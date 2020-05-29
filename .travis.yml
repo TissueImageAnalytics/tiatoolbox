@@ -27,7 +27,7 @@ deploy:
     on:
       branch: develop
       tags: true
-      repo: tialab/tiatoolbox
+      repo: TIA-Lab/tiatoolbox
       python: 3.8
   - provider: pypi
     distributions: sdist bdist_wheel
@@ -37,5 +37,5 @@ deploy:
     on:
       branch: master
       tags: true
-      repo: tialab/tiatoolbox
+      repo: TIA-Lab/tiatoolbox
       python: 3.8
