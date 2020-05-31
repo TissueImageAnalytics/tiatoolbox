@@ -1,26 +1,48 @@
 """
 This file contains miscellaneous small functions repeatedly required and used in the repo
 """
-import cv2
+import os
+import pathlib
 
 
-def cv2_imread(image_path):
+def split_path_name_ext(full_path):
     """
-    Read an image to a numpy array using OpenCV
+    Split path of a file to directory path, file name and extension
 
     Args:
-        image_path: Input file path
+        full_path: Path to a file
 
     Returns:
-        img: image as numpy array
+        input_dir: directory path
+        file_name: name of the file without extension
+        ext: file extension
     """
-    img = cv2.imread(image_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    input_dir, file_name = os.path.split(full_path)
+    file_name, ext = os.path.splitext(file_name)
+    return input_dir, file_name, ext
 
-    return img
 
+def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
+    """
+    Grabs file paths specified by file extensions
 
-def hello(count, name):
-    """Simple program that greets NAME for a total of COUNT times."""
-    for x in range(count):
-        print("Hello %s!" % name)
+    Args:
+        input_path: path to the directory where files need to be searched
+        file_types: file types (extensions) to be searched
+
+    Returns:
+        list: file paths as a python list
+    """
+    input_path = pathlib.Path(input_path)
+
+    if type(file_types) == str:
+        if len(file_types.split(",")) > 1:
+            file_types = tuple(file_types.split(","))
+        else:
+            file_types = (file_types,)
+
+    files_grabbed = []
+    for files in file_types:
+        files_grabbed.extend(input_path.glob(files))
+
+    return list(files_grabbed)

@@ -1,6 +1,8 @@
 """Top-level package for TIA Toolbox."""
-from tiatoolbox import cli
 from tiatoolbox import tiatoolbox
+from tiatoolbox import cli
+from tiatoolbox import dataloader
+from tiatoolbox import utils
 
 
 __author__ = """TIA Lab"""

@@ -1,5 +1,5 @@
 """Console script for tiatoolbox."""
-from tiatoolbox.utils import misc_utils
+from tiatoolbox import dataloader
 import sys
 import click
 
@@ -13,20 +13,35 @@ def main():
 
 
 @main.command()
-@click.option("--count", "-c", default=1, help="Number of times to print the input")
-@click.option("--name", "-n", help="Print the output")
-def hello(count, name):
+@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option(
+    "--output_dir",
+    help="Path to output directory to save the output, default=wsi_input/../meta",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory, default=('*.ndpi', '*.svs', '*.mrxs')",
+)
+@click.option(
+    "--mode",
+    help="'show' to display meta information only or 'save' to save the meta information, default=show",
+)
+@click.option(
+    "--num_cpu",
+    type=int,
+    help="num of cpus to use for multiprocessing, default=multiprocessing.cpu_count()",
+)
+def slide_info(wsi_input, output_dir, file_types, mode, num_cpu):
     """
-    prints the command "count" times.
-    Args:
-        count: Number of times to print the input
-        name: Print the output
-
-    Returns:
-        Prints the input
-
+    Displays or saves WSI metadata
     """
-    misc_utils.hello(count=count, name=name)
+    dataloader.slide_info.slide_info(
+        wsi_input=wsi_input,
+        output_dir=output_dir,
+        file_types=file_types,
+        mode=mode,
+        num_cpu=num_cpu,
+    )
 
 
 if __name__ == "__main__":
