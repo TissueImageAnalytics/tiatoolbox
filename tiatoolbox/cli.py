@@ -9,7 +9,7 @@ import os
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 def main():
     """
-    Computational pathology toolbox designed by TIALAB.
+    Computational pathology toolbox developed by TIALAB
     """
     return 0
 
