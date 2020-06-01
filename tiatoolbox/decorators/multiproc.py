@@ -11,21 +11,16 @@ class TIAMultiProcess:
     def __call__(self, func):
         def func_wrap(*args, **kwargs):
             iter_value = None
-            if 'workers' in kwargs:
-                self.workers = kwargs.pop('workers')
+            if "workers" in kwargs:
+                self.workers = kwargs.pop("workers")
             try:
                 iter_value = kwargs.pop(self.iter_on)
             except ValueError:
                 print("Please specify iter_on in function decorator")
 
             with Pool(self.workers) as p:
-                results = p.map(
-                    partial(
-                        func,
-                        **kwargs
-                    ),
-                    iter_value,
-                )
+                results = p.map(partial(func, **kwargs), iter_value,)
 
             return results
+
         return func_wrap

@@ -23,7 +23,7 @@ def main():
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs"
+    default="*.ndpi, *.svs, *.mrxs",
 )
 @click.option(
     "--mode",
@@ -38,24 +38,22 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     """
     Displays or saves WSI metadata
     """
-    file_types = tuple(file_types.split(', '))
+    file_types = tuple(file_types.split(", "))
     if os.path.isdir(wsi_input):
         files_all = misc.grab_files_from_dir(
-            input_path=wsi_input,
-            file_types=file_types
+            input_path=wsi_input, file_types=file_types
         )
     elif os.path.isfile(wsi_input):
-        files_all = [wsi_input, ]
+        files_all = [
+            wsi_input,
+        ]
     else:
-        raise ValueError('wsi_input path is not valid')
+        raise ValueError("wsi_input path is not valid")
 
     print(files_all)
 
     dataloader.slide_info.slide_info(
-        input_path=files_all,
-        output_dir=output_dir,
-        mode=mode,
-        workers=workers,
+        input_path=files_all, output_dir=output_dir, mode=mode, workers=workers,
     )
 
 

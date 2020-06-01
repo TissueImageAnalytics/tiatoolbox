@@ -2,13 +2,12 @@
 This file contains code to output or save slide information using python multiprocessing
 """
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.utils import misc_utils as misc
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
 
 import os
 
 
-@TIAMultiProcess(iter_on='input_path')
+@TIAMultiProcess(iter_on="input_path")
 def slide_info(input_path, output_dir=None, mode="show"):
     """
     Single file run to output or save WSI meta data. Multiprocessing uses this function to run slide_info in parallel
@@ -45,5 +44,7 @@ def slide_info(input_path, output_dir=None, mode="show"):
             print(info)
             return info
         else:
-            wsi_reader.slide_info(output_dir=output_dir, output_name=file_name + ".yaml")
-            return os.path.join(output_dir, file_name+".yaml")
+            wsi_reader.slide_info(
+                output_dir=output_dir, output_name=file_name + ".yaml"
+            )
+            return os.path.join(output_dir, file_name + ".yaml")
