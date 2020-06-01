@@ -40,8 +40,6 @@ class WSIReader:
         self.file_name = os.path.basename(file_name)
         if output_dir is not None:
             self.output_dir = os.path.join(output_dir, self.file_name)
-            if not os.path.isdir(self.output_dir):
-                os.makedirs(self.output_dir, exist_ok=True)
 
         self.openslide_obj = openslide.OpenSlide(
             filename=os.path.join(self.input_dir, self.file_name)
@@ -69,7 +67,7 @@ class WSIReader:
         """
         input_dir = self.input_dir
         if output_dir is None:
-            output_dir = self.output_dir
+            self.output_dir = output_dir
         if output_name is None:
             output_name = "param.yaml"
         if self.objective_power == 0:
