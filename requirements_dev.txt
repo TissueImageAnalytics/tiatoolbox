@@ -10,7 +10,7 @@ twine==1.14.0
 Click==7.0
 setuptools==45.1.0
 pytest==5.4.2
-pytest-runner==5.1
+pytest-runner==5.2
 opencv-python==4.2.0.34
 pathos==0.2.5
 openslide-python==1.1.1
