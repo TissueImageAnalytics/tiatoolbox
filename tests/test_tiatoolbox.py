@@ -15,9 +15,9 @@ import pathlib
 
 @pytest.fixture
 def response_ndpi():
-    """Sample pytest fixture for ndpi images.
-
-    See more at: http://doc.pytest.org/en/latest/fixture.html
+    """
+    Sample pytest fixture for ndpi images
+    Download ndpi image for pytest
     """
     if not os.path.isfile("./CMU-1.ndpi"):
         r = requests.get(
@@ -29,10 +29,10 @@ def response_ndpi():
 
 @pytest.fixture
 def response_svs():
-    """Sample pytest fixture for svs images.
-
-        See more at: http://doc.pytest.org/en/latest/fixture.html
-        """
+    """
+    Sample pytest fixture for svs images
+    Download ndpi image for pytest
+    """
     if not os.path.isfile("./CMU-1.svs"):
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1.svs"
@@ -41,8 +41,10 @@ def response_svs():
             f.write(r.content)
 
 
-def test_content(response_ndpi, response_svs):
-    """Sample pytest test function with the pytest fixture as an argument."""
+def test_slide_info(response_ndpi, response_svs):
+    """
+    pytest for slide_info as a python function
+    """
     # from bs4 import BeautifulSoup
     # assert 'GitHub' in BeautifulSoup(response.content).title.string
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
@@ -53,7 +55,9 @@ def test_content(response_ndpi, response_svs):
 
 
 def test_command_line_help_interface():
-    """Test the CLI."""
+    """
+    Test the CLI help
+    """
     runner = CliRunner()
     result = runner.invoke(cli.main)
     assert result.exit_code == 0
@@ -63,7 +67,9 @@ def test_command_line_help_interface():
 
 
 def test_command_line_slide_info(response_ndpi, response_svs):
-    """Test the Slide infor CLI."""
+    """
+    Test the Slide information CLI.
+    """
     runner = CliRunner()
     slide_info_result = runner.invoke(
         cli.main,
