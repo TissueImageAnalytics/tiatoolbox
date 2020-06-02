@@ -51,7 +51,8 @@ class TIAMultiProcess:
 
             with Pool(self.workers) as p:
                 results = p.map(partial(func, **kwargs), iter_value,)
-                p.close()
+                p.terminate()
+                p.restart()
 
             return results
 
