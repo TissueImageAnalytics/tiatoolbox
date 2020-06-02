@@ -53,6 +53,9 @@ class WSIReader:
         self.level_dimensions = self.openslide_obj.level_dimensions
         self.level_downsamples = self.openslide_obj.level_downsamples
 
+    def __exit__(self):
+        self.openslide_obj.close()
+
     def slide_info(self, save_mode=True, output_dir=None, output_name=None):
         """
         WSI meta data reader
