@@ -7,7 +7,7 @@ from tiatoolbox.decorators.multiproc import TIAMultiProcess
 import os
 
 
-# @TIAMultiProcess(iter_on="input_path")
+@TIAMultiProcess(iter_on="input_path")
 def slide_info(input_path, output_dir=None, mode="show"):
     """
     Single file run to output or save WSI meta data. Multiprocessing uses this function to run slide_info in parallel
@@ -21,32 +21,30 @@ def slide_info(input_path, output_dir=None, mode="show"):
 
     """
 
-    if type(input_path) == list:
-        for input_str in input_path:
-            input_dir, file_name = os.path.split(input_str)
+    input_dir, file_name = os.path.split(input_path)
 
-            if output_dir is None:
-                output_dir = os.path.join(input_dir, "..", "meta")
+    if output_dir is None:
+        output_dir = os.path.join(input_dir, "..", "meta")
 
-            if mode is None:
-                mode = "show"
+    if mode is None:
+        mode = "show"
 
-            if not os.path.isdir(output_dir) and mode == "save":
-                os.makedirs(output_dir, exist_ok=True)
+    if not os.path.isdir(output_dir) and mode == "save":
+        os.makedirs(output_dir, exist_ok=True)
 
-            print(file_name, flush=True)
-            _, file_type = os.path.splitext(file_name)
+    print(file_name, flush=True)
+    _, file_type = os.path.splitext(file_name)
 
-            if file_type == ".svs" or file_type == ".ndpi" or file_type == ".mrxs":
-                wsi_reader = wsireader.WSIReader(
-                    input_dir=input_dir, file_name=file_name, output_dir=output_dir
-                )
-                if mode == "show":
-                    info = wsi_reader.slide_info(save_mode=False)
-                    print(info)
-                    return info
-                else:
-                    wsi_reader.slide_info(
-                        output_dir=output_dir, output_name=file_name + ".yaml"
-                    )
-                    return os.path.join(output_dir, file_name + ".yaml")
+    if file_type == ".svs" or file_type == ".ndpi" or file_type == ".mrxs":
+        wsi_reader = wsireader.WSIReader(
+            input_dir=input_dir, file_name=file_name, output_dir=output_dir
+        )
+        if mode == "show":
+            info = wsi_reader.slide_info(save_mode=False)
+            print(info)
+            return info
+        else:
+            wsi_reader.slide_info(
+                output_dir=output_dir, output_name=file_name + ".yaml"
+            )
+            return os.path.join(output_dir, file_name + ".yaml")
