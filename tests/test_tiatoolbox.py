@@ -62,7 +62,7 @@ def test_command_line_help_interface():
     assert help_result.output == result.output
 
 
-def test_command_line_slide_info():
+def test_command_line_slide_info(response_ndpi, response_svs):
     """Test the Slide infor CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(

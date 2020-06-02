@@ -9,7 +9,7 @@ Sphinx==1.8.5
 twine==1.14.0
 Click==7.0
 setuptools==45.1.0
-pytest==4.6.5
+pytest==5.4.2
 pytest-runner==5.1
 opencv-python==4.2.0.34
 pathos==0.2.5
