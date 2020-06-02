@@ -49,7 +49,9 @@ def test_content(response_ndpi, response_svs):
     files_all = misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,
     )
-    _ = slide_info(input_path=files_all, workers=2, mode="save")
+    _ = slide_info(input_path=files_all,
+                   # workers=2,
+                   mode="save")
 
 
 def test_command_line_help_interface():
@@ -75,8 +77,8 @@ def test_command_line_slide_info(response_ndpi, response_svs):
             '"*.ndpi, *.svs"',
             "--mode",
             "show",
-            "--workers",
-            "2",
+            # "--workers",
+            # "2",
         ],
     )
     assert slide_info_result.exit_code == 0
