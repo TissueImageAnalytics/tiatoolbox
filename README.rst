@@ -4,7 +4,7 @@
      <img width="450" height="200" src=docs/tialab_logo.png>
    </p>
 
-tiatoolbox-private
+tiatoolbox
 ==================
 
 Computational Pathology Toolbox developed by TIA Lab
@@ -28,7 +28,7 @@ activate the conda environment:
     conda env create --name tiatoolbox --file requirements.conda.yml
     conda activate tiatoolbox
 
-python tiatoolbox.py -h
+python tiatoolbox -h
 =======================
 
 ::
