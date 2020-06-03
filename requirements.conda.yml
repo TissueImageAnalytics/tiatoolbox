@@ -1,0 +1,29 @@
+name: tiatoolbox
+channels:
+  - conda
+  - defaults
+dependencies:
+  - python=3.6
+  - setuptools==45.1.0
+  - Click==7.0
+  - cython=0.29.15
+  - h5py=2.8.0
+  - matplotlib-base=3.1.3
+  - numpy=1.18.1
+  - opencv=3.3.1
+  - pandas=1.0.3
+  - pillow=7.0.0
+  - pip=20.0.2
+  - pytorch=1.3.1
+  - pyyaml=5.3.1
+  - requests=2.23.0
+  - scipy=1.4.1
+  - scikit-image=0.16.2
+  - scikit-learn=0.22.1
+  - tensorflow-gpu==2.1.0
+  - tqdm==4.46.0
+  - colorama==0.4.3
+  - pathos==0.2.5
+  - pip:
+    - openslide-python==1.1.1
+
