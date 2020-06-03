@@ -28,22 +28,18 @@ activate the conda environment:
     conda env create --name tiatoolbox --file requirements.conda.yml
     conda activate tiatoolbox
 
-python tiatoolbox -h
+python -m tiatoolbox -h
 =======================
 
 ::
 
-    usage: tiatoolbox.py [-h] [--version] [--verbose VERBOSE]
-                     {read_region,generate_tiles,extract_patches,merge_patches,slide_info}
+    usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
+                     {slide_info}
                      ...
 
     positional arguments:
-      {read_region,generate_tiles,extract_patches,merge_patches,slide_info}
-        read_region         usage: python tiatoolbox.py read_region -h
-        generate_tiles      usage: python tiatoolbox.py generate_tiles -h
-        extract_patches     usage: python tiatoolbox.py extract_patches -h
-        merge_patches       usage: python tiatoolbox.py merge_patches -h
-        slide_info          usage: python tiatoolbox.py slide_info -h
+      {slide_info}
+        slide_info          usage: python -m tiatoolbox slide_info -h
 
     optional arguments:
       -h, --help            show this help message and exit

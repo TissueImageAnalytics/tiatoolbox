@@ -1,4 +1,5 @@
 """Console script for tiatoolbox."""
+from tiatoolbox import __version__
 from tiatoolbox import dataloader
 from tiatoolbox.utils import misc_utils as misc
 import sys
@@ -6,7 +7,16 @@ import click
 import os
 
 
+def version_msg():
+    """Return the Cookiecutter version, location and Python powering it."""
+    python_version = sys.version[:3]
+    location = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    message = 'tiatoolbox %(version)s from {} (Python {})'
+    return message.format(location, python_version)
+
+
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.version_option(__version__, '--version', '-V', help="Version", message=version_msg())
 def main():
     """
     Computational pathology toolbox developed by TIALAB

@@ -6,6 +6,7 @@ import pytest
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.utils import misc_utils as misc
 from tiatoolbox import cli
+from tiatoolbox import __version__
 
 from click.testing import CliRunner
 import requests
@@ -64,6 +65,15 @@ def test_command_line_help_interface():
     help_result = runner.invoke(cli.main, ["--help"])
     assert help_result.exit_code == 0
     assert help_result.output == result.output
+
+
+def test_command_line_version():
+    """
+    pytest for version check
+    """
+    runner = CliRunner()
+    version_result = runner.invoke(cli.main, ["-V"])
+    assert __version__ in version_result.output
 
 
 def test_command_line_slide_info(response_ndpi, response_svs):
