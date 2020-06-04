@@ -31,6 +31,7 @@ class TIAMultiProcess:
         Returns:
 
         """
+
         def func_wrap(*args, **kwargs):
             """
             Wrapping function for decorator call
