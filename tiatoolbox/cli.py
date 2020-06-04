@@ -8,7 +8,7 @@ import os
 
 
 def version_msg():
-    """Return the Cookiecutter version, location and Python powering it."""
+    """Return a string with tiatoolbox package version and python version."""
     python_version = sys.version[:3]
     location = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     message = 'tiatoolbox %(version)s from {} (Python {})'
@@ -19,7 +19,7 @@ def version_msg():
 @click.version_option(__version__, '--version', '-V', help="Version", message=version_msg())
 def main():
     """
-    Computational pathology toolbox developed by TIALAB
+    Computational pathology toolbox developed by TIA LAB
     """
     return 0
 
