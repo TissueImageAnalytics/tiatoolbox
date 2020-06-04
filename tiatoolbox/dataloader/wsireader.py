@@ -1,16 +1,10 @@
 """
-This file contains WSIReader class for WSI reading or extracting metadata information from WSIs
+WSIReader for WSI reading or extracting metadata information from WSIs
 """
-import os
+import pathlib
 import numpy as np
 import yaml
 from PIL import Image
-
-# For Windows Platforms to add path to openslide binaries
-if os.name == "nt":
-    os.environ["PATH"] = (
-        "C:\\tools\\openslide\\openslide-win64-20171122\\bin" + ";" + os.environ["PATH"]
-    )
 
 import openslide
 
@@ -18,9 +12,9 @@ import openslide
 class WSIReader:
     def __init__(
         self,
-        input_dir=os.getcwd(),
+        input_dir=pathlib.Path.cwd(),
         file_name=None,
-        output_dir=os.path.join(os.getcwd(), "output"),
+        output_dir=pathlib.Path(pathlib.Path.cwd(), "output"),
         tile_objective_value=20,
         tile_read_size_w=5000,
         tile_read_size_h=5000,
@@ -36,13 +30,13 @@ class WSIReader:
             tile_read_size_h: tile height, default=5000
         """
 
-        self.input_dir = input_dir
-        self.file_name = os.path.basename(file_name)
+        self.input_dir = pathlib.Path(input_dir)
+        self.file_name = pathlib.Path(file_name).name
         if output_dir is not None:
-            self.output_dir = os.path.join(output_dir, self.file_name)
+            self.output_dir = pathlib.Path(output_dir, self.file_name)
 
         self.openslide_obj = openslide.OpenSlide(
-            filename=os.path.join(self.input_dir, self.file_name)
+            filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
         self.tile_objective_value = np.int(tile_objective_value)
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
@@ -101,7 +95,7 @@ class WSIReader:
             "level_downsamples": level_downsamples,
         }
         if save_mode:
-            with open(os.path.join(output_dir, output_name), "w") as yaml_file:
+            with open(pathlib.Path(output_dir, output_name), "w") as yaml_file:
                 yaml.dump(param, yaml_file)
         else:
             return param

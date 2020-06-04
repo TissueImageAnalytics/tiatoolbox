@@ -19,9 +19,7 @@ Please try
 Getting Started
 ===============
 
-First, install OpenSlide `here <https://openslide.org/download/>`__. For
-Windows, extract the OpenSlide binaries at
-*C:\\tools\\openslide\\openslide-win64-20171122*. Then, create and
+First, install OpenSlide `here <https://openslide.org/download/>`__. Then, create and
 activate the conda environment:
 
 ::
