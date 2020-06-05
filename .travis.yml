@@ -7,7 +7,7 @@ python:
   - 3.6
 
 before_install:
-  - sudo apt-get -y install python3-openslide
+  - sudo apt-get -y install openslide-tools
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: pip install -U tox-travis
