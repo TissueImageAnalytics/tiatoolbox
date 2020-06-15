@@ -17,6 +17,16 @@ def slide_info(input_path, output_dir=None):
     Returns:
         displays or saves WSI meta information
 
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
+        >>> files_all = utils.misc.grab_files_from_dir(input_path, file_types=file_types)
+        >>> slide_params = slide_info(input_path=files_all, workers=2)
+
+        >>> for slide_param in slide_params:
+        >>>        utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
+        >>>        print(type(slide_param))
+
     """
 
     input_dir, file_name = os.path.split(input_path)

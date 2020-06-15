@@ -57,7 +57,7 @@ class WSIReader:
         Args:
             output_dir: output directory to save the meta information
         Returns:
-            displays or saves WSI meta information
+            param (dict): dictionary containing meta information
 
         """
         input_dir = self.input_dir
