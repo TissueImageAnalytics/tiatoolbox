@@ -1,7 +1,7 @@
 """Console script for tiatoolbox."""
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
-from tiatoolbox.utils import misc_utils as misc
+from tiatoolbox import utils
 import sys
 import click
 import os
@@ -52,7 +52,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     """
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(wsi_input):
-        files_all = misc.grab_files_from_dir(
+        files_all = utils.misc.grab_files_from_dir(
             input_path=wsi_input, file_types=file_types
         )
     elif os.path.isfile(wsi_input):

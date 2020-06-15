@@ -4,7 +4,7 @@
 import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
-from tiatoolbox.utils import misc_utils as misc
+from tiatoolbox import utils
 from tiatoolbox import cli
 from tiatoolbox import __version__
 
@@ -65,7 +65,7 @@ def test_slide_info(response_ndpi, response_svs):
     # from bs4 import BeautifulSoup
     # assert 'GitHub' in BeautifulSoup(response.content).title.string
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
-    files_all = misc.grab_files_from_dir(
+    files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,
     )
     _ = slide_info(input_path=files_all, workers=2, mode="save")
