@@ -3,8 +3,9 @@ This file defines multiprocessing decorators required by the tiatoolbox.
 """
 
 import multiprocessing
-from pathos.multiprocessing import ProcessingPool as Pool
 from functools import partial
+
+from pathos.multiprocessing import ProcessingPool as Pool
 
 
 class TIAMultiProcess:
@@ -48,7 +49,7 @@ class TIAMultiProcess:
             try:
                 iter_value = kwargs.pop(self.iter_on)
             except ValueError:
-                print("Please specify iter_on in function decorator")
+                raise ValueError("Please specify iter_on in multiprocessing decorator")
 
             with Pool(self.workers) as p:
                 results = p.map(partial(func, **kwargs), iter_value,)
