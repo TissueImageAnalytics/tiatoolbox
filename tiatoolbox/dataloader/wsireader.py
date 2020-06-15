@@ -1,5 +1,6 @@
 """
 WSIReader for WSI reading or extracting metadata information from WSIs
+
 """
 import pathlib
 import numpy as np
@@ -28,6 +29,7 @@ class WSIReader:
             tile_objective_value: objective value at which tile is generated, default=20
             tile_read_size_w: tile width, default=5000
             tile_read_size_h: tile height, default=5000
+
         """
 
         self.input_dir = pathlib.Path(input_dir)
