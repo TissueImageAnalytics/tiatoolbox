@@ -1,5 +1,5 @@
 """
-This file contains miscellaneous small functions repeatedly required and used in the repo
+Miscellaneous small functions repeatedly required and used in the repo
 """
 import os
 import pathlib
@@ -27,8 +27,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     Grabs file paths specified by file extensions
 
     Args:
-        input_path: path to the directory where files need to be searched
-        file_types: file types (extensions) to be searched
+        input_path (str, pathlib.Path): path to the directory where files need to be searched
+        file_types (str, tuple): file types (extensions) to be searched
 
     Returns:
         list: file paths as a python list
