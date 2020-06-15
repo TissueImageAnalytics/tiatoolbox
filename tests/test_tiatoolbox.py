@@ -62,8 +62,6 @@ def test_slide_info(response_ndpi, response_svs):
     """
     pytest for slide_info as a python function
     """
-    # from bs4 import BeautifulSoup
-    # assert 'GitHub' in BeautifulSoup(response.content).title.string
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,

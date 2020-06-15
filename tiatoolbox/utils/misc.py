@@ -13,9 +13,9 @@ def split_path_name_ext(full_path):
         full_path: Path to a file
 
     Returns:
-        input_dir: directory path
-        file_name: name of the file without extension
-        ext: file extension
+        tuple: Three sections of the input file path
+        (input directory path, file name, file extension)
+
     """
     input_dir, file_name = os.path.split(full_path)
     file_name, ext = os.path.splitext(file_name)
