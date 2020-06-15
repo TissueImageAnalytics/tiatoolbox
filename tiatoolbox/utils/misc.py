@@ -3,6 +3,7 @@ Miscellaneous small functions repeatedly required and used in the repo
 """
 import os
 import pathlib
+import yaml
 
 
 def split_path_name_ext(full_path):
@@ -46,3 +47,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
         files_grabbed.extend(input_path.glob(files))
 
     return list(files_grabbed)
+
+
+def save_yaml(input_dict, output_path="output.yaml"):
+    with open(pathlib.Path(output_path), "w") as yaml_file:
+        yaml.dump(input_dict, yaml_file)

@@ -4,7 +4,6 @@ WSIReader for WSI reading or extracting metadata information from WSIs
 """
 import pathlib
 import numpy as np
-import yaml
 from PIL import Image
 
 import openslide
@@ -52,14 +51,11 @@ class WSIReader:
     def __exit__(self):
         self.openslide_obj.close()
 
-    def slide_info(self, save_mode=True, output_dir=None, output_name=None):
+    def slide_info(self, output_dir=None):
         """
         WSI meta data reader
         Args:
-            save_mode: save meta information as yaml file
             output_dir: output directory to save the meta information
-            output_name: output file name
-
         Returns:
             displays or saves WSI meta information
 
@@ -67,8 +63,6 @@ class WSIReader:
         input_dir = self.input_dir
         if output_dir is None:
             self.output_dir = output_dir
-        if output_name is None:
-            output_name = "param.yaml"
         if self.objective_power == 0:
             self.objective_power = np.int(
                 self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
@@ -82,6 +76,7 @@ class WSIReader:
         level_count = self.level_count
         level_dimensions = self.level_dimensions
         level_downsamples = self.level_downsamples
+        file_name = self.file_name
 
         param = {
             "input_dir": input_dir,
@@ -95,9 +90,7 @@ class WSIReader:
             "level_count": level_count,
             "level_dimensions": level_dimensions,
             "level_downsamples": level_downsamples,
+            "file_name": file_name
         }
-        if save_mode:
-            with open(pathlib.Path(output_dir, output_name), "w") as yaml_file:
-                yaml.dump(param, yaml_file)
-        else:
-            return param
+
+        return param
