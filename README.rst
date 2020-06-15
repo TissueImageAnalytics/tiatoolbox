@@ -22,6 +22,15 @@ Getting Started
 First, install OpenSlide `here <https://openslide.org/download/>`__. Then, create and
 activate the conda environment:
 
+pip
+----
+
+::
+
+    pip install -r requirements_dev.txt
+
+conda
+-----
 ::
 
     conda env create --name tiatoolbox --file requirements.conda.yml
