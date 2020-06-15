@@ -31,5 +31,5 @@ def slide_info(input_path, output_dir=None):
         info = wsi_reader.slide_info()
         return info
     else:
-        print('File type not supported')
+        print("File type not supported")
         return None

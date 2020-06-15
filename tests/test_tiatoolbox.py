@@ -69,7 +69,7 @@ def test_slide_info(response_ndpi, response_svs):
     slide_params = slide_info(input_path=files_all, workers=2, mode="save")
 
     for slide_param in slide_params:
-        utils.misc.save_yaml(slide_param, slide_param['file_name'] + '.yaml')
+        utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
 
 def test_command_line_help_interface():

@@ -90,7 +90,7 @@ class WSIReader:
             "level_count": level_count,
             "level_dimensions": level_dimensions,
             "level_downsamples": level_downsamples,
-            "file_name": file_name
+            "file_name": file_name,
         }
 
         return param
