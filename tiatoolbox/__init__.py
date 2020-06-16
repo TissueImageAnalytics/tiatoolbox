@@ -8,5 +8,5 @@ __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
 __version__ = "0.1.1"
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

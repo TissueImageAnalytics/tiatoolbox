@@ -27,8 +27,7 @@ def split_path_name_ext(full_path):
     return input_dir, file_name, ext
 
 
-def grab_files_from_dir(input_path,
-                        file_types=("*.jpg", "*.png", "*.tif")):
+def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """
     Grabs file paths specified by file extensions
 
