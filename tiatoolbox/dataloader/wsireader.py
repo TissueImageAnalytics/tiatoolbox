@@ -10,24 +10,40 @@ import openslide
 
 
 class WSIReader:
+    """
+    WSI Reader class to read WSI images
+
+    Attributes:
+        input_dir (pathlib.Path): input path to WSI directory
+        file_name (str): file name of the WSI
+        output_dir (pathlib.Path): output directory to save the output
+        openslide_obj (:obj:`openslide.OpenSlide`)
+        tile_objective_value (int): objective value at which tile is generated
+        tile_read_size (int): [tile width, tile height]
+        objective_power (int): objective value at which whole slide image is scanned
+        level_count (int): The number of pyramid levels in the slide
+        level_dimensions = A list of `(width, height)` tuples, one for each level of the slide
+        level_downsamples = A list of down sample factors for each level of the slide
+
+    """
+
     def __init__(
         self,
-        input_dir=pathlib.Path.cwd(),
+        input_dir=".",
         file_name=None,
-        output_dir=pathlib.Path(pathlib.Path.cwd(), "output"),
+        output_dir="./output",
         tile_objective_value=20,
         tile_read_size_w=5000,
         tile_read_size_h=5000,
     ):
         """
-        WSI Reader class to read WSI images
         Args:
-            input_dir: input path to WSI directory
-            file_name: file name of the WSI
-            output_dir: output directory to save the output, default=os.getcwd()/output
-            tile_objective_value: objective value at which tile is generated, default=20
-            tile_read_size_w: tile width, default=5000
-            tile_read_size_h: tile height, default=5000
+            input_dir (str, pathlib.Path): input path to WSI directory
+            file_name (str): file name of the WSI
+            output_dir (str, pathlib.Path): output directory to save the output, default=os.getcwd()/output
+            tile_objective_value (int): objective value at which tile is generated, default=20
+            tile_read_size_w (int): tile width, default=5000
+            tile_read_size_h (int): tile height, default=5000
 
         """
 
@@ -51,18 +67,16 @@ class WSIReader:
     def __exit__(self):
         self.openslide_obj.close()
 
-    def slide_info(self, output_dir=None):
+    def slide_info(self):
         """
         WSI meta data reader
         Args:
-            output_dir: output directory to save the meta information
+
         Returns:
             param (dict): dictionary containing meta information
 
         """
         input_dir = self.input_dir
-        if output_dir is None:
-            self.output_dir = output_dir
         if self.objective_power == 0:
             self.objective_power = np.int(
                 self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
@@ -80,7 +94,6 @@ class WSIReader:
 
         param = {
             "input_dir": input_dir,
-            "output_dir": output_dir,
             "objective_power": objective_power,
             "slide_dimension": slide_dimension,
             "rescale": rescale,

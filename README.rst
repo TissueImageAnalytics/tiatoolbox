@@ -51,6 +51,6 @@ tiatoolbox --help
 
     optional arguments:
       -h, --help            show this help message and exit
-      --version             show program's version number and exit
+      --version             show program`s version number and exit
       --verbose VERBOSE
 

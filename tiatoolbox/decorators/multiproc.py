@@ -1,5 +1,5 @@
 """
-This file defines multiprocessing decorators required by the tiatoolbox.
+Multiprocessing decorators required by the tiatoolbox.
 """
 
 import multiprocessing
@@ -10,8 +10,18 @@ from pathos.multiprocessing import ProcessingPool as Pool
 
 class TIAMultiProcess:
     """
-    This class defines the multiprocessing decorator for the toolbox, requires a list iter_on as input on which
+    Multiprocessing class decorator for the toolbox, requires a list `iter_on` as input on which
     multiprocessing will run
+
+    Examples:
+        >>> from tiatoolbox.decorators.multiproc import TIAMultiProcess
+        >>> import cv2
+        >>> @TIAMultiProcess(iter_on="input_path")
+        >>> def read_images(input_path, output_dir=None):
+        >>>    img = cv2.imread(input_path)
+        >>>    return img
+        >>> imgs = read_images(input_path)
+
     """
 
     def __init__(self, iter_on):
@@ -43,7 +53,6 @@ class TIAMultiProcess:
             Returns:
 
             """
-            iter_value = None
             if "workers" in kwargs:
                 self.workers = kwargs.pop("workers")
             try:
@@ -56,5 +65,7 @@ class TIAMultiProcess:
                 p.clear()
 
             return results
+
+        func_wrap.__doc__ = func.__doc__
 
         return func_wrap
