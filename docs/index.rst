@@ -1,5 +1,5 @@
 Welcome to TIA Toolbox's documentation!
-======================================
+=======================================
 
 .. toctree::
    :maxdepth: 2
