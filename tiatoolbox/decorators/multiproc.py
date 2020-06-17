@@ -8,8 +8,8 @@ from pathos.multiprocessing import ProcessingPool as Pool
 
 class TIAMultiProcess:
     """
-    Multiprocessing class decorator for the toolbox, requires a list `iter_on` as input on which
-    multiprocessing will run
+    Multiprocessing class decorator for the toolbox, requires a list `iter_on`
+    as input on which multiprocessing will run
 
     Attributes:
         iter_on (str): Variable on which iterations will be performed.
@@ -19,9 +19,9 @@ class TIAMultiProcess:
         >>> from tiatoolbox.decorators.multiproc import TIAMultiProcess
         >>> import cv2
         >>> @TIAMultiProcess(iter_on="input_path")
-        >>> def read_images(input_path, output_dir=None):
-        >>>    img = cv2.imread(input_path)
-        >>>    return img
+        ... def read_images(input_path, output_dir=None):
+        ...    img = cv2.imread(input_path)
+        ...    return img
         >>> imgs = read_images(input_path)
 
     """

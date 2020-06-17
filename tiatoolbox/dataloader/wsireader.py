@@ -20,8 +20,9 @@ class WSIReader:
         tile_read_size (int): [tile width, tile height]
         objective_power (int): objective value at which whole slide image is scanned
         level_count (int): The number of pyramid levels in the slide
-        level_dimensions = A list of `(width, height)` tuples, one for each level of the slide
-        level_downsamples = A list of down sample factors for each level of the slide
+        level_dimensions (int): A list of `(width, height)` tuples, one for each level
+            of the slide
+        level_downsamples (int): A list of down sample factors for each level of the slide
 
     """
 
@@ -38,8 +39,10 @@ class WSIReader:
         Args:
             input_dir (str, pathlib.Path): input path to WSI directory
             file_name (str): file name of the WSI
-            output_dir (str, pathlib.Path): output directory to save the output, default=os.getcwd()/output
-            tile_objective_value (int): objective value at which tile is generated, default=20
+            output_dir (str, pathlib.Path): output directory to save the output,
+                default=./output
+            tile_objective_value (int): objective value at which tile is generated,
+                default=20
             tile_read_size_w (int): tile width, default=5000
             tile_read_size_h (int): tile height, default=5000
 

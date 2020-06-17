@@ -9,7 +9,8 @@ import os
 def slide_info(input_path, output_dir=None):
     """
     slide_info()
-    Single file run to output or save WSI meta data. Multiprocessing uses this function to run slide_info in parallel
+    Single file run to output or save WSI meta data. Multiprocessing uses this function
+    to run slide_info in parallel
 
     Args:
         input_path: Path to whole slide image
@@ -21,11 +22,13 @@ def slide_info(input_path, output_dir=None):
         >>> from tiatoolbox.dataloader.slide_info import slide_info
         >>> from tiatoolbox import utils
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
-        >>> files_all = utils.misc.grab_files_from_dir(input_path, file_types=file_types)
+        >>> files_all = utils.misc.grab_files_from_dir(input_path,
+        ...     file_types=file_types)
         >>> slide_params = slide_info(input_path=files_all, workers=2)
         >>> for slide_param in slide_params:
-        >>>        utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
-        >>>        print(type(slide_param))
+        ...        utils.misc.save_yaml(slide_param,
+        ...             slide_param["file_name"] + ".yaml")
+        ...        print(slide_param)
 
     """
 

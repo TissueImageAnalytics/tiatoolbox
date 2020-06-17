@@ -17,7 +17,8 @@ def split_path_name_ext(full_path):
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> dir_path, file_name, extension = utils.misc.split_path_name_ext(full_path)
+        >>> dir_path, file_name, extension =
+        ...     utils.misc.split_path_name_ext(full_path)
 
     """
     input_dir, file_name = os.path.split(full_path)
@@ -30,7 +31,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     Grabs file paths specified by file extensions
 
     Args:
-        input_path (str, pathlib.Path): Path to the directory where files need to be searched
+        input_path (str, pathlib.Path): Path to the directory where files
+            need to be searched
         file_types (str, tuple): File types (extensions) to be searched
 
     Returns:
