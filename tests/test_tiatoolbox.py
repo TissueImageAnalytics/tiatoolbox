@@ -15,7 +15,7 @@ import pathlib
 
 
 @pytest.fixture
-def response_ndpi(request):
+def _response_ndpi(request):
     """
     Sample pytest fixture for ndpi images
     Download ndpi image for pytest
@@ -34,11 +34,11 @@ def response_ndpi(request):
             os.remove(str(ndpi_file_path))
 
     request.addfinalizer(close_ndpi)
-    return response_ndpi
+    return _response_ndpi
 
 
 @pytest.fixture
-def response_svs(request):
+def _response_svs(request):
     """
     Sample pytest fixture for svs images
     Download ndpi image for pytest
@@ -57,10 +57,10 @@ def response_svs(request):
             os.remove(str(svs_file_path))
 
     request.addfinalizer(close_ndpi)
-    return response_svs
+    return _response_svs
 
 
-def test_slide_info(response_ndpi, response_svs):
+def test_slide_info(_response_ndpi, _response_svs):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
@@ -89,7 +89,7 @@ def test_command_line_version():
     assert __version__ in version_result.output
 
 
-def test_command_line_slide_info(response_ndpi, response_svs):
+def test_command_line_slide_info(_response_ndpi, _response_svs):
     """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
