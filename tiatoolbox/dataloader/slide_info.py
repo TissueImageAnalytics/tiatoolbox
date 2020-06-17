@@ -1,7 +1,4 @@
-"""
-Get Slide Meta Data information
-
-"""
+"""Get Slide Meta Data information"""
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
 

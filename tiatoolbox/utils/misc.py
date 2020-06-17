@@ -1,7 +1,4 @@
-"""
-Miscellaneous small functions repeatedly used in tiatoolbox
-
-"""
+"""Miscellaneous small functions repeatedly used in tiatoolbox"""
 import os
 import pathlib
 import yaml

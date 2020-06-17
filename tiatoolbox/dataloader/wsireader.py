@@ -1,10 +1,8 @@
-"""
-WSIReader for WSI reading or extracting metadata information from WSIs
+"""WSIReader for WSI reading or extracting metadata information from WSIs"""
 
-"""
 import pathlib
 import numpy as np
-from PIL import Image
+# from PIL import Image
 
 import openslide
 

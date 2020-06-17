@@ -59,9 +59,7 @@ def response_svs(request):
 
 
 def test_slide_info(response_ndpi, response_svs):
-    """
-    pytest for slide_info as a python function
-    """
+    """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,
@@ -73,9 +71,7 @@ def test_slide_info(response_ndpi, response_svs):
 
 
 def test_command_line_help_interface():
-    """
-    Test the CLI help
-    """
+    """Test the CLI help"""
     runner = CliRunner()
     result = runner.invoke(cli.main)
     assert result.exit_code == 0
@@ -85,18 +81,14 @@ def test_command_line_help_interface():
 
 
 def test_command_line_version():
-    """
-    pytest for version check
-    """
+    """pytest for version check"""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
 
 
 def test_command_line_slide_info(response_ndpi, response_svs):
-    """
-    Test the Slide information CLI.
-    """
+    """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
         cli.main,

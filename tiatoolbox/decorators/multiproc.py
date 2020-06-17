@@ -1,7 +1,4 @@
-"""
-Multiprocessing decorators required by the tiatoolbox.
-
-"""
+"""Multiprocessing decorators required by the tiatoolbox."""
 
 import multiprocessing
 from functools import partial
