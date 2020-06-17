@@ -22,7 +22,8 @@ class WSIReader:
         level_count (int): The number of pyramid levels in the slide
         level_dimensions (int): A list of `(width, height)` tuples, one for each level
             of the slide
-        level_downsamples (int): A list of down sample factors for each level of the slide
+        level_downsamples (int): A list of down sample factors for each level
+            of the slide
 
     """
 
