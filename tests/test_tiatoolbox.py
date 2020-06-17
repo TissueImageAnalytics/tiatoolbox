@@ -66,7 +66,7 @@ def test_slide_info(_response_ndpi, _response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,
     )
-    slide_params = slide_info(input_path=files_all, workers=2, mode="save")
+    slide_params = slide_info(input_path=files_all, workers=2)
 
     for slide_param in slide_params:
         utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
@@ -100,8 +100,6 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
             ".",
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--mode",
-            "show",
             "--workers",
             "2",
         ],
