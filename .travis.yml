@@ -15,6 +15,7 @@ script: tox
 
 # Upload test coverage reports (codecov and deepsource)
 after_success:
+# Upload coverage to codecov
 - bash <(curl -s https://codecov.io/bash)
 # Install deepsource CLI
 - curl https://deepsource.io/cli | sh
