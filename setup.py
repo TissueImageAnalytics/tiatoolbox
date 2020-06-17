@@ -36,7 +36,7 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     description="Computational pathology toolbox developed by TIA Lab.",
-    entry_points={"console_scripts": ["tiatoolbox=tiatoolbox.cli:main",],},
+    entry_points={"console_scripts": ["tiatoolbox=tiatoolbox.cli:main", ], },
     install_requires=requirements,
     long_description=readme + "\n\n" + history,
     include_package_data=True,
