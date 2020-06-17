@@ -41,7 +41,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     Examples:
         >>> from tiatoolbox import utils
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
-        >>> files_all = utils.misc.grab_files_from_dir(input_path, file_types=file_types,)
+        >>> files_all = utils.misc.grab_files_from_dir(input_path,
+        ...     file_types=file_types,)
 
     """
     input_path = pathlib.Path(input_path)

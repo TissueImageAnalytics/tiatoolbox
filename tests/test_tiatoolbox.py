@@ -23,7 +23,8 @@ def response_ndpi(request):
     ndpi_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1.ndpi")
     if not pathlib.Path.is_file(ndpi_file_path):
         r = requests.get(
-            "http://openslide.cs.cmu.edu/download/openslide-testdata/Hamamatsu/CMU-1.ndpi"
+            "http://openslide.cs.cmu.edu/download/openslide-testdata"
+            "/Hamamatsu/CMU-1.ndpi"
         )
         with open(ndpi_file_path, "wb") as f:
             f.write(r.content)
@@ -45,7 +46,8 @@ def response_svs(request):
     svs_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1.svs")
     if not pathlib.Path.is_file(svs_file_path):
         r = requests.get(
-            "http://openslide.cs.cmu.edu/download/openslide-testdata/Hamamatsu/CMU-1.ndpi"
+            "http://openslide.cs.cmu.edu/download/openslide-testdata"
+            "/Hamamatsu/CMU-1.ndpi"
         )
         with open(svs_file_path, "wb") as f:
             f.write(r.content)

@@ -37,12 +37,14 @@ def main():
 )
 @click.option(
     "--mode",
-    help="'show' to display meta information only or 'save' to save the meta information, default=show",
+    help="'show' to display meta information only or 'save' to save "
+         "the meta information, default=show",
 )
 @click.option(
     "--workers",
     type=int,
-    help="num of cpu cores to use for multiprocessing, default=multiprocessing.cpu_count()",
+    help="num of cpu cores to use for multiprocessing, "
+         "default=multiprocessing.cpu_count()",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     """Displays or saves WSI metadata"""
