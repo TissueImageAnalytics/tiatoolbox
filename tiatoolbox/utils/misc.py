@@ -47,7 +47,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """
     input_path = pathlib.Path(input_path)
 
-    if type(file_types) == str:
+    if type(file_types) is str:
         if len(file_types.split(",")) > 1:
             file_types = tuple(file_types.split(","))
         else:
