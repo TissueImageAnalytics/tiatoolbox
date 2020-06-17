@@ -1,0 +1,22 @@
+name: tiatoolbox
+channels:
+  - conda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - setuptools<=45.1.0
+  - Click
+  - cython
+  - h5py
+  - matplotlib
+  - numpy
+  - opencv>=4.0
+  - pillow
+  - pip
+  - pyyaml
+  - requests
+  - pathos==0.2.5
+  - pixman<0.38.0
+  - pip:
+    - openslide-python
