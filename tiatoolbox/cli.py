@@ -1,4 +1,7 @@
-"""Console script for tiatoolbox."""
+"""
+Console script for tiatoolbox.
+
+"""
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
 from tiatoolbox import utils
@@ -8,7 +11,10 @@ import os
 
 
 def version_msg():
-    """Return a string with tiatoolbox package version and python version."""
+    """
+    Return a string with tiatoolbox package version and python version.
+
+    """
     python_version = sys.version[:3]
     location = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     message = "tiatoolbox %(version)s from {} (Python {})"
@@ -22,6 +28,7 @@ def version_msg():
 def main():
     """
     Computational pathology toolbox developed by TIA LAB
+
     """
     return 0
 
@@ -49,6 +56,7 @@ def main():
 def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     """
     Displays or saves WSI metadata
+
     """
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(wsi_input):

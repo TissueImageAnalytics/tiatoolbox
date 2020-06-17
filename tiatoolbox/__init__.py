@@ -1,4 +1,7 @@
-"""Top-level package for TIA Toolbox."""
+"""
+Top-level package for TIA Toolbox.
+
+"""
 from tiatoolbox import tiatoolbox
 from tiatoolbox import dataloader
 from tiatoolbox import utils

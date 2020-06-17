@@ -1,5 +1,6 @@
 """
 Get Slide Meta Data information
+
 """
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
@@ -12,6 +13,7 @@ def slide_info(input_path, output_dir=None):
     """
     slide_info()
     Single file run to output or save WSI meta data. Multiprocessing uses this function to run slide_info in parallel
+
     Args:
         input_path: Path to whole slide image
         output_dir: Path to output directory to save the output
