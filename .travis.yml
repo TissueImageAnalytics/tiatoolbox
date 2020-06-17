@@ -13,6 +13,16 @@ install: pip install -U tox-travis
 # Command to run tests, e.g. python setup.py test
 script: tox
 
+# Upload test coverage reports (codecov and deepsource)
+after_success:
+# Upload coverage to codecov
+- bash <(curl -s https://codecov.io/bash)
+# Install deepsource CLI
+- curl https://deepsource.io/cli | sh
+- export DEEPSOURCE_DSN=https://sampledsn@deepsource.io
+# Report coverage artifact to 'test-coverage' analyzer
+-./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.xml
+
 # Assuming you have installed the travis-ci CLI tool, after you
 # create the Github repo and add it to Travis, run the
 # following command to finish PyPI deployment setup:
