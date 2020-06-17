@@ -1,7 +1,7 @@
 .. raw:: html
 
    <p align="center">
-     <img width="450" height="200" src=https://warwick.ac.uk/fac/sci/dcs/research/tia/models/tialab_logo.png>
+     <img width="450" height="200" src=https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/tialab_logo.png>
    </p>
 
 ===========
