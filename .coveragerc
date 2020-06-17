@@ -1,3 +1,5 @@
+# Pytest-cov configuration: https://coverage.readthedocs.io/en/latest/config.html
+# Based off of covdecov example: https://gist.github.com/codecov-io/bf15bde2c7db1a011b6e
 [run]
 branch = True
 source = tiatoolbox
