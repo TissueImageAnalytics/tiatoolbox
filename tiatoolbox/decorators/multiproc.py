@@ -13,6 +13,10 @@ class TIAMultiProcess:
     Multiprocessing class decorator for the toolbox, requires a list `iter_on` as input on which
     multiprocessing will run
 
+    Attributes:
+        iter_on (str): Variable on which iterations will be performed.
+        workers (int): num of cpu cores to use for multiprocessing.
+
     Examples:
         >>> from tiatoolbox.decorators.multiproc import TIAMultiProcess
         >>> import cv2
@@ -26,7 +30,6 @@ class TIAMultiProcess:
 
     def __init__(self, iter_on):
         """
-        __init__ function for TIAMultiProcess decorator
         Args:
             iter_on: Variable on which iterations will be performed.
         """
@@ -35,7 +38,6 @@ class TIAMultiProcess:
 
     def __call__(self, func):
         """
-        This is the function which will be called on a function on which decorator is applied
         Args:
             func: function to be run with multiprocessing
 
