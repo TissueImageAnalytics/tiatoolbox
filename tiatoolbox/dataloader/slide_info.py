@@ -37,7 +37,7 @@ def slide_info(input_path, output_dir=None):
     print(file_name, flush=True)
     _, file_type = os.path.splitext(file_name)
 
-    if file_type in (".svs", ".ndpi" , ".mrxs"):
+    if file_type in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.WSIReader(
             input_dir=input_dir, file_name=file_name, output_dir=output_dir
         )
