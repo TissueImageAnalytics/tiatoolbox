@@ -5,8 +5,7 @@ import yaml
 
 
 def split_path_name_ext(full_path):
-    """
-    Split path of a file to directory path, file name and extension
+    """Split path of a file to directory path, file name and extension
 
     Args:
         full_path (str): Path to a file
@@ -27,8 +26,7 @@ def split_path_name_ext(full_path):
 
 
 def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
-    """
-    Grabs file paths specified by file extensions
+    """Grabs file paths specified by file extensions
 
     Args:
         input_path (str, pathlib.Path): Path to the directory where files
@@ -61,8 +59,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 
 def save_yaml(input_dict, output_path="output.yaml"):
-    """
-    Save dictionary as yaml
+    """Save dictionary as yaml
     Args:
         input_dict (dict): A variable of type 'dict'
         output_path (str, pathlib.Path): Path to save the output file
@@ -70,8 +67,9 @@ def save_yaml(input_dict, output_path="output.yaml"):
     Returns:
 
     Examples:
+        >>> from tiatoolbox import utils
         >>> input_dict = {'hello': 'Hello World!'}
-        >>> save_yaml(input_dict, './hello.yaml')
+        >>> utils.misc.save_yaml(input_dict, './hello.yaml')
 
 
     """

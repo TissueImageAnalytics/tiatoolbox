@@ -9,8 +9,7 @@ import openslide
 
 
 class WSIReader:
-    """
-    WSI Reader class to read WSI images
+    """WSI Reader class to read WSI images
 
     Attributes:
         input_dir (pathlib.Path): input path to WSI directory
@@ -68,12 +67,11 @@ class WSIReader:
         self.level_downsamples = self.openslide_obj.level_downsamples
 
     def slide_info(self):
-        """
-        WSI meta data reader
+        """WSI meta data reader
         Args:
 
         Returns:
-            param (dict): dictionary containing meta information
+            dict: dictionary containing meta information
 
         """
         input_dir = self.input_dir

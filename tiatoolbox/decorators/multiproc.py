@@ -7,8 +7,7 @@ from pathos.multiprocessing import ProcessingPool as Pool
 
 
 class TIAMultiProcess:
-    """
-    Multiprocessing class decorator for the toolbox, requires a list `iter_on`
+    """Multiprocessing class decorator for the toolbox, requires a list `iter_on`
     as input on which multiprocessing will run
 
     Attributes:
@@ -44,8 +43,7 @@ class TIAMultiProcess:
         """
 
         def func_wrap(*args, **kwargs):
-            """
-            Wrapping function for decorator call
+            """Wrapping function for decorator call
             Args:
                 *args: args inputs
                 **kwargs: kwargs inputs
