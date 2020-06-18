@@ -21,7 +21,7 @@ after_success:
   - curl https://deepsource.io/cli | sh
   - export DEEPSOURCE_DSN=https://sampledsn@deepsource.io
   # Report coverage artifact to 'test-coverage' analyzer
-  -./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.xml
+  - ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.xml
 
 # Assuming you have installed the travis-ci CLI tool, after you
 # create the Github repo and add it to Travis, run the
