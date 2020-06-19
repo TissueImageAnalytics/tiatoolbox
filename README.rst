@@ -1,25 +1,56 @@
+.. raw:: html
+
+   <p align="center">
+     <img width="450" height="200" src=https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/tialab_logo.png>
+   </p>
+
 ===========
 TIA Toolbox
 ===========
 
+Computational Pathology Toolbox developed by TIA Lab
 
+Please try
 
+::
 
+    python -m tiatoolbox -h
 
+Getting Started
+===============
 
-Computational pathology toolbox developed by TIA Lab.
+First, install OpenSlide `here <https://openslide.org/download/>`__. Then, create and
+activate the conda environment:
 
+pip
+----
 
+::
 
-Features
---------
+    pip install -r requirements_dev.txt
 
-* TODO
+conda
+-----
+::
 
-Credits
--------
+    conda env create --name tiatoolbox --file requirements.conda.yml
+    conda activate tiatoolbox
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+tiatoolbox --help
+=======================
 
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+::
+
+    usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
+                     {slide_info}
+                     ...
+
+    positional arguments:
+      {slide_info}
+        slide_info          usage: python -m tiatoolbox slide_info -h
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --version             show program`s version number and exit
+      --verbose VERBOSE
+
