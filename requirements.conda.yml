@@ -5,7 +5,7 @@ channels:
   - defaults
 dependencies:
   - python=3.7
-  - setuptools
+  - setuptools<=45.1.0
   - Click
   - cython
   - h5py
