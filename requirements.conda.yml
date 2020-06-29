@@ -11,7 +11,7 @@ dependencies:
   - h5py
   - matplotlib
   - numpy
-  - opencv
+  - opencv>4.0
   - pillow
   - pip
   - pyyaml
