@@ -84,16 +84,20 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     help="image region in the whole slide image to read" "default=0 0 2000 2000",
 )
 @click.option(
-    "--level", type=int, help="pyramid level to read the image, " "default=0",
+    "--level",
+    type=int,
+    default=0,
+    help="pyramid level to read the image, " "default=0",
 )
 @click.option(
     "--mode",
+    default="show",
     help="'show' to display meta information only or 'save' to save "
     "the meta information, default=show",
 )
-def read_region(wsi_input, region=None, level=0, output_path=None, mode="show"):
+def read_region(wsi_input, region, level, output_path, mode):
     """Reads a region in an whole slide image as specified"""
-    if region is None:
+    if all(region):
         region = [0, 0, 2000, 2000]
 
     input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
@@ -108,7 +112,7 @@ def read_region(wsi_input, region=None, level=0, output_path=None, mode="show"):
         im_region.show()
 
     if mode == "save":
-        utils.misc.cv2_imwrite(os.path.join(output_path), im_region)
+        utils.misc.cv2_imwrite(output_path, im_region)
 
 
 if __name__ == "__main__":
