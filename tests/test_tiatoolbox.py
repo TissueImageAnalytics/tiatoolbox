@@ -153,13 +153,13 @@ def test_command_line_read_region(_response_ndpi):
             "--mode",
             "save",
             "--region",
-            "0 0 2000 2000",
+            "0", "0", "2000", "2000",
             "--output_path",
-            str(pathlib.Path(__file__).parent.joinpath("./im_region.jpg")),
+            str(pathlib.Path(__file__).parent.joinpath("im_region.jpg")),
         ],
     )
 
     assert read_region_result.exit_code == 0
     assert os.path.isfile(
-        str(pathlib.Path(__file__).parent.joinpath("./im_region.jpg"))
+        str(pathlib.Path(__file__).parent.joinpath("im_region.jpg"))
     )
