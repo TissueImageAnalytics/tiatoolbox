@@ -68,7 +68,9 @@ class WSIReader:
 
     def slide_info(self):
         """WSI meta data reader
+
         Args:
+            self (WSIReader):
 
         Returns:
             dict: dictionary containing meta information
@@ -108,6 +110,7 @@ class WSIReader:
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
+
         Args:
             start_w (int): starting point in x-direction (along width)
             start_h (int): starting point in y-direction (along height)
