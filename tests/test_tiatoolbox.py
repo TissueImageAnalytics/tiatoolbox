@@ -80,7 +80,6 @@ def test_wsireader_slide_info(_response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,
     )
-    print(files_all[0])
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.WSIReader(input_dir, file_name+ext)
     slide_param = wsi_obj.slide_info()
