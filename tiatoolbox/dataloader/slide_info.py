@@ -11,9 +11,9 @@ def slide_info(input_path, output_dir=None):
     to run slide_info in parallel
 
     Args:
-        input_path: Path to whole slide image
-        output_dir: Path to output directory to save the output
-        workers: num of cpu cores to use for multiprocessing
+        input_path (str): Path to whole slide image
+        output_dir (str): Path to output directory to save the output
+        workers (int): num of cpu cores to use for multiprocessing
     Returns:
         list: list of dictionary Whole Slide meta information
 
