@@ -79,12 +79,11 @@ def save_yaml(input_dict, output_path="output.yaml"):
 
 
 def cv2_imwrite(image_path, cv_im):
-    """
-    Write a numpy array to an image
+    """Write a numpy array to an image
 
     Args:
-        image_path: file path (including extension) to save image
-        cv_im: image as numpy array
+        image_path (str): file path (including extension) to save image
+        cv_im (ndarray): image array of dtype uint8, MxNx3
 
     Returns:
 
