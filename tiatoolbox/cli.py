@@ -75,20 +75,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-         " default=wsi_input_dir/../im_region",
+    " default=wsi_input_dir/../im_region",
 )
 @click.option(
     "--region",
     type=int,
     nargs=4,
-    help="image region in the whole slide image to read"
-    "default=0 0 2000 2000",
+    help="image region in the whole slide image to read" "default=0 0 2000 2000",
 )
 @click.option(
-    "--level",
-    type=int,
-    help="pyramid level to read the image, "
-    "default=0",
+    "--level", type=int, help="pyramid level to read the image, " "default=0",
 )
 @click.option(
     "--mode",
@@ -104,7 +100,7 @@ def read_region(wsi_input, region=None, level=0, output_path=None, mode="show"):
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
     wsi_obj = dataloader.wsireader.WSIReader(
-        input_dir=input_dir, file_name=file_name+ext
+        input_dir=input_dir, file_name=file_name + ext
     )
     im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
     if mode == "show":
