@@ -11,13 +11,13 @@ dependencies:
   - h5py
   - matplotlib
   - numpy
-  - opencv>4.0
+  - opencv>=4.0
   - pillow
   - pip
   - pyyaml
   - requests
-  - pathos
-  - openslide
+  - pathos==0.2.5
   - pixman<0.38.0
+  - openslide
   - pip:
-    - openslide-python
+    - openslide-python==1.1.1

@@ -1,7 +1,7 @@
+Click>=7.0
 numpy
 pillow
 matplotlib
-Click
 setuptools<=45.1.0
 opencv-python>=4.0
 pathos==0.2.5
