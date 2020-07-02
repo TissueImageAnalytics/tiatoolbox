@@ -76,14 +76,14 @@ def test_slide_info(_response_ndpi, _response_svs):
 
 def test_wsireader_slide_info(_response_svs):
     """pytest for slide_info as a python function"""
-    wsi_obj = wsireader.WSIReader(str(pathlib.Path(r".")), "CMU-1.svs")
+    wsi_obj = wsireader.WSIReader(str(pathlib.Path(r"./")), "CMU-1.svs")
     slide_param = wsi_obj.slide_info()
     utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
 
 def test_wsireader_read_region(_response_svs):
     """pytest for slide_info as a python function"""
-    wsi_obj = wsireader.WSIReader(str(pathlib.Path(r".")), "CMU-1.svs")
+    wsi_obj = wsireader.WSIReader(str(pathlib.Path(r"./")), "CMU-1.svs")
     level = 0
     region = [13000, 17000, 15000, 19000]
     im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
@@ -126,3 +126,25 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
     )
 
     assert slide_info_result.exit_code == 0
+
+#
+# def test_command_line_read_region():
+#     """Test the Slide information CLI."""
+#     runner = CliRunner()
+#     read_region_result = runner.invoke(
+#         cli.main,
+#         [
+#             "read_region",
+#             "--wsi_input",
+#             "./CMU-1.ndpi",
+#             # "--level",
+#             # "0",
+#             # "--mode",
+#             # "save",
+#             # "--output_path",
+#             # "./im_region.jpg",
+#         ],
+#     )
+#
+#     assert read_region_result.exit_code == 0
+#     assert os.path.isfile("./im_region.jpg")
