@@ -62,23 +62,23 @@ def _response_svs(request):
     return _response_svs
 
 
-# def test_slide_info(_response_ndpi, _response_svs):
-#     """pytest for slide_info as a python function"""
-#     file_types = ("*.ndpi", "*.svs", "*.mrxs")
-#     files_all = utils.misc.grab_files_from_dir(
-#         input_path=str(pathlib.Path(r".")), file_types=file_types,
-#     )
-#     slide_params = slide_info(input_path=files_all, workers=2)
-#
-#     for slide_param in slide_params:
-#         utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
+def test_slide_info(_response_ndpi, _response_svs):
+    """pytest for slide_info as a python function"""
+    file_types = ("*.ndpi", "*.svs", "*.mrxs")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    slide_params = slide_info(input_path=files_all, workers=2)
+
+    for slide_param in slide_params:
+        utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
 
-def test_wsireader_slide_info(_response_svs):
+def test_wsireader_slide_info(_response_ndpi):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", )
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(r".")), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.WSIReader(input_dir, file_name+ext)
@@ -90,7 +90,7 @@ def test_wsireader_read_region(_response_ndpi):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", )
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(r".")), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.WSIReader(input_dir, file_name + ext)
@@ -102,23 +102,24 @@ def test_wsireader_read_region(_response_ndpi):
     assert im_region.dtype == 'uint8'
     assert im_region.shape == (2000, 2000, 3)
 
-# def test_command_line_help_interface():
-#     """Test the CLI help"""
-#     runner = CliRunner()
-#     result = runner.invoke(cli.main)
-#     assert result.exit_code == 0
-#     help_result = runner.invoke(cli.main, ["--help"])
-#     assert help_result.exit_code == 0
-#     assert help_result.output == result.output
-#
-#
-# def test_command_line_version():
-#     """pytest for version check"""
-#     runner = CliRunner()
-#     version_result = runner.invoke(cli.main, ["-V"])
-#     assert __version__ in version_result.output
-#
-#
+
+def test_command_line_help_interface():
+    """Test the CLI help"""
+    runner = CliRunner()
+    result = runner.invoke(cli.main)
+    assert result.exit_code == 0
+    help_result = runner.invoke(cli.main, ["--help"])
+    assert help_result.exit_code == 0
+    assert help_result.output == result.output
+
+
+def test_command_line_version():
+    """pytest for version check"""
+    runner = CliRunner()
+    version_result = runner.invoke(cli.main, ["-V"])
+    assert __version__ in version_result.output
+
+
 # def test_command_line_slide_info(_response_ndpi, _response_svs):
 #     """Test the Slide information CLI."""
 #     runner = CliRunner()
