@@ -92,8 +92,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
 @click.option(
     "--mode",
     default="show",
-    help="'show' to display meta information only or 'save' to save "
-    "the meta information, default=show",
+    help="'show' to display image region or 'save' to save at the output path"
+    ", default=show",
 )
 def read_region(wsi_input, region, level, output_path, mode):
     """Reads a region in an whole slide image as specified"""
