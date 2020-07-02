@@ -62,89 +62,63 @@ def _response_svs(request):
     return _response_svs
 
 
-def test_slide_info(_response_ndpi, _response_svs):
-    """pytest for slide_info as a python function"""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs")
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(r".")), file_types=file_types,
-    )
-    slide_params = slide_info(input_path=files_all, workers=2)
-
-    for slide_param in slide_params:
-        utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
+# def test_slide_info(_response_ndpi, _response_svs):
+#     """pytest for slide_info as a python function"""
+#     file_types = ("*.ndpi", "*.svs", "*.mrxs")
+#     files_all = utils.misc.grab_files_from_dir(
+#         input_path=str(pathlib.Path(r".")), file_types=file_types,
+#     )
+#     slide_params = slide_info(input_path=files_all, workers=2)
+#
+#     for slide_param in slide_params:
+#         utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
 
 def test_wsireader_slide_info(_response_svs):
     """pytest for slide_info as a python function"""
-    wsi_obj = wsireader.WSIReader(str(pathlib.Path(r"./")), "CMU-1.svs")
+    file_types = ("*.svs")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(r".")), file_types=file_types,
+    )
+    print(files_all[0])
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.WSIReader(input_dir, file_name+ext)
     slide_param = wsi_obj.slide_info()
     utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
 
-def test_wsireader_read_region(_response_svs):
-    """pytest for slide_info as a python function"""
-    wsi_obj = wsireader.WSIReader(str(pathlib.Path(r"./")), "CMU-1.svs")
-    level = 0
-    region = [13000, 17000, 15000, 19000]
-    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
-    assert isinstance(im_region, np.ndarray)
-    assert im_region.dtype == 'uint8'
-    assert im_region.shape == (2000, 2000, 4)
-
-
-def test_command_line_help_interface():
-    """Test the CLI help"""
-    runner = CliRunner()
-    result = runner.invoke(cli.main)
-    assert result.exit_code == 0
-    help_result = runner.invoke(cli.main, ["--help"])
-    assert help_result.exit_code == 0
-    assert help_result.output == result.output
-
-
-def test_command_line_version():
-    """pytest for version check"""
-    runner = CliRunner()
-    version_result = runner.invoke(cli.main, ["-V"])
-    assert __version__ in version_result.output
-
-
-def test_command_line_slide_info(_response_ndpi, _response_svs):
-    """Test the Slide information CLI."""
-    runner = CliRunner()
-    slide_info_result = runner.invoke(
-        cli.main,
-        [
-            "slide-info",
-            "--wsi_input",
-            ".",
-            "--file_types",
-            '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
-        ],
-    )
-
-    assert slide_info_result.exit_code == 0
-
+# def test_command_line_help_interface():
+#     """Test the CLI help"""
+#     runner = CliRunner()
+#     result = runner.invoke(cli.main)
+#     assert result.exit_code == 0
+#     help_result = runner.invoke(cli.main, ["--help"])
+#     assert help_result.exit_code == 0
+#     assert help_result.output == result.output
 #
-# def test_command_line_read_region():
+#
+# def test_command_line_version():
+#     """pytest for version check"""
+#     runner = CliRunner()
+#     version_result = runner.invoke(cli.main, ["-V"])
+#     assert __version__ in version_result.output
+#
+#
+# def test_command_line_slide_info(_response_ndpi, _response_svs):
 #     """Test the Slide information CLI."""
 #     runner = CliRunner()
-#     read_region_result = runner.invoke(
+#     slide_info_result = runner.invoke(
 #         cli.main,
 #         [
-#             "read_region",
+#             "slide-info",
 #             "--wsi_input",
-#             "./CMU-1.ndpi",
-#             # "--level",
-#             # "0",
-#             # "--mode",
-#             # "save",
-#             # "--output_path",
-#             # "./im_region.jpg",
+#             ".",
+#             "--file_types",
+#             '"*.ndpi, *.svs"',
+#             "--workers",
+#             "2",
 #         ],
 #     )
 #
-#     assert read_region_result.exit_code == 0
-#     assert os.path.isfile("./im_region.jpg")
+#     assert slide_info_result.exit_code == 0
+
