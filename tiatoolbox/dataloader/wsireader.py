@@ -125,7 +125,8 @@ class WSIReader:
             >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
             >>> level = 0
             >>> region = [13000, 17000, 15000, 19000]
-            >>> im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
+            >>> im_region = wsi_obj.read_region(
+            ...     region[0], region[1], region[2], region[3], level)
             >>> plt.imshow(im_region)
 
         """
