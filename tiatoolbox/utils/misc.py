@@ -1,5 +1,6 @@
 """Miscellaneous small functions repeatedly used in tiatoolbox"""
 import os
+import cv2
 import pathlib
 import yaml
 
@@ -75,3 +76,23 @@ def save_yaml(input_dict, output_path="output.yaml"):
     """
     with open(pathlib.Path(output_path), "w") as yaml_file:
         yaml.dump(input_dict, yaml_file)
+
+
+def cv2_imwrite(image_path, cv_im):
+    """
+    Write a numpy array to an image
+
+    Args:
+        image_path: file path (including extension) to save image
+        cv_im: image as numpy array
+
+    Returns:
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> import numpy as np
+        >>> utils.misc.cv2_imwrite('BlankImage.jpg',
+        ...     np.ones([100, 100, 3]).astype('uint8')*255)
+
+    """
+    cv2.imwrite(image_path, cv2.cvtColor(cv_im, cv2.COLOR_RGB2BGR))
