@@ -49,7 +49,7 @@ def _response_svs(request):
     if not pathlib.Path.is_file(svs_file_path):
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata"
-            "/Aperio/CMU-1.svs"
+            "/Hamamatsu/CMU-1.ndpi"
         )
         with open(svs_file_path, "wb") as f:
             f.write(r.content)
@@ -76,7 +76,7 @@ def _response_svs(request):
 
 def test_wsireader_slide_info(_response_svs):
     """pytest for slide_info as a python function"""
-    file_types = ("*.svs")
+    file_types = ("*.ndpi", )
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(r".")), file_types=file_types,
     )
@@ -85,6 +85,22 @@ def test_wsireader_slide_info(_response_svs):
     slide_param = wsi_obj.slide_info()
     utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
+
+def test_wsireader_read_region(_response_ndpi):
+    """pytest for slide_info as a python function"""
+    file_types = ("*.ndpi", )
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(r".")), file_types=file_types,
+    )
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.WSIReader(input_dir, file_name + ext)
+    level = 0
+    region = [13000, 17000, 15000, 19000]
+    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
+    im_region = im_region[:, :, 0:3]
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == 'uint8'
+    assert im_region.shape == (2000, 2000, 3)
 
 # def test_command_line_help_interface():
 #     """Test the CLI help"""
