@@ -75,7 +75,7 @@ def test_slide_info(_response_ndpi, _response_svs):
 
 
 def test_wsireader_slide_info(_response_svs):
-    """pytest for slide_info as a python function"""
+    """pytest for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
@@ -87,7 +87,7 @@ def test_wsireader_slide_info(_response_svs):
 
 
 def test_wsireader_read_region(_response_svs):
-    """pytest for slide_info as a python function"""
+    """pytest for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
