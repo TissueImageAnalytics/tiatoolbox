@@ -112,7 +112,7 @@ def read_region(wsi_input, region, level, output_path, mode):
         im_region.show()
 
     if mode == "save":
-        utils.misc.cv2_imwrite(output_path, im_region)
+        utils.misc.imwrite(output_path, im_region)
 
 
 if __name__ == "__main__":

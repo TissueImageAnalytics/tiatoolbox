@@ -78,11 +78,11 @@ def save_yaml(input_dict, output_path="output.yaml"):
         yaml.dump(input_dict, yaml_file)
 
 
-def cv2_imwrite(image_path, cv_im):
+def imwrite(image_path, cv_im):
     """Write a numpy array to an image
 
     Args:
-        image_path (str): file path (including extension) to save image
+        image_path (str, pathlib.Path): file path (including extension) to save image
         cv_im (ndarray): image array of dtype uint8, MxNx3
 
     Returns:
@@ -90,8 +90,10 @@ def cv2_imwrite(image_path, cv_im):
     Examples:
         >>> from tiatoolbox import utils
         >>> import numpy as np
-        >>> utils.misc.cv2_imwrite('BlankImage.jpg',
+        >>> utils.misc.imwrite('BlankImage.jpg',
         ...     np.ones([100, 100, 3]).astype('uint8')*255)
 
     """
+    if isinstance(image_path, pathlib.Path):
+        image_path = str(image_path)
     cv2.imwrite(image_path, cv2.cvtColor(cv_im, cv2.COLOR_RGB2BGR))
