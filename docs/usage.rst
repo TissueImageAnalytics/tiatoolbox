@@ -48,4 +48,4 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, cv2_imwrite
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite

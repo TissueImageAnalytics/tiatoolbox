@@ -61,6 +61,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 def save_yaml(input_dict, output_path="output.yaml"):
     """Save dictionary as yaml
+
     Args:
         input_dict (dict): A variable of type 'dict'
         output_path (str, pathlib.Path): Path to save the output file
