@@ -12,6 +12,14 @@ with open("HISTORY.rst") as history_file:
 
 requirements = [
     "Click>=7.0",
+    "numpy",
+    "pillow",
+    "matplotlib",
+    "setuptools<=45.1.0",
+    "opencv-python>=4.0",
+    "pathos==0.2.5",
+    "openslide-python==1.1.1",
+    "pyyaml",
 ]
 
 setup_requirements = [
