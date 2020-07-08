@@ -2,10 +2,12 @@
 
 import pathlib
 import numpy as np
-
-# from PIL import Image
-
 import openslide
+import math
+import pandas as pd
+from PIL import Image
+
+from tiatoolbox.utils import misc
 
 
 class WSIReader:
@@ -75,6 +77,11 @@ class WSIReader:
         Returns:
             dict: dictionary containing meta information
 
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> slide_param = wsi_obj.slide_info()
+
         """
         input_dir = self.input_dir
         if self.objective_power == 0:
@@ -137,5 +144,126 @@ class WSIReader:
         im_region = openslide_obj.read_region(
             [start_w, start_h], level, [end_w - start_w, end_h - start_h]
         )
-        im_region = np.asarray(im_region)
+        im_region = np.asarray(im_region)[:, :, 0:3]
         return im_region
+
+    def save_tiles(self):
+        """Generate JPEG tiles from whole slide images
+
+        Args:
+            self (WSIReader):
+
+        Returns:
+            saves tiles in the output directory output_dir
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi",
+            ...     output_dir='./dev_test',
+            ...     tile_objective_value=10,
+            ...     tile_read_size_h=2000,
+            ...     tile_read_size_w=2000)
+            >>> wsi_obj.save_tiles()
+
+        """
+        openslide_obj = self.openslide_obj
+        tile_objective_value = self.tile_objective_value
+        tile_read_size = self.tile_read_size
+
+        if self.objective_power == 0:
+            self.objective_power = np.int(
+                openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+            )
+
+        rescale = np.int(self.objective_power / tile_objective_value)
+        tile_read_size = np.multiply(tile_read_size, rescale)
+        slide_dimension = openslide_obj.level_dimensions[0]
+        slide_h = slide_dimension[1]
+        slide_w = slide_dimension[0]
+        tile_h = tile_read_size[0]
+        tile_w = tile_read_size[1]
+
+        iter_tot = 0
+        output_dir = pathlib.Path(self.output_dir)
+        output_dir.mkdir(parents=True)
+        data = []
+        for h in range(int(math.ceil((slide_h - tile_h) / tile_h + 1))):
+            for w in range(int(math.ceil((slide_w - tile_w) / tile_w + 1))):
+                start_h = h * tile_h
+                end_h = (h * tile_h) + tile_h
+                start_w = w * tile_w
+                end_w = (w * tile_w) + tile_w
+                if end_h > slide_h:
+                    end_h = slide_h
+
+                if end_w > slide_w:
+                    end_w = slide_w
+                #
+                im = self.read_region(start_w, start_h, end_w, end_h)
+                format_str = \
+                    "Tile%d:  start_w:%d, end_w:%d, " \
+                    "start_h:%d, end_h:%d, " \
+                    "width:%d, height:%d"
+
+                print(
+                    format_str
+                    % (
+                        iter_tot,
+                        start_w,
+                        end_w,
+                        start_h,
+                        end_h,
+                        end_w - start_w,
+                        end_h - start_h,
+                    ),
+                    flush=True,
+                )
+
+                if rescale != 1:
+                    im = misc.imresize(im, rescale)
+
+                img_save_name = (
+                    "Tile"
+                    + "_"
+                    + str(tile_objective_value)
+                    + "_"
+                    + str(int(start_w / rescale))
+                    + "_"
+                    + str(int(start_h / rescale))
+                    + ".jpg"
+                )
+
+                misc.imwrite(
+                    image_path=output_dir.joinpath(img_save_name),
+                    img=im
+                )
+
+                data.append(
+                    [
+                        iter_tot,
+                        img_save_name,
+                        start_w,
+                        end_w,
+                        start_h,
+                        end_h,
+                        im.shape[0],
+                        im.shape[1],
+                    ]
+                )
+                iter_tot += 1
+
+        df = pd.DataFrame(
+            data,
+            columns=[
+                "iter",
+                "Tile_Name",
+                "start_w",
+                "end_w",
+                "start_h",
+                "end_h",
+                "size_w",
+                "size_h",
+            ],
+        )
+        df.to_csv(output_dir.joinpath("Output.csv"), index=False)
