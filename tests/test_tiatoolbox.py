@@ -118,6 +118,13 @@ def test_wsireader_slide_thumbnail(_response_svs):
     assert slide_thumbnail.dtype == "uint8"
 
 
+def test_imresize():
+    """pytest for read region as a python function"""
+    img = np.zeros((2000, 2000, 3))
+    resized_img = utils.misc.imresize(img, 0.5)
+    assert resized_img.shape == (1000, 1000, 3)
+
+
 def test_wsireader_slide_save_tiles(_response_svs):
     """pytest for read region as a python function"""
     file_types = ("*.svs",)
