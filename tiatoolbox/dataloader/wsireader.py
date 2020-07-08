@@ -201,10 +201,11 @@ class WSIReader:
                     end_w = slide_w
                 #
                 im = self.read_region(start_w, start_h, end_w, end_h)
-                format_str = \
-                    "Tile%d:  start_w:%d, end_w:%d, " \
-                    "start_h:%d, end_h:%d, " \
+                format_str = (
+                    "Tile%d:  start_w:%d, end_w:%d, "
+                    "start_h:%d, end_h:%d, "
                     "width:%d, height:%d"
+                )
 
                 print(
                     format_str
@@ -234,10 +235,7 @@ class WSIReader:
                     + ".jpg"
                 )
 
-                misc.imwrite(
-                    image_path=output_dir.joinpath(img_save_name),
-                    img=im
-                )
+                misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
 
                 data.append(
                     [
@@ -270,8 +268,7 @@ class WSIReader:
 
         slide_thumb = self.slide_thumbnail()
 
-        misc.imwrite(output_dir.joinpath("slide_thumbnail.jpg"),
-                     img=slide_thumb)
+        misc.imwrite(output_dir.joinpath("slide_thumbnail.jpg"), img=slide_thumb)
 
     def slide_thumbnail(self):
         """Read whole slide image thumbnail at 1.5x
