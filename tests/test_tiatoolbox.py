@@ -241,7 +241,7 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
         [
             "slide-info",
             "--wsi_input",
-            ".",
+            str(pathlib.Path(__file__).parent),
             "--file_types",
             '"*.ndpi, *.svs"',
             "--workers",
@@ -297,3 +297,22 @@ def test_command_line_slide_thumbnail(_response_ndpi):
 
     assert read_region_result.exit_code == 0
     assert pathlib.Path(__file__).parent.joinpath("slide_thumb.jpg").is_file()
+
+
+def test_command_line_save_tiles(_response_ndpi, _response_svs):
+    """Test the Save tiles CLI."""
+    runner = CliRunner()
+    save_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "save-tiles",
+            "--wsi_input",
+            str(pathlib.Path(__file__).parent),
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--workers",
+            "2",
+        ],
+    )
+
+    assert save_tiles_result.exit_code == 0

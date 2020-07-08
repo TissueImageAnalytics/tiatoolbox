@@ -148,5 +148,72 @@ def slide_thumbnail(wsi_input, output_path, mode):
         utils.misc.imwrite(output_path, slide_thumb)
 
 
+@main.command()
+@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option(
+    "--output_dir",
+    default="tiles",
+    help="Path to output directory to save the output, default=tiles",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    default="*.ndpi, *.svs, *.mrxs",
+)
+@click.option(
+    "--tile_objective_value",
+    type=int,
+    default=20,
+    help="objective value at which tile is generated, " "default=20",
+)
+@click.option(
+    "--tile_read_size_w",
+    type=int,
+    default=5000,
+    help="tile width, " "default=5000",
+)
+@click.option(
+    "--tile_read_size_h",
+    type=int,
+    default=5000,
+    help="tile height, " "default=5000",
+)
+@click.option(
+    "--workers",
+    type=int,
+    help="num of cpu cores to use for multiprocessing, "
+    "default=multiprocessing.cpu_count()",
+)
+def save_tiles(wsi_input,
+               output_dir,
+               file_types,
+               tile_objective_value,
+               tile_read_size_w,
+               tile_read_size_h,
+               workers=None):
+    """Displays or saves WSI metadata"""
+    file_types = tuple(file_types.split(", "))
+    if os.path.isdir(wsi_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=wsi_input, file_types=file_types
+        )
+    elif os.path.isfile(wsi_input):
+        files_all = [
+            wsi_input,
+        ]
+    else:
+        raise ValueError("wsi_input path is not valid")
+
+    print(files_all)
+
+    dataloader.save_tiles.save_tiles(input_path=files_all,
+                                     output_dir=output_dir,
+                                     tile_objective_value=tile_objective_value,
+                                     tile_read_size_w=tile_read_size_w,
+                                     tile_read_size_h=tile_read_size_h,
+                                     workers=workers
+                                     )
+
+
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover
