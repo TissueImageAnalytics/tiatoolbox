@@ -1,13 +1,11 @@
 """WSIReader for WSI reading or extracting metadata information from WSIs"""
+from tiatoolbox.utils import misc
 
 import pathlib
 import numpy as np
 import openslide
 import math
 import pandas as pd
-from PIL import Image
-
-from tiatoolbox.utils import misc
 
 
 class WSIReader:
@@ -147,6 +145,39 @@ class WSIReader:
         im_region = np.asarray(im_region)[:, :, 0:3]
         return im_region
 
+    def slide_thumbnail(self):
+        """Read whole slide image thumbnail at 1.5x
+
+        Args:
+            self (WSIReader):
+
+        Returns:
+            ndarray : image array
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+
+        """
+        openslide_obj = self.openslide_obj
+        tile_objective_value = self.tile_objective_value
+
+        if self.objective_power == 0:
+            self.objective_power = np.int(
+                openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+            )
+
+        rescale = np.int(self.objective_power / tile_objective_value)
+        slide_dimension = openslide_obj.level_dimensions[0]
+        slide_dimension_20x = np.array(slide_dimension) / rescale
+        thumb = openslide_obj.get_thumbnail(
+            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
+        )
+        thumb = np.asarray(thumb)
+
+        return thumb
+
     def save_tiles(self):
         """Generate JPEG tiles from whole slide images
 
@@ -188,6 +219,7 @@ class WSIReader:
         output_dir = pathlib.Path(self.output_dir)
         output_dir.mkdir(parents=True)
         data = []
+
         for h in range(int(math.ceil((slide_h - tile_h) / tile_h + 1))):
             for w in range(int(math.ceil((slide_w - tile_w) / tile_w + 1))):
                 start_h = h * tile_h
@@ -199,7 +231,8 @@ class WSIReader:
 
                 if end_w > slide_w:
                     end_w = slide_w
-                #
+
+                # Read image region
                 im = self.read_region(start_w, start_h, end_w, end_h)
                 format_str = (
                     "Tile%d:  start_w:%d, end_w:%d, "
@@ -221,6 +254,7 @@ class WSIReader:
                     flush=True,
                 )
 
+                # Rescale to the correct objective value
                 if rescale != 1:
                     im = misc.imresize(im, rescale)
 
@@ -251,6 +285,7 @@ class WSIReader:
                 )
                 iter_tot += 1
 
+        # Save information on each slide to relate to the whole slide image
         df = pd.DataFrame(
             data,
             columns=[
@@ -266,39 +301,6 @@ class WSIReader:
         )
         df.to_csv(output_dir.joinpath("Output.csv"), index=False)
 
+        # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
-
         misc.imwrite(output_dir.joinpath("slide_thumbnail.jpg"), img=slide_thumb)
-
-    def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.5x
-
-        Args:
-            self (WSIReader):
-
-        Returns:
-            ndarray : image array
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
-
-        """
-        openslide_obj = self.openslide_obj
-        tile_objective_value = self.tile_objective_value
-
-        if self.objective_power == 0:
-            self.objective_power = np.int(
-                openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-            )
-
-        rescale = np.int(self.objective_power / tile_objective_value)
-        slide_dimension = openslide_obj.level_dimensions[0]
-        slide_dimension_20x = np.array(slide_dimension) / rescale
-        thumb = openslide_obj.get_thumbnail(
-            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
-        )
-        thumb = np.asarray(thumb)
-
-        return thumb

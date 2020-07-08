@@ -6,8 +6,8 @@ from tiatoolbox.utils import misc
 
 @TIAMultiProcess(iter_on="input_path")
 def slide_info(input_path, output_dir=None):
-    """Single file run to output or save WSI meta data. Multiprocessing uses this function
-    to run slide_info in parallel
+    """Whole slide image meta data for single file. Multiprocessing decorator runs this
+    function in parallel using the number of specified cpu cores.
 
     Args:
         input_path (str): Path to whole slide image
