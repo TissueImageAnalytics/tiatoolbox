@@ -128,17 +128,30 @@ def test_wsireader_slide_save_tiles(_response_svs):
     wsi_obj = wsireader.WSIReader(
         input_dir,
         file_name + ext,
-        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles")))
+        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles")),
+    )
     wsi_obj.save_tiles()
-    assert pathlib.Path(__file__).\
-        parent.joinpath("tiles").\
-        joinpath("CMU-1.svs").joinpath("Output.txt").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.svs").joinpath("slide_thumbnail.jpg").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.svs").joinpath("Tile_20_0_0.jpg").exists()
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles")
+        .joinpath("CMU-1.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles")
+        .joinpath("CMU-1.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles")
+        .joinpath("CMU-1.svs")
+        .joinpath("Tile_20_0_0.jpg")
+        .exists()
+    )
     shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles"))
 
 
@@ -148,26 +161,55 @@ def test_save_tiles(_response_ndpi, _response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
-    save_tiles(input_path=files_all, workers=2)
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.svs").joinpath("Output.txt").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.svs").joinpath("slide_thumbnail.jpg").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.svs").joinpath("Tile_20_0_0.jpg").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.ndpi").joinpath("Output.txt").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.ndpi").joinpath("slide_thumbnail.jpg").exists()
-    assert pathlib.Path(__file__). \
-        parent.joinpath("tiles"). \
-        joinpath("CMU-1.ndpi").joinpath("Tile_20_0_0.jpg").exists()
-    shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles"))
+    save_tiles(
+        input_path=files_all,
+        workers=2,
+        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.svs")
+        .joinpath("Tile_20_0_0.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("Tile_20_0_0.jpg")
+        .exists()
+    )
+    shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
+
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
