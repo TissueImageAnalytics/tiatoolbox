@@ -77,7 +77,8 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
             >>> slide_param = wsi_obj.slide_info()
 
         """
@@ -130,7 +131,8 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
             >>> level = 0
             >>> region = [13000, 17000, 15000, 19000]
             >>> im_region = wsi_obj.read_region(
@@ -156,7 +158,8 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
             >>> slide_thumbnail = wsi_obj.slide_thumbnail()
 
         """
