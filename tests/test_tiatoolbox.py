@@ -277,3 +277,23 @@ def test_command_line_read_region(_response_ndpi):
 
     assert read_region_result.exit_code == 0
     assert os.path.isfile(str(pathlib.Path(__file__).parent.joinpath("im_region.jpg")))
+
+
+def test_command_line_slide_thumbnail(_response_ndpi):
+    """Test the Read Region CLI."""
+    runner = CliRunner()
+    read_region_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(__file__).parent.joinpath("CMU-1.ndpi")),
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(__file__).parent.joinpath("slide_thumb.jpg")),
+        ],
+    )
+
+    assert read_region_result.exit_code == 0
+    assert pathlib.Path(__file__).parent.joinpath("slide_thumb.jpg").is_file()

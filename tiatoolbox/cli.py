@@ -115,5 +115,38 @@ def read_region(wsi_input, region, level, output_path, mode):
         utils.misc.imwrite(output_path, im_region)
 
 
+@main.command()
+@click.option("--wsi_input", help="Path to WSI file")
+@click.option(
+    "--output_path",
+    help="Path to output file to save the image region in save mode,"
+    " default=wsi_input_dir/../im_region",
+)
+@click.option(
+    "--mode",
+    default="show",
+    help="'show' to display image region or 'save' to save at the output path"
+    ", default=show",
+)
+def slide_thumbnail(wsi_input, output_path, mode):
+    """Reads whole slide image thumbnail"""
+
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
+    if output_path is None and mode == "save":
+        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
+    wsi_obj = dataloader.wsireader.WSIReader(
+        input_dir=input_dir, file_name=file_name + ext
+    )
+
+    slide_thumb = wsi_obj.slide_thumbnail()
+
+    if mode == "show":
+        im_region = Image.fromarray(slide_thumb)
+        im_region.show()
+
+    if mode == "save":
+        utils.misc.imwrite(output_path, slide_thumb)
+
+
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover
