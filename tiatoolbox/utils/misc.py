@@ -79,12 +79,12 @@ def save_yaml(input_dict, output_path="output.yaml"):
         yaml.dump(input_dict, yaml_file)
 
 
-def imwrite(image_path, cv_im):
+def imwrite(image_path, img):
     """Write a numpy array to an image
 
     Args:
         image_path (str, pathlib.Path): file path (including extension) to save image
-        cv_im (ndarray): image array of dtype uint8, MxNx3
+        img (ndarray): image array of dtype uint8, MxNx3
 
     Returns:
 
@@ -97,4 +97,26 @@ def imwrite(image_path, cv_im):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
-    cv2.imwrite(image_path, cv2.cvtColor(cv_im, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+
+
+def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
+    """Resize input image
+
+    Args:
+        img (ndarray): input image
+        scale_factor (float): scaling factor to resize the input image
+        interpolation (int): interpolation, default=cv2.INTER_CUBIC
+
+    Returns:
+        ndarray: resized image
+
+    """
+    # Estimate new dimension
+    width = int(img.shape[1] * scale_factor)
+    height = int(img.shape[0] * scale_factor)
+    dim = (width, height)
+    # Resize image
+    resized_img = cv2.resize(img, dim, interpolation=interpolation)
+
+    return resized_img
