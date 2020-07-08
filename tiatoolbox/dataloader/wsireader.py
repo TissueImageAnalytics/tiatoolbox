@@ -267,3 +267,41 @@ class WSIReader:
             ],
         )
         df.to_csv(output_dir.joinpath("Output.csv"), index=False)
+
+        slide_thumb = self.slide_thumbnail()
+
+        misc.imwrite(output_dir.joinpath("slide_thumbnail.jpg"),
+                     img=slide_thumb)
+
+    def slide_thumbnail(self):
+        """Read whole slide image thumbnail at 1.5x
+
+        Args:
+            self (WSIReader):
+
+        Returns:
+            ndarray : image array
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+
+        """
+        openslide_obj = self.openslide_obj
+        tile_objective_value = self.tile_objective_value
+
+        if self.objective_power == 0:
+            self.objective_power = np.int(
+                openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+            )
+
+        rescale = np.int(self.objective_power / tile_objective_value)
+        slide_dimension = openslide_obj.level_dimensions[0]
+        slide_dimension_20x = np.array(slide_dimension) / rescale
+        thumb = openslide_obj.get_thumbnail(
+            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
+        )
+        thumb = np.asarray(thumb)
+
+        return thumb
