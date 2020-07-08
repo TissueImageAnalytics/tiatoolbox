@@ -4,6 +4,7 @@ from tiatoolbox.decorators.multiproc import TIAMultiProcess
 from tiatoolbox.utils import misc
 
 
+@TIAMultiProcess(iter_on="input_path")
 def save_tiles(input_path,
                output_dir="tiles",
                tile_objective_value=20,
@@ -30,7 +31,7 @@ def save_tiles(input_path,
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
         >>> files_all = misc.grab_files_from_dir(input_path,
         ...     file_types=file_types)
-        >>> save_tiles(input_path=files_all[0],
+        >>> save_tiles(input_path=files_all,
         ...     output_dir="tiles",
         ...     tile_objective_value=10,
         ...     tile_read_size_w=5000,
