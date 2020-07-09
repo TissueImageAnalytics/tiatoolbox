@@ -50,16 +50,22 @@ tiatoolbox --help
 
 ::
 
-    usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
-                     {slide_info}
+    usage: tiatoolbox [-h] [--version]
+                     {read-region,
+                      save-tiles,
+                      slide_info,
+                      slide-thumbnail,
+                      }
                      ...
 
     positional arguments:
-      {slide_info}
-        slide_info          usage: python -m tiatoolbox slide_info -h
+      {read-region, save-tiles, slide_info, slide-thumbnail}
+
+    read-region         usage: python -m tiatoolbox read-region -h
+    save-tiles          usage: python -m tiatoolbox save-tiles -h
+    slide-info          usage: python -m tiatoolbox slide-info -h
+    slide-thumbnail     usage: python -m tiatoolbox slide-thumbnail -h
 
     optional arguments:
       -h, --help            show this help message and exit
       --version             show program`s version number and exit
-      --verbose VERBOSE
-
