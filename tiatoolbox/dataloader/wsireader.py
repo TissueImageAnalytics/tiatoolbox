@@ -164,7 +164,7 @@ class WSIReader:
 
         """
         openslide_obj = self.openslide_obj
-        tile_objective_value = self.tile_objective_value
+        tile_objective_value = 20
 
         if self.objective_power == 0:
             self.objective_power = np.int(

@@ -106,7 +106,7 @@ def test_wsireader_read_region(_response_svs):
 
 
 def test_wsireader_slide_thumbnail(_response_svs):
-    """pytest for read region as a python function"""
+    """pytest for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
@@ -119,14 +119,14 @@ def test_wsireader_slide_thumbnail(_response_svs):
 
 
 def test_imresize():
-    """pytest for read region as a python function"""
+    """pytest for imresize"""
     img = np.zeros((2000, 2000, 3))
     resized_img = utils.misc.imresize(img, 0.5)
     assert resized_img.shape == (1000, 1000, 3)
 
 
-def test_wsireader_slide_save_tiles(_response_svs):
-    """pytest for read region as a python function"""
+def test_wsireader_save_tiles(_response_svs):
+    """pytest for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
@@ -163,7 +163,7 @@ def test_wsireader_slide_save_tiles(_response_svs):
 
 
 def test_save_tiles(_response_ndpi, _response_svs):
-    """pytest for slide_info as a python function"""
+    """pytest for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
@@ -287,7 +287,7 @@ def test_command_line_read_region(_response_ndpi):
 
 
 def test_command_line_slide_thumbnail(_response_ndpi):
-    """Test the Read Region CLI."""
+    """Test the Slide Thumbnail CLI."""
     runner = CliRunner()
     read_region_result = runner.invoke(
         cli.main,
