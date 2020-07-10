@@ -24,4 +24,4 @@ python:
 
 # Use conda to to manage environment
 conda:
-  environment: requirements.conda.yml
+  environment: requirements.dev.conda.yml
