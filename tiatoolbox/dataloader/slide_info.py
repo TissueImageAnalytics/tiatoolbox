@@ -1,13 +1,15 @@
 """Get Slide Meta Data information"""
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
-from tiatoolbox.utils import misc
+
+import os
 
 
 @TIAMultiProcess(iter_on="input_path")
 def slide_info(input_path, output_dir=None):
-    """Whole slide image meta data for single file. Multiprocessing decorator runs this
-    function in parallel using the number of specified cpu cores.
+    """Single file run to output or save WSI meta data.
+
+    Multiprocessing uses this function to run slide_info in parallel
 
     Args:
         input_path (str): Path to whole slide image
@@ -30,13 +32,14 @@ def slide_info(input_path, output_dir=None):
 
     """
 
-    input_dir, file_name, ext = misc.split_path_name_ext(input_path)
+    input_dir, file_name = os.path.split(input_path)
 
-    print(file_name+ext, flush=True)
+    print(file_name, flush=True)
+    _, file_type = os.path.splitext(file_name)
 
-    if ext in (".svs", ".ndpi", ".mrxs"):
+    if file_type in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.WSIReader(
-            input_dir=input_dir, file_name=file_name+ext, output_dir=output_dir
+            input_dir=input_dir, file_name=file_name, output_dir=output_dir
         )
         info = wsi_reader.slide_info()
     else:

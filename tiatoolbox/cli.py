@@ -40,6 +40,7 @@ def main():
 )
 @click.option(
     "--mode",
+    default="show",
     help="'show' to display meta information only or 'save' to save "
     "the meta information, default=show",
 )
@@ -52,22 +53,42 @@ def main():
 def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     """Displays or saves WSI metadata"""
     file_types = tuple(file_types.split(", "))
+
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=wsi_input, file_types=file_types
         )
+        if output_dir is None and mode == "save":
+            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
+            output_dir = pathlib.Path(input_dir).joinpath("meta")
+
     elif os.path.isfile(wsi_input):
         files_all = [
             wsi_input,
         ]
+        if output_dir is None and mode == "save":
+            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
+            output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
     else:
         raise ValueError("wsi_input path is not valid")
 
     print(files_all)
 
-    dataloader.slide_info.slide_info(
-        input_path=files_all, output_dir=output_dir, mode=mode, workers=workers,
+    slide_params = dataloader.slide_info.slide_info(
+        input_path=files_all, workers=workers,
     )
+
+    if mode == "show":
+        for slide_param in slide_params:
+            print(slide_param)
+
+    if mode == "save":
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for slide_param in slide_params:
+            utils.misc.save_yaml(slide_param,
+                                 pathlib.Path(output_dir)
+                                 .joinpath(slide_param["file_name"] + ".yaml"))
+        print("Meta files saved at " + str(output_dir))
 
 
 @main.command()
