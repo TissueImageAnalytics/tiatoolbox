@@ -1,11 +1,10 @@
-=======
 Credits
 =======
 
 Development Lead
 ----------------
 
-* TIA Lab <tialab@dcs.warwick.ac.uk>
+-   TIA Lab &lt;<tialab@dcs.warwick.ac.uk>&gt;
 
 Contributors
 ------------
