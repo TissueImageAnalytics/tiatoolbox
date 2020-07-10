@@ -68,7 +68,9 @@ class WSIReader:
 
     def slide_info(self):
         """WSI meta data reader
+
         Args:
+            self (WSIReader):
 
         Returns:
             dict: dictionary containing meta information
@@ -105,3 +107,35 @@ class WSIReader:
         }
 
         return param
+
+    def read_region(self, start_w, start_h, end_w, end_h, level=0):
+        """Read a region in whole slide image
+
+        Args:
+            start_w (int): starting point in x-direction (along width)
+            start_h (int): starting point in y-direction (along height)
+            end_w (int): end point in x-direction (along width)
+            end_h (int): end point in y-direction (along height)
+            level (int): pyramid level to read the image
+
+        Returns:
+            img_array : ndarray of size MxNx3
+            M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./", file_name="CMU-1.ndpi")
+            >>> level = 0
+            >>> region = [13000, 17000, 15000, 19000]
+            >>> im_region = wsi_obj.read_region(
+            ...     region[0], region[1], region[2], region[3], level)
+            >>> plt.imshow(im_region)
+
+        """
+        openslide_obj = self.openslide_obj
+        im_region = openslide_obj.read_region(
+            [start_w, start_h], level, [end_w - start_w, end_h - start_h]
+        )
+        im_region = np.asarray(im_region)
+        return im_region
