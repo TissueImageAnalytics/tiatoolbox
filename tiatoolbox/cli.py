@@ -85,9 +85,10 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     if mode == "save":
         output_dir.mkdir(parents=True, exist_ok=True)
         for slide_param in slide_params:
-            utils.misc.save_yaml(slide_param,
-                                 pathlib.Path(output_dir)
-                                 .joinpath(slide_param["file_name"] + ".yaml"))
+            utils.misc.save_yaml(
+                slide_param,
+                pathlib.Path(output_dir).joinpath(slide_param["file_name"] + ".yaml"),
+            )
         print("Meta files saved at " + str(output_dir))
 
 
@@ -188,16 +189,10 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="objective value at which tile is generated, " "default=20",
 )
 @click.option(
-    "--tile_read_size_w",
-    type=int,
-    default=5000,
-    help="tile width, " "default=5000",
+    "--tile_read_size_w", type=int, default=5000, help="tile width, " "default=5000",
 )
 @click.option(
-    "--tile_read_size_h",
-    type=int,
-    default=5000,
-    help="tile height, " "default=5000",
+    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
 )
 @click.option(
     "--workers",
@@ -205,13 +200,15 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="num of cpu cores to use for multiprocessing, "
     "default=multiprocessing.cpu_count()",
 )
-def save_tiles(wsi_input,
-               output_dir,
-               file_types,
-               tile_objective_value,
-               tile_read_size_w,
-               tile_read_size_h,
-               workers=None):
+def save_tiles(
+    wsi_input,
+    output_dir,
+    file_types,
+    tile_objective_value,
+    tile_read_size_w,
+    tile_read_size_h,
+    workers=None,
+):
     """Displays or saves WSI metadata"""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(wsi_input):
@@ -227,13 +224,14 @@ def save_tiles(wsi_input,
 
     print(files_all)
 
-    dataloader.save_tiles.save_tiles(input_path=files_all,
-                                     output_dir=output_dir,
-                                     tile_objective_value=tile_objective_value,
-                                     tile_read_size_w=tile_read_size_w,
-                                     tile_read_size_h=tile_read_size_h,
-                                     workers=workers
-                                     )
+    dataloader.save_tiles.save_tiles(
+        input_path=files_all,
+        output_dir=output_dir,
+        tile_objective_value=tile_objective_value,
+        tile_read_size_w=tile_read_size_w,
+        tile_read_size_h=tile_read_size_h,
+        workers=workers,
+    )
 
 
 if __name__ == "__main__":

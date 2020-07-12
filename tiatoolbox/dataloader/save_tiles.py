@@ -5,12 +5,13 @@ from tiatoolbox.utils import misc
 
 
 @TIAMultiProcess(iter_on="input_path")
-def save_tiles(input_path,
-               output_dir="tiles",
-               tile_objective_value=20,
-               tile_read_size_w=5000,
-               tile_read_size_h=5000
-               ):
+def save_tiles(
+    input_path,
+    output_dir="tiles",
+    tile_objective_value=20,
+    tile_read_size_w=5000,
+    tile_read_size_h=5000,
+):
     """Save JPEG image tiles for whole slide image. Multiprocessing decorator runs this
     function in parallel using the number of specified cpu cores.
 
@@ -51,7 +52,7 @@ def save_tiles(input_path,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
             tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h
+            tile_read_size_h=tile_read_size_h,
         )
         wsi_reader.save_tiles()
     else:
