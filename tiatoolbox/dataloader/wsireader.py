@@ -144,7 +144,7 @@ class WSIReader:
         im_region = openslide_obj.read_region(
             [start_w, start_h], level, [end_w - start_w, end_h - start_h]
         )
-        im_region = np.asarray(im_region)[:, :, 0:3]
+        im_region = np.asarray(im_region.convert('RGB'))
         return im_region
 
     def slide_thumbnail(self):
