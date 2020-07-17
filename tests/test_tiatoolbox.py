@@ -47,11 +47,11 @@ def _response_svs(request):
     Sample pytest fixture for svs images
     Download ndpi image for pytest
     """
-    svs_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1.svs")
+    svs_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1-Small-Region.svs")
     if not pathlib.Path.is_file(svs_file_path):
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata"
-            "/Aperio/CMU-1.svs"
+            "/Aperio/CMU-1-Small-Region.svs"
         )
         with open(svs_file_path, "wb") as f:
             f.write(r.content)
@@ -141,21 +141,21 @@ def test_wsireader_save_tiles(_response_svs):
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles")
-        .joinpath("CMU-1.svs")
+        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Output.csv")
         .exists()
     )
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles")
-        .joinpath("CMU-1.svs")
+        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("slide_thumbnail.jpg")
         .exists()
     )
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles")
-        .joinpath("CMU-1.svs")
+        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Tile_20_0_0.jpg")
         .exists()
     )
@@ -176,21 +176,21 @@ def test_save_tiles(_response_ndpi, _response_svs):
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
-        .joinpath("CMU-1.svs")
+        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Output.csv")
         .exists()
     )
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
-        .joinpath("CMU-1.svs")
+        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("slide_thumbnail.jpg")
         .exists()
     )
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
-        .joinpath("CMU-1.svs")
+        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Tile_20_0_0.jpg")
         .exists()
     )
