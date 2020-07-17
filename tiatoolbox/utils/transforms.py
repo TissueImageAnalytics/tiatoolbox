@@ -13,6 +13,15 @@ def background_composite(image, fill=255):
     Returns:
         ndarray: image with background composite
 
+    Examples:
+        >>> from tiatoolbox.utils import transforms
+        >>> from matplotlib import pyplot as plt
+        >>> img_with_alpha = np.zeros((2000, 2000, 4)).astype('uint8')
+        >>> img_with_alpha[:1000, :, 3] = 255 # edit alpha channel
+        >>> img_back_composite = transforms.background_composite(img_with_alpha)
+        >>> plt.imshow(im_with_alpha)
+        >>> plt.imshow(img_back_composite)
+
     """
 
     if not isinstance(image, Image.Image):
