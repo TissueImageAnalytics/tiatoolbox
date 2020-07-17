@@ -1,6 +1,36 @@
 History
 =======
 
+0.2.2 (2020-07-12)
+------------------
+
+### Major and Feature Improvements
+
+-   None
+
+### Changes to API
+
+-   None
+
+### Bug Fixes and Other Changes
+
+-   Fix command line interface for `slide-info` feature and travis pypi deployment
+
+0.2.1 (2020-07-10)
+------------------
+
+### Major and Feature Improvements
+
+-   None
+
+### Changes to API
+
+-   None
+
+### Bug Fixes and Other Changes
+
+-   Minor changes to configuration files.
+
 0.2.0 (2020-07-10)
 ------------------
 
