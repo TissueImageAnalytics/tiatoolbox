@@ -1,5 +1,6 @@
 """WSIReader for WSI reading or extracting metadata information from WSIs"""
 from tiatoolbox.utils import misc
+from tiatoolbox.utils.transforms import background_composite
 
 import pathlib
 import numpy as np
@@ -144,7 +145,7 @@ class WSIReader:
         im_region = openslide_obj.read_region(
             [start_w, start_h], level, [end_w - start_w, end_h - start_h]
         )
-        im_region = np.asarray(im_region.convert('RGB'))
+        im_region = background_composite(image=im_region)
         return im_region
 
     def slide_thumbnail(self):

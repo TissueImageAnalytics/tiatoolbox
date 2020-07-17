@@ -125,6 +125,15 @@ def test_imresize():
     assert resized_img.shape == (1000, 1000, 3)
 
 
+def test_background_composite():
+    """pytest for background composit"""
+    new_im = np.zeros((2000, 2000, 4)).astype('uint8')
+    new_im[:1000, :, 3] = 255
+    im = utils.transforms.background_composite(new_im)
+    assert np.all(im[1000:, :, :] == 255)
+    assert np.all(im[:1000, :, :] == 0)
+
+
 def test_wsireader_save_tiles(_response_svs):
     """pytest for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
