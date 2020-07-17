@@ -186,7 +186,7 @@ class WSIReader:
 
         Args:
             self (WSIReader):
-            tile_format (str): file format to save image tiles, default='.jpg'
+            tile_format (str): file format to save image tiles, default=".jpg"
 
         Returns:
             saves tiles in the output directory output_dir
