@@ -181,11 +181,12 @@ class WSIReader:
 
         return thumb
 
-    def save_tiles(self):
+    def save_tiles(self, tile_format=".jpg"):
         """Generate JPEG tiles from whole slide images
 
         Args:
             self (WSIReader):
+            tile_format (str): file format to save image tiles, default='.jpg'
 
         Returns:
             saves tiles in the output directory output_dir
@@ -262,14 +263,15 @@ class WSIReader:
                     im = misc.imresize(im, rescale)
 
                 img_save_name = (
-                    "Tile"
-                    + "_"
-                    + str(tile_objective_value)
-                    + "_"
-                    + str(int(start_w / rescale))
-                    + "_"
-                    + str(int(start_h / rescale))
-                    + ".jpg"
+                    "_".join(
+                        [
+                            "Tile",
+                            str(tile_objective_value),
+                            str(int(start_w / rescale)),
+                            str(int(start_h / rescale)),
+                        ]
+                    )
+                    + tile_format
                 )
 
                 misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
@@ -306,4 +308,6 @@ class WSIReader:
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
-        misc.imwrite(output_dir.joinpath("slide_thumbnail.jpg"), img=slide_thumb)
+        misc.imwrite(
+            output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
+        )
