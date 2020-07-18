@@ -58,11 +58,11 @@ class WSIReader:
         self.openslide_obj = openslide.OpenSlide(
             filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
-        self.tile_objective_value = np.int(tile_objective_value)
+        self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
         self.objective_power = np.int(
             self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-        )
+        )  # magnification at which slide is scanned, this is magnification at level 0
         self.level_count = self.openslide_obj.level_count
         self.level_dimensions = self.openslide_obj.level_dimensions
         self.level_downsamples = self.openslide_obj.level_downsamples
