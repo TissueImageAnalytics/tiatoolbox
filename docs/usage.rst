@@ -27,6 +27,13 @@ dataloader.slide_info
 .. automodule:: tiatoolbox.dataloader.slide_info
     :members: slide_info
 
+^^^^^^^^^^^^^^^^^^^^^
+dataloader.save_tiles
+^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.dataloader.save_tiles
+    :members: save_tiles
+
 ----------
 Decorators
 ----------
@@ -48,4 +55,10 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, imresize
+
+^^^^^^^^^^
+utils.transforms
+^^^^^^^^^^
+.. automodule:: tiatoolbox.utils.transforms
+    :members: background_composite
