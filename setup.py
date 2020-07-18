@@ -20,6 +20,7 @@ requirements = [
     "pathos==0.2.5",
     "openslide-python==1.1.1",
     "pyyaml",
+    "pandas",
 ]
 
 setup_requirements = [
