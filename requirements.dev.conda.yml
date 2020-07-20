@@ -19,6 +19,7 @@ dependencies:
   - pathos==0.2.5
   - pixman<0.38.0
   - openslide
+  - recommonmark
   - pandas
   - pip:
-    - openslide-python==1.1.1
+      - openslide-python==1.1.1

@@ -4,10 +4,10 @@
 
 from setuptools import setup, find_packages
 
-with open("README.rst") as readme_file:
+with open("README.md") as readme_file:
     readme = readme_file.read()
 
-with open("HISTORY.rst") as history_file:
+with open("HISTORY.md") as history_file:
     history = history_file.read()
 
 requirements = [
@@ -20,6 +20,7 @@ requirements = [
     "pathos==0.2.5",
     "openslide-python==1.1.1",
     "pyyaml",
+    "pandas",
 ]
 
 setup_requirements = [
@@ -47,6 +48,7 @@ setup(
     entry_points={"console_scripts": ["tiatoolbox=tiatoolbox.cli:main", ], },
     install_requires=requirements,
     long_description=readme + "\n\n" + history,
+    long_description_content_type="text/markdown",
     include_package_data=True,
     keywords="tiatoolbox",
     name="tiatoolbox",
@@ -55,6 +57,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/tialab/tiatoolbox",
-    version="0.2.1",
+    version="0.3.0",
     zip_safe=False,
 )
