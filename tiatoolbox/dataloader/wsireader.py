@@ -254,7 +254,7 @@ class WSIReader:
 
 
 class OpenSlideWSIReader(WSIReader):
-    """Class for handling OpenSlide supported whole-slide images.
+    """Class for reading OpenSlide supported whole-slide images.
 
     Attributes:
         openslide_obj (:obj:`openslide.OpenSlide`)
