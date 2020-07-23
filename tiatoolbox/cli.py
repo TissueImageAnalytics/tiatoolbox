@@ -50,7 +50,12 @@ def main():
     help="num of cpu cores to use for multiprocessing, "
     "default=multiprocessing.cpu_count()",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
+@click.option(
+    "--verbose",
+    type=bool,
+    help="Print output, default=True",
+)
+def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=True):
     """Displays or saves WSI metadata"""
     file_types = tuple(file_types.split(", "))
 
@@ -75,7 +80,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     print(files_all)
 
     slide_params = dataloader.slide_info.slide_info(
-        input_path=files_all, workers=workers,
+        input_path=files_all, workers=workers, verbose=verbose
     )
 
     if mode == "show":

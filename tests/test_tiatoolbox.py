@@ -70,7 +70,7 @@ def test_slide_info(_response_ndpi, _response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
-    slide_params = slide_info(input_path=files_all, workers=2)
+    slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
 
     for slide_param in slide_params:
         utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
