@@ -17,8 +17,9 @@ dataloader.wsireader
 ^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.dataloader.wsireader
-    :members: WSIReader
+    :members: WSIReader, OpenSlideWSIReader
     :special-members: __init__
+    :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^^^^
 dataloader.slide_info
