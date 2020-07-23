@@ -77,7 +77,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
             input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
             output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
     else:
-        raise ValueError("wsi_input path is not valid")
+        raise FileNotFoundError
 
     print(files_all)
 
@@ -152,7 +152,7 @@ def read_region(wsi_input, region, level, output_path, mode):
         if mode == "save":
             utils.misc.imwrite(output_path, im_region)
     else:
-        raise Exception("File Type not supported!")
+        raise FileNotSupported
 
 
 @main.command()

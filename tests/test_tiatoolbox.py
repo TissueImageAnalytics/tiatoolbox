@@ -345,7 +345,7 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
             "--workers",
             "2",
             "--mode",
-            "save",
+            "show",
         ],
     )
 
@@ -377,6 +377,24 @@ def test_command_line_read_region(_response_ndpi):
 
     assert read_region_result.exit_code == 0
     assert os.path.isfile(str(pathlib.Path(__file__).parent.joinpath("im_region.jpg")))
+
+    read_region_result = runner.invoke(
+        cli.main,
+        [
+            "read-region",
+            "--wsi_input",
+            str(pathlib.Path(__file__).parent.joinpath("CMU-1.ndpi")),
+            "--level",
+            "0",
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(__file__).parent.joinpath("im_region2.jpg")),
+        ],
+    )
+
+    assert read_region_result.exit_code == 0
+    assert os.path.isfile(str(pathlib.Path(__file__).parent.joinpath("im_region2.jpg")))
 
 
 def test_command_line_slide_thumbnail(_response_ndpi):
@@ -418,3 +436,24 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
     )
 
     assert save_tiles_result.exit_code == 0
+    file_types = "*.svs"
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    save_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "save-tiles",
+            "--wsi_input",
+            files_all[0],
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--workers",
+            "2",
+            "--tile_objective_value",
+            "5",
+        ],
+    )
+
+    assert save_tiles_result.exit_code == 0
+
