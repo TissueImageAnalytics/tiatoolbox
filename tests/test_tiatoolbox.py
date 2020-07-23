@@ -183,6 +183,7 @@ def test_save_tiles(_response_ndpi, _response_svs):
         workers=2,
         tile_objective_value=5,
         output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+        verbose=True,
     )
     assert (
         pathlib.Path(__file__)

@@ -53,6 +53,7 @@ def main():
 @click.option(
     "--verbose",
     type=bool,
+    default=True,
     help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=True):
@@ -222,6 +223,12 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="num of cpu cores to use for multiprocessing, "
     "default=multiprocessing.cpu_count()",
 )
+@click.option(
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
+)
 def save_tiles(
     wsi_input,
     output_dir,
@@ -230,6 +237,7 @@ def save_tiles(
     tile_read_size_w,
     tile_read_size_h,
     workers=None,
+    verbose=True,
 ):
     """Displays or saves WSI metadata"""
     file_types = tuple(file_types.split(", "))
@@ -252,6 +260,7 @@ def save_tiles(
         tile_objective_value=tile_objective_value,
         tile_read_size_w=tile_read_size_w,
         tile_read_size_h=tile_read_size_h,
+        verbose=verbose,
         workers=workers,
     )
 
