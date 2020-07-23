@@ -83,8 +83,8 @@ def test_wsireader_slide_info(_response_svs):
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
-    wsi_obj = wsireader.WSIReader(input_dir, file_name + ext)
-    slide_param = wsi_obj.slide_info()
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    slide_param = wsi_obj.slide_info
     utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
 
@@ -95,7 +95,7 @@ def test_wsireader_read_region(_response_svs):
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
-    wsi_obj = wsireader.WSIReader(input_dir, file_name + ext)
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     level = 0
     region = [13000, 17000, 15000, 19000]
     im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
@@ -112,7 +112,7 @@ def test_wsireader_slide_thumbnail(_response_svs):
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
-    wsi_obj = wsireader.WSIReader(input_dir, file_name + ext)
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     slide_thumbnail = wsi_obj.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
@@ -141,10 +141,11 @@ def test_wsireader_save_tiles(_response_svs):
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
-    wsi_obj = wsireader.WSIReader(
+    wsi_obj = wsireader.OpenSlideWSIReader(
         input_dir,
         file_name + ext,
         output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles")),
+        tile_objective_value=5,
     )
     wsi_obj.save_tiles()
     assert (
@@ -165,7 +166,7 @@ def test_wsireader_save_tiles(_response_svs):
         pathlib.Path(__file__)
         .parent.joinpath("tiles")
         .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Tile_20_0_0.jpg")
+        .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
     shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles"))
@@ -180,6 +181,7 @@ def test_save_tiles(_response_ndpi, _response_svs):
     save_tiles(
         input_path=files_all,
         workers=2,
+        tile_objective_value=5,
         output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
     )
     assert (
@@ -200,7 +202,7 @@ def test_save_tiles(_response_ndpi, _response_svs):
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
         .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Tile_20_0_0.jpg")
+        .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
     assert (
@@ -221,7 +223,7 @@ def test_save_tiles(_response_ndpi, _response_svs):
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
         .joinpath("CMU-1.ndpi")
-        .joinpath("Tile_20_0_0.jpg")
+        .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
     shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
@@ -328,6 +330,8 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
             '"*.ndpi, *.svs"',
             "--workers",
             "2",
+            "--tile_objective_value",
+            "5",
         ],
     )
 
