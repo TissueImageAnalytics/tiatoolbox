@@ -47,7 +47,7 @@ def save_tiles(
     print(file_name + ext, flush=True)
 
     if ext in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.WSIReader(
+        wsi_reader = wsireader.OpenSlideWSIReader(
             input_dir=input_dir,
             file_name=file_name + ext,
             output_dir=output_dir,

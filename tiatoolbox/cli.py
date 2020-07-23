@@ -122,19 +122,30 @@ def read_region(wsi_input, region, level, output_path, mode):
     if all(region):
         region = [0, 0, 2000, 2000]
 
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
+    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
+        full_path=wsi_input
+    )
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi_obj = dataloader.wsireader.WSIReader(
-        input_dir=input_dir, file_name=file_name + ext
-    )
-    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
-    if mode == "show":
-        im_region = Image.fromarray(im_region)
-        im_region.show()
 
-    if mode == "save":
-        utils.misc.imwrite(output_path, im_region)
+    wsi_obj = None
+    if file_type in (".svs", ".ndpi", ".mrxs"):
+        wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
+            input_dir=input_dir, file_name=file_name + file_type
+        )
+
+    if wsi_obj is not None:
+        im_region = wsi_obj.read_region(
+            region[0], region[1], region[2], region[3], level
+        )
+        if mode == "show":
+            im_region = Image.fromarray(im_region)
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(output_path, im_region)
+    else:
+        raise Exception("File Type not supported!")
 
 
 @main.command()
@@ -153,21 +164,27 @@ def read_region(wsi_input, region, level, output_path, mode):
 def slide_thumbnail(wsi_input, output_path, mode):
     """Reads whole slide image thumbnail"""
 
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
+    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
+        full_path=wsi_input
+    )
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi_obj = dataloader.wsireader.WSIReader(
-        input_dir=input_dir, file_name=file_name + ext
-    )
+    wsi_obj = None
+    if file_type in (".svs", ".ndpi", ".mrxs"):
+        wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
+            input_dir=input_dir, file_name=file_name + file_type
+        )
+    if wsi_obj is not None:
+        slide_thumb = wsi_obj.slide_thumbnail()
 
-    slide_thumb = wsi_obj.slide_thumbnail()
+        if mode == "show":
+            im_region = Image.fromarray(slide_thumb)
+            im_region.show()
 
-    if mode == "show":
-        im_region = Image.fromarray(slide_thumb)
-        im_region.show()
-
-    if mode == "save":
-        utils.misc.imwrite(output_path, slide_thumb)
+        if mode == "save":
+            utils.misc.imwrite(output_path, slide_thumb)
+    else:
+        raise Exception("File Type not supported!")
 
 
 @main.command()

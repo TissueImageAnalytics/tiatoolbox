@@ -6,7 +6,7 @@ import os
 
 
 @TIAMultiProcess(iter_on="input_path")
-def slide_info(input_path, output_dir=None):
+def slide_info(input_path, output_dir=None, verbose=1):
     """Single file run to output or save WSI meta data.
 
     Multiprocessing uses this function to run slide_info in parallel
@@ -34,14 +34,15 @@ def slide_info(input_path, output_dir=None):
 
     input_dir, file_name = os.path.split(input_path)
 
-    print(file_name, flush=True)
+    if verbose:
+        print(file_name, flush=True)
     _, file_type = os.path.splitext(file_name)
 
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.WSIReader(
+        wsi_reader = wsireader.OpenSlideWSIReader(
             input_dir=input_dir, file_name=file_name, output_dir=output_dir
         )
-        info = wsi_reader.slide_info()
+        info = wsi_reader.slide_info
     else:
         print("File type not supported")
         info = None
