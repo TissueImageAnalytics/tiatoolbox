@@ -2,6 +2,7 @@
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
 from tiatoolbox import utils
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 import sys
 import click
@@ -125,7 +126,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
 )
 def read_region(wsi_input, region, level, output_path, mode):
     """Reads a region in an whole slide image as specified"""
-    if all(region):
+    if not region:
         region = [0, 0, 2000, 2000]
 
     input_dir, file_name, file_type = utils.misc.split_path_name_ext(
@@ -190,7 +191,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
         if mode == "save":
             utils.misc.imwrite(output_path, slide_thumb)
     else:
-        raise Exception("File Type not supported!")
+        raise FileNotSupported
 
 
 @main.command()
@@ -250,7 +251,7 @@ def save_tiles(
             wsi_input,
         ]
     else:
-        raise ValueError("wsi_input path is not valid")
+        raise FileNotFoundError
 
     print(files_all)
 

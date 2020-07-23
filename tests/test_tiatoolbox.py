@@ -289,11 +289,9 @@ def test_exception_tests():
         )
 
 
-
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
-
 
 def test_command_line_help_interface():
     """Test the CLI help"""
@@ -325,6 +323,29 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
             '"*.ndpi, *.svs"',
             "--workers",
             "2",
+            "--mode",
+            "save",
+        ],
+    )
+
+    assert slide_info_result.exit_code == 0
+
+    file_types = "*.svs"
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    slide_info_result = runner.invoke(
+        cli.main,
+        [
+            "slide-info",
+            "--wsi_input",
+            files_all[0],
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--workers",
+            "2",
+            "--mode",
+            "save",
         ],
     )
 
@@ -361,7 +382,7 @@ def test_command_line_read_region(_response_ndpi):
 def test_command_line_slide_thumbnail(_response_ndpi):
     """Test the Slide Thumbnail CLI."""
     runner = CliRunner()
-    read_region_result = runner.invoke(
+    slide_thumb_result = runner.invoke(
         cli.main,
         [
             "slide-thumbnail",
@@ -374,7 +395,7 @@ def test_command_line_slide_thumbnail(_response_ndpi):
         ],
     )
 
-    assert read_region_result.exit_code == 0
+    assert slide_thumb_result.exit_code == 0
     assert pathlib.Path(__file__).parent.joinpath("slide_thumb.jpg").is_file()
 
 
