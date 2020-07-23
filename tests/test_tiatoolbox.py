@@ -75,6 +75,11 @@ def test_slide_info(_response_ndpi, _response_svs):
     for slide_param in slide_params:
         utils.misc.save_yaml(slide_param, slide_param["file_name"] + ".yaml")
 
+    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
+    utils.misc.save_yaml(
+        unwrapped_slide_info(input_path=files_all[0], verbose=True),
+        "test.yaml")
+
 
 def test_wsireader_slide_info(_response_svs):
     """pytest for slide_info in WSIReader class as a python function"""
