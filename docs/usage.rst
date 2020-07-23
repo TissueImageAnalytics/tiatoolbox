@@ -63,3 +63,9 @@ utils.transforms
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.transforms
     :members: background_composite
+
+^^^^^^^^^^
+utils.exceptions
+^^^^^^^^^^
+.. automodule:: tiatoolbox.utils.exceptions
+    :members: FileNotSupported

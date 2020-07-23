@@ -2,6 +2,7 @@
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
 from tiatoolbox.utils import misc
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 @TIAMultiProcess(iter_on="input_path")
@@ -59,4 +60,4 @@ def save_tiles(
         )
         wsi_reader.save_tiles(verbose=verbose)
     else:
-        raise Exception("File type not supported")
+        raise FileNotSupported

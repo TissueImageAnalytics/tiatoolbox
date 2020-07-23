@@ -1,6 +1,7 @@
 """Get Slide Meta Data information"""
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 import os
 
@@ -46,7 +47,6 @@ def slide_info(input_path, output_dir=None, verbose=True):
         if verbose:
             print(info)
     else:
-        print("File type not supported")
-        info = None
+        raise FileNotSupported
 
     return info
