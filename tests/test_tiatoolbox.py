@@ -235,6 +235,41 @@ def test_save_tiles(_response_ndpi, _response_svs):
     shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
 
 
+def test_save_tiles_unwrap(_response_svs):
+    file_types = ("*.svs", "*.mrxs")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
+    unwrapped_save_tiles(
+        input_path=files_all[0],
+        tile_objective_value=5,
+        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(__file__)
+            .parent.joinpath("tiles_save_tiles")
+            .joinpath("CMU-1-Small-Region.svs")
+            .joinpath("Output.csv")
+            .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+            .parent.joinpath("tiles_save_tiles")
+            .joinpath("CMU-1-Small-Region.svs")
+            .joinpath("slide_thumbnail.jpg")
+            .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+            .parent.joinpath("tiles_save_tiles")
+            .joinpath("CMU-1-Small-Region.svs")
+            .joinpath("Tile_5_0_0.jpg")
+            .exists()
+    )
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
