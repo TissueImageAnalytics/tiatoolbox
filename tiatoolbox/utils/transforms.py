@@ -30,8 +30,9 @@ def background_composite(image, fill=255):
 
     image = image.convert("RGBA")
 
-    composite = Image.fromarray(np.full(list(image.size[::-1]) + [4], fill,
-                                        dtype=np.uint8))
+    composite = Image.fromarray(
+        np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8)
+    )
     composite.alpha_composite(image)
     composite = np.asarray(composite.convert("RGB"))
     return composite
