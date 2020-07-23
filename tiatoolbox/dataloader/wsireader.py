@@ -96,7 +96,7 @@ class WSIReader:
             M=end_h-start_h, N=end_w-start_w
 
         """
-        pass
+        raise NotImplementedError
 
     def slide_thumbnail(self):
         """Read whole slide image thumbnail at 1.25x
@@ -108,7 +108,7 @@ class WSIReader:
             ndarray : image array
 
         """
-        pass
+        raise NotImplementedError
 
     def save_tiles(self, tile_format=".jpg"):
         """Generate image tiles from whole slide images.
@@ -270,9 +270,6 @@ class OpenSlideWSIReader(WSIReader):
         tile_read_size_w=5000,
         tile_read_size_h=5000,
     ):
-        """
-        file_path (string): path to single whole-slide image
-        """
         super().__init__(
             input_dir=input_dir,
             file_name=file_name,
@@ -340,7 +337,7 @@ class OpenSlideWSIReader(WSIReader):
         objective_power = np.int(
             self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         )
-        objective_power = objective_power
+
         slide_dimension = self.openslide_obj.level_dimensions[0]
         tile_objective_value = self.tile_objective_value
         rescale = np.int(objective_power / tile_objective_value)
