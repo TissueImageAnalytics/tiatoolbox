@@ -57,6 +57,6 @@ def save_tiles(
             tile_read_size_w=tile_read_size_w,
             tile_read_size_h=tile_read_size_h,
         )
-        wsi_reader.save_tiles()
+        wsi_reader.save_tiles(verbose=verbose)
     else:
         raise Exception("File type not supported")

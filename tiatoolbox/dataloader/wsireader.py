@@ -110,7 +110,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def save_tiles(self, tile_format=".jpg"):
+    def save_tiles(self, tile_format=".jpg", verbose=True):
         """Generate image tiles from whole slide images.
 
         Args:
@@ -178,25 +178,27 @@ class WSIReader:
 
                 # Read image region
                 im = self.read_region(start_w, start_h, end_w, end_h, level)
-                format_str = (
-                    "Tile%d:  start_w:%d, end_w:%d, "
-                    "start_h:%d, end_h:%d, "
-                    "width:%d, height:%d"
-                )
 
-                print(
-                    format_str
-                    % (
-                        iter_tot,
-                        start_w,
-                        end_w,
-                        start_h,
-                        end_h,
-                        end_w - start_w,
-                        end_h - start_h,
-                    ),
-                    flush=True,
-                )
+                if verbose:
+                    format_str = (
+                        "Tile%d:  start_w:%d, end_w:%d, "
+                        "start_h:%d, end_h:%d, "
+                        "width:%d, height:%d"
+                    )
+
+                    print(
+                        format_str
+                        % (
+                            iter_tot,
+                            start_w,
+                            end_w,
+                            start_h,
+                            end_h,
+                            end_w - start_w,
+                            end_h - start_h,
+                        ),
+                        flush=True,
+                    )
 
                 # Rescale to the correct objective value
                 if rescale != 1:

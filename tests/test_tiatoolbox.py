@@ -147,7 +147,7 @@ def test_wsireader_save_tiles(_response_svs):
         output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles")),
         tile_objective_value=5,
     )
-    wsi_obj.save_tiles()
+    wsi_obj.save_tiles(verbose=True)
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles")
