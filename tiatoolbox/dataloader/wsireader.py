@@ -1,6 +1,5 @@
 """WSIReader for WSI reading or extracting metadata information from WSIs"""
-from tiatoolbox.utils import misc
-from tiatoolbox.utils.transforms import background_composite
+from tiatoolbox.utils import misc, transforms
 
 import pathlib
 import numpy as np
@@ -116,6 +115,7 @@ class WSIReader:
         Args:
             self (WSIReader):
             tile_format (str): file format to save image tiles, default=".jpg"
+            verbose (bool): Print output, default=True
 
         Returns:
             saves tiles in the output directory output_dir
@@ -202,7 +202,7 @@ class WSIReader:
 
                 # Rescale to the correct objective value
                 if rescale != 1:
-                    im = misc.imresize(im, rescale)
+                    im = transforms.imresize(im, rescale)
 
                 img_save_name = (
                     "_".join(
@@ -316,7 +316,7 @@ class OpenSlideWSIReader(WSIReader):
         im_region = openslide_obj.read_region(
             [start_w, start_h], level, [end_w - start_w, end_h - start_h]
         )
-        im_region = background_composite(image=im_region)
+        im_region = transforms.background_composite(image=im_region)
         return im_region
 
     def __slide_info__(self):

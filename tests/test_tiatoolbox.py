@@ -127,7 +127,7 @@ def test_wsireader_slide_thumbnail(_response_svs):
 def test_imresize():
     """pytest for imresize"""
     img = np.zeros((2000, 2000, 3))
-    resized_img = utils.misc.imresize(img, 0.5)
+    resized_img = utils.transforms.imresize(img, 0.5)
     assert resized_img.shape == (1000, 1000, 3)
 
 

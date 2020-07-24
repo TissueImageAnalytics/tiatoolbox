@@ -56,13 +56,13 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, imresize
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite
 
 ^^^^^^^^^^
 utils.transforms
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.transforms
-    :members: background_composite
+    :members: background_composite, imresize
 
 ^^^^^^^^^^
 utils.exceptions
