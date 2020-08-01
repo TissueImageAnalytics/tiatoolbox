@@ -72,13 +72,14 @@ The full text of the licence is also included in [LICENSE.md](LICENSE.md).
 [GNU General Public License (Version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
 
 
+Auxiliary Files
+---------------
+
+Auxiliary files which are downloaded from sources outside of this repository, such as pre-trained model weights, are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+
 Dual License
 ------------
 
 If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk) and Warwick Ventures (ventures@warwick.ac.uk).
 
-
-Auxiliary Files
----------------
-
-Auxiliary files which are downloaded from sources outside of this repository, such as pre-trained model weights, are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
