@@ -52,7 +52,7 @@ class WSIReader:
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
         self.slide_info = None
 
-    def __slide_info__(self):
+    def __slide_info(self):
         """WSI meta data reader
 
         Args:
@@ -283,7 +283,7 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_obj = openslide.OpenSlide(
             filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
-        self.slide_info = self.__slide_info__()
+        self.slide_info = self.__slide_info()
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
@@ -319,7 +319,7 @@ class OpenSlideWSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    def __slide_info__(self):
+    def __slide_info(self):
         """WSI meta data reader
 
         Args:
@@ -332,7 +332,7 @@ class OpenSlideWSIReader(WSIReader):
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi_obj = wsireader.WSIReader(input_dir="./",
             ...     file_name="CMU-1.ndpi")
-            >>> slide_param = wsi_obj.__slide_info__()
+            >>> slide_param = wsi_obj.__slide_info()
 
         """
         input_dir = self.input_dir
