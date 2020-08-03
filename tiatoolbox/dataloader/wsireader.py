@@ -1,5 +1,6 @@
 """WSIReader for WSI reading or extracting metadata information from WSIs"""
 from tiatoolbox.utils import misc, transforms
+from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
 import numpy as np
@@ -50,7 +51,7 @@ class WSIReader:
 
         self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
-        self.slide_info = None
+        self.slide_info = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
 
     def __slide_info(self):
         """WSI meta data reader
@@ -62,22 +63,7 @@ class WSIReader:
             dict: dictionary containing meta information
 
         """
-        param = {
-            "input_dir": self.input_dir,
-            "objective_power": None,
-            "slide_dimension": None,
-            "rescale": None,
-            "tile_objective_value": None,
-            "filename": None,
-            "tile_read_size": None,
-            "level_count": None,
-            "level_dimensions": None,
-            "level_downsamples": None,
-            "vendor": None,
-            "mpp_x": None,
-            "mpp_y": None,
-            "file_name": None,
-        }
+        param = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
         return param
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
@@ -134,13 +120,13 @@ class WSIReader:
         tile_objective_value = self.tile_objective_value
         tile_read_size = self.tile_read_size
 
-        rescale = self.slide_info["objective_power"] / tile_objective_value
+        rescale = self.slide_info.objective_power / tile_objective_value
         if rescale.is_integer():
             try:
                 level = np.log2(rescale)
                 if level.is_integer():
                     level = np.int(level)
-                    slide_dimension = self.slide_info["level_dimensions"][level]
+                    slide_dimension = self.slide_info.level_dimensions[level]
                     rescale = 1
                 else:
                     raise ValueError
@@ -148,7 +134,7 @@ class WSIReader:
             # in level_dimensions
             except (IndexError, ValueError):
                 level = 0
-                slide_dimension = self.slide_info["level_dimensions"][level]
+                slide_dimension = self.slide_info.level_dimensions[level]
                 rescale = np.int(rescale)
         else:
             raise ValueError("rescaling factor must be an integer.")
@@ -326,13 +312,7 @@ class OpenSlideWSIReader(WSIReader):
             self (OpenSlideWSIReader):
 
         Returns:
-            dict: dictionary containing meta information
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_param = wsi_obj.__slide_info()
+            WSIMeta: containing meta information
 
         """
         input_dir = self.input_dir
@@ -343,7 +323,6 @@ class OpenSlideWSIReader(WSIReader):
         slide_dimension = self.openslide_obj.level_dimensions[0]
         tile_objective_value = self.tile_objective_value
         rescale = np.int(objective_power / tile_objective_value)
-        filename = self.file_name
         tile_read_size = self.tile_read_size
         level_count = self.openslide_obj.level_count
         level_dimensions = self.openslide_obj.level_dimensions
@@ -353,22 +332,21 @@ class OpenSlideWSIReader(WSIReader):
         mpp_x = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X],)
         mpp_y = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y],)
 
-        param = {
-            "input_dir": input_dir,
-            "objective_power": objective_power,
-            "slide_dimension": slide_dimension,
-            "rescale": rescale,
-            "tile_objective_value": tile_objective_value,
-            "filename": filename,
-            "tile_read_size": tile_read_size.tolist(),
-            "level_count": level_count,
-            "level_dimensions": level_dimensions,
-            "level_downsamples": level_downsamples,
-            "vendor": vendor,
-            "mpp_x": mpp_x,
-            "mpp_y": mpp_y,
-            "file_name": file_name,
-        }
+        param = WSIMeta(
+            input_dir=input_dir,
+            objective_power=objective_power,
+            slide_dimension=slide_dimension,
+            rescale=rescale,
+            tile_objective_value=tile_objective_value,
+            tile_read_size=tile_read_size.tolist(),
+            level_count=level_count,
+            level_dimensions=level_dimensions,
+            level_downsamples=level_downsamples,
+            vendor=vendor,
+            mpp_x=mpp_x,
+            mpp_y=mpp_y,
+            file_name=file_name,
+        )
 
         return param
 
@@ -391,8 +369,8 @@ class OpenSlideWSIReader(WSIReader):
         openslide_obj = self.openslide_obj
         tile_objective_value = 20
 
-        rescale = np.int(self.slide_info["objective_power"] / tile_objective_value)
-        slide_dimension = self.slide_info["level_dimensions"][0]
+        rescale = np.int(self.slide_info.objective_power / tile_objective_value)
+        slide_dimension = self.slide_info.level_dimensions[0]
         slide_dimension_20x = np.array(slide_dimension) / rescale
         thumb = openslide_obj.get_thumbnail(
             (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))

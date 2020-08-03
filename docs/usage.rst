@@ -21,6 +21,13 @@ dataloader.wsireader
     :special-members: __init__
     :show-inheritance:
 
+^^^^^^^^^^^^^^^^^^
+dataloader.wsimeta
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.dataloader.wsimeta
+    :members: WSIMeta
+
 ^^^^^^^^^^^^^^^^^^^^^
 dataloader.slide_info
 ^^^^^^^^^^^^^^^^^^^^^

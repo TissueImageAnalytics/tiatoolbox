@@ -87,13 +87,13 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
 
     if mode == "show":
         for slide_param in slide_params:
-            print(slide_param)
+            print(slide_param.as_dict())
 
     if mode == "save":
         output_dir.mkdir(parents=True, exist_ok=True)
         for slide_param in slide_params:
             utils.misc.save_yaml(
-                slide_param,
+                slide_param.as_dict(),
                 pathlib.Path(output_dir).joinpath(slide_param["file_name"] + ".yaml"),
             )
         print("Meta files saved at " + str(output_dir))

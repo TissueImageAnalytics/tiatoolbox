@@ -27,9 +27,9 @@ def slide_info(input_path, output_dir=None, verbose=True):
         ...     file_types=file_types)
         >>> slide_params = slide_info(input_path=files_all, workers=2)
         >>> for slide_param in slide_params:
-        ...        utils.misc.save_yaml(slide_param,
-        ...             slide_param["file_name"] + ".yaml")
-        ...        print(slide_param)
+        ...        utils.misc.save_yaml(slide_param.as_dict(),
+        ...             slide_param.file_name + ".yaml")
+        ...        print(slide_param.as_dict())
 
     """
 
@@ -45,7 +45,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
         )
         info = wsi_reader.slide_info
         if verbose:
-            print(info)
+            print(info.as_dict())
     else:
         raise FileNotSupported(file_type + " file format is not supported.")
 
