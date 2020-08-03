@@ -13,7 +13,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
     Args:
         input_path (str): Path to whole slide image
         output_dir (str): Path to output directory to save the output
-        verbose(bool): Print output, default=True
+        verbose (bool): Print output, default=True
         workers (int): num of cpu cores to use for multiprocessing
 
     Returns:
@@ -47,6 +47,6 @@ def slide_info(input_path, output_dir=None, verbose=True):
         if verbose:
             print(info)
     else:
-        raise FileNotSupported
+        raise FileNotSupported(file_type + " file format is not supported.")
 
     return info
