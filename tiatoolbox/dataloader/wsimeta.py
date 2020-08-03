@@ -20,17 +20,17 @@ class WSIMeta:
                  ):
         self.input_dir = input_dir
         self.file_name = file_name
-        self.objective_power = objective_power,
-        self.slide_dimension = slide_dimension,
-        self.rescale = rescale,
-        self.tile_objective_value = tile_objective_value,
-        self.tile_read_size = tile_read_size,
-        self.level_count = level_count,
-        self.level_dimensions = level_dimensions,
-        self.level_downsamples = level_downsamples,
-        self.vendor = vendor,
-        self.mpp_x = mpp_x,
-        self.mpp_y = mpp_y,
+        self.objective_power = objective_power
+        self.slide_dimension = slide_dimension
+        self.rescale = rescale
+        self.tile_objective_value = tile_objective_value
+        self.tile_read_size = tile_read_size
+        self.level_count = level_count
+        self.level_dimensions = level_dimensions
+        self.level_downsamples = level_downsamples
+        self.vendor = vendor
+        self.mpp_x = mpp_x
+        self.mpp_y = mpp_y
 
     def as_dict(self):
         """
