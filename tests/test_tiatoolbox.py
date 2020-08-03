@@ -73,8 +73,8 @@ def test_slide_info(_response_ndpi, _response_svs):
     )
     slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
 
-    for i in range(len(slide_params)):
-        utils.misc.save_yaml(slide_params[i], slide_params[i].file_name + ".yaml")
+    for _, slide_param in enumerate(slide_params):
+        utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
 
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     utils.misc.save_yaml(
@@ -91,7 +91,7 @@ def test_wsireader_slide_info(_response_svs):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     slide_param = wsi_obj.slide_info
-    utils.misc.save_yaml(slide_param, slide_param.file_name + ".yaml")
+    utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
 
 
 def test_wsireader_read_region(_response_svs):
