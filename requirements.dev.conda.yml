@@ -21,5 +21,6 @@ dependencies:
   - openslide
   - recommonmark
   - pandas
+  - glymur
   - pip:
       - openslide-python==1.1.1

@@ -20,3 +20,4 @@ pillow
 matplotlib
 pyyaml
 pandas
+glymur

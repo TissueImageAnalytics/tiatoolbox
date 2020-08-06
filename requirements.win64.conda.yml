@@ -19,5 +19,6 @@ dependencies:
   - pathos==0.2.5
   - pixman<0.38.0
   - pandas
+  - glymur
   - pip:
     - openslide-python
