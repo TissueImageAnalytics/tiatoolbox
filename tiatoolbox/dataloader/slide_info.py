@@ -4,8 +4,6 @@ from tiatoolbox.decorators.multiproc import TIAMultiProcess
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import split_path_name_ext
 
-import os
-
 
 @TIAMultiProcess(iter_on="input_path")
 def slide_info(input_path, output_dir=None, verbose=True):
