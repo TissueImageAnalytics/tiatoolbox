@@ -390,28 +390,28 @@ def test_exception_tests():
         )
 
 
-# # -------------------------------------------------------------------------------------
-# # Command Line Interface
-# # -------------------------------------------------------------------------------------
-#
-#
-# def test_command_line_help_interface():
-#     """Test the CLI help"""
-#     runner = CliRunner()
-#     result = runner.invoke(cli.main)
-#     assert result.exit_code == 0
-#     help_result = runner.invoke(cli.main, ["--help"])
-#     assert help_result.exit_code == 0
-#     assert help_result.output == result.output
-#
-#
-# def test_command_line_version():
-#     """pytest for version check"""
-#     runner = CliRunner()
-#     version_result = runner.invoke(cli.main, ["-V"])
-#     assert __version__ in version_result.output
-#
-#
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_command_line_help_interface():
+    """Test the CLI help"""
+    runner = CliRunner()
+    result = runner.invoke(cli.main)
+    assert result.exit_code == 0
+    help_result = runner.invoke(cli.main, ["--help"])
+    assert help_result.exit_code == 0
+    assert help_result.output == result.output
+
+
+def test_command_line_version():
+    """pytest for version check"""
+    runner = CliRunner()
+    version_result = runner.invoke(cli.main, ["-V"])
+    assert __version__ in version_result.output
+
+
 # def test_command_line_slide_info(_response_ndpi, _response_svs, _response_jp2):
 #     """Test the Slide information CLI."""
 #     runner = CliRunner()
