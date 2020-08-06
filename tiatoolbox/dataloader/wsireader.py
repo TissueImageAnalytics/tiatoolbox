@@ -37,10 +37,10 @@ class WSIReader:
         Args:
             input_dir (str, pathlib.Path): input path to WSI directory
             file_name (str): file name of the WSI
-            output_dir (str, pathlib.Path): output directory to save the output,
-                default=./output
-            tile_objective_value (int): objective value at which tile is generated,
-                default=20
+            output_dir (str, pathlib.Path): output directory to save the
+            output, default=./output
+            tile_objective_value (int): objective value at which tile
+            is generated, default=20
             tile_read_size_w (int): tile width, default=5000
             tile_read_size_h (int): tile height, default=5000
 
@@ -335,9 +335,12 @@ class OpenSlideWSIReader(WSIReader):
         level_dimensions = self.openslide_obj.level_dimensions
         level_downsamples = self.openslide_obj.level_downsamples
         file_name = self.file_name
-        vendor = (self.openslide_obj.properties[openslide.PROPERTY_NAME_VENDOR],)
-        mpp_x = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X],)
-        mpp_y = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y],)
+        vendor = (
+            self.openslide_obj.properties[openslide.PROPERTY_NAME_VENDOR],)
+        mpp_x = (
+            self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X],)
+        mpp_y = (
+            self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y],)
         magnification_levels = \
             [objective_power / lv for lv in level_downsamples]
 
@@ -478,7 +481,8 @@ class OmnyxJP2WSIReader(WSIReader):
         image_header = box[2].box[0]
         slide_dimension = (image_header.width, image_header.height)
         downsample_level = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
-        magnification_levels = [objective_power / lv for lv in downsample_level]
+        magnification_levels = [
+            objective_power / lv for lv in downsample_level]
         level_dimensions = [
             (slide_dimension[0], slide_dimension[1]),
             (int(slide_dimension[0] / 2), int(slide_dimension[1] / 2)),

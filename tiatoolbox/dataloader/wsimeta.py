@@ -38,7 +38,8 @@ class WSIMeta:
 
     def as_dict(self):
         """
-        Converts WSIMeta to dictionary to assist print and save in various formats
+        Converts WSIMeta to dictionary to assist print and save
+        in various formats
 
         Args:
             self (WSIMeta):
