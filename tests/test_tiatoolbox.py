@@ -553,7 +553,7 @@ def test_command_line_slide_thumbnail(_response_ndpi, _response_jp2):
     assert pathlib.Path(__file__).parent.joinpath("slide_thumbjp2.jpg").is_file()
 
 
-def test_command_line_save_tiles(_response_ndpi, _response_svs, _response_jp2):
+def test_command_line_save_tiles(_response_svs):
     """Test the Save tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -563,32 +563,6 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs, _response_jp2):
             "--wsi_input",
             str(pathlib.Path(__file__).parent),
             "--file_types",
-            "*.ndpi, *.svs, *.jp2",
-            "--workers",
-            "4",
-            "--tile_objective_value",
-            "5",
-            "--output_dir",
-            "all_tiles",
-        ],
-    )
-
-    assert save_tiles_result.exit_code == 0
-
-
-def test_command_line_svs_save_tiles(_response_svs):
-    runner = CliRunner()
-    file_types = "*.svs"
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
-    )
-    save_tiles_result = runner.invoke(
-        cli.main,
-        [
-            "save-tiles",
-            "--wsi_input",
-            files_all[0],
-            "--file_types",
             '"*.ndpi, *.svs"',
             "--workers",
             "2",
@@ -598,72 +572,96 @@ def test_command_line_svs_save_tiles(_response_svs):
     )
 
     assert save_tiles_result.exit_code == 0
-    assert (
-        pathlib.Path(__file__)
-        .parent.joinpath("tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("slide_thumbnail.jpg")
-        .is_file()
-    )
 
 
-def test_command_line_ndpi_save_tiles(_response_ndpi):
-    runner = CliRunner()
-    file_types = "*.ndpi"
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
-    )
-    save_tiles_result = runner.invoke(
-        cli.main,
-        [
-            "save-tiles",
-            "--wsi_input",
-            files_all[0],
-            "--file_types",
-            '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
-            "--tile_objective_value",
-            "5",
-        ],
-    )
-
-    assert save_tiles_result.exit_code == 0
-    assert (
-        pathlib.Path(__file__)
-        .parent.joinpath("tiles")
-        .joinpath("CMU-1.ndpi")
-        .joinpath("slide_thumbnail.jpg")
-        .is_file()
-    )
-
-
-def test_command_line_jp2_save_tiles(_response_jp2):
-    runner = CliRunner()
-    file_types = "*.jp2"
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
-    )
-    save_tiles_result = runner.invoke(
-        cli.main,
-        [
-            "save-tiles",
-            "--wsi_input",
-            files_all[0],
-            "--file_types",
-            '"*.jp2, *.ndpi"',
-            "--workers",
-            "2",
-            "--tile_objective_value",
-            "5",
-        ],
-    )
-
-    assert save_tiles_result.exit_code == 0
-    assert (
-        pathlib.Path(__file__)
-        .parent.joinpath("tiles")
-        .joinpath("test1.jp2")
-        .joinpath("slide_thumbnail.jpg")
-        .is_file()
-    )
+# def test_command_line_svs_save_tiles(_response_svs):
+#     runner = CliRunner()
+#     file_types = "*.svs"
+#     files_all = utils.misc.grab_files_from_dir(
+#         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+#     )
+#     save_tiles_result = runner.invoke(
+#         cli.main,
+#         [
+#             "save-tiles",
+#             "--wsi_input",
+#             files_all[0],
+#             "--file_types",
+#             '"*.ndpi, *.svs"',
+#             "--workers",
+#             "2",
+#             "--tile_objective_value",
+#             "5",
+#         ],
+#     )
+#
+#     assert save_tiles_result.exit_code == 0
+#     assert (
+#         pathlib.Path(__file__)
+#         .parent.joinpath("tiles")
+#         .joinpath("CMU-1-Small-Region.svs")
+#         .joinpath("slide_thumbnail.jpg")
+#         .is_file()
+#     )
+#
+#
+# def test_command_line_ndpi_save_tiles(_response_ndpi):
+#     runner = CliRunner()
+#     file_types = "*.ndpi"
+#     files_all = utils.misc.grab_files_from_dir(
+#         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+#     )
+#     save_tiles_result = runner.invoke(
+#         cli.main,
+#         [
+#             "save-tiles",
+#             "--wsi_input",
+#             files_all[0],
+#             "--file_types",
+#             '"*.ndpi, *.svs"',
+#             "--workers",
+#             "2",
+#             "--tile_objective_value",
+#             "5",
+#         ],
+#     )
+#
+#     assert save_tiles_result.exit_code == 0
+#     assert (
+#         pathlib.Path(__file__)
+#         .parent.joinpath("tiles")
+#         .joinpath("CMU-1.ndpi")
+#         .joinpath("slide_thumbnail.jpg")
+#         .is_file()
+#     )
+#
+#
+# def test_command_line_jp2_save_tiles(_response_jp2):
+#     runner = CliRunner()
+#     file_types = "*.jp2"
+#     files_all = utils.misc.grab_files_from_dir(
+#         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+#     )
+#     save_tiles_result = runner.invoke(
+#         cli.main,
+#         [
+#             "save-tiles",
+#             "--wsi_input",
+#             files_all[0],
+#             "--file_types",
+#             '"*.jp2, *.ndpi"',
+#             "--workers",
+#             "2",
+#             "--tile_objective_value",
+#             "5",
+#         ],
+#     )
+#
+#     assert save_tiles_result.exit_code == 0
+#     assert (
+#         pathlib.Path(__file__)
+#         .parent.joinpath("tiles")
+#         .joinpath("test1.jp2")
+#         .joinpath("slide_thumbnail.jpg")
+#         .is_file()
+#     )

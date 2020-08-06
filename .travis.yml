@@ -17,7 +17,6 @@ install:
     - bash miniconda.sh -b -p $HOME/miniconda
     - source "$HOME/miniconda/etc/profile.d/conda.sh"
     - pip install -U tox-travis
-    - travis_wait 30 mvn install
 
 
 # Command to run tests, e.g. python setup.py test
