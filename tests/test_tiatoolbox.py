@@ -546,6 +546,8 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs, _response_jp2):
             "4",
             "--tile_objective_value",
             "5",
+            "--output_dir",
+            "all_tiles"
         ],
     )
 
