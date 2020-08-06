@@ -92,7 +92,7 @@ def test_slide_info(_response_ndpi,
                     _response_svs,
                     _response_jp2):
     """pytest for slide_info as a python function"""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs")
+    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
