@@ -32,11 +32,13 @@ def main():
 @click.option("--wsi_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
-    help="Path to output directory to save the output, default=wsi_input/../meta",
+    help="Path to output directory to save the output, "
+         "default=wsi_input/../meta",
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    help="file types to capture from directory, "
+         "default='*.ndpi', '*.svs', '*.mrxs'",
     default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
@@ -52,7 +54,8 @@ def main():
     "default=multiprocessing.cpu_count()",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose", type=bool, default=True,
+    help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=True):
     """Displays or saves WSI metadata"""
@@ -72,7 +75,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
         ]
         if output_dir is None and mode == "save":
             input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
+            output_dir = pathlib.Path(input_dir)\
+                .joinpath("..").joinpath("meta")
     else:
         raise FileNotFoundError
 
@@ -91,7 +95,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
         for _, slide_param in enumerate(slide_params):
             utils.misc.save_yaml(
                 slide_param.as_dict(),
-                pathlib.Path(output_dir).joinpath(slide_param.file_name + ".yaml"),
+                pathlib.Path(output_dir).joinpath(
+                    slide_param.file_name + ".yaml"),
             )
         print("Meta files saved at " + str(output_dir))
 
@@ -107,13 +112,15 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
     "--region",
     type=int,
     nargs=4,
-    help="image region in the whole slide image to read" "default=0 0 2000 2000",
+    help="image region in the whole slide image to read, "
+         "default=0 0 2000 2000",
 )
 @click.option(
     "--level",
     type=int,
     default=0,
-    help="pyramid level to read the image, " "default=0",
+    help="pyramid level to read the image, "
+         "default=0",
 )
 @click.option(
     "--mode",
@@ -130,7 +137,9 @@ def read_region(wsi_input, region, level, output_path, mode):
         full_path=wsi_input
     )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
+        output_path = str(
+            pathlib.Path(input_dir).joinpath(
+                "../im_region.jpg"))
 
     wsi_obj = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
@@ -177,7 +186,8 @@ def slide_thumbnail(wsi_input, output_path, mode):
         full_path=wsi_input
     )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
+        output_path = str(pathlib.Path(
+            input_dir).joinpath("../im_region.jpg"))
     wsi_obj = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
         wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
@@ -210,7 +220,8 @@ def slide_thumbnail(wsi_input, output_path, mode):
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    help="file types to capture from directory, "
+         "default='*.ndpi', '*.svs', '*.mrxs'",
     default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
@@ -220,10 +231,12 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="objective value at which tile is generated, " "default=20",
 )
 @click.option(
-    "--tile_read_size_w", type=int, default=5000, help="tile width, " "default=5000",
+    "--tile_read_size_w", type=int, default=5000,
+    help="tile width, default=5000",
 )
 @click.option(
-    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
+    "--tile_read_size_h", type=int, default=5000,
+    help="tile height, " "default=5000",
 )
 @click.option(
     "--workers",
@@ -232,7 +245,8 @@ def slide_thumbnail(wsi_input, output_path, mode):
     "default=multiprocessing.cpu_count()",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose", type=bool, default=True,
+    help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
