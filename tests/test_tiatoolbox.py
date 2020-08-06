@@ -369,7 +369,9 @@ def test_save_tiles_jp2_unwrap(_response_jp2):
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
-    shutil.rmtree(pathlib.Path(__file__).parent.joinpath("test_save_tiles_jp2_unwrap"))
+    shutil.rmtree(
+        pathlib.Path(__file__).parent.joinpath(
+            "test_save_tiles_jp2_unwrap"))
 
 
 def test_exception_tests():
@@ -385,7 +387,8 @@ def test_exception_tests():
         unwrapped_save_tiles(
             input_path="/mnt/test/sample.txt",
             tile_objective_value=5,
-            output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+            output_dir=str(
+                pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
             verbose=True,
         )
 
@@ -603,6 +606,9 @@ def test_command_line_svs_save_tiles(_response_svs):
         .joinpath("slide_thumbnail.jpg")
         .is_file()
     )
+    shutil.rmtree(pathlib.Path(__file__)
+                  .parent.joinpath("../tiles")
+                  .joinpath("CMU-1-Small-Region.svs"))
 
 
 def test_command_line_ndpi_save_tiles(_response_ndpi):
@@ -634,6 +640,9 @@ def test_command_line_ndpi_save_tiles(_response_ndpi):
         .joinpath("slide_thumbnail.jpg")
         .is_file()
     )
+    shutil.rmtree(pathlib.Path(__file__)
+                  .parent.joinpath("../tiles")
+                  .joinpath("CMU-1.ndpi"))
 
 
 def test_command_line_jp2_save_tiles(_response_jp2):
@@ -665,3 +674,6 @@ def test_command_line_jp2_save_tiles(_response_jp2):
         .joinpath("slide_thumbnail.jpg")
         .is_file()
     )
+    shutil.rmtree(pathlib.Path(__file__)
+                  .parent.joinpath("../tiles")
+                  .joinpath("test1.jp2"))
