@@ -17,6 +17,7 @@ class WSIMeta:
                  vendor=None,
                  mpp_x=None,
                  mpp_y=None,
+                 magnification_levels=None,
                  ):
         self.input_dir = input_dir
         self.file_name = file_name
@@ -31,6 +32,7 @@ class WSIMeta:
         self.vendor = vendor
         self.mpp_x = mpp_x
         self.mpp_y = mpp_y
+        self.magnification_levels = magnification_levels
 
     def as_dict(self):
         """
@@ -57,5 +59,6 @@ class WSIMeta:
             "mpp_x": self.mpp_x,
             "mpp_y": self.mpp_y,
             "file_name": self.file_name,
+            "magnification_levels": self.magnification_levels,
         }
         return param

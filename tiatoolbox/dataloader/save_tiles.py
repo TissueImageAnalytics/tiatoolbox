@@ -59,5 +59,15 @@ def save_tiles(
             tile_read_size_h=tile_read_size_h,
         )
         wsi_reader.save_tiles(verbose=verbose)
+    elif ext in (".jp2", ):
+        wsi_reader = wsireader.OmnyxJP2WSIReader(
+            input_dir=input_dir,
+            file_name=file_name + ext,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
+        )
+        wsi_reader.save_tiles(verbose=verbose)
     else:
         raise FileNotSupported
