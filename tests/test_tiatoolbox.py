@@ -57,15 +57,38 @@ def _response_svs(request):
         with open(svs_file_path, "wb") as f:
             f.write(r.content)
 
-    def close_ndpi():
+    def close_svs():
         if pathlib.Path.is_file(svs_file_path):
             os.remove(str(svs_file_path))
 
-    request.addfinalizer(close_ndpi)
+    request.addfinalizer(close_svs)
     return _response_svs
 
 
-def test_slide_info(_response_ndpi, _response_svs):
+@pytest.fixture
+def _response_jp2(request):
+    """
+    Sample pytest fixture for svs images
+    Download ndpi image for pytest
+    """
+    jp2_file_path = pathlib.Path(__file__).parent.joinpath("test1.jp2")
+    if not pathlib.Path.is_file(jp2_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files"
+            "/test1.jp2"
+        )
+        with open(jp2_file_path, "wb") as f:
+            f.write(r.content)
+
+    def close_jp2():
+        if pathlib.Path.is_file(jp2_file_path):
+            os.remove(str(jp2_file_path))
+
+    request.addfinalizer(close_jp2)
+    return _response_jp2
+
+
+def test_slide_info(_response_ndpi, _response_svs, _response_jp2):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
