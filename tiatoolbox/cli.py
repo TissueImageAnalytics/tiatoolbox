@@ -52,10 +52,7 @@ def main():
     "default=multiprocessing.cpu_count()",
 )
 @click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=True):
     """Displays or saves WSI metadata"""
@@ -141,7 +138,7 @@ def read_region(wsi_input, region, level, output_path, mode):
             input_dir=input_dir, file_name=file_name + file_type
         )
 
-    elif file_type in (".jp2", ):
+    elif file_type in (".jp2",):
         wsi_obj = dataloader.wsireader.OmnyxJP2WSIReader(
             input_dir=input_dir, file_name=file_name + file_type
         )
@@ -186,7 +183,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
         wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
             input_dir=input_dir, file_name=file_name + file_type
         )
-    elif file_type in (".jp2", ):
+    elif file_type in (".jp2",):
         wsi_obj = dataloader.wsireader.OmnyxJP2WSIReader(
             input_dir=input_dir, file_name=file_name + file_type
         )
@@ -214,7 +211,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
     "--tile_objective_value",
@@ -235,10 +232,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
     "default=multiprocessing.cpu_count()",
 )
 @click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
@@ -262,8 +256,6 @@ def save_tiles(
         ]
     else:
         raise FileNotFoundError
-
-    print(files_all)
 
     dataloader.save_tiles.save_tiles(
         input_path=files_all,

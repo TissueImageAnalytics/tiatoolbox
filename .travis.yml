@@ -9,7 +9,7 @@ python:
 before_install:
   - sudo apt-get -y update
   - sudo apt-get -y install openslide-tools
-  - sudo apt-get -y install libopenjpeg5
+  - sudo apt-get -y install libopenjpeg5 libopenjpeg-dev
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: pip install -U tox-travis

@@ -33,7 +33,7 @@ def save_tiles(
     Examples:
         >>> from tiatoolbox.dataloader.save_tiles import save_tiles
         >>> from tiatoolbox.utils import misc
-        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
+        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
         >>> files_all = misc.grab_files_from_dir(input_path,
         ...     file_types=file_types)
         >>> save_tiles(input_path=files_all,
@@ -59,7 +59,7 @@ def save_tiles(
             tile_read_size_h=tile_read_size_h,
         )
         wsi_reader.save_tiles(verbose=verbose)
-    elif ext in (".jp2", ):
+    elif ext in (".jp2",):
         wsi_reader = wsireader.OmnyxJP2WSIReader(
             input_dir=input_dir,
             file_name=file_name + ext,

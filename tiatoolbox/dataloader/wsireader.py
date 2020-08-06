@@ -441,15 +441,13 @@ class OmnyxJP2WSIReader(WSIReader):
 
         """
         factor = 2 ** level
-        start_h = start_h*factor
+        start_h = start_h * factor
         start_w = start_w * factor
         end_h = end_h * factor
         end_w = end_w * factor
 
         glymur_obj = self.glymur_obj
-        im_region = glymur_obj.read(rlevel=level,
-                                    area=(start_h, start_w, end_h, end_w)
-                                    )
+        im_region = glymur_obj.read(rlevel=level, area=(start_h, start_w, end_h, end_w))
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
@@ -471,13 +469,14 @@ class OmnyxJP2WSIReader(WSIReader):
         slide_dimension = (image_header.width, image_header.height)
         downsample_level = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
         magnification_levels = [objective_power / lv for lv in downsample_level]
-        level_dimensions = [(slide_dimension[0], slide_dimension[1]),
-                            (int(slide_dimension[0]/2), int(slide_dimension[1]/2)),
-                            (int(slide_dimension[0]/4), int(slide_dimension[1]/4)),
-                            (int(slide_dimension[0]/8), int(slide_dimension[1]/8)),
-                            (int(slide_dimension[0]/16), int(slide_dimension[1]/16)),
-                            (int(slide_dimension[0]/32), int(slide_dimension[1]/32))
-                            ]
+        level_dimensions = [
+            (slide_dimension[0], slide_dimension[1]),
+            (int(slide_dimension[0] / 2), int(slide_dimension[1] / 2)),
+            (int(slide_dimension[0] / 4), int(slide_dimension[1] / 4)),
+            (int(slide_dimension[0] / 8), int(slide_dimension[1] / 8)),
+            (int(slide_dimension[0] / 16), int(slide_dimension[1] / 16)),
+            (int(slide_dimension[0] / 32), int(slide_dimension[1] / 32)),
+        ]
         tile_objective_value = self.tile_objective_value
         rescale = np.int(objective_power / tile_objective_value)
         tile_read_size = self.tile_read_size
@@ -503,7 +502,7 @@ class OmnyxJP2WSIReader(WSIReader):
             mpp_x=mpp_x,
             mpp_y=mpp_y,
             file_name=file_name,
-            magnification_levels=magnification_levels
+            magnification_levels=magnification_levels,
         )
 
         return param
@@ -525,7 +524,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         """
         glymur_obj = self.glymur_obj
-        read_level = np.int(np.log2(self.slide_info.objective_power/1.25))
+        read_level = np.int(np.log2(self.slide_info.objective_power / 1.25))
         thumb = np.asarray(glymur_obj.read(rlevel=read_level))
 
         return thumb
