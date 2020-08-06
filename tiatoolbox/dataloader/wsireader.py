@@ -455,17 +455,17 @@ class OmnyxJP2WSIReader(WSIReader):
 
     def __slide_info(self):
         """JP2 meta data reader
-    #
-    #     Args:
-    #         self (OmnyxJP2WSIReader):
-    #
-    #     Returns:
-    #         WSIMeta: containing meta information
-    #
-    #     """
+
+        Args:
+            self (OmnyxJP2WSIReader):
+
+        Returns:
+            WSIMeta: containing meta information
+
+        """
         input_dir = self.input_dir
         box = self.glymur_obj.box
-        m = re.search("(?<=AppMag = )\d\d", str(box[3]))
+        m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
         objective_power = np.int(m.group(0))
         image_header = box[2].box[0]
         slide_dimension = (image_header.width, image_header.height)
@@ -482,11 +482,10 @@ class OmnyxJP2WSIReader(WSIReader):
         rescale = np.int(objective_power / tile_objective_value)
         tile_read_size = self.tile_read_size
         level_count = None
-        level_dimensions = level_dimensions
         level_downsamples = None
         file_name = self.file_name
         vendor = "Omnyx JP2"
-        m = re.search("(?<=AppMag = )\d\d", str(box[3]))
+        m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
         mpp_x = float(m.group(0))
         mpp_y = float(m.group(0))
 
@@ -510,8 +509,7 @@ class OmnyxJP2WSIReader(WSIReader):
         return param
 
     def slide_thumbnail(self):
-        """
-        Read whole slide image thumbnail at 1.25x
+        """Read whole slide image thumbnail at 1.25x
 
         Args:
             self (OmnyxJP2WSIReader):

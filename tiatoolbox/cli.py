@@ -141,6 +141,11 @@ def read_region(wsi_input, region, level, output_path, mode):
             input_dir=input_dir, file_name=file_name + file_type
         )
 
+    elif file_type in (".jp2", ):
+        wsi_obj = dataloader.wsireader.OmnyxJP2WSIReader(
+            input_dir=input_dir, file_name=file_name + file_type
+        )
+
     if wsi_obj is not None:
         im_region = wsi_obj.read_region(
             region[0], region[1], region[2], region[3], level
@@ -181,6 +186,11 @@ def slide_thumbnail(wsi_input, output_path, mode):
         wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
             input_dir=input_dir, file_name=file_name + file_type
         )
+    elif file_type in (".jp2", ):
+        wsi_obj = dataloader.wsireader.OmnyxJP2WSIReader(
+            input_dir=input_dir, file_name=file_name + file_type
+        )
+
     if wsi_obj is not None:
         slide_thumb = wsi_obj.slide_thumbnail()
 
