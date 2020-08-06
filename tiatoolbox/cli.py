@@ -37,7 +37,7 @@ def main():
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
     "--mode",

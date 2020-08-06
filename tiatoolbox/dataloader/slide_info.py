@@ -2,6 +2,7 @@
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.decorators.multiproc import TIAMultiProcess
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.misc import split_path_name_ext
 
 import os
 
@@ -22,7 +23,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
     Examples:
         >>> from tiatoolbox.dataloader.slide_info import slide_info
         >>> from tiatoolbox import utils
-        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
+        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,
         ...     file_types=file_types)
         >>> slide_params = slide_info(input_path=files_all, workers=2)
@@ -33,24 +34,21 @@ def slide_info(input_path, output_dir=None, verbose=True):
 
     """
 
-    input_dir, file_name = os.path.split(input_path)
+    input_dir, file_name, file_type = split_path_name_ext(input_path)
 
     if verbose:
-        print(file_name, flush=True)
-    _, file_type = os.path.splitext(file_name)
+        print(file_name + file_type, flush=True)
 
     if file_type in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_dir=input_dir, file_name=file_name, output_dir=output_dir
+            input_dir=input_dir, file_name=file_name + file_type, output_dir=output_dir
         )
         info = wsi_reader.slide_info
         if verbose:
             print(info.as_dict())
     elif file_type in (".jp2",):
         wsi_reader = wsireader.OmnyxJP2WSIReader(
-            input_dir=input_dir,
-            file_name=file_name + file_type,
-            output_dir=output_dir,
+            input_dir=input_dir, file_name=file_name + file_type, output_dir=output_dir,
         )
         info = wsi_reader.slide_info
         if verbose:
