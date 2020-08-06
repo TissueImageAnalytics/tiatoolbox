@@ -598,7 +598,7 @@ def test_command_line_svs_save_tiles(_response_svs):
     assert save_tiles_result.exit_code == 0
     assert (
         pathlib.Path(__file__)
-        .parent.joinpath("tiles")
+        .parent.joinpath("../tiles")
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("slide_thumbnail.jpg")
         .is_file()
