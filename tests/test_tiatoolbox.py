@@ -295,7 +295,7 @@ def test_save_tiles(_response_ndpi, _response_svs, _response_jp2):
     shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
 
 
-def test_save_tiles_unwrap(_response_svs, _response_jp2):
+def test_save_tiles_unwrap(_response_svs):
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
@@ -330,6 +330,8 @@ def test_save_tiles_unwrap(_response_svs, _response_jp2):
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
+
+    shutil.rmtree(pathlib.Path(__file__).parent.joinpath("test_save_tiles_unwrap"))
 
 
 def test_save_tiles_jp2_unwrap(_response_jp2):
