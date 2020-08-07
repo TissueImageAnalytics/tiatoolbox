@@ -1,6 +1,7 @@
 """WSIMeta to save metadata information for WSIs"""
 import warnings
 from pathlib import Path
+from typing import Sequence, Tuple, Optional, Mapping, Union
 
 import numpy as np
 
@@ -10,17 +11,17 @@ class WSIMeta:
 
     def __init__(
         self,
-        input_dir,
-        file_name,
-        objective_power=None,
-        slide_dimensions=None,
-        level_count=1,
-        level_dimensions=None,
-        level_downsamples=None,
-        vendor=None,
-        mpp_x=None,
-        mpp_y=None,
-        raw=None,
+        input_dir: Union[str, Path],
+        file_name: Union[str, Path],
+        objective_power: float = None,
+        slide_dimensions: Tuple[int, int] = None,
+        level_count: int = 1,
+        level_dimensions: Sequence[Tuple[int, int]] = None,
+        level_downsamples: Sequence[float] = None,
+        vendor: Optional[str] = None,
+        mpp_x: Optional[float] = None,
+        mpp_y: Optional[float] = None,
+        raw: Mapping[str, str] = None,
     ):
         self.input_dir = Path(input_dir)
         self.file_name = file_name
