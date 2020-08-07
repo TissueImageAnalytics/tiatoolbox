@@ -161,19 +161,19 @@ def test_wsireader_openslide_thumbnail(_response_svs):
     assert slide_thumbnail.dtype == "uint8"
 
 
-# def test_wsireader_jp2slide_thumbnail(_response_jp2):
-#     """pytest for slide_thumbnail as a python function"""
-#     file_types = ("*.jp2",)
-#     files_all = utils.misc.grab_files_from_dir(
-#         input_path=str(pathlib.Path(__file__).parent),
-#         file_types=file_types,
-#     )
-#     input_dir, file_name, ext = \
-#         utils.misc.split_path_name_ext(str(files_all[0]))
-#     wsi_obj = wsireader.OmnyxJP2WSIReader(input_dir, file_name + ext)
-#     slide_thumbnail = wsi_obj.slide_thumbnail()
-#     assert isinstance(slide_thumbnail, np.ndarray)
-#     assert slide_thumbnail.dtype == "uint8"
+def test_wsireader_jp2slide_thumbnail(_response_jp2):
+    """pytest for slide_thumbnail as a python function"""
+    file_types = ("*.jp2",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
+    )
+    input_dir, file_name, ext = \
+        utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.OmnyxJP2WSIReader(input_dir, file_name + ext)
+    slide_thumbnail = wsi_obj.slide_thumbnail()
+    assert isinstance(slide_thumbnail, np.ndarray)
+    assert slide_thumbnail.dtype == "uint8"
 
 
 def test_imresize():
