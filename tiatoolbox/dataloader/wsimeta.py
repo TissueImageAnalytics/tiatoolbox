@@ -85,7 +85,7 @@ class WSIMeta:
             passed = False
 
         if all(x is None for x in [self.objective_power, self.mpp_x, self.mpp_y]):
-            warnings.warn("Unknown magnification (no objective_power, mpp_x, or mpp_y)")
+            warnings.warn("Unknown scale (no objective_power, mpp_x, or mpp_y)")
 
         return passed
 
