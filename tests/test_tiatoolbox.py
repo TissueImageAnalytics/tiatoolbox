@@ -705,4 +705,3 @@ def test_command_line_jp2_save_tiles(_response_jp2):
     shutil.rmtree(pathlib.Path(__file__)
                   .parent.joinpath("../tiles")
                   .joinpath("test1.jp2"))
-
