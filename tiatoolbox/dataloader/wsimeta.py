@@ -25,14 +25,20 @@ class WSIMeta:
     ):
         self.input_dir = Path(input_dir)
         self.file_name = file_name
-        self.objective_power = float(objective_power)
-        self.slide_dimensions = [int(x) for x in slide_dimensions]
+        self.objective_power = float(objective_power) if objective_power else None
+        self.slide_dimensions = (
+            [int(x) for x in slide_dimensions] if slide_dimensions else None
+        )
         self.level_count = int(level_count)
-        self.level_dimensions = [int(x) for x in level_dimensions]
-        self.level_downsamples = [float(x) for x in level_downsamples]
+        self.level_dimensions = (
+            [int(x) for x in level_dimensions] if level_dimensions else None
+        )
+        self.level_downsamples = (
+            [float(x) for x in level_downsamples] if level_downsamples else None
+        )
         self.vendor = vendor
-        self.mpp_x = float(mpp_x)
-        self.mpp_y = float(mpp_y)
+        self.mpp_x = float(mpp_x) if mpp_x else None
+        self.mpp_y = float(mpp_y) if mpp_y else None
         self.raw = raw
 
         self.validate()
