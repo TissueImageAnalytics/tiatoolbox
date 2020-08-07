@@ -72,11 +72,11 @@ class WSIMeta:
             warnings.warn("Level count is not a positive integer")
             passed = False
 
-        if len(self.level_dimensions) != self.level_count:
+        if self.level_dimensions and len(self.level_dimensions) != self.level_count:
             warnings.warn("Length of slide_dimensions != level_count")
             passed = False
 
-        if len(self.level_downsamples) != self.level_count:
+        if self.level_downsamples and len(self.level_downsamples) != self.level_count:
             warnings.warn("Length of level_downsamples != level_count")
             passed = False
 
