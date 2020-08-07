@@ -53,14 +53,14 @@ class WSIReader:
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
         self.slide_info = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
 
-    def __slide_info(self):
+    def slide_info(self):
         """WSI meta data reader
 
         Args:
             self (WSIReader):
 
         Returns:
-            dict: dictionary containing meta information
+            WSIMeta: An object containing normalised slide metadata
 
         """
         param = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
@@ -269,7 +269,6 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_obj = openslide.OpenSlide(
             filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
-        self.slide_info = self.__slide_info()
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
@@ -305,7 +304,7 @@ class OpenSlideWSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    def __slide_info(self):
+    def slide_info(self):
         """WSI meta data reader
 
         Args:
