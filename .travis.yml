@@ -5,11 +5,6 @@ python:
   - 3.8
   - 3.7
   - 3.6
-env:
-  matrix:
-    - TOXENV=py36
-    - TOXENV=py37
-    - TOXENV=py38
 
 before_install:
   - sudo apt-get -y update
@@ -25,7 +20,7 @@ install:
 
 
 # Command to run tests, e.g. python setup.py test
-script: tox -e $TOXENV
+script: tox
 
 # Upload test coverage reports (codecov and deepsource)
 after_success:
