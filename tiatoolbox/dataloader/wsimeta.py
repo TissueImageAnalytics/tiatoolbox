@@ -31,7 +31,9 @@ class WSIMeta:
         )
         self.level_count = int(level_count)
         self.level_dimensions = (
-            [int(x) for x in level_dimensions] if level_dimensions else None
+            [(int(w), int(h)) for w, h in level_dimensions]
+            if level_dimensions
+            else None
         )
         self.level_downsamples = (
             [float(x) for x in level_downsamples] if level_downsamples else None
