@@ -321,9 +321,6 @@ class OpenSlideWSIReader(WSIReader):
         )
 
         slide_dimensions = self.openslide_obj.level_dimensions[0]
-        tile_objective_value = self.tile_objective_value
-        rescale = np.int(objective_power / tile_objective_value)
-        tile_read_size = self.tile_read_size
         level_count = self.openslide_obj.level_count
         level_dimensions = self.openslide_obj.level_dimensions
         level_downsamples = self.openslide_obj.level_downsamples
@@ -336,9 +333,6 @@ class OpenSlideWSIReader(WSIReader):
             input_dir=input_dir,
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
-            rescale=rescale,
-            tile_objective_value=tile_objective_value,
-            tile_read_size=tile_read_size.tolist(),
             level_count=level_count,
             level_dimensions=level_dimensions,
             level_downsamples=level_downsamples,
