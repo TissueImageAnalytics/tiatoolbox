@@ -3,18 +3,20 @@
 
 class WSIMeta:
     """Whole slide image meta data class"""
-    def __init__(self,
-                 input_dir,
-                 file_name,
-                 objective_power=None,
-                 slide_dimension=None,
-                 level_count=None,
-                 level_dimensions=None,
-                 level_downsamples=None,
-                 vendor=None,
-                 mpp_x=None,
-                 mpp_y=None,
-                 ):
+
+    def __init__(
+        self,
+        input_dir,
+        file_name,
+        objective_power=None,
+        slide_dimension=None,
+        level_count=None,
+        level_dimensions=None,
+        level_downsamples=None,
+        vendor=None,
+        mpp_x=None,
+        mpp_y=None,
+    ):
         self.input_dir = input_dir
         self.file_name = file_name
         self.objective_power = objective_power
