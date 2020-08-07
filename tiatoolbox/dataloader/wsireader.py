@@ -319,7 +319,7 @@ class OpenSlideWSIReader(WSIReader):
             self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         )
 
-        slide_dimension = self.openslide_obj.level_dimensions[0]
+        slide_dimensions = self.openslide_obj.level_dimensions[0]
         tile_objective_value = self.tile_objective_value
         rescale = np.int(objective_power / tile_objective_value)
         tile_read_size = self.tile_read_size
@@ -334,7 +334,7 @@ class OpenSlideWSIReader(WSIReader):
         param = WSIMeta(
             input_dir=input_dir,
             objective_power=objective_power,
-            slide_dimension=slide_dimension,
+            slide_dimensions=slide_dimensions,
             rescale=rescale,
             tile_objective_value=tile_objective_value,
             tile_read_size=tile_read_size.tolist(),
