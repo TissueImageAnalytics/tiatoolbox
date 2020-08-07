@@ -559,26 +559,26 @@ def test_command_line_slide_thumbnail(_response_ndpi):
         "slide_thumb.jpg").is_file()
 
 
-# def test_command_line_slide_thumbnail_jp2(_response_jp2):
-#     """Test the Slide Thumbnail CLI."""
-#     runner = CliRunner()
-#     slide_thumb_result = runner.invoke(
-#         cli.main,
-#         [
-#             "slide-thumbnail",
-#             "--wsi_input",
-#             str(pathlib.Path(__file__).parent.joinpath("test1.jp2")),
-#             "--mode",
-#             "save",
-#             "--output_path",
-#             str(pathlib.Path(__file__).parent.joinpath("slide_thumbjp2.jpg")),
-#         ],
-#     )
-#
-#     assert slide_thumb_result.exit_code == 0
-#     assert pathlib.Path(
-#         __file__).parent.joinpath(
-#         "slide_thumbjp2.jpg").is_file()
+def test_command_line_slide_thumbnail_jp2(_response_jp2):
+    """Test the Slide Thumbnail CLI."""
+    runner = CliRunner()
+    slide_thumb_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(__file__).parent.joinpath("test1.jp2")),
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(__file__).parent.joinpath("slide_thumbjp2.jpg")),
+        ],
+    )
+
+    assert slide_thumb_result.exit_code == 0
+    assert pathlib.Path(
+        __file__).parent.joinpath(
+        "slide_thumbjp2.jpg").is_file()
 
 
 def test_command_line_save_tiles(_response_ndpi, _response_svs):
