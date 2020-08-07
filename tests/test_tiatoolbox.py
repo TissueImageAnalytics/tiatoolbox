@@ -48,7 +48,9 @@ def _response_svs(request):
     Sample pytest fixture for svs images
     Download ndpi image for pytest
     """
-    svs_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1-Small-Region.svs")
+    svs_file_path = pathlib.Path(
+        __file__).parent.joinpath(
+        "CMU-1-Small-Region.svs")
     if not pathlib.Path.is_file(svs_file_path):
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata"
@@ -239,13 +241,16 @@ def test_save_tiles(_response_ndpi, _response_svs):
     """pytest for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     save_tiles(
         input_path=files_all,
         workers=2,
         tile_objective_value=5,
-        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+        output_dir=str(
+            pathlib.Path(__file__).parent.joinpath(
+                "tiles_save_tiles")),
         verbose=True,
     )
     assert (
@@ -291,7 +296,8 @@ def test_save_tiles(_response_ndpi, _response_svs):
         .exists()
     )
     shutil.rmtree(
-        pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
+        pathlib.Path(
+            __file__).parent.joinpath("tiles_save_tiles"))
 
 
 def test_save_tiles_unwrap(_response_svs):
@@ -303,7 +309,9 @@ def test_save_tiles_unwrap(_response_svs):
     unwrapped_save_tiles(
         input_path=files_all[0],
         tile_objective_value=5,
-        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+        output_dir=str(
+            pathlib.Path(__file__).parent.joinpath(
+                "tiles_save_tiles")),
         verbose=True,
     )
     assert (
@@ -330,6 +338,47 @@ def test_save_tiles_unwrap(_response_svs):
     shutil.rmtree(
         pathlib.Path(__file__).parent.joinpath(
             "tiles_save_tiles"))
+
+
+def test_save_tiles_jp2_unwrap(_response_jp2):
+    file_types = "*.jp2"
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
+    unwrapped_save_tiles(
+        input_path=files_all[0],
+        tile_objective_value=5,
+        output_dir=str(
+            pathlib.Path(__file__).parent.joinpath(
+                "test_save_tiles_jp2_unwrap")
+        ),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("test_save_tiles_jp2_unwrap")
+        .joinpath("test1.jp2")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("test_save_tiles_jp2_unwrap")
+        .joinpath("test1.jp2")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(__file__)
+        .parent.joinpath("test_save_tiles_jp2_unwrap")
+        .joinpath("test1.jp2")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    shutil.rmtree(
+        pathlib.Path(__file__).parent.joinpath(
+            "test_save_tiles_jp2_unwrap"))
 
 
 def test_exception_tests():
