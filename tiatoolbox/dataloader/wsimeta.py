@@ -6,7 +6,7 @@ import numpy as np
 
 
 class WSIMeta:
-    """Whole slide image meta data class"""
+    """Whole slide image metadata class"""
 
     def __init__(
         self,
