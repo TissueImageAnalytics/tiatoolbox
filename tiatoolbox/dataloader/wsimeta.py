@@ -41,7 +41,7 @@ class WSIMeta:
         self.vendor = vendor
         self.mpp_x = float(mpp_x) if mpp_x else None
         self.mpp_y = float(mpp_y) if mpp_y else None
-        self.raw = raw
+        self.raw = dict(raw)
 
         self.validate()
 
