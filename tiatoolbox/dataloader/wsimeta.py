@@ -8,9 +8,6 @@ class WSIMeta:
                  file_name,
                  objective_power=None,
                  slide_dimension=None,
-                 rescale=None,
-                 tile_objective_value=None,
-                 tile_read_size=None,
                  level_count=None,
                  level_dimensions=None,
                  level_downsamples=None,
@@ -22,9 +19,6 @@ class WSIMeta:
         self.file_name = file_name
         self.objective_power = objective_power
         self.slide_dimension = slide_dimension
-        self.rescale = rescale
-        self.tile_objective_value = tile_objective_value
-        self.tile_read_size = tile_read_size
         self.level_count = level_count
         self.level_dimensions = level_dimensions
         self.level_downsamples = level_downsamples
@@ -47,9 +41,6 @@ class WSIMeta:
             "input_dir": self.input_dir,
             "objective_power": self.objective_power,
             "slide_dimension": self.slide_dimension,
-            "rescale": self.rescale,
-            "tile_objective_value": self.tile_objective_value,
-            "tile_read_size": self.tile_read_size,
             "level_count": self.level_count,
             "level_dimensions": self.level_dimensions,
             "level_downsamples": self.level_downsamples,
