@@ -345,6 +345,7 @@ class OpenSlideWSIReader(WSIReader):
             mpp_x=mpp_x,
             mpp_y=mpp_y,
             file_name=file_name,
+            raw=self.openslide_obj.properties,
         )
 
         return param
