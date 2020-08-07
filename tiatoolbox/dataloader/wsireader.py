@@ -63,8 +63,7 @@ class WSIReader:
             WSIMeta: An object containing normalised slide metadata
 
         """
-        param = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
-        return param
+        raise NotImplementedError
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
