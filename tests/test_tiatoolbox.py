@@ -90,7 +90,9 @@ def _response_jp2(request):
     return _response_jp2
 
 
-def test_slide_info(_response_ndpi, _response_svs):
+def test_slide_info(_response_ndpi,
+                    _response_svs,
+                    _response_jp2):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
@@ -105,10 +107,9 @@ def test_slide_info(_response_ndpi, _response_svs):
             slide_param.as_dict(), slide_param.file_name + ".yaml")
 
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
-    utils.misc.save_yaml(
-        unwrapped_slide_info(input_path=files_all[0], verbose=True),
-        "test.yaml"
-    )
+    unwrapped_slide_info(input_path=files_all[0], verbose=True)
+    unwrapped_slide_info(input_path=files_all[1], verbose=True)
+    unwrapped_slide_info(input_path=files_all[2], verbose=True)
 
 
 def test_wsireader_slide_info(_response_svs):
