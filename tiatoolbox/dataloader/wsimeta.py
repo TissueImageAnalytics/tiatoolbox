@@ -9,7 +9,7 @@ class WSIMeta:
         input_dir,
         file_name,
         objective_power=None,
-        slide_dimension=None,
+        slide_dimensions=None,
         level_count=None,
         level_dimensions=None,
         level_downsamples=None,
