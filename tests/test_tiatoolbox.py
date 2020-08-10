@@ -512,28 +512,28 @@ def test_command_line_read_region(_response_ndpi):
             "im_region2.jpg")))
 
 
-# def test_command_line_read_region_jp2(_response_jp2):
-#     """Test the Read Region CLI."""
-#     runner = CliRunner()
-#     read_region_result = runner.invoke(
-#         cli.main,
-#         [
-#             "read-region",
-#             "--wsi_input",
-#             str(pathlib.Path(__file__).parent.joinpath("test1.jp2")),
-#             "--level",
-#             "0",
-#             "--mode",
-#             "save",
-#             "--output_path",
-#             str(pathlib.Path(__file__).parent.joinpath("im_region3.jpg")),
-#         ],
-#     )
-#
-#     assert read_region_result.exit_code == 0
-#     assert os.path.isfile(
-#         str(pathlib.Path(__file__).parent.joinpath(
-#             "im_region3.jpg")))
+def test_command_line_read_region_jp2(_response_jp2):
+    """Test the Read Region CLI."""
+    runner = CliRunner()
+    read_region_result = runner.invoke(
+        cli.main,
+        [
+            "read-region",
+            "--wsi_input",
+            str(pathlib.Path(__file__).parent.joinpath("test1.jp2")),
+            "--level",
+            "0",
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(__file__).parent.joinpath("im_region3.jpg")),
+        ],
+    )
+
+    assert read_region_result.exit_code == 0
+    assert os.path.isfile(
+        str(pathlib.Path(__file__).parent.joinpath(
+            "im_region3.jpg")))
 
 
 def test_command_line_slide_thumbnail(_response_ndpi):
