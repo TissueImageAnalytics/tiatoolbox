@@ -54,6 +54,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
             output_dir=output_dir,
         )
         info = wsi_reader.slide_info
+        del wsi_reader
         if verbose:
             print(info.as_dict())
     else:
