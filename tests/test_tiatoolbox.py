@@ -555,9 +555,7 @@ def test_command_line_slide_thumbnail_jp2(_response_jp2):
         "slide_thumbjp2.jpg").is_file()
 
 
-def test_command_line_save_tiles(_response_svs,
-                                 _response_ndpi
-                                 ):
+def test_command_line_save_tiles(_response_ndpi, _response_svs):
     """Test the Save tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -567,7 +565,7 @@ def test_command_line_save_tiles(_response_svs,
             "--wsi_input",
             str(pathlib.Path(__file__).parent),
             "--file_types",
-            "*.ndpi, *.svs, *.jp2",
+            "*.ndpi, *.svs",
             "--workers",
             "2",
             "--tile_objective_value",
@@ -576,6 +574,8 @@ def test_command_line_save_tiles(_response_svs,
     )
 
     assert save_tiles_result.exit_code == 0
+    shutil.rmtree(pathlib.Path(__file__)
+                  .parent.joinpath("../tiles"))
 
 
 def test_command_line_svs_save_tiles(_response_svs):
