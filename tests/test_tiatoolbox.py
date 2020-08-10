@@ -91,8 +91,7 @@ def _response_jp2(request):
 
 
 def test_slide_info(_response_ndpi,
-                    _response_svs,
-                    _response_jp2):
+                    _response_svs):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
@@ -100,7 +99,7 @@ def test_slide_info(_response_ndpi,
         file_types=file_types,
     )
     slide_params = slide_info(input_path=files_all,
-                              workers=4, verbose=True)
+                              workers=2, verbose=True)
 
     for _, slide_param in enumerate(slide_params):
         utils.misc.save_yaml(
@@ -108,7 +107,24 @@ def test_slide_info(_response_ndpi,
 
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     unwrapped_slide_info(input_path=files_all[0], verbose=True)
-    unwrapped_slide_info(input_path=files_all[1], verbose=True)
+
+
+def test_slide_info_jp2(_response_jp2):
+    """pytest for slide_info as a python function"""
+    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
+    )
+    slide_params = slide_info(input_path=files_all,
+                              workers=2, verbose=True)
+
+    for _, slide_param in enumerate(slide_params):
+        utils.misc.save_yaml(
+            slide_param.as_dict(), slide_param.file_name + ".yaml")
+
+    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
+    unwrapped_slide_info(input_path=files_all[0], verbose=True)
 
 
 def test_wsireader_slide_info(_response_svs):
