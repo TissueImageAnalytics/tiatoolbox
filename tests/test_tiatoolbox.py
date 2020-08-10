@@ -109,18 +109,6 @@ def test_slide_info(_response_ndpi,
     unwrapped_slide_info(input_path=files_all[0], verbose=True)
 
 
-def test_slide_info_jp2(_response_jp2):
-    """pytest for slide_info as a python function"""
-    file_types = ("*.jp2", )
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent),
-        file_types=file_types,
-    )
-
-    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
-    unwrapped_slide_info(input_path=files_all[0], verbose=True)
-
-
 def test_wsireader_slide_info(_response_svs):
     """pytest for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
