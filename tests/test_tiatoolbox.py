@@ -556,8 +556,8 @@ def test_command_line_slide_thumbnail_jp2(_response_jp2):
 
 
 def test_command_line_save_tiles(_response_svs,
-                                 _response_ndpi,
-                                 _response_jp2):
+                                 _response_ndpi
+                                 ):
     """Test the Save tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
