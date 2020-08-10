@@ -512,30 +512,6 @@ def test_command_line_read_region(_response_ndpi):
             "im_region2.jpg")))
 
 
-def test_command_line_read_region_jp2(_response_jp2):
-    """Test the Read Region CLI."""
-    runner = CliRunner()
-    read_region_result = runner.invoke(
-        cli.main,
-        [
-            "read-region",
-            "--wsi_input",
-            str(pathlib.Path(__file__).parent.joinpath("test1.jp2")),
-            "--level",
-            "0",
-            "--mode",
-            "save",
-            "--output_path",
-            str(pathlib.Path(__file__).parent.joinpath("im_region3.jpg")),
-        ],
-    )
-
-    assert read_region_result.exit_code == 0
-    assert os.path.isfile(
-        str(pathlib.Path(__file__).parent.joinpath(
-            "im_region3.jpg")))
-
-
 def test_command_line_slide_thumbnail(_response_ndpi):
     """Test the Slide Thumbnail CLI."""
     runner = CliRunner()
@@ -579,7 +555,9 @@ def test_command_line_slide_thumbnail_jp2(_response_jp2):
         "slide_thumbjp2.jpg").is_file()
 
 
-def test_command_line_save_tiles(_response_ndpi, _response_svs):
+def test_command_line_save_tiles(_response_svs,
+                                 _response_ndpi,
+                                 _response_jp2):
     """Test the Save tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -589,7 +567,7 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
             "--wsi_input",
             str(pathlib.Path(__file__).parent),
             "--file_types",
-            "*.ndpi, *.svs",
+            "*.ndpi, *.svs, *.jp2",
             "--workers",
             "2",
             "--tile_objective_value",
@@ -598,8 +576,6 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
     )
 
     assert save_tiles_result.exit_code == 0
-    shutil.rmtree(pathlib.Path(__file__)
-                  .parent.joinpath("../tiles"))
 
 
 def test_command_line_svs_save_tiles(_response_svs):
