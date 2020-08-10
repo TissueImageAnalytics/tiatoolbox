@@ -111,17 +111,11 @@ def test_slide_info(_response_ndpi,
 
 def test_slide_info_jp2(_response_jp2):
     """pytest for slide_info as a python function"""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
+    file_types = ("*.jp2", )
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent),
         file_types=file_types,
     )
-    slide_params = slide_info(input_path=files_all,
-                              workers=2, verbose=True)
-
-    for _, slide_param in enumerate(slide_params):
-        utils.misc.save_yaml(
-            slide_param.as_dict(), slide_param.file_name + ".yaml")
 
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     unwrapped_slide_info(input_path=files_all[0], verbose=True)
