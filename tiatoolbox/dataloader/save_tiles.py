@@ -51,13 +51,14 @@ def save_tiles(
 
     if ext in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_dir=input_dir,
-            file_name=file_name + ext,
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
+            input_dir=input_dir, file_name=file_name + ext,
         )
-        wsi_reader.save_tiles(verbose=verbose)
+        size = (tile_read_size_w, tile_read_size_h)
+        wsi_reader.save_tiles(
+            output_dir=output_dir,
+            objective_power=tile_objective_value,
+            size=size,
+            verbose=verbose,
+        )
     else:
         raise FileNotSupported

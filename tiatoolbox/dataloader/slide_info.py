@@ -41,7 +41,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
 
     if file_type in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_dir=input_dir, file_name=file_name, output_dir=output_dir
+            input_dir=input_dir, file_name=file_name,
         )
         info = wsi_reader.slide_info
         if verbose:
