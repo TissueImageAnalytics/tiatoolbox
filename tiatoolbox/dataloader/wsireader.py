@@ -6,7 +6,9 @@ import pathlib
 import numpy as np
 import openslide
 import math
+import warnings
 import pandas as pd
+import cv2
 
 
 class WSIReader:
@@ -15,42 +17,22 @@ class WSIReader:
     Attributes:
         input_dir (pathlib.Path): input path to WSI directory
         file_name (str): file name of the WSI
-        output_dir (pathlib.Path): output directory to save the output
-        tile_objective_value (int): objective value at which tile is generated
-        tile_read_size (int): [tile width, tile height]
         slide_info (dict): Whole slide image slide information
 
     """
 
     def __init__(
-        self,
-        input_dir=".",
-        file_name=None,
-        output_dir="./output",
-        tile_objective_value=20,
-        tile_read_size_w=5000,
-        tile_read_size_h=5000,
+        self, input_dir=".", file_name=None,
     ):
         """
         Args:
             input_dir (str, pathlib.Path): input path to WSI directory
             file_name (str): file name of the WSI
-            output_dir (str, pathlib.Path): output directory to save the output,
-                default=./output
-            tile_objective_value (int): objective value at which tile is generated,
-                default=20
-            tile_read_size_w (int): tile width, default=5000
-            tile_read_size_h (int): tile height, default=5000
 
         """
 
         self.input_dir = pathlib.Path(input_dir)
         self.file_name = pathlib.Path(file_name).name
-        if output_dir is not None:
-            self.output_dir = pathlib.Path(output_dir, self.file_name)
-
-        self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
-        self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
 
     @property
     def slide_info(self):
@@ -94,60 +76,22 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def save_tiles(self, tile_format=".jpg", verbose=True):
-        """Generate image tiles from whole slide images.
+    def tiles(self, size=(224, 224), scale=None, objective_power=None, mpp=None):
+        """Generator which yeilds tiles at a given scale.
 
         Args:
-            self (WSIReader):
-            tile_format (str): file format to save image tiles, default=".jpg"
-            verbose (bool): Print output, default=True
+            size (int): [tile width, tile height]
+            scale (float): scale at which tiles are generated
+            objective_power (float): objective power at which tiles are generated
+            mpp (float, list, ndarray): mpp at which tiles are generated
 
         Returns:
-            saves tiles in the output directory output_dir
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi",
-            ...     output_dir='./dev_test',
-            ...     tile_objective_value=10,
-            ...     tile_read_size_h=2000,
-            ...     tile_read_size_w=2000)
-            >>> wsi_obj.save_tiles()
-
+            tuple : index, slice, image
         """
-        tile_objective_value = self.tile_objective_value
-        tile_read_size = self.tile_read_size
-
-        rescale = self.slide_info.objective_power / tile_objective_value
-        if rescale.is_integer():
-            try:
-                level = np.log2(rescale)
-                if level.is_integer():
-                    level = np.int(level)
-                    slide_dimension = self.slide_info.level_dimensions[level]
-                    rescale = 1
-                else:
-                    raise ValueError
-            # Raise index error if desired pyramid level not embedded
-            # in level_dimensions
-            except (IndexError, ValueError):
-                level = 0
-                slide_dimension = self.slide_info.level_dimensions[level]
-                rescale = np.int(rescale)
-        else:
-            raise ValueError("rescaling factor must be an integer.")
-
-        tile_read_size = np.multiply(tile_read_size, rescale)
-        slide_h = slide_dimension[1]
-        slide_w = slide_dimension[0]
-        tile_h = tile_read_size[0]
-        tile_w = tile_read_size[1]
-
-        iter_tot = 0
-        output_dir = pathlib.Path(self.output_dir)
-        output_dir.mkdir(parents=True)
-        data = []
+        level, scale = self.level_and_scale(scale, objective_power, mpp)
+        tile_read_size = np.round(np.multiply(size, 1 / scale)).astype(int)
+        slide_w, slide_h = self.slide_info.slide_dimensions
+        tile_w, tile_h = tile_read_size
 
         for h in range(int(math.ceil((slide_h - tile_h) / tile_h + 1))):
             for w in range(int(math.ceil((slide_w - tile_w) / tile_w + 1))):
@@ -162,60 +106,96 @@ class WSIReader:
                     end_w = slide_w
 
                 # Read image region
-                im = self.read_region(start_w, start_h, end_w, end_h, level)
+                img = self.read_region(start_w, start_h, end_w, end_h, level)
 
-                if verbose:
-                    format_str = (
-                        "Tile%d:  start_w:%d, end_w:%d, "
-                        "start_h:%d, end_h:%d, "
-                        "width:%d, height:%d"
-                    )
+                # Rescale to the tile to the correct size
+                img = cv2.resize(img, size, interpolation=cv2.INTER_CUBIC)
 
-                    print(
-                        format_str
-                        % (
-                            iter_tot,
-                            start_w,
-                            end_w,
-                            start_h,
-                            end_h,
-                            end_w - start_w,
-                            end_h - start_h,
-                        ),
-                        flush=True,
-                    )
+                yield (w, h), (start_w, start_h, end_w, end_h), img
 
-                # Rescale to the correct objective value
-                if rescale != 1:
-                    im = transforms.imresize(im, rescale)
+    def save_tiles(
+        self,
+        output_dir,
+        size=(5000, 5000),
+        tile_format=".jpg",
+        scale=None,
+        objective_power=None,
+        mpp=None,
+        verbose=True,
+    ):
+        """Generate image tiles at a given scale and save to disk.
 
-                img_save_name = (
-                    "_".join(
-                        [
-                            "Tile",
-                            str(tile_objective_value),
-                            str(int(start_w / rescale)),
-                            str(int(start_h / rescale)),
-                        ]
-                    )
-                    + tile_format
+        Args:
+            self (WSIReader):
+            output_dir (pathlib.Path): output directory to save the output
+            size (int): [tile width, tile height]
+            tile_format (str): file format to save image tiles, default=".jpg"
+            scale (float): scale at which tiles are generated
+            objective_power (float): objective power at which tiles are generated
+            mpp (float, list, ndarray): mpp at which tiles are generated
+            verbose (bool): Print output, default=True
+
+        Returns:
+            None
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi",
+            ...     output_dir='./dev_test',
+            ...     tile_objective_value=10,
+            ...     tile_read_size_h=2000,
+            ...     tile_read_size_w=2000)
+            >>> wsi_obj.save_tiles()
+
+        """
+        output_dir = pathlib.Path(output_dir) / self.file_name
+        output_dir.mkdir(parents=True)
+        data = []
+
+        for i, (index, slice_, img) in enumerate(
+            self.tiles(size, scale, objective_power, mpp)
+        ):
+            x, y = index
+            start_w, start_h, end_w, end_h = slice_
+
+            if verbose:
+                format_str = (
+                    "Tile%d:  start_w:%d, end_w:%d, "
+                    "start_h:%d, end_h:%d, "
+                    "width:%d, height:%d"
                 )
 
-                misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
-
-                data.append(
-                    [
-                        iter_tot,
-                        img_save_name,
+                print(
+                    format_str
+                    % (
+                        i,
                         start_w,
                         end_w,
                         start_h,
                         end_h,
-                        im.shape[0],
-                        im.shape[1],
-                    ]
+                        end_w - start_w,
+                        end_h - start_h,
+                    ),
+                    flush=True,
                 )
-                iter_tot += 1
+
+            img_save_name = "_".join(["Tile", str(y), str(x)]) + tile_format
+
+            misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=img)
+
+            data.append(
+                [
+                    i,
+                    img_save_name,
+                    start_w,
+                    end_w,
+                    start_h,
+                    end_h,
+                    img.shape[0],
+                    img.shape[1],
+                ]
+            )
 
         # Save information on each slide to relate to the whole slide image
         df = pd.DataFrame(
@@ -239,31 +219,121 @@ class WSIReader:
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
 
+    def scale_for_mpp(self, mpp):
+        """Find scale factor between the given microns-per-pixel (mpp) and the slide
+        mpp (at level 0)
+
+        Args:
+            mpp (float, ndarray): Target microns per pixel (mpp)
+
+        Returns:
+            float : scale
+        """
+        target_mpp = mpp
+        slide_mpp = self.slide_info.mpp
+
+        if slide_mpp is None:
+            raise ValueError("Cannot determine rescale. MPP of the slide is unknown.")
+        if any([target_mpp < x for x in slide_mpp]):
+            warnings.warn(
+                "Requested MPP is less than minimum slide MPP. Output may be interpolated."
+            )
+
+        scale = slide_mpp / target_mpp
+        return scale
+
+    def scale_for_objective_power(self, power):
+        """Find scale factor between the given objective power and the slide
+        objective power (at level 0)
+
+        Args:
+            power (float): Target objective power
+
+        Returns:
+            float : rescale
+        """
+        target_power = power
+        slide_power = self.slide_info.objective_power
+
+        if slide_power is None:
+            raise ValueError(
+                "Cannot determine rescale. Objective power of the slide is unknown."
+            )
+        if target_power > slide_power:
+            warnings.warn(
+                "Requested objective power is greater than maximum slide objective power. Output may be interpolated."
+            )
+
+        scale = target_power / slide_power
+        return np.array([scale, scale])
+
+    def level_and_scale(self, scale=None, objective_power=None, mpp=None, precision=4):
+        """Determine the best level and rescaling to read data most efficiently.
+
+        If a required rescaling relative to level 0 is greater than the
+        downsample offered by a level, the level is returned with an adjusted
+        rescale for that level.
+
+        The precision argument is used to avoid floating point errors caused
+        by C floats from reader libraries such as OpenSlide when finding
+        the optimal slide level to read at.
+
+        Args:
+            scale (float, ndarray): Desired rescaling relative to level 0
+            objective_power (float): Desired objetive power
+            mpp (float): Desired microns-per-pixel
+            precision (int): Decimal places to check level downsamples to
+
+        Returns:
+            tuple: A 2-tuple with the optimal level and scaling for that level
+        """
+        if len([x for x in [scale, objective_power, mpp] if x is not None]) > 1:
+            params = {"scale": scale, "objective_power": objective_power, "mpp": mpp}
+            raise ValueError(
+                "Only one of: scale, objective_power, mpp can be given."
+                " Received {}".format(params)
+            )
+        if scale is not None:
+            l0_scale = scale
+        elif objective_power is not None:
+            l0_scale = self.scale_for_objective_power(objective_power)
+        elif mpp is not None:
+            l0_scale = self.scale_for_mpp(mpp)
+
+        if isinstance(l0_scale, (int, float)):
+            l0_scale = np.array([l0_scale] * 2, dtype=np.float64)
+        elif isinstance(l0_scale, (list,)):
+            l0_scale = np.array(l0_scale, dtype=np.float64)
+
+        l0_downsample = float(max(1 / l0_scale))
+
+        # Not relying on OpenSlide get_best_level_for_downsample etc. becuase
+        # of C float comparison errors e.g. 4.0000000000001 > 4
+        for level, downsample in enumerate(self.slide_info.level_downsamples):
+            if round(downsample, precision) > round(l0_downsample, precision):
+                break
+        level = max(level - 1, 0)
+        level_downsample = float(self.slide_info.level_downsamples[level])
+        level_scale = (1 / level_downsample) / l0_scale
+
+        return level, level_scale
+
 
 class OpenSlideWSIReader(WSIReader):
     """Class for reading OpenSlide supported whole-slide images.
 
     Attributes:
         openslide_obj (:obj:`openslide.OpenSlide`)
+        file_name (str): file name of the WSI
+        slide_info (dict): Whole slide image slide information
 
     """
 
     def __init__(
-        self,
-        input_dir=".",
-        file_name=None,
-        output_dir="./output",
-        tile_objective_value=20,
-        tile_read_size_w=5000,
-        tile_read_size_h=5000,
+        self, input_dir=".", file_name=None,
     ):
         super().__init__(
-            input_dir=input_dir,
-            file_name=file_name,
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
+            input_dir=input_dir, file_name=file_name,
         )
         self.openslide_obj = openslide.OpenSlide(
             filename=str(pathlib.Path(self.input_dir, self.file_name))
