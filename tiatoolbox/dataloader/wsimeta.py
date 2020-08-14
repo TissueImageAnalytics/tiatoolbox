@@ -86,8 +86,8 @@ class WSIMeta:
             warnings.warn("Raw data is None")
             passed = False
 
-        if all(x is None for x in [self.objective_power, self.mpp_x, self.mpp_y]):
-            warnings.warn("Unknown scale (no objective_power, mpp_x, or mpp_y)")
+        if all(x is None for x in [self.objective_power, self.mpp]):
+            warnings.warn("Unknown scale (no objective_power, mpp)")
 
         return passed
 
@@ -110,8 +110,7 @@ class WSIMeta:
             "level_dimensions": self.level_dimensions,
             "level_downsamples": self.level_downsamples,
             "vendor": self.vendor,
-            "mpp_x": self.mpp_x,
-            "mpp_y": self.mpp_y,
+            "mpp": list(self.mpp),
             "file_name": self.file_name,
         }
         return param
