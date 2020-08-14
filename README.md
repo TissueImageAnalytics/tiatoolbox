@@ -75,7 +75,7 @@ The full text of the licence is included in [LICENSE.md](LICENSE.md).
 Auxiliary Files
 ---------------
 
-Auxiliary files which are downloaded from sources outside of this repository, such as pre-trained model weights, are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Lab webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 
 Dual License
