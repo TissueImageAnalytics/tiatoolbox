@@ -19,8 +19,7 @@ class WSIMeta:
         level_dimensions: Sequence[Tuple[int, int]] = None,
         level_downsamples: Sequence[float] = None,
         vendor: Optional[str] = None,
-        mpp_x: Optional[float] = None,
-        mpp_y: Optional[float] = None,
+        mpp: Optional[Sequence[float]] = None,
         raw: Mapping[str, str] = None,
     ):
         self.input_dir = Path(input_dir)
@@ -39,9 +38,7 @@ class WSIMeta:
             [float(x) for x in level_downsamples] if level_downsamples else None
         )
         self.vendor = vendor
-        mpp_x = float(mpp_x) if mpp_x else None
-        mpp_y = float(mpp_y) if mpp_y else None
-        self.mpp = np.array([mpp_x, mpp_y])
+        self.mpp = np.array(mpp)
         self.raw = dict(raw)
 
         self.validate()
