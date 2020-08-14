@@ -39,8 +39,9 @@ class WSIMeta:
             [float(x) for x in level_downsamples] if level_downsamples else None
         )
         self.vendor = vendor
-        self.mpp_x = float(mpp_x) if mpp_x else None
-        self.mpp_y = float(mpp_y) if mpp_y else None
+        mpp_x = float(mpp_x) if mpp_x else None
+        mpp_y = float(mpp_y) if mpp_y else None
+        self.mpp = np.array([mpp_x, mpp_y])
         self.raw = dict(raw)
 
         self.validate()
@@ -48,10 +49,6 @@ class WSIMeta:
     @property
     def filepath(self):
         return self.input_dir / self.file_name
-
-    @property
-    def mpp(self):
-        return np.array([self.mmpx, self.mppy])
 
     def validate(self):
         """
