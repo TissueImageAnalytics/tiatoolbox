@@ -234,9 +234,10 @@ class WSIReader:
 
         if slide_mpp is None:
             raise ValueError("Cannot determine rescale. MPP of the slide is unknown.")
-        if any([target_mpp < x for x in slide_mpp]):
+        if any(target_mpp < x for x in slide_mpp):
             warnings.warn(
-                "Requested MPP is less than minimum slide MPP. Output may be interpolated."
+                "Requested MPP is less than minimum slide MPP."
+                "Output may be interpolated."
             )
 
         scale = slide_mpp / target_mpp
@@ -261,7 +262,8 @@ class WSIReader:
             )
         if target_power > slide_power:
             warnings.warn(
-                "Requested objective power is greater than maximum slide objective power. Output may be interpolated."
+                "Requested objective power is greater than maximum slide objective power."
+                "Output may be interpolated."
             )
 
         scale = target_power / slide_power
@@ -311,8 +313,8 @@ class WSIReader:
         # of C float comparison errors e.g. 4.0000000000001 > 4
         for level, downsample in enumerate(self.slide_info.level_downsamples):
             if round(downsample, precision) > round(l0_downsample, precision):
+                level = max(level - 1, 0)
                 break
-        level = max(level - 1, 0)
         level_downsample = float(self.slide_info.level_downsamples[level])
         level_scale = (1 / level_downsample) / l0_scale
 
