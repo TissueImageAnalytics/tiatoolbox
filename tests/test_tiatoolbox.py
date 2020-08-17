@@ -3,20 +3,24 @@
 """Tests for `tiatoolbox` package."""
 import pytest
 
-# from tiatoolbox.dataloader.slide_info import slide_info
+from tiatoolbox.dataloader.slide_info import slide_info
 # from tiatoolbox.dataloader.save_tiles import save_tiles
 # from tiatoolbox.dataloader import wsireader
-# from tiatoolbox import utils
+from tiatoolbox import utils
 # from tiatoolbox.utils.exceptions import FileNotSupported
-# from tiatoolbox import cli
-# from tiatoolbox import __version__
-#
-# from click.testing import CliRunner
+from tiatoolbox import cli
+from tiatoolbox import __version__
+
+from click.testing import CliRunner
 import requests
 import os
 import pathlib
 # import numpy as np
 
+
+# -------------------------------------------------------------------------------------
+# Pytest Fixtures
+# -------------------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
 def _response_ndpi(request):
@@ -97,8 +101,46 @@ def _response_jp2(request):
 
 
 # -------------------------------------------------------------------------------------
+# Python API tests
+# -------------------------------------------------------------------------------------
+
+
+def test_slide_info(_response_ndpi, _response_svs, tmp_path):
+    """pytest for slide_info as a python function"""
+    file_types = ("*.ndpi", "*.svs", "*.mrxs")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
+
+    for _, slide_param in enumerate(slide_params):
+        utils.misc.save_yaml(
+            slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
+        )
+
+    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
+    utils.misc.save_yaml(
+        unwrapped_slide_info(input_path=files_all[0], verbose=True),
+        tmp_path / "test.yaml",
+    )
+
+# -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
 
+def test_command_line_help_interface():
+    """Test the CLI help"""
+    runner = CliRunner()
+    result = runner.invoke(cli.main)
+    assert result.exit_code == 0
+    help_result = runner.invoke(cli.main, ["--help"])
+    assert help_result.exit_code == 0
+    assert help_result.output == result.output
 
+
+def test_command_line_version():
+    """pytest for version check"""
+    runner = CliRunner()
+    version_result = runner.invoke(cli.main, ["-V"])
+    assert __version__ in version_result.output
