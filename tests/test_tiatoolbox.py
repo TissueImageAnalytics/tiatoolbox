@@ -78,8 +78,8 @@ def test_slide_info(_response_ndpi, _response_svs):
 
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     utils.misc.save_yaml(
-        unwrapped_slide_info(input_path=files_all[0], verbose=True),
-        "test.yaml")
+        unwrapped_slide_info(input_path=files_all[0], verbose=True), "test.yaml"
+    )
 
 
 def test_wsireader_slide_info(_response_svs):
@@ -133,7 +133,7 @@ def test_imresize():
 
 def test_background_composite():
     """pytest for background composit"""
-    new_im = np.zeros((2000, 2000, 4)).astype('uint8')
+    new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
     im = utils.transforms.background_composite(new_im)
     assert np.all(im[1000:, :, :] == 255)
@@ -250,24 +250,24 @@ def test_save_tiles_unwrap(_response_svs):
     )
     assert (
         pathlib.Path(__file__)
-            .parent.joinpath("tiles_save_tiles")
-            .joinpath("CMU-1-Small-Region.svs")
-            .joinpath("Output.csv")
-            .exists()
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
     )
     assert (
         pathlib.Path(__file__)
-            .parent.joinpath("tiles_save_tiles")
-            .joinpath("CMU-1-Small-Region.svs")
-            .joinpath("slide_thumbnail.jpg")
-            .exists()
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
     )
     assert (
         pathlib.Path(__file__)
-            .parent.joinpath("tiles_save_tiles")
-            .joinpath("CMU-1-Small-Region.svs")
-            .joinpath("Tile_5_0_0.jpg")
-            .exists()
+        .parent.joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
     )
     shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
 
@@ -277,7 +277,8 @@ def test_exception_tests():
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             unwrapped_slide_info(input_path="/mnt/test/sample.txt", verbose=True),
-            "test.yaml")
+            "test.yaml",
+        )
 
     unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
     with pytest.raises(FileNotSupported):
@@ -292,6 +293,7 @@ def test_exception_tests():
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
+
 
 def test_command_line_help_interface():
     """Test the CLI help"""
@@ -456,4 +458,3 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
     )
 
     assert save_tiles_result.exit_code == 0
-
