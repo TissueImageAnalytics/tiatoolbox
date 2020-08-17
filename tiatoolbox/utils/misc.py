@@ -98,34 +98,3 @@ def imwrite(image_path, img):
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-
-
-def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
-    """Resize input image
-
-    Args:
-        img (ndarray): input image
-        scale_factor (float): scaling factor to resize the input image
-        interpolation (int): interpolation, default=cv2.INTER_CUBIC
-
-    Returns:
-        ndarray: resized image
-
-    Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> from tiatoolbox.utils import misc
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
-            >>> # Resize the image to half size using scale_factor 0.5
-            >>> misc.imresize(slide_thumbnail, scale_factor=0.5)
-
-    """
-    # Estimate new dimension
-    width = int(img.shape[1] * scale_factor)
-    height = int(img.shape[0] * scale_factor)
-    dim = (width, height)
-    # Resize image
-    resized_img = cv2.resize(img, dim, interpolation=interpolation)
-
-    return resized_img

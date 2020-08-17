@@ -1,6 +1,6 @@
 """WSIReader for WSI reading or extracting metadata information from WSIs"""
-from tiatoolbox.utils import misc
-from tiatoolbox.utils.transforms import background_composite
+from tiatoolbox.utils import misc, transforms
+from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
 import numpy as np
@@ -16,15 +16,9 @@ class WSIReader:
         input_dir (pathlib.Path): input path to WSI directory
         file_name (str): file name of the WSI
         output_dir (pathlib.Path): output directory to save the output
-        openslide_obj (:obj:`openslide.OpenSlide`)
         tile_objective_value (int): objective value at which tile is generated
         tile_read_size (int): [tile width, tile height]
-        objective_power (int): objective value at which whole slide image is scanned
-        level_count (int): The number of pyramid levels in the slide
-        level_dimensions (int): A list of `(width, height)` tuples, one for each level
-            of the slide
-        level_downsamples (int): A list of down sample factors for each level
-            of the slide
+        slide_info (dict): Whole slide image slide information
 
     """
 
@@ -55,19 +49,11 @@ class WSIReader:
         if output_dir is not None:
             self.output_dir = pathlib.Path(output_dir, self.file_name)
 
-        self.openslide_obj = openslide.OpenSlide(
-            filename=str(pathlib.Path(self.input_dir, self.file_name))
-        )
         self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
-        self.objective_power = np.int(
-            self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-        )  # magnification at which slide is scanned, this is magnification at level 0
-        self.level_count = self.openslide_obj.level_count
-        self.level_dimensions = self.openslide_obj.level_dimensions
-        self.level_downsamples = self.openslide_obj.level_downsamples
+        self.slide_info = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
 
-    def slide_info(self):
+    def __slide_info(self):
         """WSI meta data reader
 
         Args:
@@ -76,43 +62,8 @@ class WSIReader:
         Returns:
             dict: dictionary containing meta information
 
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_param = wsi_obj.slide_info()
-
         """
-        input_dir = self.input_dir
-        if self.objective_power == 0:
-            self.objective_power = np.int(
-                self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-            )
-        objective_power = self.objective_power
-        slide_dimension = self.openslide_obj.level_dimensions[0]
-        tile_objective_value = self.tile_objective_value
-        rescale = np.int(objective_power / tile_objective_value)
-        filename = self.file_name
-        tile_read_size = self.tile_read_size
-        level_count = self.level_count
-        level_dimensions = self.level_dimensions
-        level_downsamples = self.level_downsamples
-        file_name = self.file_name
-
-        param = {
-            "input_dir": input_dir,
-            "objective_power": objective_power,
-            "slide_dimension": slide_dimension,
-            "rescale": rescale,
-            "tile_objective_value": tile_objective_value,
-            "filename": filename,
-            "tile_read_size": tile_read_size.tolist(),
-            "level_count": level_count,
-            "level_dimensions": level_dimensions,
-            "level_downsamples": level_downsamples,
-            "file_name": file_name,
-        }
-
+        param = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
         return param
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
@@ -129,27 +80,11 @@ class WSIReader:
             img_array : ndarray of size MxNx3
             M=end_h-start_h, N=end_w-start_w
 
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> from matplotlib import pyplot as plt
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> level = 0
-            >>> region = [13000, 17000, 15000, 19000]
-            >>> im_region = wsi_obj.read_region(
-            ...     region[0], region[1], region[2], region[3], level)
-            >>> plt.imshow(im_region)
-
         """
-        openslide_obj = self.openslide_obj
-        im_region = openslide_obj.read_region(
-            [start_w, start_h], level, [end_w - start_w, end_h - start_h]
-        )
-        im_region = background_composite(image=im_region)
-        return im_region
+        raise NotImplementedError
 
     def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.5x
+        """Read whole slide image thumbnail at 1.25x
 
         Args:
             self (WSIReader):
@@ -157,37 +92,16 @@ class WSIReader:
         Returns:
             ndarray : image array
 
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
-
         """
-        openslide_obj = self.openslide_obj
-        tile_objective_value = 20
+        raise NotImplementedError
 
-        if self.objective_power == 0:
-            self.objective_power = np.int(
-                openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-            )
-
-        rescale = np.int(self.objective_power / tile_objective_value)
-        slide_dimension = openslide_obj.level_dimensions[0]
-        slide_dimension_20x = np.array(slide_dimension) / rescale
-        thumb = openslide_obj.get_thumbnail(
-            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
-        )
-        thumb = np.asarray(thumb)
-
-        return thumb
-
-    def save_tiles(self, tile_format=".jpg"):
-        """Generate JPEG tiles from whole slide images
+    def save_tiles(self, tile_format=".jpg", verbose=True):
+        """Generate image tiles from whole slide images.
 
         Args:
             self (WSIReader):
             tile_format (str): file format to save image tiles, default=".jpg"
+            verbose (bool): Print output, default=True
 
         Returns:
             saves tiles in the output directory output_dir
@@ -203,18 +117,29 @@ class WSIReader:
             >>> wsi_obj.save_tiles()
 
         """
-        openslide_obj = self.openslide_obj
         tile_objective_value = self.tile_objective_value
         tile_read_size = self.tile_read_size
 
-        if self.objective_power == 0:
-            self.objective_power = np.int(
-                openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-            )
+        rescale = self.slide_info.objective_power / tile_objective_value
+        if rescale.is_integer():
+            try:
+                level = np.log2(rescale)
+                if level.is_integer():
+                    level = np.int(level)
+                    slide_dimension = self.slide_info.level_dimensions[level]
+                    rescale = 1
+                else:
+                    raise ValueError
+            # Raise index error if desired pyramid level not embedded
+            # in level_dimensions
+            except (IndexError, ValueError):
+                level = 0
+                slide_dimension = self.slide_info.level_dimensions[level]
+                rescale = np.int(rescale)
+        else:
+            raise ValueError("rescaling factor must be an integer.")
 
-        rescale = np.int(self.objective_power / tile_objective_value)
         tile_read_size = np.multiply(tile_read_size, rescale)
-        slide_dimension = openslide_obj.level_dimensions[0]
         slide_h = slide_dimension[1]
         slide_w = slide_dimension[0]
         tile_h = tile_read_size[0]
@@ -238,30 +163,32 @@ class WSIReader:
                     end_w = slide_w
 
                 # Read image region
-                im = self.read_region(start_w, start_h, end_w, end_h)
-                format_str = (
-                    "Tile%d:  start_w:%d, end_w:%d, "
-                    "start_h:%d, end_h:%d, "
-                    "width:%d, height:%d"
-                )
+                im = self.read_region(start_w, start_h, end_w, end_h, level)
 
-                print(
-                    format_str
-                    % (
-                        iter_tot,
-                        start_w,
-                        end_w,
-                        start_h,
-                        end_h,
-                        end_w - start_w,
-                        end_h - start_h,
-                    ),
-                    flush=True,
-                )
+                if verbose:
+                    format_str = (
+                        "Tile%d:  start_w:%d, end_w:%d, "
+                        "start_h:%d, end_h:%d, "
+                        "width:%d, height:%d"
+                    )
+
+                    print(
+                        format_str
+                        % (
+                            iter_tot,
+                            start_w,
+                            end_w,
+                            start_h,
+                            end_h,
+                            end_w - start_w,
+                            end_h - start_h,
+                        ),
+                        flush=True,
+                    )
 
                 # Rescale to the correct objective value
                 if rescale != 1:
-                    im = misc.imresize(im, rescale)
+                    im = transforms.imresize(im, rescale)
 
                 img_save_name = (
                     "_".join(
@@ -312,3 +239,142 @@ class WSIReader:
         misc.imwrite(
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
+
+
+class OpenSlideWSIReader(WSIReader):
+    """Class for reading OpenSlide supported whole-slide images.
+
+    Attributes:
+        openslide_obj (:obj:`openslide.OpenSlide`)
+
+    """
+
+    def __init__(
+        self,
+        input_dir=".",
+        file_name=None,
+        output_dir="./output",
+        tile_objective_value=20,
+        tile_read_size_w=5000,
+        tile_read_size_h=5000,
+    ):
+        super().__init__(
+            input_dir=input_dir,
+            file_name=file_name,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
+        )
+        self.openslide_obj = openslide.OpenSlide(
+            filename=str(pathlib.Path(self.input_dir, self.file_name))
+        )
+        self.slide_info = self.__slide_info()
+
+    def read_region(self, start_w, start_h, end_w, end_h, level=0):
+        """Read a region in whole slide image
+
+        Args:
+            start_w (int): starting point in x-direction (along width)
+            start_h (int): starting point in y-direction (along height)
+            end_w (int): end point in x-direction (along width)
+            end_h (int): end point in y-direction (along height)
+            level (int): pyramid level to read the image
+
+        Returns:
+            img_array : ndarray of size MxNx3
+            M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi_obj = wsireader.OpenSlideWSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
+            >>> level = 0
+            >>> region = [13000, 17000, 15000, 19000]
+            >>> im_region = wsi_obj.read_region(
+            ...     region[0], region[1], region[2], region[3], level)
+            >>> plt.imshow(im_region)
+
+        """
+
+        openslide_obj = self.openslide_obj
+        im_region = openslide_obj.read_region(
+            [start_w, start_h], level, [end_w - start_w, end_h - start_h]
+        )
+        im_region = transforms.background_composite(image=im_region)
+        return im_region
+
+    def __slide_info(self):
+        """WSI meta data reader
+
+        Args:
+            self (OpenSlideWSIReader):
+
+        Returns:
+            WSIMeta: containing meta information
+
+        """
+        input_dir = self.input_dir
+        objective_power = np.int(
+            self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+        )
+
+        slide_dimension = self.openslide_obj.level_dimensions[0]
+        tile_objective_value = self.tile_objective_value
+        rescale = np.int(objective_power / tile_objective_value)
+        tile_read_size = self.tile_read_size
+        level_count = self.openslide_obj.level_count
+        level_dimensions = self.openslide_obj.level_dimensions
+        level_downsamples = self.openslide_obj.level_downsamples
+        file_name = self.file_name
+        vendor = (self.openslide_obj.properties[openslide.PROPERTY_NAME_VENDOR],)
+        mpp_x = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X],)
+        mpp_y = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y],)
+
+        param = WSIMeta(
+            input_dir=input_dir,
+            objective_power=objective_power,
+            slide_dimension=slide_dimension,
+            rescale=rescale,
+            tile_objective_value=tile_objective_value,
+            tile_read_size=tile_read_size.tolist(),
+            level_count=level_count,
+            level_dimensions=level_dimensions,
+            level_downsamples=level_downsamples,
+            vendor=vendor,
+            mpp_x=mpp_x,
+            mpp_y=mpp_y,
+            file_name=file_name,
+        )
+
+        return param
+
+    def slide_thumbnail(self):
+        """Read whole slide image thumbnail at 1.25x
+
+        Args:
+            self (OpenSlideWSIReader):
+
+        Returns:
+            ndarray : image array
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.OpenSlideWSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
+            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+
+        """
+        openslide_obj = self.openslide_obj
+        tile_objective_value = 20
+
+        rescale = np.int(self.slide_info.objective_power / tile_objective_value)
+        slide_dimension = self.slide_info.level_dimensions[0]
+        slide_dimension_20x = np.array(slide_dimension) / rescale
+        thumb = openslide_obj.get_thumbnail(
+            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
+        )
+        thumb = np.asarray(thumb)
+
+        return thumb

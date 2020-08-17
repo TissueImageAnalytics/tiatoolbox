@@ -17,8 +17,16 @@ dataloader.wsireader
 ^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.dataloader.wsireader
-    :members: WSIReader
+    :members: WSIReader, OpenSlideWSIReader
     :special-members: __init__
+    :show-inheritance:
+
+^^^^^^^^^^^^^^^^^^
+dataloader.wsimeta
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.dataloader.wsimeta
+    :members: WSIMeta
 
 ^^^^^^^^^^^^^^^^^^^^^
 dataloader.slide_info
@@ -55,10 +63,16 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, imresize
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite
 
 ^^^^^^^^^^
 utils.transforms
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.transforms
-    :members: background_composite
+    :members: background_composite, imresize
+
+^^^^^^^^^^
+utils.exceptions
+^^^^^^^^^^
+.. automodule:: tiatoolbox.utils.exceptions
+    :members: FileNotSupported

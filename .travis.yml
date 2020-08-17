@@ -7,13 +7,22 @@ python:
   - 3.6
 
 before_install:
+  - sudo apt-get -y update
   - sudo apt-get -y install openslide-tools
+  - sudo apt-get -y install libopenjpeg5 libopenjpeg-dev
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox-travis
+install:
+    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - source "$HOME/miniconda/etc/profile.d/conda.sh"
+    - pip install -U tox-travis
+
 
 # Command to run tests, e.g. python setup.py test
-script: tox
+script:
+    - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
+    - tox -e flake8
 
 # Upload test coverage reports (codecov and deepsource)
 after_success:
