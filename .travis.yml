@@ -20,7 +20,7 @@ install:
 
 
 # Command to run tests, e.g. python setup.py test
-script: 
+script:
     - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
     - tox -e flake8
 
