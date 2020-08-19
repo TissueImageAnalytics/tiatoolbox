@@ -54,8 +54,7 @@ class WSIReader:
         self.tile_objective_value = np.int(
             tile_objective_value)  # Tile magnification
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
-        self.slide_info = WSIMeta(
-            input_dir=self.input_dir, file_name=self.file_name)
+        self.slide_info = self.__slide_info()
 
     def __slide_info(self):
         """WSI meta data reader
