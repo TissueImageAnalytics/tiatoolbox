@@ -325,36 +325,33 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     )
 
 
-def test_save_tiles_jp2(_response_all_wsis, tmp_path):
-    """pytest for save_tiles as a python function"""
-    file_types = ("*.jp2", )
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
-    )
-    save_tiles(
-        input_path=files_all,
-        workers=1,
+def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
+    """pytest for save_tiles in wsireader as a python function"""
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_jp2))
+    wsi_obj = wsireader.OpenSlideWSIReader(
+        input_dir,
+        file_name + ext,
+        output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")),
         tile_objective_value=5,
-        output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
-        verbose=True,
     )
+    wsi_obj.save_tiles(verbose=True)
     assert (
         pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
+        .joinpath("test_wsireader_jp2_save_tiles")
         .joinpath("test1.jp2")
         .joinpath("Output.csv")
         .exists()
     )
     assert (
         pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
+        .joinpath("test_wsireader_jp2_save_tiles")
         .joinpath("test1.jp2")
         .joinpath("slide_thumbnail.jpg")
         .exists()
     )
     assert (
         pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
+        .joinpath("test_wsireader_jp2_save_tiles")
         .joinpath("test1.jp2")
         .joinpath("Tile_5_0_0.jpg")
         .exists()
