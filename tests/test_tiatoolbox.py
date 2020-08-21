@@ -381,7 +381,7 @@ def test_command_line_version():
     assert __version__ in version_result.output
 
 
-def test_command_line_slide_info(_response_all_wsis, tmp_path):
+def test_command_line_slide_info(_response_all_wsis):
     """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -396,8 +396,6 @@ def test_command_line_slide_info(_response_all_wsis, tmp_path):
             "2",
             "--mode",
             "save",
-            "--output_dir",
-            tmp_path,
         ],
     )
 
@@ -488,3 +486,45 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+
+
+def test_command_line_save_tiles(_response_all_wsis):
+    """Test the Save tiles CLI."""
+    runner = CliRunner()
+    save_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "save-tiles",
+            "--wsi_input",
+            str(pathlib.Path(_response_all_wsis)),
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--workers",
+            "2",
+            "--tile_objective_value",
+            "5",
+        ],
+    )
+
+    assert save_tiles_result.exit_code == 0
+
+    file_types = "*.svs"
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+    )
+    save_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "save-tiles",
+            "--wsi_input",
+            files_all[0],
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--workers",
+            "2",
+            "--tile_objective_value",
+            "5",
+        ],
+    )
+
+    assert save_tiles_result.exit_code == 0
