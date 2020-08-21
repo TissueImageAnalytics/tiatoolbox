@@ -44,11 +44,6 @@ def _response_ndpi(request, tmpdir_factory):
     else:
         print("Skipping NDPI")
 
-    def close_ndpi():
-        if ndpi_file_path.isfile():
-            os.remove(str(ndpi_file_path))
-
-    request.addfinalizer(close_ndpi)
     return ndpi_file_path
 
 
@@ -70,11 +65,6 @@ def _response_svs(request, tmpdir_factory):
     else:
         print("Skipping SVS")
 
-    def close_svs():
-        if svs_file_path.isfile():
-            os.remove(str(svs_file_path))
-
-    request.addfinalizer(close_svs)
     return svs_file_path
 
 
@@ -96,11 +86,6 @@ def _response_jp2(request, tmpdir_factory):
     else:
         print("Skipping JP2")
 
-    def close_jp2():
-        if jp2_file_path.isfile():
-            os.remove(str(jp2_file_path))
-
-    request.addfinalizer(close_jp2)
     return jp2_file_path
 
 
@@ -114,12 +99,6 @@ def _response_all_wsis(request, _response_ndpi, _response_svs, tmpdir_factory):
     except OSError:
         shutil.copy(_response_ndpi, dir_path.joinpath(_response_ndpi.basename))
         shutil.copy(_response_svs, dir_path.joinpath(_response_svs.basename))
-
-    def close_all_wsi():
-        if dir_path.is_dir():
-            shutil.rmtree(dir_path)
-
-    request.addfinalizer(close_all_wsi)
 
     return dir_path
 
@@ -226,7 +205,6 @@ def test_save_tiles_unwrap(_response_svs, tmp_path):
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
-    shutil.rmtree(pathlib.Path(tmp_path).joinpath("tiles_save_tiles"))
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
@@ -264,7 +242,6 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
-    shutil.rmtree(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles"))
 
 
 def test_save_tiles(_response_all_wsis, tmp_path):
@@ -322,7 +299,6 @@ def test_save_tiles(_response_all_wsis, tmp_path):
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
-    shutil.rmtree(pathlib.Path(tmp_path).joinpath("tiles_save_tiles"))
 
 
 def test_exception_tests():
