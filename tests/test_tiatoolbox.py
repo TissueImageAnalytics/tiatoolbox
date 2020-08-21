@@ -230,6 +230,102 @@ def test_save_tiles_unwrap(_response_svs, tmp_path):
     shutil.rmtree(pathlib.Path(tmp_path).joinpath("tiles_save_tiles"))
 
 
+def test_wsireader_save_tiles(_response_svs, tmp_path):
+    """pytest for save_tiles in wsireader as a python function"""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+    )
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.OpenSlideWSIReader(
+        input_dir,
+        file_name + ext,
+        output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")),
+        tile_objective_value=5,
+    )
+    wsi_obj.save_tiles(verbose=True)
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    shutil.rmtree(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles"))
+
+
+def test_save_tiles(_response_all_wsis, tmp_path):
+    """pytest for save_tiles as a python function"""
+    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+    )
+    save_tiles(
+        input_path=files_all,
+        workers=2,
+        tile_objective_value=5,
+        output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    shutil.rmtree(pathlib.Path(tmp_path).joinpath("tiles_save_tiles"))
+
+
 def test_exception_tests():
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     with pytest.raises(FileNotSupported):
