@@ -512,7 +512,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
-    save_tiles_result = runner.invoke(
+    save_svs_tiles_result = runner.invoke(
         cli.main,
         [
             "save-tiles",
@@ -529,4 +529,4 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
         ],
     )
 
-    assert save_tiles_result.exit_code == 0
+    assert save_svs_tiles_result.exit_code == 0
