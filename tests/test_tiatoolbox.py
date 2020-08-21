@@ -164,7 +164,7 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     )
 
 
-def test_wsireader_read_region(_response_svs, tmp_path):
+def test_wsireader_read_region(_response_svs):
     """pytest for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
@@ -178,6 +178,35 @@ def test_wsireader_read_region(_response_svs, tmp_path):
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape == (2000, 2000, 3)
+
+
+def test_wsireader_slide_thumbnail(_response_svs):
+    """pytest for slide_thumbnail as a python function"""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+    )
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    slide_thumbnail = wsi_obj.slide_thumbnail()
+    assert isinstance(slide_thumbnail, np.ndarray)
+    assert slide_thumbnail.dtype == "uint8"
+
+
+def test_imresize():
+    """pytest for imresize"""
+    img = np.zeros((2000, 2000, 3))
+    resized_img = utils.transforms.imresize(img, 0.5)
+    assert resized_img.shape == (1000, 1000, 3)
+
+
+def test_background_composite():
+    """pytest for background composite"""
+    new_im = np.zeros((2000, 2000, 4)).astype("uint8")
+    new_im[:1000, :, 3] = 255
+    im = utils.transforms.background_composite(new_im)
+    assert np.all(im[1000:, :, :] == 255)
+    assert np.all(im[:1000, :, :] == 0)
 
 
 # -------------------------------------------------------------------------------------
