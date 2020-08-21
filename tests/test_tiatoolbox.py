@@ -19,7 +19,7 @@ import os
 import pathlib
 import shutil
 
-# import numpy as np
+import numpy as np
 
 
 # -------------------------------------------------------------------------------------
@@ -162,6 +162,22 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     utils.misc.save_yaml(
         slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
     )
+
+
+def test_wsireader_read_region(_response_svs, tmp_path):
+    """pytest for read region as a python function"""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+    )
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    level = 0
+    region = [13000, 17000, 15000, 19000]
+    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (2000, 2000, 3)
 
 
 # -------------------------------------------------------------------------------------
