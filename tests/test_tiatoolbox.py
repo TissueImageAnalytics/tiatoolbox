@@ -5,11 +5,11 @@ import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
 
-# from tiatoolbox.dataloader.save_tiles import save_tiles
+from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
 
-# from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox import cli
 from tiatoolbox import __version__
 
@@ -191,6 +191,61 @@ def test_wsireader_slide_thumbnail(_response_svs):
     slide_thumbnail = wsi_obj.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
+
+
+def test_save_tiles_unwrap(_response_svs, tmp_path):
+    """pytest for save_tiles without multiprocessing"""
+    file_types = "*.svs"
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+    )
+    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
+    unwrapped_save_tiles(
+        input_path=files_all[0],
+        tile_objective_value=5,
+        output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    shutil.rmtree(pathlib.Path(tmp_path).joinpath("tiles_save_tiles"))
+
+
+def test_exception_tests():
+    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
+    with pytest.raises(FileNotSupported):
+        utils.misc.save_yaml(
+            unwrapped_slide_info(input_path="/mnt/test/sample.txt", verbose=True),
+            "test.yaml",
+        )
+
+    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
+    with pytest.raises(FileNotSupported):
+        unwrapped_save_tiles(
+            input_path="/mnt/test/sample.txt",
+            tile_objective_value=5,
+            output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+            verbose=True,
+        )
 
 
 def test_imresize():
