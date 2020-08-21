@@ -397,7 +397,7 @@ def test_command_line_slide_info(_response_all_wsis, tmp_path):
             "--mode",
             "save",
             "--output_dir",
-            tmp_path
+            tmp_path,
         ],
     )
 
@@ -423,3 +423,68 @@ def test_command_line_slide_info(_response_all_wsis, tmp_path):
     )
 
     assert slide_info_result.exit_code == 0
+
+
+def test_command_line_read_region(_response_ndpi, tmp_path):
+    """Test the Read Region CLI."""
+    runner = CliRunner()
+    read_region_result = runner.invoke(
+        cli.main,
+        [
+            "read-region",
+            "--wsi_input",
+            str(pathlib.Path(_response_ndpi)),
+            "--level",
+            "0",
+            "--mode",
+            "save",
+            "--region",
+            "0",
+            "0",
+            "2000",
+            "2000",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("im_region.jpg")),
+        ],
+    )
+
+    assert read_region_result.exit_code == 0
+    assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region.jpg")))
+
+    read_region_result = runner.invoke(
+        cli.main,
+        [
+            "read-region",
+            "--wsi_input",
+            str(pathlib.Path(_response_ndpi)),
+            "--level",
+            "0",
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")),
+        ],
+    )
+
+    assert read_region_result.exit_code == 0
+    assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")))
+
+
+def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
+    """Test the Slide Thumbnail CLI."""
+    runner = CliRunner()
+    slide_thumb_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(_response_ndpi)),
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
+        ],
+    )
+
+    assert slide_thumb_result.exit_code == 0
+    assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
