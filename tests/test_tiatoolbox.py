@@ -270,7 +270,64 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
 
 def test_save_tiles(_response_all_wsis, tmp_path):
     """pytest for save_tiles as a python function"""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
+    file_types = ("*.ndpi", "*.svs", "*.mrxs")
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+    )
+    save_tiles(
+        input_path=files_all,
+        workers=1,
+        tile_objective_value=5,
+        output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("tiles_save_tiles")
+        .joinpath("CMU-1.ndpi")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+
+
+def test_save_tiles_jp2(_response_all_wsis, tmp_path):
+    """pytest for save_tiles as a python function"""
+    file_types = ("*.jp2", )
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
