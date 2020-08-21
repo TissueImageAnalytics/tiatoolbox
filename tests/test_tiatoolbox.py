@@ -17,9 +17,8 @@ from click.testing import CliRunner
 import requests
 import os
 import pathlib
-import shutil
-
 import numpy as np
+import shutil
 
 
 # -------------------------------------------------------------------------------------
@@ -380,3 +379,47 @@ def test_command_line_version():
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
+
+
+def test_command_line_slide_info(_response_all_wsis, tmp_path):
+    """Test the Slide information CLI."""
+    runner = CliRunner()
+    slide_info_result = runner.invoke(
+        cli.main,
+        [
+            "slide-info",
+            "--wsi_input",
+            str(pathlib.Path(_response_all_wsis)),
+            "--file_types",
+            '"*.ndpi, *.svs, *.jp2"',
+            "--workers",
+            "2",
+            "--mode",
+            "save",
+            "--output_dir",
+            tmp_path
+        ],
+    )
+
+    assert slide_info_result.exit_code == 0
+
+    file_types = "*.svs"
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    slide_info_result = runner.invoke(
+        cli.main,
+        [
+            "slide-info",
+            "--wsi_input",
+            files_all[0],
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--workers",
+            "2",
+            "--mode",
+            "show",
+        ],
+    )
+
+    assert slide_info_result.exit_code == 0
