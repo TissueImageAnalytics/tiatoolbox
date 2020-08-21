@@ -503,6 +503,8 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             "4",
             "--tile_objective_value",
             "5",
+            "--output_dir",
+            os.path.join(tmp_path, "all_tiles")
         ],
     )
 
