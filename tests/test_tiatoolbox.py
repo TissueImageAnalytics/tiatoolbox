@@ -328,7 +328,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
     """pytest for save_tiles in wsireader as a python function"""
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_jp2))
-    wsi_obj = wsireader.OpenSlideWSIReader(
+    wsi_obj = wsireader.OmnyxJP2WSIReader(
         input_dir,
         file_name + ext,
         output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")),
