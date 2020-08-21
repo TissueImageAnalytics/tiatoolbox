@@ -207,9 +207,7 @@ def test_save_tiles_jp2_unwrap(_response_jp2, tmp_path):
     unwrapped_save_tiles(
         input_path=_response_jp2,
         tile_objective_value=5,
-        output_dir=str(
-            pathlib.Path(tmp_path).joinpath("test_save_tiles_jp2_unwrap")
-        ),
+        output_dir=str(pathlib.Path(tmp_path).joinpath("test_save_tiles_jp2_unwrap")),
         verbose=True,
     )
     assert (
@@ -331,7 +329,9 @@ def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
     wsi_obj = wsireader.OmnyxJP2WSIReader(
         input_dir,
         file_name + ext,
-        output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")),
+        output_dir=str(
+            pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")
+        ),
         tile_objective_value=5,
     )
     wsi_obj.save_tiles(verbose=True)
@@ -537,7 +537,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             "--tile_objective_value",
             "5",
             "--output_dir",
-            os.path.join(tmp_path, "all_tiles")
+            os.path.join(tmp_path, "all_tiles"),
         ],
     )
 
@@ -560,7 +560,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             "--tile_objective_value",
             "5",
             "--output_dir",
-            tmp_path
+            tmp_path,
         ],
     )
 
