@@ -27,7 +27,7 @@ import shutil
 
 
 @pytest.fixture(scope="session")
-def _response_ndpi(request, tmpdir_factory):
+def _response_ndpi(tmpdir_factory):
     """
     Sample pytest fixture for ndpi images
     Download ndpi image for pytest
@@ -48,7 +48,7 @@ def _response_ndpi(request, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _response_svs(request, tmpdir_factory):
+def _response_svs(tmpdir_factory):
     """
     Sample pytest fixture for svs images
     Download ndpi image for pytest
@@ -69,7 +69,7 @@ def _response_svs(request, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _response_jp2(request, tmpdir_factory):
+def _response_jp2(tmpdir_factory):
     """
     Sample pytest fixture for svs images
     Download ndpi image for pytest
@@ -90,7 +90,7 @@ def _response_jp2(request, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _response_all_wsis(request, _response_ndpi, _response_svs, tmpdir_factory):
+def _response_all_wsis(_response_ndpi, _response_svs, tmpdir_factory):
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
     try:
