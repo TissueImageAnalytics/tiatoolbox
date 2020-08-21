@@ -405,7 +405,7 @@ def test_command_line_slide_info(_response_all_wsis, tmp_path):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
     slide_info_result = runner.invoke(
         cli.main,
