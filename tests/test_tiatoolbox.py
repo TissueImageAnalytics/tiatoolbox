@@ -4,9 +4,11 @@
 import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
+
 # from tiatoolbox.dataloader.save_tiles import save_tiles
-# from tiatoolbox.dataloader import wsireader
+from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
+
 # from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox import cli
 from tiatoolbox import __version__
@@ -16,12 +18,14 @@ import requests
 import os
 import pathlib
 import shutil
+
 # import numpy as np
 
 
 # -------------------------------------------------------------------------------------
 # Pytest Fixtures
 # -------------------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def _response_ndpi(request, tmpdir_factory):
@@ -144,6 +148,21 @@ def test_slide_info(_response_all_wsis, tmp_path):
         unwrapped_slide_info(input_path=files_all[0], verbose=True),
         tmp_path / "test.yaml",
     )
+
+
+def test_wsireader_slide_info(_response_svs, tmp_path):
+    """pytest for slide_info in WSIReader class as a python function"""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+    )
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    slide_param = wsi_obj.slide_info
+    utils.misc.save_yaml(
+        slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
+    )
+
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
