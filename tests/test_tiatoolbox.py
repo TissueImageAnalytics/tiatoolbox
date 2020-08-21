@@ -116,7 +116,7 @@ def test_slide_info(_response_all_wsis, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=_response_all_wsis, file_types=file_types,
     )
-    slide_params = slide_info(input_path=files_all, workers=4, verbose=True)
+    slide_params = slide_info(input_path=files_all, workers=1, verbose=True)
 
     for _, slide_param in enumerate(slide_params):
         utils.misc.save_yaml(
@@ -276,7 +276,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     )
     save_tiles(
         input_path=files_all,
-        workers=4,
+        workers=1,
         tile_objective_value=5,
         output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
         verbose=True,
@@ -393,7 +393,7 @@ def test_command_line_slide_info(_response_all_wsis):
             "--file_types",
             '"*.ndpi, *.svs, *.jp2"',
             "--workers",
-            "4",
+            "1",
             "--mode",
             "save",
         ],
@@ -414,7 +414,7 @@ def test_command_line_slide_info(_response_all_wsis):
             "--file_types",
             '"*.ndpi, *.svs"',
             "--workers",
-            "2",
+            "1",
             "--mode",
             "show",
         ],
@@ -500,7 +500,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             "--file_types",
             '"*.ndpi, *.svs, *.jp2"',
             "--workers",
-            "4",
+            "1",
             "--tile_objective_value",
             "5",
             "--output_dir",
@@ -523,7 +523,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             "--file_types",
             '"*.ndpi, *.svs"',
             "--workers",
-            "2",
+            "1",
             "--tile_objective_value",
             "5",
             "--output_dir",
