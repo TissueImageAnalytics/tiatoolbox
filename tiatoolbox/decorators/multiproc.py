@@ -64,6 +64,7 @@ class TIAMultiProcess:
                 p.close()
                 p.join()
                 p.restart()
+                p.clear()
 
             return results
 
