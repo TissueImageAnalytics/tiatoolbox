@@ -15,6 +15,7 @@ from click.testing import CliRunner
 import requests
 import os
 import pathlib
+import shutil
 # import numpy as np
 
 
@@ -23,13 +24,13 @@ import pathlib
 # -------------------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
-def _response_ndpi(request):
+def _response_ndpi(request, tmpdir_factory):
     """
     Sample pytest fixture for ndpi images
     Download ndpi image for pytest
     """
-    ndpi_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1.ndpi")
-    if not pathlib.Path.is_file(ndpi_file_path):
+    ndpi_file_path = tmpdir_factory.mktemp("data").join("CMU-1.ndpi")
+    if not os.path.isfile(ndpi_file_path):
         print("Downloading NDPI")
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata"
@@ -41,21 +42,21 @@ def _response_ndpi(request):
         print("Skipping NDPI")
 
     def close_ndpi():
-        if pathlib.Path.is_file(ndpi_file_path):
+        if ndpi_file_path.isfile():
             os.remove(str(ndpi_file_path))
 
     request.addfinalizer(close_ndpi)
-    return _response_ndpi
+    return ndpi_file_path
 
 
 @pytest.fixture(scope="session")
-def _response_svs(request):
+def _response_svs(request, tmpdir_factory):
     """
     Sample pytest fixture for svs images
     Download ndpi image for pytest
     """
-    svs_file_path = pathlib.Path(__file__).parent.joinpath("CMU-1-Small-Region.svs")
-    if not pathlib.Path.is_file(svs_file_path):
+    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-1-Small-Region.svs")
+    if not os.path.isfile(svs_file_path):
         print("Downloading SVS")
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata"
@@ -67,21 +68,21 @@ def _response_svs(request):
         print("Skipping SVS")
 
     def close_svs():
-        if pathlib.Path.is_file(svs_file_path):
+        if svs_file_path.isfile():
             os.remove(str(svs_file_path))
 
     request.addfinalizer(close_svs)
-    return _response_svs
+    return svs_file_path
 
 
 @pytest.fixture(scope="session")
-def _response_jp2(request):
+def _response_jp2(request, tmpdir_factory):
     """
     Sample pytest fixture for svs images
     Download ndpi image for pytest
     """
-    jp2_file_path = pathlib.Path(__file__).parent.joinpath("test1.jp2")
-    if not pathlib.Path.is_file(jp2_file_path):
+    jp2_file_path = tmpdir_factory.mktemp("data").join("test1.jp2")
+    if not os.path.isfile(jp2_file_path):
         print("Downloading JP2")
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files"
@@ -93,11 +94,31 @@ def _response_jp2(request):
         print("Skipping JP2")
 
     def close_jp2():
-        if pathlib.Path.is_file(jp2_file_path):
+        if jp2_file_path.isfile():
             os.remove(str(jp2_file_path))
 
     request.addfinalizer(close_jp2)
-    return _response_jp2
+    return jp2_file_path
+
+
+@pytest.fixture(scope="session")
+def _response_all_wsis(request, _response_ndpi, _response_svs, tmpdir_factory):
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(_response_ndpi.basename).symlink_to(_response_ndpi)
+        dir_path.joinpath(_response_svs.basename).symlink_to(_response_svs)
+    except OSError:
+        shutil.copy(_response_ndpi, dir_path.joinpath(_response_ndpi.basename))
+        shutil.copy(_response_svs, dir_path.joinpath(_response_svs.basename))
+
+    def close_all_wsi():
+        if dir_path.is_dir():
+            shutil.rmtree(dir_path)
+
+    request.addfinalizer(close_all_wsi)
+
+    return dir_path
 
 
 # -------------------------------------------------------------------------------------
@@ -105,11 +126,11 @@ def _response_jp2(request):
 # -------------------------------------------------------------------------------------
 
 
-def test_slide_info(_response_ndpi, _response_svs, tmp_path):
+def test_slide_info(_response_all_wsis, tmp_path):
     """pytest for slide_info as a python function"""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs")
+    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=_response_all_wsis, file_types=file_types,
     )
     slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
 
