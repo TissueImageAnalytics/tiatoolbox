@@ -488,7 +488,7 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
     assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
 
 
-def test_command_line_save_tiles(_response_all_wsis):
+def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     """Test the Save tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -524,6 +524,8 @@ def test_command_line_save_tiles(_response_all_wsis):
             "2",
             "--tile_objective_value",
             "5",
+            "--output_dir",
+            tmp_path
         ],
     )
 
