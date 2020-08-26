@@ -17,8 +17,8 @@
 # The Original Code is Copyright (C) 2006, Blender Foundation
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
-#
-# """WSIMeta to save metadata information for WSIs"""
+
+"""WSIMeta to save metadata information for WSIs"""
 
 
 class WSIMeta:
