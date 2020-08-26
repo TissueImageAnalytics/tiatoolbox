@@ -17,7 +17,6 @@
 # The Original Code is Copyright (C) 2006, Blender Foundation
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
-#
 
 """Save image tiles from the whole slide image"""
 from tiatoolbox.dataloader import wsireader
