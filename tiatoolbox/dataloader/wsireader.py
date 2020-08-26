@@ -1,3 +1,23 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2006, Blender Foundation
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
 """WSIReader for WSI reading or extracting metadata information from WSIs"""
 from tiatoolbox.utils import misc, transforms
 from tiatoolbox.dataloader.wsimeta import WSIMeta
@@ -51,7 +71,7 @@ class WSIReader:
 
         self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
-        self.slide_info = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
+        self.slide_info = self.__slide_info()
 
     def __slide_info(self):
         """WSI meta data reader
