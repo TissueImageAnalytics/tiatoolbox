@@ -76,8 +76,7 @@ class TIAMultiProcess:
             try:
                 iter_value = kwargs.pop(self.iter_on)
             except ValueError:
-                raise ValueError(
-                    "Please specify iter_on in multiprocessing decorator")
+                raise ValueError("Please specify iter_on in multiprocessing decorator")
 
             with Pool(self.workers) as p:
                 results = p.map(partial(func, **kwargs), iter_value,)
