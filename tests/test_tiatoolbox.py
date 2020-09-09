@@ -71,15 +71,10 @@ def test_slide_info(_response_ndpi, _response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
-    slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
 
-    for _, slide_param in enumerate(slide_params):
+    for curr_file in files_all:
+        slide_param = slide_info(input_path=curr_file, verbose=True)
         utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
-
-    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
-    utils.misc.save_yaml(
-        unwrapped_slide_info(input_path=files_all[0], verbose=True), "test.yaml"
-    )
 
 
 def test_wsireader_slide_info(_response_svs):
@@ -184,13 +179,14 @@ def test_save_tiles(_response_ndpi, _response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
     )
-    save_tiles(
-        input_path=files_all,
-        workers=2,
-        tile_objective_value=5,
-        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
-        verbose=True,
-    )
+
+    for curr_file in files_all:
+        save_tiles(
+            input_path=curr_file,
+            tile_objective_value=5,
+            output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+            verbose=True,
+        )
     assert (
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
@@ -230,42 +226,6 @@ def test_save_tiles(_response_ndpi, _response_svs):
         pathlib.Path(__file__)
         .parent.joinpath("tiles_save_tiles")
         .joinpath("CMU-1.ndpi")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
-    shutil.rmtree(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles"))
-
-
-def test_save_tiles_unwrap(_response_svs):
-    file_types = "*.svs"
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
-    )
-    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
-    unwrapped_save_tiles(
-        input_path=files_all[0],
-        tile_objective_value=5,
-        output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
-        verbose=True,
-    )
-    assert (
-        pathlib.Path(__file__)
-        .parent.joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(__file__)
-        .parent.joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(__file__)
-        .parent.joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
