@@ -233,16 +233,14 @@ def test_save_tiles(_response_ndpi, _response_svs):
 
 
 def test_exception_tests():
-    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
-            unwrapped_slide_info(input_path="/mnt/test/sample.txt", verbose=True),
+            slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
             "test.yaml",
         )
 
-    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
     with pytest.raises(FileNotSupported):
-        unwrapped_save_tiles(
+        save_tiles(
             input_path="/mnt/test/sample.txt",
             tile_objective_value=5,
             output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
@@ -283,8 +281,6 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
             str(pathlib.Path(__file__).parent),
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--mode",
             "save",
         ],
@@ -304,8 +300,6 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
             files_all[0],
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--mode",
             "show",
         ],
@@ -390,8 +384,6 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
             str(pathlib.Path(__file__).parent),
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--tile_objective_value",
             "5",
         ],
@@ -410,8 +402,6 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
             files_all[0],
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--tile_objective_value",
             "5",
         ],
