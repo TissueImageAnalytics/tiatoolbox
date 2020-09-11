@@ -148,12 +148,12 @@ class WSIReader:
         im_region = background_composite(image=im_region)
         return im_region
 
-    def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.5x
+    def slide_thumbnail(self, size=None):
+        """Read whole slide image thumbnail at 1.5x or given size
 
         Args:
             self (WSIReader):
-
+            size (tuple): set width and height of generated thumbnail
         Returns:
             ndarray : image array
 
@@ -162,9 +162,17 @@ class WSIReader:
             >>> wsi_obj = wsireader.WSIReader(input_dir="./",
             ...     file_name="CMU-1.ndpi")
             >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+            >>> slide_thumbnail = wsi_obj.slide_thumbnail(size=(500, 500))
 
         """
         openslide_obj = self.openslide_obj
+
+        if size:
+            thumb = openslide_obj.get_thumbnail(size[0], size[1])
+            thumb = np.asarray(thumb)
+
+            return thumb
+
         tile_objective_value = 20
 
         if self.objective_power == 0:
