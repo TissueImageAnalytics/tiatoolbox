@@ -4,11 +4,9 @@
 import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
-
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
-
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox import cli
 from tiatoolbox import __version__
@@ -114,18 +112,10 @@ def test_slide_info(_response_all_wsis, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=_response_all_wsis, file_types=file_types,
     )
-    slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
 
-    for _, slide_param in enumerate(slide_params):
-        utils.misc.save_yaml(
-            slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
-        )
-
-    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
-    utils.misc.save_yaml(
-        unwrapped_slide_info(input_path=files_all[0], verbose=True),
-        tmp_path / "test.yaml",
-    )
+    for curr_file in files_all:
+        slide_param = slide_info(input_path=curr_file, verbose=True)
+        utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
@@ -171,41 +161,20 @@ def test_wsireader_slide_thumbnail(_response_svs):
     assert slide_thumbnail.dtype == "uint8"
 
 
-def test_save_tiles_unwrap(_response_svs, tmp_path):
-    """pytest for save_tiles without multiprocessing"""
-    file_types = "*.svs"
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
-    )
-    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
-    unwrapped_save_tiles(
-        input_path=files_all[0],
-        tile_objective_value=5,
-        output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
-        verbose=True,
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
+def test_imresize():
+    """pytest for imresize"""
+    img = np.zeros((2000, 2000, 3))
+    resized_img = utils.transforms.imresize(img, 0.5)
+    assert resized_img.shape == (1000, 1000, 3)
 
+
+def test_background_composite():
+    """pytest for background composit"""
+    new_im = np.zeros((2000, 2000, 4)).astype("uint8")
+    new_im[:1000, :, 3] = 255
+    im = utils.transforms.background_composite(new_im)
+    assert np.all(im[1000:, :, :] == 255)
+    assert np.all(im[:1000, :, :] == 0)
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
     """pytest for save_tiles in wsireader as a python function"""
@@ -250,13 +219,14 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
-    save_tiles(
-        input_path=files_all,
-        workers=2,
-        tile_objective_value=5,
-        output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
-        verbose=True,
-    )
+
+    for curr_file in files_all:
+        save_tiles(
+            input_path=curr_file,
+            tile_objective_value=5,
+            output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+            verbose=True,
+        )
     assert (
         pathlib.Path(tmp_path)
         .joinpath("tiles_save_tiles")
@@ -302,16 +272,14 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_exception_tests():
-    unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
-            unwrapped_slide_info(input_path="/mnt/test/sample.txt", verbose=True),
+            slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
             "test.yaml",
         )
 
-    unwrapped_save_tiles = save_tiles.__closure__[0].cell_contents
     with pytest.raises(FileNotSupported):
-        unwrapped_save_tiles(
+        save_tiles(
             input_path="/mnt/test/sample.txt",
             tile_objective_value=5,
             output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
@@ -367,9 +335,7 @@ def test_command_line_slide_info(_response_all_wsis):
             "--wsi_input",
             str(pathlib.Path(_response_all_wsis)),
             "--file_types",
-            '"*.ndpi, *.svs, *.jp2"',
-            "--workers",
-            "2",
+            '"*.ndpi, *.svs"',
             "--mode",
             "save",
         ],
@@ -389,8 +355,6 @@ def test_command_line_slide_info(_response_all_wsis):
             files_all[0],
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--mode",
             "show",
         ],
@@ -475,8 +439,6 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             str(pathlib.Path(_response_all_wsis)),
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--tile_objective_value",
             "5",
         ],
@@ -496,8 +458,6 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             files_all[0],
             "--file_types",
             '"*.ndpi, *.svs"',
-            "--workers",
-            "2",
             "--tile_objective_value",
             "5",
             "--output_dir",

@@ -1,12 +1,30 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2006, Blender Foundation
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
 """Get Slide Meta Data information"""
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.decorators.multiproc import TIAMultiProcess
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 import os
 
 
-@TIAMultiProcess(iter_on="input_path")
 def slide_info(input_path, output_dir=None, verbose=True):
     """Returns WSI meta data. Multiprocessing decorator runs this function in parallel.
 
@@ -14,7 +32,6 @@ def slide_info(input_path, output_dir=None, verbose=True):
         input_path (str): Path to whole slide image
         output_dir (str): Path to output directory to save the output
         verbose (bool): Print output, default=True
-        workers (int): num of cpu cores to use for multiprocessing
 
     Returns:
         list: list of dictionary Whole Slide meta information
@@ -25,11 +42,11 @@ def slide_info(input_path, output_dir=None, verbose=True):
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,
         ...     file_types=file_types)
-        >>> slide_params = slide_info(input_path=files_all, workers=2)
-        >>> for slide_param in slide_params:
-        ...        utils.misc.save_yaml(slide_param.as_dict(),
-        ...             slide_param.file_name + ".yaml")
-        ...        print(slide_param.as_dict())
+        >>> for curr_file in files_all:
+        ...     slide_param = slide_info(input_path=curr_file)
+        ...     utils.misc.save_yaml(slide_param.as_dict(),
+        ...           slide_param.file_name + ".yaml")
+        ...     print(slide_param.as_dict())
 
     """
 
