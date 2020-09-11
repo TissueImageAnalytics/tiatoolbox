@@ -115,7 +115,9 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
     for curr_file in files_all:
         slide_param = slide_info(input_path=curr_file, verbose=True)
-        utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
+        utils.misc.save_yaml(
+            slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
+        )
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
@@ -160,21 +162,6 @@ def test_wsireader_slide_thumbnail(_response_svs):
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 
-
-def test_imresize():
-    """pytest for imresize"""
-    img = np.zeros((2000, 2000, 3))
-    resized_img = utils.transforms.imresize(img, 0.5)
-    assert resized_img.shape == (1000, 1000, 3)
-
-
-def test_background_composite():
-    """pytest for background composit"""
-    new_im = np.zeros((2000, 2000, 4)).astype("uint8")
-    new_im[:1000, :, 3] = 255
-    im = utils.transforms.background_composite(new_im)
-    assert np.all(im[1000:, :, :] == 255)
-    assert np.all(im[:1000, :, :] == 0)
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
     """pytest for save_tiles in wsireader as a python function"""
@@ -224,9 +211,10 @@ def test_save_tiles(_response_all_wsis, tmp_path):
         save_tiles(
             input_path=curr_file,
             tile_objective_value=5,
-            output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
+            output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
             verbose=True,
         )
+
     assert (
         pathlib.Path(tmp_path)
         .joinpath("tiles_save_tiles")
@@ -461,7 +449,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
             "--tile_objective_value",
             "5",
             "--output_dir",
-            tmp_path
+            tmp_path,
         ],
     )
 
