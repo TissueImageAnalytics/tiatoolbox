@@ -6,6 +6,8 @@ import pytest
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader
+from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser
+from tiatoolbox.tools.stainnorm import stain_normaliser
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox import cli
@@ -458,3 +460,32 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
     )
 
     assert save_tiles_result.exit_code == 0
+
+
+# -------------------------------------------------------------------------------------
+# Stain Normalisation
+# -------------------------------------------------------------------------------------
+
+
+def test_reinhard_normalise():
+    """Test Reinhard colour normalisation."""
+    source_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/source.png'), cvt.COLOR_BGR2RGB)
+    target_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/target.png'), cvt.COLOR_BGR2RGB)
+
+    norm = reinhard_colour_normaliser.ReinhardColourNormaliser() # init class with Ruifrok meethod
+    norm.fit(target_img) # get stain information of target image
+    transform = norm.transform(source_img) # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+
+
+def test_ruifrok_normalise():
+    """Test stain normalisation with pre-defined stain matrix given by Ruifrok and Johnston."""
+    source_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/source.png'), cv2.COLOR_BGR2RGB)
+    target_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/target.png'), cv2.COLOR_BGR2RGB)
+
+    norm = stain_normaliser.StainNormaliser('ruifrok') # init class with Ruifrok meethod
+    norm.fit(target_img) # get stain information of target image
+    transform = norm.transform(source_img) # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
