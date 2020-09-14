@@ -1,5 +1,4 @@
 import numpy as np
-import spams
 
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 from tiatoolbox.tools.stainnorm.stain_extraction.ruifrok_stain_extractor import RuifrokStainExtractor
@@ -25,20 +24,20 @@ class StainNormaliser(object):
             raise Exception('Method not recognized.')
     
     @staticmethod
-    def get_concentrations(I, stain_matrix, regularizer=0.01):
+    def get_concentrations(I, stain_matrix):
         """Estimate concentration matrix given an image and stain matrix.
 
         Args:
             I (ndarray): input image
             stain_matrix (ndarray): 2x3 (hxw) stain matrix for haematoxylin and eosin stains
-            regularizer (float): regulrization for lasso regression
         
         Returns:
             ndarray: stain concentrations of image I
 
         """
         OD = convert_RGB2OD(I).reshape((-1, 3))
-        return spams.lasso(X=OD.T, D=stain_matrix.T, mode=2, lambda1=regularizer, pos=True).toarray().T
+        x, residuals, rank, s = np.linalg.lstsq(stain_matrix.T, OD.T, rcond=-1)
+        return x.T
 
     def fit(self, target):
         """Fit to a target image.
