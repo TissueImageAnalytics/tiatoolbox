@@ -16,6 +16,7 @@ class ReinhardColourNormaliser(object):
         >>> trans = norm.transform(src_img)
 
     """
+
     def __init__(self):
         self.target_means = None
         self.target_stds = None
@@ -43,9 +44,15 @@ class ReinhardColourNormaliser(object):
         """
         I1, I2, I3 = self.lab_split(I)
         means, stds = self.get_mean_std(I)
-        norm1 = ((I1 - means[0]) * (self.target_stds[0] / stds[0])) + self.target_means[0]
-        norm2 = ((I2 - means[1]) * (self.target_stds[1] / stds[1])) + self.target_means[1]
-        norm3 = ((I3 - means[2]) * (self.target_stds[2] / stds[2])) + self.target_means[2]
+        norm1 = ((I1 - means[0]) * (self.target_stds[0] / stds[0])) + self.target_means[
+            0
+        ]
+        norm2 = ((I2 - means[1]) * (self.target_stds[1] / stds[1])) + self.target_means[
+            1
+        ]
+        norm3 = ((I3 - means[2]) * (self.target_stds[2] / stds[2])) + self.target_means[
+            2
+        ]
         return self.merge_back(norm1, norm2, norm3)
 
     @staticmethod
@@ -61,7 +68,7 @@ class ReinhardColourNormaliser(object):
             I3 (float): B
 
         """
-        I = I.astype('uint8') # ensure input image is uint8
+        I = I.astype("uint8")  # ensure input image is uint8
         I = cv2.cvtColor(I, cv2.COLOR_RGB2LAB)
         I_float = I.astype(np.float32)
         I1, I2, I3 = cv2.split(I_float)
@@ -99,7 +106,7 @@ class ReinhardColourNormaliser(object):
             stds (float): standard deviation for each RGB channel
 
         """
-        I = I.astype('uint8') # ensure input image is uint8
+        I = I.astype("uint8")  # ensure input image is uint8
         I1, I2, I3 = self.lab_split(I)
         m1, sd1 = cv2.meanStdDev(I1)
         m2, sd2 = cv2.meanStdDev(I2)

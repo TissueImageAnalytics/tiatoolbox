@@ -470,27 +470,44 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
 
 def test_reinhard_normalise():
     """Test Reinhard colour normalisation."""
-    source_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/source.png'), cv2.COLOR_BGR2RGB)
-    target_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/target.png'), cv2.COLOR_BGR2RGB)
-    reinhard_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/reinhard.png'), cv2.COLOR_BGR2RGB)
+    source_img = cv2.cvtColor(
+        cv2.imread("tiatoolbox/tools/stainnorm/samples/source.png"), cv2.COLOR_BGR2RGB
+    )
+    target_img = cv2.cvtColor(
+        cv2.imread("tiatoolbox/tools/stainnorm/samples/target.png"), cv2.COLOR_BGR2RGB
+    )
+    reinhard_img = cv2.cvtColor(
+        cv2.imread("tiatoolbox/tools/stainnorm/samples/reinhard.png"), cv2.COLOR_BGR2RGB
+    )
 
-    norm = reinhard_colour_normaliser.ReinhardColourNormaliser() # init class with Ruifrok meethod
-    norm.fit(target_img) # get stain information of target image
-    transform = norm.transform(source_img) # transform source image
+    norm = (
+        reinhard_colour_normaliser.ReinhardColourNormaliser()
+    )  # init class with Ruifrok meethod
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(reinhard_img-transform) < 1e-3
+    assert np.sum(reinhard_img - transform) < 1e-3
 
 
 def test_ruifrok_normalise():
     """Test stain normalisation with pre-defined stain matrix given by Ruifrok and Johnston."""
-    source_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/source.png'), cv2.COLOR_BGR2RGB)
-    target_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/target.png'), cv2.COLOR_BGR2RGB)
-    ruifrok_img = cv2.cvtColor(cv2.imread('tiatoolbox/tools/stainnorm/samples/ruifrok.png'), cv2.COLOR_BGR2RGB)
+    source_img = cv2.cvtColor(
+        cv2.imread("tiatoolbox/tools/stainnorm/samples/source.png"), cv2.COLOR_BGR2RGB
+    )
+    target_img = cv2.cvtColor(
+        cv2.imread("tiatoolbox/tools/stainnorm/samples/target.png"), cv2.COLOR_BGR2RGB
+    )
+    ruifrok_img = cv2.cvtColor(
+        cv2.imread("tiatoolbox/tools/stainnorm/samples/ruifrok.png"), cv2.COLOR_BGR2RGB
+    )
 
-    norm = stain_normaliser.StainNormaliser('ruifrok') # init class with Ruifrok meethod
-    norm.fit(target_img) # get stain information of target image
-    transform = norm.transform(source_img) # transform source image
+    norm = stain_normaliser.StainNormaliser(
+        "ruifrok"
+    )  # init class with Ruifrok meethod
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img-transform) < 1e-3
+    assert np.sum(ruifrok_img - transform) < 1e-3
+
