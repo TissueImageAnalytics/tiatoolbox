@@ -2,6 +2,7 @@
 from tiatoolbox import tiatoolbox
 from tiatoolbox import dataloader
 from tiatoolbox import utils
+from tiatoolbox import tools
 
 
 __author__ = """TIA Lab"""
