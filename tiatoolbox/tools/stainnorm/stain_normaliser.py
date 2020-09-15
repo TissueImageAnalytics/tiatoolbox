@@ -33,6 +33,10 @@ class StainNormaliser(object):
         Args:
             img (ndarray): input image
             stain_matrix (ndarray): stain matrix for haematoxylin and eosin stains
+<<<<<<< HEAD
+=======
+
+>>>>>>> f25f43819043a3335f01b75f4dd7e6ee210fdef2
         Returns:
             ndarray: stain concentrations of input image
 
@@ -64,6 +68,10 @@ class StainNormaliser(object):
 
         Args:
             img (ndarray uint8): RGB input source image
+<<<<<<< HEAD
+=======
+
+>>>>>>> f25f43819043a3335f01b75f4dd7e6ee210fdef2
         Returns:
             ndarray: RGB stain normalised image
 
