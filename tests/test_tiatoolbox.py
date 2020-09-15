@@ -6,8 +6,7 @@ import pytest
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser
-from tiatoolbox.tools.stainnorm import stain_normaliser
+from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser, stain_normaliser
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
@@ -72,7 +71,8 @@ def test_slide_info(_response_ndpi, _response_svs):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -84,7 +84,8 @@ def test_wsireader_slide_info(_response_svs):
     """pytest for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
@@ -96,7 +97,8 @@ def test_wsireader_read_region(_response_svs):
     """pytest for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
@@ -113,7 +115,8 @@ def test_wsireader_slide_thumbnail(_response_svs):
     """pytest for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
@@ -142,7 +145,8 @@ def test_wsireader_save_tiles(_response_svs):
     """pytest for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(
@@ -180,7 +184,8 @@ def test_save_tiles(_response_ndpi, _response_svs):
     """pytest for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -293,7 +298,8 @@ def test_command_line_slide_info(_response_ndpi, _response_svs):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     slide_info_result = runner.invoke(
         cli.main,
@@ -395,7 +401,8 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
     assert save_tiles_result.exit_code == 0
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+        input_path=str(pathlib.Path(__file__).parent),
+        file_types=file_types,
     )
     save_tiles_result = runner.invoke(
         cli.main,
