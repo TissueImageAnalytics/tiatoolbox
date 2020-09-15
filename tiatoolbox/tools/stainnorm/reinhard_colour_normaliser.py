@@ -3,10 +3,10 @@ import cv2
 
 
 class ReinhardColourNormaliser(object):
-    """ Normalize a patch colour to the target image using the method of: 
-    
-    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining 
-    by color deconvolution'. Analytical and quantitative cytology and histology 
+    """ Normalize a patch colour to the target image using the method of:
+
+    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
+    by color deconvolution'. Analytical and quantitative cytology and histology
     / the International Academy of Cytology and American Society of Cytology
 
     Examples:
