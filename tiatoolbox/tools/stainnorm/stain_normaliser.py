@@ -26,6 +26,11 @@ class StainNormaliser:
         else:
             raise Exception("Method not recognized.")
 
+        self.stain_matrix_target = None
+        self.target_concentrations = None
+        self.maxC_target = None
+        self.stain_matrix_target_RGB = None
+
     @staticmethod
     def get_concentrations(img, stain_matrix):
         """Estimate concentration matrix given an image and stain matrix.
