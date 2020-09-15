@@ -27,18 +27,18 @@ class StainNormaliser(object):
             raise Exception("Method not recognized.")
 
     @staticmethod
-    def get_concentrations(I, stain_matrix):
+    def get_concentrations(img, stain_matrix):
         """Estimate concentration matrix given an image and stain matrix.
 
         Args:
-            I (ndarray): input image
-            stain_matrix (ndarray): 2x3 (hxw) stain matrix for haematoxylin and eosin stains
+            img (ndarray): input image
+            stain_matrix (ndarray): stain matrix for haematoxylin and eosin stains
         
         Returns:
-            ndarray: stain concentrations of image I
+            ndarray: stain concentrations of input image
 
         """
-        OD = convert_RGB2OD(I).reshape((-1, 3))
+        OD = convert_RGB2OD(img).reshape((-1, 3))
         x, residuals, rank, s = np.linalg.lstsq(stain_matrix.T, OD.T, rcond=-1)
         return x.T
 
@@ -46,7 +46,7 @@ class StainNormaliser(object):
         """Fit to a target image.
 
         Args:
-            target (ndarray uint8): reference image that each source image shall be mapped to
+            target (ndarray uint8): target/reference image
 
         """
         self.stain_matrix_target = self.extractor.get_stain_matrix(target)
@@ -60,18 +60,18 @@ class StainNormaliser(object):
             self.stain_matrix_target
         )  # useful to visualize.
 
-    def transform(self, I):
+    def transform(self, img):
         """Transform an image.
 
         Args:
-            I (ndarray uint8): RGB input source image
+            img (ndarray uint8): RGB input source image
         
         Returns:
             ndarray: RGB stain normalised image 
 
         """
-        stain_matrix_source = self.extractor.get_stain_matrix(I)
-        source_concentrations = self.get_concentrations(I, stain_matrix_source)
+        stain_matrix_source = self.extractor.get_stain_matrix(img)
+        source_concentrations = self.get_concentrations(img, stain_matrix_source)
         maxC_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
         source_concentrations *= self.maxC_target / maxC_source
         tmp = 255 * np.exp(-1 * np.dot(source_concentrations, self.stain_matrix_target))

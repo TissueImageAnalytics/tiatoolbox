@@ -6,11 +6,11 @@ class ABCStainExtractor(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_stain_matrix(I):
+    def get_stain_matrix(img):
         """Estimate the stain matrix given an image.
         
         Args:
-            I (ndarray): input image
+            img (ndarray): input image
 
         """
         pass

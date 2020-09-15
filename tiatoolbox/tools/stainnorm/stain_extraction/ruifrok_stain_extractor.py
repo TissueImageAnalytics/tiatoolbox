@@ -6,8 +6,7 @@ from tiatoolbox.tools.stainnorm.stain_extraction.abc_stain_extractor import (
 
 
 class RuifrokStainExtractor(ABCStainExtractor):
-    """Stain matrix estimation via method of:
-    A.C. Ruifrok & D.A. Johnston 
+    """Stain matrix estimation via method of: A.C. Ruifrok & D.A. Johnston 
     'Quantification of histochemical staining by color deconvolution'.
     Analytical and quantitative cytology and histology / the International
     Academy of Cytology and American Society of Cytology, vol. 23, no. 4
