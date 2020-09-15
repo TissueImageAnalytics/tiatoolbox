@@ -3,17 +3,15 @@ import cv2
 
 
 class ReinhardColourNormaliser(object):
-    """ Normalize a patch color to the target image using the method of:
+    """ Normalize a patch colour to the target image using the method of: 
+    
     A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining 
     by color deconvolution'. Analytical and quantitative cytology and histology 
-    / the International Academy of Cytology and American Society of Cytology, 
-    vol. 23, no. 4
+    / the International Academy of Cytology and American Society of Cytology
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm.stain_extraction.ruifrok_stain_extractor import (
-                RuifrokStainExtractor,
-            )
-        >>> norm = ReinhardColourNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser
+        >>> norm = reinhard_colour_normaliser.ReinhardColourNormaliser()
         >>> norm.fit(target_img)
         >>> trans = norm.transform(src_img)
 
