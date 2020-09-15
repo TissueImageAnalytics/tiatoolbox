@@ -12,4 +12,3 @@ class ABCStainExtractor(ABC):
             img (ndarray): input image
 
         """
-        pass

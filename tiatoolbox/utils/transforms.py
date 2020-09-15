@@ -126,6 +126,5 @@ def convert_OD2RGB(OD):
         >>> rgb_img = transforms.convert_OD2RGB(od_img)
 
     """
-    assert OD.min() >= 0, "Negative optical density."
     OD = np.maximum(OD, 1e-6)
     return (255 * np.exp(-1 * OD)).astype(np.uint8)

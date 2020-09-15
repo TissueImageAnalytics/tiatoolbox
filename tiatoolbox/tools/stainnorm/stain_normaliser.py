@@ -6,7 +6,7 @@ from tiatoolbox.tools.stainnorm.stain_extraction.ruifrok_stain_extractor import 
 )
 
 
-class StainNormaliser(object):
+class StainNormaliser:
     """Stain normalisation class
 
     Attributes:
@@ -38,7 +38,7 @@ class StainNormaliser(object):
 
         """
         OD = convert_RGB2OD(img).reshape((-1, 3))
-        x, residuals, rank, s = np.linalg.lstsq(stain_matrix.T, OD.T, rcond=-1)
+        x, _, _, _ = np.linalg.lstsq(stain_matrix.T, OD.T, rcond=-1)
         return x.T
 
     def fit(self, target):

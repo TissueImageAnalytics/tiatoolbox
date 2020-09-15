@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 
-class ReinhardColourNormaliser(object):
+class ReinhardColourNormaliser:
     """Normalize a patch colour to the target image using the method of:
 
     Reinhard et al. "Color transfer between images." Computer graphics & applications.
