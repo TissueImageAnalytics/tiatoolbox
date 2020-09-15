@@ -33,7 +33,6 @@ class StainNormaliser(object):
         Args:
             img (ndarray): input image
             stain_matrix (ndarray): stain matrix for haematoxylin and eosin stains
-        
         Returns:
             ndarray: stain concentrations of input image
 
@@ -65,9 +64,8 @@ class StainNormaliser(object):
 
         Args:
             img (ndarray uint8): RGB input source image
-        
         Returns:
-            ndarray: RGB stain normalised image 
+            ndarray: RGB stain normalised image
 
         """
         stain_matrix_source = self.extractor.get_stain_matrix(img)
