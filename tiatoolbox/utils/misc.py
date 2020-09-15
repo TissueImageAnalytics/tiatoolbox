@@ -118,3 +118,23 @@ def imwrite(image_path, img):
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+
+
+def imread(image_path):
+    """Read an image as an array
+
+    Args:
+        image_path (str, pathlib.Path): file path (including extension) to read image
+
+    Returns:
+        img (ndarray): image array of dtype uint8, MxNx3
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> image = utils.misc.imread('ImagePath.jpg')
+
+    """
+    if isinstance(image_path, pathlib.Path):
+        image_path = str(image_path)
+    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+    return image.astype("uint8")
