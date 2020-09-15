@@ -75,4 +75,4 @@ class StainNormaliser(object):
         maxC_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
         source_concentrations *= self.maxC_target / maxC_source
         tmp = 255 * np.exp(-1 * np.dot(source_concentrations, self.stain_matrix_target))
-        return tmp.reshape(I.shape).astype(np.uint8)
+        return tmp.reshape(img.shape).astype(np.uint8)
