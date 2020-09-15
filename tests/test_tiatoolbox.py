@@ -19,7 +19,6 @@ import requests
 import os
 import pathlib
 import numpy as np
-import cv2
 import shutil
 
 
