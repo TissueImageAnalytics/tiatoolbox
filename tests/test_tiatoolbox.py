@@ -397,7 +397,7 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
 
 
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
-    """Test the Slide Thumbnail CLI."""
+    """pytest for the Slide Thumbnail CLI."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
         cli.main,
