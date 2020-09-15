@@ -34,10 +34,10 @@ class ReinhardColourNormaliser(object):
         """Transform an image.
 
         Args:
-            img (RGB uint8): Input image
+            img (ndarray uint8): Input image
 
         Returns:
-            RGB float: colour normalised RGB image
+            ndarray float: colour normalised RGB image
 
         """
         chan1, chan2, chan3 = self.lab_split(img)
@@ -58,7 +58,7 @@ class ReinhardColourNormaliser(object):
         """Convert from RGB uint8 to LAB and split into channels.
 
         Args:
-            img (RGB uint8): Input image
+            img (ndarray uint8): Input image
 
         Returns:
             chan1 (float): L
@@ -84,7 +84,7 @@ class ReinhardColourNormaliser(object):
             chan2 (float): A channel
             chan3 (float): B channel
         Returns:
-            RGB uint8: merged image
+            ndarray uint8: merged image
 
         """
         chan1 *= 2.55  # should now be in range [0,255]
@@ -97,7 +97,7 @@ class ReinhardColourNormaliser(object):
         """Get mean and standard deviation of each channel.
 
         Args:
-            img (RGB uint8): Input image
+            img (ndarray uint8): Input image
 
         Returns:
             means (float): mean values for each RGB channel
