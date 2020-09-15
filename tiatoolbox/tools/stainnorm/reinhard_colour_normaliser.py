@@ -3,17 +3,9 @@ import cv2
 
 
 class ReinhardColourNormaliser(object):
-<<<<<<< HEAD
     """Normalize a patch colour to the target image using the method of:
 
     Reinhard et al. "Color transfer between images." Computer graphics & applications.
-=======
-    """ Normalize a patch colour to the target image using the method of:
-
-    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
-    by color deconvolution'. Analytical and quantitative cytology and histology
-    / the International Academy of Cytology and American Society of Cytology
->>>>>>> f25f43819043a3335f01b75f4dd7e6ee210fdef2
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser

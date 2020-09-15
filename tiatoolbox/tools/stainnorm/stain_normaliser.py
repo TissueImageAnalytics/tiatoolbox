@@ -55,9 +55,8 @@ class StainNormaliser(object):
         self.maxC_target = np.percentile(
             self.target_concentrations, 99, axis=0
         ).reshape((1, 2))
-        self.stain_matrix_target_RGB = convert_OD2RGB(
-            self.stain_matrix_target
-        )  # useful to visualize.
+        # useful to visualize.
+        self.stain_matrix_target_RGB = convert_OD2RGB(self.stain_matrix_target)
 
     def transform(self, img):
         """Transform an image.

@@ -6,18 +6,11 @@ from tiatoolbox.tools.stainnorm.stain_extraction.abc_stain_extractor import (
 
 
 class RuifrokStainExtractor(ABCStainExtractor):
-<<<<<<< HEAD
     """Normalize a patch colour to the target image using the method of:
 
     A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
     by color deconvolution'. Analytical and quantitative cytology and histology
     / the International Academy of Cytology and American Society of Cytology
-=======
-    """Stain matrix estimation via method of: A.C. Ruifrok & D.A. Johnston
-    'Quantification of histochemical staining by color deconvolution'.
-    Analytical and quantitative cytology and histology / the International
-    Academy of Cytology and American Society of Cytology, vol. 23, no. 4
->>>>>>> f25f43819043a3335f01b75f4dd7e6ee210fdef2
 
     """
 
