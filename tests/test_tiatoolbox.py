@@ -6,7 +6,7 @@ import pytest
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser, stain_normaliser
+from tiatoolbox.tools.stainnorm import ReinhardColourNormaliser, StainNormaliser
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
@@ -427,13 +427,12 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
 
 def test_reinhard_normalise():
     """Test Reinhard colour normalisation."""
-    source_img = imread("tiatoolbox/tools/stainnorm/samples/source.png")
 
-    target_img = imread("tiatoolbox/tools/stainnorm/samples/target.png")
+    source_img = imread("tiatoolbox/tools/samples/source.png")
+    target_img = imread("tiatoolbox/tools/samples/target.png")
+    reinhard_img = imread("tiatoolbox/tools/samples/reinhard.png")
 
-    reinhard_img = imread("tiatoolbox/tools/stainnorm/samples/reinhard.png")
-
-    norm = reinhard_colour_normaliser.ReinhardColourNormaliser()
+    norm = ReinhardColourNormaliser()
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -443,14 +442,13 @@ def test_reinhard_normalise():
 
 def test_ruifrok_normalise():
     """Test stain normalisation with stain matrix from Ruifrok and Johnston."""
-    source_img = imread("tiatoolbox/tools/stainnorm/samples/source.png")
 
-    target_img = imread("tiatoolbox/tools/stainnorm/samples/target.png")
-
-    ruifrok_img = imread("tiatoolbox/tools/stainnorm/samples/ruifrok.png")
+    source_img = imread("tiatoolbox/tools/samples/source.png")
+    target_img = imread("tiatoolbox/tools/samples/target.png")
+    ruifrok_img = imread("tiatoolbox/tools/samples/ruifrok.png")
 
     # init class with Ruifrok meethod
-    norm = stain_normaliser.StainNormaliser("ruifrok")
+    norm = StainNormaliser("ruifrok")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
