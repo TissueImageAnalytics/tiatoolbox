@@ -76,7 +76,8 @@ def _response_source(request):
     source_file_path = pathlib.Path(__file__).parent.joinpath("source.png")
     if not pathlib.Path.is_file(source_file_path):
         r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/source.png"
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/source.png"
         )
         with open(source_file_path, "wb") as f:
             f.write(r.content)
@@ -98,7 +99,8 @@ def _response_target(request):
     target_file_path = pathlib.Path(__file__).parent.joinpath("target.png")
     if not pathlib.Path.is_file(target_file_path):
         r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/target.png"
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/target.png"
         )
         with open(target_file_path, "wb") as f:
             f.write(r.content)
@@ -120,7 +122,8 @@ def _response_reinhard(request):
     reinhard_file_path = pathlib.Path(__file__).parent.joinpath("reinhard.png")
     if not pathlib.Path.is_file(reinhard_file_path):
         r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/reinhard.png"
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/reinhard.png"
         )
         with open(reinhard_file_path, "wb") as f:
             f.write(r.content)
@@ -142,7 +145,8 @@ def _response_ruifrok(request):
     ruifrok_file_path = pathlib.Path(__file__).parent.joinpath("ruifrok.png")
     if not pathlib.Path.is_file(ruifrok_file_path):
         r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/ruifrok.png"
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/ruifrok.png"
         )
         with open(ruifrok_file_path, "wb") as f:
             f.write(r.content)
