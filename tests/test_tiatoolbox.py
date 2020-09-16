@@ -67,6 +67,94 @@ def _response_svs(request):
     return _response_svs
 
 
+@pytest.fixture
+def _response_source(request):
+    """
+    Sample pytest fixture for source image for stain normalisation
+    Download png image for pytest
+    """
+    source_file_path = pathlib.Path(__file__).parent.joinpath("source.png")
+    if not pathlib.Path.is_file(source_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/source.png"
+        )
+        with open(source_file_path, "wb") as f:
+            f.write(r.content)
+
+    def close_source():
+        if pathlib.Path.is_file(source_file_path):
+            os.remove(str(source_file_path))
+
+    request.addfinalizer(close_source)
+    return _response_source
+
+
+@pytest.fixture
+def _response_target(request):
+    """
+    Sample pytest fixture for target image for stain normalisation
+    Download png image for pytest
+    """
+    target_file_path = pathlib.Path(__file__).parent.joinpath("target.png")
+    if not pathlib.Path.is_file(target_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/target.png"
+        )
+        with open(target_file_path, "wb") as f:
+            f.write(r.content)
+
+    def close_target():
+        if pathlib.Path.is_file(target_file_path):
+            os.remove(str(target_file_path))
+
+    request.addfinalizer(close_target)
+    return _response_target
+
+
+@pytest.fixture
+def _response_reinhard(request):
+    """
+    Sample pytest fixture for reinhard normalised image
+    Download png image for pytest
+    """
+    reinhard_file_path = pathlib.Path(__file__).parent.joinpath("reinhard.png")
+    if not pathlib.Path.is_file(reinhard_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/reinhard.png"
+        )
+        with open(reinhard_file_path, "wb") as f:
+            f.write(r.content)
+
+    def close_reinhard():
+        if pathlib.Path.is_file(reinhard_file_path):
+            os.remove(str(reinhard_file_path))
+
+    request.addfinalizer(close_reinhard)
+    return _response_reinhard
+
+
+@pytest.fixture
+def _response_ruifrok(request):
+    """
+    Sample pytest fixture for ruifrok normalised image
+    Download png image for pytest
+    """
+    ruifrok_file_path = pathlib.Path(__file__).parent.joinpath("ruifrok.png")
+    if not pathlib.Path.is_file(ruifrok_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/ruifrok.png"
+        )
+        with open(ruifrok_file_path, "wb") as f:
+            f.write(r.content)
+
+    def close_ruifrok():
+        if pathlib.Path.is_file(ruifrok_file_path):
+            os.remove(str(ruifrok_file_path))
+
+    request.addfinalizer(close_ruifrok)
+    return _response_ruifrok
+
+
 def test_slide_info(_response_ndpi, _response_svs):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs")
@@ -425,12 +513,12 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
 # -------------------------------------------------------------------------------------
 
 
-def test_reinhard_normalise():
+def test_reinhard_normalise(_response_source, _response_target, _response_reinhard):
     """Test Reinhard colour normalisation."""
 
-    source_img = imread("tiatoolbox/tools/samples/source.png")
-    target_img = imread("tiatoolbox/tools/samples/target.png")
-    reinhard_img = imread("tiatoolbox/tools/samples/reinhard.png")
+    source_img = imread(pathlib.Path(__file__).parent.joinpath("source.png"))
+    target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
+    reinhard_img = imread(pathlib.Path(__file__).parent.joinpath("reinhard.png"))
 
     norm = ReinhardColourNormaliser()
     norm.fit(target_img)  # get stain information of target image
@@ -440,12 +528,12 @@ def test_reinhard_normalise():
     assert np.sum(reinhard_img - transform) < 1e-3
 
 
-def test_ruifrok_normalise():
+def test_ruifrok_normalise(_response_source, _response_target, _response_ruifrok):
     """Test stain normalisation with stain matrix from Ruifrok and Johnston."""
 
-    source_img = imread("tiatoolbox/tools/samples/source.png")
-    target_img = imread("tiatoolbox/tools/samples/target.png")
-    ruifrok_img = imread("tiatoolbox/tools/samples/ruifrok.png")
+    source_img = imread(pathlib.Path(__file__).parent.joinpath("source.png"))
+    target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
+    ruifrok_img = imread(pathlib.Path(__file__).parent.joinpath("ruifrok.png"))
 
     # init class with Ruifrok meethod
     norm = StainNormaliser("ruifrok")
