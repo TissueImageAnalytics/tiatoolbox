@@ -397,7 +397,7 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
 
 
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
-    """pytest for the Slide Thumbnail CLI."""
+    """pytest for the slide_thumbnail CLI."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
         cli.main,
@@ -417,7 +417,7 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
 
 def test_command_line_save_tiles(_response_all_wsis, tmp_path):
-    """Test the Save tiles CLI."""
+    """pytest for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
         cli.main,
