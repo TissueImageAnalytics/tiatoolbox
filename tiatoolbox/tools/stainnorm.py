@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 from tiatoolbox.tools.stain_utils.stain_extractor import (
@@ -13,7 +14,7 @@ class StainNormaliser:
         method (string): stain normalisation method to use
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm.stain_normaliser import StainNormaliser
+        >>> from tiatoolbox.tools.stainnorm import StainNormaliser
         >>> norm = StainNormaliser('ruifrok')
         >>> norm.fit(target_img)
         >>> transformed = norm.transform(source_img)
@@ -86,8 +87,8 @@ class ReinhardColourNormaliser:
     Reinhard et al. "Color transfer between images." Computer graphics & applications.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import reinhard_colour_normaliser
-        >>> norm = reinhard_colour_normaliser.ReinhardColourNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import ReinhardColourNormaliser()
+        >>> norm = ReinhardColourNormaliser()
         >>> norm.fit(target_img)
         >>> trans = norm.transform(src_img)
 
