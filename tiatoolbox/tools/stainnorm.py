@@ -11,7 +11,10 @@ class StainNormaliser:
     """Stain normalisation class
 
     Attributes:
-        method (string): stain normalisation method to use
+        stain_matrix_target (ndarray): stain matrix of target
+        target_concentrations (ndarray): stain concetnration matrix of target
+        maxC_target (ndarray): 99th percentile of each stain
+        stain_matrix_target_RGB (ndarray): target stain matrix in RGB
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import StainNormaliser
@@ -22,6 +25,11 @@ class StainNormaliser:
     """
 
     def __init__(self, method):
+        """
+        Args:
+            method (string): stain normalisation method to use
+
+        """
         if method.lower() == "ruifrok":
             self.extractor = RuifrokStainExtractor
         else:
@@ -85,6 +93,10 @@ class ReinhardColourNormaliser:
     """Normalize a patch colour to the target image using the method of:
 
     Reinhard et al. "Color transfer between images." Computer graphics & applications.
+
+    Attributes:
+        target_means (float): mean of each LAB channel
+        target_stds (float) : standard deviation of each LAB channel
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import ReinhardColourNormaliser()
