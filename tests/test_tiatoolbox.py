@@ -518,15 +518,13 @@ def test_command_line_stainnorm(_response_source, _response_target):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stain_norm",
+            "stainnorm",
             "--source_input",
             pathlib.Path(__file__).parent.joinpath("source.png"),
             "--target_input",
             pathlib.Path(__file__).parent.joinpath("target.png"),
             "--method",
             "reinhard",
-            "--file_types",
-            "*.png",
         ],
     )
 
@@ -535,13 +533,13 @@ def test_command_line_stainnorm(_response_source, _response_target):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stain_norm",
+            "stainnorm",
             "--source_input",
-            imread(pathlib.Path(__file__).parent.joinpath("source.png")),
+            pathlib.Path(__file__).parent.joinpath("source.png"),
             "--target_input",
-            imread(pathlib.Path(__file__).parent.joinpath("target.png")),
+            pathlib.Path(__file__).parent.joinpath("target.png"),
             "--method",
-            "reinhard",
+            "ruifrok",
         ],
     )
 
