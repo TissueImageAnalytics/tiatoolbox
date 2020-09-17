@@ -298,7 +298,8 @@ def save_tiles(
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory, default='*.png', '*.jpg', '*.tif', '*.tiff'",
+    help="file types to capture from directory"
+    "default='*.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.png, '*.jpg', '*.tif', '*.tiff'",
 )
 def stainnorm(source_input, target_input, method, output_dir, file_types):
