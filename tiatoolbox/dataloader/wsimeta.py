@@ -91,7 +91,6 @@ class WSIMeta:
 
         """
         param = {
-            "input_dir": self.input_dir,
             "objective_power": self.objective_power,
             "slide_dimensions": self.slide_dimensions,
             "level_count": self.level_count,
