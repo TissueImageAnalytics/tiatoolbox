@@ -314,7 +314,6 @@ class OpenSlideWSIReader(WSIReader):
             WSIMeta: containing meta information
 
         """
-        input_dir = self.input_dir
         objective_power = np.int(
             self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         )
@@ -330,7 +329,6 @@ class OpenSlideWSIReader(WSIReader):
         mpp = [mpp_x, mpp_y]
 
         param = WSIMeta(
-            input_dir=input_dir,
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,

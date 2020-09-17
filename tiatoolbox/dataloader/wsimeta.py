@@ -11,8 +11,6 @@ class WSIMeta:
 
     def __init__(
         self,
-        input_dir: Union[str, Path],
-        file_name: Union[str, Path],
         slide_dimensions: Tuple[int, int],
         objective_power: Optional[float] = None,
         level_count: int = 1,
@@ -61,14 +59,6 @@ class WSIMeta:
             bool: True is validation passed, False otherwise.
         """
         passed = True
-
-        if not self.input_dir.exists():
-            warnings.warn(f"Directory does not exist: {self.input_dir}")
-            passed = False
-
-        if not self.filepath.exists():
-            warnings.warn(f"File does not exist: {self.filepath}")
-            passed = False
 
         if self.level_count < 1:
             warnings.warn("Level count is not a positive integer")
