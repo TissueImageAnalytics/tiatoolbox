@@ -1,2 +1,2 @@
 """Utils package for toolbox utilities"""
-from tiatoolbox.utils import misc, transforms
+from tiatoolbox.utils import misc, transforms, exceptions, stainnorm

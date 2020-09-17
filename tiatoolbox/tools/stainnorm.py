@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
-from tiatoolbox.tools.stain_utils.stain_extractor import (
+from tiatoolbox.utils.stainnorm import (
     RuifrokStainExtractor,
 )
 

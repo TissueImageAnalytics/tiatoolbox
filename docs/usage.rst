@@ -53,6 +53,12 @@ utils.misc
 .. automodule:: tiatoolbox.utils.misc
     :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite
 
+^^^^^^^^^^^^^^^
+utils.stainnorm
+^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.utils.stainnorm
+    :members: ABCStainExtractor, RuifrokStainExtractor
+
 ^^^^^^^^^^^^^^^^
 utils.transforms
 ^^^^^^^^^^^^^^^^
