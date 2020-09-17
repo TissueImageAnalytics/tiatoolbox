@@ -12,30 +12,32 @@ class WSIMeta:
     def __init__(
         self,
         slide_dimensions: Tuple[int, int],
+        level_dimensions: Optional[Sequence[Tuple[int, int]]] = None,
         objective_power: Optional[float] = None,
-        level_count: int = 1,
-        level_dimensions: Sequence[Tuple[int, int]] = None,
-        level_downsamples: Sequence[float] = None,
+        level_count: Optional[int] = None,
+        level_downsamples: Optional[Sequence[float]] = [1],
         vendor: Optional[str] = None,
         mpp: Optional[Sequence[float]] = None,
-        raw: Mapping[str, str] = None,
+        raw: Optional[Mapping[str, str]] = None,
     ):
         self.objective_power = float(objective_power) if objective_power else None
-        self.slide_dimensions = (
-            [int(x) for x in slide_dimensions] if slide_dimensions else None
-        )
-        self.level_count = int(level_count)
+        self.slide_dimensions = tuple([int(x) for x in slide_dimensions])
         self.level_dimensions = (
-            [(int(w), int(h)) for w, h in level_dimensions]
-            if level_dimensions
-            else None
+            tuple([(int(w), int(h)) for w, h in level_dimensions])
+            if level_dimensions is not None
+            else [self.slide_dimensions]
         )
         self.level_downsamples = (
-            [float(x) for x in level_downsamples] if level_downsamples else None
+            [float(x) for x in level_downsamples]
+            if level_downsamples is not None
+            else None
+        )
+        self.level_count = (
+            int(level_count) if level_count is not None else len(self.level_dimensions)
         )
         self.vendor = vendor
         self.mpp = np.array(mpp)
-        self.raw = dict(raw)
+        self.raw = dict(raw) if raw is not None else None
 
         self.validate()
 
@@ -58,24 +60,33 @@ class WSIMeta:
         """
         passed = True
 
+        # Fatal conditions: Should return False if not True
+
         if self.level_count < 1:
             warnings.warn("Level count is not a positive integer")
             passed = False
 
-        if self.level_dimensions and len(self.level_dimensions) != self.level_count:
-            warnings.warn("Length of slide_dimensions != level_count")
+        if self.level_dimensions is None:
+            warnings.warn("level_dimensions is None")
+            passed = False
+        elif len(self.level_dimensions) != self.level_count:
+            warnings.warn("Length of level dimensions != level count")
             passed = False
 
-        if self.level_downsamples and len(self.level_downsamples) != self.level_count:
-            warnings.warn("Length of level_downsamples != level_count")
+        if self.level_downsamples is None:
+            warnings.warn("Level downsamples is None")
             passed = False
+        elif len(self.level_downsamples) != self.level_count:
+            warnings.warn("Length of level downsamples != level count")
+            passed = False
+
+        # Non-fatal conditions: Raise warning only, do not fail validation
 
         if self.raw is None:
             warnings.warn("Raw data is None")
-            passed = False
 
         if all(x is None for x in [self.objective_power, self.mpp]):
-            warnings.warn("Unknown scale (no objective_power, mpp)")
+            warnings.warn("Unknown scale (no objective_power or mpp)")
 
         return passed
 
