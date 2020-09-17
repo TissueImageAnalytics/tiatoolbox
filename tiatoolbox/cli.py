@@ -21,8 +21,9 @@
 """Console script for tiatoolbox."""
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
+from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 
 import sys
 import click
@@ -224,7 +225,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
     "--tile_objective_value",
     type=int,
     default=20,
-    help="objective value at which tile is generated, " "default=20",
+    help="objective value at which tile is generated- default=20",
 )
 @click.option(
     "--tile_read_size_w",
@@ -277,6 +278,62 @@ def save_tiles(
             tile_read_size_h=tile_read_size_h,
             verbose=verbose,
         )
+
+
+@main.command()
+@click.option(
+    "--source_input",
+    help="input path to the source image or a directory of source images",
+)
+@click.option("--target_input", help="input path to the target image")
+@click.option(
+    "--method",
+    help="Stain normlisation method to use. Choose from 'reinhard', 'ruifrok'",
+    default="reinhard",
+)
+@click.option(
+    "--output_dir",
+    help="Output directory for stain normalisation",
+    default="stainorm_output",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory, default='*.png', '*.jpg', '*.tif', '*.tiff'",
+    default="*.png, '*.jpg', '*.tif', '*.tiff'",
+)
+def stainnorm(source_input, target_input, method, output_dir, file_types):
+    """Stain normalise an input image/directory of input images"""
+    file_types = tuple(file_types.split(", "))
+    if os.path.isdir(source_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=source_input, file_types=file_types
+        )
+    elif os.path.isfile(source_input):
+        files_all = [
+            source_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    print(files_all)
+
+    if method not in ["reinhard", "ruifrok"]:
+        raise MethodNotSupported
+
+    # init stain normalisation method
+    if method == "reinhard":
+        norm = sn.ReinhardColourNormaliser()
+    else:
+        norm = sn.StainNormaliser(method)
+
+    # get stain information of target image
+    norm.fit(utils.misc.imread(target_input))
+
+    for curr_file in files_all:
+        basename = os.path.basename(curr_file)
+        # transform source image
+        transform = norm.transform(utils.misc.imread(curr_file))
+        utils.misc.imwrite(os.path.join(output_dir, basename), transform)
 
 
 if __name__ == "__main__":
