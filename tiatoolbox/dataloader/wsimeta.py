@@ -20,8 +20,6 @@ class WSIMeta:
         mpp: Optional[Sequence[float]] = None,
         raw: Mapping[str, str] = None,
     ):
-        self.input_dir = Path(input_dir)
-        self.file_name = file_name
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = (
             [int(x) for x in slide_dimensions] if slide_dimensions else None
