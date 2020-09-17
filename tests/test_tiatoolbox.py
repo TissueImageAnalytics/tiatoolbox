@@ -512,6 +512,42 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
     assert save_tiles_result.exit_code == 0
 
 
+def test_command_line_stainnorm(_response_source, _response_target):
+    """Test the stain normalisation CLI."""
+    runner = CliRunner()
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stain_norm",
+            "--source_input",
+            pathlib.Path(__file__).parent.joinpath("source.png"),
+            "--target_input",
+            pathlib.Path(__file__).parent.joinpath("target.png"),
+            "--method",
+            "reinhard",
+            "--file_types",
+            "*.png",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
+
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stain_norm",
+            "--source_input",
+            imread(pathlib.Path(__file__).parent.joinpath("source.png")),
+            "--target_input",
+            imread(pathlib.Path(__file__).parent.joinpath("target.png")),
+            "--method",
+            "reinhard",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
+
+
 # -------------------------------------------------------------------------------------
 # Stain Normalisation
 # -------------------------------------------------------------------------------------
