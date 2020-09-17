@@ -322,7 +322,6 @@ class OpenSlideWSIReader(WSIReader):
         level_count = self.openslide_obj.level_count
         level_dimensions = self.openslide_obj.level_dimensions
         level_downsamples = self.openslide_obj.level_downsamples
-        file_name = self.file_name
         vendor = self.openslide_obj.properties[openslide.PROPERTY_NAME_VENDOR]
         mpp_x = self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X]
         mpp_y = self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y]
@@ -336,7 +335,6 @@ class OpenSlideWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            file_name=file_name,
             raw=self.openslide_obj.properties,
         )
 
