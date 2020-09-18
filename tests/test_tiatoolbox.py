@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Tests for `tiatoolbox` package."""
+"""pytests for `tiatoolbox` package."""
 import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
@@ -103,18 +103,15 @@ def _response_all_wsis(_response_ndpi, _response_svs, tmpdir_factory):
     return dir_path
 
 
-# -------------------------------------------------------------------------------------
-# Python API tests
-# -------------------------------------------------------------------------------------
-
-@pytest.fixture
-def _response_source(request):
+@pytest.fixture(scope="session")
+def _response_stainnorm_source(tmpdir_factory):
     """
     Sample pytest fixture for source image for stain normalisation
     Download png image for pytest
     """
-    source_file_path = pathlib.Path(__file__).parent.joinpath("source.png")
-    if not pathlib.Path.is_file(source_file_path):
+    source_file_path = tmpdir_factory.mktemp("data").join("source.png")
+    if not os.path.isfile(source_file_path):
+        print("Downloading Source Image for stain normalisation")
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
             "/files/source.png"
@@ -122,22 +119,21 @@ def _response_source(request):
         with open(source_file_path, "wb") as f:
             f.write(r.content)
 
-    def close_source():
-        if pathlib.Path.is_file(source_file_path):
-            os.remove(str(source_file_path))
+    else:
+        print("Skipping Source Image")
 
-    request.addfinalizer(close_source)
-    return _response_source
+    return source_file_path
 
 
-@pytest.fixture
-def _response_target(request):
+@pytest.fixture(scope="session")
+def _response_stainnorm_target(tmpdir_factory):
     """
     Sample pytest fixture for target image for stain normalisation
     Download png image for pytest
     """
-    target_file_path = pathlib.Path(__file__).parent.joinpath("target.png")
-    if not pathlib.Path.is_file(target_file_path):
+    target_file_path = tmpdir_factory.mktemp("data").join("target.png")
+    if not os.path.isfile(target_file_path):
+        print("Downloading Target Image for stain normalisation")
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
             "/files/target.png"
@@ -145,22 +141,21 @@ def _response_target(request):
         with open(target_file_path, "wb") as f:
             f.write(r.content)
 
-    def close_target():
-        if pathlib.Path.is_file(target_file_path):
-            os.remove(str(target_file_path))
+    else:
+        print("Skipping Target Image")
 
-    request.addfinalizer(close_target)
-    return _response_target
+    return target_file_path
 
 
-@pytest.fixture
-def _response_reinhard(request):
+@pytest.fixture(scope="session")
+def _response_reinhard(tmpdir_factory):
     """
     Sample pytest fixture for reinhard normalised image
     Download png image for pytest
     """
-    reinhard_file_path = pathlib.Path(__file__).parent.joinpath("reinhard.png")
-    if not pathlib.Path.is_file(reinhard_file_path):
+    reinhard_file_path = tmpdir_factory.mktemp("data").join("reinhard.png")
+    print("Downloading Reinhard Image for stain normalisation")
+    if not os.path.isfile(reinhard_file_path):
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
             "/files/reinhard.png"
@@ -168,22 +163,20 @@ def _response_reinhard(request):
         with open(reinhard_file_path, "wb") as f:
             f.write(r.content)
 
-    def close_reinhard():
-        if pathlib.Path.is_file(reinhard_file_path):
-            os.remove(str(reinhard_file_path))
+    else:
+        print("Skipping Reinhard Image")
 
-    request.addfinalizer(close_reinhard)
-    return _response_reinhard
+    return reinhard_file_path
 
 
-@pytest.fixture
-def _response_ruifrok(request):
+@pytest.fixture(scope="session")
+def _response_ruifrok(tmpdir_factory):
     """
     Sample pytest fixture for ruifrok normalised image
     Download png image for pytest
     """
-    ruifrok_file_path = pathlib.Path(__file__).parent.joinpath("ruifrok.png")
-    if not pathlib.Path.is_file(ruifrok_file_path):
+    ruifrok_file_path = tmpdir_factory.mktemp("data").join("ruifrok.png")
+    if not os.path.isfile(ruifrok_file_path):
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
             "/files/ruifrok.png"
@@ -191,12 +184,19 @@ def _response_ruifrok(request):
         with open(ruifrok_file_path, "wb") as f:
             f.write(r.content)
 
-    def close_ruifrok():
-        if pathlib.Path.is_file(ruifrok_file_path):
-            os.remove(str(ruifrok_file_path))
+    else:
+        print("Skipping Reinhard Image")
 
-    request.addfinalizer(close_ruifrok)
-    return _response_ruifrok
+    return ruifrok_file_path
+
+
+# -------------------------------------------------------------------------------------
+# Python API tests
+# -------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------
+# Slide Info
+# -------------------------------------------------------------------------------------
 
 
 def test_slide_info(_response_all_wsis, tmp_path):
@@ -227,6 +227,11 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     )
 
 
+# -------------------------------------------------------------------------------------
+# Read Region
+# -------------------------------------------------------------------------------------
+
+
 def test_wsireader_read_region(_response_svs):
     """pytest for read region as a python function"""
     file_types = ("*.svs",)
@@ -243,6 +248,11 @@ def test_wsireader_read_region(_response_svs):
     assert im_region.shape == (2000, 2000, 3)
 
 
+# -------------------------------------------------------------------------------------
+# Slide Thumbnail
+# -------------------------------------------------------------------------------------
+
+
 def test_wsireader_slide_thumbnail(_response_svs):
     """pytest for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
@@ -254,6 +264,11 @@ def test_wsireader_slide_thumbnail(_response_svs):
     slide_thumbnail = wsi_obj.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
+
+
+# -------------------------------------------------------------------------------------
+# Save Tiles
+# -------------------------------------------------------------------------------------
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
@@ -352,6 +367,11 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     )
 
 
+# -------------------------------------------------------------------------------------
+# Exceptions
+# -------------------------------------------------------------------------------------
+
+
 def test_exception_tests():
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
@@ -366,6 +386,11 @@ def test_exception_tests():
             output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
             verbose=True,
         )
+
+
+# -------------------------------------------------------------------------------------
+# Transforms
+# -------------------------------------------------------------------------------------
 
 
 def test_imresize():
@@ -385,12 +410,56 @@ def test_background_composite():
 
 
 # -------------------------------------------------------------------------------------
+# Stain Normalisation
+# -------------------------------------------------------------------------------------
+
+
+def test_reinhard_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
+):
+    """pytest for Reinhard colour normalisation."""
+
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    reinhard_img = imread(pathlib.Path(_response_reinhard))
+
+    norm = ReinhardColourNormaliser()
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(reinhard_img - transform) < 1e-3
+
+
+def test_ruifrok_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
+):
+    """pytest for stain normalisation with stain matrix from Ruifrok and Johnston."""
+
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    ruifrok_img = imread(pathlib.Path(_response_ruifrok))
+
+    # init class with Ruifrok method
+    norm = StainNormaliser("ruifrok")
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(ruifrok_img - transform) < 1e-3
+
+
+# -------------------------------------------------------------------------------------
 # Command Line Interface
+# -------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------
+# Command Line Basic
 # -------------------------------------------------------------------------------------
 
 
 def test_command_line_help_interface():
-    """Test the CLI help"""
+    """pytest the CLI help"""
     runner = CliRunner()
     result = runner.invoke(cli.main)
     assert result.exit_code == 0
@@ -406,8 +475,13 @@ def test_command_line_version():
     assert __version__ in version_result.output
 
 
+# -------------------------------------------------------------------------------------
+# Slide Info
+# -------------------------------------------------------------------------------------
+
+
 def test_command_line_slide_info(_response_all_wsis):
-    """Test the Slide information CLI."""
+    """pytest the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
         cli.main,
@@ -444,8 +518,13 @@ def test_command_line_slide_info(_response_all_wsis):
     assert slide_info_result.exit_code == 0
 
 
+# -------------------------------------------------------------------------------------
+# Read Region
+# -------------------------------------------------------------------------------------
+
+
 def test_command_line_read_region(_response_ndpi, tmp_path):
-    """Test the Read Region CLI."""
+    """pytest the Read Region CLI."""
     runner = CliRunner()
     read_region_result = runner.invoke(
         cli.main,
@@ -489,6 +568,11 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
     assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")))
 
 
+# -------------------------------------------------------------------------------------
+# Slide Thumbnail
+# -------------------------------------------------------------------------------------
+
+
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
     """pytest for the slide_thumbnail CLI."""
     runner = CliRunner()
@@ -507,6 +591,11 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+
+
+# -------------------------------------------------------------------------------------
+# Save Tiles
+# -------------------------------------------------------------------------------------
 
 
 def test_command_line_save_tiles(_response_all_wsis, tmp_path):
@@ -549,17 +638,22 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     assert save_tiles_result.exit_code == 0
 
 
-def test_command_line_stainnorm(_response_source, _response_target):
-    """Test the stain normalisation CLI."""
+# -------------------------------------------------------------------------------------
+# Stain Normalisation
+# -------------------------------------------------------------------------------------
+
+
+def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
+    """pytest for the stain normalisation CLI."""
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(__file__).parent.joinpath("source.png"),
+            pathlib.Path(_response_stainnorm_source),
             "--target_input",
-            pathlib.Path(__file__).parent.joinpath("target.png"),
+            pathlib.Path(_response_stainnorm_target),
             "--method",
             "reinhard",
         ],
@@ -572,48 +666,12 @@ def test_command_line_stainnorm(_response_source, _response_target):
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(__file__).parent.joinpath("source.png"),
+            pathlib.Path(_response_stainnorm_source),
             "--target_input",
-            pathlib.Path(__file__).parent.joinpath("target.png"),
+            pathlib.Path(_response_stainnorm_target),
             "--method",
             "ruifrok",
         ],
     )
 
     assert stainnorm_result.exit_code == 0
-
-
-# -------------------------------------------------------------------------------------
-# Stain Normalisation
-# -------------------------------------------------------------------------------------
-
-
-def test_reinhard_normalise(_response_source, _response_target, _response_reinhard):
-    """Test Reinhard colour normalisation."""
-
-    source_img = imread(pathlib.Path(__file__).parent.joinpath("source.png"))
-    target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
-    reinhard_img = imread(pathlib.Path(__file__).parent.joinpath("reinhard.png"))
-
-    norm = ReinhardColourNormaliser()
-    norm.fit(target_img)  # get stain information of target image
-    transform = norm.transform(source_img)  # transform source image
-
-    assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(reinhard_img - transform) < 1e-3
-
-
-def test_ruifrok_normalise(_response_source, _response_target, _response_ruifrok):
-    """Test stain normalisation with stain matrix from Ruifrok and Johnston."""
-
-    source_img = imread(pathlib.Path(__file__).parent.joinpath("source.png"))
-    target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
-    ruifrok_img = imread(pathlib.Path(__file__).parent.joinpath("ruifrok.png"))
-
-    # init class with Ruifrok meethod
-    norm = StainNormaliser("ruifrok")
-    norm.fit(target_img)  # get stain information of target image
-    transform = norm.transform(source_img)  # transform source image
-
-    assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img - transform) < 1e-3
