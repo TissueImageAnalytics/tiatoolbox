@@ -1,7 +1,6 @@
 """WSIMeta to save metadata information for WSIs"""
 import warnings
-from pathlib import Path
-from typing import Sequence, Tuple, Optional, Mapping, Union
+from typing import Sequence, Tuple, Optional, Mapping
 
 import numpy as np
 
