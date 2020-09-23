@@ -103,11 +103,12 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.25x
+    def slide_thumbnail(self, size=None):
+        """Read whole slide image thumbnail at 1.25x or the given size
 
         Args:
             self (WSIReader):
+            size (tuple): set width and height of generated thumbnail
 
         Returns:
             ndarray : image array
@@ -370,11 +371,12 @@ class OpenSlideWSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.25x
+    def slide_thumbnail(self, size=None):
+        """Read whole slide image thumbnail at 1.25x or the given size
 
         Args:
             self (OpenSlideWSIReader):
+            size (tuple): set width and height of generated thumbnail
 
         Returns:
             ndarray : image array
@@ -387,6 +389,22 @@ class OpenSlideWSIReader(WSIReader):
 
         """
         openslide_obj = self.openslide_obj
+
+        if size:
+            if not (isinstance(size, tuple) and len(size) == 2):
+                raise ValueError("Thumbnail size must be a tuple of length 2 (width, height).")
+
+            if not (isinstance(size[0], int) and size[0] > 0):
+                raise ValueError("Width of thumbnail must be an integer larger than 0.")
+
+            if not (isinstance(size[1], int) and size[1] > 0):
+                raise ValueError("Height of thumbnail must be an integer larger than 0.")
+
+            thumb = openslide_obj.get_thumbnail(size[0], size[1])
+            thumb = np.asarray(thumb)
+
+            return thumb
+
         tile_objective_value = 20
 
         rescale = np.int(self.slide_info.objective_power / tile_objective_value)
