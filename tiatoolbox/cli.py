@@ -178,6 +178,13 @@ def read_region(wsi_input, region, level, output_path, mode):
 @main.command()
 @click.option("--wsi_input", help="Path to WSI file")
 @click.option(
+    "--size", 
+    nargs=2, 
+    type=click.Tuple([int, int]),
+    default=None,
+    help="Size of thumbnail", 
+)
+@click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
     " default=wsi_input_dir/../im_region",
@@ -188,7 +195,7 @@ def read_region(wsi_input, region, level, output_path, mode):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def slide_thumbnail(wsi_input, output_path, mode):
+def slide_thumbnail(wsi_input, size, output_path, mode):
     """Reads whole slide image thumbnail"""
 
     input_dir, file_name, file_type = utils.misc.split_path_name_ext(
@@ -202,7 +209,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
             input_dir=input_dir, file_name=file_name + file_type
         )
     if wsi_obj is not None:
-        slide_thumb = wsi_obj.slide_thumbnail()
+        slide_thumb = wsi_obj.slide_thumbnail(size=size)
 
         if mode == "show":
             im_region = Image.fromarray(slide_thumb)
