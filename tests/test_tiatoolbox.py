@@ -124,6 +124,20 @@ def test_wsireader_slide_thumbnail(_response_svs):
     assert slide_thumbnail.dtype == "uint8"
 
 
+def test_wsireader_slide_thumbnail_optional_size(_response_svs):
+    """pytest for slide_thumbnail as a python function"""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(__file__).parent), file_types=file_types,
+    )
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    slide_thumbnail = wsi_obj.slide_thumbnail(size=(256, 256))
+    assert isinstance(slide_thumbnail, np.ndarray)
+    assert slide_thumbnail.dtype == "uint8"
+    assert im_region.shape == (256, 256, 3)
+
+
 def test_imresize():
     """pytest for imresize"""
     img = np.zeros((2000, 2000, 3))
