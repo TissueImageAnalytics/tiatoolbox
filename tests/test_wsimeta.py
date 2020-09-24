@@ -4,7 +4,6 @@
 import pathlib
 
 import pytest
-from .test_tiatoolbox import _response_ndpi, _response_svs
 
 from tiatoolbox import utils
 from tiatoolbox.dataloader import wsireader, wsimeta
