@@ -91,7 +91,7 @@ def test_wsireader_slide_info(_response_svs):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     slide_param = wsi_obj.slide_info
-    utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
+    utils.misc.save_yaml(slide_param.as_dict(), file_name + ".yaml")
 
 
 def test_wsireader_read_region(_response_svs):
