@@ -14,7 +14,7 @@ class WSIMeta:
         level_dimensions: Optional[Sequence[Tuple[int, int]]] = None,
         objective_power: Optional[float] = None,
         level_count: Optional[int] = None,
-        level_downsamples: Optional[Sequence[float]] = [1],
+        level_downsamples: Optional[Sequence[float]] = (1,),
         vendor: Optional[str] = None,
         mpp: Optional[Sequence[float]] = None,
         raw: Optional[Mapping[str, str]] = None,
