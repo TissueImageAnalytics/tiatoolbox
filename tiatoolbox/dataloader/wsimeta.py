@@ -108,6 +108,5 @@ class WSIMeta:
             "level_downsamples": self.level_downsamples,
             "vendor": self.vendor,
             "mpp": list(self.mpp),
-            "file_name": self.file_name,
         }
         return param
