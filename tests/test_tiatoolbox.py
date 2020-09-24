@@ -73,8 +73,8 @@ def test_slide_info(_response_ndpi, _response_svs):
     )
     slide_params = slide_info(input_path=files_all, workers=2, verbose=True)
 
-    for _, slide_param in enumerate(slide_params):
-        utils.misc.save_yaml(slide_param.as_dict(), slide_param.file_name + ".yaml")
+    for file_name, slide_param in slide_params:
+        utils.misc.save_yaml(slide_param.as_dict(), file_name + ".yaml")
 
     unwrapped_slide_info = slide_info.__closure__[0].cell_contents
     utils.misc.save_yaml(
