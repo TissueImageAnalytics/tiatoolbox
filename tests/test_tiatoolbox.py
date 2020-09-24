@@ -462,7 +462,7 @@ def test_command_line_save_tiles(_response_ndpi, _response_svs):
 
 def test_wsimeta_init_fail():
     with pytest.raises(TypeError):
-        wsimeta.WSIMeta()
+        wsimeta.WSIMeta(slide_dimensions=None)
 
 
 def test_wsimeta_validate_fail():
