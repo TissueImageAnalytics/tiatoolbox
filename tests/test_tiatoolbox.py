@@ -471,8 +471,19 @@ def test_wsimeta_validate_fail():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
     assert meta.validate() is False
 
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    assert meta.validate() is False
 
-def test_wsimeta_validate_init_pass():
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_dimensions = None
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_downsamples = None
+    assert meta.validate() is False
+
+
+def test_wsimeta_validate_pass():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     assert meta.validate()
 
