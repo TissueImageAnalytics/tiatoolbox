@@ -115,9 +115,7 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
     for curr_file in files_all:
         file_name, slide_param = slide_info(input_path=curr_file, verbose=True)
-        utils.misc.save_yaml(
-            slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
-        )
+        utils.misc.save_yaml(slide_param.as_dict(), tmp_path / (file_name + ".yaml"))
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
