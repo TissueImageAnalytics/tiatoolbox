@@ -16,7 +16,6 @@ dependencies:
   - pip
   - pyyaml
   - requests
-  - pathos==0.2.5
   - pixman<0.38.0
   - pandas
   - pip:

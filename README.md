@@ -60,3 +60,26 @@ tiatoolbox --help
       -h, --help            show this help message and exit
       --version             show program`s version number and exit
       --verbose VERBOSE
+
+
+License
+=======
+
+The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
+
+The full text of the licence is included in [LICENSE.md](LICENSE.md).
+
+[GNU General Public License (Version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
+
+
+Auxiliary Files
+---------------
+
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Lab webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+
+Dual License
+------------
+
+If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk).
+
