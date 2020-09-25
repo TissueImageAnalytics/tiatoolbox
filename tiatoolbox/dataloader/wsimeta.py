@@ -60,10 +60,6 @@ class WSIMeta:
 
         self.validate()
 
-    @property
-    def filepath(self):
-        return self.input_dir / self.file_name
-
     def validate(self):
         """
         Validate passed values and cast to Python types
