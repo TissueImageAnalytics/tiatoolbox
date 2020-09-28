@@ -126,7 +126,7 @@ class WSIMeta:
             "level_dimensions": self.level_dimensions,
             "level_downsamples": self.level_downsamples,
             "vendor": self.vendor,
-            "mpp": list(self.mpp),
+            "mpp": tuple(self.mpp),
             "file_path": self.file_path,
         }
         return param
