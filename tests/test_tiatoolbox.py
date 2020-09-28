@@ -114,8 +114,9 @@ def test_slide_info(_response_all_wsis, tmp_path):
     )
 
     for curr_file in files_all:
-        file_name, slide_param = slide_info(input_path=curr_file, verbose=True)
-        utils.misc.save_yaml(slide_param.as_dict(), tmp_path / (file_name + ".yaml"))
+        slide_param = slide_info(input_path=curr_file, verbose=True)
+        out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
+        utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
@@ -127,7 +128,8 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     slide_param = wsi_obj.slide_info
-    utils.misc.save_yaml(slide_param.as_dict(), file_name + ".yaml")
+    out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
+    utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
 def test_wsireader_read_region(_response_svs):

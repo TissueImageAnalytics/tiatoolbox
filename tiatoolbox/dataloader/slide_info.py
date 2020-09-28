@@ -66,4 +66,4 @@ def slide_info(input_path, output_dir=None, verbose=True):
     else:
         raise FileNotSupported(file_type + " file format is not supported.")
 
-    return file_name, info
+    return info

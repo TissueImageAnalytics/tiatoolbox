@@ -20,6 +20,7 @@
 
 """WSIMeta to save metadata information for WSIs"""
 import warnings
+from pathlib import Path
 from typing import Sequence, Tuple, Optional, Mapping
 
 import numpy as np
@@ -37,6 +38,7 @@ class WSIMeta:
         level_downsamples: Optional[Sequence[float]] = (1,),
         vendor: Optional[str] = None,
         mpp: Optional[Sequence[float]] = None,
+        file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
     ):
         self.objective_power = float(objective_power) if objective_power else None
@@ -56,6 +58,7 @@ class WSIMeta:
         )
         self.vendor = vendor
         self.mpp = np.array(mpp)
+        self.file_path = file_path
         self.raw = dict(raw) if raw is not None else None
 
         self.validate()
@@ -124,5 +127,6 @@ class WSIMeta:
             "level_downsamples": self.level_downsamples,
             "vendor": self.vendor,
             "mpp": list(self.mpp),
+            "file_path": self.file_path,
         }
         return param

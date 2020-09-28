@@ -348,6 +348,7 @@ class OpenSlideWSIReader(WSIReader):
         mpp = [mpp_x, mpp_y]
 
         param = WSIMeta(
+            file_path=pathlib.Path(self.input_dir, self.file_name),
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,
