@@ -421,7 +421,6 @@ class OmnyxJP2WSIReader(WSIReader):
         self.glymur_wsi = glymur.Jp2k(
             filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
-        self.slide_info = self.__slide_info()
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
