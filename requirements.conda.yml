@@ -5,7 +5,6 @@ channels:
   - defaults
 dependencies:
   - python=3.7
-  - setuptools<=45.1.0
   - Click
   - cython
   - h5py
@@ -20,4 +19,4 @@ dependencies:
   - openslide
   - pandas
   - pip:
-    - openslide-python==1.1.1
+    - openslide-python==1.1.2
