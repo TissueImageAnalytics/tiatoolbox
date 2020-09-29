@@ -34,7 +34,7 @@ def _response_ndpi(tmpdir_factory):
     """
     ndpi_file_path = tmpdir_factory.mktemp("data").join("CMU-1.ndpi")
     if not os.path.isfile(ndpi_file_path):
-        print("Downloading NDPI")
+        print("\nDownloading NDPI")
         r = requests.get(
             "http://openslide.cs.cmu.edu/download/openslide-testdata"
             "/Hamamatsu/CMU-1.ndpi"
@@ -76,7 +76,7 @@ def _response_jp2(tmpdir_factory):
     """
     jp2_file_path = tmpdir_factory.mktemp("data").join("test1.jp2")
     if not os.path.isfile(jp2_file_path):
-        print("Downloading JP2")
+        print("\nDownloading JP2")
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files"
             "/test1.jp2"
@@ -84,7 +84,7 @@ def _response_jp2(tmpdir_factory):
         with open(jp2_file_path, "wb") as f:
             f.write(r.content)
     else:
-        print("Skipping JP2")
+        print("\nSkipping JP2")
 
     return jp2_file_path
 
