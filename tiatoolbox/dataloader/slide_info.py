@@ -34,7 +34,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
         verbose (bool): Print output, default=True
 
     Returns:
-        list: list of dictionary Whole Slide meta information
+        WSIMeta: containing meta information
 
     Examples:
         >>> from tiatoolbox.dataloader.slide_info import slide_info
