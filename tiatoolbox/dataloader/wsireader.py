@@ -71,20 +71,19 @@ class WSIReader:
 
         self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
-        self.slide_info = self.__slide_info()
 
-    def __slide_info(self):
+    @property
+    def slide_info(self):
         """WSI meta data reader
 
         Args:
             self (WSIReader):
 
         Returns:
-            dict: dictionary containing meta information
+            WSIMeta: An object containing normalised slide metadata
 
         """
-        param = WSIMeta(input_dir=self.input_dir, file_name=self.file_name)
-        return param
+        raise NotImplementedError
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
@@ -289,7 +288,6 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_obj = openslide.OpenSlide(
             filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
-        self.slide_info = self.__slide_info()
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
@@ -325,7 +323,8 @@ class OpenSlideWSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    def __slide_info(self):
+    @property
+    def slide_info(self):
         """WSI meta data reader
 
         Args:
@@ -335,37 +334,29 @@ class OpenSlideWSIReader(WSIReader):
             WSIMeta: containing meta information
 
         """
-        input_dir = self.input_dir
         objective_power = np.int(
             self.openslide_obj.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         )
 
-        slide_dimension = self.openslide_obj.level_dimensions[0]
-        tile_objective_value = self.tile_objective_value
-        rescale = np.int(objective_power / tile_objective_value)
-        tile_read_size = self.tile_read_size
+        slide_dimensions = self.openslide_obj.level_dimensions[0]
         level_count = self.openslide_obj.level_count
         level_dimensions = self.openslide_obj.level_dimensions
         level_downsamples = self.openslide_obj.level_downsamples
-        file_name = self.file_name
-        vendor = (self.openslide_obj.properties[openslide.PROPERTY_NAME_VENDOR],)
-        mpp_x = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X],)
-        mpp_y = (self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y],)
+        vendor = self.openslide_obj.properties[openslide.PROPERTY_NAME_VENDOR]
+        mpp_x = self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_X]
+        mpp_y = self.openslide_obj.properties[openslide.PROPERTY_NAME_MPP_Y]
+        mpp = [mpp_x, mpp_y]
 
         param = WSIMeta(
-            input_dir=input_dir,
+            file_path=pathlib.Path(self.input_dir, self.file_name),
             objective_power=objective_power,
-            slide_dimension=slide_dimension,
-            rescale=rescale,
-            tile_objective_value=tile_objective_value,
-            tile_read_size=tile_read_size.tolist(),
+            slide_dimensions=slide_dimensions,
             level_count=level_count,
             level_dimensions=level_dimensions,
             level_downsamples=level_downsamples,
             vendor=vendor,
-            mpp_x=mpp_x,
-            mpp_y=mpp_y,
-            file_name=file_name,
+            mpp=mpp,
+            raw=self.openslide_obj.properties,
         )
 
         return param
