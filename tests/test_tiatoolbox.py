@@ -492,7 +492,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
         ],
     )
 
-    assert save_tiles_result.exit_code == 0
+    assert save_svs_tiles_result.exit_code == 0
 
 
 def test_wsimeta_init_fail():
