@@ -42,18 +42,6 @@ dataloader.save_tiles
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
 
-----------
-Decorators
-----------
-.. automodule:: tiatoolbox.decorators
-
-^^^^^^^^^^^^^^^^^^^^
-decorators.multiproc
-^^^^^^^^^^^^^^^^^^^^
-.. automodule:: tiatoolbox.decorators.multiproc
-    :members: TIAMultiProcess
-    :special-members: __init__, __call__
-
 ------
 Utils
 ------

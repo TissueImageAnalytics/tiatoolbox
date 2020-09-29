@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2006, Blender Foundation
+# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -66,15 +66,9 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--workers",
-    type=int,
-    help="num of cpu cores to use for multiprocessing, "
-    "default=multiprocessing.cpu_count()",
-)
-@click.option(
     "--verbose", type=bool, default=True, help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=True):
+def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Displays or saves WSI metadata"""
     file_types = tuple(file_types.split(", "))
 
@@ -98,22 +92,24 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None, verbose=Tr
 
     print(files_all)
 
-    slide_params = dataloader.slide_info.slide_info(
-        input_path=files_all, workers=workers, verbose=verbose
-    )
-
-    if mode == "show":
-        for _, slide_param in enumerate(slide_params):
-            print(slide_param.as_dict())
-
     if mode == "save":
         output_dir.mkdir(parents=True, exist_ok=True)
-        for _, slide_param in enumerate(slide_params):
-            utils.misc.save_yaml(
-                slide_param.as_dict(),
-                pathlib.Path(output_dir).joinpath(slide_param.file_name + ".yaml"),
+
+    for curr_file in files_all:
+        slide_param = dataloader.slide_info.slide_info(
+            input_path=curr_file, verbose=verbose
+        )
+        if mode == "show":
+            print(slide_param.as_dict())
+
+        if mode == "save":
+            out_path = pathlib.Path(
+                output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
-        print("Meta files saved at " + str(output_dir))
+            utils.misc.save_yaml(
+                slide_param.as_dict(), out_path,
+            )
+            print("Meta files saved at " + str(output_dir))
 
 
 @main.command()
@@ -243,12 +239,6 @@ def slide_thumbnail(wsi_input, output_path, mode):
     "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
 )
 @click.option(
-    "--workers",
-    type=int,
-    help="num of cpu cores to use for multiprocessing, "
-    "default=multiprocessing.cpu_count()",
-)
-@click.option(
     "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def save_tiles(
@@ -258,7 +248,6 @@ def save_tiles(
     tile_objective_value,
     tile_read_size_w,
     tile_read_size_h,
-    workers=None,
     verbose=True,
 ):
     """Displays or saves WSI metadata"""
@@ -274,15 +263,17 @@ def save_tiles(
     else:
         raise FileNotFoundError
 
-    dataloader.save_tiles.save_tiles(
-        input_path=files_all,
-        output_dir=output_dir,
-        tile_objective_value=tile_objective_value,
-        tile_read_size_w=tile_read_size_w,
-        tile_read_size_h=tile_read_size_h,
-        verbose=verbose,
-        workers=workers,
-    )
+    print(files_all)
+
+    for curr_file in files_all:
+        dataloader.save_tiles.save_tiles(
+            input_path=curr_file,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
+            verbose=verbose,
+        )
 
 
 if __name__ == "__main__":
