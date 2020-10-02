@@ -482,7 +482,7 @@ class OmnyxJP2WSIReader(WSIReader):
         # Determine level_count
         cod = None
         for segment in glymur_wsi.codestream.segment:
-            if isinstance(segment, glymur.codesteam.CODsegment):
+            if isinstance(segment, glymur.codestream.CODsegment):
                 cod = segment
 
         if cod is None:
