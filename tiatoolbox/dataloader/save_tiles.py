@@ -23,6 +23,8 @@ from tiatoolbox.dataloader import wsireader
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
 
+import pathlib
+
 
 def save_tiles(
     input_path,
@@ -64,24 +66,23 @@ def save_tiles(
 
     """
 
-    input_dir, file_name, ext = misc.split_path_name_ext(input_path)
+    input_path = pathlib.Path(input_path)
     if verbose:
-        print(file_name + ext, flush=True)
+        print(input_path.name, flush=True)
 
-    if ext in (".svs", ".ndpi", ".mrxs"):
+    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_dir=input_dir,
-            file_name=file_name + ext,
+            input_path=input_path,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
             tile_read_size_w=tile_read_size_w,
             tile_read_size_h=tile_read_size_h,
         )
         wsi_reader.save_tiles(verbose=verbose)
-    elif ext in (".jp2",):
+
+    elif input_path.suffix in (".jp2",):
         wsi_reader = wsireader.OmnyxJP2WSIReader(
-            input_dir=input_dir,
-            file_name=file_name + ext,
+            input_path=input_path,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
             tile_read_size_w=tile_read_size_w,
@@ -89,4 +90,4 @@ def save_tiles(
         )
         wsi_reader.save_tiles(verbose=verbose)
     else:
-        raise FileNotSupported
+        raise FileNotSupported(input_path.suffix + " file format is not supported.")
