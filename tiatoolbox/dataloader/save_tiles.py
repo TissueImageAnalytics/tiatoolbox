@@ -35,8 +35,6 @@ def save_tiles(
 ):
     """Save image tiles for whole slide image.
     Default file format for tiles is jpg.
-    Multiprocessing decorator runs this function in parallel using
-    the number of specified cpu cores.
 
     Args:
         input_path (str): Path to whole slide image

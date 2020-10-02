@@ -27,7 +27,6 @@ import pathlib
 
 def slide_info(input_path, output_dir=None, verbose=True):
     """Returns WSI meta data.
-    Multiprocessing decorator runs this function in parallel.
 
     Args:
         input_path (str, pathlib.Path): Path to whole slide image
