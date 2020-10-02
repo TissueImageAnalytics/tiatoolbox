@@ -324,6 +324,60 @@ def test_background_composite():
     assert np.all(im[:, :, 3] == 255)
 
 
+def test_wsimeta_init_fail():
+    with pytest.raises(TypeError):
+        wsimeta.WSIMeta(slide_dimensions=None)
+
+
+def test_wsimeta_validate_fail():
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_dimensions=[(512, 512), (256, 256)],
+        level_count=3,
+    )
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_dimensions = None
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_downsamples = None
+    assert meta.validate() is False
+
+
+def test_wsimeta_validate_pass():
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    assert meta.validate()
+
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_dimensions=[(512, 512), (256, 256)],
+        level_downsamples=[1, 2],
+    )
+    assert meta.validate()
+
+
+def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
+    wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
+    meta = wsi.slide_info
+    assert meta.validate()
+
+
+def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
+    wsi = wsireader.OpenSlideWSIReader(_response_svs)
+    meta = wsi.slide_info
+    assert meta.validate()
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
@@ -385,7 +439,7 @@ def test_command_line_slide_info(_response_all_wsis):
 
 
 def test_command_line_read_region(_response_ndpi, tmp_path):
-    """Test the Read Region CLI."""
+    """pytest OpenSlide read_region CLI."""
     runner = CliRunner()
     read_region_result = runner.invoke(
         cli.main,
@@ -429,6 +483,28 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
     assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")))
 
 
+def test_command_line_jp2_read_region(_response_jp2, tmp_path):
+    """pytest JP2 read_region"""
+    runner = CliRunner()
+    read_region_result = runner.invoke(
+        cli.main,
+        [
+            "read-region",
+            "--wsi_input",
+            str(pathlib.Path(_response_jp2)),
+            "--level",
+            "0",
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("im_region.jpg")),
+        ],
+    )
+
+    assert read_region_result.exit_code == 0
+    assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region.jpg")))
+
+
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
     """pytest for the slide_thumbnail CLI."""
     runner = CliRunner()
@@ -438,6 +514,26 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
             "slide-thumbnail",
             "--wsi_input",
             str(pathlib.Path(_response_ndpi)),
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
+        ],
+    )
+
+    assert slide_thumb_result.exit_code == 0
+    assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+
+
+def test_command_line_jp2_slide_thumbnail(_response_jp2, tmp_path):
+    """pytest for the jp2 slide_thumbnail CLI."""
+    runner = CliRunner()
+    slide_thumb_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(_response_jp2)),
             "--mode",
             "save",
             "--output_path",
@@ -489,58 +585,3 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     )
 
     assert save_svs_tiles_result.exit_code == 0
-
-
-def test_wsimeta_init_fail():
-    with pytest.raises(TypeError):
-        wsimeta.WSIMeta(slide_dimensions=None)
-
-
-def test_wsimeta_validate_fail():
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_dimensions=[(512, 512), (256, 256)],
-        level_count=3,
-    )
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    meta.level_dimensions = None
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    meta.level_downsamples = None
-    assert meta.validate() is False
-
-
-def test_wsimeta_validate_pass():
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    assert meta.validate()
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_dimensions=[(512, 512), (256, 256)],
-        level_downsamples=[1, 2],
-    )
-    assert meta.validate()
-
-
-def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
-    wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
-    meta = wsi.slide_info
-    assert meta.validate()
-
-
-def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
-    wsi = wsireader.OpenSlideWSIReader(_response_svs)
-    meta = wsi.slide_info
-    assert meta.validate()
