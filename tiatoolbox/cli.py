@@ -1,7 +1,28 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
 """Console script for tiatoolbox."""
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
 from tiatoolbox import utils
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 import sys
 import click
@@ -45,12 +66,9 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--workers",
-    type=int,
-    help="num of cpu cores to use for multiprocessing, "
-    "default=multiprocessing.cpu_count()",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
+def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Displays or saves WSI metadata"""
     file_types = tuple(file_types.split(", "))
 
@@ -70,26 +88,28 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
             input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
             output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
     else:
-        raise ValueError("wsi_input path is not valid")
+        raise FileNotFoundError
 
     print(files_all)
 
-    slide_params = dataloader.slide_info.slide_info(
-        input_path=files_all, workers=workers,
-    )
-
-    if mode == "show":
-        for slide_param in slide_params:
-            print(slide_param)
-
     if mode == "save":
         output_dir.mkdir(parents=True, exist_ok=True)
-        for slide_param in slide_params:
-            utils.misc.save_yaml(
-                slide_param,
-                pathlib.Path(output_dir).joinpath(slide_param["file_name"] + ".yaml"),
+
+    for curr_file in files_all:
+        slide_param = dataloader.slide_info.slide_info(
+            input_path=curr_file, verbose=verbose
+        )
+        if mode == "show":
+            print(slide_param.as_dict())
+
+        if mode == "save":
+            out_path = pathlib.Path(
+                output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
-        print("Meta files saved at " + str(output_dir))
+            utils.misc.save_yaml(
+                slide_param.as_dict(), out_path,
+            )
+            print("Meta files saved at " + str(output_dir))
 
 
 @main.command()
@@ -119,22 +139,134 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
 )
 def read_region(wsi_input, region, level, output_path, mode):
     """Reads a region in an whole slide image as specified"""
-    if all(region):
+    if not region:
         region = [0, 0, 2000, 2000]
 
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
+    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
+        full_path=wsi_input
+    )
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi_obj = dataloader.wsireader.WSIReader(
-        input_dir=input_dir, file_name=file_name + ext
-    )
-    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
-    if mode == "show":
-        im_region = Image.fromarray(im_region)
-        im_region.show()
 
-    if mode == "save":
-        utils.misc.imwrite(output_path, im_region)
+    wsi_obj = None
+    if file_type in (".svs", ".ndpi", ".mrxs"):
+        wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
+            input_dir=input_dir, file_name=file_name + file_type
+        )
+
+    if wsi_obj is not None:
+        im_region = wsi_obj.read_region(
+            region[0], region[1], region[2], region[3], level
+        )
+        if mode == "show":
+            im_region = Image.fromarray(im_region)
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(output_path, im_region)
+    else:
+        raise FileNotSupported
+
+
+@main.command()
+@click.option("--wsi_input", help="Path to WSI file")
+@click.option(
+    "--output_path",
+    help="Path to output file to save the image region in save mode,"
+    " default=wsi_input_dir/../im_region",
+)
+@click.option(
+    "--mode",
+    default="show",
+    help="'show' to display image region or 'save' to save at the output path"
+    ", default=show",
+)
+def slide_thumbnail(wsi_input, output_path, mode):
+    """Reads whole slide image thumbnail"""
+
+    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
+        full_path=wsi_input
+    )
+    if output_path is None and mode == "save":
+        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
+    wsi_obj = None
+    if file_type in (".svs", ".ndpi", ".mrxs"):
+        wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
+            input_dir=input_dir, file_name=file_name + file_type
+        )
+    if wsi_obj is not None:
+        slide_thumb = wsi_obj.slide_thumbnail()
+
+        if mode == "show":
+            im_region = Image.fromarray(slide_thumb)
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(output_path, slide_thumb)
+    else:
+        raise FileNotSupported
+
+
+@main.command()
+@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option(
+    "--output_dir",
+    default="tiles",
+    help="Path to output directory to save the output, default=tiles",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    default="*.ndpi, *.svs, *.mrxs",
+)
+@click.option(
+    "--tile_objective_value",
+    type=int,
+    default=20,
+    help="objective value at which tile is generated, " "default=20",
+)
+@click.option(
+    "--tile_read_size_w", type=int, default=5000, help="tile width, " "default=5000",
+)
+@click.option(
+    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
+)
+@click.option(
+    "--verbose", type=bool, default=True, help="Print output, default=True",
+)
+def save_tiles(
+    wsi_input,
+    output_dir,
+    file_types,
+    tile_objective_value,
+    tile_read_size_w,
+    tile_read_size_h,
+    verbose=True,
+):
+    """Displays or saves WSI metadata"""
+    file_types = tuple(file_types.split(", "))
+    if os.path.isdir(wsi_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=wsi_input, file_types=file_types
+        )
+    elif os.path.isfile(wsi_input):
+        files_all = [
+            wsi_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    print(files_all)
+
+    for curr_file in files_all:
+        dataloader.save_tiles.save_tiles(
+            input_path=curr_file,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
+            verbose=verbose,
+        )
 
 
 @main.command()

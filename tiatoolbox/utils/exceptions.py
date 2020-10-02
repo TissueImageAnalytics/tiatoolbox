@@ -18,8 +18,12 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""__main__ file invoked with `python -m tiatoolbox` command"""
+"""Custom Errors and Exceptions for TIAToolbox"""
 
-from tiatoolbox.cli import main
 
-main()
+class FileNotSupported(Exception):
+    """Raises No supported file found Error"""
+
+    def __init__(self, message="File format is not supported"):
+        self.message = message
+        super().__init__(self.message)

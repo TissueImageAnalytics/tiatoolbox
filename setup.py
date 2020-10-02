@@ -15,10 +15,8 @@ requirements = [
     "numpy",
     "pillow",
     "matplotlib",
-    "setuptools<=45.1.0",
     "opencv-python>=4.0",
-    "pathos==0.2.5",
-    "openslide-python==1.1.1",
+    "openslide-python==1.1.2",
     "pyyaml",
     "pandas",
 ]
