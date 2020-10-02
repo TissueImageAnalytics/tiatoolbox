@@ -21,7 +21,6 @@
 """Get Slide Meta Data information"""
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.utils.misc import split_path_name_ext
 
 import pathlib
 

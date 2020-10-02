@@ -20,7 +20,6 @@
 
 """Save image tiles from the whole slide image"""
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pathlib

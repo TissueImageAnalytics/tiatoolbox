@@ -168,7 +168,6 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(
         files_all[0],
         output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")),
