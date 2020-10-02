@@ -281,9 +281,7 @@ class OpenSlideWSIReader(WSIReader):
             tile_read_size_w=tile_read_size_w,
             tile_read_size_h=tile_read_size_h,
         )
-        self.openslide_wsi = openslide.OpenSlide(
-            filename=str(self.input_path)
-        )
+        self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
@@ -408,9 +406,7 @@ class OmnyxJP2WSIReader(WSIReader):
             tile_read_size_w=tile_read_size_w,
             tile_read_size_h=tile_read_size_h,
         )
-        self.glymur_wsi = glymur.Jp2k(
-            filename=str(self.input_path)
-        )
+        self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image

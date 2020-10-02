@@ -147,19 +147,13 @@ def read_region(wsi_input, region, level, output_path, mode):
 
     wsi = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(
-            input_path=wsi_input
-        )
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
 
     elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(
-            input_path=wsi_input
-        )
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
 
     if wsi is not None:
-        im_region = wsi.read_region(
-            region[0], region[1], region[2], region[3], level
-        )
+        im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
         if mode == "show":
             im_region = Image.fromarray(im_region)
             im_region.show()
@@ -193,13 +187,9 @@ def slide_thumbnail(wsi_input, output_path, mode):
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
     wsi = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(
-            input_path=wsi_input
-        )
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
     elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(
-            input_path=wsi_input
-        )
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
 
     if wsi is not None:
         slide_thumb = wsi.slide_thumbnail()
