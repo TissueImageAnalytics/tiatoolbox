@@ -24,12 +24,13 @@ from PIL import Image
 import cv2
 
 
-def background_composite(image, fill=255):
+def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background
 
     Args:
         image (ndarray, PIL.Image): input image
         fill (int): fill value for the background, default=255
+        alpha (bool): True if alpha channel is required
 
     Returns:
         ndarray: image with background composite
@@ -43,6 +44,7 @@ def background_composite(image, fill=255):
         ...     .background_composite(img_with_alpha)
         >>> plt.imshow(img_with_alpha)
         >>> plt.imshow(img_back_composite)
+        >>> plt.show()
 
     """
 
@@ -55,7 +57,11 @@ def background_composite(image, fill=255):
         np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8)
     )
     composite.alpha_composite(image)
-    composite = np.asarray(composite.convert("RGB"))
+    if not alpha:
+        composite = np.asarray(composite.convert("RGB"))
+    else:
+        composite = np.asarray(composite)
+
     return composite
 
 

@@ -320,6 +320,9 @@ def test_background_composite():
     assert np.all(im[1000:, :, :] == 255)
     assert np.all(im[:1000, :, :] == 0)
 
+    im = utils.transforms.background_composite(new_im, alpha=True)
+    assert np.all(im[:, :, 3] == 255)
+
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
