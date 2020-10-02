@@ -29,6 +29,7 @@ import glymur
 import math
 import pandas as pd
 import re
+import warnings
 
 
 class WSIReader:
@@ -477,12 +478,21 @@ class OmnyxJP2WSIReader(WSIReader):
         objective_power = np.int(m.group(0))
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
-        level_count = None
+
+        # Determine level_count
+        cod = None
         for segment in glymur_wsi.codestream.segment:
             if isinstance(segment, glymur.codesteam.CODsegment):
-                level_count = segment
-        if level_count is None:
-            raise ValueError("Invalid JP2 file. Missing codestream COD segment.")
+                cod = segment
+
+        if cod is None:
+            warnings.warn(
+                "JP2 codestream missing COD segment! "
+                "Cannot determine number of decompositions (levels)"
+            )
+            level_count = 1
+        else:
+            level_count = cod.num_res
 
         level_downsamples = [2 ** n for n in range(level_count)]
 
