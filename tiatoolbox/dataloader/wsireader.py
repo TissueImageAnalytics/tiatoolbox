@@ -471,21 +471,26 @@ class OmnyxJP2WSIReader(WSIReader):
 
         """
 
-        box = self.glymur_wsi.box
+        glymur_wsi = self.glymur_wsi
+        box = glymur_wsi.box
         m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
         objective_power = np.int(m.group(0))
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
-        level_dimensions = [
-            (slide_dimensions[0], slide_dimensions[1]),
-            (int(slide_dimensions[0] / 2), int(slide_dimensions[1] / 2)),
-            (int(slide_dimensions[0] / 4), int(slide_dimensions[1] / 4)),
-            (int(slide_dimensions[0] / 8), int(slide_dimensions[1] / 8)),
-            (int(slide_dimensions[0] / 16), int(slide_dimensions[1] / 16)),
-            (int(slide_dimensions[0] / 32), int(slide_dimensions[1] / 32)),
-        ]
         level_count = None
-        level_downsamples = None
+        for segment in glymur_wsi.codestream.segment:
+            if isinstance(segment, glymur.codesteam.CODsegment):
+                level_count = segment
+        if level_count is None:
+            raise ValueError("Invalid JP2 file. Missing codestream COD segment.")
+
+        level_downsamples = [2 ** n for n in range(level_count)]
+
+        level_dimensions = [
+            (int(slide_dimensions[0] / 2 ** n), int(slide_dimensions[1] / 2 ** n))
+            for n in range(level_count)
+        ]
+
         vendor = "Omnyx JP2"
         m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
         mpp_x = float(m.group(0))
