@@ -129,8 +129,8 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
-    wsi_obj = wsireader.OpenSlideWSIReader(files_all[0])
-    slide_param = wsi_obj.slide_info
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    slide_param = wsi.slide_info
     out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
@@ -141,10 +141,10 @@ def test_wsireader_read_region(_response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
-    wsi_obj = wsireader.OpenSlideWSIReader(files_all[0])
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
     level = 0
     region = [13000, 17000, 15000, 19000]
-    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
+    im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape == (2000, 2000, 3)
@@ -156,8 +156,8 @@ def test_wsireader_slide_thumbnail(_response_svs):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
-    wsi_obj = wsireader.OpenSlideWSIReader(files_all[0])
-    slide_thumbnail = wsi_obj.slide_thumbnail()
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 
@@ -168,12 +168,12 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
-    wsi_obj = wsireader.OpenSlideWSIReader(
+    wsi = wsireader.OpenSlideWSIReader(
         files_all[0],
         output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")),
         tile_objective_value=5,
     )
-    wsi_obj.save_tiles(verbose=True)
+    wsi.save_tiles(verbose=True)
     assert (
         pathlib.Path(tmp_path)
         .joinpath("test_wsireader_save_tiles")
@@ -258,14 +258,14 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
     """pytest for save_tiles in wsireader as a python function"""
-    wsi_obj = wsireader.OmnyxJP2WSIReader(
+    wsi = wsireader.OmnyxJP2WSIReader(
         _response_jp2,
         output_dir=str(
             pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")
         ),
         tile_objective_value=5,
     )
-    wsi_obj.save_tiles(verbose=True)
+    wsi.save_tiles(verbose=True)
     assert (
         pathlib.Path(tmp_path)
         .joinpath("test_wsireader_jp2_save_tiles")
@@ -532,12 +532,12 @@ def test_wsimeta_validate_pass():
 
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
-    wsi_obj = wsireader.OpenSlideWSIReader(_response_ndpi)
-    meta = wsi_obj.slide_info
+    wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
+    meta = wsi.slide_info
     assert meta.validate()
 
 
 def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
-    wsi_obj = wsireader.OpenSlideWSIReader(_response_svs)
-    meta = wsi_obj.slide_info
+    wsi = wsireader.OpenSlideWSIReader(_response_svs)
+    meta = wsi.slide_info
     assert meta.validate()

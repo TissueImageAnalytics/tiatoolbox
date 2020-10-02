@@ -302,10 +302,10 @@ class OpenSlideWSIReader(WSIReader):
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi_obj = wsireader.OpenSlideWSIReader(input_path='./CMU-1.ndpi')
+            >>> wsi = wsireader.OpenSlideWSIReader(input_path='./CMU-1.ndpi')
             >>> level = 0
             >>> region = [13000, 17000, 15000, 19000]
-            >>> im_region = wsi_obj.read_region(
+            >>> im_region = wsi.read_region(
             ...     region[0], region[1], region[2], region[3], level)
             >>> plt.imshow(im_region)
 
@@ -520,8 +520,8 @@ class OmnyxJP2WSIReader(WSIReader):
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.OmnyxJP2WSIReader(input_path="./test.jp2")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+            >>> wsi = wsireader.OmnyxJP2WSIReader(input_path="./test.jp2")
+            >>> slide_thumbnail = wsi.slide_thumbnail()
 
         """
         glymur_wsi = self.glymur_wsi

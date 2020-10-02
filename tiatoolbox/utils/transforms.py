@@ -73,8 +73,8 @@ def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
     Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> from tiatoolbox.utils import transforms
-            >>> wsi_obj = wsireader.WSIReader(input_path="./CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> slide_thumbnail = wsi.slide_thumbnail()
             >>> # Resize the image to half size using scale_factor 0.5
             >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
