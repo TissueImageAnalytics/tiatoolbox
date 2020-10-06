@@ -111,7 +111,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(), out_path,
+                slide_param.as_dict(),
+                out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -290,7 +291,7 @@ def save_tiles(
 @click.option("--target_input", help="input path to the target image")
 @click.option(
     "--method",
-    help="Stain normlisation method to use. Choose from 'reinhard', 'ruifrok'",
+    help="Stain normlisation method to use. Choose from 'reinhard', 'custom' or 'ruifrok'",
     default="reinhard",
 )
 @click.option(
@@ -320,7 +321,7 @@ def stainnorm(source_input, target_input, method, output_dir, file_types):
 
     print(files_all)
 
-    if method not in ["reinhard", "ruifrok"]:
+    if method not in ["reinhard", "custom", "ruifrok"]:
         raise MethodNotSupported
 
     # init stain normalisation method
