@@ -322,10 +322,7 @@ def stainnorm(source_input, target_input, method, output_dir, file_types):
         raise MethodNotSupported
 
     # init stain normalisation method
-    if method == "reinhard":
-        norm = sn.ReinhardColourNormaliser()
-    else:
-        norm = sn.StainNormaliser(method)
+    norm = sn.get_normaliser(method)
 
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))

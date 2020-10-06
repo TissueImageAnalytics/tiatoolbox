@@ -23,13 +23,11 @@ import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
-from tiatoolbox.utils.stainnorm import (
-    RuifrokStainExtractor,
-)
+from tiatoolbox.tools.stainnorm_utils import get_ruifrok_stain_matrix
 
 
 class StainNormaliser:
-    """Stain normalisation class
+    """Stain normalisation base class
 
     Attributes:
         stain_matrix_target (ndarray): stain matrix of target
@@ -37,25 +35,10 @@ class StainNormaliser:
         maxC_target (ndarray): 99th percentile of each stain
         stain_matrix_target_RGB (ndarray): target stain matrix in RGB
 
-    Examples:
-        >>> from tiatoolbox.tools.stainnorm import StainNormaliser
-        >>> norm = StainNormaliser('ruifrok')
-        >>> norm.fit(target_img)
-        >>> transformed = norm.transform(source_img)
-
     """
 
-    def __init__(self, method):
-        """
-        Args:
-            method (string): stain normalisation method to use
-
-        """
-        if method.lower() == "ruifrok":
-            self.extractor = RuifrokStainExtractor
-        else:
-            raise Exception("Method not recognized.")
-
+    def __init__(self):
+        self.extractor = None
         self.stain_matrix_target = None
         self.target_concentrations = None
         self.maxC_target = None
@@ -108,6 +91,24 @@ class StainNormaliser:
         source_concentrations *= self.maxC_target / maxC_source
         tmp = 255 * np.exp(-1 * np.dot(source_concentrations, self.stain_matrix_target))
         return tmp.reshape(img.shape).astype(np.uint8)
+
+
+class RuifrokNormaliser(StainNormaliser):
+    """Ruifrok stain normaliser, adapted from:
+    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
+    by color deconvolution'. Analytical and quantitative cytology and histology
+    / the International Academy of Cytology and American Society of Cytology.
+
+    Examples:
+        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
+        >>> norm = RuifrokNormaliser()
+        >>> norm.fit(target_img)
+        >>> norm.transform(source_img)
+
+    """
+
+    def __init__(self):
+        self.stain_matrix = get_ruifrok_stain_matrix()
 
 
 class ReinhardColourNormaliser:
@@ -224,3 +225,25 @@ class ReinhardColourNormaliser:
         means = m1, m2, m3
         stds = sd1, sd2, sd3
         return means, stds
+
+
+def get_normaliser(method_name):
+    """Return a stain normaliser object with corresponding name
+    Args:
+        method_name (str) : name of stain norm method, must be one of
+                            "Reinhard" or "Ruifrok".
+    Return:
+        StainNormaliser : an object with base 'StainNormaliser' as base class
+    Examples:
+        >>> from tiatoolbox.tools.stainnorm import get_normaliser
+        >>> norm = get_normaliser('Reinhard')
+        >>> norm.fit(target_img)
+        >>> transformed = norm.transform(source_img)
+
+    """
+    if method_name.lower() == "reinhard":
+        return ReinhardColourNormaliser
+    elif method_name.lower() == "ruifrok":
+        return RuifrokNormaliser
+    else:
+        raise Exception("Method not recognized.")

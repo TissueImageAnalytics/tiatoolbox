@@ -41,6 +41,24 @@ dataloader.save_tiles
 
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
+-----
+Tools
+-----
+.. automodule:: tiatoolbox.tools
+
+^^^^^^^^^^^^^^^
+tools.stainnorm
+^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.tools.stainnorm
+    :members: StainNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :special-members: __init__
+    :show-inheritance:
+
+^^^^^^^^^^^^^^^^^^^^^
+tools.stainnorm_utils
+^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.tools.stainnorm_utils
+    :members: get_ruifrok_stain_matrix
 
 ------
 Utils
@@ -53,12 +71,6 @@ utils.misc
 .. automodule:: tiatoolbox.utils.misc
     :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite
 
-^^^^^^^^^^^^^^^
-utils.stainnorm
-^^^^^^^^^^^^^^^
-.. automodule:: tiatoolbox.utils.stainnorm
-    :members: ABCStainExtractor, RuifrokStainExtractor
-
 ^^^^^^^^^^^^^^^^
 utils.transforms
 ^^^^^^^^^^^^^^^^
@@ -70,15 +82,3 @@ utils.exceptions
 ^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.exceptions
     :members: FileNotSupported
-
------
-Tools
------
-.. automodule:: tiatoolbox.tools
-
-^^^^^^^^^^^^^^^
-tools.stainnorm
-^^^^^^^^^^^^^^^
-.. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, ReinhardColourNormaliser
-    :special-members: __init__

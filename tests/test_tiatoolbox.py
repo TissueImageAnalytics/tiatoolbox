@@ -6,7 +6,7 @@ import pytest
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.tools.stainnorm import ReinhardColourNormaliser, StainNormaliser
+from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
@@ -558,7 +558,7 @@ def test_reinhard_normalise(_response_source, _response_target, _response_reinha
     target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
     reinhard_img = imread(pathlib.Path(__file__).parent.joinpath("reinhard.png"))
 
-    norm = ReinhardColourNormaliser()
+    norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -574,7 +574,7 @@ def test_ruifrok_normalise(_response_source, _response_target, _response_ruifrok
     ruifrok_img = imread(pathlib.Path(__file__).parent.joinpath("ruifrok.png"))
 
     # init class with Ruifrok meethod
-    norm = StainNormaliser("ruifrok")
+    norm = get_normaliser("ruifrok")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
