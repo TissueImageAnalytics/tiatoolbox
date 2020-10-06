@@ -109,7 +109,29 @@ class RuifrokNormaliser(StainNormaliser):
 
     def __init__(self):
         super().__init__()
-        self.stain_matrix = get_ruifrok_stain_matrix()
+        self.extractor = get_ruifrok_stain_matrix()
+
+
+class CustomNormaliser(StainNormaliser):
+    """Stain Normalisation using a user-defined stain matrix.
+
+    Args:
+        stain_matrix (ndarray): user-defined stain matrix. Must be
+                                either 2x3 or 3x3.
+
+    Examples:
+        >>> from tiatoolbox.tools.stainnorm import CustomNormaliser()
+        >>> norm = CustomNormaliser(stain_matrix)
+        >>> norm.fit(target_img)
+        >>> norm.transform(source_img)
+
+    """
+
+    def __init__(self, stain_matrix):
+        super().__init__()
+        assert stain_matrix.shape == (2, 3) or stain_matrix.shape == (3,3), 
+        "Stain matrix must be a numpy array with shape (2,3) or (3,3)"
+        self.extractor = stain_matrix
 
 
 class ReinhardColourNormaliser:
@@ -228,11 +250,14 @@ class ReinhardColourNormaliser:
         return means, stds
 
 
-def get_normaliser(method_name):
+def get_normaliser(method_name, stain_matrix=None):
     """Return a stain normaliser object with corresponding name
     Args:
         method_name (str) : name of stain norm method, must be one of
-                            "Reinhard" or "Ruifrok".
+                            "reinhard", "custom" or "ruifrok".
+        stain_matrix (ndarray) : user-defined stain matrix. This is
+                                 only defined if using "custom".
+
     Return:
         StainNormaliser : an object with base 'StainNormaliser' as base class
     Examples:
@@ -242,8 +267,13 @@ def get_normaliser(method_name):
         >>> transformed = norm.transform(source_img)
 
     """
+    if method_name.lower() == "reinhard" or method_name.lower() == "ruifrok":
+        assert stain_matrix is None, "stain_matrix is only defined when using custom"
+
     if method_name.lower() == "reinhard":
         norm = ReinhardColourNormaliser()
+    elif method_name.lower() == "custom":
+        norm = CustomNormaliser(stain_matrix)
     elif method_name.lower() == "ruifrok":
         norm = RuifrokNormaliser()
     else:

@@ -401,6 +401,25 @@ def test_reinhard_normalise(
     assert np.sum(reinhard_img - transform) < 1e-3
 
 
+def test_custom_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
+):
+    """pytest for stain normalisation with user-defined stain matrix."""
+
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    ruifrok_img = imread(pathlib.Path(_response_ruifrok))
+
+    # init class with custom method - test with ruifrok stain matrix
+    stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+    norm = get_normaliser("custom", stain_matrix=stain_matrix)
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(ruifrok_img - transform) < 1e-3
+
+
 def test_ruifrok_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
 ):

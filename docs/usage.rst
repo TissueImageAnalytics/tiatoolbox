@@ -50,7 +50,7 @@ Tools
 tools.stainnorm
 ^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
     :special-members: __init__
     :show-inheritance:
 
