@@ -27,7 +27,7 @@ class RuifrokExtractor:
     A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
     by color deconvolution'. Analytical and quantitative cytology and histology
     / the International Academy of Cytology and American Society of Cytology.
-    
+
     """
 
     def get_stain_matrix(self):
@@ -38,6 +38,5 @@ class CustomExtractor:
     """Get the user-defined stain matrix"""
 
     def get_stain_matrix(self, stain_matrix):
-        assert stain_matrix.shape == (2, 3) or stain_matrix.shape == (3,3), 
-        "Stain matrix must be a numpy array with shape (2,3) or (3,3)."
+        assert stain_matrix.shape == (2, 3) or stain_matrix.shape == (3, 3)
         return stain_matrix
