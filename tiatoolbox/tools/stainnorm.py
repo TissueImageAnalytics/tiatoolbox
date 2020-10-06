@@ -266,7 +266,7 @@ def get_normaliser(method_name, stain_matrix=None):
 
     """
     if method_name.lower() == "reinhard" or method_name.lower() == "ruifrok":
-        assert stain_matrix is None, "stain_matrix is only defined when using custom"
+        raise Exception("stain_matrix is only defined when using custom")
 
     if method_name.lower() == "reinhard":
         norm = ReinhardColourNormaliser()

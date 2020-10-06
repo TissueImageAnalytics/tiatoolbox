@@ -24,6 +24,7 @@ import numpy as np
 
 class RuifrokExtractor:
     """Get the stain matrix as defined in:
+
     A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
     by color deconvolution'. Analytical and quantitative cytology and histology
     / the International Academy of Cytology and American Society of Cytology.
@@ -38,5 +39,6 @@ class CustomExtractor:
     """Get the user-defined stain matrix"""
 
     def get_stain_matrix(self, stain_matrix):
-        assert stain_matrix.shape == (2, 3) or stain_matrix.shape == (3, 3)
+        if stain_matrix.shape == (2, 3) or stain_matrix.shape == (3, 3):
+            raise Exception("Stain matrix must be either (2,3) or (3,3)")
         return stain_matrix
