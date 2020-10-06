@@ -22,6 +22,22 @@
 import numpy as np
 
 
-def get_ruifrok_stain_matrix():
-    """Get the stain matrix"""
-    return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+class RuifrokExtractor:
+    """Get the stain matrix as defined in:
+    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
+    by color deconvolution'. Analytical and quantitative cytology and histology
+    / the International Academy of Cytology and American Society of Cytology.
+    
+    """
+
+    def get_stain_matrix(self):
+        return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+
+
+class CustomExtractor:
+    """Get the user-defined stain matrix"""
+
+    def get_stain_matrix(self, stain_matrix):
+        assert stain_matrix.shape == (2, 3) or stain_matrix.shape == (3,3), 
+        "Stain matrix must be a numpy array with shape (2,3) or (3,3)."
+        return stain_matrix

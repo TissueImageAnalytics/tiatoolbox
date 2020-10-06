@@ -58,7 +58,7 @@ tools.stainnorm
 tools.stainextract
 ^^^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainextract
-    :members: get_ruifrok_stain_matrix
+    :members: CustomExtractor, RuifrokExtractor
 
 ------
 Utils

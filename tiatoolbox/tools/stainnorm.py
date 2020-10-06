@@ -23,7 +23,7 @@ import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
-from tiatoolbox.tools.stainextract import get_ruifrok_stain_matrix
+from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
 
 
 class StainNormaliser:
@@ -109,7 +109,7 @@ class RuifrokNormaliser(StainNormaliser):
 
     def __init__(self):
         super().__init__()
-        self.extractor = get_ruifrok_stain_matrix()
+        self.extractor = RuifrokExtractor()
 
 
 class CustomNormaliser(StainNormaliser):
@@ -129,9 +129,7 @@ class CustomNormaliser(StainNormaliser):
 
     def __init__(self, stain_matrix):
         super().__init__()
-        assert stain_matrix.shape == (2, 3) or stain_matrix.shape == (3,3), 
-        "Stain matrix must be a numpy array with shape (2,3) or (3,3)"
-        self.extractor = stain_matrix
+        self.extractor = CustomExtractor(stain_matrix)
 
 
 class ReinhardColourNormaliser:
