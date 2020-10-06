@@ -25,11 +25,13 @@ import numpy as np
 class CustomExtractor:
     """Get the user-defined stain matrix"""
 
-    @staticmethod
-    def get_stain_matrix(stain_matrix):
-        if stain_matrix.shape == (2, 3) or stain_matrix.shape == (3, 3):
+    def __init__(self, stain_matrix):
+        self.stain_matrix = stain_matrix
+        if self.stain_matrix.shape == (2, 3) or self.stain_matrix.shape == (3, 3):
             raise Exception("Stain matrix must be either (2,3) or (3,3)")
-        return stain_matrix
+
+    def get_stain_matrix(self):
+        return self.stain_matrix
 
 
 class RuifrokExtractor:
