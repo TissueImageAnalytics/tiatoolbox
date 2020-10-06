@@ -8,7 +8,7 @@ from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader, wsimeta
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox import cli
 from tiatoolbox import __version__
@@ -353,6 +353,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_exception_tests():
+    """pytest for Exceptions"""
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
@@ -366,6 +367,9 @@ def test_exception_tests():
             output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
             verbose=True,
         )
+
+    with pytest.raises(MethodNotSupported):
+        get_normaliser(method_name="invalid_normaliser")
 
 
 def test_imresize():

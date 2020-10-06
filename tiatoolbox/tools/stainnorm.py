@@ -22,6 +22,7 @@
 import numpy as np
 import cv2
 
+from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
 
@@ -276,6 +277,6 @@ def get_normaliser(method_name, stain_matrix=None):
     elif method_name.lower() == "ruifrok":
         norm = RuifrokNormaliser()
     else:
-        raise Exception("Method not recognized.")
+        raise MethodNotSupported
 
     return norm
