@@ -54,10 +54,10 @@ tools.stainnorm
     :special-members: __init__
     :show-inheritance:
 
-^^^^^^^^^^^^^^^^^^^^^
-tools.stainnorm_utils
-^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: tiatoolbox.tools.stainnorm_utils
+^^^^^^^^^^^^^^^^^^
+tools.stainextract
+^^^^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.tools.stainextract
     :members: get_ruifrok_stain_matrix
 
 ------
