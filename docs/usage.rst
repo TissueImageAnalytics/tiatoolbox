@@ -81,4 +81,4 @@ utils.transforms
 utils.exceptions
 ^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.exceptions
-    :members: FileNotSupported
+    :members: FileNotSupported, MethodNotSupported
