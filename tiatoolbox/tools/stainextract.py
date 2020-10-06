@@ -30,7 +30,7 @@ class CustomExtractor:
         if self.stain_matrix.shape != (2, 3) and self.stain_matrix.shape != (3, 3):
             raise Exception("Stain matrix must be either (2,3) or (3,3)")
 
-    def get_stain_matrix(self):
+    def get_stain_matrix(self, _):
         return self.stain_matrix
 
 
@@ -44,5 +44,5 @@ class RuifrokExtractor:
     """
 
     @staticmethod
-    def get_stain_matrix():
+    def get_stain_matrix(_):
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
