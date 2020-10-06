@@ -620,34 +620,3 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
     )
 
     assert stainnorm_result.exit_code == 0
-
-
-def test_reinhard_normalise(_response_source, _response_target, _response_reinhard):
-    """Test Reinhard colour normalisation."""
-
-    source_img = imread(pathlib.Path(__file__).parent.joinpath("source.png"))
-    target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
-    reinhard_img = imread(pathlib.Path(__file__).parent.joinpath("reinhard.png"))
-
-    norm = get_normaliser("reinhard")
-    norm.fit(target_img)  # get stain information of target image
-    transform = norm.transform(source_img)  # transform source image
-
-    assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(reinhard_img - transform) < 1e-3
-
-
-def test_ruifrok_normalise(_response_source, _response_target, _response_ruifrok):
-    """Test stain normalisation with stain matrix from Ruifrok and Johnston."""
-
-    source_img = imread(pathlib.Path(__file__).parent.joinpath("source.png"))
-    target_img = imread(pathlib.Path(__file__).parent.joinpath("target.png"))
-    ruifrok_img = imread(pathlib.Path(__file__).parent.joinpath("ruifrok.png"))
-
-    # init class with Ruifrok meethod
-    norm = get_normaliser("ruifrok")
-    norm.fit(target_img)  # get stain information of target image
-    transform = norm.transform(source_img)  # transform source image
-
-    assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img - transform) < 1e-3
