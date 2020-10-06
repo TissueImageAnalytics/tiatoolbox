@@ -203,7 +203,8 @@ def test_slide_info(_response_all_wsis, tmp_path):
     """pytest for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=_response_all_wsis, file_types=file_types,
+        input_path=_response_all_wsis,
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -217,7 +218,8 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     """pytest for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
@@ -236,7 +238,8 @@ def test_wsireader_read_region(_response_svs):
     """pytest for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
@@ -257,7 +260,8 @@ def test_wsireader_slide_thumbnail(_response_svs):
     """pytest for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
@@ -275,7 +279,8 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
     """pytest for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(
@@ -312,7 +317,8 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     """pytest for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)),
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -500,7 +506,8 @@ def test_command_line_slide_info(_response_all_wsis):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)),
+        file_types=file_types,
     )
     slide_info_result = runner.invoke(
         cli.main,
@@ -618,7 +625,8 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)),
+        file_types=file_types,
     )
     save_tiles_result = runner.invoke(
         cli.main,
@@ -675,7 +683,6 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
     )
 
     assert stainnorm_result.exit_code == 0
-<<<<<<< HEAD
 
 
 # -------------------------------------------------------------------------------------
@@ -712,5 +719,3 @@ def test_ruifrok_normalise(_response_source, _response_target, _response_ruifrok
 
     assert np.shape(transform) == np.shape(source_img)
     assert np.sum(ruifrok_img - transform) < 1e-3
-=======
->>>>>>> f5780b085a0165262610388ec06d084dc4550ae1

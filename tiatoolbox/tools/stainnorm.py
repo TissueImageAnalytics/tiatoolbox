@@ -23,7 +23,7 @@ import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
-from tiatoolbox.tools.stainnorm_utils import get_ruifrok_stain_matrix
+from tiatoolbox.tools.stainextract import get_ruifrok_stain_matrix
 
 
 class StainNormaliser:
@@ -108,6 +108,7 @@ class RuifrokNormaliser(StainNormaliser):
     """
 
     def __init__(self):
+        super().__init__()
         self.stain_matrix = get_ruifrok_stain_matrix()
 
 
@@ -242,8 +243,10 @@ def get_normaliser(method_name):
 
     """
     if method_name.lower() == "reinhard":
-        return ReinhardColourNormaliser
+        norm = ReinhardColourNormaliser
     elif method_name.lower() == "ruifrok":
-        return RuifrokNormaliser
+        norm = RuifrokNormaliser
     else:
         raise Exception("Method not recognized.")
+
+    return norm
