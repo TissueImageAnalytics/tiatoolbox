@@ -5,7 +5,7 @@ import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
-from tiatoolbox.dataloader import wsireader
+from tiatoolbox.dataloader import wsireader, wsimeta
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -205,9 +205,8 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
     for curr_file in files_all:
         slide_param = slide_info(input_path=curr_file, verbose=True)
-        utils.misc.save_yaml(
-            slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
-        )
+        out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
+        utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
@@ -220,9 +219,8 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     slide_param = wsi_obj.slide_info
-    utils.misc.save_yaml(
-        slide_param.as_dict(), tmp_path / (slide_param.file_name + ".yaml")
-    )
+    out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
+    utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
 def test_wsireader_read_region(_response_svs):
@@ -620,3 +618,66 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
     )
 
     assert stainnorm_result.exit_code == 0
+
+
+def test_wsimeta_init_fail():
+    with pytest.raises(TypeError):
+        wsimeta.WSIMeta(slide_dimensions=None)
+
+
+def test_wsimeta_validate_fail():
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_dimensions=[(512, 512), (256, 256)],
+        level_count=3,
+    )
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_dimensions = None
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_downsamples = None
+    assert meta.validate() is False
+
+
+def test_wsimeta_validate_pass():
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    assert meta.validate()
+
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_dimensions=[(512, 512), (256, 256)],
+        level_downsamples=[1, 2],
+    )
+    assert meta.validate()
+
+
+def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_ndpi))
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    meta = wsi_obj.slide_info
+    assert meta.validate()
+
+
+def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
+    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_svs))
+    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    meta = wsi_obj.slide_info
+    assert meta.validate()

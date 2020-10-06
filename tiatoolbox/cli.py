@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2006, Blender Foundation
+# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -107,9 +107,11 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
             print(slide_param.as_dict())
 
         if mode == "save":
+            out_path = pathlib.Path(
+                output_dir, slide_param.file_path.with_suffix(".yaml").name
+            )
             utils.misc.save_yaml(
-                slide_param.as_dict(),
-                pathlib.Path(output_dir).joinpath(slide_param.file_name + ".yaml"),
+                slide_param.as_dict(), out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
