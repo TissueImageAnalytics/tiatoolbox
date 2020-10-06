@@ -291,7 +291,8 @@ def save_tiles(
 @click.option("--target_input", help="input path to the target image")
 @click.option(
     "--method",
-    help="Stain normlisation method to use. Choose from 'reinhard', 'custom' or 'ruifrok'",
+    help="Stain normlisation method to use. Choose from 'reinhard', 'custom',"
+    "'ruifrok'",
     default="reinhard",
 )
 @click.option(
