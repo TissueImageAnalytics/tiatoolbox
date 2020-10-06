@@ -243,9 +243,9 @@ def get_normaliser(method_name):
 
     """
     if method_name.lower() == "reinhard":
-        norm = ReinhardColourNormaliser
+        norm = ReinhardColourNormaliser()
     elif method_name.lower() == "ruifrok":
-        norm = RuifrokNormaliser
+        norm = RuifrokNormaliser()
     else:
         raise Exception("Method not recognized.")
 
