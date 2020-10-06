@@ -194,10 +194,6 @@ def _response_ruifrok(tmpdir_factory):
 # Python API tests
 # -------------------------------------------------------------------------------------
 
-# -------------------------------------------------------------------------------------
-# Slide Info
-# -------------------------------------------------------------------------------------
-
 
 def test_slide_info(_response_all_wsis, tmp_path):
     """pytest for slide_info as a python function"""
@@ -229,11 +225,6 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     )
 
 
-# -------------------------------------------------------------------------------------
-# Read Region
-# -------------------------------------------------------------------------------------
-
-
 def test_wsireader_read_region(_response_svs):
     """pytest for read region as a python function"""
     file_types = ("*.svs",)
@@ -251,11 +242,6 @@ def test_wsireader_read_region(_response_svs):
     assert im_region.shape == (2000, 2000, 3)
 
 
-# -------------------------------------------------------------------------------------
-# Slide Thumbnail
-# -------------------------------------------------------------------------------------
-
-
 def test_wsireader_slide_thumbnail(_response_svs):
     """pytest for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
@@ -268,11 +254,6 @@ def test_wsireader_slide_thumbnail(_response_svs):
     slide_thumbnail = wsi_obj.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
-
-
-# -------------------------------------------------------------------------------------
-# Save Tiles
-# -------------------------------------------------------------------------------------
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
@@ -373,11 +354,6 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     )
 
 
-# -------------------------------------------------------------------------------------
-# Exceptions
-# -------------------------------------------------------------------------------------
-
-
 def test_exception_tests():
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
@@ -392,11 +368,6 @@ def test_exception_tests():
             output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
             verbose=True,
         )
-
-
-# -------------------------------------------------------------------------------------
-# Transforms
-# -------------------------------------------------------------------------------------
 
 
 def test_imresize():
@@ -415,11 +386,6 @@ def test_background_composite():
     assert np.all(im[:1000, :, :] == 0)
 
 
-# -------------------------------------------------------------------------------------
-# Stain Normalisation
-# -------------------------------------------------------------------------------------
-
-
 def test_reinhard_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
 ):
@@ -429,7 +395,7 @@ def test_reinhard_normalise(
     target_img = imread(pathlib.Path(_response_stainnorm_target))
     reinhard_img = imread(pathlib.Path(_response_reinhard))
 
-    norm = ReinhardColourNormaliser()
+    norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -447,7 +413,7 @@ def test_ruifrok_normalise(
     ruifrok_img = imread(pathlib.Path(_response_ruifrok))
 
     # init class with Ruifrok method
-    norm = StainNormaliser("ruifrok")
+    norm = get_normaliser("ruifrok")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -457,10 +423,6 @@ def test_ruifrok_normalise(
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
-# -------------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------------
-# Command Line Basic
 # -------------------------------------------------------------------------------------
 
 
@@ -479,11 +441,6 @@ def test_command_line_version():
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
-
-
-# -------------------------------------------------------------------------------------
-# Slide Info
-# -------------------------------------------------------------------------------------
 
 
 def test_command_line_slide_info(_response_all_wsis):
@@ -523,11 +480,6 @@ def test_command_line_slide_info(_response_all_wsis):
     )
 
     assert slide_info_result.exit_code == 0
-
-
-# -------------------------------------------------------------------------------------
-# Read Region
-# -------------------------------------------------------------------------------------
 
 
 def test_command_line_read_region(_response_ndpi, tmp_path):
@@ -575,11 +527,6 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
     assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")))
 
 
-# -------------------------------------------------------------------------------------
-# Slide Thumbnail
-# -------------------------------------------------------------------------------------
-
-
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
     """pytest for the slide_thumbnail CLI."""
     runner = CliRunner()
@@ -598,11 +545,6 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
-
-
-# -------------------------------------------------------------------------------------
-# Save Tiles
-# -------------------------------------------------------------------------------------
 
 
 def test_command_line_save_tiles(_response_all_wsis, tmp_path):
@@ -646,11 +588,6 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     assert save_tiles_result.exit_code == 0
 
 
-# -------------------------------------------------------------------------------------
-# Stain Normalisation
-# -------------------------------------------------------------------------------------
-
-
 def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
     """pytest for the stain normalisation CLI."""
     runner = CliRunner()
@@ -683,11 +620,6 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
     )
 
     assert stainnorm_result.exit_code == 0
-
-
-# -------------------------------------------------------------------------------------
-# Stain Normalisation
-# -------------------------------------------------------------------------------------
 
 
 def test_reinhard_normalise(_response_source, _response_target, _response_reinhard):
