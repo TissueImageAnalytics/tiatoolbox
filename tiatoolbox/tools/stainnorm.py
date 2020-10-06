@@ -93,25 +93,6 @@ class StainNormaliser:
         return tmp.reshape(img.shape).astype(np.uint8)
 
 
-class RuifrokNormaliser(StainNormaliser):
-    """Ruifrok stain normaliser, adapted from:
-    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
-    by color deconvolution'. Analytical and quantitative cytology and histology
-    / the International Academy of Cytology and American Society of Cytology.
-
-    Examples:
-        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
-        >>> norm = RuifrokNormaliser()
-        >>> norm.fit(target_img)
-        >>> norm.transform(source_img)
-
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.extractor = RuifrokExtractor()
-
-
 class CustomNormaliser(StainNormaliser):
     """Stain Normalisation using a user-defined stain matrix.
 
@@ -130,6 +111,25 @@ class CustomNormaliser(StainNormaliser):
     def __init__(self, stain_matrix):
         super().__init__()
         self.extractor = CustomExtractor(stain_matrix)
+
+
+class RuifrokNormaliser(StainNormaliser):
+    """Ruifrok stain normaliser, adapted from:
+    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
+    by color deconvolution'. Analytical and quantitative cytology and histology
+    / the International Academy of Cytology and American Society of Cytology.
+
+    Examples:
+        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
+        >>> norm = RuifrokNormaliser()
+        >>> norm.fit(target_img)
+        >>> norm.transform(source_img)
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.extractor = RuifrokExtractor()
 
 
 class ReinhardColourNormaliser:
