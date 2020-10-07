@@ -104,7 +104,7 @@ def imwrite(image_path, img):
 
     Args:
         image_path (str, pathlib.Path): file path (including extension)
-        to save image
+            to save image
         img (ndarray): image array of dtype uint8, MxNx3
 
     Returns:
