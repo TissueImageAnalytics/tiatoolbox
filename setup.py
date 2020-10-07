@@ -19,6 +19,7 @@ requirements = [
     "openslide-python==1.1.2",
     "pyyaml",
     "pandas",
+    "glymur",
 ]
 
 setup_requirements = [

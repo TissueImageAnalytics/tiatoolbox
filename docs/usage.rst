@@ -17,7 +17,7 @@ dataloader.wsireader
 ^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.dataloader.wsireader
-    :members: WSIReader, OpenSlideWSIReader
+    :members: WSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader
     :special-members: __init__
     :show-inheritance:
 
