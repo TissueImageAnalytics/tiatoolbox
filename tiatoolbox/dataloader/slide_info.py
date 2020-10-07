@@ -22,24 +22,24 @@
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.utils.exceptions import FileNotSupported
 
-import os
+import pathlib
 
 
 def slide_info(input_path, output_dir=None, verbose=True):
-    """Returns WSI meta data. Multiprocessing decorator runs this function in parallel.
+    """Returns WSI meta data.
 
     Args:
-        input_path (str): Path to whole slide image
-        output_dir (str): Path to output directory to save the output
+        input_path (str, pathlib.Path): Path to whole slide image
+        output_dir (str, pathlib.Path): Path to output directory to save the output
         verbose (bool): Print output, default=True
 
     Returns:
-        list: list of dictionary Whole Slide meta information
+        WSIMeta: containing meta information
 
     Examples:
         >>> from tiatoolbox.dataloader.slide_info import slide_info
         >>> from tiatoolbox import utils
-        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
+        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,
         ...     file_types=file_types)
         >>> for curr_file in files_all:
@@ -50,20 +50,25 @@ def slide_info(input_path, output_dir=None, verbose=True):
 
     """
 
-    input_dir, file_name = os.path.split(input_path)
-
+    input_path = pathlib.Path(input_path)
     if verbose:
-        print(file_name, flush=True)
-    _, file_type = os.path.splitext(file_name)
+        print(input_path.name, flush=True)
 
-    if file_type in (".svs", ".ndpi", ".mrxs"):
+    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_dir=input_dir, file_name=file_name, output_dir=output_dir
+            input_path=input_path, output_dir=output_dir
+        )
+        info = wsi_reader.slide_info
+        if verbose:
+            print(info.as_dict())
+    elif input_path.suffix in (".jp2",):
+        wsi_reader = wsireader.OmnyxJP2WSIReader(
+            input_path=input_path, output_dir=output_dir,
         )
         info = wsi_reader.slide_info
         if verbose:
             print(info.as_dict())
     else:
-        raise FileNotSupported(file_type + " file format is not supported.")
+        raise FileNotSupported(input_path.suffix + " file format is not supported.")
 
     return info

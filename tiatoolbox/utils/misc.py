@@ -103,7 +103,8 @@ def imwrite(image_path, img):
     """Write a numpy array to an image
 
     Args:
-        image_path (str, pathlib.Path): file path (including extension) to save image
+        image_path (str, pathlib.Path): file path (including extension)
+            to save image
         img (ndarray): image array of dtype uint8, MxNx3
 
     Returns:

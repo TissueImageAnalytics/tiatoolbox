@@ -6,3 +6,4 @@ opencv-python>=4.0
 openslide-python==1.1.2
 pyyaml
 pandas
+glymur
