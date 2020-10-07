@@ -296,6 +296,9 @@ def save_tiles(
     default="reinhard",
 )
 @click.option(
+    "--stain_matrix", help="stain matrix to use in custom normaliser", default=None
+)
+@click.option(
     "--output_dir",
     help="Output directory for stain normalisation",
     default="stainorm_output",
@@ -306,7 +309,7 @@ def save_tiles(
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.png, '*.jpg', '*.tif', '*.tiff'",
 )
-def stainnorm(source_input, target_input, method, output_dir, file_types):
+def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
     """Stain normalise an input image/directory of input images"""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(source_input):
@@ -326,7 +329,7 @@ def stainnorm(source_input, target_input, method, output_dir, file_types):
         raise MethodNotSupported
 
     # init stain normalisation method
-    norm = sn.get_normaliser(method)
+    norm = sn.get_normaliser(method, stain_matrix)
 
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))
