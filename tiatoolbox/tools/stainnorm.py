@@ -31,7 +31,7 @@ class StainNormaliser:
     """Stain normalisation base class
 
     Attributes:
-        self.extractor: method specific stain extractor
+        extractor (CustomExtractor,RuifrokExtractor): method specific stain extractor
         stain_matrix_target (ndarray): stain matrix of target
         target_concentrations (ndarray): stain concetnration matrix of target
         maxC_target (ndarray): 99th percentile of each stain
