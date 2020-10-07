@@ -196,7 +196,7 @@ def _response_ruifrok(tmpdir_factory):
 
 
 def test_slide_info(_response_all_wsis, tmp_path):
-    """pytest for slide_info as a python function"""
+    """Test for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=_response_all_wsis,
@@ -210,7 +210,7 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
-    """pytest for slide_info in WSIReader class as a python function"""
+    """Test for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -224,7 +224,7 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
 
 
 def test_wsireader_read_region(_response_svs):
-    """pytest for read region as a python function"""
+    """Test for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -241,7 +241,7 @@ def test_wsireader_read_region(_response_svs):
 
 
 def test_wsireader_slide_thumbnail(_response_svs):
-    """pytest for slide_thumbnail as a python function"""
+    """Test for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -255,7 +255,7 @@ def test_wsireader_slide_thumbnail(_response_svs):
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
-    """pytest for save_tiles in wsireader as a python function"""
+    """Test for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -293,7 +293,7 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
 
 
 def test_save_tiles(_response_all_wsis, tmp_path):
-    """pytest for save_tiles as a python function"""
+    """Test for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_all_wsis)),
@@ -353,7 +353,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_exception_tests():
-    """pytest for Exceptions"""
+    """Test for Exceptions"""
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
@@ -373,14 +373,14 @@ def test_exception_tests():
 
 
 def test_imresize():
-    """pytest for imresize"""
+    """Test for imresize"""
     img = np.zeros((2000, 2000, 3))
     resized_img = utils.transforms.imresize(img, 0.5)
     assert resized_img.shape == (1000, 1000, 3)
 
 
 def test_background_composite():
-    """pytest for background composite"""
+    """Test for background composite"""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
     im = utils.transforms.background_composite(new_im)
@@ -391,8 +391,7 @@ def test_background_composite():
 def test_reinhard_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
 ):
-    """pytest for Reinhard colour normalisation."""
-
+    """Test for Reinhard colour normalisation."""
     source_img = imread(pathlib.Path(_response_stainnorm_source))
     target_img = imread(pathlib.Path(_response_stainnorm_target))
     reinhard_img = imread(pathlib.Path(_response_reinhard))
@@ -408,8 +407,7 @@ def test_reinhard_normalise(
 def test_custom_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
 ):
-    """pytest for stain normalisation with user-defined stain matrix."""
-
+    """Test for stain normalisation with user-defined stain matrix."""
     source_img = imread(pathlib.Path(_response_stainnorm_source))
     target_img = imread(pathlib.Path(_response_stainnorm_target))
     ruifrok_img = imread(pathlib.Path(_response_ruifrok))
@@ -427,8 +425,7 @@ def test_custom_normalise(
 def test_ruifrok_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
 ):
-    """pytest for stain normalisation with stain matrix from Ruifrok and Johnston."""
-
+    """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
     source_img = imread(pathlib.Path(_response_stainnorm_source))
     target_img = imread(pathlib.Path(_response_stainnorm_target))
     ruifrok_img = imread(pathlib.Path(_response_ruifrok))
@@ -448,7 +445,7 @@ def test_ruifrok_normalise(
 
 
 def test_command_line_help_interface():
-    """pytest the CLI help"""
+    """Test the CLI help"""
     runner = CliRunner()
     result = runner.invoke(cli.main)
     assert result.exit_code == 0
@@ -458,14 +455,14 @@ def test_command_line_help_interface():
 
 
 def test_command_line_version():
-    """pytest for version check"""
+    """Test for version check"""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
 
 
 def test_command_line_slide_info(_response_all_wsis):
-    """pytest the Slide information CLI."""
+    """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
         cli.main,
@@ -504,7 +501,7 @@ def test_command_line_slide_info(_response_all_wsis):
 
 
 def test_command_line_read_region(_response_ndpi, tmp_path):
-    """pytest the Read Region CLI."""
+    """Test the Read Region CLI."""
     runner = CliRunner()
     read_region_result = runner.invoke(
         cli.main,
@@ -549,7 +546,7 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
 
 
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
-    """pytest for the slide_thumbnail CLI."""
+    """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
         cli.main,
@@ -569,7 +566,7 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
 
 def test_command_line_save_tiles(_response_all_wsis, tmp_path):
-    """pytest for save_tiles CLI."""
+    """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
         cli.main,
@@ -610,7 +607,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
-    """pytest for the stain normalisation CLI."""
+    """Test for the stain normalisation CLI."""
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
@@ -644,11 +641,13 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
 
 
 def test_wsimeta_init_fail():
+    """Test for WSI metadata intitialise validation."""
     with pytest.raises(TypeError):
         wsimeta.WSIMeta(slide_dimensions=None)
 
 
 def test_wsimeta_validate_fail():
+    """Test for WSI metadata fail validation."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
 
@@ -681,6 +680,7 @@ def test_wsimeta_validate_fail():
 
 
 def test_wsimeta_validate_pass():
+    """Test for WSI metadata pass validation."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     assert meta.validate()
 
@@ -693,6 +693,7 @@ def test_wsimeta_validate_pass():
 
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
+    """Test for WSI metadata ndpi openslide reader."""
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_ndpi))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     meta = wsi_obj.slide_info
@@ -700,6 +701,7 @@ def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
 
 
 def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
+    """Test for WSI metadata svs openslide reader."""
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_svs))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     meta = wsi_obj.slide_info
