@@ -50,7 +50,7 @@ Tools
 tools.stainnorm
 ^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
     :special-members: __init__
     :show-inheritance:
 
@@ -58,7 +58,7 @@ tools.stainnorm
 tools.stainextract
 ^^^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainextract
-    :members: CustomExtractor, RuifrokExtractor
+    :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
 
 ------
 Utils

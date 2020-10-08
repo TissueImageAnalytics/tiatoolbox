@@ -25,7 +25,12 @@ import cv2
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 from tiatoolbox.utils.misc import load_stain_matrix
-from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
+from tiatoolbox.tools.stainextract import (
+    CustomExtractor,
+    RuifrokExtractor,
+    MacenkoExtractor,
+    VahadaneExtractor,
+)
 
 
 class StainNormaliser:
@@ -119,6 +124,7 @@ class CustomNormaliser(StainNormaliser):
 
 class RuifrokNormaliser(StainNormaliser):
     """Ruifrok stain normaliser, adapted from:
+
     A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
     by color deconvolution'. Analytical and quantitative cytology and histology
     / the International Academy of Cytology and American Society of Cytology.
@@ -134,6 +140,44 @@ class RuifrokNormaliser(StainNormaliser):
     def __init__(self):
         super().__init__()
         self.extractor = RuifrokExtractor()
+
+
+class MacenkoNormaliser(StainNormaliser):
+    """Macenko stain normaliser, adapted from:
+
+    M. Macenko et al. "A method for normalizing histology slides for quantitative
+    analysis." 2009 IEEE International Symposium on Biomedical Imaging.
+
+    Examples:
+        >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser()
+        >>> norm = MacenkoNormaliser()
+        >>> norm.fit(target_img)
+        >>> norm.transform(source_img)
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.extractor = MacenkoExtractor()
+
+
+class VahadaneNormaliser(StainNormaliser):
+    """Vahadane stain normaliser, adapted from:
+
+    A. Vahadane et al. "Structure-preserving color normalization and sparse
+    stain separation for histological images." IEEE transactions on medical imaging.
+
+    Examples:
+        >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser()
+        >>> norm = VahadaneNormaliser()
+        >>> norm.fit(target_img)
+        >>> norm.transform(source_img)
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.extractor = VahadaneExtractor()
 
 
 class ReinhardColourNormaliser:

@@ -46,3 +46,29 @@ class RuifrokExtractor:
     @staticmethod
     def get_stain_matrix(_):
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+
+
+class MacenkoExtractor:
+    """Get the stain matrix as defined in:
+
+    M. Macenko et al. "A method for normalizing histology slides for quantitative
+    analysis." 2009 IEEE International Symposium on Biomedical Imaging.
+
+    """
+
+    @staticmethod
+    def get_stain_matrix(_):
+        return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+
+
+class VahadaneExtractor:
+    """Get the stain matrix as defined in:
+
+    A. Vahadane et al. "Structure-preserving color normalization and sparse
+    stain separation for histological images." IEEE transactions on medical imaging.
+
+    """
+
+    @staticmethod
+    def get_stain_matrix(_):
+        return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
