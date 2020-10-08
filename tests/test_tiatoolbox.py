@@ -460,6 +460,7 @@ def test_wsimeta_init_fail():
         wsimeta.WSIMeta(slide_dimensions=None)
 
 
+@pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_fail():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
@@ -486,6 +487,7 @@ def test_wsimeta_validate_fail():
     assert meta.validate() is False
 
 
+@pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     assert meta.validate()
