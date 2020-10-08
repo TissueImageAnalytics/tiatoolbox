@@ -24,6 +24,7 @@ import cv2
 
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
+from tiatoolbox.utils.misc import load_stain_matrix
 from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
 
 
@@ -112,6 +113,7 @@ class CustomNormaliser(StainNormaliser):
 
     def __init__(self, stain_matrix):
         super().__init__()
+
         self.extractor = CustomExtractor(stain_matrix)
 
 
@@ -255,8 +257,9 @@ def get_normaliser(method_name, stain_matrix=None):
     Args:
         method_name (str) : name of stain norm method, must be one of
                             "reinhard", "custom" or "ruifrok".
-        stain_matrix (ndarray) : user-defined stain matrix. This is
-                                 only defined if using "custom".
+        stain_matrix (ndarray or str, pathlib.Path) : user-defined stain matrix.
+            This must either be a numpy array or a path to either a .csv or .npy
+            file. This is only utilised if using "custom" method name.
 
     Return:
         StainNormaliser : an object with base 'StainNormaliser' as base class
@@ -274,7 +277,7 @@ def get_normaliser(method_name, stain_matrix=None):
     if method_name.lower() == "reinhard":
         norm = ReinhardColourNormaliser()
     elif method_name.lower() == "custom":
-        norm = CustomNormaliser(stain_matrix)
+        norm = CustomNormaliser(load_stain_matrix(stain_matrix))
     elif method_name.lower() == "ruifrok":
         norm = RuifrokNormaliser()
     else:

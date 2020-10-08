@@ -296,7 +296,11 @@ def save_tiles(
     default="reinhard",
 )
 @click.option(
-    "--stain_matrix", help="stain matrix to use in custom normaliser", default=None
+    "--stain_matrix",
+    help="stain matrix to use in custom normaliser. This can either be a numpy array"
+    ", a path to a npy file or a path to a csv file. If using a path to a csv file, "
+    "there must not be any column headers.",
+    default=None,
 )
 @click.option(
     "--output_dir",
