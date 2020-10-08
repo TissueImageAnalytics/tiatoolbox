@@ -190,7 +190,7 @@ class WSIReader:
         return level, scale
 
     def read_rect_params_for_scale(
-        self, target_size, target_scale, units, scale_kwargs=dict()
+        self, target_size, target_scale, units, scale_kwargs={}
     ):
         """
         Find the optimal parameters to use for reading a rect at a give
