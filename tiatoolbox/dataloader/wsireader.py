@@ -140,7 +140,7 @@ class WSIReader:
             target_scale = info.level_downsamples[target_scale]
         elif units == "baseline":
             base_scale = 1
-            target_scale = target_scale
+            target_scale = 1 / target_scale
         else:
             raise ValueError("Invalid units")
 
