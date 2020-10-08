@@ -180,7 +180,7 @@ class WSIReader:
         # Convert the index from the reversed list to the regular index (level)
         level = (len(level_scales) - 1) - reverse_index
         scale = level_scales[level]
-        if scale > 1:
+        if np.any(np.array(scale) > 1):
             warnings.warn(
                 "Scale > 1."
                 "This means that the desired scale is a higher"
