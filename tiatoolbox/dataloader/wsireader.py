@@ -490,7 +490,7 @@ class OpenSlideWSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self, scale, units):
+    def slide_thumbnail(self):
         """Read whole slide image thumbnail at 1.25x
 
         Args:

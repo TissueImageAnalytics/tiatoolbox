@@ -516,7 +516,6 @@ def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
     level_scales = wsi.relative_level_scales(0.5, "mpp")
-    print(level_scales)
     expected = np.array(
         [
             [0.91282519, 0.91012514],
@@ -537,7 +536,6 @@ def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
     level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
-    print(level_scales)
     assert level_scales[0] == 1
     downsamples = np.array(wsi.slide_info.level_downsamples)
     assert np.all(level_scales == downsamples)
@@ -547,7 +545,6 @@ def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
     level_scales = wsi.relative_level_scales(3, "level")
-    print(level_scales)
     assert level_scales[3] == 1.0
     downsamples = np.array(wsi.slide_info.level_downsamples)
     expected = downsamples / downsamples[3]
@@ -558,7 +555,7 @@ def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
     level_scales = wsi.relative_level_scales(0.125, "baseline")
-    print(level_scales)
+    assert level_scales[3] == 1.0
     downsamples = np.array(wsi.slide_info.level_downsamples)
     expected = downsamples * 0.125
     assert np.all(level_scales == expected)
@@ -601,7 +598,6 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
     target_size = (256, 256)
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
-        print("Target scale", target_scale)
         level, read_size, post_read_scale = wsi.read_rect_params_for_scale(
             target_size=target_size, target_scale=target_scale, units="power",
         )
@@ -617,11 +613,9 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
     target_size = (256, 256)
     # Test a range of MPP
     for target_scale in range(1, 10):
-        print("Target scale", target_scale)
         level, read_size, post_read_scale = wsi.read_rect_params_for_scale(
             target_size=target_size, target_scale=target_scale, units="mpp",
         )
         # Check that read_size * scale == target_size
         post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
         assert np.array_equal(post_read_downscaled_size, np.array(target_size))
-
