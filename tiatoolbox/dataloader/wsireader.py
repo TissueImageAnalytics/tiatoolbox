@@ -23,6 +23,7 @@ from tiatoolbox.utils import misc, transforms
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
+import warnings
 import numpy as np
 import openslide
 import math
@@ -96,7 +97,8 @@ class WSIReader:
         Args:
             target_scale (float): Scale to calculate relative to
             units (str): Units of the scale. Allowed values are: mpp,
-                power, level, base
+                power, level, baseline. Baseline refers to the largest
+                resolution in the WSI (level 0).
 
         Raises:
             ValueError: Missing MPP metadata
@@ -106,6 +108,17 @@ class WSIReader:
         Returns:
             list: Scale for each level relative to the given scale and
                 units
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
+            >>> print(wsi.relative_level_scales(0.5, "mpp"))
+            [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
+
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
+            >>> print(wsi.relative_level_scales(0.5, "baseline"))
+            [0.125, 0.25, 0.5, 1,]
         """
         info = self.slide_info
 
@@ -121,9 +134,11 @@ class WSIReader:
             else:
                 raise ValueError("Objective power is None")
         elif units == "level":
+            if target_scale >= len(info.level_downsamples):
+                raise ValueError("Target scale level > number of levels in WSI")
             base_scale = 1
             target_scale = info.level_downsamples[target_scale]
-        elif units == "base":
+        elif units == "baseline":
             base_scale = 1
             target_scale = target_scale
         else:
@@ -151,8 +166,8 @@ class WSIReader:
                 Defaults to 3.
 
         Returns:
-            tuple: Optimal read level and scale of optimal level
-                relative to target
+            tuple: Optimal read level and scale factor between the optimal level
+                and the target scale (usually <= 1).
         """
         level_scales = self.relative_level_scales(target_scale, units)
         # Note that np.argmax finds the index of the first True element.
@@ -164,7 +179,15 @@ class WSIReader:
         )
         # Convert the index from the reversed list to the regular index (level)
         level = (len(level_scales) - 1) - reverse_index
-        return level, level_scales[level]
+        scale = level_scales[level]
+        if scale > 1:
+            warnings.warn(
+                "Scale > 1."
+                "This means that the desired scale is a higher"
+                " resolution than the WSI can produce."
+                "Interpolation of read regions may occur."
+            )
+        return level, scale
 
     def read_rect_params_for_scale(
         self, target_size, target_scale, units, scale_kwargs=dict()
