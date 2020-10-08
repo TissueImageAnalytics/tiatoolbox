@@ -86,6 +86,110 @@ class WSIReader:
         """
         raise NotImplementedError
 
+    def relative_level_scales(self, target_scale, units):
+        """
+        Calculate scale of each image pyramid level relative to the
+        given target scale and units.
+
+        Values > 1 indicate that the level has a larger scale than the
+        target and < 1 indicates that it is smaller.
+
+        Args:
+            target_scale (float): Scale to calculate relative to
+            units (str): Units of the scale. Allowed values are: mpp,
+                power, level, base
+
+        Raises:
+            ValueError: Missing MPP metadata
+            ValueError: Missing objective power metadata
+            ValueError: Invalid units
+
+        Returns:
+            list: Scale for each level relative to the given scale and
+                units
+        """
+        info = self.slide_info
+
+        if units == "mpp":
+            if info.mpp is not None:
+                base_scale = info.mpp
+            else:
+                raise ValueError("MPP is None")
+        elif units == "power":
+            if info.objective_power is not None:
+                base_scale = 1 / info.objective_power
+                target_scale = 1 / target_scale
+            else:
+                raise ValueError("Objective power is None")
+        elif units == "level":
+            base_scale = 1
+            target_scale = info.level_downsamples[target_scale]
+        elif units == "base":
+            base_scale = 1
+            target_scale = target_scale
+        else:
+            raise ValueError("Invalid units")
+
+        return [(base_scale * ds) / target_scale for ds in info.level_downsamples]
+
+    def optimal_level_scale(self, target_scale, units, precision=3):
+        """
+        Find the optimal level to read at for a desired scale and units.
+
+        The optimal level is the most downscaled level of the image
+        pyramid (or multi-resolution layer) which is larger than the
+        desired target scale. The returned scale is the scale factor
+        required, post read, to achieve the desired scale.
+
+        Args:
+            target_scale (float): Scale to calculate relative to
+            units (str): Units of the scale. Allowed values are the same
+                as for WSIReader.relative_level_scales
+            precision (int, optional): Decimal places to use when
+                finding optimal scale. This can be adjusted to avoid
+                errors when an unecessary precision is used. E.g.
+                1.1e-10 > 1 is insignificant in most cases.
+                Defaults to 3.
+
+        Returns:
+            tuple: Optimal read level and scale of optimal level
+                relative to target
+        """
+        level_scales = self.relative_level_scales(target_scale, units)
+        # Note that np.argmax finds the index of the first True element.
+        # Here it is used on a reversed list to find the first
+        # element <=1, which is the same element as the last <=1
+        # element when counting forward in the regular list.
+        reverse_index = np.argmax(
+            [np.all(np.round(x, decimals=precision) <= 1) for x in level_scales[::-1]]
+        )
+        # Convert the index from the reversed list to the regular index (level)
+        level = (len(level_scales) - 1) - reverse_index
+        return level, level_scales[level]
+
+    def read_rect_params_for_scale(
+        self, target_size, target_scale, units, scale_kwargs=dict()
+    ):
+        """
+        Find the optimal parameters to use for reading a rect at a give
+        scale.
+
+        Args:
+            target_size (float): Desired output size in pixels
+            target_scale (float): Scale to calculate relative to
+            units (str): Units of the scale. Allowed values are the same
+                as for WSIReader.relative_level_scales
+
+        Returns:
+            tuple: Optimal level, size (width, height) of the region to
+                read, downscaling factor to apply after reading to reach
+                target_size and correct scale.
+        """
+        level, scale = self.optimal_level_scale(target_scale, units, **scale_kwargs)
+        read_size = np.round(np.array(target_size) * (1 / scale)).astype(int)
+        post_read_scale = scale
+        return level, read_size, post_read_scale
+
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
         """Read a region in whole slide image
 
@@ -361,110 +465,6 @@ class OpenSlideWSIReader(WSIReader):
         )
 
         return param
-
-    def relative_level_scales(self, target_scale, units):
-        """
-        Calculate scale of each image pyramid level relative to the
-        given target scale and units.
-
-        Values > 1 indicate that the level has a larger scale than the
-        target and < 1 indicates that it is smaller.
-
-        Args:
-            target_scale (float): Scale to calculate relative to
-            units (str): Units of the scale. Allowed values are: mpp,
-                power, level, base
-
-        Raises:
-            ValueError: Missing MPP metadata
-            ValueError: Missing objective power metadata
-            ValueError: Invalid units
-
-        Returns:
-            list: Scale for each level relative to the given scale and
-                units
-        """
-        info = self.slide_info
-
-        if units == "mpp":
-            if info.mpp is not None:
-                base_scale = info.mpp
-            else:
-                raise ValueError("MPP is None")
-        elif units == "power":
-            if info.objective_power is not None:
-                base_scale = 1 / info.objective_power
-                target_scale = 1 / target_scale
-            else:
-                raise ValueError("Objective power is None")
-        elif units == "level":
-            base_scale = 1
-            target_scale = info.level_downsamples[target_scale]
-        elif units == "base":
-            base_scale = 1
-            target_scale = target_scale
-        else:
-            raise ValueError("Invalid units")
-
-        return [(base_scale * ds) / target_scale for ds in info.level_downsamples]
-
-    def optimal_level_scale(self, target_scale, units, precision=3):
-        """
-        Find the optimal level to read at for a desired scale and units.
-
-        The optimal level is the most downscaled level of the image
-        pyramid (or multi-resolution layer) which is larger than the
-        desired target scale. The returned scale is the scale factor
-        required, post read, to achieve the desired scale.
-
-        Args:
-            target_scale (float): Scale to calculate relative to
-            units (str): Units of the scale. Allowed values are the same
-                as for WSIReader.relative_level_scales
-            precision (int, optional): Decimal places to use when
-                finding optimal scale. This can be adjusted to avoid
-                errors when an unecessary precision is used. E.g.
-                1.1e-10 > 1 is insignificant in most cases.
-                Defaults to 3.
-
-        Returns:
-            tuple: Optimal read level and scale of optimal level
-                relative to target
-        """
-        level_scales = self.relative_level_scales(target_scale, units)
-        # Note that np.argmax finds the index of the first True element.
-        # Here it is used on a reversed list to find the first
-        # element <=1, which is the same element as the last <=1
-        # element when counting forward in the regular list.
-        reverse_index = np.argmax(
-            [np.all(np.round(x, decimals=precision) <= 1) for x in level_scales[::-1]]
-        )
-        # Convert the index from the reversed list to the regular index (level)
-        level = (len(level_scales) - 1) - reverse_index
-        return level, level_scales[level]
-
-    def read_rect_params_for_scale(
-        self, target_size, target_scale, units, scale_kwargs=dict()
-    ):
-        """
-        Find the optimal parameters to use for reading a rect at a give
-        scale.
-
-        Args:
-            target_size (float): Desired output size in pixels
-            target_scale (float): Scale to calculate relative to
-            units (str): Units of the scale. Allowed values are the same
-                as for WSIReader.relative_level_scales
-
-        Returns:
-            tuple: Optimal level, size (width, height) of the region to
-                read, downscaling factor to apply after reading to reach
-                target_size and correct scale.
-        """
-        level, scale = self.optimal_level_scale(target_scale, units, **scale_kwargs)
-        read_size = np.round(np.array(target_size) * (1 / scale)).astype(int)
-        post_read_scale = scale
-        return level, read_size, post_read_scale
 
     def slide_thumbnail(self, scale, units):
         """Read whole slide image thumbnail at 1.25x
