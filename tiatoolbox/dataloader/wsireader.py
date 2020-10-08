@@ -26,7 +26,6 @@ import pathlib
 import numpy as np
 import openslide
 import math
-import warnings
 import pandas as pd
 
 
