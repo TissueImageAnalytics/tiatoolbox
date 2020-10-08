@@ -512,13 +512,28 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     assert meta.validate()
 
 
-def test_openslidewsireader_level_rescales_mpp(_response_ndpi):
+def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
-    print(wsi.relative_level_scales(0.5, "mpp"))
+    level_scales = wsi.relative_level_scales(0.5, "mpp")
+    print(level_scales)
+    expected = np.array(
+        [
+            [0.91282519, 0.91012514],
+            [1.82565039, 1.82025028],
+            [3.65130078, 3.64050057],
+            [7.30260155, 7.28100114],
+            [14.6052031, 14.56200228],
+            [29.21040621, 29.12400455],
+            [58.42081241, 58.2480091],
+            [116.84162483, 116.4960182],
+            [233.68324966, 232.99203641],
+        ]
+    )
+    assert level_scales == approx(expected)
 
 
-def test_openslidewsireader_level_rescales_power(_response_ndpi):
+def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
     level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
@@ -528,7 +543,7 @@ def test_openslidewsireader_level_rescales_power(_response_ndpi):
     assert np.all(level_scales == downsamples)
 
 
-def test_openslidewsireader_level_rescales_level(_response_ndpi):
+def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
     level_scales = wsi.relative_level_scales(3, "level")
@@ -539,22 +554,22 @@ def test_openslidewsireader_level_rescales_level(_response_ndpi):
     assert np.all(level_scales == expected)
 
 
-def test_openslidewsireader_level_rescales_base(_response_ndpi):
+def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
-    level_scales = wsi.relative_level_scales(0.125, "base")
+    level_scales = wsi.relative_level_scales(0.125, "baseline")
     print(level_scales)
     downsamples = np.array(wsi.slide_info.level_downsamples)
-    expected = downsamples / 0.125
+    expected = downsamples * 0.125
     assert np.all(level_scales == expected)
 
 
-def test_openslidewsireader_optimal_level_rescales_mpp(_response_ndpi):
+def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
 
-    level_mpp_05, level_rescale_mpp_05 = wsi.optimal_level_scale(0.5, "mpp")
-    level_mpp_10, level_rescale_mpp_10 = wsi.optimal_level_scale(10, "mpp")
+    level_mpp_05, level_rescale_mpp_05 = wsi.optimal_relative_level_scale(0.5, "mpp")
+    level_mpp_10, level_rescale_mpp_10 = wsi.optimal_relative_level_scale(10, "mpp")
 
     assert np.all(level_mpp_05 == 0)
     assert np.all(level_mpp_10 == 4)
@@ -562,12 +577,16 @@ def test_openslidewsireader_optimal_level_rescales_mpp(_response_ndpi):
     assert level_rescale_mpp_10 == approx([0.73026016, 0.72810011])
 
 
-def test_openslidewsireader_optimal_level_rescales_power(_response_ndpi):
+def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
 
-    level_power_05, level_rescale_power_05 = wsi.optimal_level_scale(2.5, "power")
-    level_power_10, level_rescale_power_10 = wsi.optimal_level_scale(10, "power")
+    level_power_05, level_rescale_power_05 = wsi.optimal_relative_level_scale(
+        2.5, "power"
+    )
+    level_power_10, level_rescale_power_10 = wsi.optimal_relative_level_scale(
+        10, "power"
+    )
 
     assert level_power_05 == 3
     assert level_rescale_power_05 == 1.0

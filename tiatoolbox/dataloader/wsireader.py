@@ -146,7 +146,7 @@ class WSIReader:
 
         return [(base_scale * ds) / target_scale for ds in info.level_downsamples]
 
-    def optimal_level_scale(self, target_scale, units, precision=3):
+    def optimal_relative_level_scale(self, target_scale, units, precision=3):
         """
         Find the optimal level to read at for a desired scale and units.
 
@@ -207,7 +207,9 @@ class WSIReader:
                 read, downscaling factor to apply after reading to reach
                 target_size and correct scale.
         """
-        level, scale = self.optimal_level_scale(target_scale, units, **scale_kwargs)
+        level, scale = self.optimal_relative_level_scale(
+            target_scale, units, **scale_kwargs
+        )
         read_size = np.round(np.array(target_size) * (1 / scale)).astype(int)
         post_read_scale = scale
         return level, read_size, post_read_scale
