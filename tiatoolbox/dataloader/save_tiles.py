@@ -20,8 +20,9 @@
 
 """Save image tiles from the whole slide image"""
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
+
+import pathlib
 
 
 def save_tiles(
@@ -32,9 +33,8 @@ def save_tiles(
     tile_read_size_h=5000,
     verbose=True,
 ):
-    """Save image tiles for whole slide image. Default file format for tiles is jpg.
-    Multiprocessing decorator runs this function in parallel using the number of
-    specified cpu cores.
+    """Save image tiles for whole slide image.
+    Default file format for tiles is jpg.
 
     Args:
         input_path (str): Path to whole slide image
@@ -50,7 +50,7 @@ def save_tiles(
     Examples:
         >>> from tiatoolbox.dataloader.save_tiles import save_tiles
         >>> from tiatoolbox.utils import misc
-        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
+        >>> file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
         >>> files_all = misc.grab_files_from_dir(input_path,
         ...     file_types=file_types)
         >>> for curr_file in files_all:
@@ -63,14 +63,23 @@ def save_tiles(
 
     """
 
-    input_dir, file_name, ext = misc.split_path_name_ext(input_path)
+    input_path = pathlib.Path(input_path)
     if verbose:
-        print(file_name + ext, flush=True)
+        print(input_path.name, flush=True)
 
-    if ext in (".svs", ".ndpi", ".mrxs"):
+    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_dir=input_dir,
-            file_name=file_name + ext,
+            input_path=input_path,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
+        )
+        wsi_reader.save_tiles(verbose=verbose)
+
+    elif input_path.suffix in (".jp2",):
+        wsi_reader = wsireader.OmnyxJP2WSIReader(
+            input_path=input_path,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
             tile_read_size_w=tile_read_size_w,
@@ -78,4 +87,4 @@ def save_tiles(
         )
         wsi_reader.save_tiles(verbose=verbose)
     else:
-        raise FileNotSupported
+        raise FileNotSupported(input_path.suffix + " file format is not supported.")

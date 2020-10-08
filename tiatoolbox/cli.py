@@ -58,7 +58,7 @@ def main():
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
     "--mode",
@@ -128,13 +128,10 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     "--region",
     type=int,
     nargs=4,
-    help="image region in the whole slide image to read" "default=0 0 2000 2000",
+    help="image region in the whole slide image to read, default=0 0 2000 2000",
 )
 @click.option(
-    "--level",
-    type=int,
-    default=0,
-    help="pyramid level to read the image, " "default=0",
+    "--level", type=int, default=0, help="pyramid level to read the image, default=0",
 )
 @click.option(
     "--mode",
@@ -153,16 +150,15 @@ def read_region(wsi_input, region, level, output_path, mode):
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
 
-    wsi_obj = None
+    wsi = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
-            input_dir=input_dir, file_name=file_name + file_type
-        )
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
 
-    if wsi_obj is not None:
-        im_region = wsi_obj.read_region(
-            region[0], region[1], region[2], region[3], level
-        )
+    elif file_type in (".jp2",):
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+
+    if wsi is not None:
+        im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
         if mode == "show":
             im_region = Image.fromarray(im_region)
             im_region.show()
@@ -194,13 +190,14 @@ def slide_thumbnail(wsi_input, output_path, mode):
     )
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi_obj = None
+    wsi = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi_obj = dataloader.wsireader.OpenSlideWSIReader(
-            input_dir=input_dir, file_name=file_name + file_type
-        )
-    if wsi_obj is not None:
-        slide_thumb = wsi_obj.slide_thumbnail()
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
+    elif file_type in (".jp2",):
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+
+    if wsi is not None:
+        slide_thumb = wsi.slide_thumbnail()
 
         if mode == "show":
             im_region = Image.fromarray(slide_thumb)
@@ -222,7 +219,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
     "--tile_objective_value",
@@ -231,10 +228,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="objective value at which tile is generated- default=20",
 )
 @click.option(
-    "--tile_read_size_w",
-    type=int,
-    default=5000,
-    help="tile width, " "default=5000",
+    "--tile_read_size_w", type=int, default=5000, help="tile width, default=5000",
 )
 @click.option(
     "--tile_read_size_h",
