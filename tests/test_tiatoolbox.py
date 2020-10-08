@@ -604,7 +604,7 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
             target_size=target_size, target_scale=target_scale, units="power",
         )
         assert level >= 0
-        assert level < wsi.info.level_count
+        assert level < wsi.slide_info.level_count
         # Check that read_size * scale == target_size
         post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
         assert np.array_equal(post_read_downscaled_size, np.array(target_size))
@@ -621,7 +621,7 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
             target_size=target_size, target_scale=target_scale, units="mpp",
         )
         assert level >= 0
-        assert level < wsi.info.level_count
+        assert level < wsi.slide_info.level_count
         # Check that read_size * scale == target_size
         post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
         assert np.array_equal(post_read_downscaled_size, np.array(target_size))
