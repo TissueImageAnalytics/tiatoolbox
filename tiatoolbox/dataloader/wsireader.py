@@ -118,7 +118,7 @@ class WSIReader:
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
             >>> print(wsi.relative_level_scales(0.5, "baseline"))
-            [0.125, 0.25, 0.5, 1,]
+            [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
         """
         info = self.slide_info
 
