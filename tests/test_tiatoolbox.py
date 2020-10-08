@@ -737,7 +737,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
         ],
     )
 
-    assert save_tiles_result.exit_code == 0
+    assert save_svs_tiles_result.exit_code == 0
 
 
 def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
@@ -772,71 +772,3 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
     )
 
     assert stainnorm_result.exit_code == 0
-
-
-def test_wsimeta_init_fail():
-    """Test for WSI metadata intitialise validation."""
-    with pytest.raises(TypeError):
-        wsimeta.WSIMeta(slide_dimensions=None)
-
-
-def test_wsimeta_validate_fail():
-    """Test for WSI metadata fail validation."""
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_dimensions=[(512, 512), (256, 256)],
-        level_count=3,
-    )
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_downsamples=[1, 2],
-    )
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_downsamples=[1, 2],
-    )
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    meta.level_dimensions = None
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    meta.level_downsamples = None
-    assert meta.validate() is False
-
-
-def test_wsimeta_validate_pass():
-    """Test for WSI metadata pass validation."""
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    assert meta.validate()
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_dimensions=[(512, 512), (256, 256)],
-        level_downsamples=[1, 2],
-    )
-    assert meta.validate()
-
-
-def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
-    """Test for WSI metadata ndpi openslide reader."""
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_ndpi))
-    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
-    meta = wsi_obj.slide_info
-    assert meta.validate()
-
-
-def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
-    """Test for WSI metadata svs openslide reader."""
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_svs))
-    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
-    meta = wsi_obj.slide_info
-    assert meta.validate()
