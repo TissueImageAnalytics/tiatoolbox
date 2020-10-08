@@ -2,6 +2,7 @@
 
 """Tests for `tiatoolbox` package."""
 import pytest
+from pytest import approx
 
 from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
@@ -509,3 +510,99 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     meta = wsi_obj.slide_info
     assert meta.validate()
+
+
+def test_openslidewsireader_level_rescales_mpp(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    print(wsi.relative_level_scales(0.5, "mpp"))
+
+
+def test_openslidewsireader_level_rescales_power(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
+    print(level_scales)
+    assert level_scales[0] == 1
+    downsamples = np.array(wsi.slide_info.level_downsamples)
+    assert np.all(level_scales == downsamples)
+
+
+def test_openslidewsireader_level_rescales_level(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    level_scales = wsi.relative_level_scales(3, "level")
+    print(level_scales)
+    assert level_scales[3] == 1.0
+    downsamples = np.array(wsi.slide_info.level_downsamples)
+    expected = downsamples / downsamples[3]
+    assert np.all(level_scales == expected)
+
+
+def test_openslidewsireader_level_rescales_base(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    level_scales = wsi.relative_level_scales(0.125, "base")
+    print(level_scales)
+    downsamples = np.array(wsi.slide_info.level_downsamples)
+    expected = downsamples / 0.125
+    assert np.all(level_scales == expected)
+
+
+def test_openslidewsireader_optimal_level_rescales_mpp(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+
+    level_mpp_05, level_rescale_mpp_05 = wsi.optimal_level_scale(0.5, "mpp")
+    level_mpp_10, level_rescale_mpp_10 = wsi.optimal_level_scale(10, "mpp")
+
+    assert np.all(level_mpp_05 == 0)
+    assert np.all(level_mpp_10 == 4)
+    assert level_rescale_mpp_05 == approx([0.91282519, 0.91012514])
+    assert level_rescale_mpp_10 == approx([0.73026016, 0.72810011])
+
+
+def test_openslidewsireader_optimal_level_rescales_power(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+
+    level_power_05, level_rescale_power_05 = wsi.optimal_level_scale(2.5, "power")
+    level_power_10, level_rescale_power_10 = wsi.optimal_level_scale(10, "power")
+
+    assert level_power_05 == 3
+    assert level_rescale_power_05 == 1.0
+    assert level_power_10 == 1
+    assert level_rescale_power_10 == 1.0
+
+
+def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+
+    target_size = (256, 256)
+    # Test a range of objective powers
+    for target_scale in [1.25, 2.5, 5, 10, 20]:
+        print("Target scale", target_scale)
+        level, read_size, post_read_scale = wsi.read_rect_params_for_scale(
+            target_size=target_size, target_scale=target_scale, units="power",
+        )
+        # Check that read_size * scale == target_size
+        post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
+        assert np.array_equal(post_read_downscaled_size, np.array(target_size))
+
+
+def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+
+    target_size = (256, 256)
+    # Test a range of MPP
+    for target_scale in range(1, 10):
+        print("Target scale", target_scale)
+        level, read_size, post_read_scale = wsi.read_rect_params_for_scale(
+            target_size=target_size, target_scale=target_scale, units="mpp",
+        )
+        # Check that read_size * scale == target_size
+        post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
+        assert np.array_equal(post_read_downscaled_size, np.array(target_size))
+
