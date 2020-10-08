@@ -440,10 +440,16 @@ def test_wsimeta_validate_fail():
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
@@ -477,6 +483,7 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     wsi = wsireader.OpenSlideWSIReader(_response_svs)
     meta = wsi.slide_info
     assert meta.validate()
+
 
 def test_reinhard_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
