@@ -18,16 +18,5 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Top-level package for TIA Toolbox."""
-from tiatoolbox import tiatoolbox
-from tiatoolbox import dataloader
-from tiatoolbox import utils
-from tiatoolbox import tools
-
-
-__author__ = """TIA Lab"""
-__email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.3.0"
-
-if __name__ == "__main__":
-    pass
+"""Package defines tools for the toolbox"""
+from tiatoolbox.tools import stainnorm, stainextract

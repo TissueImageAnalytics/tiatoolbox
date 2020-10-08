@@ -23,6 +23,8 @@ import os
 import cv2
 import pathlib
 import yaml
+import pandas as pd
+import numpy as np
 
 
 def split_path_name_ext(full_path):
@@ -119,3 +121,58 @@ def imwrite(image_path, img):
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+
+
+def imread(image_path):
+    """Read an image as an array
+
+    Args:
+        image_path (str, pathlib.Path): file path (including extension) to read image
+
+    Returns:
+        img (ndarray): image array of dtype uint8, MxNx3
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> image = utils.misc.imread('ImagePath.jpg')
+
+    """
+    if isinstance(image_path, pathlib.Path):
+        image_path = str(image_path)
+    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+    return image.astype("uint8")
+
+
+def load_stain_matrix(stain_matrix_input):
+    """Load a stain matrix as a numpy array.
+
+    Args:
+        stain_matrix_input (ndarray or str, pathlib.Path): either a 2x3 / 3x3
+            numpy array or a path to a saved .npy / .csv file. If using a .csv file,
+            there should be no column headers provided
+
+    Returns:
+        stain_matrix (ndarray): the loaded stain matrix
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> stain_matrix = utils.misc.load_stain_matrix(stain_matrix_input)
+
+    """
+    if isinstance(stain_matrix_input, str):
+        _, __, ext = split_path_name_ext(stain_matrix_input)
+        if ext == "csv":
+            stain_matrix = np.array(pd.read_csv(stain_matrix_input, header=None))
+        elif ext == "npy":
+            stain_matrix = np.load(stain_matrix_input)
+        else:
+            raise Exception(
+                "If supplying a path to a stain matrix, use either a \
+                npy or a csv file"
+            )
+    elif isinstance(stain_matrix_input, np.ndarray):
+        stain_matrix = stain_matrix_input
+    else:
+        raise Exception("stain_matrix must be either a path or a numpy array")
+
+    return stain_matrix

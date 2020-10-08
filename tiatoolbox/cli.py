@@ -21,8 +21,9 @@
 """Console script for tiatoolbox."""
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
+from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 
 import sys
 import click
@@ -66,7 +67,10 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Displays or saves WSI metadata"""
@@ -107,7 +111,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(), out_path,
+                slide_param.as_dict(),
+                out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -220,16 +225,22 @@ def slide_thumbnail(wsi_input, output_path, mode):
     "--tile_objective_value",
     type=int,
     default=20,
-    help="objective value at which tile is generated, " "default=20",
+    help="objective value at which tile is generated- default=20",
 )
 @click.option(
     "--tile_read_size_w", type=int, default=5000, help="tile width, default=5000",
 )
 @click.option(
-    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
+    "--tile_read_size_h",
+    type=int,
+    default=5000,
+    help="tile height, " "default=5000",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
@@ -264,6 +275,68 @@ def save_tiles(
             tile_read_size_h=tile_read_size_h,
             verbose=verbose,
         )
+
+
+@main.command()
+@click.option(
+    "--source_input",
+    help="input path to the source image or a directory of source images",
+)
+@click.option("--target_input", help="input path to the target image")
+@click.option(
+    "--method",
+    help="Stain normlisation method to use. Choose from 'reinhard', 'custom',"
+    "'ruifrok'",
+    default="reinhard",
+)
+@click.option(
+    "--stain_matrix",
+    help="stain matrix to use in custom normaliser. This can either be a numpy array"
+    ", a path to a npy file or a path to a csv file. If using a path to a csv file, "
+    "there must not be any column headers.",
+    default=None,
+)
+@click.option(
+    "--output_dir",
+    help="Output directory for stain normalisation",
+    default="stainorm_output",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory"
+    "default='*.png', '*.jpg', '*.tif', '*.tiff'",
+    default="*.png, '*.jpg', '*.tif', '*.tiff'",
+)
+def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
+    """Stain normalise an input image/directory of input images"""
+    file_types = tuple(file_types.split(", "))
+    if os.path.isdir(source_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=source_input, file_types=file_types
+        )
+    elif os.path.isfile(source_input):
+        files_all = [
+            source_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    print(files_all)
+
+    if method not in ["reinhard", "custom", "ruifrok"]:
+        raise MethodNotSupported
+
+    # init stain normalisation method
+    norm = sn.get_normaliser(method, stain_matrix)
+
+    # get stain information of target image
+    norm.fit(utils.misc.imread(target_input))
+
+    for curr_file in files_all:
+        basename = os.path.basename(curr_file)
+        # transform source image
+        transform = norm.transform(utils.misc.imread(curr_file))
+        utils.misc.imwrite(os.path.join(output_dir, basename), transform)
 
 
 if __name__ == "__main__":
