@@ -439,7 +439,7 @@ class OpenSlideWSIReader(WSIReader):
             filename=str(pathlib.Path(self.input_dir, self.file_name))
         )
 
-    def read_region(self, start_w, start_h, end_w, end_h, level=0):
+    def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
         """Read a region in whole slide image
 
         Args:
@@ -459,17 +459,26 @@ class OpenSlideWSIReader(WSIReader):
             >>> wsi_obj = wsireader.OpenSlideWSIReader(input_dir="./",
             ...     file_name="CMU-1.ndpi")
             >>> level = 0
-            >>> region = [13000, 17000, 15000, 19000]
-            >>> im_region = wsi_obj.read_region(
-            ...     region[0], region[1], region[2], region[3], level)
+            >>> region = [1000, 2000, 2000, 3000]
+            >>> im_region = wsi_obj.read_region(*region, level)
             >>> plt.imshow(im_region)
 
         """
-
-        openslide_obj = self.openslide_obj
-        im_region = openslide_obj.read_region(
-            [start_w, start_h], level, [end_w - start_w, end_h - start_h]
+        output_size = [end_w - start_w, end_h - start_h]
+        # Find parameters for optimal read
+        read_level, read_size, post_read_scale = self.read_rect_params_for_scale(
+            target_size=output_size, target_scale=scale, units=units,
         )
+        openslide_obj = self.openslide_obj
+        # Read at optimal level and corrected read size
+        im_region = openslide_obj.read_region([start_w, start_h], read_level, read_size)
+        # Resize to correct scale if required
+        if post_read_scale != 1.0:
+            interpolation = cv2.INTER_AREA
+            if post_read_scale > 1.0:
+                interpolation = cv2.INTER_CUBIC
+            im_region = cv2.resize(im_region, output_size, interpolation=interpolation,)
+
         im_region = transforms.background_composite(image=im_region)
         return im_region
 

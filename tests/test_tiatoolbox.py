@@ -142,11 +142,11 @@ def test_wsireader_read_region(_response_svs):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(files_all[0]))
     wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
     level = 0
-    region = [13000, 17000, 15000, 19000]
+    region = [1000, 2000, 2000, 3000]
     im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
-    assert im_region.shape == (2000, 2000, 3)
+    assert im_region.shape == (1000, 1000, 3)
 
 
 def test_wsireader_slide_thumbnail(_response_svs):
