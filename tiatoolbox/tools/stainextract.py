@@ -18,16 +18,31 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Top-level package for TIA Toolbox."""
-from tiatoolbox import tiatoolbox
-from tiatoolbox import dataloader
-from tiatoolbox import utils
-from tiatoolbox import tools
+"""Stain normalisation utilities used in tiatoolbox"""
+import numpy as np
 
 
-__author__ = """TIA Lab"""
-__email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.3.0"
+class CustomExtractor:
+    """Get the user-defined stain matrix"""
 
-if __name__ == "__main__":
-    pass
+    def __init__(self, stain_matrix):
+        self.stain_matrix = stain_matrix
+        if self.stain_matrix.shape != (2, 3) and self.stain_matrix.shape != (3, 3):
+            raise Exception("Stain matrix must be either (2,3) or (3,3)")
+
+    def get_stain_matrix(self, _):
+        return self.stain_matrix
+
+
+class RuifrokExtractor:
+    """Get the stain matrix as defined in:
+
+    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
+    by color deconvolution'. Analytical and quantitative cytology and histology
+    / the International Academy of Cytology and American Society of Cytology.
+
+    """
+
+    @staticmethod
+    def get_stain_matrix(_):
+        return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])

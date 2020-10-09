@@ -41,6 +41,24 @@ dataloader.save_tiles
 
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
+-----
+Tools
+-----
+.. automodule:: tiatoolbox.tools
+
+^^^^^^^^^^^^^^^
+tools.stainnorm
+^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.tools.stainnorm
+    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :special-members: __init__
+    :show-inheritance:
+
+^^^^^^^^^^^^^^^^^^
+tools.stainextract
+^^^^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.tools.stainextract
+    :members: CustomExtractor, RuifrokExtractor
 
 ------
 Utils
@@ -51,16 +69,16 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix
 
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 utils.transforms
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.transforms
     :members: background_composite, imresize
 
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 utils.exceptions
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.exceptions
-    :members: FileNotSupported
+    :members: FileNotSupported, MethodNotSupported

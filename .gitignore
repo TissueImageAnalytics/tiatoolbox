@@ -107,3 +107,5 @@ ENV/
 .vscode/
 
 examples/*.py
+# Mac generated
+.DS_Store

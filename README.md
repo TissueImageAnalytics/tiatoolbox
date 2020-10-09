@@ -33,7 +33,7 @@ Then, create and activate the conda environment:
 pip
 ---
 
-    pip install -r requirements.txt
+    pip install tiatoolbox
 
 conda
 -----

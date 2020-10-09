@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 
-"""Tests for `tiatoolbox` package."""
+"""pytests for `tiatoolbox` package."""
 import pytest
 
 from tiatoolbox.dataloader.slide_info import slide_info
 
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader, wsimeta
+from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox import utils
 
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
+from tiatoolbox.utils.misc import imread
+
 from tiatoolbox import cli
 from tiatoolbox import __version__
 
@@ -105,16 +108,104 @@ def _response_all_wsis(_response_ndpi, _response_svs, _response_jp2, tmpdir_fact
     return dir_path
 
 
+@pytest.fixture(scope="session")
+def _response_stainnorm_source(tmpdir_factory):
+    """
+    Sample pytest fixture for source image for stain normalisation
+    Download png image for pytest
+    """
+    source_file_path = tmpdir_factory.mktemp("data").join("source.png")
+    if not os.path.isfile(source_file_path):
+        print("Downloading Source Image for stain normalisation")
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/source.png"
+        )
+        with open(source_file_path, "wb") as f:
+            f.write(r.content)
+
+    else:
+        print("Skipping Source Image")
+
+    return source_file_path
+
+
+@pytest.fixture(scope="session")
+def _response_stainnorm_target(tmpdir_factory):
+    """
+    Sample pytest fixture for target image for stain normalisation
+    Download png image for pytest
+    """
+    target_file_path = tmpdir_factory.mktemp("data").join("target.png")
+    if not os.path.isfile(target_file_path):
+        print("Downloading Target Image for stain normalisation")
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/target.png"
+        )
+        with open(target_file_path, "wb") as f:
+            f.write(r.content)
+
+    else:
+        print("Skipping Target Image")
+
+    return target_file_path
+
+
+@pytest.fixture(scope="session")
+def _response_reinhard(tmpdir_factory):
+    """
+    Sample pytest fixture for reinhard normalised image
+    Download png image for pytest
+    """
+    reinhard_file_path = tmpdir_factory.mktemp("data").join("reinhard.png")
+    print("Downloading Reinhard Image for stain normalisation")
+    if not os.path.isfile(reinhard_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/reinhard.png"
+        )
+        with open(reinhard_file_path, "wb") as f:
+            f.write(r.content)
+
+    else:
+        print("Skipping Reinhard Image")
+
+    return reinhard_file_path
+
+
+@pytest.fixture(scope="session")
+def _response_ruifrok(tmpdir_factory):
+    """
+    Sample pytest fixture for ruifrok normalised image
+    Download png image for pytest
+    """
+    ruifrok_file_path = tmpdir_factory.mktemp("data").join("ruifrok.png")
+    if not os.path.isfile(ruifrok_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/ruifrok.png"
+        )
+        with open(ruifrok_file_path, "wb") as f:
+            f.write(r.content)
+
+    else:
+        print("Skipping Reinhard Image")
+
+    return ruifrok_file_path
+
+
 # -------------------------------------------------------------------------------------
 # Python API tests
 # -------------------------------------------------------------------------------------
 
 
 def test_slide_info(_response_all_wsis, tmp_path):
-    """pytest for slide_info as a python function"""
+    """Test for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=_response_all_wsis, file_types=file_types,
+        input_path=_response_all_wsis,
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -124,10 +215,11 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
-    """pytest for slide_info in WSIReader class as a python function"""
+    """Test for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_param = wsi.slide_info
@@ -136,10 +228,11 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
 
 
 def test_wsireader_read_region(_response_svs):
-    """pytest for read region as a python function"""
+    """Test for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     level = 0
@@ -151,10 +244,11 @@ def test_wsireader_read_region(_response_svs):
 
 
 def test_wsireader_slide_thumbnail(_response_svs):
-    """pytest for slide_thumbnail as a python function"""
+    """Test for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_thumbnail = wsi.slide_thumbnail()
@@ -163,10 +257,11 @@ def test_wsireader_slide_thumbnail(_response_svs):
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
-    """pytest for save_tiles in wsireader as a python function"""
+    """Test for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(
         files_all[0],
@@ -198,10 +293,11 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
 
 
 def test_save_tiles(_response_all_wsis, tmp_path):
-    """pytest for save_tiles as a python function"""
+    """Test for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)),
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -290,6 +386,7 @@ def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
 
 
 def test_exception_tests():
+    """Test for Exceptions"""
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
@@ -304,16 +401,19 @@ def test_exception_tests():
             verbose=True,
         )
 
+    with pytest.raises(MethodNotSupported):
+        get_normaliser(method_name="invalid_normaliser")
+
 
 def test_imresize():
-    """pytest for imresize"""
+    """Test for imresize"""
     img = np.zeros((2000, 2000, 3))
     resized_img = utils.transforms.imresize(img, 0.5)
     assert resized_img.shape == (1000, 1000, 3)
 
 
 def test_background_composite():
-    """pytest for background composite"""
+    """Test for background composite"""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
     im = utils.transforms.background_composite(new_im)
@@ -340,10 +440,16 @@ def test_wsimeta_validate_fail():
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
@@ -378,6 +484,58 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     meta = wsi.slide_info
     assert meta.validate()
 
+
+def test_reinhard_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
+):
+    """Test for Reinhard colour normalisation."""
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    reinhard_img = imread(pathlib.Path(_response_reinhard))
+
+    norm = get_normaliser("reinhard")
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(reinhard_img - transform) < 1e-3
+
+
+def test_custom_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
+):
+    """Test for stain normalisation with user-defined stain matrix."""
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    ruifrok_img = imread(pathlib.Path(_response_ruifrok))
+
+    # init class with custom method - test with ruifrok stain matrix
+    stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+    norm = get_normaliser("custom", stain_matrix=stain_matrix)
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(ruifrok_img - transform) < 1e-3
+
+
+def test_ruifrok_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
+):
+    """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    ruifrok_img = imread(pathlib.Path(_response_ruifrok))
+
+    # init class with Ruifrok method
+    norm = get_normaliser("ruifrok")
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(ruifrok_img - transform) < 1e-3
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
@@ -394,7 +552,7 @@ def test_command_line_help_interface():
 
 
 def test_command_line_version():
-    """pytest for version check"""
+    """Test for version check"""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
@@ -420,7 +578,8 @@ def test_command_line_slide_info(_response_all_wsis):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)),
+        file_types=file_types,
     )
     slide_info_result = runner.invoke(
         cli.main,
@@ -506,7 +665,7 @@ def test_command_line_jp2_read_region(_response_jp2, tmp_path):
 
 
 def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
-    """pytest for the slide_thumbnail CLI."""
+    """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
         cli.main,
@@ -546,7 +705,7 @@ def test_command_line_jp2_slide_thumbnail(_response_jp2, tmp_path):
 
 
 def test_command_line_save_tiles(_response_all_wsis, tmp_path):
-    """pytest for save_tiles CLI."""
+    """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
         cli.main,
@@ -567,7 +726,8 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)),
+        file_types=file_types,
     )
     save_svs_tiles_result = runner.invoke(
         cli.main,
@@ -585,3 +745,37 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     )
 
     assert save_svs_tiles_result.exit_code == 0
+
+
+def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
+    """Test for the stain normalisation CLI."""
+    runner = CliRunner()
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            pathlib.Path(_response_stainnorm_source),
+            "--target_input",
+            pathlib.Path(_response_stainnorm_target),
+            "--method",
+            "reinhard",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
+
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            pathlib.Path(_response_stainnorm_source),
+            "--target_input",
+            pathlib.Path(_response_stainnorm_target),
+            "--method",
+            "ruifrok",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
