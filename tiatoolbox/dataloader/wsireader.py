@@ -217,7 +217,7 @@ class WSIReader:
         post_read_scale = scale
         return level, read_size, post_read_scale
 
-    def read_region(self, start_w, start_h, end_w, end_h, level=0):
+    def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
         """Read a region in whole slide image
 
         Args:
