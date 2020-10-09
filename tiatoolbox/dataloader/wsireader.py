@@ -519,4 +519,3 @@ class OpenSlideWSIReader(WSIReader):
         )
 
         return param
-
