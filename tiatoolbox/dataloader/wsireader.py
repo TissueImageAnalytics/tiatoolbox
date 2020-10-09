@@ -225,7 +225,9 @@ class WSIReader:
             start_h (int): starting point in y-direction (along height)
             end_w (int): end point in x-direction (along width)
             end_h (int): end point in y-direction (along height)
-            level (int): pyramid level to read the image
+            scale (float): scale at which to read the image, default = 0
+            units (str): the units of scale, default = "level".
+                supported units are "mpp", "power", "level", "baseline"
 
         Returns:
             img_array : ndarray of size MxNx3
@@ -447,7 +449,9 @@ class OpenSlideWSIReader(WSIReader):
             start_h (int): starting point in y-direction (along height)
             end_w (int): end point in x-direction (along width)
             end_h (int): end point in y-direction (along height)
-            level (int): pyramid level to read the image
+            scale (float): scale at which to read the image, default = 0
+            units (str): the units of scale, default = "level",
+                supported units are "mpp", "power", "level", "baseline"
 
         Returns:
             img_array : ndarray of size MxNx3
