@@ -28,6 +28,7 @@ import numpy as np
 import openslide
 import math
 import pandas as pd
+import cv2
 
 
 class WSIReader:
@@ -233,7 +234,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def slide_thumbnail(self):
+    def slide_thumbnail(self, scale=1.25, units="power"):
         """Read whole slide image thumbnail at 1.25x
 
         Args:
@@ -242,8 +243,26 @@ class WSIReader:
         Returns:
             ndarray : image array
 
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.OpenSlideWSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
+            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
+
         """
-        raise NotImplementedError
+        level, post_read_scale = self.optimal_relative_level_scale(scale, units)
+        level_dimensions = self.slide_info.level_dimensions[level]
+        thumb = self.read_region(0, 0, *level_dimensions)
+
+        if scale != 1.0:
+            new_size = np.round(np.array(level_dimensions) * post_read_scale)
+            new_size = tuple(new_size.astype(int))
+            thumb = cv2.resize(thumb, new_size, interpolation=cv2.INTER_AREA)
+            cv2.imwrite("/home/john/Downloads/thumbnail.png", thumb)
+
+        thumb = np.array(thumb)
+
+        return thumb
 
     def save_tiles(self, tile_format=".jpg", verbose=True):
         """Generate image tiles from whole slide images.
@@ -492,31 +511,3 @@ class OpenSlideWSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.25x
-
-        Args:
-            self (OpenSlideWSIReader):
-
-        Returns:
-            ndarray : image array
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.OpenSlideWSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
-
-        """
-        openslide_obj = self.openslide_obj
-        tile_objective_value = 20
-
-        rescale = np.int(self.slide_info.objective_power / tile_objective_value)
-        slide_dimension = self.slide_info.level_dimensions[0]
-        slide_dimension_20x = np.array(slide_dimension) / rescale
-        thumb = openslide_obj.get_thumbnail(
-            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
-        )
-        thumb = np.asarray(thumb)
-
-        return thumb
