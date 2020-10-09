@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox"""
-import os
 import cv2
 import pathlib
 import yaml
@@ -43,9 +42,8 @@ def split_path_name_ext(full_path):
         ...     utils.misc.split_path_name_ext(full_path)
 
     """
-    input_dir, file_name = os.path.split(full_path)
-    file_name, ext = os.path.splitext(file_name)
-    return input_dir, file_name, ext
+    input_path = pathlib.Path(full_path)
+    return input_path.parent.absolute(), input_path.name, input_path.suffix
 
 
 def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
@@ -97,7 +95,7 @@ def save_yaml(input_dict, output_path="output.yaml"):
 
 
     """
-    with open(pathlib.Path(output_path), "w") as yaml_file:
+    with open(str(pathlib.Path(output_path)), "w") as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
 
