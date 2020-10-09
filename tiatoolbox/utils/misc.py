@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox"""
-import os
 import cv2
 import pathlib
 import yaml
