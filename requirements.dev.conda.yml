@@ -20,5 +20,7 @@ dependencies:
   - recommonmark
   - pandas
   - glymur
+  - pytest==5.4.2
+  - pytest-runner==5.2
   - pip:
       - openslide-python==1.1.2
