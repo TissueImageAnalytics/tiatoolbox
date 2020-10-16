@@ -15,7 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # This file contains code inspired by StainTools
-# [https://github.com/Peter554/StainTools] written by Peter Byfield."
+# [https://github.com/Peter554/StainTools] written by Peter Byfield.
 #
 # The Original Code is Copyright (C) 2020, TIALab, University of Warwick
 # All rights reserved.
