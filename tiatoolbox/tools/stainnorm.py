@@ -25,16 +25,12 @@ import cv2
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 from tiatoolbox.utils.misc import load_stain_matrix
-<<<<<<< HEAD
 from tiatoolbox.tools.stainextract import (
     CustomExtractor,
     RuifrokExtractor,
     MacenkoExtractor,
     VahadaneExtractor,
 )
-=======
-from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
->>>>>>> develop
 
 
 class StainNormaliser:
@@ -127,14 +123,11 @@ class CustomNormaliser(StainNormaliser):
 
 
 class RuifrokNormaliser(StainNormaliser):
-    """Ruifrok stain normaliser, adapted from:
-<<<<<<< HEAD
+    """Ruifrok & Johnston stain normaliser, adapted from:
 
-=======
->>>>>>> develop
-    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
-    by color deconvolution'. Analytical and quantitative cytology and histology
-    / the International Academy of Cytology and American Society of Cytology.
+    Ruifrok, Arnout C., and Dennis A. Johnston. "Quantification of
+    histochemical staining by color deconvolution." Analytical and
+    quantitative cytology and histology 23.4 (2001): 291-299.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
@@ -149,12 +142,12 @@ class RuifrokNormaliser(StainNormaliser):
         self.extractor = RuifrokExtractor()
 
 
-<<<<<<< HEAD
 class MacenkoNormaliser(StainNormaliser):
     """Macenko stain normaliser, adapted from:
 
-    M. Macenko et al. "A method for normalizing histology slides for quantitative
-    analysis." 2009 IEEE International Symposium on Biomedical Imaging.
+    Macenko, Marc, et al. "A method for normalizing histology
+    slides for quantitative analysis." 2009 IEEE International
+    Symposium on Biomedical Imaging: From Nano to Macro. IEEE, 2009.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser()
@@ -172,8 +165,9 @@ class MacenkoNormaliser(StainNormaliser):
 class VahadaneNormaliser(StainNormaliser):
     """Vahadane stain normaliser, adapted from:
 
-    A. Vahadane et al. "Structure-preserving color normalization and sparse
-    stain separation for histological images." IEEE transactions on medical imaging.
+    Vahadane, Abhishek, et al. "Structure-preserving color normalization
+    and sparse stain separation for histological images."
+    IEEE transactions on medical imaging 35.8 (2016): 1962-1971.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser()
@@ -188,12 +182,11 @@ class VahadaneNormaliser(StainNormaliser):
         self.extractor = VahadaneExtractor()
 
 
-=======
->>>>>>> develop
 class ReinhardColourNormaliser:
     """Normalize a patch colour to the target image using the method of:
 
-    Reinhard et al. "Color transfer between images." Computer graphics & applications.
+    Reinhard, Erik, et al. "Color transfer between images."
+    IEEE Computer graphics and applications 21.5 (2001): 34-41.
 
     Attributes:
         target_means (float): mean of each LAB channel

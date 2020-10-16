@@ -37,23 +37,23 @@ class CustomExtractor:
 class RuifrokExtractor:
     """Get the stain matrix as defined in:
 
-    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
-    by color deconvolution'. Analytical and quantitative cytology and histology
-    / the International Academy of Cytology and American Society of Cytology.
+    Ruifrok, Arnout C., and Dennis A. Johnston. "Quantification of
+    histochemical staining by color deconvolution." Analytical and
+    quantitative cytology and histology 23.4 (2001): 291-299.
 
     """
 
     @staticmethod
     def get_stain_matrix(_):
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-<<<<<<< HEAD
 
 
 class MacenkoExtractor:
     """Get the stain matrix as defined in:
 
-    M. Macenko et al. "A method for normalizing histology slides for quantitative
-    analysis." 2009 IEEE International Symposium on Biomedical Imaging.
+    Macenko, Marc, et al. "A method for normalizing histology
+    slides for quantitative analysis." 2009 IEEE International
+    Symposium on Biomedical Imaging: From Nano to Macro. IEEE, 2009.
 
     """
 
@@ -65,13 +65,12 @@ class MacenkoExtractor:
 class VahadaneExtractor:
     """Get the stain matrix as defined in:
 
-    A. Vahadane et al. "Structure-preserving color normalization and sparse
-    stain separation for histological images." IEEE transactions on medical imaging.
+    Vahadane, Abhishek, et al. "Structure-preserving color normalization
+    and sparse stain separation for histological images."
+    IEEE transactions on medical imaging 35.8 (2016): 1962-1971.
 
     """
 
     @staticmethod
     def get_stain_matrix(_):
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-=======
->>>>>>> develop
