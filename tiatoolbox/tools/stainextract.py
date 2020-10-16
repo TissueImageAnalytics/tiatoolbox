@@ -21,17 +21,17 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Stain normalisation utilities used in tiatoolbox"""
+"""Stain normalisation stain matrix extraction."""
 import numpy as np
 
 from tiatoolbox.utils.transforms import convert_RGB2OD
 
 
 class CustomExtractor:
-    """Get the user-defined stain matrix
+    """Get the user-defined stain matrix.
 
     This class contains code inspired by StainTools
-    [https://github.com/Peter554/StainTools] written by Peter Byfield
+    [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
         >>> from tiatoolbox.tools.staiextract import CustomExtractor()
@@ -46,10 +46,10 @@ class CustomExtractor:
             raise Exception("Stain matrix must be either (2,3) or (3,3)")
 
     def get_stain_matrix(self, _):
-        """Get the user defined stain matrix
+        """Get the user defined stain matrix.
 
         Returns:
-            ndarray: user defined stain matrix
+            ndarray: user defined stain matrix.
 
         """
         return self.stain_matrix
@@ -63,7 +63,7 @@ class RuifrokExtractor:
     quantitative cytology and histology 23.4 (2001): 291-299.
 
     This class contains code inspired by StainTools
-    [https://github.com/Peter554/StainTools] written by Peter Byfield
+    [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
         >>> from tiatoolbox.tools.staiextract import RuifrokExtractor()
@@ -74,10 +74,10 @@ class RuifrokExtractor:
 
     @staticmethod
     def get_stain_matrix(_):
-        """Get the pre-defined stain matrix
+        """Get the pre-defined stain matrix.
 
         Returns:
-            ndarray: pre-defined  stain matrix
+            ndarray: pre-defined  stain matrix.
 
         """
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
@@ -91,7 +91,7 @@ class MacenkoExtractor:
     Symposium on Biomedical Imaging: From Nano to Macro. IEEE, 2009.
 
     This class contains code inspired by StainTools
-    [https://github.com/Peter554/StainTools] written by Peter Byfield
+    [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
         >>> from tiatoolbox.tools.staiextract import MacenkoExtractor()
@@ -102,7 +102,7 @@ class MacenkoExtractor:
 
     @staticmethod
     def get_stain_matrix(img, luminosity_threshold=0.8, angular_percentile=99):
-        """Stain matrix estimation
+        """Stain matrix estimation.
 
         Args:
             img (ndarray): input image used for stain matrix estimation
@@ -110,7 +110,7 @@ class MacenkoExtractor:
             angular_percentile (int):
 
         Returns:
-            ndarray: estimated stain matrix
+            ndarray: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -165,7 +165,7 @@ class VahadaneExtractor:
     IEEE transactions on medical imaging 35.8 (2016): 1962-1971.
 
     This class contains code inspired by StainTools
-    [https://github.com/Peter554/StainTools] written by Peter Byfield
+    [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
         >>> from tiatoolbox.tools.staiextract import VahadaneExtractor()
@@ -176,7 +176,7 @@ class VahadaneExtractor:
 
     @staticmethod
     def get_stain_matrix(img, luminosity_threshold=0.8, regulariser=0.1):
-        """Stain matrix estimation
+        """Stain matrix estimation.
 
         Args:
             img (ndarray): input image used for stain matrix estimation
@@ -184,7 +184,7 @@ class VahadaneExtractor:
             regulariser (float): regulariser used in dictionary learning
 
         Returns:
-            ndarray: estimated stain matrix
+            ndarray: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
