@@ -46,6 +46,7 @@ class RuifrokExtractor:
     @staticmethod
     def get_stain_matrix(_):
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+<<<<<<< HEAD
 
 
 class MacenkoExtractor:
@@ -72,3 +73,5 @@ class VahadaneExtractor:
     @staticmethod
     def get_stain_matrix(_):
         return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+=======
+>>>>>>> develop

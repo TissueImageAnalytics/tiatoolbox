@@ -133,6 +133,12 @@ class WSIReader:
             ...     tile_read_size_w=2000)
             >>> wsi.save_tiles()
 
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            ...     file_name="CMU-1.ndpi")
+            >>> slide_param = wsi_obj.slide_info()
+
         """
         tile_objective_value = self.tile_objective_value
         tile_read_size = self.tile_read_size

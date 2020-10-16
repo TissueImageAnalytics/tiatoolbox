@@ -82,7 +82,7 @@ def _response_jp2(tmpdir_factory):
         print("\nDownloading JP2")
         r = requests.get(
             "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files"
-            "/test1.jp2"
+            "/test2.jp2"
         )
         with open(jp2_file_path, "wb") as f:
             f.write(r.content)

@@ -25,12 +25,16 @@ import cv2
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 from tiatoolbox.utils.misc import load_stain_matrix
+<<<<<<< HEAD
 from tiatoolbox.tools.stainextract import (
     CustomExtractor,
     RuifrokExtractor,
     MacenkoExtractor,
     VahadaneExtractor,
 )
+=======
+from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
+>>>>>>> develop
 
 
 class StainNormaliser:
@@ -124,7 +128,10 @@ class CustomNormaliser(StainNormaliser):
 
 class RuifrokNormaliser(StainNormaliser):
     """Ruifrok stain normaliser, adapted from:
+<<<<<<< HEAD
 
+=======
+>>>>>>> develop
     A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
     by color deconvolution'. Analytical and quantitative cytology and histology
     / the International Academy of Cytology and American Society of Cytology.
@@ -142,6 +149,7 @@ class RuifrokNormaliser(StainNormaliser):
         self.extractor = RuifrokExtractor()
 
 
+<<<<<<< HEAD
 class MacenkoNormaliser(StainNormaliser):
     """Macenko stain normaliser, adapted from:
 
@@ -180,6 +188,8 @@ class VahadaneNormaliser(StainNormaliser):
         self.extractor = VahadaneExtractor()
 
 
+=======
+>>>>>>> develop
 class ReinhardColourNormaliser:
     """Normalize a patch colour to the target image using the method of:
 
