@@ -49,6 +49,7 @@ tiatoolbox --help
                       save-tiles,
                       slide_info,
                       slide-thumbnail,
+                      stainnorm,
                       }
                      ...
 
@@ -59,6 +60,7 @@ tiatoolbox --help
     save-tiles          usage: tiatoolbox save-tiles -h
     slide-info          usage: tiatoolbox slide-info -h
     slide-thumbnail     usage: tiatoolbox slide-thumbnail -h
+    stainnorm           usage: tiatoolbox stainnorm -h
 
     optional arguments:
       -h, --help            show this help message and exit
