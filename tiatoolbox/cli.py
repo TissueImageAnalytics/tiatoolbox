@@ -131,7 +131,10 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     help="image region in the whole slide image to read, default=0 0 2000 2000",
 )
 @click.option(
-    "--level", type=int, default=0, help="pyramid level to read the image, default=0",
+    "--level",
+    type=int,
+    default=0,
+    help="pyramid level to read the image, default=0",
 )
 @click.option(
     "--mode",
@@ -228,7 +231,10 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="objective value at which tile is generated- default=20",
 )
 @click.option(
-    "--tile_read_size_w", type=int, default=5000, help="tile width, default=5000",
+    "--tile_read_size_w",
+    type=int,
+    default=5000,
+    help="tile width, default=5000",
 )
 @click.option(
     "--tile_read_size_h",
@@ -286,7 +292,7 @@ def save_tiles(
 @click.option(
     "--method",
     help="Stain normlisation method to use. Choose from 'reinhard', 'custom',"
-    "'ruifrok'",
+    "'ruifrok', 'macenko, 'vahadane'",
     default="reinhard",
 )
 @click.option(
@@ -323,7 +329,7 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 
     print(files_all)
 
-    if method not in ["reinhard", "custom", "ruifrok"]:
+    if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise MethodNotSupported
 
     # init stain normalisation method
