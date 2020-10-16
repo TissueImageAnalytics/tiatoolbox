@@ -96,6 +96,7 @@ class StainNormaliser:
 
         Args:
             img (ndarray uint8): RGB input source image
+
         Returns:
             ndarray: RGB stain normalised image
 
@@ -122,7 +123,7 @@ class CustomNormaliser(StainNormaliser):
         >>> from tiatoolbox.tools.stainnorm import CustomNormaliser()
         >>> norm = CustomNormaliser(stain_matrix)
         >>> norm.fit(target_img)
-        >>> norm.transform(source_img)
+        >>> norm_img = norm.transform(source_img)
 
     """
 
@@ -146,7 +147,7 @@ class RuifrokNormaliser(StainNormaliser):
         >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
         >>> norm = RuifrokNormaliser()
         >>> norm.fit(target_img)
-        >>> norm.transform(source_img)
+        >>> norm_img = norm.transform(source_img)
 
     """
 
@@ -169,7 +170,7 @@ class MacenkoNormaliser(StainNormaliser):
         >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser()
         >>> norm = MacenkoNormaliser()
         >>> norm.fit(target_img)
-        >>> norm.transform(source_img)
+        >>> norm_img = norm.transform(source_img)
 
     """
 
@@ -192,7 +193,7 @@ class VahadaneNormaliser(StainNormaliser):
         >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser()
         >>> norm = VahadaneNormaliser()
         >>> norm.fit(target_img)
-        >>> norm.transform(source_img)
+        >>> norm_img = norm.transform(source_img)
 
     """
 
@@ -218,7 +219,7 @@ class ReinhardColourNormaliser:
         >>> from tiatoolbox.tools.stainnorm import ReinhardColourNormaliser()
         >>> norm = ReinhardColourNormaliser()
         >>> norm.fit(target_img)
-        >>> trans = norm.transform(src_img)
+        >>> norm_img = norm.transform(src_img)
 
     """
 
@@ -338,7 +339,7 @@ def get_normaliser(method_name, stain_matrix=None):
         >>> from tiatoolbox.tools.stainnorm import get_normaliser
         >>> norm = get_normaliser('Reinhard')
         >>> norm.fit(target_img)
-        >>> transformed = norm.transform(source_img)
+        >>> norm_img = norm.transform(source_img)
 
     """
     if method_name.lower() == "reinhard" or method_name.lower() == "ruifrok":
