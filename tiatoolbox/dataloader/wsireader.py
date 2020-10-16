@@ -31,7 +31,6 @@ import math
 import pandas as pd
 import cv2
 import re
-import warnings
 
 
 class WSIReader:
@@ -463,16 +462,16 @@ class OpenSlideWSIReader(WSIReader):
             >>> wsi = wsireader.OpenSlideWSIReader(input_path='./CMU-1.ndpi')
             >>> level = 0
             >>> region = [1000, 2000, 2000, 3000]
-            >>> im_region = wsi_obj.read_region(*region, level)
+            >>> im_region = wsi.read_region(*region, level)
             >>> plt.imshow(im_region)
-        
+
         """
         output_size = [end_w - start_w, end_h - start_h]
         # Find parameters for optimal read
         read_level, read_size, post_read_scale = self.read_rect_params_for_scale(
             target_size=output_size, target_scale=scale, units=units,
         )
-        wsi = self.openslide_obj
+        wsi = self.openslide_wsi
         # Read at optimal level and corrected read size
         im_region = wsi.read_region([start_w, start_h], read_level, read_size)
         # Resize to correct scale if required
@@ -523,8 +522,7 @@ class OpenSlideWSIReader(WSIReader):
 
         return param
 
-
-    def slide_thumbnail(self):
+    def slide_thumbnail(self, scale=1.25, units="power"):
         """Read whole slide image thumbnail at 1.25x
 
         Args:
@@ -578,7 +576,7 @@ class OmnyxJP2WSIReader(WSIReader):
         )
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
-    def read_region(self, start_w, start_h, end_w, end_h, level=0):
+    def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
         """Read a region in whole slide image
 
         Args:
@@ -603,7 +601,7 @@ class OmnyxJP2WSIReader(WSIReader):
             >>> plt.imshow(im_region)
 
         """
-        factor = 2 ** level
+        factor = 2 ** scale
         start_h = start_h * factor
         start_w = start_w * factor
         end_h = end_h * factor
@@ -675,7 +673,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self):
+    def slide_thumbnail(self, scale=1.25, units="power"):
         """Read whole slide image thumbnail at 1.25x
 
         Args:

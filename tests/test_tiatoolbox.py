@@ -238,8 +238,8 @@ def test_wsireader_read_region(_response_svs):
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     level = 0
     region = [1000, 2000, 2000, 3000]
-    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
-    
+    im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
+
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape == (1000, 1000, 3)
@@ -425,12 +425,6 @@ def test_background_composite():
     im = utils.transforms.background_composite(new_im, alpha=True)
     assert np.all(im[:, :, 3] == 255)
 
-
-def test_wsimeta_init_fail():
-    with pytest.raises(TypeError):
-        wsimeta.WSIMeta(slide_dimensions=None)
-
-
 def test_wsimeta_validate_fail():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
@@ -461,30 +455,6 @@ def test_wsimeta_validate_fail():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     meta.level_downsamples = None
     assert meta.validate() is False
-
-
-def test_wsimeta_validate_pass():
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    assert meta.validate()
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_dimensions=[(512, 512), (256, 256)],
-        level_downsamples=[1, 2],
-    )
-    assert meta.validate()
-
-
-def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
-    wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
-    meta = wsi.slide_info
-    assert meta.validate()
-
-
-def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
-    wsi = wsireader.OpenSlideWSIReader(_response_svs)
-    meta = wsi.slide_info
-    assert meta.validate()
 
 
 def test_reinhard_normalise(
@@ -776,6 +746,7 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
     )
 
     assert stainnorm_result.exit_code == 0
+
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
