@@ -17,5 +17,6 @@ dependencies:
   - requests
   - pixman<0.38.0
   - pandas
+  - glymur
   - pip:
     - openslide-python

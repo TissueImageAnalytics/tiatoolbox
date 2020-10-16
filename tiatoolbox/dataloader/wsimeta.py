@@ -59,7 +59,7 @@ class WSIMeta:
         self.vendor = vendor
         self.mpp = np.array([float(x) for x in mpp]) if mpp is not None else None
         self.file_path = file_path
-        self.raw = dict(raw) if raw is not None else None
+        self.raw = raw if raw is not None else None
 
         self.validate()
 

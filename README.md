@@ -23,13 +23,17 @@ Please try
 Getting Started
 ===============
 
-First, install OpenSlide [here](https://openslide.org/download/). Then,
-create and activate the conda environment:
+First, install
+- OpenSlide [here](https://openslide.org/download/).
+- OpenJPEG [here](https://www.openjpeg.org/), using
+`conda install -c conda-forge openjpeg>=2.3.0`.
+
+Then, create and activate the conda environment:
 
 pip
 ---
 
-    pip install -r requirements.txt
+    pip install tiatoolbox
 
 conda
 -----

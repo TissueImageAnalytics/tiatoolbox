@@ -24,12 +24,13 @@ from PIL import Image
 import cv2
 
 
-def background_composite(image, fill=255):
+def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background
 
     Args:
         image (ndarray, PIL.Image): input image
         fill (int): fill value for the background, default=255
+        alpha (bool): True if alpha channel is required
 
     Returns:
         ndarray: image with background composite
@@ -43,9 +44,9 @@ def background_composite(image, fill=255):
         ...     .background_composite(img_with_alpha)
         >>> plt.imshow(img_with_alpha)
         >>> plt.imshow(img_back_composite)
+        >>> plt.show()
 
     """
-
     if not isinstance(image, Image.Image):
         image = Image.fromarray(image)
 
@@ -55,7 +56,11 @@ def background_composite(image, fill=255):
         np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8)
     )
     composite.alpha_composite(image)
-    composite = np.asarray(composite.convert("RGB"))
+    if not alpha:
+        composite = np.asarray(composite.convert("RGB"))
+    else:
+        composite = np.asarray(composite)
+
     return composite
 
 
@@ -71,13 +76,12 @@ def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
         ndarray: resized image
 
     Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> from tiatoolbox.utils import transforms
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
-            >>> # Resize the image to half size using scale_factor 0.5
-            >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
+        >>> from tiatoolbox.dataloader import wsireader
+        >>> from tiatoolbox.utils import transforms
+        >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+        >>> slide_thumbnail = wsi.slide_thumbnail()
+        >>> # Resize the image to half size using scale_factor 0.5
+        >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
     # Estimate new dimension
@@ -88,3 +92,44 @@ def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
     resized_img = cv2.resize(img, dim, interpolation=interpolation)
 
     return resized_img
+
+
+def convert_RGB2OD(img):
+    """Convert from RGB to optical density (OD_RGB) space.
+    RGB = 255 * exp(-1*OD_RGB).
+
+    Args:
+        img (ndarray uint8): Image RGB
+
+    Returns:
+        ndarray: Optical denisty RGB image.
+
+    Examples:
+        >>> from tiatoolbox.utils import transforms
+        >>> # rgb_img: RGB image
+        >>> od_img = transforms.convert_RGB2OD(rgb_img)
+
+    """
+    mask = img == 0
+    img[mask] = 1
+    return np.maximum(-1 * np.log(img / 255), 1e-6)
+
+
+def convert_OD2RGB(OD):
+    """Convert from optical density (OD_RGB) to RGB.
+    RGB = 255 * exp(-1*OD_RGB)
+
+    Args:
+        OD (ndrray): Optical denisty RGB image
+
+    Returns:
+        ndarray uint8: Image RGB
+
+    Examples:
+        >>> from tiatoolbox.utils import transforms
+        >>> # od_img: optical density image
+        >>> rgb_img = transforms.convert_OD2RGB(od_img)
+
+    """
+    OD = np.maximum(OD, 1e-6)
+    return (255 * np.exp(-1 * OD)).astype(np.uint8)
