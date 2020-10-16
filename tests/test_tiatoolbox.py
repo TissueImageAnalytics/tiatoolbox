@@ -190,9 +190,51 @@ def _response_ruifrok(tmpdir_factory):
             f.write(r.content)
 
     else:
-        print("Skipping Reinhard Image")
+        print("Skipping Ruifrok Image")
 
     return ruifrok_file_path
+
+
+@pytest.fixture(scope="session")
+def _response_macenko(tmpdir_factory):
+    """
+    Sample pytest fixture for Macenko normalised image
+    Download png image for pytest
+    """
+    macenko_file_path = tmpdir_factory.mktemp("data").join("macenko.png")
+    if not os.path.isfile(macenko_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/macenko.png"
+        )
+        with open(macenko_file_path, "wb") as f:
+            f.write(r.content)
+
+    else:
+        print("Skipping Macenko Image")
+
+    return macenko_file_path
+
+
+@pytest.fixture(scope="session")
+def _response_vahadane(tmpdir_factory):
+    """
+    Sample pytest fixture for Vahadane normalised image
+    Download png image for pytest
+    """
+    vahadane_file_path = tmpdir_factory.mktemp("data").join("vahadane.png")
+    if not os.path.isfile(vahadane_file_path):
+        r = requests.get(
+            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
+            "/files/vahadane.png"
+        )
+        with open(vahadane_file_path, "wb") as f:
+            f.write(r.content)
+
+    else:
+        print("Skipping Vahadane Image")
+
+    return vahadane_file_path
 
 
 # -------------------------------------------------------------------------------------
@@ -527,13 +569,47 @@ def test_ruifrok_normalise(
     target_img = imread(pathlib.Path(_response_stainnorm_target))
     ruifrok_img = imread(pathlib.Path(_response_ruifrok))
 
-    # init class with Ruifrok method
+    # init class with Ruifrok & Johnston method
     norm = get_normaliser("ruifrok")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
     assert np.sum(ruifrok_img - transform) < 1e-3
+
+
+def test_macenko_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_macenko
+):
+    """Test for stain normalisation with stain matrix from Macenko et al."""
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    macenko_img = imread(pathlib.Path(_response_macenko))
+
+    # init class with Macenko method
+    norm = get_normaliser("macenko")
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(macenko_img - transform) < 1e-3
+
+
+def test_vahadane_normalise(
+    _response_stainnorm_source, _response_stainnorm_target, _response_vahadane
+):
+    """Test for stain normalisation with stain matrix from Vahadane et al."""
+    source_img = imread(pathlib.Path(_response_stainnorm_source))
+    target_img = imread(pathlib.Path(_response_stainnorm_target))
+    vahadane_img = imread(pathlib.Path(_response_vahadane))
+
+    # init class with Vahadane method
+    norm = get_normaliser("vahadane")
+    norm.fit(target_img)  # get stain information of target image
+    transform = norm.transform(source_img)  # transform source image
+
+    assert np.shape(transform) == np.shape(source_img)
+    assert np.sum(vahadane_img - transform) < 1e-3
 
 
 # -------------------------------------------------------------------------------------
@@ -775,6 +851,36 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
             pathlib.Path(_response_stainnorm_target),
             "--method",
             "ruifrok",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
+
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            pathlib.Path(_response_stainnorm_source),
+            "--target_input",
+            pathlib.Path(_response_stainnorm_target),
+            "--method",
+            "macenko",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
+
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            pathlib.Path(_response_stainnorm_source),
+            "--target_input",
+            pathlib.Path(_response_stainnorm_target),
+            "--method",
+            "vahadane",
         ],
     )
 
