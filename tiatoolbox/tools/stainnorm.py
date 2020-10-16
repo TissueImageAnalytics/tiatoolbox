@@ -14,6 +14,9 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
+# This file contains code inspired by StainTools
+# [https://github.com/Peter554/StainTools] written by Peter Byfield."
+#
 # The Original Code is Copyright (C) 2020, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
@@ -35,6 +38,9 @@ from tiatoolbox.tools.stainextract import (
 
 class StainNormaliser:
     """Stain normalisation base class
+
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
 
     Attributes:
         extractor (CustomExtractor,RuifrokExtractor): method specific stain extractor
@@ -59,6 +65,7 @@ class StainNormaliser:
         Args:
             img (ndarray): input image
             stain_matrix (ndarray): stain matrix for haematoxylin and eosin stains
+
         Returns:
             ndarray: stain concentrations of input image
 
@@ -104,6 +111,9 @@ class StainNormaliser:
 class CustomNormaliser(StainNormaliser):
     """Stain Normalisation using a user-defined stain matrix.
 
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
+
     Args:
         stain_matrix (ndarray): user-defined stain matrix. Must be
                                 either 2x3 or 3x3.
@@ -129,6 +139,9 @@ class RuifrokNormaliser(StainNormaliser):
     histochemical staining by color deconvolution." Analytical and
     quantitative cytology and histology 23.4 (2001): 291-299.
 
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
+
     Examples:
         >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
         >>> norm = RuifrokNormaliser()
@@ -148,6 +161,9 @@ class MacenkoNormaliser(StainNormaliser):
     Macenko, Marc, et al. "A method for normalizing histology
     slides for quantitative analysis." 2009 IEEE International
     Symposium on Biomedical Imaging: From Nano to Macro. IEEE, 2009.
+
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser()
@@ -169,6 +185,9 @@ class VahadaneNormaliser(StainNormaliser):
     and sparse stain separation for histological images."
     IEEE transactions on medical imaging 35.8 (2016): 1962-1971.
 
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
+
     Examples:
         >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser()
         >>> norm = VahadaneNormaliser()
@@ -187,6 +206,9 @@ class ReinhardColourNormaliser:
 
     Reinhard, Erik, et al. "Color transfer between images."
     IEEE Computer graphics and applications 21.5 (2001): 34-41.
+
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
 
     Attributes:
         target_means (float): mean of each LAB channel
@@ -268,6 +290,7 @@ class ReinhardColourNormaliser:
             chan1 (float): L channel
             chan2 (float): A channel
             chan3 (float): B channel
+
         Returns:
             ndarray uint8: merged image
 
@@ -308,8 +331,9 @@ def get_normaliser(method_name, stain_matrix=None):
             This must either be a numpy array or a path to either a .csv or .npy
             file. This is only utilised if using "custom" method name.
 
-    Return:
+    Returns:
         StainNormaliser : an object with base 'StainNormaliser' as base class
+
     Examples:
         >>> from tiatoolbox.tools.stainnorm import get_normaliser
         >>> norm = get_normaliser('Reinhard')

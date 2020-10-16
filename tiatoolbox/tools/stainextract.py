@@ -14,6 +14,9 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
+# This file contains code inspired by StainTools
+# [https://github.com/Peter554/StainTools] written by Peter Byfield."
+#
 # The Original Code is Copyright (C) 2020, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
@@ -23,7 +26,12 @@ import numpy as np
 
 
 class CustomExtractor:
-    """Get the user-defined stain matrix"""
+    """Get the user-defined stain matrix
+
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
+
+    """
 
     def __init__(self, stain_matrix):
         self.stain_matrix = stain_matrix
@@ -41,6 +49,9 @@ class RuifrokExtractor:
     histochemical staining by color deconvolution." Analytical and
     quantitative cytology and histology 23.4 (2001): 291-299.
 
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
+
     """
 
     @staticmethod
@@ -55,6 +66,9 @@ class MacenkoExtractor:
     slides for quantitative analysis." 2009 IEEE International
     Symposium on Biomedical Imaging: From Nano to Macro. IEEE, 2009.
 
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
+
     """
 
     @staticmethod
@@ -68,6 +82,9 @@ class VahadaneExtractor:
     Vahadane, Abhishek, et al. "Structure-preserving color normalization
     and sparse stain separation for histological images."
     IEEE transactions on medical imaging 35.8 (2016): 1962-1971.
+
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield
 
     """
 
