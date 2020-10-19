@@ -205,8 +205,7 @@ def test_slide_info(_response_all_wsis, tmp_path):
     """Test for slide_info as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=_response_all_wsis,
-        file_types=file_types,
+        input_path=_response_all_wsis, file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -219,8 +218,7 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     """Test for slide_info in WSIReader class as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_param = wsi.slide_info
@@ -232,8 +230,7 @@ def test_wsireader_read_region(_response_svs):
     """Test for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     level = 0
@@ -249,8 +246,7 @@ def test_wsireader_slide_thumbnail(_response_svs):
     """Test for slide_thumbnail as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_thumbnail = wsi.slide_thumbnail()
@@ -262,8 +258,7 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
     """Test for save_tiles in wsireader as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_svs).parent),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(
         files_all[0],
@@ -298,8 +293,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
     """Test for save_tiles as a python function"""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -425,6 +419,7 @@ def test_background_composite():
     im = utils.transforms.background_composite(new_im, alpha=True)
     assert np.all(im[:, :, 3] == 255)
 
+
 def test_wsimeta_validate_fail():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
@@ -436,16 +431,10 @@ def test_wsimeta_validate_fail():
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_downsamples=[1, 2],
-    )
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_downsamples=[1, 2],
-    )
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
@@ -550,8 +539,7 @@ def test_command_line_slide_info(_response_all_wsis):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
     slide_info_result = runner.invoke(
         cli.main,
@@ -698,8 +686,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_response_all_wsis)),
-        file_types=file_types,
+        input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
     )
     save_svs_tiles_result = runner.invoke(
         cli.main,
@@ -717,6 +704,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     )
 
     assert save_svs_tiles_result.exit_code == 0
+
 
 def test_wsimeta_init_fail():
     with pytest.raises(TypeError):
@@ -762,21 +750,21 @@ def test_wsimeta_validate_pass():
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_ndpi))
-    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    wsi_obj = wsireader.OpenSlideWSIReader(_response_ndpi)
     meta = wsi_obj.slide_info
     assert meta.validate()
 
 
 def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_svs))
-    wsi_obj = wsireader.OpenSlideWSIReader(input_dir, file_name + ext)
+    wsi_obj = wsireader.OpenSlideWSIReader(_response_svs)
     meta = wsi_obj.slide_info
     assert meta.validate()
 
 
 def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.5, "mpp")
     expected = np.array(
         [
@@ -796,7 +784,7 @@ def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
 
 def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
     assert level_scales[0] == 1
     downsamples = np.array(wsi.slide_info.level_downsamples)
@@ -805,7 +793,7 @@ def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
 
 def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(3, "level")
     assert level_scales[3] == 1.0
     downsamples = np.array(wsi.slide_info.level_downsamples)
@@ -815,7 +803,7 @@ def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
 
 def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.125, "baseline")
     assert level_scales[3] == 1.0
     downsamples = np.array(wsi.slide_info.level_downsamples)
@@ -825,7 +813,7 @@ def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
 
 def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
 
     level_mpp_05, level_rescale_mpp_05 = wsi.optimal_relative_level_scale(0.5, "mpp")
     level_mpp_10, level_rescale_mpp_10 = wsi.optimal_relative_level_scale(10, "mpp")
@@ -838,7 +826,7 @@ def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
 
 def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
 
     level_power_05, level_rescale_power_05 = wsi.optimal_relative_level_scale(
         2.5, "power"
@@ -855,7 +843,7 @@ def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
 
 def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
 
     location = (0, 0)
     target_size = (256, 256)
@@ -881,7 +869,7 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
 
 def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
-    wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
+    wsi = wsireader.OpenSlideWSIReader(path)
 
     location = (0, 0)
     target_size = (256, 256)
