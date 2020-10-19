@@ -189,7 +189,7 @@ class WSIReader:
         return level, scale
 
     def read_rect_params_for_scale(
-        self, target_size, target_scale, units, scale_kwargs=None
+        self, location, target_size, target_scale, units, scale_kwargs=None
     ):
         """
         Find the optimal parameters to use for reading a rect at a give
@@ -213,7 +213,8 @@ class WSIReader:
         )
         read_size = np.round(np.array(target_size) * (1 / scale)).astype(int)
         post_read_scale = scale
-        return level, read_size, post_read_scale
+        level_location = np.round(np.array(location) / scale).astype(int)
+        return level, level_location, read_size, post_read_scale
 
     def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
         """Read a region in whole slide image
@@ -466,10 +467,16 @@ class OpenSlideWSIReader(WSIReader):
             >>> plt.imshow(im_region)
 
         """
-        output_size = [end_w - start_w, end_h - start_h]
+        target_size = [end_w - start_w, end_h - start_h]
+        location = (start_w, start_h)
         # Find parameters for optimal read
-        read_level, read_size, post_read_scale = self.read_rect_params_for_scale(
-            target_size=output_size, target_scale=scale, units=units,
+        (
+            read_level,
+            level_location,
+            read_size,
+            post_read_scale,
+        ) = self.read_rect_params_for_scale(
+            location=location, target_size=target_size, target_scale=scale, units=units,
         )
         wsi = self.openslide_wsi
         # Read at optimal level and corrected read size
@@ -479,7 +486,7 @@ class OpenSlideWSIReader(WSIReader):
             interpolation = cv2.INTER_AREA
             if post_read_scale > 1.0:
                 interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(im_region, output_size, interpolation=interpolation,)
+            im_region = cv2.resize(im_region, target_size, interpolation=interpolation)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -601,14 +608,28 @@ class OmnyxJP2WSIReader(WSIReader):
             >>> plt.imshow(im_region)
 
         """
-        factor = 2 ** scale
-        start_h = start_h * factor
-        start_w = start_w * factor
-        end_h = end_h * factor
-        end_w = end_w * factor
+        target_size = (end_w - start_w, end_h - start_h)
+        location = (start_w, start_h)
+        # Find parameters for optimal read
+        (
+            read_level,
+            level_location,
+            read_size,
+            post_read_scale,
+        ) = self.read_rect_params_for_scale(
+            location=location, target_size=target_size, target_scale=scale, units=units,
+        )
+        # Read at optimal level and corrected read size
+        area = (*level_location[::-1], *(level_location[::-1] + read_size))
 
         glymur_wsi = self.glymur_wsi
-        im_region = glymur_wsi.read(rlevel=level, area=(start_h, start_w, end_h, end_w))
+        im_region = glymur_wsi.read(rlevel=read_level, area=area)
+        if post_read_scale != 1.0:
+            interpolation = cv2.INTER_AREA
+            if post_read_scale > 1.0:
+                interpolation = cv2.INTER_CUBIC
+            im_region = cv2.resize(im_region, target_size, interpolation=interpolation)
+
         im_region = transforms.background_composite(image=im_region)
         return im_region
 

@@ -857,11 +857,20 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
 
+    location = (0, 0)
     target_size = (256, 256)
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
-        level, read_size, post_read_scale = wsi.read_rect_params_for_scale(
-            target_size=target_size, target_scale=target_scale, units="power",
+        (
+            level_location,
+            level,
+            read_size,
+            post_read_scale,
+        ) = wsi.read_rect_params_for_scale(
+            location=location,
+            target_size=target_size,
+            target_scale=target_scale,
+            units="power",
         )
         assert level >= 0
         assert level < wsi.slide_info.level_count
@@ -874,11 +883,20 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path.parent, path.name)
 
+    location = (0, 0)
     target_size = (256, 256)
     # Test a range of MPP
     for target_scale in range(1, 10):
-        level, read_size, post_read_scale = wsi.read_rect_params_for_scale(
-            target_size=target_size, target_scale=target_scale, units="mpp",
+        (
+            level_location,
+            level,
+            read_size,
+            post_read_scale,
+        ) = wsi.read_rect_params_for_scale(
+            location=location,
+            target_size=target_size,
+            target_scale=target_scale,
+            units="mpp",
         )
         assert level >= 0
         assert level < wsi.slide_info.level_count
