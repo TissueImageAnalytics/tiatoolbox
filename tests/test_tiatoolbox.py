@@ -850,8 +850,8 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
         (
-            level_location,
             level,
+            level_location,
             read_size,
             post_read_scale,
         ) = wsi.read_rect_params_for_scale(
@@ -876,8 +876,8 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
     # Test a range of MPP
     for target_scale in range(1, 10):
         (
-            level_location,
             level,
+            level_location,
             read_size,
             post_read_scale,
         ) = wsi.read_rect_params_for_scale(
