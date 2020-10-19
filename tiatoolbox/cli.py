@@ -67,10 +67,7 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Displays or saves WSI metadata"""
@@ -111,8 +108,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(),
-                out_path,
+                slide_param.as_dict(), out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -231,16 +227,10 @@ def slide_thumbnail(wsi_input, output_path, mode):
     "--tile_read_size_w", type=int, default=5000, help="tile width, default=5000",
 )
 @click.option(
-    "--tile_read_size_h",
-    type=int,
-    default=5000,
-    help="tile height, " "default=5000",
+    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
 )
 @click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
