@@ -136,13 +136,12 @@ class WSIReader:
             if isinstance(x, int) or int(x) == x:
                 # Return the downsample for the level
                 return info.level_downsamples[int(x)]
-            else:
-                # Linearly interpolate between levels
-                floor = int(np.floor(x))
-                ceil = int(np.ceil(x))
-                floor_downsample = info.level_downsamples[floor]
-                ceil_downsample = info.level_downsamples[ceil]
-                return np.interp(x, [floor, ceil], [floor_downsample, ceil_downsample])
+            # Linearly interpolate between levels
+            floor = int(np.floor(x))
+            ceil = int(np.ceil(x))
+            floor_downsample = info.level_downsamples[floor]
+            ceil_downsample = info.level_downsamples[ceil]
+            return np.interp(x, [floor, ceil], [floor_downsample, ceil_downsample])
 
         resolution = make_into_array(resolution)
 
