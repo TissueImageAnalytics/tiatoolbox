@@ -33,7 +33,7 @@ import shutil
 @pytest.fixture(scope="session")
 def _response_ndpi(tmpdir_factory):
     """
-    Sample pytest fixture for ndpi images
+    Sample pytest fixture for ndpi images.
     Download ndpi image for pytest
     """
     ndpi_file_path = tmpdir_factory.mktemp("data").join("CMU-1.ndpi")
@@ -54,7 +54,7 @@ def _response_ndpi(tmpdir_factory):
 @pytest.fixture(scope="session")
 def _response_svs(tmpdir_factory):
     """
-    Sample pytest fixture for svs images
+    Sample pytest fixture for svs images.
     Download ndpi image for pytest
     """
     svs_file_path = tmpdir_factory.mktemp("data").join("CMU-1-Small-Region.svs")
@@ -75,7 +75,7 @@ def _response_svs(tmpdir_factory):
 @pytest.fixture(scope="session")
 def _response_jp2(tmpdir_factory):
     """
-    Sample pytest fixture for svs images
+    Sample pytest fixture for svs images.
     Download ndpi image for pytest
     """
     jp2_file_path = tmpdir_factory.mktemp("data").join("test1.jp2")
@@ -112,7 +112,7 @@ def _response_all_wsis(_response_ndpi, _response_svs, _response_jp2, tmpdir_fact
 @pytest.fixture(scope="session")
 def _response_stainnorm_source(tmpdir_factory):
     """
-    Sample pytest fixture for source image for stain normalisation
+    Sample pytest fixture for source image for stain normalisation.
     Download png image for pytest
     """
     source_file_path = tmpdir_factory.mktemp("data").join("source.png")
@@ -134,7 +134,7 @@ def _response_stainnorm_source(tmpdir_factory):
 @pytest.fixture(scope="session")
 def _response_stainnorm_target(tmpdir_factory):
     """
-    Sample pytest fixture for target image for stain normalisation
+    Sample pytest fixture for target image for stain normalisation.
     Download png image for pytest
     """
     target_file_path = tmpdir_factory.mktemp("data").join("target.png")
@@ -156,7 +156,7 @@ def _response_stainnorm_target(tmpdir_factory):
 @pytest.fixture(scope="session")
 def _response_reinhard(tmpdir_factory):
     """
-    Sample pytest fixture for reinhard normalised image
+    Sample pytest fixture for reinhard normalised image.
     Download png image for pytest
     """
     reinhard_file_path = tmpdir_factory.mktemp("data").join("reinhard.png")
@@ -178,7 +178,7 @@ def _response_reinhard(tmpdir_factory):
 @pytest.fixture(scope="session")
 def _response_ruifrok(tmpdir_factory):
     """
-    Sample pytest fixture for ruifrok normalised image
+    Sample pytest fixture for ruifrok normalised image.
     Download png image for pytest
     """
     ruifrok_file_path = tmpdir_factory.mktemp("data").join("ruifrok.png")
@@ -202,7 +202,7 @@ def _response_ruifrok(tmpdir_factory):
 
 
 def test_slide_info(_response_all_wsis, tmp_path):
-    """Test for slide_info as a python function"""
+    """Test for slide_info as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=_response_all_wsis, file_types=file_types,
@@ -215,7 +215,7 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
-    """Test for slide_info in WSIReader class as a python function"""
+    """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
@@ -227,7 +227,7 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
 
 
 def test_wsireader_read_bounds(_response_svs):
-    """Test for read region as a python function"""
+    """Test for read region as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
@@ -243,7 +243,7 @@ def test_wsireader_read_bounds(_response_svs):
 
 
 def test_wsireader_slide_thumbnail(_response_svs):
-    """Test for slide_thumbnail as a python function"""
+    """Test for slide_thumbnail as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
@@ -255,7 +255,7 @@ def test_wsireader_slide_thumbnail(_response_svs):
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
-    """Test for save_tiles in wsireader as a python function"""
+    """Test for save_tiles in wsireader as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
@@ -290,7 +290,7 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
 
 
 def test_save_tiles(_response_all_wsis, tmp_path):
-    """Test for save_tiles as a python function"""
+    """Test for save_tiles as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_all_wsis)), file_types=file_types,
@@ -349,7 +349,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
-    """Pytest for save_tiles in wsireader as a python function"""
+    """Pytest for save_tiles in wsireader as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(
         _response_jp2,
         output_dir=str(
@@ -382,7 +382,7 @@ def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
 
 
 def test_exception_tests():
-    """Test for Exceptions"""
+    """Test for Exceptions."""
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
@@ -402,14 +402,14 @@ def test_exception_tests():
 
 
 def test_imresize():
-    """Test for imresize"""
+    """Test for imresize."""
     img = np.zeros((2000, 2000, 3))
     resized_img = utils.transforms.imresize(img, 0.5)
     assert resized_img.shape == (1000, 1000, 3)
 
 
 def test_background_composite():
-    """Test for background composite"""
+    """Test for background composite."""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
     im = utils.transforms.background_composite(new_im)
@@ -477,7 +477,7 @@ def test_ruifrok_normalise(
 
 
 def test_command_line_help_interface():
-    """Test the CLI help"""
+    """Test the CLI help."""
     runner = CliRunner()
     result = runner.invoke(cli.main)
     assert result.exit_code == 0
@@ -487,7 +487,7 @@ def test_command_line_help_interface():
 
 
 def test_command_line_version():
-    """Test for version check"""
+    """Test for version check."""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
@@ -581,7 +581,7 @@ def test_command_line_read_bounds(_response_ndpi, tmp_path):
 
 
 def test_command_line_jp2_read_bounds(_response_jp2, tmp_path):
-    """Pytest JP2 read_bounds"""
+    """Pytest JP2 read_bounds."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
         cli.main,
@@ -687,14 +687,14 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_wsimeta_init_fail():
-    """Test incorrect init for WSIMeta raises TypeError"""
+    """Test incorrect init for WSIMeta raises TypeError."""
     with pytest.raises(TypeError):
         wsimeta.WSIMeta(slide_dimensions=None)
 
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_fail():
-    """Test failure cases for WSIMeta validation"""
+    """Test failure cases for WSIMeta validation."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
 
@@ -741,7 +741,7 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
-    """Test WSIMeta validation"""
+    """Test WSIMeta validation."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     assert meta.validate()
 
@@ -753,21 +753,21 @@ def test_wsimeta_validate_pass():
 
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
-    """Test OpenSlide reader metadata for ndpi"""
+    """Test OpenSlide reader metadata for ndpi."""
     wsi_obj = wsireader.OpenSlideWSIReader(_response_ndpi)
     meta = wsi_obj.slide_info
     assert meta.validate()
 
 
 def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
-    """Test OpenSlide reader metadata for svs"""
+    """Test OpenSlide reader metadata for svs."""
     wsi_obj = wsireader.OpenSlideWSIReader(_response_svs)
     meta = wsi_obj.slide_info
     assert meta.validate()
 
 
 def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
-    """Test calculation of relative level scales for mpp"""
+    """Test calculation of relative level scales for mpp."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.5, "mpp")
@@ -788,7 +788,7 @@ def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
-    """Test calculation of relative level scales for objective power"""
+    """Test calculation of relative level scales for objective power."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
@@ -800,7 +800,7 @@ def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
-    """Test calculation of relative level scales for level"""
+    """Test calculation of relative level scales for level."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(3, "level")
@@ -813,7 +813,7 @@ def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_level_float(_response_ndpi):
-    """Test calculation of relative level scales for fracitonal level"""
+    """Test calculation of relative level scales for fracitonal level."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(1.5, "level")
@@ -826,7 +826,7 @@ def test_openslidewsireader_relative_level_scales_level_float(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
-    """Test calculation of relative level scales for pixels per baseline pixel"""
+    """Test calculation of relative level scales for pixels per baseline pixel."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.125, "baseline")
@@ -838,7 +838,7 @@ def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
 
 
 def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
-    """Test finding optimal level for mpp read"""
+    """Test finding optimal level for mpp read."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -856,7 +856,7 @@ def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
 
 
 def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
-    """Test finding optimal level for objective power read"""
+    """Test finding optimal level for objective power read."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -874,7 +874,7 @@ def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
 
 
 def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
-    """Test finding read rect parameters for objective power"""
+    """Test finding read rect parameters for objective power."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -893,7 +893,7 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
 
 
 def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
-    """Test finding read rect parameters for objective mpp"""
+    """Test finding read rect parameters for objective mpp."""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
