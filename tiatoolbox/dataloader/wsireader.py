@@ -661,12 +661,7 @@ class OpenSlideWSIReader(WSIReader):
         target_size = size
 
         # Find parameters for optimal read
-        (
-            read_level,
-            level_location,
-            read_size,
-            post_read_scale,
-        ) = self.find_read_rect_params(
+        (read_level, _, read_size, post_read_scale,) = self.find_read_rect_params(
             location=location, size=target_size, resolution=resolution, units=units,
         )
         wsi = self.openslide_wsi
