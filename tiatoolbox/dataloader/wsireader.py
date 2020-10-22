@@ -477,7 +477,6 @@ class WSIReader:
             new_size = np.round(np.array(level_dimensions) * post_read_scale)
             new_size = tuple(new_size.astype(int))
             thumb = cv2.resize(thumb, new_size, interpolation=cv2.INTER_AREA)
-            cv2.imwrite("/home/john/Downloads/thumbnail.png", thumb)
 
         thumb = np.array(thumb)
 
