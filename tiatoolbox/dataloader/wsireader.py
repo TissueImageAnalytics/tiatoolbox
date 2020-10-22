@@ -822,10 +822,3 @@ class OmnyxJP2WSIReader(WSIReader):
         )
 
         return param
-
-    def slide_thumbnail(self, resolution=1.25, units="power"):
-        glymur_wsi = self.glymur_wsi
-        read_level = np.int(np.log2(self.slide_info.objective_power / 1.25))
-        thumb = np.asarray(glymur_wsi.read(rlevel=read_level))
-
-        return thumb
