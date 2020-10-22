@@ -449,7 +449,7 @@ class WSIReader:
         )
 
     def slide_thumbnail(self, resolution=1.25, units="power"):
-        """Read the whole slide image thumbnail at 1.25x.
+        """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see :fun:`read_rect`
 
