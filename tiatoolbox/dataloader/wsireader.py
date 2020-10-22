@@ -63,9 +63,7 @@ class WSIReader:
                 default=20
             tile_read_size_w (int): tile width, default=5000
             tile_read_size_h (int): tile height, default=5000
-
         """
-
         self.input_path = pathlib.Path(input_path)
         if output_dir is not None:
             self.output_dir = pathlib.Path(output_dir, self.input_path.name)

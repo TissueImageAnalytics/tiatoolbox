@@ -196,7 +196,6 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 )
 def slide_thumbnail(wsi_input, output_path, mode):
     """Reads whole slide image thumbnail"""
-
     input_dir, file_name, file_type = utils.misc.split_path_name_ext(
         full_path=wsi_input
     )
