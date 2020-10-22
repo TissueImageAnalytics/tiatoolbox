@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""WSIReader for WSI reading or extracting metadata information from WSIs"""
+"""WSIReader for WSI reading or extracting metadata information from WSIs."""
 from tiatoolbox.utils import misc, transforms
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
@@ -35,7 +35,7 @@ import numbers
 
 
 class WSIReader:
-    """WSI Reader class to read WSI images
+    """WSI Reader class to read WSI images.
 
     Attributes:
         input_path (pathlib.Path): input path to WSI directory
@@ -124,7 +124,7 @@ class WSIReader:
         info = self.slide_info
 
         def make_into_array(x):
-            """Ensure input x is a numpy array of length 2"""
+            """Ensure input x is a numpy array of length 2."""
             if isinstance(resolution, numbers.Number):
                 # If one number is given, the same value is used for x and y
                 return np.array([resolution] * 2)
@@ -132,7 +132,7 @@ class WSIReader:
 
         @np.vectorize
         def level_to_downsample(x):
-            """Get the downsample for a level, interpolating non-integer levels"""
+            """Get the downsample for a level, interpolating non-integer levels."""
             if isinstance(x, int) or int(x) == x:
                 # Return the downsample for the level
                 return info.level_downsamples[int(x)]
@@ -236,7 +236,7 @@ class WSIReader:
         return read_level, level_location, read_size, post_read_downsample
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        """Read a region of the whole slide image at a location and size
+        """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
         resolution), and size is the output reguion size.
