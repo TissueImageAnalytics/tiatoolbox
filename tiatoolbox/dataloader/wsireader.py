@@ -546,11 +546,8 @@ class WSIReader:
                 end_h = (h * tile_h) + tile_h
                 start_w = w * tile_w
                 end_w = (w * tile_w) + tile_w
-                if end_h > slide_h:
-                    end_h = slide_h
-
-                if end_w > slide_w:
-                    end_w = slide_w
+                end_h = min(end_h, slide_h)
+                end_w = min(end_w, slide_w)
 
                 # Read image region
                 im = self.read_bounds(start_w, start_h, end_w, end_h, level)
