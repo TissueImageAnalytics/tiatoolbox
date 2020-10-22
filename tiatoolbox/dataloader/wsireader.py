@@ -260,7 +260,7 @@ class WSIReader:
                 the top left pixel in the baseline (level 0)
                 reference frame.
             size (tuple of int): (width, height) tuple
-                giving the desired output image size
+                giving the desired output image size.
             resolution (int or float or tuple of float): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
@@ -381,10 +381,10 @@ class WSIReader:
         interpolation is applied to the output image.
 
         Args:
-            start_w (int): starting point in x-direction (along width)
-            start_h (int): starting point in y-direction (along height)
-            end_w (int): end point in x-direction (along width)
-            end_h (int): end point in y-direction (along height)
+            start_w (int): starting point in x-direction (along width).
+            start_h (int): starting point in y-direction (along height).
+            end_w (int): end point in x-direction (along width).
+            end_h (int): end point in y-direction (along height).
             resolution (int or float or tuple of float): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
@@ -432,9 +432,19 @@ class WSIReader:
 
         This function is to help with writing code which is backwards
         compatible with OpenSlide. As such it has the same arguments.
-        However, other reader classes will inherit this function as so
+
+        Other reader classes will inherit this function and therefore
         some WSI formats which are not supported by OpenSlide may also
         be readable with the same syntax.
+
+        Args:
+            location: (x, y) tuple giving the top left pixel in the
+                level 0 reference frame.
+            level: the level number.
+            size: (width, height) tuple giving the region size.
+
+        Returns:
+            PIL.Image: Image containing the contents of the region.
         """
         return self.read_rect(
             location=location, size=size, resolution=level, units="level"
