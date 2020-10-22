@@ -210,9 +210,7 @@ class WSIReader:
         return level, scale
 
     def find_read_rect_params(self, location, size, resolution, units, precision=3):
-        """
-        Find the optimal parameters to use for reading a rect at a given
-        resolution.
+        """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
             size (float): Desired output size in pixels
