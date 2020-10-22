@@ -9,7 +9,7 @@ from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader, wsimeta
 from tiatoolbox.tools.stainnorm import get_normaliser
-from tiatoolbox import utilsss
+from tiatoolbox import utils
 
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.utils.misc import imread
