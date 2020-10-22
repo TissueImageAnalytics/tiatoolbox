@@ -238,7 +238,7 @@ class WSIReader:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
-        resolution), and size is the output reguion size.
+        resolution), and size is the output region size.
 
         This method reads provides a fast method for performing partial
         reads (reading without loading the whole image into memory) of
