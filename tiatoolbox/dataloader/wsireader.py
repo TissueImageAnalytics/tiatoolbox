@@ -451,11 +451,15 @@ class WSIReader:
     def slide_thumbnail(self, resolution=1.25, units="power"):
         """Read the whole slide image thumbnail at 1.25x.
 
+        For more information on resolution and units see :fun:`read_rect`
+
         Args:
-            self (WSIReader):
+            resolution (int or float or tuple of float): resolution to
+                read thumbnail at, default = 1.25 (objective power)
+            units (str): resolution units, default = "power"
 
         Returns:
-            ndarray : image array
+            ndarray : thumbnail image
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
