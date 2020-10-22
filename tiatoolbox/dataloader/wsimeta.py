@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""WSIMeta to save metadata information for WSIs"""
+"""WSIMeta to save metadata information for WSIs."""
 import warnings
 from pathlib import Path
 from typing import Sequence, Tuple, Optional, Mapping
@@ -27,7 +27,7 @@ import numpy as np
 
 
 class WSIMeta:
-    """Whole slide image metadata class
+    """Whole slide image metadata class.
 
     Attributes:
         slide_dimensions (:obj:`tuple` of :obj:`int`): Tuple containing the width and
@@ -64,7 +64,8 @@ class WSIMeta:
         file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
     ):
-        """
+        """Initialise the metadata object.
+
         Args:
             slide_dimensions (int, int): Tuple containing the width and
                 height of the WSI. These are for the baseline (full resolution)
@@ -109,8 +110,7 @@ class WSIMeta:
         self.validate()
 
     def validate(self):
-        """
-        Validate passed values and cast to Python types
+        """Validate passed values and cast to Python types.
 
         Metadata values are often given as strings and must be parsed/cast to the
         appropriate python type e.g. "3.14" to 3.14 etc.
@@ -151,8 +151,7 @@ class WSIMeta:
         return passed
 
     def as_dict(self):
-        """
-        Convert WSIMeta to dictionary of Python types
+        """Convert WSIMeta to dictionary of Python types.
 
         Returns:
             dict: whole slide image meta data as dictionary
