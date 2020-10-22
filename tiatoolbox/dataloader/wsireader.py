@@ -87,7 +87,7 @@ class WSIReader:
         raise NotImplementedError
 
     def relative_level_scales(self, resolution, units):
-        """Calculate relative scale of each resolution in the WSI.
+        """Calculate scale of each level in the WSI relative to given resolution.
 
         Find the relative scale of each image pyramid / resolution level
         of the WSI relative to the given resolution and units.
