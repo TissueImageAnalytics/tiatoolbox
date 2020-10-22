@@ -75,7 +75,7 @@ class WSIReader:
 
     @property
     def slide_info(self):
-        """WSI meta data reader
+        """WSI metadata getter.
 
         Args:
             self (WSIReader):
@@ -88,7 +88,7 @@ class WSIReader:
 
     def relative_level_scales(self, resolution, units):
         """Calculate relative scale of each resolution in the WSI.
-        
+
         Find the relative scale of each image pyramid / resolution level
         of the WSI relative to the given resolution and units.
 
