@@ -127,7 +127,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     help="image region in the whole slide image to read, default=0 0 2000 2000",
 )
 @click.option(
-    "--level", type=int, default=0, help="pyramid level to read the image, default=0",
+    "--resolution",
+    type=float,
+    default=0,
+    help="resolution to read the image at, default=0",
+)
+@click.option(
+    "--units",
+    default="level",
+    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
+    help="resolution units, default=level",
 )
 @click.option(
     "--mode",
@@ -135,7 +144,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def read_region(wsi_input, region, level, output_path, mode):
+def read_bounds(wsi_input, region, resolution, units, output_path, mode):
     """Reads a region in an whole slide image as specified"""
     if not region:
         region = [0, 0, 2000, 2000]
@@ -154,7 +163,14 @@ def read_region(wsi_input, region, level, output_path, mode):
         wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
 
     if wsi is not None:
-        im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
+        im_region = wsi.read_bounds(
+            region[0],
+            region[1],
+            region[2],
+            region[3],
+            resolution=resolution,
+            units=units,
+        )
         if mode == "show":
             im_region = Image.fromarray(im_region)
             im_region.show()

@@ -27,7 +27,30 @@ import numpy as np
 
 
 class WSIMeta:
-    """Whole slide image metadata class"""
+    """Whole slide image metadata class
+
+    Attributes:
+        slide_dimensions (:obj:`tuple` of :obj:`int`): Tuple containing the width and
+            height of the WSI. These are for the baseline (full resolution)
+            image if the WSI is a pyramid or multi-resoltion.
+        level_dimensions (list): A list of dimensions for each level of the
+            pyramid or for each resolution in the WSI.
+        objective_power (float): The magnification power of the objective lens
+            used to scan the image. Not always present or accurate.
+        level_count: (int): The number of levels or resolutions
+            in the WSI. If not given this is assigned
+            len(level_dimensions). Defaults to None.
+        level_downsamples (:obj:`list` of :obj:`float`): List of scale
+            values which describe how many times smaller the current level
+            is compared with the baseline.
+        vendor (str): Scanner vendor/manufacturer description.
+        mpp (float, float, optional): Microns per pixel. Derived from objective
+            power and sensor size. Not always present or accurate.
+        file_path (Path): Path to the corresponding WSI file.
+        raw (dict): Dictionary of unprocessed metadata extracted
+            from the WSI format. For JP2 images this contains an xml object
+            under the key "xml".
+    """
 
     def __init__(
         self,
@@ -41,6 +64,28 @@ class WSIMeta:
         file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
     ):
+        """
+        Args:
+            slide_dimensions (int, int): Tuple containing the width and
+                height of the WSI. These are for the baseline (full resolution)
+                image if the WSI is a pyramid or multi-resoltion.
+            level_dimensions (list): A list of dimensions for each level of the
+                pyramid or for each resolution in the WSI.
+            objective_power (float, optional): The power of the objective lens
+                used to create the image.
+            level_count: (int, optional): The number of levels or resolutions
+                in the WSI. If not given this is assigned
+                len(level_dimensions). Defaults to None.
+            level_downsamples (:obj:`list` of :obj:`float`): List of scale
+                values which describe how many times smaller the current level
+                is compared with the baseline.
+            vendor (str, optional): Scanner vendor/manufacturer description.
+            mpp (float, float, optional): Microns per pixel.
+            file_path (Path, optional): Path to the corresponding WSI file.
+            raw (dict, optional): Dictionary of unprocessed metadata extracted
+                from the WSI format. For JPEG-2000 images this contains an xml
+                object under the key "xml".
+        """
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple([int(x) for x in slide_dimensions])
         self.level_dimensions = (
@@ -69,9 +114,6 @@ class WSIMeta:
 
         Metadata values are often given as strings and must be parsed/cast to the
         appropriate python type e.g. "3.14" to 3.14 etc.
-
-        Args:
-            self (WSIMeta):
 
         Returns:
             bool: True is validation passed, False otherwise.
@@ -110,10 +152,7 @@ class WSIMeta:
 
     def as_dict(self):
         """
-        Converts WSIMeta to dictionary to assist print and save in various formats
-
-        Args:
-            self (WSIMeta):
+        Convert WSIMeta to dictionary of Python types
 
         Returns:
             dict: whole slide image meta data as dictionary

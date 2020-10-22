@@ -31,6 +31,7 @@ import math
 import pandas as pd
 import cv2
 import re
+import numbers
 
 
 class WSIReader:
@@ -55,8 +56,8 @@ class WSIReader:
     ):
         """
         Args:
-            input_path (str, pathlib.Path): input path to WSI
-            output_dir (str, pathlib.Path): output directory to save the output,
+            input_path (str or pathlib.Path): input path to WSI
+            output_dir (str or pathlib.Path): output directory to save the output,
                 default=./output
             tile_objective_value (int): objective value at which tile is generated,
                 default=20
@@ -85,7 +86,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def relative_level_scales(self, target_scale, units):
+    def relative_level_scales(self, resolution, units):
         """
         Calculate scale of each image pyramid level relative to the
         given target scale and units.
@@ -94,7 +95,8 @@ class WSIReader:
         target and < 1 indicates that it is smaller.
 
         Args:
-            target_scale (float): Scale to calculate relative to
+            resolution (float or tuple of float): Scale to calculate
+                relative to
             units (str): Units of the scale. Allowed values are: mpp,
                 power, level, baseline. Baseline refers to the largest
                 resolution in the WSI (level 0).
@@ -121,43 +123,65 @@ class WSIReader:
         """
         info = self.slide_info
 
+        def make_into_array(x):
+            """Ensure input x is a numpy array of length 2"""
+            if isinstance(resolution, numbers.Number):
+                # If one number is given, the same value is used for x and y
+                return np.array([resolution] * 2)
+            return np.array(resolution)
+
+        @np.vectorize
+        def level_to_downsample(x):
+            """Get the downsample for a level, interpolating non-integer levels"""
+            if isinstance(x, int) or int(x) == x:
+                # Return the downsample for the level
+                return info.level_downsamples[int(x)]
+            else:
+                # Linearly interpolate between levels
+                floor = int(np.floor(x))
+                ceil = int(np.ceil(x))
+                floor_downsample = info.level_downsamples[floor]
+                ceil_downsample = info.level_downsamples[ceil]
+                return np.interp(x, [floor, ceil], [floor_downsample, ceil_downsample])
+
+        resolution = make_into_array(resolution)
+
         if units == "mpp":
-            if info.mpp is not None:
-                base_scale = info.mpp
-            else:
+            if info.mpp is None:
                 raise ValueError("MPP is None")
+            base_scale = info.mpp
         elif units == "power":
-            if info.objective_power is not None:
-                base_scale = 1 / info.objective_power
-                target_scale = 1 / target_scale
-            else:
+            if info.objective_power is None:
                 raise ValueError("Objective power is None")
+            base_scale = 1 / info.objective_power
+            resolution = 1 / resolution
         elif units == "level":
-            if target_scale >= len(info.level_downsamples):
+            if any(resolution >= len(info.level_downsamples)):
                 raise ValueError("Target scale level > number of levels in WSI")
             base_scale = 1
-            target_scale = info.level_downsamples[target_scale]
+            resolution = level_to_downsample(resolution)
         elif units == "baseline":
             base_scale = 1
-            target_scale = 1 / target_scale
+            resolution = 1 / resolution
         else:
             raise ValueError("Invalid units")
 
-        return [(base_scale * ds) / target_scale for ds in info.level_downsamples]
+        return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
-    def optimal_relative_level_scale(self, target_scale, units, precision=3):
+    def find_optimal_level_and_downsample(self, resolution, units, precision=3):
         """
-        Find the optimal level to read at for a desired scale and units.
+        Find the optimal level to read at for a desired resolution and units.
 
         The optimal level is the most downscaled level of the image
         pyramid (or multi-resolution layer) which is larger than the
-        desired target scale. The returned scale is the scale factor
-        required, post read, to achieve the desired scale.
+        desired target scale. The returned downsample is the scale factor
+        required, post read, to achieve the desired resolution.
 
         Args:
-            target_scale (float): Scale to calculate relative to
+            resolution (float or tuple of float): Resolution to
+                find optimal read parameters for
             units (str): Units of the scale. Allowed values are the same
-                as for WSIReader.relative_level_scales
+                as for `WSIReader.relative_level_scales`
             precision (int, optional): Decimal places to use when
                 finding optimal scale. This can be adjusted to avoid
                 errors when an unecessary precision is used. E.g.
@@ -165,21 +189,21 @@ class WSIReader:
                 Defaults to 3.
 
         Returns:
-            tuple: Optimal read level and scale factor between the optimal level
-                and the target scale (usually <= 1).
+            (int, float): Optimal read level and scale factor between
+                the optimal level and the target scale (usually <= 1).
         """
-        level_scales = self.relative_level_scales(target_scale, units)
+        level_scales = self.relative_level_scales(resolution, units)
         # Note that np.argmax finds the index of the first True element.
         # Here it is used on a reversed list to find the first
         # element <=1, which is the same element as the last <=1
         # element when counting forward in the regular list.
         reverse_index = np.argmax(
-            [np.all(np.round(x, decimals=precision) <= 1) for x in level_scales[::-1]]
+            [all(np.round(x, decimals=precision) <= 1) for x in level_scales[::-1]]
         )
         # Convert the index from the reversed list to the regular index (level)
         level = (len(level_scales) - 1) - reverse_index
         scale = level_scales[level]
-        if np.any(np.array(scale) > 1):
+        if any(np.array(scale) > 1):
             warnings.warn(
                 "Scale > 1."
                 "This means that the desired scale is a higher"
@@ -188,55 +212,236 @@ class WSIReader:
             )
         return level, scale
 
-    def read_rect_params_for_scale(
-        self, location, target_size, target_scale, units, scale_kwargs=None
-    ):
+    def find_read_rect_params(self, location, size, resolution, units, precision=3):
         """
-        Find the optimal parameters to use for reading a rect at a give
-        scale.
+        Find the optimal parameters to use for reading a rect at a given
+        resolution.
 
         Args:
-            target_size (float): Desired output size in pixels
-            target_scale (float): Scale to calculate relative to
+            size (float): Desired output size in pixels
+            resolutions (float): Resolution to calculate relative to
             units (str): Units of the scale. Allowed values are the same
                 as for WSIReader.relative_level_scales
 
         Returns:
-            tuple: Optimal level, size (width, height) of the region to
-                read, downscaling factor to apply after reading to reach
-                target_size and correct scale.
+            (int, tuple of int, tuple of int, float): Optimal level,
+                size (width, height) of the region to read, downscaling
+                factor to apply after reading to reach size and
+                correct scale.
         """
-        if scale_kwargs is None:
-            scale_kwargs = {}
-        level, scale = self.optimal_relative_level_scale(
-            target_scale, units, **scale_kwargs
+        read_level, post_read_downsample = self.find_optimal_level_and_downsample(
+            resolution, units, precision
         )
-        read_size = np.round(np.array(target_size) * (1 / scale)).astype(int)
-        post_read_scale = scale
-        level_location = np.round(np.array(location) / scale).astype(int)
-        return level, level_location, read_size, post_read_scale
+        read_size = np.round(np.array(size) * (1 / post_read_downsample)).astype(int)
+        level_location = np.round(np.array(location) / post_read_downsample).astype(int)
+        return read_level, level_location, read_size, post_read_downsample
 
-    def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
-        """Read a region in whole slide image
+    def read_rect(self, location, size, resolution=0, units="level"):
+        """Read a region of the whole slide image at a location and size
+
+        Location is in terms of the baseline image (level 0  / maximum
+        resolution), and size is the output reguion size.
+
+        This method reads provides a fast method for performing partial
+        reads (reading without loading the whole image into memory) of
+        the WSI.
+
+        Reads can also be performed at different resolutions. This is
+        done by supplying a pair of arguments for the resolution and
+        units of resolution. If the WSI does not have a resolution layer
+        corresponding exactly to the requested resolution, a larger
+        resolution is downscaled to achieve the correct requested output
+        resolution. If the requested resolution is higher than the
+        baseline (maximum resultion of the image), then bicubic
+        interpolation is applied to the output image.
+
+        Args:
+            location (tuple of int): (x, y) tuple giving
+                the top left pixel in the baseline (level 0)
+                reference frame.
+            size (tuple of int): (width, height) tuple
+                giving the desired output image size
+            resolution (int or float or tuple of float): resolution at
+                which to read the image, default = 0. Either a single
+                number or a sequence of two numbers for x and y are
+                valid. This scale value is in terms of the corresponding
+                units. For example: resolution=0.5 and units="mpp" will
+                read the slide at 0.5 microns per-pixel, and
+                resolution=3, units="level" will read at level at
+                pyramid level / resolution layer 3.
+            units (str): the units of scale, default = "level".
+                Supported units are: microns per pixel (mpp), objective
+                power (power), pyramid / resolution level (level),
+                pixels per baseline pixel (baseline).
+
+        Returns:
+            ndarray : array of size MxNx3
+            M=size[0], N=size[1]
+
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> # Load a WSI image
+            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> img = wsi.read_rect(location, size)
+            >>> # Read a region at 0.5 microns per pixel (mpp)
+            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=[0.5, 0.5],
+            ...     units="mpp",
+            ... )
+            >>> # The resolution can be different in x and y, e.g.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=[0.5, 0.75],
+            ...     units="mpp",
+            ... )
+            >>> # Several units can be used including: objective power,
+            >>> # microns per pixel, pyramid/resolution level, and
+            >>> # fraction of baseline.
+            >>> # E.g. Read a region at an objective power of 10x
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=10,
+            ...     units="power",
+            ... )
+            >>> # Read a region at pyramid / resolution level 1
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1,
+            ...     units="level",
+            ... )
+            >>> # Read at a fractional level, this will linearly
+            >>> # interpolate the downsampling factor between levels.
+            >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
+            >>> # 2x of baseline, then level 0.5 will correspond to a
+            >>> # downsampling factor 1.5x of baseline.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="level",
+            ... )
+            >>> # Read a region at half of the full / baseline
+            >>> # resolution.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="baseline",
+            ... )
+            >>> # Read at a higher resolution than the baseline
+            >>> # (interpolation applied to output)
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1.25,
+            ...     units="baseline",
+            ... )
+            >>> # Assuming the image has a native mpp of 0.5,
+            >>> # interpolation will be applied here.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.25,
+            ...     units="mpp",
+            ... )
+
+        """
+        raise NotImplementedError
+
+    def read_bounds(self, start_w, start_h, end_w, end_h, resolution=0, units="level"):
+        """Read a region of the whole slide image within given bounds.
+
+        Bounds are in terms of the baseline image (level 0  / maximum
+        resolution).
+
+        Internally this method uses :func:`read_rect`. See
+        :func:`read_rect` for more.
+
+        This method reads provides a fast method for performing partial
+        reads (reading without loading the whole image into memory) of
+        the WSI.
+
+        Reads can also be performed at different resolutions. This is
+        done by supplying a pair of arguments for the resolution and
+        units of resolution. If the WSI does not have a resolution layer
+        corresponding exactly to the requested resolution, a larger
+        resolution is downscaled to achieve the correct requested output
+        resolution. If the requested resolution is higher than the
+        baseline (maximum resultion of the image), then bicubic
+        interpolation is applied to the output image.
 
         Args:
             start_w (int): starting point in x-direction (along width)
             start_h (int): starting point in y-direction (along height)
             end_w (int): end point in x-direction (along width)
             end_h (int): end point in y-direction (along height)
-            scale (float): scale at which to read the image, default = 0
+            resolution (int or float or tuple of float): resolution at
+                which to read the image, default = 0. Either a single
+                number or a sequence of two numbers for x and y are
+                valid. This scale value is in terms of the corresponding
+                units. For example: resolution=0.5 and units="mpp" will
+                read the slide at 0.5 microns per-pixel, and
+                resolution=3, units="level" will read at level at
+                pyramid level / resolution layer 3.
             units (str): the units of scale, default = "level".
-                supported units are "mpp", "power", "level", "baseline"
+                Supported units are: microns per pixel (mpp), objective
+                power (power), pyramid / resolution level (level),
+                pixels per baseline pixel (baseline).
 
         Returns:
-            img_array : ndarray of size MxNx3
+            ndarray : array of size MxNx3
             M=end_h-start_h, N=end_w-start_w
 
+        Examples:
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi_obj = wsireader.WSIReader("/path/to/a/wsi")
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> bounds = [1000, 2000, 2000, 3000]
+            >>> img = wsi_obj.read_bounds(*bounds)
+            >>> plt.imshow(img)
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi_obj.read_bounds(
+            ...     start_w=bounds[0],
+            ...     start_h=bounds[1],
+            ...     end_w=bounds[2],
+            ...     end_h=bounds[3],
+            ...     resolution=0,
+            ...     units="level",
+            ... )
+            >>> plt.imshow(img)
         """
-        raise NotImplementedError
+        location = (start_w, start_h)
+        size = (end_w - start_w, end_h - start_h)
+        return self.read_rect(
+            location=location, size=size, resolution=resolution, units=units
+        )
 
-    def slide_thumbnail(self, scale=1.25, units="power"):
-        """Read whole slide image thumbnail at 1.25x
+    def read_region(self, location, level, size):
+        """Read a region of the whole slide image (OpenSlide format args).
+
+        This function is to help with writing code which is backwards
+        compatible with OpenSlide. As such it has the same arguments.
+        However, other reader classes will inherit this function as so
+        some WSI formats which are not supported by OpenSlide may also
+        be readable with the same syntax.
+        """
+        return self.read_rect(
+            location=location, size=size, resolution=level, units="level"
+        )
+
+    def slide_thumbnail(self, resolution=1.25, units="power"):
+        """Read the whole slide image thumbnail at 1.25x.
 
         Args:
             self (WSIReader):
@@ -246,16 +451,17 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.OpenSlideWSIReader(input_dir="./",
+            >>> wsi = wsireader.OpenSlideWSIReader(input_dir="./",
             ...     file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi_obj.slide_thumbnail()
-
+            >>> slide_thumbnail = wsi.slide_thumbnail()
         """
-        level, post_read_scale = self.optimal_relative_level_scale(scale, units)
+        level, post_read_scale = self.find_optimal_level_and_downsample(
+            resolution, units
+        )
         level_dimensions = self.slide_info.level_dimensions[level]
-        thumb = self.read_region(0, 0, *level_dimensions)
+        thumb = self.read_bounds(0, 0, *level_dimensions)
 
-        if scale != 1.0:
+        if np.any(post_read_scale != 1.0):
             new_size = np.round(np.array(level_dimensions) * post_read_scale)
             new_size = tuple(new_size.astype(int))
             thumb = cv2.resize(thumb, new_size, interpolation=cv2.INTER_AREA)
@@ -338,7 +544,7 @@ class WSIReader:
                     end_w = slide_w
 
                 # Read image region
-                im = self.read_region(start_w, start_h, end_w, end_h, level)
+                im = self.read_bounds(start_w, start_h, end_w, end_h, level)
 
                 if verbose:
                     format_str = (
@@ -441,50 +647,28 @@ class OpenSlideWSIReader(WSIReader):
         )
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
-    def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
-        """Read a region in whole slide image
+    def read_rect(self, location, size, resolution=0, units="level"):
+        target_size = size
 
-        Args:
-            start_w (int): starting point in x-direction (along width)
-            start_h (int): starting point in y-direction (along height)
-            end_w (int): end point in x-direction (along width)
-            end_h (int): end point in y-direction (along height)
-            scale (float): scale at which to read the image, default = 0
-            units (str): the units of scale, default = "level",
-                supported units are "mpp", "power", "level", "baseline"
-
-        Returns:
-            img_array : ndarray of size MxNx3
-            M=end_h-start_h, N=end_w-start_w
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> from matplotlib import pyplot as plt
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path='./CMU-1.ndpi')
-            >>> level = 0
-            >>> region = [1000, 2000, 2000, 3000]
-            >>> im_region = wsi.read_region(*region, level)
-            >>> plt.imshow(im_region)
-
-        """
-        target_size = [end_w - start_w, end_h - start_h]
-        location = (start_w, start_h)
         # Find parameters for optimal read
         (
             read_level,
             level_location,
             read_size,
             post_read_scale,
-        ) = self.read_rect_params_for_scale(
-            location=location, target_size=target_size, target_scale=scale, units=units,
+        ) = self.find_read_rect_params(
+            location=location, size=target_size, resolution=resolution, units=units,
         )
         wsi = self.openslide_wsi
+
         # Read at optimal level and corrected read size
-        im_region = wsi.read_region([start_w, start_h], read_level, read_size)
+        im_region = wsi.read_region(location, read_level, read_size)
+        im_region = np.array(im_region)
+
         # Resize to correct scale if required
-        if post_read_scale != 1.0:
+        if np.any(post_read_scale != 1.0):
             interpolation = cv2.INTER_AREA
-            if post_read_scale > 1.0:
+            if np.any(post_read_scale > 1.0):
                 interpolation = cv2.INTER_CUBIC
             im_region = cv2.resize(im_region, target_size, interpolation=interpolation)
 
@@ -493,15 +677,6 @@ class OpenSlideWSIReader(WSIReader):
 
     @property
     def slide_info(self):
-        """Openslide WSI meta data reader
-
-        Args:
-            self (OpenSlideWSIReader):
-
-        Returns:
-            WSIMeta: containing meta information
-
-        """
         objective_power = np.int(
             self.openslide_wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         )
@@ -529,21 +704,7 @@ class OpenSlideWSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self, scale=1.25, units="power"):
-        """Read whole slide image thumbnail at 1.25x
-
-        Args:
-            self (OpenSlideWSIReader):
-
-        Returns:
-            ndarray : image array
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
-            >>> slide_thumbnail = wsi.slide_thumbnail()
-
-        """
+    def slide_thumbnail(self, resolution=1.25, units="power"):
         openslide_wsi = self.openslide_wsi
         tile_objective_value = 20
 
@@ -563,7 +724,6 @@ class OmnyxJP2WSIReader(WSIReader):
 
     Attributes:
         glymur_wsi (:obj:`glymur.Jp2k`)
-
     """
 
     def __init__(
@@ -583,50 +743,25 @@ class OmnyxJP2WSIReader(WSIReader):
         )
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
-    def read_region(self, start_w, start_h, end_w, end_h, scale=0, units="level"):
-        """Read a region in whole slide image
-
-        Args:
-            start_w (int): starting point in x-direction (along width)
-            start_h (int): starting point in y-direction (along height)
-            end_w (int): end point in x-direction (along width)
-            end_h (int): end point in y-direction (along height)
-            level (int): pyramid level to read the image
-
-        Returns:
-            img_array : ndarray of size MxNx3
-            M=end_h-start_h, N=end_w-start_w
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> from matplotlib import pyplot as plt
-            >>> wsi = wsireader.OmnyxJP2WSIReader(input_path="./test.jp2")
-            >>> level = 0
-            >>> region = [13000, 17000, 15000, 19000]
-            >>> im_region = wsi.read_region(
-            ...     region[0], region[1], region[2], region[3], level)
-            >>> plt.imshow(im_region)
-
-        """
-        target_size = (end_w - start_w, end_h - start_h)
-        location = (start_w, start_h)
+    def read_rect(self, location, size, resolution=0, units="level"):
+        target_size = size
         # Find parameters for optimal read
         (
             read_level,
             level_location,
             read_size,
             post_read_scale,
-        ) = self.read_rect_params_for_scale(
-            location=location, target_size=target_size, target_scale=scale, units=units,
+        ) = self.find_read_rect_params(
+            location=location, size=target_size, resolution=resolution, units=units,
         )
         # Read at optimal level and corrected read size
         area = (*level_location[::-1], *(level_location[::-1] + read_size))
 
         glymur_wsi = self.glymur_wsi
         im_region = glymur_wsi.read(rlevel=read_level, area=area)
-        if post_read_scale != 1.0:
+        if np.any(post_read_scale != 1.0):
             interpolation = cv2.INTER_AREA
-            if post_read_scale > 1.0:
+            if np.any(post_read_scale > 1.0):
                 interpolation = cv2.INTER_CUBIC
             im_region = cv2.resize(im_region, target_size, interpolation=interpolation)
 
@@ -635,16 +770,6 @@ class OmnyxJP2WSIReader(WSIReader):
 
     @property
     def slide_info(self):
-        """JP2 meta data reader
-
-        Args:
-            self (OmnyxJP2WSIReader):
-
-        Returns:
-            WSIMeta: containing meta information
-
-        """
-
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
@@ -694,21 +819,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self, scale=1.25, units="power"):
-        """Read whole slide image thumbnail at 1.25x
-
-        Args:
-            self (OmnyxJP2WSIReader):
-
-        Returns:
-            ndarray : image array
-
-        Examples:
-            >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.OmnyxJP2WSIReader(input_path="./test.jp2")
-            >>> slide_thumbnail = wsi.slide_thumbnail()
-
-        """
+    def slide_thumbnail(self, resolution=1.25, units="power"):
         glymur_wsi = self.glymur_wsi
         read_level = np.int(np.log2(self.slide_info.objective_power / 1.25))
         thumb = np.asarray(glymur_wsi.read(rlevel=read_level))

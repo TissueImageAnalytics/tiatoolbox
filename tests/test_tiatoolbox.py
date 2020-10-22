@@ -226,7 +226,7 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
-def test_wsireader_read_region(_response_svs):
+def test_wsireader_read_bounds(_response_svs):
     """Test for read region as a python function"""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
@@ -235,7 +235,7 @@ def test_wsireader_read_region(_response_svs):
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     level = 0
     region = [1000, 2000, 2000, 3000]
-    im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
+    im_region = wsi.read_bounds(region[0], region[1], region[2], region[3], level)
 
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
@@ -420,32 +420,6 @@ def test_background_composite():
     assert np.all(im[:, :, 3] == 255)
 
 
-def test_wsimeta_validate_fail():
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(
-        slide_dimensions=(512, 512),
-        level_dimensions=[(512, 512), (256, 256)],
-        level_count=3,
-    )
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    meta.level_dimensions = None
-    assert meta.validate() is False
-
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
-    meta.level_downsamples = None
-    assert meta.validate() is False
-
-
 def test_reinhard_normalise(
     _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
 ):
@@ -557,17 +531,19 @@ def test_command_line_slide_info(_response_all_wsis):
     assert slide_info_result.exit_code == 0
 
 
-def test_command_line_read_region(_response_ndpi, tmp_path):
-    """pytest OpenSlide read_region CLI."""
+def test_command_line_read_bounds(_response_ndpi, tmp_path):
+    """pytest OpenSlide read_bounds CLI."""
     runner = CliRunner()
-    read_region_result = runner.invoke(
+    read_bounds_result = runner.invoke(
         cli.main,
         [
-            "read-region",
+            "read-bounds",
             "--wsi_input",
             str(pathlib.Path(_response_ndpi)),
-            "--level",
+            "--resolution",
             "0",
+            "--units",
+            "level",
             "--mode",
             "save",
             "--region",
@@ -580,17 +556,19 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
         ],
     )
 
-    assert read_region_result.exit_code == 0
+    assert read_bounds_result.exit_code == 0
     assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region.jpg")))
 
-    read_region_result = runner.invoke(
+    read_bounds_result = runner.invoke(
         cli.main,
         [
-            "read-region",
+            "read-bounds",
             "--wsi_input",
             str(pathlib.Path(_response_ndpi)),
-            "--level",
+            "--resolution",
             "0",
+            "--units",
+            "level",
             "--mode",
             "save",
             "--output_path",
@@ -598,21 +576,23 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
         ],
     )
 
-    assert read_region_result.exit_code == 0
+    assert read_bounds_result.exit_code == 0
     assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")))
 
 
-def test_command_line_jp2_read_region(_response_jp2, tmp_path):
-    """pytest JP2 read_region"""
+def test_command_line_jp2_read_bounds(_response_jp2, tmp_path):
+    """pytest JP2 read_bounds"""
     runner = CliRunner()
-    read_region_result = runner.invoke(
+    read_bounds_result = runner.invoke(
         cli.main,
         [
-            "read-region",
+            "read-bounds",
             "--wsi_input",
             str(pathlib.Path(_response_jp2)),
-            "--level",
+            "--resolution",
             "0",
+            "--units",
+            "level",
             "--mode",
             "save",
             "--output_path",
@@ -620,7 +600,7 @@ def test_command_line_jp2_read_region(_response_jp2, tmp_path):
         ],
     )
 
-    assert read_region_result.exit_code == 0
+    assert read_bounds_result.exit_code == 0
     assert os.path.isfile(str(pathlib.Path(tmp_path).joinpath("im_region.jpg")))
 
 
@@ -716,6 +696,27 @@ def test_wsimeta_validate_fail():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
 
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_dimensions=[(512, 512), (256, 256)],
+        level_count=3,
+    )
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_dimensions = None
+    assert meta.validate() is False
+
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta.level_downsamples = None
+    assert meta.validate() is False
+
 
 def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
     """Test for the stain normalisation CLI."""
@@ -786,40 +787,61 @@ def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
-    assert level_scales[0] == 1
+    level_scales = np.array(level_scales)
+    assert np.array_equal(level_scales[0], [1, 1])
     downsamples = np.array(wsi.slide_info.level_downsamples)
-    assert np.all(level_scales == downsamples)
+    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], downsamples)
 
 
 def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(3, "level")
-    assert level_scales[3] == 1.0
+    level_scales = np.array(level_scales)
+    assert np.array_equal(level_scales[3], [1, 1])
     downsamples = np.array(wsi.slide_info.level_downsamples)
     expected = downsamples / downsamples[3]
-    assert np.all(level_scales == expected)
+    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], expected)
+
+
+def test_openslidewsireader_relative_level_scales_level_float(_response_ndpi):
+    path = pathlib.Path(_response_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(path)
+    level_scales = wsi.relative_level_scales(1.5, "level")
+    level_scales = np.array(level_scales)
+    assert level_scales[0] == approx([1 / 3, 1 / 3])
+    downsamples = np.array(wsi.slide_info.level_downsamples)
+    expected = downsamples / downsamples[0] * (1 / 3)
+    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], expected)
 
 
 def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.125, "baseline")
-    assert level_scales[3] == 1.0
+    level_scales = np.array(level_scales)
     downsamples = np.array(wsi.slide_info.level_downsamples)
     expected = downsamples * 0.125
-    assert np.all(level_scales == expected)
+    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], expected)
 
 
 def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
-    level_mpp_05, level_rescale_mpp_05 = wsi.optimal_relative_level_scale(0.5, "mpp")
-    level_mpp_10, level_rescale_mpp_10 = wsi.optimal_relative_level_scale(10, "mpp")
+    level_mpp_05, level_rescale_mpp_05 = wsi.find_optimal_level_and_downsample(
+        0.5, "mpp"
+    )
+    level_mpp_10, level_rescale_mpp_10 = wsi.find_optimal_level_and_downsample(
+        10, "mpp"
+    )
 
-    assert np.all(level_mpp_05 == 0)
-    assert np.all(level_mpp_10 == 4)
+    assert level_mpp_05 == 0
+    assert level_mpp_10 == 4
     assert level_rescale_mpp_05 == approx([0.91282519, 0.91012514])
     assert level_rescale_mpp_10 == approx([0.73026016, 0.72810011])
 
@@ -828,17 +850,17 @@ def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
-    level_power_05, level_rescale_power_05 = wsi.optimal_relative_level_scale(
+    level_power_05, level_rescale_power_05 = wsi.find_optimal_level_and_downsample(
         2.5, "power"
     )
-    level_power_10, level_rescale_power_10 = wsi.optimal_relative_level_scale(
+    level_power_10, level_rescale_power_10 = wsi.find_optimal_level_and_downsample(
         10, "power"
     )
 
     assert level_power_05 == 3
-    assert level_rescale_power_05 == 1.0
+    assert np.array_equal(level_rescale_power_05, [1.0, 1.0])
     assert level_power_10 == 1
-    assert level_rescale_power_10 == 1.0
+    assert np.array_equal(level_rescale_power_10, [1.0, 1.0])
 
 
 def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
@@ -846,7 +868,7 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
     wsi = wsireader.OpenSlideWSIReader(path)
 
     location = (0, 0)
-    target_size = (256, 256)
+    size = (256, 256)
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
         (
@@ -854,17 +876,14 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
             level_location,
             read_size,
             post_read_scale,
-        ) = wsi.read_rect_params_for_scale(
-            location=location,
-            target_size=target_size,
-            target_scale=target_scale,
-            units="power",
+        ) = wsi.find_read_rect_params(
+            location=location, size=size, resolution=target_scale, units="power",
         )
         assert level >= 0
         assert level < wsi.slide_info.level_count
-        # Check that read_size * scale == target_size
+        # Check that read_size * scale == size
         post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
-        assert np.array_equal(post_read_downscaled_size, np.array(target_size))
+        assert np.array_equal(post_read_downscaled_size, np.array(size))
 
 
 def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
@@ -872,7 +891,7 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
     wsi = wsireader.OpenSlideWSIReader(path)
 
     location = (0, 0)
-    target_size = (256, 256)
+    size = (256, 256)
     # Test a range of MPP
     for target_scale in range(1, 10):
         (
@@ -880,15 +899,11 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
             level_location,
             read_size,
             post_read_scale,
-        ) = wsi.read_rect_params_for_scale(
-            location=location,
-            target_size=target_size,
-            target_scale=target_scale,
-            units="mpp",
+        ) = wsi.find_read_rect_params(
+            location=location, size=size, resolution=target_scale, units="mpp",
         )
         assert level >= 0
         assert level < wsi.slide_info.level_count
-        # Check that read_size * scale == target_size
+        # Check that read_size * scale == size
         post_read_downscaled_size = np.round(read_size * post_read_scale).astype(int)
-        assert np.array_equal(post_read_downscaled_size, np.array(target_size))
-
+        assert np.array_equal(post_read_downscaled_size, np.array(size))
