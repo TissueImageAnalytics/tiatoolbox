@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""pytests for `tiatoolbox` package."""
+"""Pytests for `tiatoolbox` package."""
 import pytest
 from pytest import approx
 
@@ -9,7 +9,7 @@ from tiatoolbox.dataloader.slide_info import slide_info
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox.dataloader import wsireader, wsimeta
 from tiatoolbox.tools.stainnorm import get_normaliser
-from tiatoolbox import utils
+from tiatoolbox import utilsss
 
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.utils.misc import imread
@@ -349,7 +349,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
-    """pytest for save_tiles in wsireader as a python function"""
+    """Pytest for save_tiles in wsireader as a python function"""
     wsi = wsireader.OmnyxJP2WSIReader(
         _response_jp2,
         output_dir=str(
@@ -532,7 +532,7 @@ def test_command_line_slide_info(_response_all_wsis):
 
 
 def test_command_line_read_bounds(_response_ndpi, tmp_path):
-    """pytest OpenSlide read_bounds CLI."""
+    """Pytest OpenSlide read_bounds CLI."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
         cli.main,
@@ -581,7 +581,7 @@ def test_command_line_read_bounds(_response_ndpi, tmp_path):
 
 
 def test_command_line_jp2_read_bounds(_response_jp2, tmp_path):
-    """pytest JP2 read_bounds"""
+    """Pytest JP2 read_bounds"""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
         cli.main,
@@ -625,7 +625,7 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
 
 def test_command_line_jp2_slide_thumbnail(_response_jp2, tmp_path):
-    """pytest for the jp2 slide_thumbnail CLI."""
+    """Pytest for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
         cli.main,
@@ -687,12 +687,14 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_wsimeta_init_fail():
+    """Test incorrect init for WSIMeta raises TypeError"""
     with pytest.raises(TypeError):
         wsimeta.WSIMeta(slide_dimensions=None)
 
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_fail():
+    """Test failure cases for WSIMeta validation"""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
 
@@ -739,6 +741,7 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
+    """Test WSIMeta validation"""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     assert meta.validate()
 
@@ -750,20 +753,21 @@ def test_wsimeta_validate_pass():
 
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_ndpi))
+    """Test OpenSlide reader metadata for ndpi"""
     wsi_obj = wsireader.OpenSlideWSIReader(_response_ndpi)
     meta = wsi_obj.slide_info
     assert meta.validate()
 
 
 def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(str(_response_svs))
+    """Test OpenSlide reader metadata for svs"""
     wsi_obj = wsireader.OpenSlideWSIReader(_response_svs)
     meta = wsi_obj.slide_info
     assert meta.validate()
 
 
 def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
+    """Test calculation of relative level scales for mpp"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.5, "mpp")
@@ -784,6 +788,7 @@ def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
+    """Test calculation of relative level scales for objective power"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(wsi.slide_info.objective_power, "power")
@@ -795,6 +800,7 @@ def test_openslidewsireader_relative_level_scales_power(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
+    """Test calculation of relative level scales for level"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(3, "level")
@@ -807,6 +813,7 @@ def test_openslidewsireader_relative_level_scales_level(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_level_float(_response_ndpi):
+    """Test calculation of relative level scales for fracitonal level"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(1.5, "level")
@@ -819,6 +826,7 @@ def test_openslidewsireader_relative_level_scales_level_float(_response_ndpi):
 
 
 def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
+    """Test calculation of relative level scales for pixels per baseline pixel"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.125, "baseline")
@@ -830,6 +838,7 @@ def test_openslidewsireader_relative_level_scales_baseline(_response_ndpi):
 
 
 def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
+    """Test finding optimal level for mpp read"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -847,6 +856,7 @@ def test_openslidewsireader_optimal_relative_level_scale_mpp(_response_ndpi):
 
 
 def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
+    """Test finding optimal level for objective power read"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -864,6 +874,7 @@ def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
 
 
 def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
+    """Test finding read rect parameters for objective power"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -871,12 +882,7 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
     size = (256, 256)
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
-        (
-            level,
-            level_location,
-            read_size,
-            post_read_scale,
-        ) = wsi.find_read_rect_params(
+        (level, _, read_size, post_read_scale,) = wsi.find_read_rect_params(
             location=location, size=size, resolution=target_scale, units="power",
         )
         assert level >= 0
@@ -887,6 +893,7 @@ def test_openslidewsireader_read_rect_params_for_scale_power(_response_ndpi):
 
 
 def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
+    """Test finding read rect parameters for objective mpp"""
     path = pathlib.Path(_response_ndpi)
     wsi = wsireader.OpenSlideWSIReader(path)
 
@@ -894,12 +901,7 @@ def test_openslidewsireader_read_rect_params_for_scale_mpp(_response_ndpi):
     size = (256, 256)
     # Test a range of MPP
     for target_scale in range(1, 10):
-        (
-            level,
-            level_location,
-            read_size,
-            post_read_scale,
-        ) = wsi.find_read_rect_params(
+        (level, _, read_size, post_read_scale,) = wsi.find_read_rect_params(
             location=location, size=size, resolution=target_scale, units="mpp",
         )
         assert level >= 0
