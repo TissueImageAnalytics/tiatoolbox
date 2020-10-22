@@ -123,10 +123,10 @@ class WSIReader:
 
         def make_into_array(x):
             """Ensure input x is a numpy array of length 2."""
-            if isinstance(resolution, numbers.Number):
+            if isinstance(x, numbers.Number):
                 # If one number is given, the same value is used for x and y
-                return np.array([resolution] * 2)
-            return np.array(resolution)
+                return np.array([x] * 2)
+            return np.array(x)
 
         @np.vectorize
         def level_to_downsample(x):
