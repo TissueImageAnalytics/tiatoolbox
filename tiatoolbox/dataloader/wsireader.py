@@ -55,6 +55,8 @@ class WSIReader:
         tile_read_size_h=5000,
     ):
         """
+        Initialise WSIReader.
+
         Args:
             input_path (str or pathlib.Path): input path to WSI
             output_dir (str or pathlib.Path): output directory to save the output,
@@ -85,9 +87,10 @@ class WSIReader:
         raise NotImplementedError
 
     def relative_level_scales(self, resolution, units):
-        """
-        Calculate scale of each image pyramid level relative to the
-        given target scale and units.
+        """Calculate relative scale of each resolution in the WSI.
+        
+        Find the relative scale of each image pyramid / resolution level
+        of the WSI relative to the given resolution and units.
 
         Values > 1 indicate that the level has a larger scale than the
         target and < 1 indicates that it is smaller.
