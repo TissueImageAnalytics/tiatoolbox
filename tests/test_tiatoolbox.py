@@ -414,7 +414,7 @@ def test_reinhard_normalise():
 
 def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
-    source_img = imread("tests/data/source_img.png")
+    source_img = imread("tests/data/source_image.png")
     target_img = imread("data/target_img.png")
     ruifrok_img = imread("tests/data/norm_ruifrok.png")
 
@@ -430,7 +430,7 @@ def test_custom_normalise():
 
 def test_ruifrok_normalise():
     """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
-    source_img = imread("data/source_img.png")
+    source_img = imread("data/source_image.png")
     target_img = imread("../data/target_img.png")
     ruifrok_img = imread("data/norm_ruifrok.png")
 
