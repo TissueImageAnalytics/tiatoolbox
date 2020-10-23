@@ -118,10 +118,10 @@ class CustomNormaliser(StainNormaliser):
 
 
 class RuifrokNormaliser(StainNormaliser):
-    """Ruifrok stain normaliser, adapted from A.C. Ruifrok & D.A. Johnston
-    'Quantification of histochemical staining by color deconvolution'.
-    Analytical and quantitative cytology and histology the International Academy of
-    Cytology and American Society of Cytology.
+    """Ruifrok stain normaliser.
+    Adapted from A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
+    by color deconvolution'. Analytical and quantitative cytology and histology the
+    International Academy of Cytology and American Society of Cytology.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
@@ -137,7 +137,8 @@ class RuifrokNormaliser(StainNormaliser):
 
 
 class ReinhardColourNormaliser:
-    """Normalize a patch colour to the target image using the method of Reinhard et al.
+    """Reinhard Stain Normaliser.
+    Normalize a patch colour to the target image using the method of Reinhard et al.
     "Color transfer between images." Computer graphics & applications.
 
     Attributes:

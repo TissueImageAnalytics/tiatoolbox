@@ -19,7 +19,6 @@ dataloader.wsireader
 .. currentmodule:: tiatoolbox.dataloader.wsireader
 .. autoclass:: WSIReader
     :members: read_region, slide_thumbnail, save_tiles
-    :special-members: __init__
 
 .. autoclass:: OpenSlideWSIReader
     :members: slide_info, read_region, slide_thumbnail, save_tiles
