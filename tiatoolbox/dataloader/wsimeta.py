@@ -32,24 +32,27 @@ class WSIMeta:
     Attributes:
         slide_dimensions (:obj:`tuple` of :obj:`int`): Tuple containing the width and
             height of the WSI. These are for the baseline (full resolution)
-            image if the WSI is a pyramid or multi-resoltion.
+            image if the WSI is a pyramid or multi-resoltion. Required.
         level_dimensions (list): A list of dimensions for each level of the
-            pyramid or for each resolution in the WSI.
+            pyramid or for each resolution in the WSI. Defaults to
+            [slide_dimension].
         objective_power (float): The magnification power of the objective lens
             used to scan the image. Not always present or accurate.
+            Defaults to None.
         level_count: (int): The number of levels or resolutions
             in the WSI. If not given this is assigned
-            len(level_dimensions). Defaults to None.
+            len(level_dimensions). Defaults to len(level_dimensions).
         level_downsamples (:obj:`list` of :obj:`float`): List of scale
             values which describe how many times smaller the current level
-            is compared with the baseline.
+            is compared with the baseline. Defaults to (1,).
         vendor (str): Scanner vendor/manufacturer description.
         mpp (float, float, optional): Microns per pixel. Derived from objective
             power and sensor size. Not always present or accurate.
-        file_path (Path): Path to the corresponding WSI file.
+            Defaults to None.
+        file_path (Path): Path to the corresponding WSI file. Defaults to None.
         raw (dict): Dictionary of unprocessed metadata extracted
             from the WSI format. For JP2 images this contains an xml object
-            under the key "xml".
+            under the key "xml". Defaults to empty dictionary.
     """
 
     def __init__(
