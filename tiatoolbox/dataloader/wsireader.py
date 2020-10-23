@@ -707,20 +707,6 @@ class OpenSlideWSIReader(WSIReader):
 
         return param
 
-    def slide_thumbnail(self, resolution=1.25, units="power"):
-        openslide_wsi = self.openslide_wsi
-        tile_objective_value = 20
-
-        rescale = np.int(self.slide_info.objective_power / tile_objective_value)
-        slide_dimension = self.slide_info.level_dimensions[0]
-        slide_dimension_20x = np.array(slide_dimension) / rescale
-        thumb = openslide_wsi.get_thumbnail(
-            (int(slide_dimension_20x[0] / 16), int(slide_dimension_20x[1] / 16))
-        )
-        thumb = np.asarray(thumb)
-
-        return thumb
-
 
 class OmnyxJP2WSIReader(WSIReader):
     """Class for reading Omnyx JP2 images.
