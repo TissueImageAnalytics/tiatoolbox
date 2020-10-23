@@ -69,7 +69,7 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, get_luminosity_tissue_mask
 
 ^^^^^^^^^^^^^^^^
 utils.transforms
