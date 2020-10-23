@@ -400,9 +400,10 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
 
 def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
-    source_img = imread("data/source_image.png")
-    target_img = imread("../data/target_image.png")
-    reinhard_img = imread("data/norm_reinhard.png")
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
+    reinhard_img = imread(file_parent_dir.joinpath("data/norm_reinhard.png"))
 
     norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
@@ -414,9 +415,10 @@ def test_reinhard_normalise():
 
 def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
-    source_img = imread("data/source_image.png")
-    target_img = imread("../data/target_image.png")
-    custom_img = imread("data/norm_ruifrok.png")
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
+    custom_img = imread(file_parent_dir.joinpath("data/norm_ruifrok.png"))
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
@@ -430,9 +432,10 @@ def test_custom_normalise():
 
 def test_ruifrok_normalise():
     """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
-    source_img = imread("data/source_image.png")
-    target_img = imread("../data/target_image.png")
-    ruifrok_img = imread("data/norm_ruifrok.png")
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
+    ruifrok_img = imread(file_parent_dir.joinpath("data/norm_ruifrok.png"))
 
     # init class with Ruifrok & Johnston method
     norm = get_normaliser("ruifrok")
@@ -445,9 +448,10 @@ def test_ruifrok_normalise():
 
 def test_macenko_normalise():
     """Test for stain normalisation with stain matrix from Macenko et al."""
-    source_img = imread("data/source_image.png")
-    target_img = imread("../data/target_image.png")
-    macenko_img = imread("data/norm_macenko.png")
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
+    macenko_img = imread(file_parent_dir.joinpath("data/norm_macenko.png"))
 
     # init class with Macenko method
     norm = get_normaliser("macenko")
@@ -460,9 +464,10 @@ def test_macenko_normalise():
 
 def test_vahadane_normalise():
     """Test for stain normalisation with stain matrix from Vahadane et al."""
-    source_img = imread("data/source_image.png")
-    target_img = imread("../data/target_image.png")
-    vahadane_img = imread("data/norm_vahadane.png")
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
+    vahadane_img = imread(file_parent_dir.joinpath("data/norm_vahadane.png"))
 
     # init class with Vahadane method
     norm = get_normaliser("vahadane")
