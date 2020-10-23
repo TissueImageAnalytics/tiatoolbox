@@ -689,17 +689,20 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     assert save_svs_tiles_result.exit_code == 0
 
 
-def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
+def test_command_line_stainnorm():
     """Test for the stain normalisation CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = file_parent_dir.joinpath("data/source_image.png")
+    target_img = file_parent_dir.joinpath("../data/target_image.png")
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "reinhard",
         ],
@@ -712,9 +715,9 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "ruifrok",
         ],
@@ -727,9 +730,9 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "macenko",
         ],
@@ -742,9 +745,9 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "vahadane",
         ],
