@@ -409,7 +409,7 @@ def test_reinhard_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(reinhard_img/255. - transform/255.)) < 1e-1
+    assert np.mean(np.absolute(reinhard_img/255. - transform/255.)) < 1e-3
 
 
 def test_custom_normalise():
@@ -425,7 +425,7 @@ def test_custom_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(custom_img/255. - transform/255.)) < 1e-1
+    assert np.mean(np.absolute(custom_img/255. - transform/255.)) < 1e-3
 
 
 def test_ruifrok_normalise():
@@ -440,7 +440,7 @@ def test_ruifrok_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(ruifrok_img/255. - transform/255.)) < 1e-1
+    assert np.mean(np.absolute(ruifrok_img/255. - transform/255.)) < 1e-3
 
 
 def test_macenko_normalise():
@@ -455,7 +455,7 @@ def test_macenko_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(macenko_img/255. - transform/255.)) < 1e-1
+    assert np.mean(np.absolute(macenko_img/255. - transform/255.)) < 1e-3
 
 
 def test_vahadane_normalise():
@@ -470,7 +470,7 @@ def test_vahadane_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(vahadane_img/255. - transform/255.)) < 1e-1
+    assert np.mean(np.absolute(vahadane_img/255. - transform/255.)) < 1e-3
 
 
 # -------------------------------------------------------------------------------------
