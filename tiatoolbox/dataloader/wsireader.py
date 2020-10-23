@@ -53,12 +53,13 @@ class WSIReader:
         tile_read_size_h=5000,
     ):
         """
+
         Args:
             input_path (str, pathlib.Path): input path to WSI
             output_dir (str, pathlib.Path): output directory to save the output,
-                default=./output
+             default=./output
             tile_objective_value (int): objective value at which tile is generated,
-                default=20
+             default=20
             tile_read_size_w (int): tile width, default=5000
             tile_read_size_h (int): tile height, default=5000
 

@@ -253,16 +253,18 @@ class ReinhardColourNormaliser:
 
 
 def get_normaliser(method_name, stain_matrix=None):
-    """Return a stain normaliser object with corresponding name
+    """Returns a stain normaliser object with corresponding name.
+
     Args:
-        method_name (str) : name of stain norm method, must be one of
-                            "reinhard", "custom" or "ruifrok".
+        method_name (str) : name of stain norm method, must be one of "reinhard",
+         "custom" or "ruifrok".
         stain_matrix (ndarray or str, pathlib.Path) : user-defined stain matrix.
-            This must either be a numpy array or a path to either a .csv or .npy
-            file. This is only utilised if using "custom" method name.
+         This must either be a numpy array or a path to either a .csv or .npy file.
+         This is only utilised if using "custom" method name.
 
     Return:
         StainNormaliser : an object with base 'StainNormaliser' as base class
+
     Examples:
         >>> from tiatoolbox.tools.stainnorm import get_normaliser
         >>> norm = get_normaliser('Reinhard')
