@@ -71,7 +71,7 @@ License
 
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
 
-The full text of the licence is included in [LICENSE.md](LICENSE.md).
+The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/LICENSE.md).
 
 [GNU General Public License (Version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
 
