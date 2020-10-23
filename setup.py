@@ -20,7 +20,7 @@ requirements = [
     "pyyaml",
     "pandas",
     "glymur",
-    "scikit-learn=0.23.2",
+    "scikit-learn==0.23.2",
 ]
 
 setup_requirements = [
