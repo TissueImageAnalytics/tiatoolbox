@@ -409,14 +409,14 @@ def test_reinhard_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(reinhard_img - transform) < 1e-3
+    assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-3
 
 
 def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
     source_img = imread("data/source_image.png")
     target_img = imread("../data/target_image.png")
-    ruifrok_img = imread("data/norm_ruifrok.png")
+    custom_img = imread("data/norm_ruifrok.png")
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
@@ -425,7 +425,7 @@ def test_custom_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img - transform) < 1e-3
+    assert np.mean(np.absolute(custom_img / 255.0 - transform / 255.0)) < 1e-3
 
 
 def test_ruifrok_normalise():
@@ -440,7 +440,7 @@ def test_ruifrok_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img - transform) < 1e-3
+    assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-3
 
 
 def test_macenko_normalise():
@@ -455,7 +455,7 @@ def test_macenko_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(macenko_img - transform) < 1e-3
+    assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-3
 
 
 def test_vahadane_normalise():
@@ -470,7 +470,7 @@ def test_vahadane_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(vahadane_img - transform) < 1e-3
+    assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-3
 
 
 # -------------------------------------------------------------------------------------
