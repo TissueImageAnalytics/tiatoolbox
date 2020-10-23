@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Stain normalisation classes for TIAToolbox"""
+"""Stain normalisation classes for TIAToolbox."""
 import numpy as np
 import cv2
 
@@ -29,7 +29,7 @@ from tiatoolbox.tools.stainextract import CustomExtractor, RuifrokExtractor
 
 
 class StainNormaliser:
-    """Stain normalisation base class
+    """Stain normalisation base class.
 
     Attributes:
         extractor (CustomExtractor,RuifrokExtractor): method specific stain extractor
@@ -118,10 +118,10 @@ class CustomNormaliser(StainNormaliser):
 
 
 class RuifrokNormaliser(StainNormaliser):
-    """Ruifrok stain normaliser, adapted from:
-    A.C. Ruifrok & D.A. Johnston 'Quantification of histochemical staining
-    by color deconvolution'. Analytical and quantitative cytology and histology
-    / the International Academy of Cytology and American Society of Cytology.
+    """Ruifrok stain normaliser, adapted from A.C. Ruifrok & D.A. Johnston
+    'Quantification of histochemical staining by color deconvolution'.
+    Analytical and quantitative cytology and histology the International Academy of
+    Cytology and American Society of Cytology.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
@@ -137,9 +137,8 @@ class RuifrokNormaliser(StainNormaliser):
 
 
 class ReinhardColourNormaliser:
-    """Normalize a patch colour to the target image using the method of:
-
-    Reinhard et al. "Color transfer between images." Computer graphics & applications.
+    """Normalize a patch colour to the target image using the method of Reinhard et al.
+    "Color transfer between images." Computer graphics & applications.
 
     Attributes:
         target_means (float): mean of each LAB channel
@@ -158,7 +157,7 @@ class ReinhardColourNormaliser:
         self.target_stds = None
 
     def fit(self, target):
-        """Fit to a target image
+        """Fit to a target image.
 
         Args:
             target (RGB uint8): target image
@@ -253,7 +252,7 @@ class ReinhardColourNormaliser:
 
 
 def get_normaliser(method_name, stain_matrix=None):
-    """Returns a stain normaliser object with corresponding name.
+    """Return a stain normaliser object with corresponding name.
 
     Args:
         method_name (str) : name of stain norm method, must be one of "reinhard",
