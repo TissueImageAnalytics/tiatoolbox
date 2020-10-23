@@ -105,8 +105,15 @@ class StainNormaliser:
         source_concentrations = self.get_concentrations(img, stain_matrix_source)
         maxC_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
         source_concentrations *= self.maxC_target / maxC_source
-        tmp = 255 * np.exp(-1 * np.dot(source_concentrations, self.stain_matrix_target))
-        return tmp.reshape(img.shape).astype(np.uint8)
+        trans = 255 * np.exp(
+            -1 * np.dot(source_concentrations, self.stain_matrix_target)
+        )
+
+        # ensure between 0 and 255
+        trans[trans > 255] = 255
+        trans[trans < 0] = 0
+
+        return trans.reshape(img.shape).astype(np.uint8)
 
 
 class CustomNormaliser(StainNormaliser):
@@ -328,7 +335,7 @@ def get_normaliser(method_name, stain_matrix=None):
 
     Args:
         method_name (str) : name of stain norm method, must be one of
-                            "reinhard", "custom" or "ruifrok".
+                            "reinhard", "custom", "ruifrok", "macenko" or "vahadane".
         stain_matrix (ndarray or str, pathlib.Path) : user-defined stain matrix.
             This must either be a numpy array or a path to either a .csv or .npy
             file. This is only utilised if using "custom" method name.
@@ -343,7 +350,7 @@ def get_normaliser(method_name, stain_matrix=None):
         >>> norm_img = norm.transform(source_img)
 
     """
-    if method_name.lower() == "reinhard" or method_name.lower() == "ruifrok":
+    if method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]:
         if stain_matrix is not None:
             raise Exception("stain_matrix is only defined when using custom")
 
@@ -353,6 +360,10 @@ def get_normaliser(method_name, stain_matrix=None):
         norm = CustomNormaliser(load_stain_matrix(stain_matrix))
     elif method_name.lower() == "ruifrok":
         norm = RuifrokNormaliser()
+    elif method_name.lower() == "macenko":
+        norm = MacenkoNormaliser()
+    elif method_name.lower() == "vahadane":
+        norm = VahadaneNormaliser()
     else:
         raise MethodNotSupported
 
