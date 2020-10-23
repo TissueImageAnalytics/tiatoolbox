@@ -108,135 +108,6 @@ def _response_all_wsis(_response_ndpi, _response_svs, _response_jp2, tmpdir_fact
     return dir_path
 
 
-@pytest.fixture(scope="session")
-def _response_stainnorm_source(tmpdir_factory):
-    """
-    Sample pytest fixture for source image for stain normalisation
-    Download png image for pytest
-    """
-    source_file_path = tmpdir_factory.mktemp("data").join("source.png")
-    if not os.path.isfile(source_file_path):
-        print("Downloading Source Image for stain normalisation")
-        r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
-            "/files/source.png"
-        )
-        with open(source_file_path, "wb") as f:
-            f.write(r.content)
-
-    else:
-        print("Skipping Source Image")
-
-    return source_file_path
-
-
-@pytest.fixture(scope="session")
-def _response_stainnorm_target(tmpdir_factory):
-    """
-    Sample pytest fixture for target image for stain normalisation
-    Download png image for pytest
-    """
-    target_file_path = tmpdir_factory.mktemp("data").join("target.png")
-    if not os.path.isfile(target_file_path):
-        print("Downloading Target Image for stain normalisation")
-        r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
-            "/files/target.png"
-        )
-        with open(target_file_path, "wb") as f:
-            f.write(r.content)
-
-    else:
-        print("Skipping Target Image")
-
-    return target_file_path
-
-
-@pytest.fixture(scope="session")
-def _response_reinhard(tmpdir_factory):
-    """
-    Sample pytest fixture for reinhard normalised image
-    Download png image for pytest
-    """
-    reinhard_file_path = tmpdir_factory.mktemp("data").join("reinhard.png")
-    print("Downloading Reinhard Image for stain normalisation")
-    if not os.path.isfile(reinhard_file_path):
-        r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
-            "/files/reinhard.png"
-        )
-        with open(reinhard_file_path, "wb") as f:
-            f.write(r.content)
-
-    else:
-        print("Skipping Reinhard Image")
-
-    return reinhard_file_path
-
-
-@pytest.fixture(scope="session")
-def _response_ruifrok(tmpdir_factory):
-    """
-    Sample pytest fixture for ruifrok normalised image
-    Download png image for pytest
-    """
-    ruifrok_file_path = tmpdir_factory.mktemp("data").join("ruifrok.png")
-    if not os.path.isfile(ruifrok_file_path):
-        r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
-            "/files/ruifrok.png"
-        )
-        with open(ruifrok_file_path, "wb") as f:
-            f.write(r.content)
-
-    else:
-        print("Skipping Ruifrok Image")
-
-    return ruifrok_file_path
-
-
-@pytest.fixture(scope="session")
-def _response_macenko(tmpdir_factory):
-    """
-    Sample pytest fixture for Macenko normalised image
-    Download png image for pytest
-    """
-    macenko_file_path = tmpdir_factory.mktemp("data").join("macenko.png")
-    if not os.path.isfile(macenko_file_path):
-        r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
-            "/files/macenko.png"
-        )
-        with open(macenko_file_path, "wb") as f:
-            f.write(r.content)
-
-    else:
-        print("Skipping Macenko Image")
-
-    return macenko_file_path
-
-
-@pytest.fixture(scope="session")
-def _response_vahadane(tmpdir_factory):
-    """
-    Sample pytest fixture for Vahadane normalised image
-    Download png image for pytest
-    """
-    vahadane_file_path = tmpdir_factory.mktemp("data").join("vahadane.png")
-    if not os.path.isfile(vahadane_file_path):
-        r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox"
-            "/files/vahadane.png"
-        )
-        with open(vahadane_file_path, "wb") as f:
-            f.write(r.content)
-
-    else:
-        print("Skipping Vahadane Image")
-
-    return vahadane_file_path
-
-
 # -------------------------------------------------------------------------------------
 # Python API tests
 # -------------------------------------------------------------------------------------
@@ -527,13 +398,11 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     assert meta.validate()
 
 
-def test_reinhard_normalise(
-    _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
-):
+def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
-    source_img = imread(pathlib.Path(_response_stainnorm_source))
-    target_img = imread(pathlib.Path(_response_stainnorm_target))
-    reinhard_img = imread(pathlib.Path(_response_reinhard))
+    source_img = imread("data/source_img.png")
+    target_img = imread("data/target_img.png")
+    reinhard_img = imread("data/norm_reinhard.png")
 
     norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
@@ -543,13 +412,11 @@ def test_reinhard_normalise(
     assert np.sum(reinhard_img - transform) < 1e-3
 
 
-def test_custom_normalise(
-    _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
-):
+def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
-    source_img = imread(pathlib.Path(_response_stainnorm_source))
-    target_img = imread(pathlib.Path(_response_stainnorm_target))
-    ruifrok_img = imread(pathlib.Path(_response_ruifrok))
+    source_img = imread("data/source_img.png")
+    target_img = imread("data/target_img.png")
+    ruifrok_img = imread("data/norm_ruifrok.png")
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
@@ -561,13 +428,11 @@ def test_custom_normalise(
     assert np.sum(ruifrok_img - transform) < 1e-3
 
 
-def test_ruifrok_normalise(
-    _response_stainnorm_source, _response_stainnorm_target, _response_ruifrok
-):
+def test_ruifrok_normalise():
     """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
-    source_img = imread(pathlib.Path(_response_stainnorm_source))
-    target_img = imread(pathlib.Path(_response_stainnorm_target))
-    ruifrok_img = imread(pathlib.Path(_response_ruifrok))
+    source_img = imread("data/source_img.png")
+    target_img = imread("data/target_img.png")
+    ruifrok_img = imread("data/norm_ruifrok.png")
 
     # init class with Ruifrok & Johnston method
     norm = get_normaliser("ruifrok")
@@ -578,13 +443,11 @@ def test_ruifrok_normalise(
     assert np.sum(ruifrok_img - transform) < 1e-3
 
 
-def test_macenko_normalise(
-    _response_stainnorm_source, _response_stainnorm_target, _response_macenko
-):
+def test_macenko_normalise():
     """Test for stain normalisation with stain matrix from Macenko et al."""
-    source_img = imread(pathlib.Path(_response_stainnorm_source))
-    target_img = imread(pathlib.Path(_response_stainnorm_target))
-    macenko_img = imread(pathlib.Path(_response_macenko))
+    source_img = imread("data/source_img.png")
+    target_img = imread("data/target_img.png")
+    macenko_img = imread("data/norm_macenko.png")
 
     # init class with Macenko method
     norm = get_normaliser("macenko")
@@ -595,13 +458,11 @@ def test_macenko_normalise(
     assert np.sum(macenko_img - transform) < 1e-3
 
 
-def test_vahadane_normalise(
-    _response_stainnorm_source, _response_stainnorm_target, _response_vahadane
-):
+def test_vahadane_normalise():
     """Test for stain normalisation with stain matrix from Vahadane et al."""
-    source_img = imread(pathlib.Path(_response_stainnorm_source))
-    target_img = imread(pathlib.Path(_response_stainnorm_target))
-    vahadane_img = imread(pathlib.Path(_response_vahadane))
+    source_img = imread("data/source_img.png")
+    target_img = imread("data/target_img.png")
+    vahadane_img = imread("data/norm_vahadane.png")
 
     # init class with Vahadane method
     norm = get_normaliser("vahadane")
