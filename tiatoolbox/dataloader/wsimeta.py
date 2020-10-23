@@ -135,7 +135,7 @@ class WSIMeta:
         return passed
 
     def as_dict(self):
-        """Converts WSIMeta to dictionary to assist print and save in various formats.
+        """Convert WSIMeta to dictionary to assist print and save in various formats.
 
         Args:
             self (WSIMeta):
