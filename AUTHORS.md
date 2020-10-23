@@ -4,14 +4,15 @@ Credits
 Development Lead
 ----------------
 
-- TIA Lab &lt;tialab@dcs.warwick.ac.uk&gt;
-- Shan E Ahmed Raza  &lt;shaneahmed&gt;
-- John Pocock &lt;John-P&gt;
-- Simon Graham &lt;simongraham&gt;
+- TIA Lab <tialab@dcs.warwick.ac.uk>
+- Shan E Ahmed Raza  <shaneahmed>
+- John Pocock <John-P>
+- Simon Graham <simongraham>
+- Dang Vu <vqdang>
 
 Contributors
 ------------
 
-- Jev Gamper &lt;jgamper&gt;
-- Dang Vu &lt;vqdang&gt;
-- Srijay Deshpande &lt;Srijay-lab&gt;
+- Jev Gamper <jgamper>
+- Srijay Deshpande <Srijay-lab>
+- Saad Bashir <rajasaad>

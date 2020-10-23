@@ -50,6 +50,7 @@ tiatoolbox --help
                       slide_info,
                       slide-thumbnail,
                       }
+
                      ...
 
     positional arguments:
@@ -63,8 +64,7 @@ tiatoolbox --help
     optional arguments:
       -h, --help            show this help message and exit
       --version             show program`s version number and exit
-      --verbose VERBOSE
-
+      --verbose             VERBOSE
 
 License
 =======

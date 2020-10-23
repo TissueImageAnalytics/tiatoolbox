@@ -33,14 +33,14 @@ import warnings
 
 
 class WSIReader:
-    """WSI Reader class to read WSI images
+    """WSI Reader class to read WSI images.
 
     Attributes:
-        input_path (pathlib.Path): input path to WSI directory
-        output_dir (pathlib.Path): output directory to save the output
-        tile_objective_value (int): objective value at which tile is generated
+        input_path (pathlib.Path): input path to WSI directory.
+        output_dir (pathlib.Path): output directory to save the output.
+        tile_objective_value (int): objective value at which tile is generated.
         tile_read_size (int): [tile width, tile height]
-        slide_info (WSIMeta): Whole slide image slide information
+        slide_info (WSIMeta): Whole slide image slide information.
 
     """
 
@@ -325,13 +325,13 @@ class OpenSlideWSIReader(WSIReader):
 
     @property
     def slide_info(self):
-        """Openslide WSI meta data reader
+        """Openslide WSI meta data reader.
 
         Args:
             self (OpenSlideWSIReader):
 
         Returns:
-            WSIMeta: containing meta information
+            WSIMeta: containing meta information.
 
         """
         objective_power = np.int(

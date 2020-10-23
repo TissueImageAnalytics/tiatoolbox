@@ -18,7 +18,7 @@ dataloader.wsireader
 
 .. currentmodule:: tiatoolbox.dataloader.wsireader
 .. autoclass:: WSIReader
-    :members: slide_info, read_region, slide_thumbnail, save_tiles
+    :members: read_region, slide_thumbnail, save_tiles
     :special-members: __init__
 
 .. autoclass:: OpenSlideWSIReader
@@ -49,6 +49,7 @@ dataloader.save_tiles
 
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
+
 -----
 Tools
 -----
@@ -58,7 +59,7 @@ Tools
 tools.stainnorm
 ^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, ReinhardColourNormaliser, get_normaliser
     :special-members: __init__
     :show-inheritance:
 
