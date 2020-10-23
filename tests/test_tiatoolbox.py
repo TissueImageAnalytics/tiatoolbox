@@ -400,23 +400,23 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
 
 def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
-    source_img = imread("tests/data/source_img.png")
-    target_img = imread("data/target_img.png")
-    reinhard_img = imread("tests/data/norm_reinhard.png")
+    source_img = imread("data/source_image.png")
+    target_img = imread("../data/target_image.png")
+    reinhard_img = imread("data/norm_reinhard.png")
 
     norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(reinhard_img - transform) < 1e-3
+    assert np.mean(np.absolute(reinhard_img/255. - transform/255.)) < 1e-1
 
 
 def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
-    source_img = imread("tests/data/source_image.png")
-    target_img = imread("data/target_img.png")
-    ruifrok_img = imread("tests/data/norm_ruifrok.png")
+    source_img = imread("data/source_image.png")
+    target_img = imread("../data/target_image.png")
+    custom_img = imread("data/norm_ruifrok.png")
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
@@ -425,13 +425,13 @@ def test_custom_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img - transform) < 1e-3
+    assert np.mean(np.absolute(custom_img/255. - transform/255.)) < 1e-1
 
 
 def test_ruifrok_normalise():
     """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
     source_img = imread("data/source_image.png")
-    target_img = imread("../data/target_img.png")
+    target_img = imread("../data/target_image.png")
     ruifrok_img = imread("data/norm_ruifrok.png")
 
     # init class with Ruifrok & Johnston method
@@ -440,13 +440,13 @@ def test_ruifrok_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(ruifrok_img - transform) < 1e-3
+    assert np.mean(np.absolute(ruifrok_img/255. - transform/255.)) < 1e-1
 
 
 def test_macenko_normalise():
     """Test for stain normalisation with stain matrix from Macenko et al."""
-    source_img = imread("data/source_img.png")
-    target_img = imread("../data/target_img.png")
+    source_img = imread("data/source_image.png")
+    target_img = imread("../data/target_image.png")
     macenko_img = imread("data/norm_macenko.png")
 
     # init class with Macenko method
@@ -455,13 +455,13 @@ def test_macenko_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(macenko_img - transform) < 1e-3
+    assert np.mean(np.absolute(macenko_img/255. - transform/255.)) < 1e-1
 
 
 def test_vahadane_normalise():
     """Test for stain normalisation with stain matrix from Vahadane et al."""
-    source_img = imread("data/source_img.png")
-    target_img = imread("../data/target_img.png")
+    source_img = imread("data/source_image.png")
+    target_img = imread("../data/target_image.png")
     vahadane_img = imread("data/norm_vahadane.png")
 
     # init class with Vahadane method
@@ -470,7 +470,7 @@ def test_vahadane_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.sum(vahadane_img - transform) < 1e-3
+    assert np.mean(np.absolute(vahadane_img/255. - transform/255.)) < 1e-1
 
 
 # -------------------------------------------------------------------------------------
