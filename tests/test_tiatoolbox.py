@@ -401,7 +401,7 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
 def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
     source_img = imread("data/source_img.png")
-    target_img = imread("data/target_img.png")
+    target_img = imread("../data/target_img.png")
     reinhard_img = imread("data/norm_reinhard.png")
 
     norm = get_normaliser("reinhard")
@@ -415,7 +415,7 @@ def test_reinhard_normalise():
 def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
     source_img = imread("data/source_img.png")
-    target_img = imread("data/target_img.png")
+    target_img = imread("../data/target_img.png")
     ruifrok_img = imread("data/norm_ruifrok.png")
 
     # init class with custom method - test with ruifrok stain matrix
@@ -431,7 +431,7 @@ def test_custom_normalise():
 def test_ruifrok_normalise():
     """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
     source_img = imread("data/source_img.png")
-    target_img = imread("data/target_img.png")
+    target_img = imread("../data/target_img.png")
     ruifrok_img = imread("data/norm_ruifrok.png")
 
     # init class with Ruifrok & Johnston method
@@ -446,7 +446,7 @@ def test_ruifrok_normalise():
 def test_macenko_normalise():
     """Test for stain normalisation with stain matrix from Macenko et al."""
     source_img = imread("data/source_img.png")
-    target_img = imread("data/target_img.png")
+    target_img = imread("../data/target_img.png")
     macenko_img = imread("data/norm_macenko.png")
 
     # init class with Macenko method
@@ -461,7 +461,7 @@ def test_macenko_normalise():
 def test_vahadane_normalise():
     """Test for stain normalisation with stain matrix from Vahadane et al."""
     source_img = imread("data/source_img.png")
-    target_img = imread("data/target_img.png")
+    target_img = imread("../data/target_img.png")
     vahadane_img = imread("data/norm_vahadane.png")
 
     # init class with Vahadane method
