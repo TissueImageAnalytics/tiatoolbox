@@ -23,8 +23,10 @@
 
 """Stain normalisation stain matrix extraction."""
 import numpy as np
+from sklearn.decomposition import DictionaryLearning
 
 from tiatoolbox.utils.transforms import convert_RGB2OD
+from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
 class CustomExtractor:
@@ -114,47 +116,47 @@ class MacenkoExtractor:
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
-        # Convert to OD and ignore background
-        tissue_mask = LuminosityThresholdTissueLocator.get_tissue_mask(
-            img, luminosity_threshold=luminosity_threshold
+        # convert to OD and ignore background
+        tissue_mask = get_luminosity_tissue_mask(
+            img, threshold=luminosity_threshold
         ).reshape((-1,))
-        OD = convert_RGB2OD(img).reshape((-1, 3))
-        OD = OD[tissue_mask]
+        img_od = convert_RGB2OD(img).reshape((-1, 3))
+        img_od = img_od[tissue_mask]
 
-        # Eigenvectors of cov in OD space (orthogonal as cov symmetric)
-        _, V = np.linalg.eigh(np.cov(OD, rowvar=False))
+        # eigenvectors of cov in OD space (orthogonal as cov symmetric)
+        _, V = np.linalg.eigh(np.cov(img_od, rowvar=False))
 
-        # The two principle eigenvectors
+        # the two principle eigenvectors
         V = V[:, [2, 1]]
 
-        # Make sure vectors are pointing the right way
+        # make sure vectors are pointing the right way
         if V[0, 0] < 0:
             V[:, 0] *= -1
         if V[0, 1] < 0:
             V[:, 1] *= -1
 
-        # Project on this basis.
-        That = np.dot(OD, V)
+        # project on this basis.
+        That = np.dot(img_od, V)
 
-        # Angular coordinates with repect to the prinicple, orthogonal eigenvectors
+        # angular coordinates with repect to the prinicple, orthogonal eigenvectors
         phi = np.arctan2(That[:, 1], That[:, 0])
 
-        # Min and max angles
-        minPhi = np.percentile(phi, 100 - angular_percentile)
-        maxPhi = np.percentile(phi, angular_percentile)
+        # min and max angles
+        min_phi = np.percentile(phi, 100 - angular_percentile)
+        max_phi = np.percentile(phi, angular_percentile)
 
         # the two principle colors
-        v1 = np.dot(V, np.array([np.cos(minPhi), np.sin(minPhi)]))
-        v2 = np.dot(V, np.array([np.cos(maxPhi), np.sin(maxPhi)]))
+        v1 = np.dot(V, np.array([np.cos(min_phi), np.sin(min_phi)]))
+        v2 = np.dot(V, np.array([np.cos(max_phi), np.sin(max_phi)]))
 
-        # Order of H and E.
-        # H first row.
+        # order of H&E - H first row
         if v1[0] > v2[0]:
-            HE = np.array([v1, v2])
+            he = np.array([v1, v2])
         else:
-            HE = np.array([v2, v1])
+            he = np.array([v2, v1])
 
-        return normalize_matrix_rows(HE)
+        normalised_rows = he / np.linalg.norm(he, axis=1)[:, None]
+        return normalised_rows
 
 
 class VahadaneExtractor:
@@ -189,27 +191,30 @@ class VahadaneExtractor:
         """
         img = img.astype("uint8")  # ensure input image is uint8
         # convert to OD and ignore background
-        tissue_mask = LuminosityThresholdTissueLocator.get_tissue_mask(
-            img, luminosity_threshold=luminosity_threshold
+        tissue_mask = get_luminosity_tissue_mask(
+            img, threshold=luminosity_threshold
         ).reshape((-1,))
-        OD = convert_RGB2OD(img).reshape((-1, 3))
-        OD = OD[tissue_mask]
+        img_od = convert_RGB2OD(img).reshape((-1, 3))
+        img_od = img_od[tissue_mask]
 
         # do the dictionary learning
-        dictionary = spams.trainDL(
-            X=OD.T,
-            K=2,
-            lambda1=regulariser,
-            mode=2,
-            modeD=0,
-            posAlpha=True,
-            posD=True,
+        dl = DictionaryLearning(
+            n_components=2,
+            alpha=regulariser,
+            transform_alpha=regulariser,
+            fit_algorithm="lars",
+            transform_algorithm="lasso_lars",
+            positive_dict=True,
             verbose=False,
-        ).T
+            max_iter=3,
+            transform_max_iter=1000,
+        )
+        dictionary = dl.fit_transform(X=img_od.T).T
 
         # order H and E.
         # H on first row.
         if dictionary[0, 0] < dictionary[1, 0]:
             dictionary = dictionary[[1, 0], :]
+        normalised_rows = dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
 
-        return normalize_matrix_rows(dictionary)
+        return normalised_rows
