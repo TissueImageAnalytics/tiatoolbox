@@ -400,9 +400,9 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
 
 def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
-    source_img = imread("data/source_img.png")
-    target_img = imread("../data/target_img.png")
-    reinhard_img = imread("data/norm_reinhard.png")
+    source_img = imread("tests/data/source_img.png")
+    target_img = imread("data/target_img.png")
+    reinhard_img = imread("tests/data/norm_reinhard.png")
 
     norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
@@ -414,9 +414,9 @@ def test_reinhard_normalise():
 
 def test_custom_normalise():
     """Test for stain normalisation with user-defined stain matrix."""
-    source_img = imread("data/source_img.png")
-    target_img = imread("../data/target_img.png")
-    ruifrok_img = imread("data/norm_ruifrok.png")
+    source_img = imread("tests/data/source_img.png")
+    target_img = imread("data/target_img.png")
+    ruifrok_img = imread("tests/data/norm_ruifrok.png")
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
