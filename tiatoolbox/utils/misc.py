@@ -192,8 +192,8 @@ def get_luminosity_tissue_mask(img, threshold):
     """
     img = img.astype("uint8")  # ensure input image is uint8
     img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
-    l = img_lab[:, :, 0] / 255.0  # Convert to range [0,1].
-    tissue_mask = l < threshold
+    l_lab = img_lab[:, :, 0] / 255.0  # Convert to range [0,1].
+    tissue_mask = l_lab < threshold
 
     # check it's not empty
     if tissue_mask.sum() == 0:
