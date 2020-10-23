@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""WSIMeta to save metadata information for WSIs"""
+"""WSIMeta to save metadata information for WSIs."""
 import warnings
 from pathlib import Path
 from typing import Sequence, Tuple, Optional, Mapping
@@ -135,8 +135,7 @@ class WSIMeta:
         return passed
 
     def as_dict(self):
-        """
-        Converts WSIMeta to dictionary to assist print and save in various formats.
+        """Converts WSIMeta to dictionary to assist print and save in various formats.
 
         Args:
             self (WSIMeta):
