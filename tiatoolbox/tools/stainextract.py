@@ -128,30 +128,30 @@ class MacenkoExtractor:
         img_od = img_od[tissue_mask]
 
         # eigenvectors of cov in OD space (orthogonal as cov symmetric)
-        _, V = np.linalg.eigh(np.cov(img_od, rowvar=False))
+        _, e_vects = np.linalg.eigh(np.cov(img_od, rowvar=False))
 
         # the two principle eigenvectors
-        V = V[:, [2, 1]]
+        e_vects = e_vects[:, [2, 1]]
 
         # make sure vectors are pointing the right way
-        if V[0, 0] < 0:
-            V[:, 0] *= -1
-        if V[0, 1] < 0:
-            V[:, 1] *= -1
+        if e_vects[0, 0] < 0:
+            e_vects[:, 0] *= -1
+        if e_vects[0, 1] < 0:
+            e_vects[:, 1] *= -1
 
         # project on this basis.
-        That = np.dot(img_od, V)
+        proj = np.dot(img_od, e_vects)
 
         # angular coordinates with repect to the prinicple, orthogonal eigenvectors
-        phi = np.arctan2(That[:, 1], That[:, 0])
+        phi = np.arctan2(proj[:, 1], proj[:, 0])
 
         # min and max angles
         min_phi = np.percentile(phi, 100 - angular_percentile)
         max_phi = np.percentile(phi, angular_percentile)
 
         # the two principle colors
-        v1 = np.dot(V, np.array([np.cos(min_phi), np.sin(min_phi)]))
-        v2 = np.dot(V, np.array([np.cos(max_phi), np.sin(max_phi)]))
+        v1 = np.dot(e_vects, np.array([np.cos(min_phi), np.sin(min_phi)]))
+        v2 = np.dot(e_vects, np.array([np.cos(max_phi), np.sin(max_phi)]))
 
         # order of H&E - H first row
         if v1[0] > v2[0]:
