@@ -141,7 +141,9 @@ class CustomNormaliser(StainNormaliser):
 
 
 class RuifrokNormaliser(StainNormaliser):
-    """Ruifrok & Johnston stain normaliser, adapted from:
+    """Ruifrok & Johnston stain normaliser.
+
+    Normalise a patch to the stain appearance of the target image using the method of:
 
     Ruifrok, Arnout C., and Dennis A. Johnston. "Quantification of
     histochemical staining by color deconvolution." Analytical and
@@ -164,7 +166,9 @@ class RuifrokNormaliser(StainNormaliser):
 
 
 class MacenkoNormaliser(StainNormaliser):
-    """Macenko stain normaliser, adapted from:
+    """Macenko stain normaliser.
+
+    Normalise a patch to the stain appearance of the target image using the method of:
 
     Macenko, Marc, et al. "A method for normalizing histology
     slides for quantitative analysis." 2009 IEEE International
@@ -187,7 +191,9 @@ class MacenkoNormaliser(StainNormaliser):
 
 
 class VahadaneNormaliser(StainNormaliser):
-    """Vahadane stain normaliser, adapted from:
+    """Vahadane stain normaliser.
+
+    Normalise a patch to the stain appearance of the target image using the method of:
 
     Vahadane, Abhishek, et al. "Structure-preserving color normalization
     and sparse stain separation for histological images."
@@ -210,7 +216,9 @@ class VahadaneNormaliser(StainNormaliser):
 
 
 class ReinhardNormaliser:
-    """Normalize a patch colour to the target image using the method of:
+    """Reinhard colour normaliser.
+
+    Normalise a patch colour to the target image using the method of:
 
     Reinhard, Erik, et al. "Color transfer between images."
     IEEE Computer graphics and applications 21.5 (2001): 34-41.
