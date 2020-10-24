@@ -410,7 +410,7 @@ def test_reinhard_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-3
+    assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-2
 
 
 def test_custom_normalise():
@@ -427,7 +427,7 @@ def test_custom_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(custom_img / 255.0 - transform / 255.0)) < 1e-3
+    assert np.mean(np.absolute(custom_img / 255.0 - transform / 255.0)) < 1e-2
 
 
 def test_ruifrok_normalise():
@@ -443,7 +443,7 @@ def test_ruifrok_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-3
+    assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-2
 
 
 def test_macenko_normalise():
@@ -459,7 +459,7 @@ def test_macenko_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-3
+    assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
 def test_vahadane_normalise():
@@ -475,7 +475,7 @@ def test_vahadane_normalise():
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-3
+    assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-2
 
 
 # -------------------------------------------------------------------------------------
@@ -689,17 +689,20 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     assert save_svs_tiles_result.exit_code == 0
 
 
-def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_target):
+def test_command_line_stainnorm():
     """Test for the stain normalisation CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = file_parent_dir.joinpath("data/source_image.png")
+    target_img = file_parent_dir.joinpath("../data/target_image.png")
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "reinhard",
         ],
@@ -712,9 +715,9 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "ruifrok",
         ],
@@ -727,9 +730,9 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "macenko",
         ],
@@ -742,9 +745,9 @@ def test_command_line_stainnorm(_response_stainnorm_source, _response_stainnorm_
         [
             "stainnorm",
             "--source_input",
-            pathlib.Path(_response_stainnorm_source),
+            source_img,
             "--target_input",
-            pathlib.Path(_response_stainnorm_target),
+            target_img,
             "--method",
             "vahadane",
         ],

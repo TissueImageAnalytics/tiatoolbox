@@ -21,7 +21,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Stain normalisation stain matrix extraction."""
+"""Stain matrix extraction for stain normalisation."""
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
@@ -58,7 +58,9 @@ class CustomExtractor:
 
 
 class RuifrokExtractor:
-    """Get the stain matrix as defined in:
+    """Reuifrok stain extractor.
+
+    Get the stain matrix as defined in:
 
     Ruifrok, Arnout C., and Dennis A. Johnston. "Quantification of
     histochemical staining by color deconvolution." Analytical and
@@ -86,7 +88,9 @@ class RuifrokExtractor:
 
 
 class MacenkoExtractor:
-    """Get the stain matrix as defined in:
+    """Macenko stain extractor.
+
+    Get the stain matrix as defined in:
 
     Macenko, Marc, et al. "A method for normalizing histology
     slides for quantitative analysis." 2009 IEEE International
@@ -160,7 +164,9 @@ class MacenkoExtractor:
 
 
 class VahadaneExtractor:
-    """Get the stain matrix as defined in:
+    """Vahadane stain extractor.
+
+    Get the stain matrix as defined in:
 
     Vahadane, Abhishek, et al. "Structure-preserving color normalization
     and sparse stain separation for histological images."
