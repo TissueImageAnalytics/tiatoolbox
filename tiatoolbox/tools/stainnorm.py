@@ -209,7 +209,7 @@ class VahadaneNormaliser(StainNormaliser):
         self.extractor = VahadaneExtractor()
 
 
-class ReinhardColourNormaliser:
+class ReinhardNormaliser:
     """Normalize a patch colour to the target image using the method of:
 
     Reinhard, Erik, et al. "Color transfer between images."
@@ -223,8 +223,8 @@ class ReinhardColourNormaliser:
         target_stds (float) : standard deviation of each LAB channel.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import ReinhardColourNormaliser()
-        >>> norm = ReinhardColourNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import ReinhardNormaliser()
+        >>> norm = ReinhardNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(src_img)
 
@@ -355,7 +355,7 @@ def get_normaliser(method_name, stain_matrix=None):
             raise Exception("stain_matrix is only defined when using custom")
 
     if method_name.lower() == "reinhard":
-        norm = ReinhardColourNormaliser()
+        norm = ReinhardNormaliser()
     elif method_name.lower() == "custom":
         norm = CustomNormaliser(load_stain_matrix(stain_matrix))
     elif method_name.lower() == "ruifrok":
