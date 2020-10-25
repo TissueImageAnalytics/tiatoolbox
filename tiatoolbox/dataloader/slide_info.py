@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Get Slide Meta Data information"""
+"""Get Slide Meta Data information."""
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.utils.exceptions import FileNotSupported
 

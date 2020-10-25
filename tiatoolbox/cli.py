@@ -45,7 +45,7 @@ def version_msg():
     __version__, "--version", "-V", help="Version", message=version_msg()
 )
 def main():
-    """Computational pathology toolbox developed by TIA LAB"""
+    """Computational pathology toolbox by TIA LAB."""
     return 0
 
 
@@ -73,7 +73,7 @@ def main():
     help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
-    """Displays or saves WSI metadata"""
+    """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
 
     if os.path.isdir(wsi_input):
@@ -143,7 +143,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     ", default=show",
 )
 def read_region(wsi_input, region, level, output_path, mode):
-    """Reads a region in an whole slide image as specified"""
+    """Read a region in an whole slide image as specified."""
     if not region:
         region = [0, 0, 2000, 2000]
 
@@ -186,7 +186,7 @@ def read_region(wsi_input, region, level, output_path, mode):
     ", default=show",
 )
 def slide_thumbnail(wsi_input, output_path, mode):
-    """Reads whole slide image thumbnail"""
+    """Read whole slide image thumbnail."""
     input_dir, file_name, file_type = utils.misc.split_path_name_ext(
         full_path=wsi_input
     )
@@ -256,7 +256,7 @@ def save_tiles(
     tile_read_size_h,
     verbose=True,
 ):
-    """Displays or saves WSI metadata"""
+    """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(

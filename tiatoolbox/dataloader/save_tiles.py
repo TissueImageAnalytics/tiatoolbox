@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Save image tiles from the whole slide image"""
+"""Save image tiles from the whole slide image."""
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox.utils.exceptions import FileNotSupported
 

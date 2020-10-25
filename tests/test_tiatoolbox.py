@@ -31,10 +31,7 @@ import shutil
 
 @pytest.fixture(scope="session")
 def _response_ndpi(tmpdir_factory):
-    """
-    Sample pytest fixture for ndpi images
-    Download ndpi image for pytest
-    """
+    """Sample pytest fixture for ndpi images. Download ndpi image for pytest."""
     ndpi_file_path = tmpdir_factory.mktemp("data").join("CMU-1.ndpi")
     if not os.path.isfile(ndpi_file_path):
         print("\nDownloading NDPI")
@@ -52,10 +49,7 @@ def _response_ndpi(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _response_svs(tmpdir_factory):
-    """
-    Sample pytest fixture for svs images
-    Download ndpi image for pytest
-    """
+    """Sample pytest fixture for svs images. Download ndpi image for pytest."""
     svs_file_path = tmpdir_factory.mktemp("data").join("CMU-1-Small-Region.svs")
     if not os.path.isfile(svs_file_path):
         print("\nDownloading SVS")
@@ -73,10 +67,7 @@ def _response_svs(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _response_jp2(tmpdir_factory):
-    """
-    Sample pytest fixture for svs images
-    Download ndpi image for pytest
-    """
+    """Sample pytest fixture for JP2 images. Download ndpi image for pytest."""
     jp2_file_path = tmpdir_factory.mktemp("data").join("test1.jp2")
     if not os.path.isfile(jp2_file_path):
         print("\nDownloading JP2")
@@ -94,6 +85,7 @@ def _response_jp2(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _response_all_wsis(_response_ndpi, _response_svs, _response_jp2, tmpdir_factory):
+    """pytest fixture for sample wsi(s) of all types supported by tiatoolbox."""
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
     try:
@@ -114,7 +106,7 @@ def _response_all_wsis(_response_ndpi, _response_svs, _response_jp2, tmpdir_fact
 
 
 def test_slide_info(_response_all_wsis, tmp_path):
-    """Test for slide_info as a python function"""
+    """Test for slide_info as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=_response_all_wsis,
@@ -128,7 +120,7 @@ def test_slide_info(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_slide_info(_response_svs, tmp_path):
-    """Test for slide_info in WSIReader class as a python function"""
+    """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -141,7 +133,7 @@ def test_wsireader_slide_info(_response_svs, tmp_path):
 
 
 def test_wsireader_read_region(_response_svs):
-    """Test for read region as a python function"""
+    """Test for read region as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -157,7 +149,7 @@ def test_wsireader_read_region(_response_svs):
 
 
 def test_wsireader_slide_thumbnail(_response_svs):
-    """Test for slide_thumbnail as a python function"""
+    """Test for slide_thumbnail as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -170,7 +162,7 @@ def test_wsireader_slide_thumbnail(_response_svs):
 
 
 def test_wsireader_save_tiles(_response_svs, tmp_path):
-    """Test for save_tiles in wsireader as a python function"""
+    """Test for save_tiles in wsireader as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent),
@@ -206,7 +198,7 @@ def test_wsireader_save_tiles(_response_svs, tmp_path):
 
 
 def test_save_tiles(_response_all_wsis, tmp_path):
-    """Test for save_tiles as a python function"""
+    """Test for save_tiles as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_all_wsis)),
@@ -266,7 +258,7 @@ def test_save_tiles(_response_all_wsis, tmp_path):
 
 
 def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
-    """pytest for save_tiles in wsireader as a python function"""
+    """Test for save_tiles in wsireader as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(
         _response_jp2,
         output_dir=str(
@@ -299,7 +291,7 @@ def test_wsireader_jp2_save_tiles(_response_jp2, tmp_path):
 
 
 def test_exception_tests():
-    """Test for Exceptions"""
+    """Test for Exceptions."""
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),
@@ -319,14 +311,14 @@ def test_exception_tests():
 
 
 def test_imresize():
-    """Test for imresize"""
+    """Test for imresize."""
     img = np.zeros((2000, 2000, 3))
     resized_img = utils.transforms.imresize(img, 0.5)
     assert resized_img.shape == (1000, 1000, 3)
 
 
 def test_background_composite():
-    """Test for background composite"""
+    """Test for background composite."""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
     im = utils.transforms.background_composite(new_im)
@@ -338,11 +330,13 @@ def test_background_composite():
 
 
 def test_wsimeta_init_fail():
+    """Test for wsimeta initialisation fail."""
     with pytest.raises(TypeError):
         wsimeta.WSIMeta(slide_dimensions=None)
 
 
 def test_wsimeta_validate_fail():
+    """Test for wsimeta validation fail."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
     assert meta.validate() is False
 
@@ -375,6 +369,7 @@ def test_wsimeta_validate_fail():
 
 
 def test_wsimeta_validate_pass():
+    """Test for wsimeta validation."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
     assert meta.validate()
 
@@ -387,13 +382,22 @@ def test_wsimeta_validate_pass():
 
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
+    """Test for wsimeta for openslide ndpi."""
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
     meta = wsi.slide_info
     assert meta.validate()
 
 
 def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
+    """Test for wsimeta for openslide svs."""
     wsi = wsireader.OpenSlideWSIReader(_response_svs)
+    meta = wsi.slide_info
+    assert meta.validate()
+
+
+def test_wsimeta_openslidewsireader_jp2(_response_jp2, tmp_path):
+    """Test for wsimeta for JP2."""
+    wsi = wsireader.OmnyxJP2WSIReader(_response_jp2)
     meta = wsi.slide_info
     assert meta.validate()
 
@@ -484,7 +488,7 @@ def test_vahadane_normalise():
 
 
 def test_command_line_help_interface():
-    """Test the CLI help"""
+    """Test the CLI help."""
     runner = CliRunner()
     result = runner.invoke(cli.main)
     assert result.exit_code == 0
@@ -494,7 +498,7 @@ def test_command_line_help_interface():
 
 
 def test_command_line_version():
-    """Test for version check"""
+    """Test for version check."""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-V"])
     assert __version__ in version_result.output
@@ -540,7 +544,7 @@ def test_command_line_slide_info(_response_all_wsis):
 
 
 def test_command_line_read_region(_response_ndpi, tmp_path):
-    """pytest OpenSlide read_region CLI."""
+    """Test OpenSlide read_region CLI."""
     runner = CliRunner()
     read_region_result = runner.invoke(
         cli.main,
@@ -585,7 +589,7 @@ def test_command_line_read_region(_response_ndpi, tmp_path):
 
 
 def test_command_line_jp2_read_region(_response_jp2, tmp_path):
-    """pytest JP2 read_region"""
+    """Test JP2 read_region."""
     runner = CliRunner()
     read_region_result = runner.invoke(
         cli.main,
@@ -627,7 +631,7 @@ def test_command_line_slide_thumbnail(_response_ndpi, tmp_path):
 
 
 def test_command_line_jp2_slide_thumbnail(_response_jp2, tmp_path):
-    """pytest for the jp2 slide_thumbnail CLI."""
+    """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
         cli.main,
