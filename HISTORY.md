@@ -28,7 +28,6 @@ History
 - Removes `pathos` as a dependency
 - Updates `openslide-python` requirement to 1.1.2
 
-
 0.3.0 (2020-07-19)
 ------------------
 

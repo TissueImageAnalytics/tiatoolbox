@@ -45,7 +45,6 @@ dataloader.slide_info
 ^^^^^^^^^^^^^^^^^^^^^
 dataloader.save_tiles
 ^^^^^^^^^^^^^^^^^^^^^
-
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
 
