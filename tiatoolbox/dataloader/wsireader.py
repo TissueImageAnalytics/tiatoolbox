@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""WSIReader for WSI reading or extracting metadata information from WSIs"""
+"""WSIReader for WSI reading or extracting metadata information from WSIs."""
 from tiatoolbox.utils import misc, transforms
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
@@ -33,14 +33,23 @@ import warnings
 
 
 class WSIReader:
-    """WSI Reader class to read WSI images
+    """WSI Reader class to read WSI images.
 
     Attributes:
-        input_path (pathlib.Path): input path to WSI directory
-        output_dir (pathlib.Path): output directory to save the output
-        tile_objective_value (int): objective value at which tile is generated
+        input_path (pathlib.Path): input path to WSI directory.
+        output_dir (pathlib.Path): output directory to save the output.
+        tile_objective_value (int): objective value at which tile is generated.
         tile_read_size (int): [tile width, tile height]
-        slide_info (WSIMeta): Whole slide image slide information
+        slide_info (WSIMeta): Whole slide image slide information.
+
+    Args:
+        input_path (str, pathlib.Path): input path to WSI.
+        output_dir (str, pathlib.Path): output directory to save the output,
+         default=./output.
+        tile_objective_value (int): objective value at which tile is generated,
+         default=20.
+        tile_read_size_w (int): tile width, default=5000.
+        tile_read_size_h (int): tile height, default=5000.
 
     """
 
@@ -52,17 +61,6 @@ class WSIReader:
         tile_read_size_w=5000,
         tile_read_size_h=5000,
     ):
-        """
-        Args:
-            input_path (str, pathlib.Path): input path to WSI
-            output_dir (str, pathlib.Path): output directory to save the output,
-                default=./output
-            tile_objective_value (int): objective value at which tile is generated,
-                default=20
-            tile_read_size_w (int): tile width, default=5000
-            tile_read_size_h (int): tile height, default=5000
-
-        """
 
         self.input_path = pathlib.Path(input_path)
         if output_dir is not None:
@@ -73,7 +71,7 @@ class WSIReader:
 
     @property
     def slide_info(self):
-        """WSI meta data reader
+        """WSI meta data reader.
 
         Args:
             self (WSIReader):
@@ -85,8 +83,7 @@ class WSIReader:
         raise NotImplementedError
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
-        """Read a region in whole slide image
-
+        """Read a region in whole slide image.
         Args:
             start_w (int): starting point in x-direction (along width)
             start_h (int): starting point in y-direction (along height)
@@ -102,7 +99,7 @@ class WSIReader:
         raise NotImplementedError
 
     def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.25x
+        """Read whole slide image thumbnail at 1.25x.
 
         Args:
             self (WSIReader):
@@ -179,11 +176,9 @@ class WSIReader:
                 end_h = (h * tile_h) + tile_h
                 start_w = w * tile_w
                 end_w = (w * tile_w) + tile_w
-                if end_h > slide_h:
-                    end_h = slide_h
 
-                if end_w > slide_w:
-                    end_w = slide_w
+                end_h = min(end_h, slide_h)
+                end_w = min(end_w, slide_w)
 
                 # Read image region
                 im = self.read_region(start_w, start_h, end_w, end_h, level)
@@ -290,7 +285,7 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
-        """Read a region in whole slide image
+        """Read a region in whole slide image.
 
         Args:
             start_w (int): starting point in x-direction (along width)
@@ -314,7 +309,6 @@ class OpenSlideWSIReader(WSIReader):
             >>> plt.imshow(im_region)
 
         """
-
         openslide_obj = self.openslide_wsi
         im_region = openslide_obj.read_region(
             [start_w, start_h], level, [end_w - start_w, end_h - start_h]
@@ -324,13 +318,13 @@ class OpenSlideWSIReader(WSIReader):
 
     @property
     def slide_info(self):
-        """Openslide WSI meta data reader
+        """Openslide WSI meta data reader.
 
         Args:
             self (OpenSlideWSIReader):
 
         Returns:
-            WSIMeta: containing meta information
+            WSIMeta: containing meta information.
 
         """
         objective_power = np.int(
@@ -361,7 +355,7 @@ class OpenSlideWSIReader(WSIReader):
         return param
 
     def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.25x
+        """Read whole slide image thumbnail at 1.25x.
 
         Args:
             self (OpenSlideWSIReader):
@@ -415,7 +409,7 @@ class OmnyxJP2WSIReader(WSIReader):
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_region(self, start_w, start_h, end_w, end_h, level=0):
-        """Read a region in whole slide image
+        """Read a region in whole slide image.
 
         Args:
             start_w (int): starting point in x-direction (along width)
@@ -452,8 +446,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
     @property
     def slide_info(self):
-        """JP2 meta data reader
-
+        """JP2 meta data reader.
         Args:
             self (OmnyxJP2WSIReader):
 
@@ -461,7 +454,6 @@ class OmnyxJP2WSIReader(WSIReader):
             WSIMeta: containing meta information
 
         """
-
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
@@ -512,7 +504,7 @@ class OmnyxJP2WSIReader(WSIReader):
         return param
 
     def slide_thumbnail(self):
-        """Read whole slide image thumbnail at 1.25x
+        """Read whole slide image thumbnail at 1.25x.
 
         Args:
             self (OmnyxJP2WSIReader):

@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""WSIMeta to save metadata information for WSIs"""
+"""WSIMeta to save metadata information for WSIs."""
 import warnings
 from pathlib import Path
 from typing import Sequence, Tuple, Optional, Mapping
@@ -27,7 +27,34 @@ import numpy as np
 
 
 class WSIMeta:
-    """Whole slide image metadata class"""
+    """Whole slide image metadata class.
+
+    Attributes:
+        objective_power (float): objective power at which the slide was scanned.
+        slide_dimensions (tuple): Slide dimensions at level 0 in terms of width and
+         height.
+        level_dimensions (list): A list of image dimensions at each downsample level of
+         the WSI.
+        level_downsamples (list): A list of downsample factors for each level of WSI.
+        level_count (int): The number of available levels in the whole slide image.
+        vendor (str): vendor of the microscope which scanned the image.
+        mpp (np.array): microns per pixel at base resolution.
+        file_path (str, pathlib.Path): Path to input image.
+        raw (xml, dict): raw meta data from Openslide or glymur
+
+    Args:
+        objective_power (float): objective power at which the slide was scanned.
+        slide_dimensions (tuple): Slide dimensions at level 0 as [width, height].
+        level_dimensions (list): A list of image dimensions at each downsample level of
+         the WSI.
+        level_downsamples (list): A list of downsample factors for each level of WSI.
+        level_count (int): The number of available levels in the whole slide image.
+        vendor (str): vendor of the microscope which scanned the image.
+        mpp (np.array): microns per pixel at base resolution.
+        file_path (str, pathlib.Path): Path to input image.
+        raw (xml, dict): raw meta data from Openslide or glymur
+
+    """
 
     def __init__(
         self,
@@ -65,8 +92,7 @@ class WSIMeta:
 
     def validate(self):
         """
-        Validate passed values and cast to Python types
-
+        Validate passed values and cast to Python types.
         Metadata values are often given as strings and must be parsed/cast to the
         appropriate python type e.g. "3.14" to 3.14 etc.
 
@@ -109,8 +135,7 @@ class WSIMeta:
         return passed
 
     def as_dict(self):
-        """
-        Converts WSIMeta to dictionary to assist print and save in various formats
+        """Convert WSIMeta to dictionary to assist print and save in various formats.
 
         Args:
             self (WSIMeta):

@@ -16,9 +16,16 @@ Dataloader
 dataloader.wsireader
 ^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.dataloader.wsireader
-    :members: WSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader
-    :special-members: __init__
+.. currentmodule:: tiatoolbox.dataloader.wsireader
+.. autoclass:: WSIReader
+    :members: read_region, slide_thumbnail, save_tiles
+
+.. autoclass:: OpenSlideWSIReader
+    :members: slide_info, read_region, slide_thumbnail, save_tiles
+    :show-inheritance:
+
+.. autoclass:: OmnyxJP2WSIReader
+    :members: slide_info, read_region, slide_thumbnail, save_tiles
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -41,6 +48,7 @@ dataloader.save_tiles
 
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
+
 -----
 Tools
 -----
@@ -69,7 +77,7 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, get_luminosity_tissue_mask
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, imread, get_luminosity_tissue_mask
 
 ^^^^^^^^^^^^^^^^
 utils.transforms
