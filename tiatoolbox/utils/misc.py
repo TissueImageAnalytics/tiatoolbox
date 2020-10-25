@@ -173,3 +173,30 @@ def load_stain_matrix(stain_matrix_input):
         raise Exception("stain_matrix must be either a path or a numpy array")
 
     return stain_matrix
+
+
+def get_luminosity_tissue_mask(img, threshold):
+    """Get tissue mask based on the luminosity of the input image.
+
+    Args:
+        img (ndarray): input image used to obtain tissue mask.
+        threshold (float): luminosity threshold used to determine tissue area.
+
+    Returns:
+        tissue_mask (ndarray): binary tissue mask.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> tissue_mask = utils.misc.get_luminosity_tissue_mask(img, threshold=0.8)
+
+    """
+    img = img.astype("uint8")  # ensure input image is uint8
+    img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    l_lab = img_lab[:, :, 0] / 255.0  # Convert to range [0,1].
+    tissue_mask = l_lab < threshold
+
+    # check it's not empty
+    if tissue_mask.sum() == 0:
+        raise Exception("Empty tissue mask computed")
+
+    return tissue_mask
