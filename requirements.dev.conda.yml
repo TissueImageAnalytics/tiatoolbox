@@ -20,6 +20,7 @@ dependencies:
   - recommonmark
   - pandas
   - glymur
+  - scikit-learn==0.23.2
   - pytest==5.4.2
   - pytest-runner==5.2
   - pip:
