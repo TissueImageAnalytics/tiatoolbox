@@ -26,7 +26,7 @@ import pathlib
 
 
 def slide_info(input_path, output_dir=None, verbose=True):
-    """Returns WSI meta data.
+    """Return WSI meta data.
 
     Args:
         input_path (str, pathlib.Path): Path to whole slide image
@@ -49,7 +49,6 @@ def slide_info(input_path, output_dir=None, verbose=True):
         ...     print(slide_param.as_dict())
 
     """
-
     input_path = pathlib.Path(input_path)
     if verbose:
         print(input_path.name, flush=True)

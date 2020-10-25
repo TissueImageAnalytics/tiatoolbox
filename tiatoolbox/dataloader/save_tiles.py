@@ -62,7 +62,6 @@ def save_tiles(
         ...         )
 
     """
-
     input_path = pathlib.Path(input_path)
     if verbose:
         print(input_path.name, flush=True)
