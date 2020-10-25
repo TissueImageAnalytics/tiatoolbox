@@ -38,7 +38,6 @@ from tiatoolbox.tools.stainextract import (
 
 class StainNormaliser:
     """Stain normalisation base class.
-
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
@@ -342,11 +341,11 @@ def get_normaliser(method_name, stain_matrix=None):
     """Return a stain normaliser object with corresponding name.
 
     Args:
-        method_name (str) : name of stain norm method, must be one of
-                            "reinhard", "custom", "ruifrok", "macenko" or "vahadane".
+        method_name (str) : name of stain norm method, must be one of "reinhard",
+         "custom", "ruifrok", "macenko" or "vahadane".
         stain_matrix (ndarray or str, pathlib.Path) : user-defined stain matrix.
-            This must either be a numpy array or a path to either a .csv or .npy
-            file. This is only utilised if using "custom" method name.
+         This must either be a numpy array or a path to either a .csv or .npy file.
+         This is only utilised if using "custom" method name.
 
     Returns:
         StainNormaliser : an object with base 'StainNormaliser' as base class.
