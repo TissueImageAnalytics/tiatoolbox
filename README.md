@@ -23,13 +23,17 @@ Please try
 Getting Started
 ===============
 
-First, install OpenSlide [here](https://openslide.org/download/). Then,
-create and activate the conda environment:
+First, install
+- OpenSlide [here](https://openslide.org/download/).
+- OpenJPEG [here](https://www.openjpeg.org/), using
+`conda install -c conda-forge openjpeg>=2.3.0`.
+
+Then, create and activate the conda environment:
 
 pip
 ---
 
-    pip install -r requirements.txt
+    pip install tiatoolbox
 
 conda
 -----
@@ -45,6 +49,7 @@ tiatoolbox --help
                       save-tiles,
                       slide_info,
                       slide-thumbnail,
+                      stainnorm,
                       }
                      ...
 
@@ -55,8 +60,31 @@ tiatoolbox --help
     save-tiles          usage: tiatoolbox save-tiles -h
     slide-info          usage: tiatoolbox slide-info -h
     slide-thumbnail     usage: tiatoolbox slide-thumbnail -h
+    stainnorm           usage: tiatoolbox stainnorm -h
 
     optional arguments:
       -h, --help            show this help message and exit
       --version             show program`s version number and exit
-      --verbose VERBOSE
+      --verbose             VERBOSE
+
+
+License
+=======
+
+The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
+
+The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/LICENSE.md).
+
+[GNU General Public License (Version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
+
+
+Auxiliary Files
+---------------
+
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Lab webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+
+Dual License
+------------
+
+If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk).

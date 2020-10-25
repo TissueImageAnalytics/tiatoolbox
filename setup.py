@@ -15,12 +15,12 @@ requirements = [
     "numpy",
     "pillow",
     "matplotlib",
-    "setuptools<=45.1.0",
     "opencv-python>=4.0",
-    "pathos==0.2.5",
-    "openslide-python==1.1.1",
+    "openslide-python==1.1.2",
     "pyyaml",
     "pandas",
+    "glymur",
+    "scikit-learn==0.23.2",
 ]
 
 setup_requirements = [
@@ -45,7 +45,11 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     description="Computational pathology toolbox developed by TIA Lab.",
-    entry_points={"console_scripts": ["tiatoolbox=tiatoolbox.cli:main", ], },
+    entry_points={
+        "console_scripts": [
+            "tiatoolbox=tiatoolbox.cli:main",
+        ],
+    },
     install_requires=requirements,
     long_description=readme + "\n\n" + history,
     long_description_content_type="text/markdown",
@@ -57,6 +61,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/tialab/tiatoolbox",
-    version="0.3.0",
+    version="0.4.0",
     zip_safe=False,
 )

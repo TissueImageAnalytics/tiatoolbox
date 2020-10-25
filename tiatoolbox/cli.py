@@ -1,7 +1,29 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
 """Console script for tiatoolbox."""
 from tiatoolbox import __version__
 from tiatoolbox import dataloader
+from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
+from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 
 import sys
 import click
@@ -23,7 +45,7 @@ def version_msg():
     __version__, "--version", "-V", help="Version", message=version_msg()
 )
 def main():
-    """Computational pathology toolbox developed by TIA LAB"""
+    """Computational pathology toolbox by TIA LAB."""
     return 0
 
 
@@ -36,7 +58,7 @@ def main():
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
     "--mode",
@@ -45,13 +67,13 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--workers",
-    type=int,
-    help="num of cpu cores to use for multiprocessing, "
-    "default=multiprocessing.cpu_count()",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
-    """Displays or saves WSI metadata"""
+def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
+    """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
 
     if os.path.isdir(wsi_input):
@@ -70,26 +92,29 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
             input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
             output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
     else:
-        raise ValueError("wsi_input path is not valid")
+        raise FileNotFoundError
 
     print(files_all)
 
-    slide_params = dataloader.slide_info.slide_info(
-        input_path=files_all, workers=workers,
-    )
-
-    if mode == "show":
-        for slide_param in slide_params:
-            print(slide_param)
-
     if mode == "save":
         output_dir.mkdir(parents=True, exist_ok=True)
-        for slide_param in slide_params:
-            utils.misc.save_yaml(
-                slide_param,
-                pathlib.Path(output_dir).joinpath(slide_param["file_name"] + ".yaml"),
+
+    for curr_file in files_all:
+        slide_param = dataloader.slide_info.slide_info(
+            input_path=curr_file, verbose=verbose
+        )
+        if mode == "show":
+            print(slide_param.as_dict())
+
+        if mode == "save":
+            out_path = pathlib.Path(
+                output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
-        print("Meta files saved at " + str(output_dir))
+            utils.misc.save_yaml(
+                slide_param.as_dict(),
+                out_path,
+            )
+            print("Meta files saved at " + str(output_dir))
 
 
 @main.command()
@@ -103,13 +128,13 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     "--region",
     type=int,
     nargs=4,
-    help="image region in the whole slide image to read" "default=0 0 2000 2000",
+    help="image region in the whole slide image to read, default=0 0 2000 2000",
 )
 @click.option(
     "--level",
     type=int,
     default=0,
-    help="pyramid level to read the image, " "default=0",
+    help="pyramid level to read the image, default=0",
 )
 @click.option(
     "--mode",
@@ -118,23 +143,33 @@ def slide_info(wsi_input, output_dir, file_types, mode, workers=None):
     ", default=show",
 )
 def read_region(wsi_input, region, level, output_path, mode):
-    """Reads a region in an whole slide image as specified"""
-    if all(region):
+    """Read a region in an whole slide image as specified."""
+    if not region:
         region = [0, 0, 2000, 2000]
 
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
+    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
+        full_path=wsi_input
+    )
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi_obj = dataloader.wsireader.WSIReader(
-        input_dir=input_dir, file_name=file_name + ext
-    )
-    im_region = wsi_obj.read_region(region[0], region[1], region[2], region[3], level)
-    if mode == "show":
-        im_region = Image.fromarray(im_region)
-        im_region.show()
 
-    if mode == "save":
-        utils.misc.imwrite(output_path, im_region)
+    wsi = None
+    if file_type in (".svs", ".ndpi", ".mrxs"):
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
+
+    elif file_type in (".jp2",):
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+
+    if wsi is not None:
+        im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
+        if mode == "show":
+            im_region = Image.fromarray(im_region)
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(output_path, im_region)
+    else:
+        raise FileNotSupported
 
 
 @main.command()
@@ -151,23 +186,29 @@ def read_region(wsi_input, region, level, output_path, mode):
     ", default=show",
 )
 def slide_thumbnail(wsi_input, output_path, mode):
-    """Reads whole slide image thumbnail"""
-
-    input_dir, file_name, ext = utils.misc.split_path_name_ext(full_path=wsi_input)
+    """Read whole slide image thumbnail."""
+    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
+        full_path=wsi_input
+    )
     if output_path is None and mode == "save":
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi_obj = dataloader.wsireader.WSIReader(
-        input_dir=input_dir, file_name=file_name + ext
-    )
+    wsi = None
+    if file_type in (".svs", ".ndpi", ".mrxs"):
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
+    elif file_type in (".jp2",):
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
 
-    slide_thumb = wsi_obj.slide_thumbnail()
+    if wsi is not None:
+        slide_thumb = wsi.slide_thumbnail()
 
-    if mode == "show":
-        im_region = Image.fromarray(slide_thumb)
-        im_region.show()
+        if mode == "show":
+            im_region = Image.fromarray(slide_thumb)
+            im_region.show()
 
-    if mode == "save":
-        utils.misc.imwrite(output_path, slide_thumb)
+        if mode == "save":
+            utils.misc.imwrite(output_path, slide_thumb)
+    else:
+        raise FileNotSupported
 
 
 @main.command()
@@ -180,25 +221,31 @@ def slide_thumbnail(wsi_input, output_path, mode):
 @click.option(
     "--file_types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
     "--tile_objective_value",
     type=int,
     default=20,
-    help="objective value at which tile is generated, " "default=20",
+    help="objective value at which tile is generated- default=20",
 )
 @click.option(
-    "--tile_read_size_w", type=int, default=5000, help="tile width, " "default=5000",
-)
-@click.option(
-    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
-)
-@click.option(
-    "--workers",
+    "--tile_read_size_w",
     type=int,
-    help="num of cpu cores to use for multiprocessing, "
-    "default=multiprocessing.cpu_count()",
+    default=5000,
+    help="tile width, default=5000",
+)
+@click.option(
+    "--tile_read_size_h",
+    type=int,
+    default=5000,
+    help="tile height, " "default=5000",
+)
+@click.option(
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
@@ -207,9 +254,9 @@ def save_tiles(
     tile_objective_value,
     tile_read_size_w,
     tile_read_size_h,
-    workers=None,
+    verbose=True,
 ):
-    """Displays or saves WSI metadata"""
+    """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(
@@ -220,18 +267,81 @@ def save_tiles(
             wsi_input,
         ]
     else:
-        raise ValueError("wsi_input path is not valid")
+        raise FileNotFoundError
 
     print(files_all)
 
-    dataloader.save_tiles.save_tiles(
-        input_path=files_all,
-        output_dir=output_dir,
-        tile_objective_value=tile_objective_value,
-        tile_read_size_w=tile_read_size_w,
-        tile_read_size_h=tile_read_size_h,
-        workers=workers,
-    )
+    for curr_file in files_all:
+        dataloader.save_tiles.save_tiles(
+            input_path=curr_file,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
+            verbose=verbose,
+        )
+
+
+@main.command()
+@click.option(
+    "--source_input",
+    help="input path to the source image or a directory of source images",
+)
+@click.option("--target_input", help="input path to the target image")
+@click.option(
+    "--method",
+    help="Stain normlisation method to use. Choose from 'reinhard', 'custom',"
+    "'ruifrok', 'macenko, 'vahadane'",
+    default="reinhard",
+)
+@click.option(
+    "--stain_matrix",
+    help="stain matrix to use in custom normaliser. This can either be a numpy array"
+    ", a path to a npy file or a path to a csv file. If using a path to a csv file, "
+    "there must not be any column headers.",
+    default=None,
+)
+@click.option(
+    "--output_dir",
+    help="Output directory for stain normalisation",
+    default="stainorm_output",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory"
+    "default='*.png', '*.jpg', '*.tif', '*.tiff'",
+    default="*.png, '*.jpg', '*.tif', '*.tiff'",
+)
+def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
+    """Stain normalise an input image/directory of input images"""
+    file_types = tuple(file_types.split(", "))
+    if os.path.isdir(source_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=source_input, file_types=file_types
+        )
+    elif os.path.isfile(source_input):
+        files_all = [
+            source_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    print(files_all)
+
+    if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
+        raise MethodNotSupported
+
+    # init stain normalisation method
+    norm = sn.get_normaliser(method, stain_matrix)
+
+    # get stain information of target image
+    norm.fit(utils.misc.imread(target_input))
+
+    for curr_file in files_all:
+        basename = os.path.basename(curr_file)
+        # transform source image
+        transform = norm.transform(utils.misc.imread(curr_file))
+        utils.misc.imwrite(os.path.join(output_dir, basename), transform)
 
 
 if __name__ == "__main__":
