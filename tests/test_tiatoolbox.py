@@ -265,7 +265,6 @@ def test_read_rect_openslide_levels(_response_ndpi):
     location = (1000, 2000)
     size = (256, 256)
     for level in range(wsi.slide_info.level_count):
-        level_width, level_height = wsi.slide_info.level_dimensions[level]
         im_region = wsi.read_rect(location, size, resolution=level, units="level")
 
         assert isinstance(im_region, np.ndarray)
