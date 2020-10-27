@@ -16,9 +16,16 @@ Dataloader
 dataloader.wsireader
 ^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.dataloader.wsireader
-    :members: WSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader
-    :special-members: __init__
+.. currentmodule:: tiatoolbox.dataloader.wsireader
+.. autoclass:: WSIReader
+    :members: read_region, slide_thumbnail, save_tiles
+
+.. autoclass:: OpenSlideWSIReader
+    :members: slide_info, read_region, slide_thumbnail, save_tiles
+    :show-inheritance:
+
+.. autoclass:: OmnyxJP2WSIReader
+    :members: slide_info, read_region, slide_thumbnail, save_tiles
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -38,9 +45,9 @@ dataloader.slide_info
 ^^^^^^^^^^^^^^^^^^^^^
 dataloader.save_tiles
 ^^^^^^^^^^^^^^^^^^^^^
-
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
+
 -----
 Tools
 -----
@@ -50,7 +57,7 @@ Tools
 tools.stainnorm
 ^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
     :special-members: __init__
     :show-inheritance:
 
@@ -58,7 +65,7 @@ tools.stainnorm
 tools.stainextract
 ^^^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.tools.stainextract
-    :members: CustomExtractor, RuifrokExtractor
+    :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
 
 ------
 Utils
@@ -69,7 +76,7 @@ Utils
 utils.misc
 ^^^^^^^^^^
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix
+    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, imread, get_luminosity_tissue_mask
 
 ^^^^^^^^^^^^^^^^
 utils.transforms

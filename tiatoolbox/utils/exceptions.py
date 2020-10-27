@@ -18,11 +18,11 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Custom Errors and Exceptions for TIAToolbox"""
+"""Custom Errors and Exceptions for TIAToolbox."""
 
 
 class FileNotSupported(Exception):
-    """Raises No supported file found Error"""
+    """Raise No supported file found error."""
 
     def __init__(self, message="File format is not supported"):
         self.message = message
@@ -30,7 +30,7 @@ class FileNotSupported(Exception):
 
 
 class MethodNotSupported(Exception):
-    """Raises No supported file found Error"""
+    """Raise No supported file found error."""
 
     def __init__(self, message="Method is not supported"):
         self.message = message

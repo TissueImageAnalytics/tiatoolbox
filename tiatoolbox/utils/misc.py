@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Miscellaneous small functions repeatedly used in tiatoolbox"""
+"""Miscellaneous small functions repeatedly used in tiatoolbox."""
 import cv2
 import pathlib
 import yaml
@@ -27,7 +27,7 @@ import numpy as np
 
 
 def split_path_name_ext(full_path):
-    """Split path of a file to directory path, file name and extension
+    """Split path of a file to directory path, file name and extension.
 
     Args:
         full_path (str): Path to a file
@@ -47,7 +47,7 @@ def split_path_name_ext(full_path):
 
 
 def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
-    """Grabs file paths specified by file extensions
+    """Grab file paths specified by file extensions.
 
     Args:
         input_path (str, pathlib.Path): Path to the directory where files
@@ -80,7 +80,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 
 def save_yaml(input_dict, output_path="output.yaml"):
-    """Save dictionary as yaml
+    """Save dictionary as yaml.
     Args:
         input_dict (dict): A variable of type 'dict'
         output_path (str, pathlib.Path): Path to save the output file
@@ -99,7 +99,7 @@ def save_yaml(input_dict, output_path="output.yaml"):
 
 
 def imwrite(image_path, img):
-    """Write a numpy array to an image
+    """Write numpy array to an image.
 
     Args:
         image_path (str, pathlib.Path): file path (including extension)
@@ -121,7 +121,7 @@ def imwrite(image_path, img):
 
 
 def imread(image_path):
-    """Read an image as an array
+    """Read an image as numpy array.
 
     Args:
         image_path (str, pathlib.Path): file path (including extension) to read image
@@ -173,3 +173,30 @@ def load_stain_matrix(stain_matrix_input):
         raise Exception("stain_matrix must be either a path or a numpy array")
 
     return stain_matrix
+
+
+def get_luminosity_tissue_mask(img, threshold):
+    """Get tissue mask based on the luminosity of the input image.
+
+    Args:
+        img (ndarray): input image used to obtain tissue mask.
+        threshold (float): luminosity threshold used to determine tissue area.
+
+    Returns:
+        tissue_mask (ndarray): binary tissue mask.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> tissue_mask = utils.misc.get_luminosity_tissue_mask(img, threshold=0.8)
+
+    """
+    img = img.astype("uint8")  # ensure input image is uint8
+    img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    l_lab = img_lab[:, :, 0] / 255.0  # Convert to range [0,1].
+    tissue_mask = l_lab < threshold
+
+    # check it's not empty
+    if tissue_mask.sum() == 0:
+        raise Exception("Empty tissue mask computed")
+
+    return tissue_mask

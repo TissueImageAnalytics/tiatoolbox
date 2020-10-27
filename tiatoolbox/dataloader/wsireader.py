@@ -41,11 +41,20 @@ class WSIReader:
     """WSI Reader class to read WSI images.
 
     Attributes:
-        input_path (pathlib.Path): input path to WSI directory
-        output_dir (pathlib.Path): output directory to save the output
-        tile_objective_value (int): objective value at which tile is generated
+        input_path (pathlib.Path): input path to WSI directory.
+        output_dir (pathlib.Path): output directory to save the output.
+        tile_objective_value (int): objective value at which tile is generated.
         tile_read_size (int): [tile width, tile height]
-        slide_info (WSIMeta): Whole slide image slide information
+        slide_info (WSIMeta): Whole slide image slide information.
+
+    Args:
+        input_path (str, pathlib.Path): input path to WSI.
+        output_dir (str, pathlib.Path): output directory to save the output,
+         default=./output.
+        tile_objective_value (int): objective value at which tile is generated,
+         default=20.
+        tile_read_size_w (int): tile width, default=5000.
+        tile_read_size_h (int): tile height, default=5000.
 
     """
 
@@ -57,18 +66,7 @@ class WSIReader:
         tile_read_size_w=5000,
         tile_read_size_h=5000,
     ):
-        """
-        Initialise WSIReader.
 
-        Args:
-            input_path (str or pathlib.Path): input path to WSI
-            output_dir (str or pathlib.Path): output directory to save the output,
-                default=./output
-            tile_objective_value (int): objective value at which tile is generated,
-                default=20
-            tile_read_size_w (int): tile width, default=5000
-            tile_read_size_h (int): tile height, default=5000
-        """
         self.input_path = pathlib.Path(input_path)
         if output_dir is not None:
             self.output_dir = pathlib.Path(output_dir, self.input_path.name)
@@ -606,6 +604,7 @@ class WSIReader:
                 end_h = (h * tile_h) + tile_h
                 start_w = w * tile_w
                 end_w = (w * tile_w) + tile_w
+
                 end_h = min(end_h, slide_h)
                 end_w = min(end_w, slide_w)
 
@@ -773,6 +772,15 @@ class OpenSlideWSIReader(WSIReader):
 
     @property
     def slide_info(self):
+        """Openslide WSI meta data reader.
+
+        Args:
+            self (OpenSlideWSIReader):
+
+        Returns:
+            WSIMeta: containing meta information.
+
+        """
         objective_power = np.int(
             self.openslide_wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         )
@@ -879,6 +887,14 @@ class OmnyxJP2WSIReader(WSIReader):
 
     @property
     def slide_info(self):
+        """JP2 meta data reader.
+        Args:
+            self (OmnyxJP2WSIReader):
+
+        Returns:
+            WSIMeta: containing meta information
+
+        """
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))

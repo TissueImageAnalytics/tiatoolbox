@@ -1,6 +1,33 @@
 History
 =======
 
+0.4.0 (2020-10-25)
+------------------
+
+### Major and Feature Improvements
+
+- Adds `OpenSlideWSIReader` to read Openslide image formats
+- Adds support to read Omnyx jp2 images using `OmnyxJP2WSIReader`.
+- New feature added to perform stain normalisation using `Ruifork`, `Reinhard`, `Vahadane`, `Macenko` methods and using custom stain matrices.
+- Adds example notebook to read whole slide images via the toolbox.
+- Adds `WSIMeta` class to save meta data for whole slide images. `WSIMeta` casts properties to python types. Properties from OpenSlide are returned as string. raw values can always be accessed via `slide.raw`. Adds data validation e.g., checking that level_count matches up with the length of the `level_dimensions` and `level_downsamples`. Adds type hints to `WSIMeta`.
+- Adds exceptions `FileNotSupported` and `MethodNotSupported`
+
+
+### Changes to API
+
+-  Restructures `WSIReader` as parent class to allow support to read whole slide images in other formats.
+- Adds `slide_info` as a property of `WSIReader`
+- Updates `slide_info` type to `WSIMeta` from `dict`
+- Depericiates support for multiprocessing from within the toolbox. The toolbox is focussed on processing single whole slide and standard images. External libraries can be used to run using multi processing on multiple files.
+
+### Bug Fixes and Other Changes
+
+- Adds `scikit-learn`, `glymur` as a dependency
+- Adds licence information
+- Removes `pathos` as a dependency
+- Updates `openslide-python` requirement to 1.1.2
+
 0.3.0 (2020-07-19)
 ------------------
 

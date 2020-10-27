@@ -18,14 +18,14 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Define Image transforms"""
+"""Define Image transforms."""
 import numpy as np
 from PIL import Image
 import cv2
 
 
 def background_composite(image, fill=255, alpha=False):
-    """Image composite with specified background
+    """Image composite with specified background.
 
     Args:
         image (ndarray, PIL.Image): input image
@@ -65,7 +65,7 @@ def background_composite(image, fill=255, alpha=False):
 
 
 def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
-    """Resize input image
+    """Resize input image.
 
     Args:
         img (ndarray): input image

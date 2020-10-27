@@ -45,7 +45,7 @@ def version_msg():
     __version__, "--version", "-V", help="Version", message=version_msg()
 )
 def main():
-    """Computational pathology toolbox developed by TIA LAB."""
+    """Computational pathology toolbox by TIA LAB."""
     return 0
 
 
@@ -291,7 +291,7 @@ def save_tiles(
 @click.option(
     "--method",
     help="Stain normlisation method to use. Choose from 'reinhard', 'custom',"
-    "'ruifrok'",
+    "'ruifrok', 'macenko, 'vahadane'",
     default="reinhard",
 )
 @click.option(
@@ -328,7 +328,7 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 
     print(files_all)
 
-    if method not in ["reinhard", "custom", "ruifrok"]:
+    if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise MethodNotSupported
 
     # init stain normalisation method

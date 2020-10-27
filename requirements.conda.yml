@@ -19,5 +19,6 @@ dependencies:
   - openslide
   - pandas
   - glymur
+  - scikit-learn==0.23.2
   - pip:
     - openslide-python==1.1.2

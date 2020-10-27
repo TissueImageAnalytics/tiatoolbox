@@ -114,7 +114,6 @@ class WSIMeta:
 
     def validate(self):
         """Validate passed values and cast to Python types.
-
         Metadata values are often given as strings and must be parsed/cast to the
         appropriate python type e.g. "3.14" to 3.14 etc.
 
