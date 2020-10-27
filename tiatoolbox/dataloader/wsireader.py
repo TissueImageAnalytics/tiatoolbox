@@ -32,6 +32,9 @@ import pandas as pd
 import cv2
 import re
 import numbers
+import os
+
+glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
 
 class WSIReader:
