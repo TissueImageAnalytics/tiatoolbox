@@ -1052,7 +1052,7 @@ def test_openslidewsireader_relative_level_scales_mpp(_response_ndpi):
     wsi = wsireader.OpenSlideWSIReader(path)
     level_scales = wsi.relative_level_scales(0.5, "mpp")
     expected = np.array(
-
+        [
             [0.91282519, 0.91012514],
             [1.82565039, 1.82025028],
             [3.65130078, 3.64050057],
@@ -1146,6 +1146,7 @@ def test_openslidewsireader_optimal_relative_level_scales_power(_response_ndpi):
     level_power_10, level_rescale_power_10 = wsi.find_optimal_level_and_downsample(
         10, "power"
     )
+
     assert level_power_05 == 3
     assert np.array_equal(level_rescale_power_05, [1.0, 1.0])
     assert level_power_10 == 1
