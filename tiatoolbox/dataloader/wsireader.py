@@ -926,7 +926,7 @@ class OmnyxJP2WSIReader(WSIReader):
         ]
 
         vendor = "Omnyx JP2"
-        m = re.search(r"(?<=MPP = )\d\d", description.text)
+        m = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
         mpp_x = float(m.group(0))
         mpp_y = float(m.group(0))
         mpp = [mpp_x, mpp_y]
