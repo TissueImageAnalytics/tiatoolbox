@@ -204,12 +204,14 @@ class WSIReader:
         # Convert the index from the reversed list to the regular index (level)
         level = (len(level_scales) - 1) - reverse_index
         scale = level_scales[level]
+
+        # Check for requested resolution > than baseline
         if any(np.array(scale) > 1):
             warnings.warn(
                 "Scale > 1."
-                "This means that the desired scale is a higher"
-                " resolution than the WSI can produce."
-                "Interpolation of read regions may occur."
+                "This means that the desired resolution is higher"
+                " than the WSI baseline (maximum encoded resolution)."
+                " Interpolation of read regions may occur."
             )
         return level, scale
 
