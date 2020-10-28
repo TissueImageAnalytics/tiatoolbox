@@ -288,9 +288,7 @@ def test_find_optimal_level_and_downsample_interpolation_warning(_response_ndpi)
     """
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
     with pytest.warns(UserWarning):
-        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
-            0.1, "mpp"
-        )
+        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_mpp(_response_ndpi):
