@@ -205,6 +205,11 @@ class WSIReader:
         level = (len(level_scales) - 1) - reverse_index
         scale = level_scales[level]
 
+        # Ensure results are sensible for resolution at a fixed level
+        if units == "level":
+            assert level == resolution
+            assert all(x == 1.0 for x in scale)
+
         # Check for requested resolution > than baseline
         if any(np.array(scale) > 1):
             warnings.warn(
