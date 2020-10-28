@@ -621,9 +621,7 @@ def test_background_composite():
     assert np.all(im[:, :, 3] == 255)
 
 
-def test_reinhard_normalise(
-    _response_stainnorm_source, _response_stainnorm_target, _response_reinhard
-):
+def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
     file_parent_dir = pathlib.Path(__file__).parent
     source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
