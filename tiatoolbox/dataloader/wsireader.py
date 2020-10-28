@@ -87,7 +87,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def relative_level_scales(self, resolution, units):
+    def _relative_level_scales(self, resolution, units):
         """Calculate scale of each level in the WSI relative to given resolution.
 
         Find the relative scale of each image pyramid / resolution level
@@ -115,12 +115,12 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
-            >>> print(wsi.relative_level_scales(0.5, "mpp"))
+            >>> print(wsi._relative_level_scales(0.5, "mpp"))
             [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
 
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
-            >>> print(wsi.relative_level_scales(0.5, "baseline"))
+            >>> print(wsi._relative_level_scales(0.5, "baseline"))
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
         """
         info = self.slide_info
@@ -169,7 +169,7 @@ class WSIReader:
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
-    def find_optimal_level_and_downsample(self, resolution, units, precision=3):
+    def _find_optimal_level_and_downsample(self, resolution, units, precision=3):
         """
         Find the optimal level to read at for a desired resolution and units.
 
@@ -182,7 +182,7 @@ class WSIReader:
             resolution (float or tuple of float): Resolution to
                 find optimal read parameters for
             units (str): Units of the scale. Allowed values are the same
-                as for `WSIReader.relative_level_scales`
+                as for `WSIReader._relative_level_scales`
             precision (int, optional): Decimal places to use when
                 finding optimal scale. This can be adjusted to avoid
                 errors when an unecessary precision is used. E.g.
@@ -193,7 +193,7 @@ class WSIReader:
             (int, float): Optimal read level and scale factor between
                 the optimal level and the target scale (usually <= 1).
         """
-        level_scales = self.relative_level_scales(resolution, units)
+        level_scales = self._relative_level_scales(resolution, units)
         # Note that np.argmax finds the index of the first True element.
         # Here it is used on a reversed list to find the first
         # element <=1, which is the same element as the last <=1
@@ -222,7 +222,7 @@ class WSIReader:
             )
         return level, scale
 
-    def find_read_rect_params(self, location, size, resolution, units, precision=3):
+    def _find_read_rect_params(self, location, size, resolution, units, precision=3):
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
@@ -245,7 +245,7 @@ class WSIReader:
                 resolution, the size of the region in baseline reference
                 frame.
         """
-        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.slide_info
@@ -263,7 +263,7 @@ class WSIReader:
             baseline_read_size,
         )
 
-    def find_read_bounds_params(
+    def _find_read_bounds_params(
         self, start_w, start_h, end_w, end_h, resolution, units, precision=3
     ):
         """Find optimal parameters for reading bounds at a given resolution.
@@ -294,7 +294,7 @@ class WSIReader:
                 downscaling, downscaling factor to apply after reading
                 to get the correct output size and resolution.
         """
-        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.slide_info
@@ -532,7 +532,7 @@ class WSIReader:
             ...     file_name="CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
         """
-        level, post_read_scale = self.find_optimal_level_and_downsample(
+        level, post_read_scale = self._find_optimal_level_and_downsample(
             resolution, units
         )
         level_dimensions = self.slide_info.level_dimensions[level]
@@ -723,7 +723,7 @@ class OpenSlideWSIReader(WSIReader):
 
     def read_rect(self, location, size, resolution=0, units="level"):
         # Find parameters for optimal read
-        (read_level, _, read_size, post_read_scale, _) = self.find_read_rect_params(
+        (read_level, _, read_size, post_read_scale, _) = self._find_read_rect_params(
             location=location, size=size, resolution=resolution, units=units,
         )
 
@@ -750,7 +750,7 @@ class OpenSlideWSIReader(WSIReader):
             level_bounds,
             output_size,
             post_read_scale,
-        ) = self.find_read_bounds_params(
+        ) = self._find_read_bounds_params(
             start_w, start_h, end_w, end_h, resolution=resolution, units=units,
         )
 
@@ -850,7 +850,7 @@ class OmnyxJP2WSIReader(WSIReader):
             _,
             post_read_scale,
             baseline_read_size,
-        ) = self.find_read_rect_params(
+        ) = self._find_read_rect_params(
             location=location, size=size, resolution=resolution, units=units,
         )
         # Read at optimal level and corrected read size
@@ -872,7 +872,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
     def read_bounds(self, start_w, start_h, end_w, end_h, resolution=0, units="level"):
         # Find parameters for optimal read
-        (read_level, _, output_size, post_read_scale,) = self.find_read_bounds_params(
+        (read_level, _, output_size, post_read_scale,) = self._find_read_bounds_params(
             start_w, start_h, end_w, end_h, resolution=resolution, units=units,
         )
 
