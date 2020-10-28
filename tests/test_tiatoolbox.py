@@ -280,13 +280,70 @@ def test__relative_level_scales_jp2_level_float(_response_jp2):
     assert np.array_equal(level_scales[:, 0], expected)
 
 
-def test_find_optimal_level_and_downsample_interpolation_warning(_response_ndpi):
+def test__relative_level_scales_invalid_units(_response_svs):
+    """Test _relative_level_scales with invalid units."""
+    wsi = wsireader.OpenSlideWSIReader(_response_svs)
+    with pytest.raises(ValueError):
+        wsi._relative_level_scales(1.0, "gibberish")
+
+
+def test__relative_level_scales_no_mpp():
+    """Test _relative_level_scales objective when mpp is None."""
+
+    class DummyWSI:
+        _relative_level_scales = wsireader.WSIReader._relative_level_scales
+
+        @property
+        def slide_info(self):
+            return wsireader.WSIMeta((100, 100))
+
+    wsi = DummyWSI()
+    with pytest.raises(ValueError):
+        wsi._relative_level_scales(1.0, "mpp")
+
+
+def test__relative_level_scales_no_objective_power():
+    """Test _relative_level_scales objective when objective power is None."""
+
+    class DummyWSI:
+        _relative_level_scales = wsireader.WSIReader._relative_level_scales
+
+        @property
+        def slide_info(self):
+            return wsireader.WSIMeta((100, 100))
+
+    wsi = DummyWSI()
+    with pytest.raises(ValueError):
+        wsi._relative_level_scales(10, "power")
+
+
+def test__relative_level_scales_level_too_high(_response_svs):
+    """Test _relative_level_scales levels set too high."""
+    wsi = wsireader.OpenSlideWSIReader(_response_svs)
+    with pytest.raises(ValueError):
+        wsi._relative_level_scales(100, "level")
+
+
+def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
+    _response_ndpi,
+):
     """Test finding optimal level for mpp read with scale > 1.
 
     This tests the case where the scale is found to be > 1 and interpolation
     will be applied to the output. A UserWarning should be raised in this case.
     """
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
+    with pytest.warns(UserWarning):
+        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+
+
+def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_response_jp2):
+    """Test finding optimal level for mpp read with scale > 1.
+
+    This tests the case where the scale is found to be > 1 and interpolation
+    will be applied to the output. A UserWarning should be raised in this case.
+    """
+    wsi = wsireader.OmnyxJP2WSIReader(_response_jp2)
     with pytest.warns(UserWarning):
         _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
 
