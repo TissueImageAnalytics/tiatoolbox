@@ -897,7 +897,8 @@ class OmnyxJP2WSIReader(WSIReader):
         """
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
-        m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
+        description = box[3].xml.find("description")
+        m = re.search(r"(?<=AppMag = )\d\d", description.text)
         objective_power = np.int(m.group(0))
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
@@ -925,7 +926,7 @@ class OmnyxJP2WSIReader(WSIReader):
         ]
 
         vendor = "Omnyx JP2"
-        m = re.search(r"(?<=AppMag = )\d\d", str(box[3]))
+        m = re.search(r"(?<=MPP = )\d\d", description.text)
         mpp_x = float(m.group(0))
         mpp_y = float(m.group(0))
         mpp = [mpp_x, mpp_y]
