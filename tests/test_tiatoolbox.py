@@ -282,7 +282,7 @@ def test_relative_level_scales_jp2_level_float(_response_jp2):
 
 def test_find_optimal_level_and_downsample_interpolation_warning(_response_ndpi):
     """Test finding optimal level for mpp read with scale > 1.
-    
+
     This tests the case where the scale is found to be > 1 and interpolation
     will be applied to the output. A UserWarning should be raised in this case.
     """
