@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""WSIReader for WSI reading or extracting metadata information from WSIs."""
+"""This module defines classes which can read image data from WSI formats."""
 from tiatoolbox.utils import misc, transforms
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
@@ -38,13 +38,17 @@ glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
 
 class WSIReader:
-    """WSI Reader class to read WSI images.
+    """Base whole slide image (WSI) reader class.
+
+    This class defines functions for reading pixel data and metadata
+    from whole slide image (WSI) files.
 
     Attributes:
-        input_path (pathlib.Path): input path to WSI directory.
-        output_dir (pathlib.Path): output directory to save the output.
-        tile_objective_value (int): objective value at which tile is generated.
-        tile_read_size (int): [tile width, tile height]
+        input_path (pathlib.Path): Input path to WSI file.
+        output_dir (pathlib.Path): Output directory to save the output.
+        tile_objective_value (int): Objective value at which tile is generated.
+        tile_read_size_w (int): Tile width.
+        tile_read_size_h (int): Tile height.
         slide_info (WSIMeta): Whole slide image slide information.
 
     Args:
@@ -310,19 +314,15 @@ class WSIReader:
     def read_rect(self, location, size, resolution=0, units="level"):
         """Read a region of the whole slide image at a location and size.
 
-        This method reads provides a fast method for performing partial
-        reads (reading without loading the whole image into memory) of
-        the WSI. Location is in terms of the baseline image (level 0  /
+        Location is in terms of the baseline image (level 0  /
         maximum resolution), and size is the output image size.
 
-        Reads can also be performed at different resolutions. This is
-        done by supplying a pair of arguments for the resolution and
-        units of resolution. If the WSI does not have a resolution layer
-        corresponding exactly to the requested resolution, a larger
-        resolution is downscaled to achieve the correct requested output
-        resolution. If the requested resolution is higher than the
-        baseline (maximum resultion of the image), then bicubic
-        interpolation is applied to the output image.
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the
+        units of resolution.
+
+        The field of view varies with resolution. For a fixed
+        field of view see :func:'read_bounds'.
 
         Args:
             location (tuple of int): (x, y) tuple giving
@@ -333,12 +333,12 @@ class WSIReader:
             resolution (int or float or tuple of float): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
-                valid. This scale value is in terms of the corresponding
+                valid. This value is in terms of the corresponding
                 units. For example: resolution=0.5 and units="mpp" will
                 read the slide at 0.5 microns per-pixel, and
                 resolution=3, units="level" will read at level at
                 pyramid level / resolution layer 3.
-            units (str): the units of scale, default = "level".
+            units (str): the units of resolution, default = "level".
                 Supported units are: microns per pixel (mpp), objective
                 power (power), pyramid / resolution level (level),
                 pixels per baseline pixel (baseline).
@@ -347,7 +347,7 @@ class WSIReader:
             ndarray : array of size MxNx3
             M=size[0], N=size[1]
 
-        Examples:
+        Example:
             >>> from tiatoolbox.dataloader import wsireader
             >>> # Load a WSI image
             >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
@@ -364,6 +364,46 @@ class WSIReader:
             ...     resolution=[0.5, 0.5],
             ...     units="mpp",
             ... )
+
+        Note: The field of view varies with resolution.
+
+        .. figure:: images/read_rect_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_rect
+
+        As the location is in the baseline reference frame but the size
+        (width and height) is the output image size, the field of view
+        therefore changes as resolution changes.
+
+        If the WSI does not have a resolution layer
+        corresponding exactly to the requested resolution
+        (shown above in white with a dashed outline), a larger
+        resolution is downscaled to achieve the correct requested output
+        resolution.
+
+        If the requested resolution is higher than the
+        baseline (maximum resultion of the image), then bicubic
+        interpolation is applied to the output image.
+
+        .. figure:: images/read_rect-interpolated-reads.png
+            :width: 512
+            :alt: Diagram illustrating read_rect interpolting between levels
+
+        When reading between the levels stored in the WSI, the coordinates
+        of the requested region are projected to the next highest
+        resolution. This resolution is then decoded and downsampled
+        to produced the desired output. This is a major source of
+        variability in the time take to perform a read operation. Reads
+        which require reading a large region before downsampling will
+        be significantly slower than reading at a fixed level.
+
+        Examples:
+
+            >>> from tiatoolbox.dataloader import wsireader
+            >>> # Load a WSI image
+            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
             >>> # The resolution can be different in x and y, e.g.
             >>> img = wsi.read_rect(
             ...     location,
@@ -430,22 +470,17 @@ class WSIReader:
     def read_bounds(self, start_w, start_h, end_w, end_h, resolution=0, units="level"):
         """Read a region of the whole slide image within given bounds.
 
-        This method reads provides a fast method for performing partial
-        reads (reading without loading the whole image into memory) of
-        the WSI. Bounds are in terms of the baseline image (level 0  /
-        maximum resolution). Note that the output image may be smaller
-        than the width and heigh of the bounds as the resolution can
-        affect this. To read a region with a fixed output image size see
-        :func:read_rect.
+        Bounds are in terms of the baseline image (level 0  /
+        maximum resolution).
 
-        Reads can also be performed at different resolutions. This is
-        done by supplying a pair of arguments for the resolution and
-        units of resolution. If the WSI does not have a resolution layer
-        corresponding exactly to the requested resolution, a larger
-        resolution is downscaled to achieve the correct requested output
-        resolution. If the requested resolution is higher than the
-        baseline (maximum resultion of the image), then bicubic
-        interpolation is applied to the output image.
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the
+        units of resolution.
+
+        The output image size may be different
+        to the width and height of the bounds as the resolution will
+        affect this. To read a region with a fixed output image size see
+        :func:`read_rect`.
 
         Args:
             start_w (int): starting point in x-direction (along width).
@@ -455,12 +490,12 @@ class WSIReader:
             resolution (int or float or tuple of float): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
-                valid. This scale value is in terms of the corresponding
+                valid. This value is in terms of the corresponding
                 units. For example: resolution=0.5 and units="mpp" will
                 read the slide at 0.5 microns per-pixel, and
                 resolution=3, units="level" will read at level at
                 pyramid level / resolution layer 3.
-            units (str): the units of scale, default = "level".
+            units (str): the units of resolution, default = "level".
                 Supported units are: microns per pixel (mpp), objective
                 power (power), pyramid / resolution level (level),
                 pixels per baseline pixel (baseline).
@@ -487,6 +522,27 @@ class WSIReader:
             ...     units="level",
             ... )
             >>> plt.imshow(img)
+
+        Note: The field of view remains the same as resolution is varied.
+        
+        .. figure:: images/read_bounds_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_bounds
+
+        This is because
+        the bounds are in the baseline (level 0) reference
+        frame. Therefore, varying the resolution does not change what is
+        visible within the output image.
+
+        If the WSI does not have a resolution layer
+        corresponding exactly to the requested resolution
+        (shown above in white with a dashed outline), a larger
+        resolution is downscaled to achieve the correct requested output
+        resolution.
+
+        If the requested resolution is higher than the
+        baseline (maximum resultion of the image), then bicubic
+        interpolation is applied to the output image.
         """
         raise NotImplementedError()
 
@@ -494,11 +550,13 @@ class WSIReader:
         """Read a region of the whole slide image (OpenSlide format args).
 
         This function is to help with writing code which is backwards
-        compatible with OpenSlide. As such it has the same arguments.
+        compatible with OpenSlide. As such, it has the same arguments.
 
-        Other reader classes will inherit this function and therefore
-        some WSI formats which are not supported by OpenSlide may also
-        be readable with the same syntax.
+        This interally calls :func:`read_rect` which should be
+        implemented by any :class:`WSIReader` subclass.
+        Therefore, some WSI formats which
+        are not supported by OpenSlide, such as Omnyx JP2 files, may
+        also be readable with the same syntax.
 
         Args:
             location: (x, y) tuple giving the top left pixel in the
@@ -551,7 +609,6 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            self (WSIReader):
             tile_format (str): file format to save image tiles, default=".jpg"
             verbose (bool): Print output, default=True
 
@@ -697,7 +754,20 @@ class WSIReader:
 
 
 class OpenSlideWSIReader(WSIReader):
-    """Class for reading OpenSlide supported whole-slide images.
+    """Reader for OpenSlide supported whole-slide images.
+
+    Supported WSI formats:
+
+    - Aperio (.svs, .tif)
+    - Hamamatsu (.vms, .vmu, .ndpi)
+    - Leica (.scn)
+    - MIRAX (.mrxs)
+    - Philips (.tiff)
+    - Sakura (.svslide)
+    - Trestle (.tif)
+    - Ventana (.bif, .tif)
+    - Generic tiled TIFF (.tif)
+
 
     Attributes:
         openslide_wsi (:obj:`openslide.OpenSlide`)
@@ -783,9 +853,6 @@ class OpenSlideWSIReader(WSIReader):
     def slide_info(self):
         """Openslide WSI meta data reader.
 
-        Args:
-            self (OpenSlideWSIReader):
-
         Returns:
             WSIMeta: containing meta information.
 
@@ -820,6 +887,10 @@ class OpenSlideWSIReader(WSIReader):
 
 class OmnyxJP2WSIReader(WSIReader):
     """Class for reading Omnyx JP2 images.
+
+    Supported WSI formats:
+
+    - Omnyx JPEG-2000 (.jp2)
 
     Attributes:
         glymur_wsi (:obj:`glymur.Jp2k`)
@@ -897,8 +968,6 @@ class OmnyxJP2WSIReader(WSIReader):
     @property
     def slide_info(self):
         """JP2 meta data reader.
-        Args:
-            self (OmnyxJP2WSIReader):
 
         Returns:
             WSIMeta: containing meta information
