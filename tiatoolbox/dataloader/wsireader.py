@@ -49,7 +49,7 @@ class WSIReader:
         tile_objective_value (int): Objective value at which tile is generated.
         tile_read_size_w (int): Tile width.
         tile_read_size_h (int): Tile height.
-        slide_info (WSIMeta): Whole slide image slide information.
+        info (WSIMeta): Whole slide image slide information.
 
     Args:
         input_path (str, pathlib.Path): input path to WSI.
@@ -79,7 +79,7 @@ class WSIReader:
         self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
 
     @property
-    def slide_info(self):
+    def info(self):
         """WSI metadata getter.
 
         Args:
@@ -127,7 +127,7 @@ class WSIReader:
             >>> print(wsi._relative_level_scales(0.5, "baseline"))
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
         """
-        info = self.slide_info
+        info = self.info
 
         def make_into_array(x):
             """Ensure input x is a numpy array of length 2."""
@@ -252,7 +252,7 @@ class WSIReader:
         read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
-        info = self.slide_info
+        info = self.info
         level_downsample = info.level_downsamples[read_level]
         baseline_read_size = np.round(
             np.array(size) * level_downsample / post_read_scale_factor
@@ -301,7 +301,7 @@ class WSIReader:
         read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
-        info = self.slide_info
+        info = self.info
         level_downsample = info.level_downsamples[read_level]
         location = np.array([start_w, start_h])
         size = np.array([end_w - start_w, end_h - start_h])
@@ -595,7 +595,7 @@ class WSIReader:
         level, post_read_scale = self._find_optimal_level_and_downsample(
             resolution, units
         )
-        level_dimensions = self.slide_info.level_dimensions[level]
+        level_dimensions = self.info.level_dimensions[level]
         thumb = self.read_bounds(0, 0, *level_dimensions)
 
         if np.any(post_read_scale != 1.0):
@@ -630,19 +630,19 @@ class WSIReader:
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.WSIReader(input_dir="./",
             ...     file_name="CMU-1.ndpi")
-            >>> slide_param = wsi.slide_info()
+            >>> slide_param = wsi.info()
 
         """
         tile_objective_value = self.tile_objective_value
         tile_read_size = self.tile_read_size
 
-        rescale = self.slide_info.objective_power / tile_objective_value
+        rescale = self.info.objective_power / tile_objective_value
         if rescale.is_integer():
             try:
                 level = np.log2(rescale)
                 if level.is_integer():
                     level = np.int(level)
-                    slide_dimension = self.slide_info.level_dimensions[level]
+                    slide_dimension = self.info.level_dimensions[level]
                     rescale = 1
                 else:
                     raise ValueError
@@ -650,7 +650,7 @@ class WSIReader:
             # in level_dimensions
             except (IndexError, ValueError):
                 level = 0
-                slide_dimension = self.slide_info.level_dimensions[level]
+                slide_dimension = self.info.level_dimensions[level]
                 rescale = np.int(rescale)
         else:
             raise ValueError("rescaling factor must be an integer.")
@@ -852,7 +852,7 @@ class OpenSlideWSIReader(WSIReader):
         return im_region
 
     @property
-    def slide_info(self):
+    def info(self):
         """Openslide WSI meta data reader.
 
         Returns:
@@ -968,7 +968,7 @@ class OmnyxJP2WSIReader(WSIReader):
         return im_region
 
     @property
-    def slide_info(self):
+    def info(self):
         """JP2 meta data reader.
 
         Returns:

@@ -57,14 +57,14 @@ def slide_info(input_path, output_dir=None, verbose=True):
         wsi_reader = wsireader.OpenSlideWSIReader(
             input_path=input_path, output_dir=output_dir
         )
-        info = wsi_reader.slide_info
+        info = wsi_reader.info
         if verbose:
             print(info.as_dict())
     elif input_path.suffix in (".jp2",):
         wsi_reader = wsireader.OmnyxJP2WSIReader(
             input_path=input_path, output_dir=output_dir,
         )
-        info = wsi_reader.slide_info
+        info = wsi_reader.info
         if verbose:
             print(info.as_dict())
     else:
