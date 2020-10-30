@@ -508,13 +508,13 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi_obj = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
-            >>> img = wsi_obj.read_bounds(*bounds)
+            >>> img = wsi.read_bounds(*bounds)
             >>> plt.imshow(img)
             >>> # This could also be written more verbosely as follows
-            >>> img = wsi_obj.read_bounds(
+            >>> img = wsi.read_bounds(
             ...     start_w=bounds[0],
             ...     start_h=bounds[1],
             ...     end_w=bounds[2],
@@ -628,9 +628,9 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi_obj = wsireader.WSIReader(input_dir="./",
+            >>> wsi = wsireader.WSIReader(input_dir="./",
             ...     file_name="CMU-1.ndpi")
-            >>> slide_param = wsi_obj.slide_info()
+            >>> slide_param = wsi.slide_info()
 
         """
         tile_objective_value = self.tile_objective_value
