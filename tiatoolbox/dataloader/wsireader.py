@@ -365,7 +365,8 @@ class WSIReader:
             ...     units="mpp",
             ... )
 
-        Note: The field of view varies with resolution.
+        Note: The field of view varies with resolution when using
+        :func:`read_rect`.
 
         .. figure:: images/read_rect_tissue.png
             :width: 512
@@ -523,7 +524,8 @@ class WSIReader:
             ... )
             >>> plt.imshow(img)
 
-        Note: The field of view remains the same as resolution is varied.
+        Note: The field of view remains the same as resolution is varied
+        when using :func:`read_bounds`.
 
         .. figure:: images/read_bounds_tissue.png
             :width: 512
