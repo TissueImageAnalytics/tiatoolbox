@@ -524,7 +524,7 @@ class WSIReader:
             >>> plt.imshow(img)
 
         Note: The field of view remains the same as resolution is varied.
-        
+
         .. figure:: images/read_bounds_tissue.png
             :width: 512
             :alt: Diagram illustrating read_bounds
