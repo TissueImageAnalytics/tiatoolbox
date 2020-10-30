@@ -322,7 +322,7 @@ class WSIReader:
         units of resolution.
 
         The field of view varies with resolution. For a fixed
-        field of view see :func:'read_bounds'.
+        field of view see :func:`read_bounds`.
 
         Args:
             location (tuple of int): (x, y) tuple giving
