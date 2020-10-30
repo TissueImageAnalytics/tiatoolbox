@@ -174,8 +174,7 @@ class WSIReader:
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
     def _find_optimal_level_and_downsample(self, resolution, units, precision=3):
-        """
-        Find the optimal level to read at for a desired resolution and units.
+        """Find the optimal level to read at for a desired resolution and units.
 
         The optimal level is the most downscaled level of the image
         pyramid (or multi-resolution layer) which is larger than the
