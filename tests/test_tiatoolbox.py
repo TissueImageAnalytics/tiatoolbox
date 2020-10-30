@@ -762,14 +762,14 @@ def test_read_bounds_jp2_objective_power(_response_jp2):
         assert im_region.shape[2] == 3
 
 
-def test_wsireader_slide_thumbnail(_response_svs):
-    """Test for slide_thumbnail as a python function."""
+def test_wsireader_get_thumbnail(_response_svs):
+    """Test for get_thumbnail as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_response_svs).parent), file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
-    slide_thumbnail = wsi.slide_thumbnail()
+    slide_thumbnail = wsi.get_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 
