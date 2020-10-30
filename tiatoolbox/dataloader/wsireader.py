@@ -546,7 +546,7 @@ class WSIReader:
         baseline (maximum resultion of the image), then bicubic
         interpolation is applied to the output image.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def read_region(self, location, level, size):
         """Read a region of the whole slide image (OpenSlide format args).
