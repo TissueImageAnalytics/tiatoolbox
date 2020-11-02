@@ -67,8 +67,7 @@ class WSIReader:
         input_path=".",
         output_dir="./output",
         tile_objective_value=20,
-        tile_read_size_w=5000,
-        tile_read_size_h=5000,
+        tile_read_size=(5000, 5000),
     ):
 
         self.input_path = pathlib.Path(input_path)
@@ -76,7 +75,7 @@ class WSIReader:
             self.output_dir = pathlib.Path(output_dir, self.input_path.name)
 
         self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
-        self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
+        self.tile_read_size = np.array(tile_read_size)
 
     @property
     def info(self):
