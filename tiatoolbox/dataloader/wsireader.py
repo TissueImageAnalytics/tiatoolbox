@@ -47,8 +47,7 @@ class WSIReader:
         input_path (pathlib.Path): Input path to WSI file.
         output_dir (pathlib.Path): Output directory to save the output.
         tile_objective_value (int): Objective value at which tile is generated.
-        tile_read_size_w (int): Tile width.
-        tile_read_size_h (int): Tile height.
+        tile_read_size (tuple of int): Tile (width, height).
         info (WSIMeta): Whole slide image slide information.
 
     Args:
