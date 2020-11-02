@@ -163,14 +163,7 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
         wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
 
     if wsi is not None:
-        im_region = wsi.read_bounds(
-            region[0],
-            region[1],
-            region[2],
-            region[3],
-            resolution=resolution,
-            units=units,
-        )
+        im_region = wsi.read_bounds(region, resolution=resolution, units=units,)
         if mode == "show":
             im_region = Image.fromarray(im_region)
             im_region.show()

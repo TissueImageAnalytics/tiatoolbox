@@ -265,20 +265,13 @@ class WSIReader:
             baseline_read_size,
         )
 
-    def _find_read_bounds_params(
-        self, start_w, start_h, end_w, end_h, resolution, units, precision=3
-    ):
+    def _find_read_bounds_params(self, bounds, resolution, units, precision=3):
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
-            start_w (int): starting point in x-direction (along width)
-                in baseline (level 0) reference frame.
-            start_h (int): starting point in y-direction (along height)
-                in baseline (level 0) reference frame.
-            end_w (int): end point in x-direction (along width)
-                in baseline (level 0) reference frame.
-            end_h (int): end point in y-direction (along height)
-                in baseline (level 0) reference frame.
+            bounds (tuple of int): Tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame.
             resolutions (float): desired output resolution
             units (str): the units of scale, default = "level".
                 Supported units are: microns per pixel (mpp), objective
@@ -296,13 +289,14 @@ class WSIReader:
                 downscaling, downscaling factor to apply after reading
                 to get the correct output size and resolution.
         """
+        start_x, start_y, end_x, end_y = bounds
         read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
         level_downsample = info.level_downsamples[read_level]
-        location = np.array([start_w, start_h])
-        size = np.array([end_w - start_w, end_h - start_h])
+        location = np.array([start_x, start_y])
+        size = np.array([end_x - start_x, end_y - start_y])
         level_size = np.round(np.array(size) / level_downsample).astype(int)
         level_location = np.round(location / level_downsample).astype(int)
         level_bounds = (*level_location, *(level_location + level_size))
@@ -466,7 +460,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def read_bounds(self, start_w, start_h, end_w, end_h, resolution=0, units="level"):
+    def read_bounds(self, bounds, resolution=0, units="level"):
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  /
@@ -482,10 +476,9 @@ class WSIReader:
         :func:`read_rect`.
 
         Args:
-            start_w (int): starting point in x-direction (along width).
-            start_h (int): starting point in y-direction (along height).
-            end_w (int): end point in x-direction (along width).
-            end_h (int): end point in y-direction (along height).
+            bounds (tuple of int): Tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame.
             resolution (int or float or tuple of float): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
@@ -509,14 +502,11 @@ class WSIReader:
             >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
-            >>> img = wsi.read_bounds(*bounds)
+            >>> img = wsi.read_bounds(bounds)
             >>> plt.imshow(img)
             >>> # This could also be written more verbosely as follows
             >>> img = wsi.read_bounds(
-            ...     start_w=bounds[0],
-            ...     start_h=bounds[1],
-            ...     end_w=bounds[2],
-            ...     end_h=bounds[3],
+            ...     bounds,
             ...     resolution=0,
             ...     units="level",
             ... )
@@ -594,7 +584,8 @@ class WSIReader:
             resolution, units
         )
         level_dimensions = self.info.level_dimensions[level]
-        thumb = self.read_bounds(0, 0, *level_dimensions)
+        bounds = (0, 0, *level_dimensions)
+        thumb = self.read_bounds(bounds, 1.25, "power")
 
         if np.any(post_read_scale != 1.0):
             new_size = np.round(np.array(level_dimensions) * post_read_scale)
@@ -675,7 +666,8 @@ class WSIReader:
                 end_w = min(end_w, slide_w)
 
                 # Read image region
-                im = self.read_bounds(start_w, start_h, end_w, end_h, level)
+                bounds = start_w, start_h, end_w, end_h
+                im = self.read_bounds(bounds, level)
 
                 if verbose:
                     format_str = (
@@ -813,16 +805,14 @@ class OpenSlideWSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    def read_bounds(self, start_w, start_h, end_w, end_h, resolution=0, units="level"):
+    def read_bounds(self, bounds, resolution=0, units="level"):
         # Find parameters for optimal read
         (
             read_level,
             level_bounds,
             output_size,
             post_read_scale,
-        ) = self._find_read_bounds_params(
-            start_w, start_h, end_w, end_h, resolution=resolution, units=units,
-        )
+        ) = self._find_read_bounds_params(bounds, resolution=resolution, units=units,)
 
         wsi = self.openslide_wsi
 
@@ -941,19 +931,20 @@ class OmnyxJP2WSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    def read_bounds(self, start_w, start_h, end_w, end_h, resolution=0, units="level"):
+    def read_bounds(self, bounds, resolution=0, units="level"):
         # Find parameters for optimal read
-        (read_level, _, output_size, post_read_scale,) = self._find_read_bounds_params(
-            start_w, start_h, end_w, end_h, resolution=resolution, units=units,
+        read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
+            bounds, resolution=resolution, units=units,
         )
 
         glymur_wsi = self.glymur_wsi
 
+        start_x, start_y, end_x, end_y = bounds
         # stride = 2 ** read_level
-        # im_region = glymur_wsi[start_h:end_h:stride, start_w:end_w:stride]
-        im_region = glymur_wsi.read(
-            rlevel=read_level, area=(start_h, start_w, end_h, end_w)
-        )
+        # im_region = glymur_wsi[start_y:end_y:stride, start_x:end_x:stride]
+        # Equivalent but deprecated read function
+        area = (start_y, start_x, end_y, end_x)
+        im_region = glymur_wsi.read(rlevel=read_level, area=area)
         if np.any(post_read_scale != 1.0):
             interpolation = cv2.INTER_AREA
             if np.any(post_read_scale > 1.0):
