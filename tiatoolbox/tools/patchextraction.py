@@ -45,10 +45,9 @@ class PatchExtractor(ABC):
         self.pad_y = pad_y
         self.pad_x = pad_x
 
-    def get_last_steps(self, image_dim, label_patch_dim, stride):
-        """
-        Get the last location for patch extraction in a specific
-        direction (horizontal or vertical).
+    @staticmethod
+    def get_last_steps(image_dim, label_patch_dim, stride):
+        """Get the last location for patch extraction in a specific direction.
 
         Args:
             image_dim: 1D size of image
@@ -64,17 +63,16 @@ class PatchExtractor(ABC):
 
     def extract_patches(
         self,
-        input_img_value,
+        input_img,
         labels=None,
         save_output=False,
         save_path=None,
         save_name=None,
     ):
-        """
-        Extract patches from an image using locations provided by labels data.
+        """Extract patches from an image using locations provided by labels data.
 
         Args:
-            input_img_value (str, ndarray): input image.
+            input_img (str, ndarray): input image.
             labels (str, ndarray):
             save_output (bool): whether to save extracted patches
             save_path (str, pathlib.Path): path to save patches (only
@@ -88,8 +86,7 @@ class PatchExtractor(ABC):
         raise NotImplementedError
 
     def merge_patches(self, patches):
-        """
-        Merge the patch-level results to get the overall image-level prediction
+        """Merge the patch-level results to get the overall image-level prediction.
 
         Args:
             patches: patch-level predictions
@@ -102,8 +99,7 @@ class PatchExtractor(ABC):
 
 
 class FixedWindowPatchExtractor(PatchExtractor):
-    """Class for extracting and merging patches in standard and whole-slide images with
-    fixed window size for both input image and labels.
+    """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
         img_patch_h: input image patch height
@@ -123,10 +119,22 @@ class FixedWindowPatchExtractor(PatchExtractor):
 
         raise NotImplementedError
 
+    def extract_patches(
+        self,
+        input_img,
+        labels=None,
+        save_output=False,
+        save_path=None,
+        save_name=None,
+    ):
+        raise NotImplementedError
+
+    def merge_patches(self, patches):
+        raise NotImplementedError
+
 
 class VariableWindowPatchExtractor(PatchExtractor):
-    """Class for extracting and merging patches in standard and whole-slide images with
-    variable window size for both input image and labels.
+    """Extract and merge patches using variable sized windows for images and labels.
 
     Args:
         img_patch_h: input image patch height
@@ -141,8 +149,8 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self,
         img_patch_h,
         img_patch_w,
-        pad_y,
-        pad_x,
+        pad_y=0,
+        pad_x=0,
         stride_h=1,
         stride_w=1,
         label_patch_h=None,
@@ -158,11 +166,22 @@ class VariableWindowPatchExtractor(PatchExtractor):
 
         raise NotImplementedError
 
+    def extract_patches(
+        self,
+        input_img,
+        labels=None,
+        save_output=False,
+        save_path=None,
+        save_name=None,
+    ):
+        raise NotImplementedError
+
+    def merge_patches(self, patches):
+        raise NotImplementedError
+
 
 class PointsPatchExtractor(PatchExtractor):
-    """
-    Class for extracting patches in standard and whole-slide images with specified point
-    as a centre.
+    """Extracting patches with specified points as a centre.
 
     Args:
         img_patch_h: input image patch height
@@ -173,22 +192,21 @@ class PointsPatchExtractor(PatchExtractor):
         self,
         img_patch_h,
         img_patch_w,
-        pad_y,
-        pad_x,
-        input_points,
+        pad_y=0,
+        pad_x=0,
         num_examples_per_patch=9,  # Square Root of Num of Examples must be odd
     ):
         super().__init__(
             img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
         )
-        self.input_points = input_points
+
         self.num_examples_per_patch = num_examples_per_patch
 
     def extract_patches(
         self, input_img, labels=None, save_output=False, save_path=None, save_name=None
     ):
-        if isinstance(self.input_points, np.ndarray):
-            input_points = self.input_points
+        if isinstance(labels, np.ndarray):
+            labels = labels
         else:
             raise Exception("Please input correct csv, json path or csv data")
 
@@ -208,7 +226,7 @@ class PointsPatchExtractor(PatchExtractor):
             "symmetric",
         )
 
-        num_patches_img = len(input_points) * self.num_examples_per_patch
+        num_patches_img = len(labels) * self.num_examples_per_patch
         img_patches = np.zeros(
             (num_patches_img, patch_h, patch_w, image.shape[2]), dtype=image.dtype
         )
@@ -217,7 +235,7 @@ class PointsPatchExtractor(PatchExtractor):
 
         cell_tot = 1
         iter_tot = 0
-        for row in input_points:
+        for row in labels:
             patch_label = row[0]
             cell_location = np.array([row[2], row[1]], dtype=np.int)
             cell_location[0] = (
