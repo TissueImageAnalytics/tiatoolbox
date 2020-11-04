@@ -46,7 +46,7 @@ class PatchExtractor(ABC):
         self.pad_x = pad_x
 
     @staticmethod
-    def get_last_steps(image_dim, label_patch_dim, stride):
+    def __get_last_steps(image_dim, label_patch_dim, stride):
         """Get the last location for patch extraction in a specific direction.
 
         Args:

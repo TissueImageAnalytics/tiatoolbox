@@ -48,8 +48,22 @@ Stain Normalisation
 ^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
-    :special-members: __init__
+    :members: StainNormaliser, get_normaliser
+    :show-inheritance:
+
+.. autoclass:: CustomNormaliser
+    :show-inheritance:
+
+.. autoclass:: RuifrokNormaliser
+    :show-inheritance:
+
+.. autoclass:: MacenkoNormaliser
+    :show-inheritance:
+
+.. autoclass:: VahadaneNormaliser
+    :show-inheritance:
+
+.. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -58,6 +72,22 @@ Stain Extraction
 
 .. automodule:: tiatoolbox.tools.stainextract
     :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
+
+^^^^^^^^^^^^^^^^^^
+Patch Extraction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.patchextraction
+    :members: PatchExtractor, get_patch_extractor
+
+.. autoclass:: PointsPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: FixedWindowPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: VariableWindowPatchExtractor
+    :show-inheritance:
 
 ^^^^^^^^^
 Utilities
