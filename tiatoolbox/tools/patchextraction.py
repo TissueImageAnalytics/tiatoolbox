@@ -39,7 +39,7 @@ class PatchExtractor(ABC):
 
     """
 
-    def __init__(self, img_patch_h, img_patch_w, pad_y, pad_x):
+    def __init__(self, img_patch_h, img_patch_w, pad_y=0, pad_x=0):
         self.img_patch_h = img_patch_h
         self.img_patch_w = img_patch_w
         self.pad_y = pad_y
@@ -71,17 +71,18 @@ class PatchExtractor(ABC):
         save_name=None,
     ):
         """
-        Extract patches from an image
+        Extract patches from an image using locations provided by labels data.
 
         Args:
-            input_img_value (str, ndarray): input image
+            input_img_value (str, ndarray): input image.
             labels (str, ndarray):
-            save_output: whether to save extracted patches
-            save_path: path where saved patches will be saved (only if save_output = True)
-            save_name: filename for saving patches (only if save_output = True)
+            save_output (bool): whether to save extracted patches
+            save_path (str, pathlib.Path): path to save patches (only
+              if save_output = True).
+            save_name (str): filename for saving patches (only if save_output = True)
 
         Returns:
-            img_patches: extracted image patches
+            img_patches (ndarray): extracted image patches of size NxHxWxD.
         """
 
         raise NotImplementedError
@@ -111,9 +112,11 @@ class FixedWindowPatchExtractor(PatchExtractor):
         stride_w: stride in vertical direction for patch extraction
     """
 
-    def __init__(self, img_patch_h, img_patch_w, stride_h=1, stride_w=1):
-        super(PatchExtractor, self).__init__(
-            img_patch_h=img_patch_h, img_patch_w=img_patch_w
+    def __init__(
+        self, img_patch_h, img_patch_w, pad_y=0, pad_x=0, stride_h=1, stride_w=1
+    ):
+        super().__init__(
+            img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
         )
         self.stride_h = stride_h
         self.stride_w = stride_w
@@ -138,13 +141,15 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self,
         img_patch_h,
         img_patch_w,
+        pad_y,
+        pad_x,
         stride_h=1,
         stride_w=1,
         label_patch_h=None,
         label_patch_w=None,
     ):
-        super(PatchExtractor, self).__init__(
-            img_patch_h=img_patch_h, img_patch_w=img_patch_w
+        super().__init__(
+            img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
         )
         self.stride_h = stride_h
         self.stride_w = stride_w
@@ -173,7 +178,7 @@ class PointsPatchExtractor(PatchExtractor):
         input_points,
         num_examples_per_patch=9,  # Square Root of Num of Examples must be odd
     ):
-        super(PatchExtractor, self).__init__(
+        super().__init__(
             img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
         )
         self.input_points = input_points
@@ -207,11 +212,8 @@ class PointsPatchExtractor(PatchExtractor):
         img_patches = np.zeros(
             (num_patches_img, patch_h, patch_w, image.shape[2]), dtype=image.dtype
         )
-        labels = []
-        class_id = []
-        for i in range(num_patches_img):
-            labels.append([])
-            class_id.append([])
+        labels = [None] * num_patches_img
+        class_id = [None] * num_patches_img
 
         cell_tot = 1
         iter_tot = 0
@@ -284,11 +286,11 @@ def get_patch_extractor(
         )
     elif method_name.lower() == "fixedwindow":
         patch_extractor = FixedWindowPatchExtractor(
-            img_patch_h=img_patch_h, img_patch_w=img_patch_w
+            img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
         )
     elif method_name.lower() == "variablewindow":
         patch_extractor = VariableWindowPatchExtractor(
-            img_patch_h=img_patch_h, img_patch_w=img_patch_w
+            img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
         )
     else:
         raise MethodNotSupported
