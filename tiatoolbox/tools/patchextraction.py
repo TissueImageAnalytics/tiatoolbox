@@ -62,12 +62,7 @@ class PatchExtractor(ABC):
         return int(last_step)
 
     def extract_patches(
-        self,
-        input_img,
-        labels=None,
-        save_output=False,
-        save_path=None,
-        save_name=None,
+        self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
     ):
         """Extract patches from an image using locations provided by labels data.
 
@@ -117,15 +112,8 @@ class FixedWindowPatchExtractor(PatchExtractor):
         self.stride_h = stride_h
         self.stride_w = stride_w
 
-        raise NotImplementedError
-
     def extract_patches(
-        self,
-        input_img,
-        labels=None,
-        save_output=False,
-        save_path=None,
-        save_name=None,
+        self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
     ):
         raise NotImplementedError
 
@@ -164,15 +152,8 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self.label_patch_h = label_patch_h
         self.label_patch_w = label_patch_w
 
-        raise NotImplementedError
-
     def extract_patches(
-        self,
-        input_img,
-        labels=None,
-        save_output=False,
-        save_path=None,
-        save_name=None,
+        self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
     ):
         raise NotImplementedError
 
@@ -272,44 +253,31 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
-def get_patch_extractor(
-    method_name, img_patch_h=224, img_patch_w=224, input_points=None, pad_y=0, pad_x=0
-):
+def get_patch_extractor(method_name, **kwargs):
     """Return a patch extractor object as requested.
+
     Args:
-        method_name (str): name of patch extraction method, must be one of
-                            "point", "fixedwindow", "variablwindow".
-        img_patch_h(int): desired image patch height, default=224.
-        img_patch_w(int): desired image patch width, default=224.
-        input_points(pd.dataframe, pathlib.Path): pandas dataframe with x, y, l,
-          columns or path to csv/json containing input points and labels for patch
-          extraction using points defined by x, y and l(labels).
-        pad_y(int): symmetric padding y-axis, default=0.
-        pad_x(int): symmetric padding x-axis, default=0.
+        method_name (str): name of patch extraction method, must be one of "point",
+          "fixedwindow", "variablwindow".
+        **kwargs: Keyword arguments passed to :obj:`PointsPatchExtractor`.
+
     Return:
-        PatchExtractor : an object with base 'PatchExtractor' as base class.
+        PatchExtractor: an object with base :obj:`PointsPatchExtractor` as base class.
+
     Examples:
         >>> from tiatoolbox.tools.patchextraction import get_patch_extractor
         >>> # PointsPatchExtractor with default values
-        >>> patch_extract = get_patch_extractor('point')
+        >>> patch_extract = get_patch_extractor(
+        ...  'point', img_patch_h=200, img_patch_w=200)
 
     """
+
     if method_name.lower() == "point":
-        patch_extractor = PointsPatchExtractor(
-            img_patch_h=img_patch_h,
-            img_patch_w=img_patch_w,
-            pad_y=pad_y,
-            pad_x=pad_x,
-            input_points=input_points,
-        )
+        patch_extractor = PointsPatchExtractor(**kwargs)
     elif method_name.lower() == "fixedwindow":
-        patch_extractor = FixedWindowPatchExtractor(
-            img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
-        )
+        patch_extractor = FixedWindowPatchExtractor(**kwargs)
     elif method_name.lower() == "variablewindow":
-        patch_extractor = VariableWindowPatchExtractor(
-            img_patch_h=img_patch_h, img_patch_w=img_patch_w, pad_y=pad_y, pad_x=pad_x
-        )
+        patch_extractor = VariableWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported
 
