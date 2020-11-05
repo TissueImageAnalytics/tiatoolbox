@@ -13,6 +13,7 @@ from tiatoolbox import utils
 
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.utils.misc import imread
+from tests import patch_extraction_tests
 
 from tiatoolbox import cli
 from tiatoolbox import __version__
@@ -1333,3 +1334,11 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     wsi_obj = wsireader.OpenSlideWSIReader(_response_svs)
     meta = wsi_obj.info
     assert meta.validate()
+
+
+# -------------------------------------------------------------------------------------
+# Patch Extraction Tests
+# -------------------------------------------------------------------------------------
+
+def test_patch_extraction():
+    patch_extraction_tests.get_patch_extractor()
