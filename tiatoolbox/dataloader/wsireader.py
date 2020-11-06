@@ -580,20 +580,9 @@ class WSIReader:
             ...     file_name="CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
         """
-        level, post_read_scale = self._find_optimal_level_and_downsample(
-            resolution, units
-        )
-        level_dimensions = self.info.level_dimensions[level]
-        bounds = (0, 0, *level_dimensions)
-        thumb = self.read_bounds(bounds, 1.25, "power")
-
-        if np.any(post_read_scale != 1.0):
-            new_size = np.round(np.array(level_dimensions) * post_read_scale)
-            new_size = tuple(new_size.astype(int))
-            thumb = cv2.resize(thumb, new_size, interpolation=cv2.INTER_AREA)
-
-        thumb = np.array(thumb)
-
+        slide_dimensions = self.info.slide_dimensions
+        bounds = (0, 0, *slide_dimensions)
+        thumb = self.read_bounds(bounds, resolution=resolution, units=units)
         return thumb
 
     def save_tiles(self, tile_format=".jpg", verbose=True):
