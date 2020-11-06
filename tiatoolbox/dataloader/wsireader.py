@@ -228,7 +228,7 @@ class WSIReader:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
-            size (float): desired output size in pixels.
+            size (tuple of int): desired output size in pixels.
             resolution (float): desired output resolution.
             units (str): the units of scale, default = "level".
                 Supported units are: microns per pixel (mpp), objective
@@ -272,7 +272,7 @@ class WSIReader:
             bounds (tuple of int): Tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame.
-            resolutions (float): desired output resolution
+            resolution (float): desired output resolution
             units (str): the units of scale, default = "level".
                 Supported units are: microns per pixel (mpp), objective
                 power (power), pyramid / resolution level (level),
