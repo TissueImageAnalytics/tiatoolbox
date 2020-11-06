@@ -1210,7 +1210,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
 def test_wsimeta_init_fail():
     """Test incorrect init for WSIMeta raises TypeError."""
     with pytest.raises(TypeError):
-        wsimeta.WSIMeta(slide_dimensions=None)
+        wsimeta.WSIMeta(slide_dimensions=(None, None))
 
 
 @pytest.mark.filterwarnings("ignore")
@@ -1319,6 +1319,7 @@ def test_wsimeta_validate_pass():
         level_dimensions=[(512, 512), (256, 256)],
         level_downsamples=[1, 2],
     )
+    assert meta.validate()
 
 
 def test_wsimeta_openslidewsireader_ndpi(_response_ndpi, tmp_path):
@@ -1333,4 +1334,3 @@ def test_wsimeta_openslidewsireader_svs(_response_svs, tmp_path):
     wsi_obj = wsireader.OpenSlideWSIReader(_response_svs)
     meta = wsi_obj.info
     assert meta.validate()
-
