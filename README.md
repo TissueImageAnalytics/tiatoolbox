@@ -56,7 +56,7 @@ tiatoolbox --help
     positional arguments:
       {slide_info}
 
-    read-region         usage: tiatoolbox read-region -h
+    read-bounds         usage: tiatoolbox read-region -h
     save-tiles          usage: tiatoolbox save-tiles -h
     slide-info          usage: tiatoolbox slide-info -h
     slide-thumbnail     usage: tiatoolbox slide-thumbnail -h
