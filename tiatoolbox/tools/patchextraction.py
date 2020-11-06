@@ -23,7 +23,7 @@ from abc import ABC
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import imread
 
-import math
+# import math
 import numpy as np
 
 
