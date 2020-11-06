@@ -229,7 +229,7 @@ class WSIReader:
 
         Args:
             size (float): desired output size in pixels.
-            resolutions (float): desired output resolution.
+            resolution (float): desired output resolution.
             units (str): the units of scale, default = "level".
                 Supported units are: microns per pixel (mpp), objective
                 power (power), pyramid / resolution level (level),
