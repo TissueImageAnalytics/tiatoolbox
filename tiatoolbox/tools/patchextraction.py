@@ -163,8 +163,11 @@ class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
 
     Args:
-        img_patch_h: input image patch height
-        img_patch_w: input image patch width
+        img_patch_h (int): input image patch height
+        img_patch_w (int): input image patch width
+        pad_y (int): symmetric padding y-axis.
+        pad_x (int): symmetric padding x-axis.
+
     """
 
     def __init__(
@@ -244,6 +247,11 @@ class PointsPatchExtractor(PatchExtractor):
         return img_patches, labels, class_id
 
     def merge_patches(self, patches=None):
+        """Merge patch is not supported by :obj:`PointsPatchExtractor`.
+        Calling this function for :obj:`PointsPatchExtractor` will raise an error. This
+        overrides the merge_patches function in the base class :obj:`PatchExtractor`
+
+        """
         raise MethodNotSupported(
             message="Merge patches not supported for " "PointsPatchExtractor"
         )
@@ -255,10 +263,10 @@ def get_patch_extractor(method_name, **kwargs):
     Args:
         method_name (str): name of patch extraction method, must be one of "point",
           "fixedwindow", "variablwindow".
-        **kwargs: Keyword arguments passed to :obj:`PointsPatchExtractor`.
+        **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Return:
-        PatchExtractor: an object with base :obj:`PointsPatchExtractor` as base class.
+        PatchExtractor: an object with base :obj:`PatchExtractor` as base class.
 
     Examples:
         >>> from tiatoolbox.tools.patchextraction import get_patch_extractor
