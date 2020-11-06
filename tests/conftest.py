@@ -2,7 +2,6 @@ import pytest
 import requests
 import shutil
 import pathlib
-import os
 
 # -------------------------------------------------------------------------------------
 # Pytest Fixtures
@@ -65,7 +64,7 @@ def _sample_jp2(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _sample_all_wsis(_sample_ndpi, _sample_svs, _sample_jp2, tmpdir_factory):
-    """pytest fixture for sample wsi(s) of all types supported by tiatoolbox."""
+    """Sample wsi(s) of all types supported by tiatoolbox."""
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
     try:
