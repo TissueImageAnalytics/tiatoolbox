@@ -45,21 +45,21 @@ class PatchExtractor(ABC):
         self.pad_y = pad_y
         self.pad_x = pad_x
 
-    @staticmethod
-    def __get_last_steps(image_dim, label_patch_dim, stride):
-        """Get the last location for patch extraction in a specific direction.
-
-        Args:
-            image_dim: 1D size of image
-            label_patch_dim: 1D size of patches
-            stride: 1D size of stride for patch extraction
-
-        Returns:
-            last_step: the final location for patch extraction
-        """
-        nr_step = math.ceil((image_dim - label_patch_dim) / stride)
-        last_step = (nr_step + 1) * stride
-        return int(last_step)
+    # @staticmethod
+    # def __get_last_steps(image_dim, label_patch_dim, stride):
+    #     """Get the last location for patch extraction in a specific direction.
+    #
+    #     Args:
+    #         image_dim: 1D size of image
+    #         label_patch_dim: 1D size of patches
+    #         stride: 1D size of stride for patch extraction
+    #
+    #     Returns:
+    #         last_step: the final location for patch extraction
+    #     """
+    #     nr_step = math.ceil((image_dim - label_patch_dim) / stride)
+    #     last_step = (nr_step + 1) * stride
+    #     return int(last_step)
 
     def extract_patches(
         self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
