@@ -104,6 +104,7 @@ def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
+
 def test_command_line_save_tiles(_sample_all_wsis, tmp_path):
     """Test for save_tiles CLI."""
     runner = CliRunner()

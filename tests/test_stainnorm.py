@@ -91,6 +91,7 @@ def test_vahadane_normalise():
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
+
 def test_command_line_stainnorm():
     """Test for the stain normalisation CLI."""
     file_parent_dir = pathlib.Path(__file__).parent

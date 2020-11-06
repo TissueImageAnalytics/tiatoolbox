@@ -18,6 +18,7 @@ def test_slide_info(_sample_all_wsis, tmp_path):
         out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
         utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
