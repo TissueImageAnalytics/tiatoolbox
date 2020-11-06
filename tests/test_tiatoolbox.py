@@ -570,7 +570,7 @@ def test_read_bounds_openslide_baseline(_response_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
 
     assert isinstance(im_region, np.ndarray)
@@ -584,7 +584,7 @@ def test_read_bounds_jp2_baseline(_response_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_response_jp2)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
 
     assert isinstance(im_region, np.ndarray)
@@ -598,7 +598,7 @@ def test_read_bounds_openslide_levels(_response_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     for level, downsample in enumerate(wsi.info.level_downsamples):
         im_region = wsi.read_bounds(bounds, resolution=level, units="level")
 
@@ -616,7 +616,7 @@ def test_read_bounds_jp2_levels(_response_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_response_jp2)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     for level, downsample in enumerate(wsi.info.level_downsamples):
         im_region = wsi.read_bounds(bounds, resolution=level, units="level")
 
@@ -633,7 +633,7 @@ def test_read_bounds_openslide_mpp(_response_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     slide_mpp = wsi.info.mpp
     for factor in range(1, 10):
         mpp = slide_mpp * factor
@@ -656,7 +656,7 @@ def test_read_bounds_jp2_mpp(_response_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_response_jp2)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     slide_mpp = wsi.info.mpp
     for factor in range(1, 10):
         mpp = slide_mpp * factor
@@ -679,7 +679,7 @@ def test_read_bounds_openslide_objective_power(_response_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_response_ndpi)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     slide_power = wsi.info.objective_power
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
@@ -701,7 +701,7 @@ def test_read_bounds_interpolated(_response_svs):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_response_svs)
-    bounds = [0, 0, 500, 500]
+    bounds = (0, 0, 500, 500)
     im_region = wsi.read_bounds(bounds, resolution=0.1, units="mpp",)
 
     assert 0.1 < wsi.info.mpp[0]
@@ -718,7 +718,7 @@ def test_read_bounds_jp2_objective_power(_response_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_response_jp2)
-    bounds = [1000, 2000, 2000, 3000]
+    bounds = (1000, 2000, 2000, 3000)
     slide_power = wsi.info.objective_power
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
@@ -1207,6 +1207,7 @@ def test_command_line_save_tiles(_response_all_wsis, tmp_path):
     assert save_svs_tiles_result.exit_code == 0
 
 
+# noinspection PyTypeChecker
 def test_wsimeta_init_fail():
     """Test incorrect init for WSIMeta raises TypeError."""
     with pytest.raises(TypeError):
