@@ -262,7 +262,7 @@ def get_patch_extractor(method_name, **kwargs):
 
     Args:
         method_name (str): name of patch extraction method, must be one of "point",
-          "fixedwindow", "variablwindow".
+          "fixedwindow", "variablewindow".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Return:
