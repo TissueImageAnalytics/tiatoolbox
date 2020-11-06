@@ -77,7 +77,6 @@ class PatchExtractor(ABC):
         Returns:
             img_patches (ndarray): extracted image patches of size NxHxWxD.
         """
-
         raise NotImplementedError
 
     def merge_patches(self, patches):
@@ -89,7 +88,6 @@ class PatchExtractor(ABC):
         Returns:
             image: merged prediction
         """
-
         raise NotImplementedError
 
 
@@ -186,9 +184,7 @@ class PointsPatchExtractor(PatchExtractor):
     def extract_patches(
         self, input_img, labels=None, save_output=False, save_path=None, save_name=None
     ):
-        if isinstance(labels, np.ndarray):
-            labels = labels
-        else:
+        if not isinstance(labels, np.ndarray):
             raise Exception("Please input correct csv, json path or csv data")
 
         if input_img == str:
@@ -271,7 +267,6 @@ def get_patch_extractor(method_name, **kwargs):
         ...  'point', img_patch_h=200, img_patch_w=200)
 
     """
-
     if method_name.lower() == "point":
         patch_extractor = PointsPatchExtractor(**kwargs)
     elif method_name.lower() == "fixedwindow":
