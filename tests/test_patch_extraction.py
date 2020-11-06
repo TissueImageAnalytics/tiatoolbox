@@ -12,6 +12,9 @@ def test_get_patch_extractor():
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
 
+    with pytest.raises(MethodNotSupported):
+        points.merge_patches()
+
     fixed_window = patchextraction.get_patch_extractor(
         "fixedwindow", img_patch_h=200, img_patch_w=200
     )
