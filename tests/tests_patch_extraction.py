@@ -1,7 +1,7 @@
 from tiatoolbox.tools import patchextraction
 
 
-def get_patch_extractor():
+def test_get_patch_extractor():
     points = patchextraction.get_patch_extractor(
         "point", img_patch_h=200, img_patch_w=200
     )
