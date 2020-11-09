@@ -29,3 +29,12 @@ def test_get_patch_extractor():
 
     with pytest.raises(MethodNotSupported):
         patchextraction.get_patch_extractor("unknown")
+
+
+def test_points_patch_extractor():
+    points = patchextraction.get_patch_extractor(
+        "point", img_patch_h=200, img_patch_w=200
+    )
+
+    with pytest.raises(MethodNotSupported):
+        points.merge_patches(patches=None)

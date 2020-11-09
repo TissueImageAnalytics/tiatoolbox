@@ -45,6 +45,13 @@ class PatchExtractor(ABC):
         self.pad_y = pad_y
         self.pad_x = pad_x
 
+    def __iter__(self):
+        self.n = 0
+        return self
+
+    def __next__(self):
+        raise NotImplementedError
+
     # @staticmethod
     # def __get_last_steps(image_dim, label_patch_dim, stride):
     #     """Get the last location for patch extraction in a specific direction.
@@ -62,17 +69,13 @@ class PatchExtractor(ABC):
     #     return int(last_step)
 
     def extract_patches(
-        self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
+        self, input_img, labels=None
     ):
         """Extract patches from an image using locations provided by labels data.
 
         Args:
             input_img (str, ndarray): input image.
             labels (str, ndarray):
-            save_output (bool): whether to save extracted patches
-            save_path (str, pathlib.Path): path to save patches (only
-              if save_output = True).
-            save_name (str): filename for saving patches (only if save_output = True)
 
         Returns:
             img_patches (ndarray): extracted image patches of size NxHxWxD.
@@ -111,7 +114,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         self.stride_w = stride_w
 
     def extract_patches(
-        self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
+        self, input_img, labels=None
     ):
         raise NotImplementedError
 
@@ -151,7 +154,7 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self.label_patch_w = label_patch_w
 
     def extract_patches(
-        self, input_img, labels=None, save_output=False, save_path=None, save_name=None,
+        self, input_img, labels=None
     ):
         raise NotImplementedError
 
@@ -185,7 +188,7 @@ class PointsPatchExtractor(PatchExtractor):
         self.num_examples_per_patch = num_examples_per_patch
 
     def extract_patches(
-        self, input_img, labels=None, save_output=False, save_path=None, save_name=None
+        self, input_img, labels=None
     ):
         if not isinstance(labels, np.ndarray):
             raise Exception("Please input correct csv, json path or csv data")
