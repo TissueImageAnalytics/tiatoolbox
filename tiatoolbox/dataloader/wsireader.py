@@ -869,6 +869,7 @@ class OpenSlideWSIReader(WSIReader):
                     y_res = float(props["tiff.YResolution"])
                     mpp_x = 1 / x_res * units_per_micron[tiff_res_units]
                     mpp_y = 1 / y_res * units_per_micron[tiff_res_units]
+                    mpp = [mpp_x, mpp_y]
                 except KeyError:
                     warnings.warn("Unable to determine microns-per-pixel")
 
