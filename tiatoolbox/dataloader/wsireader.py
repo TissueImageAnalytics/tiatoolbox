@@ -844,9 +844,30 @@ class OpenSlideWSIReader(WSIReader):
         level_dimensions = self.openslide_wsi.level_dimensions
         level_downsamples = self.openslide_wsi.level_downsamples
         vendor = props[openslide.PROPERTY_NAME_VENDOR]
-        mpp_x = props[openslide.PROPERTY_NAME_MPP_X]
-        mpp_y = props[openslide.PROPERTY_NAME_MPP_Y]
-        mpp = [mpp_x, mpp_y]
+
+        # Find microns per pixel (mpp)
+        # Initialise to None (value if cannot be determined)
+        mpp = None
+        # Check OpenSlide for mpp metadata first
+        try:
+            mpp_x = props[openslide.PROPERTY_NAME_MPP_X]
+            mpp_y = props[openslide.PROPERTY_NAME_MPP_Y]
+            mpp = [mpp_x, mpp_y]
+        # Fallback to TIFF resolution units and convert to mpp
+        except KeyError:
+            tiff_res_units = props.get("tiff.ResolutionUnit")
+            if tiff_res_units is not None:
+                try:
+                    units_per_micron = {
+                        "centimeter": 1e4,  # 10k
+                        "inch": 25400,
+                    }
+                    x_res = float(props["tiff.XResolution"])
+                    y_res = float(props["tiff.YResolution"])
+                    mpp_x = 1 / x_res * units_per_micron[tiff_res_units]
+                    mpp_y = 1 / y_res * units_per_micron[tiff_res_units]
+                except KeyError:
+                    warnings.warn("Unable to determine microns-per-pixel")
 
         param = WSIMeta(
             file_path=self.input_path,
