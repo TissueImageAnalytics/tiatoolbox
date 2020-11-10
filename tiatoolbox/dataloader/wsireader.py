@@ -837,13 +837,16 @@ class OpenSlideWSIReader(WSIReader):
 
         """
         props = self.openslide_wsi.properties
-        objective_power = int(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+        if openslide.PROPERTY_NAME_OBJECTIVE_POWER in props:
+            objective_power = int(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+        else:
+            objective_power = None
 
         slide_dimensions = self.openslide_wsi.level_dimensions[0]
         level_count = self.openslide_wsi.level_count
         level_dimensions = self.openslide_wsi.level_dimensions
         level_downsamples = self.openslide_wsi.level_downsamples
-        vendor = props[openslide.PROPERTY_NAME_VENDOR]
+        vendor = props.get(openslide.PROPERTY_NAME_VENDOR)
 
         # Find microns per pixel (mpp)
         # Initialise to None (value if cannot be determined)
