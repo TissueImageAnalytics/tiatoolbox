@@ -836,17 +836,16 @@ class OpenSlideWSIReader(WSIReader):
             WSIMeta: containing meta information.
 
         """
-        objective_power = np.int(
-            self.openslide_wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-        )
+        props = self.openslide_wsi.properties
+        objective_power = np.int(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
 
         slide_dimensions = self.openslide_wsi.level_dimensions[0]
         level_count = self.openslide_wsi.level_count
         level_dimensions = self.openslide_wsi.level_dimensions
         level_downsamples = self.openslide_wsi.level_downsamples
-        vendor = self.openslide_wsi.properties[openslide.PROPERTY_NAME_VENDOR]
-        mpp_x = self.openslide_wsi.properties[openslide.PROPERTY_NAME_MPP_X]
-        mpp_y = self.openslide_wsi.properties[openslide.PROPERTY_NAME_MPP_Y]
+        vendor = props[openslide.PROPERTY_NAME_VENDOR]
+        mpp_x = props[openslide.PROPERTY_NAME_MPP_X]
+        mpp_y = props[openslide.PROPERTY_NAME_MPP_Y]
         mpp = [mpp_x, mpp_y]
 
         param = WSIMeta(
@@ -858,7 +857,7 @@ class OpenSlideWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=self.openslide_wsi.properties,
+            raw=props,
         )
 
         return param
