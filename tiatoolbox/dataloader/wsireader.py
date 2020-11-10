@@ -861,14 +861,14 @@ class OpenSlideWSIReader(WSIReader):
             tiff_res_units = props.get("tiff.ResolutionUnit")
             if tiff_res_units is not None:
                 try:
-                    units_per_micron = {
+                    microns_per_unit = {
                         "centimeter": 1e4,  # 10k
                         "inch": 25400,
                     }
                     x_res = float(props["tiff.XResolution"])
                     y_res = float(props["tiff.YResolution"])
-                    mpp_x = 1 / x_res * units_per_micron[tiff_res_units]
-                    mpp_y = 1 / y_res * units_per_micron[tiff_res_units]
+                    mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
+                    mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
                     mpp = [mpp_x, mpp_y]
                 except KeyError:
                     warnings.warn("Unable to determine microns-per-pixel")
