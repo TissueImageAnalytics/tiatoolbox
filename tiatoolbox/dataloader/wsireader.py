@@ -837,7 +837,7 @@ class OpenSlideWSIReader(WSIReader):
 
         """
         props = self.openslide_wsi.properties
-        objective_power = np.int(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+        objective_power = int(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
 
         slide_dimensions = self.openslide_wsi.level_dimensions[0]
         level_count = self.openslide_wsi.level_count
