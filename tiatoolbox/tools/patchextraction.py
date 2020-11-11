@@ -59,7 +59,7 @@ class PatchExtractor(ABC):
         self.pad_y = pad_y
         self.pad_x = pad_x
         self.n = 0
-        self.input_image = input_image_for_patch_extraction(input_image)
+        self.input_image = convert_input_image_for_patch_extraction(input_image)
 
     def __iter__(self):
         self.n = 0
