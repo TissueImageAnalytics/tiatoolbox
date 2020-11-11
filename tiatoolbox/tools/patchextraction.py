@@ -46,7 +46,7 @@ class PatchExtractor(ABC):
         img_patch_w(int): input image patch width.
         pad_y(int): symmetric padding y-axis.
         pad_x(int): symmetric padding x-axis.
-        n (int): current state of the iterator.
+        n(int): current state of the iterator.
 
     """
 
@@ -135,6 +135,9 @@ class FixedWindowPatchExtractor(PatchExtractor):
     # def extract_patches(self, input_img, labels=None):
     #     raise NotImplementedError
 
+    def __next__(self):
+        raise NotImplementedError
+
     def merge_patches(self, patches):
         raise NotImplementedError
 
@@ -175,6 +178,9 @@ class VariableWindowPatchExtractor(PatchExtractor):
 
     # def extract_patches(self, input_img, labels=None):
     #     raise NotImplementedError
+
+    def __next__(self):
+        raise NotImplementedError
 
     def merge_patches(self, patches):
         raise NotImplementedError
@@ -217,6 +223,9 @@ class PointsPatchExtractor(PatchExtractor):
 
         self.num_examples_per_patch = num_examples_per_patch
         self.labels = labels
+
+    def __next__(self):
+        raise NotImplementedError
 
     # def extract_patches(self, input_img, labels=None):
     #     if not isinstance(labels, np.ndarray):
@@ -285,7 +294,7 @@ class PointsPatchExtractor(PatchExtractor):
 
         """
         raise MethodNotSupported(
-            message="Merge patches not supported for " "PointsPatchExtractor"
+            message="Merge patches not supported for PointsPatchExtractor"
         )
 
 

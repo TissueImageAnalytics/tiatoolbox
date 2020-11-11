@@ -47,6 +47,7 @@ def test_get_patch_extractor():
 
 
 def test_points_patch_extractor():
+    """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
     input_image = imread(file_parent_dir.joinpath("data/source_image.png"))
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
