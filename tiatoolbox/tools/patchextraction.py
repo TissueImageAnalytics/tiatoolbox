@@ -295,8 +295,16 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
-def input_image_for_patch_extraction(input_image):
-    """Sets the correct value for PatchExtraction input_image attribute."""
+def convert_input_image_for_patch_extraction(input_image):
+    """Convert PatchExtraction input_image attribute to ndarray or :obj:`WSIReader`.
+
+    Args:
+        input_image(str, pathlib.Path, ndarray): input image for patch extraction.
+
+    Return:
+        ndarray, WSIReader: a numpy arrary or an object of type :obj:`WSIReader`.
+
+    """
     if not isinstance(input_image, np.ndarray):
 
         if isinstance(input_image, pathlib.Path):

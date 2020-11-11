@@ -78,7 +78,7 @@ Patch Extraction
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.patchextraction
-    :members: PatchExtractor, get_patch_extractor
+    :members: PatchExtractor, get_patch_extractor, convert_input_image_for_patch_extraction
 
 .. autoclass:: PointsPatchExtractor
     :show-inheritance:
