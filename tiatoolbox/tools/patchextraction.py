@@ -20,11 +20,14 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
+from tiatoolbox.dataloader.wsireader import OpenSlideWSIReader, OmnyxJP2WSIReader
 from tiatoolbox.utils.exceptions import MethodNotSupported
-# from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.misc import imread, split_path_name_ext
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 # import math
-# import numpy as np
+import numpy as np
+import pathlib
 
 
 class PatchExtractor(ABC):
@@ -56,7 +59,7 @@ class PatchExtractor(ABC):
         self.pad_y = pad_y
         self.pad_x = pad_x
         self.n = 0
-        self.input_image = input_image
+        self.input_image = input_image_for_patch_extraction(input_image)
 
     def __iter__(self):
         self.n = 0
@@ -231,12 +234,6 @@ class PointsPatchExtractor(PatchExtractor):
     #     if not isinstance(labels, np.ndarray):
     #         raise Exception("Please input correct csv, json path or csv data")
     #
-    #     if input_img == str:
-    #         image = imread(input_img)
-    #     elif isinstance(input_img, np.ndarray):
-    #         image = input_img
-    #     else:
-    #         raise Exception("Please input correct image path or numpy array")
     #
     #     patch_h = self.img_patch_h
     #     patch_w = self.img_patch_w
@@ -296,6 +293,33 @@ class PointsPatchExtractor(PatchExtractor):
         raise MethodNotSupported(
             message="Merge patches not supported for PointsPatchExtractor"
         )
+
+
+def input_image_for_patch_extraction(input_image):
+    """Sets the correct value for PatchExtraction input_image attribute."""
+    if not isinstance(input_image, np.ndarray):
+
+        if isinstance(input_image, pathlib.Path):
+            input_image = str(input_image)
+
+        if isinstance(input_image, str):
+            _, _, suffix = split_path_name_ext(input_image)
+
+            if suffix in (".jpg", ".png"):
+                input_image = imread(input_image)
+
+            elif suffix in (".svs", ".ndpi", ".mrxs"):
+                input_image = OpenSlideWSIReader(input_image)
+
+            elif suffix == ".jp2":
+                input_image = OmnyxJP2WSIReader(input_image)
+
+            else:
+                raise FileNotSupported("Filetype not supported.")
+        else:
+            raise FileNotSupported("Please input correct image path or numpy array")
+
+    return input_image
 
 
 def get_patch_extractor(method_name, **kwargs):
