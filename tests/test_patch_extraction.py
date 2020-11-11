@@ -1,5 +1,5 @@
 from tiatoolbox.tools import patchextraction
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupported, FileNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.dataloader.wsireader import OpenSlideWSIReader, OmnyxJP2WSIReader
 
@@ -51,7 +51,7 @@ def test_get_patch_extractor():
 def test_points_patch_extractor(_sample_svs, _sample_jp2):
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
-    input_image = imread(file_parent_dir.joinpath("data/source_image.png"))
+    input_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.png"))
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
     points = patchextraction.get_patch_extractor(
         input_image=input_image,
@@ -61,10 +61,10 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
         img_patch_w=200,
     )
 
+    assert isinstance(points.input_image, np.ndarray)
+
     with pytest.raises(MethodNotSupported):
         points.merge_patches(patches=None)
-
-    assert isinstance(points.input_image, np.ndarray)
 
     points = patchextraction.get_patch_extractor(
         input_image=pathlib.Path(_sample_svs),
@@ -86,3 +86,12 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
 
     assert isinstance(points.input_image, OmnyxJP2WSIReader)
 
+    with pytest.raises(FileNotSupported):
+        false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
+        _ = patchextraction.get_patch_extractor(
+            input_image=false_image,
+            labels=labels,
+            method_name="point",
+            img_patch_h=200,
+            img_patch_w=200,
+        )

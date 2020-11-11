@@ -316,8 +316,9 @@ def input_image_for_patch_extraction(input_image):
 
             else:
                 raise FileNotSupported("Filetype not supported.")
+
         else:
-            raise FileNotSupported("Please input correct image path or numpy array")
+            raise Exception("Please input correct image path or numpy array")
 
     return input_image
 
