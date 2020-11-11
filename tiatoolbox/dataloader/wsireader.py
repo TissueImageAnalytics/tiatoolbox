@@ -48,7 +48,6 @@ class WSIReader:
         output_dir (pathlib.Path): Output directory to save the output.
         tile_objective_value (int): Objective value at which tile is generated.
         tile_read_size (tuple of int): Tile (width, height).
-        info (WSIMeta): Whole slide image slide information.
 
     Args:
         input_path (str, pathlib.Path): input path to WSI.
@@ -85,7 +84,7 @@ class WSIReader:
             self (WSIReader):
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata
+            WSIMeta: An object containing normalised slide metadata.
 
         """
         raise NotImplementedError

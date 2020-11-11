@@ -12,7 +12,7 @@ Reading WSI Image Data
 
 .. currentmodule:: tiatoolbox.dataloader.wsireader
 .. autoclass:: WSIReader
-    :members: read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
+    :members: info, read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
 
 .. autoclass:: OpenSlideWSIReader
     :members: slide_info
