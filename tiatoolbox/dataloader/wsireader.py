@@ -85,7 +85,7 @@ class WSIReader:
             self (WSIReader):
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata
+            WSIMetadata: An object containing normalised slide metadata
 
         """
         raise NotImplementedError
@@ -217,7 +217,7 @@ class WSIReader:
         # Check for requested resolution > than baseline
         if any(np.array(scale) > 1):
             warnings.warn(
-                "Scale > 1."
+                "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
                 " Interpolation of read regions may occur."
@@ -833,7 +833,7 @@ class OpenSlideWSIReader(WSIReader):
         """Openslide WSI meta data reader.
 
         Returns:
-            WSIMeta: containing meta information.
+            WSIMetadata: containing meta information.
 
         """
         props = self.openslide_wsi.properties
@@ -853,8 +853,8 @@ class OpenSlideWSIReader(WSIReader):
         mpp = None
         # Check OpenSlide for mpp metadata first
         try:
-            mpp_x = props[openslide.PROPERTY_NAME_MPP_X]
-            mpp_y = props[openslide.PROPERTY_NAME_MPP_Y]
+            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
             mpp = [mpp_x, mpp_y]
         # Fallback to TIFF resolution units and convert to mpp
         except KeyError:
@@ -871,7 +871,23 @@ class OpenSlideWSIReader(WSIReader):
                     mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
                     mpp = [mpp_x, mpp_y]
                 except KeyError:
-                    warnings.warn("Unable to determine microns-per-pixel")
+                    warnings.warn(
+                        "Metadata: Unable to determine microns-per-pixel."
+                    )
+
+        # Fallback to calculating objective power from mpp
+        if objective_power is None:
+            if mpp is not None:
+                try:
+                    objective_power = misc.mpp2objective_power(mpp)
+                except ValueError:
+                    warnings.warn(
+                        "Metadata: Unable to approximate objective power from MPP."
+                        "MPP outside of sensible range."
+                    )
+                warnings.warn("Metadata: Objective power inferred from MPP.")
+            else:
+                warnings.warn("Metadata: Unable to determine objective power.")
 
         param = WSIMeta(
             file_path=self.input_path,
@@ -975,7 +991,7 @@ class OmnyxJP2WSIReader(WSIReader):
         """JP2 meta data reader.
 
         Returns:
-            WSIMeta: containing meta information
+            WSIMetadata: containing meta information
 
         """
         glymur_wsi = self.glymur_wsi
@@ -994,7 +1010,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         if cod is None:
             warnings.warn(
-                "JP2 codestream missing COD segment! "
+                "Metadata: JP2 codestream missing COD segment! "
                 "Cannot determine number of decompositions (levels)"
             )
             level_count = 1
