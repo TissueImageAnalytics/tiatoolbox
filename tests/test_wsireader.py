@@ -791,3 +791,63 @@ def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+
+
+def test_openslide_objective_power_from_mpp(_sample_svs):
+    """Test OpenSlideWSIReader approximation of objective power from mpp."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    openslide_obj = wsi.openslide_wsi
+    dictionary = dict(wsi.openslide_wsi.properties)
+
+    class DummyOpenSlideObject(object):
+        def __getattr__(self, name: str):
+            if name != "properties":
+                return getattr(openslide_obj, name)
+
+        @property
+        def properties(self):
+            return dictionary
+
+    wsi.openslide_wsi = DummyOpenSlideObject()
+
+    del dictionary["openslide.objective-power"]
+    with pytest.warns(UserWarning, match=r"Objective power inferred"):
+        wsi.info
+
+    dictionary["openslide.mpp-x"] = 10
+    dictionary["openslide.mpp-y"] = 10
+    with pytest.warns(UserWarning, match=r"MPP outside of sensible range"):
+        wsi.info
+
+    del dictionary["openslide.mpp-x"]
+    del dictionary["openslide.mpp-y"]
+    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
+        wsi.info
+
+
+def test_openslide_mpp_from_tiff_resolution(_sample_svs):
+    """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    openslide_obj = wsi.openslide_wsi
+    dictionary = dict(wsi.openslide_wsi.properties)
+
+    class DummyOpenSlideObject(object):
+        def __getattr__(self, name: str):
+            if name != "properties":
+                return getattr(openslide_obj, name)
+
+        @property
+        def properties(self):
+            return dictionary
+
+    wsi.openslide_wsi = DummyOpenSlideObject()
+
+    del dictionary["openslide.mpp-x"]
+    del dictionary["openslide.mpp-y"]
+    dictionary["tiff.ResolutionUnit"] = "centimeter"
+    dictionary["tiff.XResolution"] = 1e4  # Pixels per cm
+    dictionary["tiff.YResolution"] = 1e4  # Pixels per cm
+    with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
+        wsi.info
+
+    assert np.array_equal(wsi.info.mpp, [1, 1])

@@ -26,7 +26,7 @@ def test_background_composite():
 
 
 def test_mpp2objective_power(_sample_svs):
-    """Test approximation of objective power from mpp."""
+    """Test approximate conversion of from mpp to objective power."""
     mapping = [
         (0.05, 100),
         (0.07, 100),
@@ -51,32 +51,3 @@ def test_mpp2objective_power(_sample_svs):
 
     with pytest.raises(ValueError):
         utils.misc.mpp2objective_power(mpp=10)
-
-    wsi = tiatoolbox.dataloader.wsireader.OpenSlideWSIReader(_sample_svs)
-    openslide_obj = wsi.openslide_wsi
-    dictionary = dict(wsi.openslide_wsi.properties)
-
-    class DummyOpenSlideObject(object):
-        def __getattr__(self, name: str):
-            if name != "properties":
-                return getattr(openslide_obj, name)
-
-        @property
-        def properties(self):
-            return dictionary
-
-    wsi.openslide_wsi = DummyOpenSlideObject()
-
-    del dictionary["openslide.objective-power"]
-    with pytest.warns(UserWarning, match=r"Objective power inferred"):
-        wsi.info
-
-    dictionary["openslide.mpp-x"] = 10
-    dictionary["openslide.mpp-y"] = 10
-    with pytest.warns(UserWarning, match=r"MPP outside of sensible range"):
-        wsi.info
-
-    del dictionary["openslide.mpp-x"]
-    del dictionary["openslide.mpp-y"]
-    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        wsi.info

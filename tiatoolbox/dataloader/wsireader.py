@@ -870,9 +870,13 @@ class OpenSlideWSIReader(WSIReader):
                     mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
                     mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
                     mpp = [mpp_x, mpp_y]
+                    warnings.warn(
+                        "Metadata: Falling back to TIFF resolution tag"
+                        " for microns-per-pixel (MPP)."
+                    )
                 except KeyError:
                     warnings.warn(
-                        "Metadata: Unable to determine microns-per-pixel."
+                        "Metadata: Unable to determine microns-per-pixel (MPP)."
                     )
 
         # Fallback to calculating objective power from mpp
@@ -882,10 +886,13 @@ class OpenSlideWSIReader(WSIReader):
                     objective_power = misc.mpp2objective_power(mpp)
                 except ValueError:
                     warnings.warn(
-                        "Metadata: Unable to approximate objective power from MPP."
-                        "MPP outside of sensible range."
+                        "Metadata: Unable to approximate objective power"
+                        " from microns-per-pixel (MPP)."
+                        " MPP outside of sensible range."
                     )
-                warnings.warn("Metadata: Objective power inferred from MPP.")
+                warnings.warn(
+                    "Metadata: Objective power inferred from microns-per-pixel (MPP)."
+                )
             else:
                 warnings.warn("Metadata: Unable to determine objective power.")
 
