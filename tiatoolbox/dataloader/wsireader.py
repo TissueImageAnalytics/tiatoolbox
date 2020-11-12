@@ -838,7 +838,7 @@ class OpenSlideWSIReader(WSIReader):
         """
         props = self.openslide_wsi.properties
         if openslide.PROPERTY_NAME_OBJECTIVE_POWER in props:
-            objective_power = int(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+            objective_power = float(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
         else:
             objective_power = None
 
