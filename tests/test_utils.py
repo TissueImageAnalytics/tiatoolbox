@@ -3,8 +3,6 @@ from tiatoolbox import utils
 import pytest
 import numpy as np
 
-import tiatoolbox
-
 
 def test_imresize():
     """Test for imresize."""

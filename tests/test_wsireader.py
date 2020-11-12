@@ -38,6 +38,32 @@ def strictly_decreasing(seq):
     return all(a > b for a, b in zip(seq, seq[1:]))
 
 
+# -------------------------------------------------------------------------------------
+# Utility Test Classes
+# -------------------------------------------------------------------------------------
+
+
+class DummyMutableOpenSlideObject:
+    """Dummy OpenSlide object with mutable properties."""
+
+    def __init__(self, openslide_obj) -> None:
+        self.openslide_obj = openslide_obj
+        self._properties = dict(openslide_obj.properties)
+
+    def __getattr__(self, name: str):
+        return getattr(self.openslide_obj, name)
+
+    @property
+    def properties(self):
+        """Return the fake properties."""
+        return self._properties
+
+
+# -------------------------------------------------------------------------------------
+# Tests
+# -------------------------------------------------------------------------------------
+
+
 def test_wsireader_slide_info(_sample_svs, tmp_path):
     """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
@@ -796,58 +822,36 @@ def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
 def test_openslide_objective_power_from_mpp(_sample_svs):
     """Test OpenSlideWSIReader approximation of objective power from mpp."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    openslide_obj = wsi.openslide_wsi
-    dictionary = dict(wsi.openslide_wsi.properties)
+    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
+    props = wsi.openslide_wsi._properties
 
-    class DummyOpenSlideObject(object):
-        def __getattr__(self, name: str):
-            if name != "properties":
-                return getattr(openslide_obj, name)
-
-        @property
-        def properties(self):
-            return dictionary
-
-    wsi.openslide_wsi = DummyOpenSlideObject()
-
-    del dictionary["openslide.objective-power"]
+    del props["openslide.objective-power"]
     with pytest.warns(UserWarning, match=r"Objective power inferred"):
-        wsi.info
+        _ = wsi.info
 
-    dictionary["openslide.mpp-x"] = 10
-    dictionary["openslide.mpp-y"] = 10
+    props["openslide.mpp-x"] = 10
+    props["openslide.mpp-y"] = 10
     with pytest.warns(UserWarning, match=r"MPP outside of sensible range"):
-        wsi.info
+        _ = wsi.info
 
-    del dictionary["openslide.mpp-x"]
-    del dictionary["openslide.mpp-y"]
+    del props["openslide.mpp-x"]
+    del props["openslide.mpp-y"]
     with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        wsi.info
+        _ = wsi.info
 
 
 def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    openslide_obj = wsi.openslide_wsi
-    dictionary = dict(wsi.openslide_wsi.properties)
+    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
+    props = wsi.openslide_wsi._properties
 
-    class DummyOpenSlideObject(object):
-        def __getattr__(self, name: str):
-            if name != "properties":
-                return getattr(openslide_obj, name)
-
-        @property
-        def properties(self):
-            return dictionary
-
-    wsi.openslide_wsi = DummyOpenSlideObject()
-
-    del dictionary["openslide.mpp-x"]
-    del dictionary["openslide.mpp-y"]
-    dictionary["tiff.ResolutionUnit"] = "centimeter"
-    dictionary["tiff.XResolution"] = 1e4  # Pixels per cm
-    dictionary["tiff.YResolution"] = 1e4  # Pixels per cm
+    del props["openslide.mpp-x"]
+    del props["openslide.mpp-y"]
+    props["tiff.ResolutionUnit"] = "centimeter"
+    props["tiff.XResolution"] = 1e4  # Pixels per cm
+    props["tiff.YResolution"] = 1e4  # Pixels per cm
     with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
-        wsi.info
+        _ = wsi.info
 
     assert np.array_equal(wsi.info.mpp, [1, 1])
