@@ -806,14 +806,12 @@ class OpenSlideWSIReader(WSIReader):
         wsi = self.openslide_wsi
 
         # Read at optimal level and corrected read size
-        level_location = level_bounds[:2]
+        location = bounds[:2]
         read_size = (
             level_bounds[2] - level_bounds[0],
             level_bounds[3] - level_bounds[1],
         )
-        im_region = wsi.read_region(
-            location=level_location, level=read_level, size=read_size
-        )
+        im_region = wsi.read_region(location=location, level=read_level, size=read_size)
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
