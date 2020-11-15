@@ -1,4 +1,3 @@
-from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli
