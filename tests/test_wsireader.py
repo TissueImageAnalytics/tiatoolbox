@@ -1,3 +1,4 @@
+from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli
@@ -6,6 +7,7 @@ import pytest
 from pytest import approx
 import pathlib
 import numpy as np
+import cv2
 from click.testing import CliRunner
 
 # -------------------------------------------------------------------------------------
@@ -622,6 +624,17 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
         )
         assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
         assert im_region.shape[2] == 3
+
+
+def test_read_bounds_level_consistency(_sample_ndpi):
+    """Test read_bounds produces the same visual field across resolution levels."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    bounds = (30400, 11810, 30912, 12322)
+    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [cv2.resize(img, smallest_size) for img in imgs]
+    for a, b in zip(resized, resized[1:]):
+        assert np.sum((a - b) ** 2) / np.prod(a.shape) < 10
 
 
 def test_wsireader_get_thumbnail_openslide(_sample_svs):
