@@ -30,6 +30,10 @@ Git
 Create the virtual environment
 
     conda env create -f requirements.conda.yml
+or (on Windows)
+
+    conda env create -f requirements.win64.conda.yml
+
 or
 
     pip install -r requirements.txt
