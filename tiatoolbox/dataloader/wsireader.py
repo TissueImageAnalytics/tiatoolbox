@@ -45,18 +45,37 @@ class WSIReader:
 
     Attributes:
         input_path (pathlib.Path): Input path to WSI file.
+        output_dir (pathlib.Path): Output directory to save the output.
+        tile_objective_value (int): Objective value at which tile is generated.
+        tile_read_size (tuple of int): Tile (width, height).
+        info (WSIMeta): Whole slide image slide information.
 
     Args:
         input_path (str, pathlib.Path): input path to WSI.
+        output_dir (str, pathlib.Path): output directory to save the output,
+         default=./output.
+        tile_objective_value (int): objective value at which tile is generated,
+         default=20.
+        tile_read_size_w (int): tile width, default=5000.
+        tile_read_size_h (int): tile height, default=5000.
 
     """
 
     def __init__(
         self,
         input_path=".",
+        output_dir="./output",
+        tile_objective_value=20,
+        tile_read_size_w=5000,
+        tile_read_size_h=5000,
     ):
 
         self.input_path = pathlib.Path(input_path)
+        if output_dir is not None:
+            self.output_dir = pathlib.Path(output_dir, self.input_path.name)
+
+        self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
+        self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
 
     @property
     def info(self):
@@ -739,9 +758,17 @@ class OpenSlideWSIReader(WSIReader):
     def __init__(
         self,
         input_path=".",
+        output_dir="./output",
+        tile_objective_value=20,
+        tile_read_size_w=5000,
+        tile_read_size_h=5000,
     ):
         super().__init__(
             input_path=input_path,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
         )
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
@@ -850,10 +877,18 @@ class OmnyxJP2WSIReader(WSIReader):
 
     def __init__(
         self,
-        input_path="."
+        input_path=".",
+        output_dir="./output",
+        tile_objective_value=20,
+        tile_read_size_w=5000,
+        tile_read_size_h=5000,
     ):
         super().__init__(
             input_path=input_path,
+            output_dir=output_dir,
+            tile_objective_value=tile_objective_value,
+            tile_read_size_w=tile_read_size_w,
+            tile_read_size_h=tile_read_size_h,
         )
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
@@ -968,21 +1003,3 @@ class OmnyxJP2WSIReader(WSIReader):
         )
 
         return param
-
-
-class VFReader(WSIReader):
-    """Class for reading small visual field images.
-
-    Supported formats:
-
-    - .jpg
-    - .png
-
-    """
-    def __init__(
-        self,
-        input_path="."
-    ):
-        super().__init__(
-            input_path=input_path,
-        )
