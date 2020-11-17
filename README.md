@@ -50,8 +50,9 @@ pip
 conda
 -----
 
-    conda env create --name tiatoolbox --file requirements.conda.yml
+    conda env create -n tiatoolbox python=3.{6,7,8}
     conda activate tiatoolbox
+    pip install tiatoolbox
 
 tiatoolbox --help
 =================
