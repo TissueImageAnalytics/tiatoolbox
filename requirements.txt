@@ -7,4 +7,4 @@ openslide-python==1.1.2
 pyyaml
 pandas
 glymur
-scikit-learn=0.23.2
+scikit-learn==0.23.2
