@@ -85,7 +85,7 @@ class WSIReader:
             self (WSIReader):
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata
+            WSIMetadata: An object containing normalised slide metadata
 
         """
         raise NotImplementedError
@@ -223,7 +223,7 @@ class WSIReader:
         # Check for requested resolution > than baseline resolution
         if any(np.array(scale) > 1):
             warnings.warn(
-                "Scale > 1."
+                "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
                 " Interpolation of read regions may occur."
@@ -837,21 +837,68 @@ class OpenSlideWSIReader(WSIReader):
         """Openslide WSI meta data reader.
 
         Returns:
-            WSIMeta: containing meta information.
+            WSIMetadata: containing meta information.
 
         """
-        objective_power = np.int(
-            self.openslide_wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-        )
+        props = self.openslide_wsi.properties
+        if openslide.PROPERTY_NAME_OBJECTIVE_POWER in props:
+            objective_power = float(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+        else:
+            objective_power = None
 
         slide_dimensions = self.openslide_wsi.level_dimensions[0]
         level_count = self.openslide_wsi.level_count
         level_dimensions = self.openslide_wsi.level_dimensions
         level_downsamples = self.openslide_wsi.level_downsamples
-        vendor = self.openslide_wsi.properties[openslide.PROPERTY_NAME_VENDOR]
-        mpp_x = self.openslide_wsi.properties[openslide.PROPERTY_NAME_MPP_X]
-        mpp_y = self.openslide_wsi.properties[openslide.PROPERTY_NAME_MPP_Y]
-        mpp = [mpp_x, mpp_y]
+        vendor = props.get(openslide.PROPERTY_NAME_VENDOR)
+
+        # Find microns per pixel (mpp)
+        # Initialise to None (value if cannot be determined)
+        mpp = None
+        # Check OpenSlide for mpp metadata first
+        try:
+            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
+            mpp = [mpp_x, mpp_y]
+        # Fallback to TIFF resolution units and convert to mpp
+        except KeyError:
+            tiff_res_units = props.get("tiff.ResolutionUnit")
+            if tiff_res_units is not None:
+                try:
+                    microns_per_unit = {
+                        "centimeter": 1e4,  # 10k
+                        "inch": 25400,
+                    }
+                    x_res = float(props["tiff.XResolution"])
+                    y_res = float(props["tiff.YResolution"])
+                    mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
+                    mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
+                    mpp = [mpp_x, mpp_y]
+                    warnings.warn(
+                        "Metadata: Falling back to TIFF resolution tag"
+                        " for microns-per-pixel (MPP)."
+                    )
+                except KeyError:
+                    warnings.warn(
+                        "Metadata: Unable to determine microns-per-pixel (MPP)."
+                    )
+
+        # Fallback to calculating objective power from mpp
+        if objective_power is None:
+            if mpp is not None:
+                try:
+                    objective_power = misc.mpp2objective_power(mpp)
+                except ValueError:
+                    warnings.warn(
+                        "Metadata: Unable to approximate objective power"
+                        " from microns-per-pixel (MPP)."
+                        " MPP outside of sensible range."
+                    )
+                warnings.warn(
+                    "Metadata: Objective power inferred from microns-per-pixel (MPP)."
+                )
+            else:
+                warnings.warn("Metadata: Unable to determine objective power.")
 
         param = WSIMeta(
             file_path=self.input_path,
@@ -862,7 +909,7 @@ class OpenSlideWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=self.openslide_wsi.properties,
+            raw=props,
         )
 
         return param
@@ -955,7 +1002,7 @@ class OmnyxJP2WSIReader(WSIReader):
         """JP2 meta data reader.
 
         Returns:
-            WSIMeta: containing meta information
+            WSIMetadata: containing meta information
 
         """
         glymur_wsi = self.glymur_wsi
@@ -974,7 +1021,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         if cod is None:
             warnings.warn(
-                "JP2 codestream missing COD segment! "
+                "Metadata: JP2 codestream missing COD segment! "
                 "Cannot determine number of decompositions (levels)"
             )
             level_count = 1
