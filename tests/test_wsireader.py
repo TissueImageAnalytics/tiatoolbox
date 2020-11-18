@@ -6,6 +6,7 @@ import pytest
 from pytest import approx
 import pathlib
 import numpy as np
+import cv2
 from click.testing import CliRunner
 
 # -------------------------------------------------------------------------------------
@@ -36,6 +37,32 @@ def strictly_decreasing(seq):
         bool: True if strictly decreasing.
     """
     return all(a > b for a, b in zip(seq, seq[1:]))
+
+
+# -------------------------------------------------------------------------------------
+# Utility Test Classes
+# -------------------------------------------------------------------------------------
+
+
+class DummyMutableOpenSlideObject:
+    """Dummy OpenSlide object with mutable properties."""
+
+    def __init__(self, openslide_obj) -> None:
+        self.openslide_obj = openslide_obj
+        self._properties = dict(openslide_obj.properties)
+
+    def __getattr__(self, name: str):
+        return getattr(self.openslide_obj, name)
+
+    @property
+    def properties(self):
+        """Return the fake properties."""
+        return self._properties
+
+
+# -------------------------------------------------------------------------------------
+# Tests
+# -------------------------------------------------------------------------------------
 
 
 def test_wsireader_slide_info(_sample_svs, tmp_path):
@@ -624,6 +651,38 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
         assert im_region.shape[2] == 3
 
 
+def test_read_bounds_level_consistency_openslide(_sample_ndpi):
+    """Test read_bounds produces the same visual field across resolution levels."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    bounds = (30400, 11810, 30912, 12322)
+    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [
+        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
+        for img in imgs
+    ]
+    # Pair-wise check resolutions for mean squared error
+    for a in resized:
+        for b in resized:
+            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
+
+
+def test_read_bounds_level_consistency_jp2(_sample_jp2):
+    """Test read_bounds produces the same visual field across resolution levels."""
+    bounds = (32768, 42880, 33792, 43904)
+    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
+    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [
+        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
+        for img in imgs
+    ]
+    # Pair-wise check resolutions for mean squared error
+    for a in resized:
+        for b in resized:
+            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
+
+
 def test_wsireader_get_thumbnail_openslide(_sample_svs):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -791,3 +850,41 @@ def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+
+
+def test_openslide_objective_power_from_mpp(_sample_svs):
+    """Test OpenSlideWSIReader approximation of objective power from mpp."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
+    props = wsi.openslide_wsi._properties
+
+    del props["openslide.objective-power"]
+    with pytest.warns(UserWarning, match=r"Objective power inferred"):
+        _ = wsi.info
+
+    props["openslide.mpp-x"] = 10
+    props["openslide.mpp-y"] = 10
+    with pytest.warns(UserWarning, match=r"MPP outside of sensible range"):
+        _ = wsi.info
+
+    del props["openslide.mpp-x"]
+    del props["openslide.mpp-y"]
+    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
+        _ = wsi.info
+
+
+def test_openslide_mpp_from_tiff_resolution(_sample_svs):
+    """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
+    props = wsi.openslide_wsi._properties
+
+    del props["openslide.mpp-x"]
+    del props["openslide.mpp-y"]
+    props["tiff.ResolutionUnit"] = "centimeter"
+    props["tiff.XResolution"] = 1e4  # Pixels per cm
+    props["tiff.YResolution"] = 1e4  # Pixels per cm
+    with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
+        _ = wsi.info
+
+    assert np.array_equal(wsi.info.mpp, [1, 1])
