@@ -6,6 +6,7 @@ import pytest
 from pytest import approx
 import pathlib
 import numpy as np
+import cv2
 from click.testing import CliRunner
 
 # -------------------------------------------------------------------------------------
@@ -622,6 +623,38 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
         )
         assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
         assert im_region.shape[2] == 3
+
+
+def test_read_bounds_level_consistency_openslide(_sample_ndpi):
+    """Test read_bounds produces the same visual field across resolution levels."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    bounds = (30400, 11810, 30912, 12322)
+    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [
+        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
+        for img in imgs
+    ]
+    # Pair-wise check resolutions for mean squared error
+    for a in resized:
+        for b in resized:
+            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
+
+
+def test_read_bounds_level_consistency_jp2(_sample_jp2):
+    """Test read_bounds produces the same visual field across resolution levels."""
+    bounds = (32768, 42880, 33792, 43904)
+    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
+    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [
+        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
+        for img in imgs
+    ]
+    # Pair-wise check resolutions for mean squared error
+    for a in resized:
+        for b in resized:
+            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
 
 
 def test_wsireader_get_thumbnail_openslide(_sample_svs):

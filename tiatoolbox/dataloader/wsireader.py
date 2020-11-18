@@ -196,15 +196,21 @@ class WSIReader:
                 the optimal level and the target scale (usually <= 1).
         """
         level_scales = self._relative_level_scales(resolution, units)
-        # Note that np.argmax finds the index of the first True element.
-        # Here it is used on a reversed list to find the first
-        # element <=1, which is the same element as the last <=1
-        # element when counting forward in the regular list.
-        reverse_index = np.argmax(
-            [all(np.round(x, decimals=precision) <= 1) for x in level_scales[::-1]]
-        )
-        # Convert the index from the reversed list to the regular index (level)
-        level = (len(level_scales) - 1) - reverse_index
+        level_resolution_sufficient = [
+            all(np.round(x, decimals=precision) <= 1) for x in level_scales
+        ]
+        # Check if level 0 is lower resolution than required (scale > 1)
+        if not any(level_resolution_sufficient):
+            level = 0
+        else:
+            # Find the first level with relative scale >= 1.
+            # Note: np.argmax finds the index of the first True element.
+            # Here it is used on a reversed list to find the first
+            # element <=1, which is the same element as the last <=1
+            # element when counting forward in the regular list.
+            reverse_index = np.argmax(level_resolution_sufficient[::-1])
+            # Convert the index from the reversed list to the regular index (level)
+            level = (len(level_scales) - 1) - reverse_index
         scale = level_scales[level]
 
         # Ensure results are sensible for resolution at a integer levels
@@ -214,7 +220,7 @@ class WSIReader:
             if not all(x == 1.0 for x in scale):
                 raise AssertionError("Scale != 1.0 for level resolution units")
 
-        # Check for requested resolution > than baseline
+        # Check for requested resolution > than baseline resolution
         if any(np.array(scale) > 1):
             warnings.warn(
                 "Scale > 1."
@@ -806,14 +812,12 @@ class OpenSlideWSIReader(WSIReader):
         wsi = self.openslide_wsi
 
         # Read at optimal level and corrected read size
-        level_location = level_bounds[:2]
+        location = bounds[:2]
         read_size = (
             level_bounds[2] - level_bounds[0],
             level_bounds[3] - level_bounds[1],
         )
-        im_region = wsi.read_region(
-            location=level_location, level=read_level, size=read_size
-        )
+        im_region = wsi.read_region(location=location, level=read_level, size=read_size)
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
