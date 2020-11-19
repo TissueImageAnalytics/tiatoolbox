@@ -33,6 +33,7 @@ import cv2
 import re
 import numbers
 import os
+from typing import Tuple
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -52,8 +53,7 @@ class WSIReader:
     """
 
     def __init__(
-        self,
-        input_path=".",
+        self, input_path=".",
     ):
 
         self.input_path = pathlib.Path(input_path)
@@ -486,7 +486,7 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = wsireader.WSIReader(input_path="/path/to/a/wsi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
             >>> img = wsi.read_bounds(bounds)
@@ -563,19 +563,28 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
-            >>> slide_thumbnail = wsi.slide_thumbnail()
+            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
+            >>> slide_thumbnail = wsi.get_thumbnail()
         """
         slide_dimensions = self.info.slide_dimensions
         bounds = (0, 0, *slide_dimensions)
         thumb = self.read_bounds(bounds, resolution=resolution, units=units)
         return thumb
 
-    def save_tiles(self, tile_format=".jpg", verbose=True):
+    def save_tiles(
+        self,
+        output_dir: [str, pathlib.Path],
+        tile_objective_value: [int],
+        tile_read_size: Tuple[int, int],
+        tile_format=".jpg",
+        verbose=True,
+    ):
         """Generate image tiles from whole slide images.
 
         Args:
+            output_dir(str, pathlib.Path): Output directory to save the tiles.
+            tile_objective_value (int): Objective value at which tile is generated.
+            tile_read_size (tuple of int): Tile (height, width).
             tile_format (str): file format to save image tiles, default=".jpg"
             verbose (bool): Print output, default=True
 
@@ -584,23 +593,18 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi",
-            ...     output_dir='./dev_test',
+            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> wsi.save_tiles(output_dir='./dev_test',
             ...     tile_objective_value=10,
-            ...     tile_read_size_h=2000,
-            ...     tile_read_size_w=2000)
-            >>> wsi.save_tiles()
+            ...     tile_read_size=(2000, 2000))
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
+            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
             >>> slide_param = wsi.info()
 
         """
-        tile_objective_value = self.tile_objective_value
-        tile_read_size = self.tile_read_size
-
+        output_dir = pathlib.Path(output_dir, self.input_path.name)
         rescale = self.info.objective_power / tile_objective_value
         if rescale.is_integer():
             try:
@@ -627,7 +631,7 @@ class WSIReader:
         tile_w = tile_read_size[1]
 
         iter_tot = 0
-        output_dir = pathlib.Path(self.output_dir)
+        output_dir = pathlib.Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
 
@@ -743,12 +747,9 @@ class OpenSlideWSIReader(WSIReader):
     """
 
     def __init__(
-        self,
-        input_path=".",
+        self, input_path=".",
     ):
-        super().__init__(
-            input_path=input_path,
-        )
+        super().__init__(input_path=input_path,)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -899,13 +900,8 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi (:obj:`glymur.Jp2k`)
     """
 
-    def __init__(
-        self,
-        input_path="."
-    ):
-        super().__init__(
-            input_path=input_path,
-        )
+    def __init__(self, input_path="."):
+        super().__init__(input_path=input_path,)
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -1030,10 +1026,6 @@ class VFReader(WSIReader):
     - .png
 
     """
-    def __init__(
-        self,
-        input_path="."
-    ):
-        super().__init__(
-            input_path=input_path,
-        )
+
+    def __init__(self, input_path="."):
+        super().__init__(input_path=input_path,)

@@ -705,12 +705,13 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_sample_svs).parent), file_types=file_types,
     )
-    wsi = wsireader.OpenSlideWSIReader(
-        files_all[0],
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    wsi.save_tiles(
         output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")),
         tile_objective_value=5,
+        tile_read_size=(5000, 5000),
+        verbose=True,
     )
-    wsi.save_tiles(verbose=True)
     assert (
         pathlib.Path(tmp_path)
         .joinpath("test_wsireader_save_tiles")
@@ -729,6 +730,40 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
         pathlib.Path(tmp_path)
         .joinpath("test_wsireader_save_tiles")
         .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+
+
+def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
+    """Test for save_tiles in wsireader as a python function."""
+    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
+    wsi.save_tiles(
+        output_dir=str(
+            pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")
+        ),
+        tile_objective_value=5,
+        tile_read_size=(5000, 5000),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_jp2_save_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_jp2_save_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_jp2_save_tiles")
+        .joinpath("test1.jp2")
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
