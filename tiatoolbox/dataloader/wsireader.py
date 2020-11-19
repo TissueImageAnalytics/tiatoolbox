@@ -1029,3 +1029,34 @@ class VFReader(WSIReader):
 
     def __init__(self, input_path="."):
         super().__init__(input_path=input_path,)
+
+    @property
+    def info(self):
+        """VF metadata getter.
+
+        Args:
+            self (WSIReader):
+
+        Returns:
+            WSIMetadata: An object containing normalised slide metadata
+
+        """
+        param = WSIMeta(
+            file_path=self.input_path,
+            objective_power=None,
+            slide_dimensions=(1000, 1000),
+            level_count=1,
+            level_dimensions=[(1000, 1000)],
+            level_downsamples=[1],
+            vendor=None,
+            mpp=None,
+            raw=None,
+        )
+
+        return param
+
+    def read_rect(self, location, size, resolution=0, units="level"):
+        pass
+
+    def read_bounds(self, bounds, resolution=0, units="level"):
+        pass
