@@ -923,3 +923,23 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
         _ = wsi.info
 
     assert np.array_equal(wsi.info.mpp, [1, 1])
+
+
+def test_VFReader():
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    with pytest.warns(UserWarning, match=r"Unknown scale"):
+        _ = wsi.info
+    with pytest.warns(UserWarning, match=r"Raw data is None"):
+        _ = wsi.info
+
+    assert wsi.img.shape==(256, 256, 3)
+
+    img = wsi.read_rect(location=(0, 0), size=(100, 50))
+    assert img.shape == (50, 100, 3)
+
+    img = wsi.read_region(location=(0, 0), size=(100, 50), level=0)
+    assert img.shape == (50, 100, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100))
+    assert img.shape == (100, 50, 3)
