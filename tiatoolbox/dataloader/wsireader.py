@@ -1055,9 +1055,7 @@ class VFReader(WSIReader):
             raw=None,
         )
 
-        warnings.warn(
-            "Unknown scale (no objective_power or mpp)."
-        )
+        warnings.warn("Unknown scale (no objective_power or mpp).")
 
         warnings.warn("Raw data is None.")
 
@@ -1065,8 +1063,8 @@ class VFReader(WSIReader):
 
     def read_rect(self, location, size, resolution=0, units="level"):
         return self.img[
-            location[1]:location[1] + size[1], location[0]:location[0] + size[0], :
+            location[1] : location[1] + size[1], location[0] : location[0] + size[0], :
         ]
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        return self.img[bounds[1]:bounds[3], bounds[0]:bounds[2], :]
+        return self.img[bounds[1] : bounds[3], bounds[0] : bounds[2], :]

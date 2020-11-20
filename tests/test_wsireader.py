@@ -933,7 +933,7 @@ def test_VFReader():
     with pytest.warns(UserWarning, match=r"Raw data is None"):
         _ = wsi.info
 
-    assert wsi.img.shape==(256, 256, 3)
+    assert wsi.img.shape == (256, 256, 3)
 
     img = wsi.read_rect(location=(0, 0), size=(100, 50))
     assert img.shape == (50, 100, 3)
