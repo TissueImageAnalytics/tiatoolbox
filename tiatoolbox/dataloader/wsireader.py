@@ -529,7 +529,7 @@ class WSIReader:
         This function is to help with writing code which is backwards
         compatible with OpenSlide. As such, it has the same arguments.
 
-        This interally calls :func:`read_rect` which should be
+        This internally calls :func:`read_rect` which should be
         implemented by any :class:`WSIReader` subclass.
         Therefore, some WSI formats which
         are not supported by OpenSlide, such as Omnyx JP2 files, may
@@ -1025,29 +1025,31 @@ class VFReader(WSIReader):
     - .jpg
     - .png
 
+    Attributes:
+        img (ndarray)
+
     """
 
     def __init__(self, input_path="."):
         super().__init__(input_path=input_path,)
 
+        self.img = misc.imread(self.input_path)
+
     @property
     def info(self):
-        """VF metadata getter.
-
-        Args:
-            self (WSIReader):
+        """Visual Field meta data reader.
 
         Returns:
-            WSIMetadata: An object containing normalised slide metadata
+            WSIMetadata: containing meta information.
 
         """
         param = WSIMeta(
             file_path=self.input_path,
             objective_power=None,
-            slide_dimensions=(1000, 1000),
+            slide_dimensions=self.img.shape[:-1],
             level_count=1,
-            level_dimensions=[(1000, 1000)],
-            level_downsamples=[1],
+            level_dimensions=(self.img.shape[:-1],),
+            level_downsamples=[1.0],
             vendor=None,
             mpp=None,
             raw=None,
@@ -1056,7 +1058,9 @@ class VFReader(WSIReader):
         return param
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        pass
+        return self.img[
+            location[1]:location[1] + size[1], location[0]:location[0] + size[0], :
+        ]
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        pass
+        return self.img[bounds[1]:bounds[3], bounds[0]:bounds[3], :]
