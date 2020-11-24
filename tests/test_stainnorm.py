@@ -157,3 +157,7 @@ def test_command_line_stainnorm():
     )
 
     assert stainnorm_result.exit_code == 0
+
+
+def test_luminosity_standardiser(input):
+    return None

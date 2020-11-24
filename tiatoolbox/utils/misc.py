@@ -235,3 +235,8 @@ def mpp2objective_power(mpp):
         # Double the objective power as mpp halves
         return 10 * 2 ** (np.ceil(np.log2(0.15 / mpp)) + 2)
     raise ValueError()
+
+
+def luminosity_standardiser(input):
+    """Docstring."""
+    return None
