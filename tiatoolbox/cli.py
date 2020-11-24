@@ -201,7 +201,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
         wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
 
     if wsi is not None:
-        slide_thumb = wsi.get_thumbnail()
+        slide_thumb = wsi.slide_thumbnail()
 
         if mode == "show":
             im_region = Image.fromarray(slide_thumb)

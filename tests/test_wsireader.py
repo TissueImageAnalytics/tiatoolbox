@@ -686,7 +686,7 @@ def test_read_bounds_level_consistency_jp2(_sample_jp2):
 def test_wsireader_get_thumbnail_openslide(_sample_svs):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    slide_thumbnail = wsi.get_thumbnail()
+    slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 
@@ -694,7 +694,7 @@ def test_wsireader_get_thumbnail_openslide(_sample_svs):
 def test_wsireader_get_thumbnail_jp2(_sample_jp2):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    slide_thumbnail = wsi.get_thumbnail()
+    slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 

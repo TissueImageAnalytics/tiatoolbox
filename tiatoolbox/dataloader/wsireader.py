@@ -548,7 +548,7 @@ class WSIReader:
             location=location, size=size, resolution=level, units="level"
         )
 
-    def get_thumbnail(self, resolution=1.25, units="power"):
+    def slide_thumbnail(self, resolution=1.25, units="power"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see :func:`read_rect`
@@ -564,7 +564,7 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
-            >>> slide_thumbnail = wsi.get_thumbnail()
+            >>> slide_thumbnail = wsi.slide_thumbnail()
         """
         slide_dimensions = self.info.slide_dimensions
         bounds = (0, 0, *slide_dimensions)
@@ -719,7 +719,7 @@ class WSIReader:
         df.to_csv(output_dir.joinpath("Output.csv"), index=False)
 
         # Save slide thumbnail
-        slide_thumb = self.get_thumbnail()
+        slide_thumb = self.slide_thumbnail()
         misc.imwrite(
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
