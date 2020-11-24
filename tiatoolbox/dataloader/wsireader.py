@@ -1063,7 +1063,7 @@ class VFReader(WSIReader):
 
     def read_rect(self, location, size, resolution=0, units="level"):
         return self.img[
-            location[1] : location[1] + size[1], location[0] : location[0] + size[0], :
+            location[1]:location[1] + size[1], location[0]:location[0] + size[0], :
         ]
 
     def read_bounds(self, bounds, resolution=0, units="level"):
