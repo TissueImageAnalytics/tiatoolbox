@@ -1067,4 +1067,21 @@ class VFReader(WSIReader):
         ]
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        return self.img[bounds[1] : bounds[3], bounds[0] : bounds[2], :]
+        read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
+            bounds, resolution=resolution, units=units,
+        )
+        start_x, start_y, end_x, end_y = bounds
+        stride = 2 ** read_level
+
+        im_region = self.img[start_y:end_y:stride, start_x:end_x:stride]
+
+        if np.any(post_read_scale != 1.0):
+            interpolation = cv2.INTER_AREA
+            if np.any(post_read_scale > 1.0):
+                interpolation = cv2.INTER_CUBIC
+            im_region = cv2.resize(
+                im_region, tuple(output_size), interpolation=interpolation
+            )
+
+        im_region = transforms.background_composite(image=im_region)
+        return im_region
