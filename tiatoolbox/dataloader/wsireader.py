@@ -341,7 +341,7 @@ class WSIReader:
             >>> img = wsi.read_rect(
             ...     location,
             ...     size,
-            ...     resolution=[0.5, 0.5],
+            ...     resolution=(0.5, 0.5),
             ...     units="mpp",
             ... )
 
@@ -834,7 +834,7 @@ class OpenSlideWSIReader(WSIReader):
         try:
             mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
             mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
-            mpp = [mpp_x, mpp_y]
+            mpp = (mpp_x, mpp_y)
         # Fallback to TIFF resolution units and convert to mpp
         except KeyError:
             tiff_res_units = props.get("tiff.ResolutionUnit")
