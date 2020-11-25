@@ -236,7 +236,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
     type=int,
     nargs=2,
     default=[5000, 5000],
-    help="tile width, default=5000 5000",
+    help="tile width, height default=5000 5000",
 )
 @click.option(
     "--verbose", type=bool, default=True, help="Print output, default=True",
