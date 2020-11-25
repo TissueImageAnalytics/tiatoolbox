@@ -215,7 +215,8 @@ class WSIReader:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
-            size (tuple of int): desired output size in pixels.
+            location (tuple of int): in terms of the baseline image (level 0).
+            size (tuple of int): desired output size in pixels (width, height) tuple.
             resolution (float): desired output resolution.
             units (str): the units of scale, default = "level".
                 Supported units are: microns per pixel (mpp), objective
@@ -323,7 +324,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray : array of size MxNx3
+            ndarray: array of size MxNx3
             M=size[0], N=size[1]
 
         Example:
@@ -480,7 +481,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray : array of size MxNx3
+            ndarray: array of size MxNx3
             M=end_h-start_h, N=end_w-start_w
 
         Examples:
@@ -559,7 +560,7 @@ class WSIReader:
             units (str): resolution units, default = "power"
 
         Returns:
-            ndarray : thumbnail image
+            ndarray: thumbnail image
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
@@ -1062,11 +1063,34 @@ class VFReader(WSIReader):
         return param
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        return self.img[
-            location[1]:location[1] + size[1], location[0]:location[0] + size[0], :
+        # Find parameters for optimal read
+        (
+            read_level,
+            level_location,
+            _,
+            post_read_scale,
+            baseline_read_size,
+        ) = self._find_read_rect_params(
+            location=location, size=size, resolution=resolution, units=units,
+        )
+
+        im_region = self.img[
+            level_location[1]:level_location[1] + baseline_read_size[1],
+            level_location[0]:level_location[0] + baseline_read_size[0],
+            :,
         ]
 
+        if np.any(post_read_scale != 1.0):
+            interpolation = cv2.INTER_AREA
+            if np.any(post_read_scale > 1.0):
+                interpolation = cv2.INTER_CUBIC
+            im_region = cv2.resize(im_region, size, interpolation=interpolation)
+
+        im_region = transforms.background_composite(image=im_region)
+        return im_region
+
     def read_bounds(self, bounds, resolution=0, units="level"):
+        # Find parameters for optimal read
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds, resolution=resolution, units=units,
         )
