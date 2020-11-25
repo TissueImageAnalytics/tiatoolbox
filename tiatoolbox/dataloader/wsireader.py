@@ -1065,7 +1065,7 @@ class VFReader(WSIReader):
     def read_rect(self, location, size, resolution=0, units="level"):
         # Find parameters for optimal read
         (
-            read_level,
+            _,
             level_location,
             _,
             post_read_scale,
