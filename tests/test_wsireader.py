@@ -926,6 +926,7 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
 
 
 def test_VFReader():
+    """Test VFReader"""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
     with pytest.warns(UserWarning, match=r"Unknown scale"):
@@ -941,5 +942,23 @@ def test_VFReader():
     img = wsi.read_region(location=(0, 0), size=(100, 50), level=0)
     assert img.shape == (50, 100, 3)
 
+
+def test_VFReader_read_bounds():
+    """Test VFReader read bounds"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1.5, units="baseline")
+    assert img.shape == (150, 75, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="baseline")
+    assert img.shape == (50, 25, 3)
+
+    with pytest.raises(IndexError):
+        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="level")
+
+    with pytest.raises(ValueError):
+        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
+
