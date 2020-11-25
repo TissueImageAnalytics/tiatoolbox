@@ -585,7 +585,7 @@ class WSIReader:
         Args:
             output_dir(str, pathlib.Path): Output directory to save the tiles.
             tile_objective_value (int): Objective value at which tile is generated.
-            tile_read_size (tuple of int): Tile (height, width).
+            tile_read_size (tuple of int): Tile (width, height).
             tile_format (str): file format to save image tiles, default=".jpg"
             verbose (bool): Print output, default=True
 
@@ -628,8 +628,8 @@ class WSIReader:
         tile_read_size = np.multiply(tile_read_size, rescale)
         slide_h = slide_dimension[1]
         slide_w = slide_dimension[0]
-        tile_h = tile_read_size[0]
-        tile_w = tile_read_size[1]
+        tile_h = tile_read_size[1]
+        tile_w = tile_read_size[0]
 
         iter_tot = 0
         output_dir = pathlib.Path(output_dir)
