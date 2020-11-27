@@ -1039,10 +1039,9 @@ class VFReader(WSIReader):
         super().__init__(input_path=input_path,)
 
         if isinstance(input_path, np.ndarray):
-            if __name__ == '__main__':
-                self.img = input_path
-            else:
-                self.img = misc.imread(self.input_path)
+            self.img = input_path
+        else:
+            self.img = misc.imread(self.input_path)
 
     @property
     def info(self):
