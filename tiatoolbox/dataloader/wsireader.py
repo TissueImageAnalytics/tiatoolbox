@@ -1025,16 +1025,24 @@ class VFReader(WSIReader):
 
     - .jpg
     - .png
+    - np.ndarray
 
     Attributes:
         img (ndarray)
+
+    Args:
+        input_path (str, pathlib.Path, ndarray): input path to WSI.
 
     """
 
     def __init__(self, input_path="."):
         super().__init__(input_path=input_path,)
 
-        self.img = misc.imread(self.input_path)
+        if isinstance(input_path, np.ndarray):
+            if __name__ == '__main__':
+                self.img = input_path
+            else:
+                self.img = misc.imread(self.input_path)
 
     @property
     def info(self):
