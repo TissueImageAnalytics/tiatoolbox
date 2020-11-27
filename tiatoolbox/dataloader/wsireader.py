@@ -29,7 +29,6 @@ import openslide
 import glymur
 import math
 import pandas as pd
-import cv2
 import re
 import numbers
 import os
