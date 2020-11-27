@@ -62,6 +62,7 @@ class WSIReader:
     def info(self):
         """WSI metadata getter.
 
+
         Args:
             self (WSIReader):
 
@@ -1035,7 +1036,8 @@ class VFReader(WSIReader):
 
     @property
     def info(self):
-        """Visual Field meta data reader.
+        """Visual Field meta data reader. For missing metadata values such as `mpp` or
+        `objective` the value is set to None.
 
         Returns:
             WSIMetadata: containing meta information.
