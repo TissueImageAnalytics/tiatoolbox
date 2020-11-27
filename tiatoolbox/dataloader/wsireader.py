@@ -673,7 +673,7 @@ class WSIReader:
 
                 # Rescale to the correct objective value
                 if rescale != 1:
-                    im = transforms.imresize(im, rescale)
+                    im = transforms.imresize(img=im, scale_factor=rescale)
 
                 img_save_name = (
                     "_".join(
@@ -766,11 +766,9 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(im_region, size, interpolation=interpolation)
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -796,13 +794,9 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(
-                im_region, tuple(output_size), interpolation=interpolation
-            )
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=output_size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -924,11 +918,10 @@ class OmnyxJP2WSIReader(WSIReader):
 
         glymur_wsi = self.glymur_wsi
         im_region = glymur_wsi.read(rlevel=read_level, area=area)
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(im_region, size, interpolation=interpolation)
+
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -948,13 +941,9 @@ class OmnyxJP2WSIReader(WSIReader):
         # area = (start_y, start_x, end_y, end_x)
         # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(
-                im_region, tuple(output_size), interpolation=interpolation
-            )
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=output_size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -1040,6 +1029,7 @@ class VFReader(WSIReader):
 
         if isinstance(input_img, np.ndarray):
             self.img = input_img
+            self.input_path = None
         else:
             self.img = misc.imread(self.input_path)
 
@@ -1087,11 +1077,9 @@ class VFReader(WSIReader):
             :,
         ]
 
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(im_region, size, interpolation=interpolation)
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -1106,13 +1094,9 @@ class VFReader(WSIReader):
 
         im_region = self.img[start_y:end_y:stride, start_x:end_x:stride]
 
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(
-                im_region, tuple(output_size), interpolation=interpolation
-            )
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=output_size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
