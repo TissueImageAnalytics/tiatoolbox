@@ -45,18 +45,18 @@ class WSIReader:
     from whole slide image (WSI) files.
 
     Attributes:
-        input_path (pathlib.Path): Input path to WSI file.
+        input_img (pathlib.Path): Input path to WSI file.
 
     Args:
-        input_path (str, pathlib.Path): input path to WSI.
+        input_img (str, pathlib.Path): input path to WSI.
 
     """
 
     def __init__(
-        self, input_path=".",
+        self, input_img=".",
     ):
 
-        self.input_path = pathlib.Path(input_path)
+        self.input_path = pathlib.Path(input_img)
 
     @property
     def info(self):
@@ -748,9 +748,9 @@ class OpenSlideWSIReader(WSIReader):
     """
 
     def __init__(
-        self, input_path=".",
+        self, input_img=".",
     ):
-        super().__init__(input_path=input_path,)
+        super().__init__(input_img=input_img, )
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -901,8 +901,8 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi (:obj:`glymur.Jp2k`)
     """
 
-    def __init__(self, input_path="."):
-        super().__init__(input_path=input_path,)
+    def __init__(self, input_img="."):
+        super().__init__(input_img=input_img, )
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -1031,15 +1031,15 @@ class VFReader(WSIReader):
         img (ndarray)
 
     Args:
-        input_path (str, pathlib.Path, ndarray): input path to WSI.
+        input_img (str, pathlib.Path, ndarray): input path to WSI.
 
     """
 
-    def __init__(self, input_path="."):
-        super().__init__(input_path=input_path,)
+    def __init__(self, input_img="."):
+        super().__init__(input_img=input_img, )
 
-        if isinstance(input_path, np.ndarray):
-            self.img = input_path
+        if isinstance(input_img, np.ndarray):
+            self.img = input_img
         else:
             self.img = misc.imread(self.input_path)
 

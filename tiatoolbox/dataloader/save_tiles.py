@@ -65,7 +65,7 @@ def save_tiles(
         print(input_path.name, flush=True)
 
     if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.OpenSlideWSIReader(input_path=input_path)
+        wsi_reader = wsireader.OpenSlideWSIReader(input_img=input_path)
         wsi_reader.save_tiles(
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
@@ -74,7 +74,7 @@ def save_tiles(
         )
 
     elif input_path.suffix in (".jp2",):
-        wsi_reader = wsireader.OmnyxJP2WSIReader(input_path=input_path)
+        wsi_reader = wsireader.OmnyxJP2WSIReader(input_img=input_path)
         wsi_reader.save_tiles(
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
