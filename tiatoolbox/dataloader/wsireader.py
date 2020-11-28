@@ -299,7 +299,8 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the
-        units of resolution.
+        units of resolution. If meta data does not specify `mpp` or `objective_power`
+        then `baseline` units should be selected with resolution 1.0
 
         The field of view varies with resolution. For a fixed
         field of view see :func:`read_bounds`.
@@ -456,7 +457,8 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the
-        units of resolution.
+        units of resolution. If meta data does not specify `mpp` or `objective_power`
+        then `baseline` units should be selected with resolution 1.0
 
         The output image size may be different
         to the width and height of the bounds as the resolution will
@@ -543,7 +545,7 @@ class WSIReader:
             size: (width, height) tuple giving the region size.
 
         Returns:
-            PIL.Image: Image containing the contents of the region.
+            ndarray: array of size MxNx3.
         """
         return self.read_rect(
             location=location, size=size, resolution=level, units="level"
@@ -1060,7 +1062,7 @@ class VFReader(WSIReader):
 
         return param
 
-    def read_rect(self, location, size, resolution=0, units="level"):
+    def read_rect(self, location, size, resolution=1.0, units="baseline"):
         # Find parameters for optimal read
         (
             _,
@@ -1085,7 +1087,7 @@ class VFReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    def read_bounds(self, bounds, resolution=0, units="level"):
+    def read_bounds(self, bounds, resolution=1.0, units="baseline"):
         # Find parameters for optimal read
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds, resolution=resolution, units=units,
