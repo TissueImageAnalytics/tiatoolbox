@@ -96,10 +96,11 @@ def imresize(img, scale_factor=None, output_size=None, interpolation='optimise')
 
     # Optimise interpolation
     if np.any(scale_factor != 1.0):
-        if interpolation == 'optimise' and np.any(scale_factor > 1.0):
-            interpolation = cv2.INTER_CUBIC
-        else:
-            interpolation = cv2.INTER_AREA
+        if interpolation == 'optimise':
+            if np.any(scale_factor > 1.0):
+                interpolation = cv2.INTER_CUBIC
+            else:
+                interpolation = cv2.INTER_AREA
 
         # Resize image
         resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
