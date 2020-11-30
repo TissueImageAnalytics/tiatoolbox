@@ -5,9 +5,12 @@ import numpy as np
 
 def test_imresize():
     """Test for imresize."""
-    img = np.zeros((2000, 2000, 3))
-    resized_img = utils.transforms.imresize(img, 0.5)
-    assert resized_img.shape == (1000, 1000, 3)
+    img = np.zeros((2000, 1000, 3))
+    resized_img = utils.transforms.imresize(img, scale_factor=0.5)
+    assert resized_img.shape == (1000, 500, 3)
+
+    resized_img = utils.transforms.imresize(resized_img, scale_factor=2.0)
+    assert resized_img.shape == (2000, 1000, 3)
 
 
 def test_background_composite():

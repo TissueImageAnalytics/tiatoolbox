@@ -25,7 +25,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 import pathlib
 
 
-def slide_info(input_path, output_dir=None, verbose=True):
+def slide_info(input_path, verbose=True):
     """Return WSI meta data.
 
     Args:
@@ -55,14 +55,14 @@ def slide_info(input_path, output_dir=None, verbose=True):
 
     if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
         wsi_reader = wsireader.OpenSlideWSIReader(
-            input_path=input_path, output_dir=output_dir
+            input_img=input_path
         )
         info = wsi_reader.info
         if verbose:
             print(info.as_dict())
     elif input_path.suffix in (".jp2",):
         wsi_reader = wsireader.OmnyxJP2WSIReader(
-            input_path=input_path, output_dir=output_dir,
+            input_img=input_path
         )
         info = wsi_reader.info
         if verbose:
