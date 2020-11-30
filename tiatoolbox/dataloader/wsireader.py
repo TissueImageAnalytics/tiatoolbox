@@ -649,8 +649,9 @@ class WSIReader:
                 end_w = min(end_w, slide_w)
 
                 # Read image region
-                bounds = start_w, start_h, end_w, end_h
-                im = self.read_bounds(bounds, level)
+                im = self.read_region(location=(start_w, start_h),
+                                      size=(end_w - start_w, end_h - start_h),
+                                      level=level)
 
                 if verbose:
                     format_str = (
