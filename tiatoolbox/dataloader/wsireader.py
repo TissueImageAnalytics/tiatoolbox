@@ -29,10 +29,10 @@ import openslide
 import glymur
 import math
 import pandas as pd
-import cv2
 import re
 import numbers
 import os
+from typing import Tuple
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -44,37 +44,18 @@ class WSIReader:
     from whole slide image (WSI) files.
 
     Attributes:
-        input_path (pathlib.Path): Input path to WSI file.
-        output_dir (pathlib.Path): Output directory to save the output.
-        tile_objective_value (int): Objective value at which tile is generated.
-        tile_read_size (tuple of int): Tile (width, height).
+        input_img (pathlib.Path): Input path to WSI file.
 
     Args:
-        input_path (str, pathlib.Path): input path to WSI.
-        output_dir (str, pathlib.Path): output directory to save the output,
-         default=./output.
-        tile_objective_value (int): objective value at which tile is generated,
-         default=20.
-        tile_read_size_w (int): tile width, default=5000.
-        tile_read_size_h (int): tile height, default=5000.
+        input_img (str, pathlib.Path): input path to WSI.
 
     """
 
     def __init__(
-        self,
-        input_path=".",
-        output_dir="./output",
-        tile_objective_value=20,
-        tile_read_size_w=5000,
-        tile_read_size_h=5000,
+        self, input_img=".",
     ):
 
-        self.input_path = pathlib.Path(input_path)
-        if output_dir is not None:
-            self.output_dir = pathlib.Path(output_dir, self.input_path.name)
-
-        self.tile_objective_value = np.int(tile_objective_value)  # Tile magnification
-        self.tile_read_size = np.array([tile_read_size_w, tile_read_size_h])
+        self.input_path = pathlib.Path(input_img)
 
     @property
     def info(self):
@@ -84,7 +65,7 @@ class WSIReader:
             self (WSIReader):
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata.
+            WSIMetadata: An object containing normalised slide metadata
 
         """
         raise NotImplementedError
@@ -195,15 +176,21 @@ class WSIReader:
                 the optimal level and the target scale (usually <= 1).
         """
         level_scales = self._relative_level_scales(resolution, units)
-        # Note that np.argmax finds the index of the first True element.
-        # Here it is used on a reversed list to find the first
-        # element <=1, which is the same element as the last <=1
-        # element when counting forward in the regular list.
-        reverse_index = np.argmax(
-            [all(np.round(x, decimals=precision) <= 1) for x in level_scales[::-1]]
-        )
-        # Convert the index from the reversed list to the regular index (level)
-        level = (len(level_scales) - 1) - reverse_index
+        level_resolution_sufficient = [
+            all(np.round(x, decimals=precision) <= 1) for x in level_scales
+        ]
+        # Check if level 0 is lower resolution than required (scale > 1)
+        if not any(level_resolution_sufficient):
+            level = 0
+        else:
+            # Find the first level with relative scale >= 1.
+            # Note: np.argmax finds the index of the first True element.
+            # Here it is used on a reversed list to find the first
+            # element <=1, which is the same element as the last <=1
+            # element when counting forward in the regular list.
+            reverse_index = np.argmax(level_resolution_sufficient[::-1])
+            # Convert the index from the reversed list to the regular index (level)
+            level = (len(level_scales) - 1) - reverse_index
         scale = level_scales[level]
 
         # Ensure results are sensible for resolution at a integer levels
@@ -213,10 +200,10 @@ class WSIReader:
             if not all(x == 1.0 for x in scale):
                 raise AssertionError("Scale != 1.0 for level resolution units")
 
-        # Check for requested resolution > than baseline
+        # Check for requested resolution > than baseline resolution
         if any(np.array(scale) > 1):
             warnings.warn(
-                "Scale > 1."
+                "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
                 " Interpolation of read regions may occur."
@@ -227,7 +214,8 @@ class WSIReader:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
-            size (tuple of int): desired output size in pixels.
+            location (tuple of int): in terms of the baseline image (level 0).
+            size (tuple of int): desired output size in pixels (width, height) tuple.
             resolution (float): desired output resolution.
             units (str): the units of scale, default = "level".
                 Supported units are: microns per pixel (mpp), objective
@@ -310,7 +298,8 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the
-        units of resolution.
+        units of resolution. If meta data does not specify `mpp` or `objective_power`
+        then `baseline` units should be selected with resolution 1.0
 
         The field of view varies with resolution. For a fixed
         field of view see :func:`read_bounds`.
@@ -335,7 +324,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray : array of size MxNx3
+            ndarray: array of size MxNx3
             M=size[0], N=size[1]
 
         Example:
@@ -352,7 +341,7 @@ class WSIReader:
             >>> img = wsi.read_rect(
             ...     location,
             ...     size,
-            ...     resolution=[0.5, 0.5],
+            ...     resolution=(0.5, 0.5),
             ...     units="mpp",
             ... )
 
@@ -467,7 +456,8 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the
-        units of resolution.
+        units of resolution. If meta data does not specify `mpp` or `objective_power`
+        then `baseline` units should be selected with resolution 1.0
 
         The output image size may be different
         to the width and height of the bounds as the resolution will
@@ -492,13 +482,13 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray : array of size MxNx3
+            ndarray: array of size MxNx3
             M=end_h-start_h, N=end_w-start_w
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = wsireader.WSIReader(input_path="/path/to/a/wsi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
             >>> img = wsi.read_bounds(bounds)
@@ -541,7 +531,7 @@ class WSIReader:
         This function is to help with writing code which is backwards
         compatible with OpenSlide. As such, it has the same arguments.
 
-        This interally calls :func:`read_rect` which should be
+        This internally calls :func:`read_rect` which should be
         implemented by any :class:`WSIReader` subclass.
         Therefore, some WSI formats which
         are not supported by OpenSlide, such as Omnyx JP2 files, may
@@ -554,13 +544,13 @@ class WSIReader:
             size: (width, height) tuple giving the region size.
 
         Returns:
-            PIL.Image: Image containing the contents of the region.
+            ndarray: array of size MxNx3.
         """
         return self.read_rect(
             location=location, size=size, resolution=level, units="level"
         )
 
-    def get_thumbnail(self, resolution=1.25, units="power"):
+    def slide_thumbnail(self, resolution=1.25, units="power"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see :func:`read_rect`
@@ -571,12 +561,11 @@ class WSIReader:
             units (str): resolution units, default = "power"
 
         Returns:
-            ndarray : thumbnail image
+            ndarray: thumbnail image
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
+            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
         """
         slide_dimensions = self.info.slide_dimensions
@@ -584,10 +573,20 @@ class WSIReader:
         thumb = self.read_bounds(bounds, resolution=resolution, units=units)
         return thumb
 
-    def save_tiles(self, tile_format=".jpg", verbose=True):
+    def save_tiles(
+        self,
+        output_dir: [str, pathlib.Path],
+        tile_objective_value: [int],
+        tile_read_size: Tuple[int, int],
+        tile_format=".jpg",
+        verbose=True,
+    ):
         """Generate image tiles from whole slide images.
 
         Args:
+            output_dir(str, pathlib.Path): Output directory to save the tiles.
+            tile_objective_value (int): Objective value at which tile is generated.
+            tile_read_size (tuple of int): Tile (width, height).
             tile_format (str): file format to save image tiles, default=".jpg"
             verbose (bool): Print output, default=True
 
@@ -596,23 +595,18 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi",
-            ...     output_dir='./dev_test',
+            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> wsi.save_tiles(output_dir='./dev_test',
             ...     tile_objective_value=10,
-            ...     tile_read_size_h=2000,
-            ...     tile_read_size_w=2000)
-            >>> wsi.save_tiles()
+            ...     tile_read_size=(2000, 2000))
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.WSIReader(input_dir="./",
-            ...     file_name="CMU-1.ndpi")
+            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
             >>> slide_param = wsi.info()
 
         """
-        tile_objective_value = self.tile_objective_value
-        tile_read_size = self.tile_read_size
-
+        output_dir = pathlib.Path(output_dir, self.input_path.name)
         rescale = self.info.objective_power / tile_objective_value
         if rescale.is_integer():
             try:
@@ -635,11 +629,11 @@ class WSIReader:
         tile_read_size = np.multiply(tile_read_size, rescale)
         slide_h = slide_dimension[1]
         slide_w = slide_dimension[0]
-        tile_h = tile_read_size[0]
-        tile_w = tile_read_size[1]
+        tile_h = tile_read_size[1]
+        tile_w = tile_read_size[0]
 
         iter_tot = 0
-        output_dir = pathlib.Path(self.output_dir)
+        output_dir = pathlib.Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
 
@@ -680,7 +674,7 @@ class WSIReader:
 
                 # Rescale to the correct objective value
                 if rescale != 1:
-                    im = transforms.imresize(im, rescale)
+                    im = transforms.imresize(img=im, scale_factor=rescale)
 
                 img_save_name = (
                     "_".join(
@@ -727,7 +721,7 @@ class WSIReader:
         df.to_csv(output_dir.joinpath("Output.csv"), index=False)
 
         # Save slide thumbnail
-        slide_thumb = self.get_thumbnail()
+        slide_thumb = self.slide_thumbnail()
         misc.imwrite(
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
@@ -755,20 +749,9 @@ class OpenSlideWSIReader(WSIReader):
     """
 
     def __init__(
-        self,
-        input_path=".",
-        output_dir="./output",
-        tile_objective_value=20,
-        tile_read_size_w=5000,
-        tile_read_size_h=5000,
+        self, input_img=".",
     ):
-        super().__init__(
-            input_path=input_path,
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
-        )
+        super().__init__(input_img=input_img, )
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -784,11 +767,9 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(im_region, size, interpolation=interpolation)
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -805,24 +786,18 @@ class OpenSlideWSIReader(WSIReader):
         wsi = self.openslide_wsi
 
         # Read at optimal level and corrected read size
-        level_location = level_bounds[:2]
+        location = bounds[:2]
         read_size = (
             level_bounds[2] - level_bounds[0],
             level_bounds[3] - level_bounds[1],
         )
-        im_region = wsi.read_region(
-            location=level_location, level=read_level, size=read_size
-        )
+        im_region = wsi.read_region(location=location, level=read_level, size=read_size)
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(
-                im_region, tuple(output_size), interpolation=interpolation
-            )
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=output_size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -832,21 +807,68 @@ class OpenSlideWSIReader(WSIReader):
         """Openslide WSI meta data reader.
 
         Returns:
-            WSIMeta: containing meta information.
+            WSIMetadata: containing meta information.
 
         """
-        objective_power = np.int(
-            self.openslide_wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
-        )
+        props = self.openslide_wsi.properties
+        if openslide.PROPERTY_NAME_OBJECTIVE_POWER in props:
+            objective_power = float(props[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+        else:
+            objective_power = None
 
         slide_dimensions = self.openslide_wsi.level_dimensions[0]
         level_count = self.openslide_wsi.level_count
         level_dimensions = self.openslide_wsi.level_dimensions
         level_downsamples = self.openslide_wsi.level_downsamples
-        vendor = self.openslide_wsi.properties[openslide.PROPERTY_NAME_VENDOR]
-        mpp_x = self.openslide_wsi.properties[openslide.PROPERTY_NAME_MPP_X]
-        mpp_y = self.openslide_wsi.properties[openslide.PROPERTY_NAME_MPP_Y]
-        mpp = [mpp_x, mpp_y]
+        vendor = props.get(openslide.PROPERTY_NAME_VENDOR)
+
+        # Find microns per pixel (mpp)
+        # Initialise to None (value if cannot be determined)
+        mpp = None
+        # Check OpenSlide for mpp metadata first
+        try:
+            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
+            mpp = (mpp_x, mpp_y)
+        # Fallback to TIFF resolution units and convert to mpp
+        except KeyError:
+            tiff_res_units = props.get("tiff.ResolutionUnit")
+            if tiff_res_units is not None:
+                try:
+                    microns_per_unit = {
+                        "centimeter": 1e4,  # 10k
+                        "inch": 25400,
+                    }
+                    x_res = float(props["tiff.XResolution"])
+                    y_res = float(props["tiff.YResolution"])
+                    mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
+                    mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
+                    mpp = [mpp_x, mpp_y]
+                    warnings.warn(
+                        "Metadata: Falling back to TIFF resolution tag"
+                        " for microns-per-pixel (MPP)."
+                    )
+                except KeyError:
+                    warnings.warn(
+                        "Metadata: Unable to determine microns-per-pixel (MPP)."
+                    )
+
+        # Fallback to calculating objective power from mpp
+        if objective_power is None:
+            if mpp is not None:
+                try:
+                    objective_power = misc.mpp2objective_power(mpp)
+                except ValueError:
+                    warnings.warn(
+                        "Metadata: Unable to approximate objective power"
+                        " from microns-per-pixel (MPP)."
+                        " MPP outside of sensible range."
+                    )
+                warnings.warn(
+                    "Metadata: Objective power inferred from microns-per-pixel (MPP)."
+                )
+            else:
+                warnings.warn("Metadata: Unable to determine objective power.")
 
         param = WSIMeta(
             file_path=self.input_path,
@@ -857,7 +879,7 @@ class OpenSlideWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=self.openslide_wsi.properties,
+            raw=props,
         )
 
         return param
@@ -874,21 +896,8 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi (:obj:`glymur.Jp2k`)
     """
 
-    def __init__(
-        self,
-        input_path=".",
-        output_dir="./output",
-        tile_objective_value=20,
-        tile_read_size_w=5000,
-        tile_read_size_h=5000,
-    ):
-        super().__init__(
-            input_path=input_path,
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
-        )
+    def __init__(self, input_img="."):
+        super().__init__(input_img=input_img, )
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -910,11 +919,10 @@ class OmnyxJP2WSIReader(WSIReader):
 
         glymur_wsi = self.glymur_wsi
         im_region = glymur_wsi.read(rlevel=read_level, area=area)
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(im_region, size, interpolation=interpolation)
+
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -934,13 +942,9 @@ class OmnyxJP2WSIReader(WSIReader):
         # area = (start_y, start_x, end_y, end_x)
         # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        if np.any(post_read_scale != 1.0):
-            interpolation = cv2.INTER_AREA
-            if np.any(post_read_scale > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            im_region = cv2.resize(
-                im_region, tuple(output_size), interpolation=interpolation
-            )
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=output_size)
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -950,7 +954,7 @@ class OmnyxJP2WSIReader(WSIReader):
         """JP2 meta data reader.
 
         Returns:
-            WSIMeta: containing meta information
+            WSIMetadata: containing meta information
 
         """
         glymur_wsi = self.glymur_wsi
@@ -969,7 +973,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         if cod is None:
             warnings.warn(
-                "JP2 codestream missing COD segment! "
+                "Metadata: JP2 codestream missing COD segment! "
                 "Cannot determine number of decompositions (levels)"
             )
             level_count = 1
@@ -1002,3 +1006,99 @@ class OmnyxJP2WSIReader(WSIReader):
         )
 
         return param
+
+
+class VFReader(WSIReader):
+    """Class for reading small visual field images.
+
+    Supported formats:
+
+    - .jpg
+    - .png
+    - np.ndarray
+
+    Attributes:
+        img (ndarray)
+
+    Args:
+        input_img (str, pathlib.Path, ndarray): input path to WSI.
+
+    """
+
+    def __init__(self, input_img="."):
+        super().__init__(input_img=input_img, )
+
+        if isinstance(input_img, np.ndarray):
+            self.img = input_img
+            self.input_path = None
+        else:
+            self.img = misc.imread(self.input_path)
+
+    @property
+    def info(self):
+        """Visual Field meta data reader. For missing metadata values such as `mpp` or
+        `objective` the value is set to None.
+
+        Returns:
+            WSIMetadata: containing meta information.
+
+        """
+        param = WSIMeta(
+            file_path=self.input_path,
+            objective_power=None,
+            slide_dimensions=self.img.shape[:-1],
+            level_count=1,
+            level_dimensions=(self.img.shape[:-1],),
+            level_downsamples=[1.0],
+            vendor=None,
+            mpp=None,
+            raw=None,
+        )
+
+        warnings.warn("Unknown scale (no objective_power or mpp).")
+
+        warnings.warn("Raw data is None.")
+
+        return param
+
+    def read_rect(self, location, size, resolution=1.0, units="baseline"):
+        # Find parameters for optimal read
+        (
+            _,
+            level_location,
+            _,
+            post_read_scale,
+            baseline_read_size,
+        ) = self._find_read_rect_params(
+            location=location, size=size, resolution=resolution, units=units,
+        )
+
+        im_region = self.img[
+            level_location[1]:level_location[1] + baseline_read_size[1],
+            level_location[0]:level_location[0] + baseline_read_size[0],
+            :,
+        ]
+
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=size)
+
+        im_region = transforms.background_composite(image=im_region)
+        return im_region
+
+    def read_bounds(self, bounds, resolution=1.0, units="baseline"):
+        # Find parameters for optimal read
+        read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
+            bounds, resolution=resolution, units=units,
+        )
+        start_x, start_y, end_x, end_y = bounds
+        stride = 2 ** read_level
+
+        im_region = self.img[start_y:end_y:stride, start_x:end_x:stride]
+
+        im_region = transforms.imresize(img=im_region,
+                                        scale_factor=post_read_scale,
+                                        output_size=output_size)
+
+        im_region = transforms.background_composite(image=im_region)
+        return im_region

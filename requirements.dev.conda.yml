@@ -9,7 +9,7 @@ dependencies:
   - cython
   - h5py
   - matplotlib
-  - numpy
+  - numpy<=1.19.3
   - opencv>=4.0
   - pillow
   - pip

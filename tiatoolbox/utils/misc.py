@@ -200,3 +200,38 @@ def get_luminosity_tissue_mask(img, threshold):
         raise Exception("Empty tissue mask computed")
 
     return tissue_mask
+
+
+def mpp2objective_power(mpp):
+    """Approximate objective power from mpp.
+
+    Ranges for approximation::
+
+            mpp < 0.10 -> 100x
+    0.10 <= mpp < 0.15 -> 60x
+    0.15 <= mpp < 0.30 -> 40x
+    0.30 <= mpp < 0.60 -> 20x
+    0.60 <= mpp < 1.20 -> 10x
+    1.20 <= mpp < 2.40 -> 5x
+    2.40 <= mpp < 4.80 -> 2.5x
+    4.80 <= mpp < 9.60 -> 1.25x
+    9.60 <= mpp -> ValueError
+
+    Args:
+        mpp (float or tuple of float): Microns per-pixel.
+
+    Returns:
+        float: Objective power approximation.
+
+    Raises:
+        ValueError
+    """
+    mpp = np.mean(mpp)
+    if mpp < 0.10:
+        return 100
+    if mpp < 0.15:
+        return 60
+    if mpp < 9.60:
+        # Double the objective power as mpp halves
+        return 10 * 2 ** (np.ceil(np.log2(0.15 / mpp)) + 2)
+    raise ValueError()

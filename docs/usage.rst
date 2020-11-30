@@ -15,11 +15,12 @@ Reading WSI Image Data
     :members: info, read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
 
 .. autoclass:: OpenSlideWSIReader
-    :members: slide_info
     :show-inheritance:
 
 .. autoclass:: OmnyxJP2WSIReader
-    :members: slide_info
+    :show-inheritance:
+
+.. autoclass:: VFReader
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
