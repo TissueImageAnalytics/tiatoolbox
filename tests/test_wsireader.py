@@ -686,7 +686,7 @@ def test_read_bounds_level_consistency_jp2(_sample_jp2):
 def test_wsireader_get_thumbnail_openslide(_sample_svs):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    slide_thumbnail = wsi.get_thumbnail()
+    slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 
@@ -694,7 +694,7 @@ def test_wsireader_get_thumbnail_openslide(_sample_svs):
 def test_wsireader_get_thumbnail_jp2(_sample_jp2):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    slide_thumbnail = wsi.get_thumbnail()
+    slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
 
@@ -705,12 +705,13 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     files_all = utils.misc.grab_files_from_dir(
         input_path=str(pathlib.Path(_sample_svs).parent), file_types=file_types,
     )
-    wsi = wsireader.OpenSlideWSIReader(
-        files_all[0],
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    wsi.save_tiles(
         output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")),
         tile_objective_value=5,
+        tile_read_size=(5000, 5000),
+        verbose=True,
     )
-    wsi.save_tiles(verbose=True)
     assert (
         pathlib.Path(tmp_path)
         .joinpath("test_wsireader_save_tiles")
@@ -729,6 +730,40 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
         pathlib.Path(tmp_path)
         .joinpath("test_wsireader_save_tiles")
         .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+
+
+def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
+    """Test for save_tiles in wsireader as a python function."""
+    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
+    wsi.save_tiles(
+        output_dir=str(
+            pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")
+        ),
+        tile_objective_value=5,
+        tile_read_size=(5000, 5000),
+        verbose=True,
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_jp2_save_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_jp2_save_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("test_wsireader_jp2_save_tiles")
+        .joinpath("test1.jp2")
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
@@ -888,3 +923,67 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
         _ = wsi.info
 
     assert np.array_equal(wsi.info.mpp, [1, 1])
+
+
+def test_VFReader():
+    """Test VFReader"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    with pytest.warns(UserWarning, match=r"Unknown scale"):
+        _ = wsi.info
+    with pytest.warns(UserWarning, match=r"Raw data is None"):
+        _ = wsi.info
+
+    assert wsi.img.shape == (256, 256, 3)
+
+    img = wsi.read_rect(location=(0, 0), size=(100, 50))
+    assert img.shape == (50, 100, 3)
+
+    img = wsi.read_region(location=(0, 0), size=(100, 50), level=0)
+    assert img.shape == (50, 100, 3)
+
+
+def test_VFReader_read_bounds():
+    """Test VFReader read bounds"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100))
+    assert img.shape == (100, 50, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1.5, units="baseline")
+    assert img.shape == (150, 75, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="baseline")
+    assert img.shape == (50, 25, 3)
+
+    with pytest.raises(IndexError):
+        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="level")
+
+    with pytest.raises(ValueError):
+        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
+
+
+def test_VFReader_read_rect():
+    """Test VFReader read bounds"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    img = wsi.read_rect(location=(0, 0), size=(50, 100))
+    assert img.shape == (100, 50, 3)
+
+    img = wsi.read_rect(
+        location=(0, 0), size=(50, 100), resolution=1.5, units="baseline"
+    )
+    assert img.shape == (100, 50, 3)
+
+    img = wsi.read_rect(
+        location=(0, 0), size=(50, 100), resolution=0.5, units="baseline"
+    )
+    assert img.shape == (100, 50, 3)
+
+    with pytest.raises(IndexError):
+        _ = wsi.read_rect(
+            location=(0, 0), size=(50, 100), resolution=0.5, units="level"
+        )
+
+    with pytest.raises(ValueError):
+        _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")

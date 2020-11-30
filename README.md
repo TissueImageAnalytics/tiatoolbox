@@ -27,7 +27,7 @@ First, install
 Git
 ---
 
-Create the virtual environment
+1.Create the virtual environment
 
     conda env create -f requirements.conda.yml
 or (on Windows)
@@ -38,11 +38,11 @@ or
 
     pip install -r requirements.txt
 
-Clone the tiatoolbox
+2.Clone the tiatoolbox
 
     git clone https://github.com/TIA-Lab/tiatoolbox.git
 
-Please try
+3.Please try
 
     python -m tiatoolbox -h
 
@@ -62,7 +62,7 @@ tiatoolbox --help
 =================
 
     usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
-                     {read-region,
+                     {read-bounds,
                       save-tiles,
                       slide_info,
                       slide-thumbnail,
