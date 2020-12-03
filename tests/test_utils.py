@@ -1,3 +1,4 @@
+# %%
 from tiatoolbox import utils
 
 import pytest
@@ -49,3 +50,8 @@ def test_mpp2objective_power(_sample_svs):
 
     with pytest.raises(ValueError):
         utils.misc.mpp2objective_power(mpp=10)
+
+def test_luminosity_standardiser():
+    """Test luminosity standardiser for RGB images"""
+    return None
+
