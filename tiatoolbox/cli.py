@@ -302,7 +302,7 @@ def save_tiles(
     "--file_types",
     help="file types to capture from directory"
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
-    default="*.png, '*.jpg', '*.tif', '*.tiff'",
+    default="*.png, *.jpg, *.tif, *.tiff",
 )
 def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
     """Stain normalise an input image/directory of input images."""
