@@ -25,6 +25,7 @@
 
 from typing import Union, Tuple, Optional
 from abc import ABC, abstractmethod
+import warnings
 
 import cv2
 import numpy as np
@@ -90,29 +91,39 @@ class MorphologicalMasker(TissueMasker):
     small region removal, the area of the kernel is used as a threshold.
     """
 
-    def fit(
-        self,
-        image: np.ndarray,
-        kernel_size: Optional[Tuple[int, int]] = None,
-        mpp: Optional[Union[float, Tuple[float, float]]] = None,
-        power: Optional[Union[float, Tuple[float, float]]] = None,
-        **kwargs
-    ) -> np.ndarray:
+    def __init__(self) -> None:
+        super().__init__()
+        self.kernel_size = np.array([1, 1])
+        self.min_region_size = 3
+        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, self.kernel_size)
+
+    def fit(self, image: np.ndarray = None, **kwargs) -> np.ndarray:
         """Fit the masker to the image and given key word parameters.
 
         At least one of mpp, power, or kernel_size is required.
 
         Args:
             thumbnail (np.ndarray): An RGB thumnail image.
+            kwargs (dict): Key word arguements.
             kernel_size (int or tuple of int): Manual kernel size, optional.
             mpp (float or tuple of float): The microns per-pixel of
                 the image. Used to calculate kernel_size, optional.
             power (float or tuple of float): The objective
                 power of the image. Used to calculate kernel_size, optional.
         """
-        # Check number of given arguments
+        mpp = kwargs.get("mpp")
+        power = kwargs.get("power")
+        kernel_size = kwargs.get("kernel_size")
+
+        # Check kwargs
         if all(arg is None for arg in [mpp, power, kernel_size]):
-            raise Exception("Either mpp, power, kernel_size is required.")
+            warnings.warn(
+                "No mpp, power, or kernel_size given. "
+                "Using default kernel size of 1. "
+                "Masking may be inconsistent across slides of different resolutions."
+            )
+            kernel_size = self.kernel_size
+
         if sum(arg is not None for arg in [mpp, power, kernel_size]) > 1:
             raise ValueError("Only one of mpp, power, kernel_size can be given.")
 
