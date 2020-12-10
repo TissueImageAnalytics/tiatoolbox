@@ -204,7 +204,7 @@ def get_luminosity_tissue_mask(img, threshold):
 
 @np.vectorize
 def mpp2common_objective_power(
-    mpp, common_powers=[1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100]
+    mpp, common_powers=(1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100)
 ):
     """Approximate (commonly used round value) of objective power from mpp.
 
