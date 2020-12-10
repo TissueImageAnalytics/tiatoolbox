@@ -95,7 +95,7 @@ class MorphologicalMasker(TissueMasker):
         **kwargs
     ) -> np.ndarray:
         """Fit the masker to the image and given key word parameters.
-        
+
         At least one of mpp, power, or kernel_size is required.
 
         Args:
