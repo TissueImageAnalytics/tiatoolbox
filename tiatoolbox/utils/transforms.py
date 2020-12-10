@@ -166,6 +166,5 @@ def bounds2size(bounds, origin="upper"):
     left, top, right, bottom = bounds
     if origin == "upper":
         return np.array([right - left, bottom - top])
-    else:
-        return np.array([right - left, top - bottom])
+    return np.array([right - left, top - bottom])
 
