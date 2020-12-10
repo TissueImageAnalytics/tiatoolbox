@@ -44,8 +44,8 @@ def test_mpp2objective_power(_sample_svs):
         (9.00, 1.25),
     ]
     for mpp, result in mapping:
-        assert utils.misc.mpp2objective_power(mpp) == result
-        assert utils.misc.mpp2objective_power([mpp] * 2) == result
+        assert utils.misc.mpp2common_objective_power(mpp) == result
+        assert utils.misc.mpp2common_objective_power([mpp] * 2) == result
 
     with pytest.raises(ValueError):
-        utils.misc.mpp2objective_power(mpp=10)
+        utils.misc.mpp2common_objective_power(mpp=10)
