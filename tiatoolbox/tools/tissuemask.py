@@ -40,7 +40,6 @@ class TissueMasker(ABC):
             image (np.ndarray): RGB image, usually a WSI thumbnail.
             kwargs (dict): Generic key word arguments.
         """
-        pass
 
     @abstractmethod
     def transform(self, image: np.ndarray):
@@ -56,15 +55,20 @@ class TissueMasker(ABC):
         return
 
     def fit_transform(self, image: np.ndarray, **kwargs):
+        """Apply fit and transform in one step.
+
+        Args:
+            image (np.ndarray): Image to create mask from.
+            kwargs (dict): Generic key word arguments passed to fit.
+        """
         self.fit(image, **kwargs)
         return self.transform(image)
 
 
 class OtsuTissueMasker(TissueMasker):
-    """Tissue masker which uses Otsu's method to determine background.
-    """
+    """Tissue masker which uses Otsu's method to determine background."""
 
-    def fit_transform(self, image: np.ndarray, **kwargs) -> np.ndarray:
+    def transform(self, image: np.ndarray) -> np.ndarray:
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         else:
