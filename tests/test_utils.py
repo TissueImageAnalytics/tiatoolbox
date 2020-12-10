@@ -1,3 +1,6 @@
+import random
+from pathlib import Path
+
 from tiatoolbox import utils
 
 import pytest
@@ -52,3 +55,52 @@ def test_mpp2objective_power(_sample_svs):
 
     with pytest.raises(ValueError):
         utils.misc.mpp2objective_power(mpp=10)
+
+
+def test_sub_pixel_read_bounds():
+    """Test sub-pixel numpy image reads with known tricky parameters."""
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    x = 6
+    y = -4
+    w = 21.805648705868652
+    h = 0.9280264518437986
+    bounds = (x, y, x + w, y + h)
+    ow = 88
+    oh = 98
+    output = utils.image.sub_pixel_read_bounds(test_image, bounds, (ow, oh))
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    x = 13
+    y = 15
+    w = 29.46
+    h = 6.92
+    bounds = (x, y, x + w, y + h)
+    ow = 93
+    oh = 34
+    output = utils.image.sub_pixel_read_bounds(test_image, bounds, (ow, oh))
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+
+def test_fuzz_sub_pixel_read_bounds():
+    """Fuzz test for numpy sub-pixel image reads."""
+    random.seed(0)
+
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    for _ in range(10000):
+        x = random.randint(-5, 32 - 5)
+        y = random.randint(-5, 32 - 5)
+        w = random.random() * random.randint(1, 32)
+        h = random.random() * random.randint(1, 32)
+        bounds = (x, y, x + w, y + h)
+        ow = random.randint(4, 128)
+        oh = random.randint(4, 128)
+        output = utils.image.sub_pixel_read_bounds(
+            test_image, bounds, (ow, oh), interpolation="linear"
+        )
+        assert (ow, oh) == tuple(output.shape[:2][::-1])
