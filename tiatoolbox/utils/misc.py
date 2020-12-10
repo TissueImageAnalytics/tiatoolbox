@@ -208,20 +208,10 @@ def mpp2common_objective_power(
 ):
     """Approximate (commonly used round value) of objective power from mpp.
 
-    Ranges for approximation::
-
-            mpp < 0.10 -> 100x
-    0.10 <= mpp < 0.15 -> 60x
-    0.15 <= mpp < 0.30 -> 40x
-    0.30 <= mpp < 0.60 -> 20x
-    0.60 <= mpp < 1.20 -> 10x
-    1.20 <= mpp < 2.40 -> 5x
-    2.40 <= mpp < 4.80 -> 2.5x
-    4.80 <= mpp < 9.60 -> 1.25x
-    9.60 <= mpp -> ValueError
-
     Args:
         mpp (float or tuple of float): Microns per-pixel.
+        common_powers (list of float): A sequence of objective
+            power values to round to.
 
     Returns:
         float: Objective power approximation.
