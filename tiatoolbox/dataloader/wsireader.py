@@ -887,7 +887,7 @@ class OpenSlideWSIReader(WSIReader):
         if objective_power is None:
             if mpp is not None:
                 try:
-                    objective_power = misc.mpp2objective_power(mpp)
+                    objective_power = misc.mpp2common_objective_power(mpp)
                 except ValueError:
                     warnings.warn(
                         "Metadata: Unable to approximate objective power"
