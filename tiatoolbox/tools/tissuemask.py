@@ -23,6 +23,7 @@
 
 """Methods of masking tissue and background."""
 
+from typing import Union, Tuple, Optional
 from abc import ABC, abstractmethod
 
 import cv2
@@ -33,7 +34,7 @@ from tiatoolbox.utils.misc import objective_power2mpp
 
 class TissueMasker(ABC):
     def fit(self, image=None, **kwargs):
-        """Fit the segmenter to the image and given key word parameters.
+        """Fit the masker to the image and given key word parameters.
 
         Args:
             image (np.ndarray): RGB image, usually a WSI thumbnail.
@@ -60,6 +61,9 @@ class TissueMasker(ABC):
 
 
 class OtsuTissueMasker(TissueMasker):
+    """Tissue masker which uses Otsu's method to determine background.
+    """
+
     def fit_transform(self, image: np.ndarray, **kwargs) -> np.ndarray:
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -76,30 +80,32 @@ class MorphologicalMasker(TissueMasker):
 
     This method applies Otsu's threshold before a simple small region
     removal, followed by a morphological dilation. The kernel for the
-    dilation is an ellipse of radius 64/mpp unless a value  is given for
-    kernel_size. Mpp is estimted from objective power via
-    func:`tiatoolbox.utils.misc.objective_power2mpp` if unknown. For
+    dilation is an ellipse of radius 64/mpp unless a value is given for
+    kernel_size to :func:`fit`. MPP is estimated from objective power
+    via func:`tiatoolbox.utils.misc.objective_power2mpp` if unknown. For
     small region removal, the area of the kernel is used as a threshold.
-
-    At least one of mpp, power, or kernel_size is required.
-
-    Args:
-        thumbnail (np.ndarray): An RGB thumnail image.
-        kernel_size (int or tuple of int): Manual kernel size, optional.
-        mpp (float or tuple of float): The microns per-pixel of
-            the image. Used to calculate kernel_size, optional.
-        power (float or tuple of float): The objective
-            power of the image. Used to calculate kernel_size, optional.
     """
 
     def fit(
         self,
         image: np.ndarray,
-        kernel_size=None,
-        mpp: float = None,
-        power: float = None,
+        kernel_size: Optional[Tuple[int, int]] = None,
+        mpp: Optional[Union[float, Tuple[float, float]]] = None,
+        power: Optional[Union[float, Tuple[float, float]]] = None,
         **kwargs
     ) -> np.ndarray:
+        """Fit the masker to the image and given key word parameters.
+        
+        At least one of mpp, power, or kernel_size is required.
+
+        Args:
+            thumbnail (np.ndarray): An RGB thumnail image.
+            kernel_size (int or tuple of int): Manual kernel size, optional.
+            mpp (float or tuple of float): The microns per-pixel of
+                the image. Used to calculate kernel_size, optional.
+            power (float or tuple of float): The objective
+                power of the image. Used to calculate kernel_size, optional.
+        """
         # Check number of given arguments
         if all(arg is None for arg in [mpp, power, kernel_size]):
             raise Exception("Either mpp, power, kernel_size is required.")
