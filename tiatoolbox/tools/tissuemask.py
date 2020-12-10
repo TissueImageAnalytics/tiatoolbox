@@ -24,12 +24,11 @@
 """Methods of masking tissue and background."""
 
 from abc import ABC, abstractmethod
-import warnings
 
 import cv2
 import numpy as np
 
-from tiatoolbox.utils.misc import mpp2objective_power, objective_power2mpp
+from tiatoolbox.utils.misc import objective_power2mpp
 
 
 class TissueMasker(ABC):
