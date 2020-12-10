@@ -21,7 +21,6 @@
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
 import cv2
 import pathlib
-from numpy.lib.function_base import vectorize
 import yaml
 import pandas as pd
 import numpy as np
