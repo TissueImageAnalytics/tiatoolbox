@@ -29,6 +29,8 @@ import warnings
 import cv2
 import numpy as np
 
+from tiatoolbox.utils.misc import mpp2objective_power, objective_power2mpp
+
 
 class TissueMasker(ABC):
     def fit(self, image=None, **kwargs):
@@ -55,7 +57,7 @@ class TissueMasker(ABC):
 
     def fit_transform(self, image: np.ndarray, **kwargs):
         self.fit(image, **kwargs)
-        return self.transform(image, **kwargs)
+        return self.transform(image)
 
 
 class OtsuTissueMasker(TissueMasker):
@@ -80,27 +82,41 @@ class MorphologicalMasker(TissueMasker):
     func:`tiatoolbox.utils.misc.objective_power2mpp` if unknown. For
     small region removal, the area of the kernel is used as a threshold.
 
-    At least one of thumb_mpp, thumb_objective_power, or kernel_size is
-    required. Order or presidence is: kernel_size, thumb_mpp,
-    thumb_objective_power.
+    At least one of mpp, power, or kernel_size is required.
 
     Args:
         thumbnail (np.ndarray): An RGB thumnail image.
-        thumb_mpp (float or tuple of float): The microns per-pixel of
-            the thumbnail.
-        thumb_objective_power (float or tuple of float): The objective
-            power of the thumbnail.
         kernel_size (int or tuple of int): Manual kernel size, optional.
+        mpp (float or tuple of float): The microns per-pixel of
+            the image. Used to calculate kernel_size, optional.
+        power (float or tuple of float): The objective
+            power of the image. Used to calculate kernel_size, optional.
     """
 
     def fit(
-        self, image: np.ndarray, mpp: float = None, kernel_size=None, **kwargs
+        self,
+        image: np.ndarray,
+        kernel_size=None,
+        mpp: float = None,
+        power: float = None,
+        **kwargs
     ) -> np.ndarray:
+        # Check number of given arguments
+        if all(arg is None for arg in [mpp, power, kernel_size]):
+            raise Exception("Either mpp, power, kernel_size is required.")
+        if sum(arg is not None for arg in [mpp, power, kernel_size]) > 1:
+            raise ValueError("Only one of mpp, power, kernel_size can be given.")
+
+        # Convert (objective) power to MPP
+        if power is not None:
+            mpp = objective_power2mpp(power)
+
         # Normalise args to be either None or a length 2 numpy array
         if mpp is not None:
             mpp = np.array(mpp)
             if mpp.size != 2:
                 mpp = mpp.repeat(2)
+            kernel_size = np.max([64 / mpp, [1, 1]], axis=0)
         if kernel_size is not None:
             kernel_size = np.array(kernel_size)
             if kernel_size.size != 2:
@@ -108,16 +124,9 @@ class MorphologicalMasker(TissueMasker):
 
         self.kernel_size = kernel_size
 
-        if all(arg is None for arg in [mpp, kernel_size]):
-            raise Exception("Either mpp or kernel_size is required.")
-
-        # Scale the kernel with MPP for consistent results across slides
+        # Scale the kernel with MPP for consistent results across resolutions
         if mpp is not None:
             self.kernel_size = np.max([64 / mpp, [1, 1]], axis=0)
-
-        if kernel_size is not None and mpp is not None:
-            warnings.warn("Kernel size argument overriding others")
-            self.kernel_size = kernel_size
 
         # At this point _kernel_size should not be None
         if self.kernel_size is None or None in self.kernel_size:
