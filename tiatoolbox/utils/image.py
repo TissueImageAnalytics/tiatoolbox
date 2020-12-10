@@ -129,7 +129,7 @@ def sub_pixel_read_bounds(
             padding is removed after scaling/resampling. Defaults to
             True.
         read_func (callable): Custom read function. Defaults to
-            :func:`padded_array_read`. A function which recieves
+            :func:`safe_padded_read`. A function which recieves
             two positional args of the image object and a set of
             integer bounds in addition to padding key word arguments
             for reading a pixel-aligned bounding region. This function
@@ -138,7 +138,7 @@ def sub_pixel_read_bounds(
         pad_mode (str): Method for padding when reading areas outside of
             the input image. Default is constant (0 padding). This is
             passed to `read_func` which defaults to
-            :func:`padded_array_read`. See :func:`padded_array_read`
+            :func:`safe_padded_read`. See :func:`safe_padded_read`
             for supported pad modes.
         **read_kwargs: Arbitrary keyword arguments passed through to
             `read_func`.
