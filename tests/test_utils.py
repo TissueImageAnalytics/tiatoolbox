@@ -1,6 +1,5 @@
 from tiatoolbox import utils
 
-import pytest
 import numpy as np
 
 
