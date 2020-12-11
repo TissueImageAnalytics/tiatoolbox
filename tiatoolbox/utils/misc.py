@@ -223,7 +223,6 @@ def mpp2common_objective_power(
     distances = [np.abs(op - power) for power in common_powers]
     closest_match = common_powers[np.argmin(distances)]
     return closest_match
-    # raise ValueError("No sensible common objective power for given mpp")
 
 
 @np.vectorize
