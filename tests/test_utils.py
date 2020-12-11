@@ -104,3 +104,13 @@ def test_fuzz_sub_pixel_read_bounds():
             test_image, bounds, (ow, oh), interpolation="linear"
         )
         assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+
+def test_fuzz_bounds2size():
+    """"""
+    random.seed(0)
+    for _ in range(1000):
+        size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
+        location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
+        bounds = (*location, *(sum(x) for x in zip(size, location)))
+        assert np.array_equal(utils.transforms.bounds2size(bounds), size)
