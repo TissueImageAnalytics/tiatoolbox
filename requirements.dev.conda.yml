@@ -24,5 +24,8 @@ dependencies:
   - pytest==5.4.2
   - pytest-runner==5.2
   - pre-commit
+  - flake8
+  - flake8-bugbear
+  - black
   - pip:
       - openslide-python==1.1.2

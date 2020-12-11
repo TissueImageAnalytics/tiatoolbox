@@ -20,3 +20,5 @@ pyyaml
 pandas
 glymur
 pre-commit
+black
+flake8-bugbear
