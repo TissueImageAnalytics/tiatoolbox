@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
     "recommonmark",
 ]
 
@@ -161,3 +162,13 @@ texinfo_documents = [
         "Miscellaneous",
     ),
 ]
+
+# -- Options for InterSphinx (Reference Other Docs) --------------------
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
+    "matplotlib": ("https://matplotlib.org", None),
+}
+
