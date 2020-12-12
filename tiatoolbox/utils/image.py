@@ -13,19 +13,29 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
     integer bounds only.
 
     Regions outside of the source image are padded using
-    any of the pad modes available in :func:`np.pad`.
+    any of the pad modes available in :func:`numpy.pad`.
+
+    .. figure:: images/out_of_bounds_read.png
+            :width: 512
+            :alt: Illustration for reading a region with negative
+                coordinates using zero padding and reflection padding.
 
     Args:
-        img (np.ndarray): Input image to read from.
-        bounds (tuple of int): Bounds of the region in (left, top,
+        img (:class:`numpy.ndarray`):
+            Input image to read from.
+        bounds (tuple(int)):
+            Bounds of the region in (left, top,
             right, bottom) format.
-        padding (int or tuple of int): Padding to apply to each bound.
-        pad_mode (str): Method for padding when reading areas outside of
+        padding (int, tuple(int)):
+            Padding to apply to each bound.
+        pad_mode (str):
+            Method for padding when reading areas outside of
             the input image. Default is constant (0 padding). Possible
             values are: constant, reflect, wrap, symmetric. See
-            :func:`np.pad` for more.
-        **pad_kwargs: Arbitrary keyword arguments passed through to the
-            padding function :func:`np.pad`.
+            :func:`numpy.pad` for more.
+        **pad_kwargs (dict):
+            Arbitrary keyword arguments passed through to the
+            padding function :func:`numpy.pad`.
 
     Returns:
         np.ndarray: Padded image region.
@@ -112,36 +122,49 @@ def sub_pixel_read_bounds(
     Allows for reading of image regions with sub-pixel coordinates, and
     out of bounds reads with various padding and interpolation modes.
 
+    .. figure:: images/sub_pixel_reads.png
+            :width: 512
+            :alt: Illustration for reading a region with fractional
+                coordinates (sub-pixel).
+
     Args:
-        image (np.ndarray): Image to read from.
-        bounds (tuple of float): Bounds of the image to read in
+        image (:class:`numpy.ndarray`):
+            Image to read from.
+        bounds (tuple(float)):
+            Bounds of the image to read in
             (left, top, right, bottom) format.
-        output_size (tuple of int): The desired output size.
-        padding (int or tuple of int): Amount of padding to apply to the
-            image region in pixels.
-        interpolation (str): Method of interpolation. Default is nearest
+        output_size (tuple(int)):
+            The desired output size.
+        padding (int, tuple(int)):
+            Amount of padding to apply to the image region in pixels.
+        interpolation (str):
+            Method of interpolation. Default is nearest
             and possible values are: nearest, linear, cubic, lanczos.
-        pad_at_baseline (bool): Apply padding in terms of baseline
+        pad_at_baseline (bool):
+            Apply padding in terms of baseline
             pixels. Defaults to False, meaning padding is added to the
             output image size in pixels.
-        pad_for_interpolation (bool): Add padding before scaling in
+        pad_for_interpolation (bool):
+            Add padding before scaling in
             order to avoid border effects from interpolation. This
             padding is removed after scaling/resampling. Defaults to
             True.
-        read_func (callable): Custom read function. Defaults to
+        read_func (collections.abc.Callable):
+            Custom read function. Defaults to
             :func:`safe_padded_read`. A function which recieves
             two positional args of the image object and a set of
             integer bounds in addition to padding key word arguments
             for reading a pixel-aligned bounding region. This function
             should return a numpy array with 2 or 3 dimensions. See
             examples for more.
-        pad_mode (str): Method for padding when reading areas outside of
+        pad_mode (str):
+            Method for padding when reading areas outside of
             the input image. Default is constant (0 padding). This is
             passed to `read_func` which defaults to
             :func:`safe_padded_read`. See :func:`safe_padded_read`
             for supported pad modes.
-        **read_kwargs: Arbitrary keyword arguments passed through to
-            `read_func`.
+        **read_kwargs (dict):
+            Arbitrary keyword arguments passed through to `read_func`.
 
     Return:
         np.ndimage: Output image region.
