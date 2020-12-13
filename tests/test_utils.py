@@ -192,7 +192,7 @@ def test_fuzz_bounds2size():
         assert np.array_equal(utils.transforms.bounds2size(bounds), size)
 
 
-def test_fuzz_bounds2size():
+def test_fuzz_bounds2size_lower():
     """Fuzz test for bounds2size with origin lower."""
     random.seed(0)
     for _ in range(1000):
