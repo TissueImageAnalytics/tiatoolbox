@@ -57,14 +57,20 @@ def test_mpp2objective_power(_sample_svs):
         utils.misc.mpp2objective_power(mpp=10)
 
 
-def test_safe_padded_read_invalid_args():
-    """Test safe_padded_read with invalid arguments."""
+def test_safe_padded_read_non_int_bounds():
+    """Test safe_padded_read with non-integer bounds."""
     data = np.zeros((16, 16))
 
     bounds = (1.5, 1, 5, 5)
     with pytest.raises(ValueError):
         utils.image.safe_padded_read(data, bounds)
 
+
+def test_safe_padded_read_negative_padding():
+    """Test safe_padded_read with non-integer bounds."""
+    data = np.zeros((16, 16))
+
+    bounds = (1, 1, 5, 5)
     with pytest.raises(ValueError):
         utils.image.safe_padded_read(data, bounds, padding=-1)
 
@@ -105,8 +111,8 @@ def test_sub_pixel_read_bounds():
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_sub_pixel_read_bounds_invalid_args():
-    """Test sub_pixel_read_bounds with invalid arguments."""
+def test_sub_pixel_read_bounds_invalid_interpolation():
+    """Test sub_pixel_read_bounds with invalid interpolation."""
     data = np.zeros((16, 16))
     out_size = data.shape
 
@@ -114,9 +120,15 @@ def test_sub_pixel_read_bounds_invalid_args():
     with pytest.raises(ValueError):
         utils.image.sub_pixel_read_bounds(data, bounds, out_size, interpolation="fizz")
 
+
+def test_sub_pixel_read_bounds_invalid_bounds():
+    """Test sub_pixel_read_bounds with invalid bounds."""
+    data = np.zeros((16, 16))
+    out_size = data.shape
+
+    bounds = (1.5, 1, -5, 5)
     with pytest.warns(UserWarning):
         with pytest.raises(AssertionError):
-            bounds = (1.5, 1, -5, 5)
             utils.image.sub_pixel_read_bounds(data, bounds, out_size)
 
 
