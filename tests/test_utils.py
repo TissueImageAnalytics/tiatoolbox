@@ -57,6 +57,27 @@ def test_mpp2objective_power(_sample_svs):
         utils.misc.mpp2objective_power(mpp=10)
 
 
+def test_safe_padded_read_invalid_args():
+    """Test safe_padded_read with invalid arguments."""
+    data = np.zeros((16, 16))
+
+    bounds = (1.5, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds)
+
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, padding=-1)
+
+
+def test_safe_padded_read_padding_formats():
+    """Test safe_padded_read with different padding argument formats."""
+    data = np.zeros((16, 16))
+    bounds = (0, 0, 8, 8)
+    for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
+        region = utils.image.safe_padded_read(data, bounds, padding=padding,)
+        assert region.shape == (8 + 4, 8 + 4)
+
+
 def test_sub_pixel_read_bounds():
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(__file__).parent / "data" / "source_image.png"
@@ -82,6 +103,49 @@ def test_sub_pixel_read_bounds():
     oh = 34
     output = utils.image.sub_pixel_read_bounds(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+
+def test_sub_pixel_read_bounds_invalid_args():
+    """Test sub_pixel_read_bounds with invalid arguments."""
+    data = np.zeros((16, 16))
+    out_size = data.shape
+
+    bounds = (1.5, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.sub_pixel_read_bounds(data, bounds, out_size, interpolation="fizz")
+
+    with pytest.warns(UserWarning):
+        with pytest.raises(AssertionError):
+            bounds = (1.5, 1, -5, 5)
+            utils.image.sub_pixel_read_bounds(data, bounds, out_size)
+
+
+def test_sub_pixel_read_bounds_pad_at_baseline():
+    """Test sub_pixel_read_bounds with baseline padding."""
+    data = np.zeros((16, 16))
+    out_size = data.shape
+    bounds = (0, 0, 8, 8)
+    for padding in range(3):
+        region = utils.image.sub_pixel_read_bounds(
+            data, bounds, out_size, padding=padding, pad_at_baseline=True
+        )
+        assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
+
+
+def test_sub_pixel_read_bounds_padding_formats():
+    """Test sub_pixel_read_bounds with different padding argument formats."""
+    data = np.zeros((16, 16))
+    out_size = data.shape
+    bounds = (0, 0, 8, 8)
+    for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
+        region = utils.image.sub_pixel_read_bounds(
+            data, bounds, out_size, padding=padding, pad_at_baseline=True
+        )
+        assert region.shape == (16 + 4, 16 + 4)
+        region = utils.image.sub_pixel_read_bounds(
+            data, bounds, out_size, padding=padding
+        )
+        assert region.shape == (16 + 2, 16 + 2)
 
 
 def test_fuzz_sub_pixel_read_bounds():
