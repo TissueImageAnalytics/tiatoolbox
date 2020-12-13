@@ -54,6 +54,7 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
         >>> bounds = (1, 1, 6, 6)
         >>> safe_padded_read(image, bounds, padding=2 pad_mode="reflect")
     """
+    padding = np.array(padding)
     # Ensure the bounds are integers.
     if np.array(bounds).dtype != int:
         raise ValueError("Bounds must be integers.")

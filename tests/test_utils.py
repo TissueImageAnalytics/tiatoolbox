@@ -75,7 +75,7 @@ def test_safe_padded_read_padding_formats():
     bounds = (0, 0, 8, 8)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.safe_padded_read(data, bounds, padding=padding,)
-        assert region.shape == (8 + 4, 8 + 4)
+        assert region.shape == (8 + 2, 8 + 2)
 
 
 def test_sub_pixel_read_bounds():
