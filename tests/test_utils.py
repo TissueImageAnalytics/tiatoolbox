@@ -182,6 +182,18 @@ def test_fuzz_sub_pixel_read_bounds():
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
+def test_sub_pixel_read_bounds_interpolation_modes():
+    """Test sub_pixel_read_bounds with different padding argument formats."""
+    data = np.mgrid[:16:1, :16:1].sum(0).astype(np.uint8)
+    out_size = data.shape
+    bounds = (0, 0, 8, 8)
+    for mode in ["nearest", "linear", "cubic", "lanczos"]:
+        output = utils.image.sub_pixel_read_bounds(
+            data, bounds, out_size, interpolation=mode
+        )
+        assert output.shape == out_size
+
+
 def test_fuzz_bounds2size():
     """Fuzz test for bounds2size."""
     random.seed(0)
