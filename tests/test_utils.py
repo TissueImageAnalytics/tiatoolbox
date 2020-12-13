@@ -183,10 +183,24 @@ def test_fuzz_sub_pixel_read_bounds():
 
 
 def test_fuzz_bounds2size():
-    """"""
+    """Fuzz test for bounds2size."""
     random.seed(0)
     for _ in range(1000):
         size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         bounds = (*location, *(sum(x) for x in zip(size, location)))
         assert np.array_equal(utils.transforms.bounds2size(bounds), size)
+
+
+def test_fuzz_bounds2size():
+    """Fuzz test for bounds2size with origin lower."""
+    random.seed(0)
+    for _ in range(1000):
+        size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
+        starts = (random.randint(-1000, 1000), random.randint(-1000, 1000))
+        ends = [sum(x) for x in zip(size, starts)]
+        bounds = (starts[0], ends[1], ends[0], starts[1])
+
+        assert np.array_equal(
+            utils.transforms.bounds2size(bounds, origin="lower"), size
+        )
