@@ -261,7 +261,7 @@ def sub_pixel_read_bounds(
     elif np.size(padding) == 2:
         desired_padding = np.tile(padding, 2)
     else:
-        desired_padding = padding
+        desired_padding = np.array(padding)
 
     # Divide padding by scale factor to get padding to add to bounds.
     if pad_at_baseline:
