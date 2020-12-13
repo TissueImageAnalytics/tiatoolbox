@@ -23,7 +23,6 @@
 
 """Methods of masking tissue and background."""
 
-from typing import Union, Tuple, Optional
 from abc import ABC, abstractmethod
 import warnings
 
