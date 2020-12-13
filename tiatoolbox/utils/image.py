@@ -249,7 +249,7 @@ def sub_pixel_read_bounds(
         inter_cv2 = cv2.INTER_LANCZOS4
         inter_padding = 2
     else:
-        ValueError("Invalid interpolation mode.")
+        raise ValueError("Invalid interpolation mode.")
     if pad_for_interpolation is False:
         inter_padding = 0
     # Make interpolation padding a length 4 array.
