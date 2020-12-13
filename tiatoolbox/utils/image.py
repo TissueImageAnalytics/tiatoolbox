@@ -106,7 +106,7 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
     return region
 
 
-def sub_pixel_read_bounds(
+def sub_pixel_read(
     image,
     bounds,
     output_size,
@@ -179,12 +179,12 @@ def sub_pixel_read_bounds(
         Simple read:
 
         >>> bounds = (0, 0, 10.5, 10.5)
-        >>> sub_pixel_read_bounds(image, bounds)
+        >>> sub_pixel_read(image, bounds)
 
         Read with padding applied to bounds before reading:
 
         >>> bounds = (0, 0, 10.5, 10.5)
-        >>> region = sub_pixel_read_bounds(
+        >>> region = sub_pixel_read(
         ...     image,
         ...     bounds,
         ...     padding=2,
@@ -194,13 +194,13 @@ def sub_pixel_read_bounds(
         Read with padding applied after reading:
 
         >>> bounds = (0, 0, 10.5, 10.5)
-        >>> region = sub_pixel_read_bounds(image, bounds)
+        >>> region = sub_pixel_read(image, bounds)
         >>> reguin = np.pad(region, padding=2, mode="reflect")
 
         Read with no temporary padding to account for interpolation mode:
 
         >>> bounds = (0, 0, 10.5, 10.5)
-        >>> region = sub_pixel_read_bounds(
+        >>> region = sub_pixel_read(
         ...     image,
         ...     bounds,
         ...     interpolation="cubic",
@@ -215,7 +215,7 @@ def sub_pixel_read_bounds(
         >>> def gradient(_, b, **kw):
         ...     width, height = (b[2] - b[0], b[3] - b[1])
         ...     return np.mgrid[:height, :width].sum(0)
-        >>> sub_pixel_read_bounds(bounds, read_func=gradient)
+        >>> sub_pixel_read(bounds, read_func=gradient)
 
         Custom read function which gets pixel data from a custom object:
 
@@ -226,7 +226,7 @@ def sub_pixel_read_bounds(
         ...     size = (right - left, bottom - top)
         ...     pil_img = image.read_region((left, top), level=0, size=size)
         ...     return np.array(pil_img.convert("RGB"))
-        >>> sub_pixel_read_bounds(bounds, read_func=openslide_read)
+        >>> sub_pixel_read(bounds, read_func=openslide_read)
 
 
     """

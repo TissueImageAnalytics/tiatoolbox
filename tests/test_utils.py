@@ -84,7 +84,7 @@ def test_safe_padded_read_padding_formats():
         assert region.shape == (8 + 2, 8 + 2)
 
 
-def test_sub_pixel_read_bounds():
+def test_sub_pixel_read():
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(__file__).parent / "data" / "source_image.png"
     assert image_path.exists()
@@ -97,7 +97,7 @@ def test_sub_pixel_read_bounds():
     bounds = (x, y, x + w, y + h)
     ow = 88
     oh = 98
-    output = utils.image.sub_pixel_read_bounds(test_image, bounds, (ow, oh))
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
     x = 13
@@ -107,60 +107,58 @@ def test_sub_pixel_read_bounds():
     bounds = (x, y, x + w, y + h)
     ow = 93
     oh = 34
-    output = utils.image.sub_pixel_read_bounds(test_image, bounds, (ow, oh))
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_sub_pixel_read_bounds_invalid_interpolation():
-    """Test sub_pixel_read_bounds with invalid interpolation."""
+def test_sub_pixel_read_invalid_interpolation():
+    """Test sub_pixel_read with invalid interpolation."""
     data = np.zeros((16, 16))
     out_size = data.shape
 
     bounds = (1.5, 1, 5, 5)
     with pytest.raises(ValueError):
-        utils.image.sub_pixel_read_bounds(data, bounds, out_size, interpolation="fizz")
+        utils.image.sub_pixel_read(data, bounds, out_size, interpolation="fizz")
 
 
-def test_sub_pixel_read_bounds_invalid_bounds():
-    """Test sub_pixel_read_bounds with invalid bounds."""
+def test_sub_pixel_read_invalid_bounds():
+    """Test sub_pixel_read with invalid bounds."""
     data = np.zeros((16, 16))
     out_size = data.shape
 
     bounds = (1.5, 1, -5, 5)
     with pytest.warns(UserWarning):
         with pytest.raises(AssertionError):
-            utils.image.sub_pixel_read_bounds(data, bounds, out_size)
+            utils.image.sub_pixel_read(data, bounds, out_size)
 
 
-def test_sub_pixel_read_bounds_pad_at_baseline():
-    """Test sub_pixel_read_bounds with baseline padding."""
+def test_sub_pixel_read_pad_at_baseline():
+    """Test sub_pixel_read with baseline padding."""
     data = np.zeros((16, 16))
     out_size = data.shape
     bounds = (0, 0, 8, 8)
     for padding in range(3):
-        region = utils.image.sub_pixel_read_bounds(
+        region = utils.image.sub_pixel_read(
             data, bounds, out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
 
 
-def test_sub_pixel_read_bounds_padding_formats():
-    """Test sub_pixel_read_bounds with different padding argument formats."""
+def test_sub_pixel_read_padding_formats():
+    """Test sub_pixel_read with different padding argument formats."""
     data = np.zeros((16, 16))
     out_size = data.shape
     bounds = (0, 0, 8, 8)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
-        region = utils.image.sub_pixel_read_bounds(
+        region = utils.image.sub_pixel_read(
             data, bounds, out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4, 16 + 4)
-        region = utils.image.sub_pixel_read_bounds(
-            data, bounds, out_size, padding=padding
-        )
+        region = utils.image.sub_pixel_read(data, bounds, out_size, padding=padding)
         assert region.shape == (16 + 2, 16 + 2)
 
 
-def test_fuzz_sub_pixel_read_bounds():
+def test_fuzz_sub_pixel_read():
     """Fuzz test for numpy sub-pixel image reads."""
     random.seed(0)
 
@@ -176,21 +174,19 @@ def test_fuzz_sub_pixel_read_bounds():
         bounds = (x, y, x + w, y + h)
         ow = random.randint(4, 128)
         oh = random.randint(4, 128)
-        output = utils.image.sub_pixel_read_bounds(
+        output = utils.image.sub_pixel_read(
             test_image, bounds, (ow, oh), interpolation="linear"
         )
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_sub_pixel_read_bounds_interpolation_modes():
-    """Test sub_pixel_read_bounds with different padding argument formats."""
+def test_sub_pixel_read_interpolation_modes():
+    """Test sub_pixel_read with different padding argument formats."""
     data = np.mgrid[:16:1, :16:1].sum(0).astype(np.uint8)
     out_size = data.shape
     bounds = (0, 0, 8, 8)
     for mode in ["nearest", "linear", "cubic", "lanczos"]:
-        output = utils.image.sub_pixel_read_bounds(
-            data, bounds, out_size, interpolation=mode
-        )
+        output = utils.image.sub_pixel_read(data, bounds, out_size, interpolation=mode)
         assert output.shape == out_size
 
 
