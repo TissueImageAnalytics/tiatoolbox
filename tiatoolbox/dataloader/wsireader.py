@@ -824,8 +824,7 @@ class OpenSlideWSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    @property
-    def info(self):
+    def _info(self):
         """Openslide WSI meta data reader.
 
         Returns:
@@ -971,8 +970,7 @@ class OmnyxJP2WSIReader(WSIReader):
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    @property
-    def info(self):
+    def _info(self):
         """JP2 meta data reader.
 
         Returns:
@@ -1056,10 +1054,11 @@ class VFReader(WSIReader):
         else:
             self.img = misc.imread(self.input_path)
 
-    @property
-    def info(self):
-        """Visual Field meta data reader. For missing metadata values such as `mpp` or
-        `objective` the value is set to None.
+    def _info(self):
+        """Visual Field meta data getter.
+        
+        For missing metadata values such as `mpp` or `objective` the value is
+        set to None.
 
         Returns:
             WSIMetadata: containing meta information.
