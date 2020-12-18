@@ -6,7 +6,7 @@ python:
   - 3.7
   - 3.6
 
-if: branch = master
+if: type != push OR branch = master
 
 before_install:
   - sudo apt-get -y update
