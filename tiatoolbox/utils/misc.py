@@ -238,9 +238,10 @@ def mpp2objective_power(mpp):
         return 10 * 2 ** (np.ceil(np.log2(0.15 / mpp)) + 2)
     raise ValueError()
 
+
 def contrast_enhancer(img, low_p=2, high_p=98):
-    """Enhancing contrast of the input RGB image using intensity adjustment through
-        image low and high percentiles.
+    """Enhancing contrast of the input RGB image using intensity adjustment.
+       This method uses both image low and high percentiles.
 
     Args:
         img (ndarray): input image used to obtain tissue mask.
