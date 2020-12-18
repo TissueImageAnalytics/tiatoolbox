@@ -21,3 +21,6 @@ pyyaml
 pandas
 glymur
 scikit-image
+pre-commit
+black
+flake8-bugbear
