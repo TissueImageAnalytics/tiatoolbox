@@ -1056,7 +1056,7 @@ class VFReader(WSIReader):
 
     def _info(self):
         """Visual Field meta data getter.
-        
+
         For missing metadata values such as `mpp` or `objective` the value is
         set to None.
 
