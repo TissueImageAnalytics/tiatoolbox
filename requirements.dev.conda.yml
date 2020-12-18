@@ -24,5 +24,6 @@ dependencies:
   - pytest==5.4.2
   - pytest-runner==5.2
   - scikit-image
+  - pytest-cov
   - pip:
       - openslide-python==1.1.2
