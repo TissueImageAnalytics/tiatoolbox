@@ -111,9 +111,9 @@ class WSIMeta:
         self.level_count = (
             int(level_count) if level_count is not None else len(self.level_dimensions)
         )
-        self.vendor = vendor
+        self.vendor = str(vendor)
         self.mpp = np.array([float(x) for x in mpp]) if mpp is not None else None
-        self.file_path = file_path
+        self.file_path = Path(file_path) if file_path is not None else None
         self.raw = raw if raw is not None else None
 
         self.validate()

@@ -900,7 +900,7 @@ class OpenSlideWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=props,
+            raw=dict(**props),
         )
 
         return param
