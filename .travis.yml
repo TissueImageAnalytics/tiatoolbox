@@ -6,7 +6,7 @@ python:
   - 3.7
   - 3.6
 
-if: type != push OR branch = master OR branch = develop
+if: type != push OR branch = master OR branch = develop OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 before_install:
   - sudo apt-get -y update
