@@ -36,7 +36,8 @@ class TissueMasker(ABC):
         super().__init__()
         self.fitted = False
 
-    def fit(self, image: np.ndarray = None, mask=None) -> None:
+    @abstractmethod
+    def fit(self, image: np.ndarray, mask=None) -> None:
         """Fit the masker to the image and given key word parameters.
 
         Args:
