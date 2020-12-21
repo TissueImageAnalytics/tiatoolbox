@@ -13,7 +13,7 @@ def test_otsu_masker(_sample_svs):
     """Test Otsu's thresholding method."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     mpp = 32
-    thumb = wsi.get_thumbnail(mpp, "mpp")
+    thumb = wsi.slide_thumbnail(mpp, "mpp")
     masker = tissuemask.OtsuTissueMasker()
     mask_a = masker.fit_transform(thumb)
 
@@ -29,7 +29,7 @@ def test_otsu_masker(_sample_svs):
 def test_morphological_masker(_sample_svs):
     """Test simple morphological thresholding."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    thumb = wsi.get_thumbnail()
+    thumb = wsi.slide_thumbnail()
     masker = tissuemask.MorphologicalMasker()
     mask_a = masker.fit_transform(thumb)
 
@@ -46,7 +46,7 @@ def test_morphological_masker_int_kernel_size(_sample_svs):
     """Test simple morphological thresholding with mpp with int kernel_size."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     mpp = 32
-    thumb = wsi.get_thumbnail(mpp, "mpp")
+    thumb = wsi.slide_thumbnail(mpp, "mpp")
     masker = tissuemask.MorphologicalMasker(kernel_size=5)
     mask_a = masker.fit_transform(thumb)
 
@@ -63,7 +63,7 @@ def test_morphological_masker_mpp(_sample_svs):
     """Test simple morphological thresholding with mpp."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     mpp = 32
-    thumb = wsi.get_thumbnail(mpp, "mpp")
+    thumb = wsi.slide_thumbnail(mpp, "mpp")
     masker = tissuemask.MorphologicalMasker(mpp=mpp)
     mask_a = masker.fit_transform(thumb)
 
@@ -80,7 +80,7 @@ def test_morphological_masker_power(_sample_svs):
     """Test simple morphological thresholding with objective power."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     power = 1.25
-    thumb = wsi.get_thumbnail(power, "power")
+    thumb = wsi.slide_thumbnail(power, "power")
     masker = tissuemask.MorphologicalMasker(power=power)
     mask_a = masker.fit_transform(thumb)
 
