@@ -1,7 +1,6 @@
-from tiatoolbox.dataloader import wsireader
-
 import numpy as np
 
+from tiatoolbox.dataloader import wsireader
 from tiatoolbox.tools import tissuemask
 
 
