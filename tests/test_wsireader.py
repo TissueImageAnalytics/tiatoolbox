@@ -78,6 +78,19 @@ def test_wsireader_slide_info(_sample_svs, tmp_path):
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
+def test_wsireader_slide_info_cache(_sample_svs, tmp_path):
+    """Test for caching slide_info in WSIReader class as a python function."""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
+    )
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    info = wsi.info
+    cached_info = wsi.info
+    assert info.as_dict() == cached_info.as_dict()
+
+
 def test__relative_level_scales_openslide_baseline(_sample_ndpi):
     """Test openslide relative level scales for pixels per baseline pixel."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
