@@ -36,7 +36,7 @@ class TissueMasker(ABC):
         super().__init__()
         self.fitted = False
 
-    def fit(self, image=None, mask=None) -> None:
+    def fit(self, image: np.ndarray = None, mask=None) -> None:
         """Fit the masker to the image and given key word parameters.
 
         Args:
@@ -182,7 +182,7 @@ class MorphologicalMasker(TissueMasker):
         if self.min_region_size is None:
             self.min_region_size = np.sum(self.kernel)
 
-    def fit(self, image: np.ndarray = None, mask=None) -> np.ndarray:
+    def fit(self, image: np.ndarray = None, mask=None) -> None:
         # Find Otsu's threshold
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
