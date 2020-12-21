@@ -239,7 +239,7 @@ def objective_power2mpp(objective_power):
     Raises:
         ValueError
     """
-    return 10 * (np.float(objective_power) ** -1)
+    return 10 / np.float(objective_power)
 
 
 @np.vectorize
