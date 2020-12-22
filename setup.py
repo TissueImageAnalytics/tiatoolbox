@@ -21,6 +21,7 @@ requirements = [
     "pandas",
     "glymur",
     "scikit-learn==0.23.2",
+    "jupyterlab"
 ]
 
 setup_requirements = [
