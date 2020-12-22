@@ -20,5 +20,6 @@ dependencies:
   - glymur
   - scikit-learn==0.23.2
   - scikit-image
+  - jupyterlab
   - pip:
     - openslide-python
