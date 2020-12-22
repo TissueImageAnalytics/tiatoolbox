@@ -454,6 +454,17 @@ def test_read_rect_jp2_levels(_sample_jp2):
         )
 
 
+def read_rect_mpp(wsi, location, size):
+    """Read rect with resolution in microns per pixel."""
+    for factor in range(1, 10):
+        mpp = wsi.info.mpp * factor
+        im_region = wsi.read_rect(location, size, resolution=mpp, units="mpp")
+
+        assert isinstance(im_region, np.ndarray)
+        assert im_region.dtype == "uint8"
+        assert im_region.shape == (*size[::-1], 3)
+
+
 def test_read_rect_openslide_mpp(_sample_ndpi):
     """Test openslide read rect with resolution in microns per pixel.
 
@@ -462,13 +473,7 @@ def test_read_rect_openslide_mpp(_sample_ndpi):
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
-    for factor in range(1, 10):
-        mpp = wsi.info.mpp * factor
-        im_region = wsi.read_rect(location, size, resolution=mpp, units="mpp")
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        assert im_region.shape == (*size[::-1], 3)
+    read_rect_mpp(wsi, location, size)
 
 
 def test_read_rect_jp2_mpp(_sample_jp2):
@@ -479,13 +484,7 @@ def test_read_rect_jp2_mpp(_sample_jp2):
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
-    for factor in range(1, 10):
-        mpp = wsi.info.mpp * factor
-        im_region = wsi.read_rect(location, size, resolution=mpp, units="mpp")
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        assert im_region.shape == (*size[::-1], 3)
+    read_rect_mpp(wsi, location, size)
 
 
 def test_read_rect_openslide_objective_power(_sample_ndpi):
