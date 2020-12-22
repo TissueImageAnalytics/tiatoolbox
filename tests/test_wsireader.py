@@ -69,12 +69,26 @@ def test_wsireader_slide_info(_sample_svs, tmp_path):
     """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_param = wsi.info
     out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
+
+
+def test_wsireader_slide_info_cache(_sample_svs, tmp_path):
+    """Test for caching slide_info in WSIReader class as a python function."""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
+    )
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    info = wsi.info
+    cached_info = wsi.info
+    assert info.as_dict() == cached_info.as_dict()
 
 
 def test__relative_level_scales_openslide_baseline(_sample_ndpi):
@@ -321,7 +335,10 @@ def test_find_read_rect_params_power(_sample_ndpi):
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
         (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
-            location=location, size=size, resolution=target_scale, units="power",
+            location=location,
+            size=size,
+            resolution=target_scale,
+            units="power",
         )
         assert level >= 0
         assert level < wsi.info.level_count
@@ -339,7 +356,10 @@ def test_find_read_rect_params_mpp(_sample_ndpi):
     # Test a range of MPP
     for target_scale in range(1, 10):
         (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
-            location=location, size=size, resolution=target_scale, units="mpp",
+            location=location,
+            size=size,
+            resolution=target_scale,
+            units="mpp",
         )
         assert level >= 0
         assert level < wsi.info.level_count
@@ -601,7 +621,11 @@ def test_read_bounds_openslide_objective_power(_sample_ndpi):
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
 
-        im_region = wsi.read_bounds(bounds, resolution=objective_power, units="power",)
+        im_region = wsi.read_bounds(
+            bounds,
+            resolution=objective_power,
+            units="power",
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
@@ -619,7 +643,11 @@ def test_read_bounds_interpolated(_sample_svs):
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     bounds = (0, 0, 500, 500)
-    im_region = wsi.read_bounds(bounds, resolution=0.1, units="mpp",)
+    im_region = wsi.read_bounds(
+        bounds,
+        resolution=0.1,
+        units="mpp",
+    )
 
     assert 0.1 < wsi.info.mpp[0]
     assert 0.1 < wsi.info.mpp[1]
@@ -640,7 +668,11 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
 
-        im_region = wsi.read_bounds(bounds, resolution=objective_power, units="power",)
+        im_region = wsi.read_bounds(
+            bounds,
+            resolution=objective_power,
+            units="power",
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
@@ -703,7 +735,8 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     wsi.save_tiles(
@@ -895,17 +928,17 @@ def test_openslide_objective_power_from_mpp(_sample_svs):
 
     del props["openslide.objective-power"]
     with pytest.warns(UserWarning, match=r"Objective power inferred"):
-        _ = wsi.info
+        _ = wsi._info()
 
     props["openslide.mpp-x"] = 10
     props["openslide.mpp-y"] = 10
     with pytest.warns(UserWarning, match=r"MPP outside of sensible range"):
-        _ = wsi.info
+        _ = wsi._info()
 
     del props["openslide.mpp-x"]
     del props["openslide.mpp-y"]
     with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        _ = wsi.info
+        _ = wsi._info()
 
 
 def test_openslide_mpp_from_tiff_resolution(_sample_svs):
@@ -930,9 +963,9 @@ def test_VFReader():
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
     with pytest.warns(UserWarning, match=r"Unknown scale"):
-        _ = wsi.info
+        _ = wsi._info()
     with pytest.warns(UserWarning, match=r"Raw data is None"):
-        _ = wsi.info
+        _ = wsi._info()
 
     assert wsi.img.shape == (256, 256, 3)
 

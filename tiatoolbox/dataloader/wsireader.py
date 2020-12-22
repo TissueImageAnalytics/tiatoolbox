@@ -24,6 +24,7 @@ from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
 import warnings
+import copy
 import numpy as np
 import openslide
 import glymur
@@ -59,15 +60,33 @@ class WSIReader:
 
     @property
     def info(self):
-        """WSI metadata getter.
+        """WSI metadata property.
 
-
-        Args:
-            self (WSIReader):
+        This property is cached and only generated on the first call.
 
         Returns:
             WSIMetadata: An object containing normalised slide metadata
+        """
+        # In Python>=3.8 this could be replaced with functools.cached_property
+        if hasattr(self, "_m_info"):
+            return copy.deepcopy(self._m_info)
+        self._m_info = self._info()
+        return self._m_info
 
+    @info.setter
+    def info(self, meta):
+        """WSI metadata setter.
+
+        Args:
+            meta (WSIMeta): Metadata object.
+        """
+        self._m_info = meta
+
+    def _info(self):
+        """WSI metadata internal getter used to update info property.
+
+        Returns:
+            WSIMetadata: An object containing normalised slide metadata
         """
         raise NotImplementedError
 
@@ -754,7 +773,7 @@ class OpenSlideWSIReader(WSIReader):
     def __init__(
         self, input_img=".",
     ):
-        super().__init__(input_img=input_img, )
+        super().__init__(input_img=input_img,)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -770,9 +789,9 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        im_region = transforms.imresize(img=im_region,
-                                        scale_factor=post_read_scale,
-                                        output_size=size)
+        im_region = transforms.imresize(
+            img=im_region, scale_factor=post_read_scale, output_size=size
+        )
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -798,15 +817,14 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        im_region = transforms.imresize(img=im_region,
-                                        scale_factor=post_read_scale,
-                                        output_size=output_size)
+        im_region = transforms.imresize(
+            img=im_region, scale_factor=post_read_scale, output_size=output_size
+        )
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    @property
-    def info(self):
+    def _info(self):
         """Openslide WSI meta data reader.
 
         Returns:
@@ -882,7 +900,7 @@ class OpenSlideWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=props,
+            raw=dict(**props),
         )
 
         return param
@@ -900,7 +918,7 @@ class OmnyxJP2WSIReader(WSIReader):
     """
 
     def __init__(self, input_img="."):
-        super().__init__(input_img=input_img, )
+        super().__init__(input_img=input_img,)
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -923,9 +941,9 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
         im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        im_region = transforms.imresize(img=im_region,
-                                        scale_factor=post_read_scale,
-                                        output_size=size)
+        im_region = transforms.imresize(
+            img=im_region, scale_factor=post_read_scale, output_size=size
+        )
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -945,15 +963,14 @@ class OmnyxJP2WSIReader(WSIReader):
         # area = (start_y, start_x, end_y, end_x)
         # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        im_region = transforms.imresize(img=im_region,
-                                        scale_factor=post_read_scale,
-                                        output_size=output_size)
+        im_region = transforms.imresize(
+            img=im_region, scale_factor=post_read_scale, output_size=output_size
+        )
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
 
-    @property
-    def info(self):
+    def _info(self):
         """JP2 meta data reader.
 
         Returns:
@@ -1029,7 +1046,7 @@ class VFReader(WSIReader):
     """
 
     def __init__(self, input_img="."):
-        super().__init__(input_img=input_img, )
+        super().__init__(input_img=input_img,)
 
         if isinstance(input_img, np.ndarray):
             self.img = input_img
@@ -1037,10 +1054,11 @@ class VFReader(WSIReader):
         else:
             self.img = misc.imread(self.input_path)
 
-    @property
-    def info(self):
-        """Visual Field meta data reader. For missing metadata values such as `mpp` or
-        `objective` the value is set to None.
+    def _info(self):
+        """Visual Field meta data getter.
+
+        For missing metadata values such as `mpp` or `objective` the value is
+        set to None.
 
         Returns:
             WSIMetadata: containing meta information.
@@ -1077,14 +1095,14 @@ class VFReader(WSIReader):
         )
 
         im_region = self.img[
-            level_location[1]:level_location[1] + baseline_read_size[1],
-            level_location[0]:level_location[0] + baseline_read_size[0],
+            level_location[1] : level_location[1] + baseline_read_size[1],
+            level_location[0] : level_location[0] + baseline_read_size[0],
             :,
         ]
 
-        im_region = transforms.imresize(img=im_region,
-                                        scale_factor=post_read_scale,
-                                        output_size=size)
+        im_region = transforms.imresize(
+            img=im_region, scale_factor=post_read_scale, output_size=size
+        )
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
@@ -1099,9 +1117,9 @@ class VFReader(WSIReader):
 
         im_region = self.img[start_y:end_y:stride, start_x:end_x:stride]
 
-        im_region = transforms.imresize(img=im_region,
-                                        scale_factor=post_read_scale,
-                                        output_size=output_size)
+        im_region = transforms.imresize(
+            img=im_region, scale_factor=post_read_scale, output_size=output_size
+        )
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
