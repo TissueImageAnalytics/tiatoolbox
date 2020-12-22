@@ -929,10 +929,12 @@ def test_openslide_objective_power_from_mpp(_sample_svs):
     del props["openslide.objective-power"]
     with pytest.warns(UserWarning, match=r"Objective power inferred"):
         _ = wsi._info()
+
     props["openslide.mpp-x"] = 10
     props["openslide.mpp-y"] = 10
     with pytest.warns(UserWarning, match=r"MPP outside of sensible range"):
         _ = wsi._info()
+
     del props["openslide.mpp-x"]
     del props["openslide.mpp-y"]
     with pytest.warns(UserWarning, match=r"Unable to determine objective power"):

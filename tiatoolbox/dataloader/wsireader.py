@@ -877,7 +877,14 @@ class OpenSlideWSIReader(WSIReader):
         # Fallback to calculating objective power from mpp
         if objective_power is None:
             if mpp is not None:
-                objective_power = misc.mpp2common_objective_power(np.mean(mpp))
+                try:
+                    objective_power = misc.mpp2objective_power(mpp)
+                except ValueError:
+                    warnings.warn(
+                        "Metadata: Unable to approximate objective power"
+                        " from microns-per-pixel (MPP)."
+                        " MPP outside of sensible range."
+                    )
                 warnings.warn(
                     "Metadata: Objective power inferred from microns-per-pixel (MPP)."
                 )

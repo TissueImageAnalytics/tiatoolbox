@@ -202,16 +202,23 @@ def get_luminosity_tissue_mask(img, threshold):
     return tissue_mask
 
 
-@np.vectorize
-def mpp2common_objective_power(
-    mpp, common_powers=(1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100)
-):
-    """Approximate (commonly used round value) of objective power from mpp.
+def mpp2objective_power(mpp):
+    """Approximate objective power from mpp.
+
+    Ranges for approximation::
+
+            mpp < 0.10 -> 100x
+    0.10 <= mpp < 0.15 -> 60x
+    0.15 <= mpp < 0.30 -> 40x
+    0.30 <= mpp < 0.60 -> 20x
+    0.60 <= mpp < 1.20 -> 10x
+    1.20 <= mpp < 2.40 -> 5x
+    2.40 <= mpp < 4.80 -> 2.5x
+    4.80 <= mpp < 9.60 -> 1.25x
+    9.60 <= mpp -> ValueError
 
     Args:
         mpp (float or tuple of float): Microns per-pixel.
-        common_powers (list of float): A sequence of objective
-            power values to round to.
 
     Returns:
         float: Objective power approximation.
@@ -219,43 +226,12 @@ def mpp2common_objective_power(
     Raises:
         ValueError
     """
-    op = mpp2objective_power(mpp)
-    distances = [np.abs(op - power) for power in common_powers]
-    closest_match = common_powers[np.argmin(distances)]
-    return closest_match
-
-
-@np.vectorize
-def objective_power2mpp(objective_power):
-    """Approximate mpp from objective_power.
-
-
-    Args:
-        objective_power (float or tuple of float): Objective power.
-
-    Returns:
-        float: Microns per-pixel (MPP) approximation.
-
-    Raises:
-        ValueError
-    """
-    return 10 / np.float(objective_power)
-
-
-@np.vectorize
-def mpp2objective_power(mpp):
-    """Approximate objective_power from mpp.
-
-    Alias to func:`objective_power2mpp` as it is a self-inverse function.
-
-
-    Args:
-        objective_power (float or tuple of float): Microns per-pixel.
-
-    Returns:
-        float: Objective power approximation.
-
-    Raises:
-        ValueError
-    """
-    return objective_power2mpp(mpp)
+    mpp = np.mean(mpp)
+    if mpp < 0.10:
+        return 100
+    if mpp < 0.15:
+        return 60
+    if mpp < 9.60:
+        # Double the objective power as mpp halves
+        return 10 * 2 ** (np.ceil(np.log2(0.15 / mpp)) + 2)
+    raise ValueError()
