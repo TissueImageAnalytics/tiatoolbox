@@ -1,4 +1,3 @@
-from tiatoolbox.dataloader import wsireader
 from tiatoolbox.dataloader.save_tiles import save_tiles
 from tiatoolbox import utils
 from tiatoolbox import cli
@@ -62,39 +61,6 @@ def test_save_tiles(_sample_all_wsis, tmp_path):
         pathlib.Path(tmp_path)
         .joinpath("tiles_save_tiles")
         .joinpath("CMU-1.ndpi")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
-
-
-def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
-    """Test for save_tiles in wsireader as a python function."""
-    wsi = wsireader.OmnyxJP2WSIReader(
-        _sample_jp2,
-        output_dir=str(
-            pathlib.Path(tmp_path).joinpath("test_wsireader_jp2_save_tiles")
-        ),
-        tile_objective_value=5,
-    )
-    wsi.save_tiles(verbose=True)
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("test_wsireader_jp2_save_tiles")
-        .joinpath("test1.jp2")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("test_wsireader_jp2_save_tiles")
-        .joinpath("test1.jp2")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("test_wsireader_jp2_save_tiles")
-        .joinpath("test1.jp2")
         .joinpath("Tile_5_0_0.jpg")
         .exists()
     )
