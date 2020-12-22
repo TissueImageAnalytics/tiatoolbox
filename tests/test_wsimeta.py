@@ -1,6 +1,7 @@
-from tiatoolbox.dataloader import wsimeta, wsireader
-
+import numpy as np
 import pytest
+
+from tiatoolbox.dataloader import wsimeta, wsireader
 
 
 # noinspection PyTypeChecker
@@ -23,10 +24,16 @@ def test_wsimeta_validate_fail():
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
@@ -65,3 +72,14 @@ def test_wsimeta_openslidewsireader_svs(_sample_svs, tmp_path):
     wsi_obj = wsireader.OpenSlideWSIReader(_sample_svs)
     meta = wsi_obj.info
     assert meta.validate()
+
+
+def test_wsimeta_setter(_sample_svs):
+    """Test setter for metadata."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    meta = wsi.info
+    assert not np.array_equal(meta.mpp, np.array([1, 1]))
+    meta.mpp = np.array([1, 1])
+    wsi.info = meta
+    assert meta.validate()
+    assert np.array_equal(wsi.info.mpp, np.array([1, 1]))
