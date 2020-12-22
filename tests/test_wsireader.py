@@ -94,7 +94,7 @@ def test_wsireader_slide_info(_sample_svs, tmp_path):
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
-def test_wsireader_slide_info_cache(_sample_svs, tmp_path):
+def test_wsireader_slide_info_cache(_sample_svs):
     """Test for caching slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
