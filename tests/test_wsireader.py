@@ -151,9 +151,8 @@ def test__relative_level_scales_jp2_mpp(_sample_jp2):
     assert all(level_scales[0] == wsi.info.mpp / 0.5)
 
 
-def test__relative_level_scales_openslide_power(_sample_ndpi):
-    """Test openslide calculation of relative level scales for objective power."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+def relative_level_scales_power(wsi):
+    """Calculation of relative level scales for objective power."""
     level_scales = wsi._relative_level_scales(wsi.info.objective_power, "power")
     level_scales = np.array(level_scales)
     assert strictly_increasing(level_scales[:, 0])
@@ -162,19 +161,18 @@ def test__relative_level_scales_openslide_power(_sample_ndpi):
     downsamples = np.array(wsi.info.level_downsamples)
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], downsamples)
+
+
+def test__relative_level_scales_openslide_power(_sample_ndpi):
+    """Test openslide calculation of relative level scales for objective power."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    relative_level_scales_power(wsi)
 
 
 def test__relative_level_scales_jp2_power(_sample_jp2):
     """Test jp2 calculation of relative level scales for objective power."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(wsi.info.objective_power, "power")
-    level_scales = np.array(level_scales)
-    assert strictly_increasing(level_scales[:, 0])
-    assert strictly_increasing(level_scales[:, 1])
-    assert np.array_equal(level_scales[0], [1, 1])
-    downsamples = np.array(wsi.info.level_downsamples)
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], downsamples)
+    relative_level_scales_power(wsi)
 
 
 def test__relative_level_scales_openslide_level(_sample_ndpi):
