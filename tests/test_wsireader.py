@@ -198,9 +198,8 @@ def test__relative_level_scales_jp2_level(_sample_jp2):
     relative_level_scales_level(wsi)
 
 
-def test__relative_level_scales_openslide_level_float(_sample_ndpi):
-    """Test openslide calculation of relative level scales for fracitonal level."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+def relative_level_scales_float(wsi):
+    """Calculation of relative level scales for fractional level."""
     level_scales = wsi._relative_level_scales(1.5, "level")
     level_scales = np.array(level_scales)
     assert level_scales[0] == approx([1 / 3, 1 / 3])
@@ -208,18 +207,18 @@ def test__relative_level_scales_openslide_level_float(_sample_ndpi):
     expected = downsamples / downsamples[0] * (1 / 3)
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], expected)
+
+
+def test__relative_level_scales_openslide_level_float(_sample_ndpi):
+    """Test openslide calculation of relative level scales for fractional level."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    relative_level_scales_float(wsi)
 
 
 def test__relative_level_scales_jp2_level_float(_sample_jp2):
-    """Test jp2 calculation of relative level scales for fracitonal level."""
+    """Test jp2 calculation of relative level scales for fractional level."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(1.5, "level")
-    level_scales = np.array(level_scales)
-    assert level_scales[0] == approx([1 / 3, 1 / 3])
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples / downsamples[0] * (1 / 3)
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+    relative_level_scales_float(wsi)
 
 
 def test__relative_level_scales_invalid_units(_sample_svs):
