@@ -107,9 +107,8 @@ def test_wsireader_slide_info_cache(_sample_svs):
     assert info.as_dict() == cached_info.as_dict()
 
 
-def test__relative_level_scales_openslide_baseline(_sample_ndpi):
-    """Test openslide relative level scales for pixels per baseline pixel."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+def relative_level_scales_baseline(wsi):
+    """Relative level scales for pixels per baseline pixel."""
     level_scales = wsi._relative_level_scales(0.125, "baseline")
     level_scales = np.array(level_scales)
     downsamples = np.array(wsi.info.level_downsamples)
@@ -118,19 +117,18 @@ def test__relative_level_scales_openslide_baseline(_sample_ndpi):
     assert strictly_increasing(level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], expected)
+
+
+def test__relative_level_scales_openslide_baseline(_sample_ndpi):
+    """Test openslide relative level scales for pixels per baseline pixel."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    relative_level_scales_baseline(wsi)
 
 
 def test__relative_level_scales_jp2_baseline(_sample_jp2):
     """Test jp2 relative level scales for pixels per baseline pixel."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(0.125, "baseline")
-    level_scales = np.array(level_scales)
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples * 0.125
-    assert strictly_increasing(level_scales[:, 0])
-    assert strictly_increasing(level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+    relative_level_scales_baseline(wsi)
 
 
 def test__relative_level_scales_openslide_mpp(_sample_ndpi):
