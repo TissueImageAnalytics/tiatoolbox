@@ -22,7 +22,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-import tiatoolbox
+import tiatoolbox  # noqa: E402
 
 # -- General configuration ---------------------------------------------
 
@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.mathjax",
     "recommonmark",
 ]
 

@@ -208,39 +208,95 @@ def get_luminosity_tissue_mask(img, threshold):
     return tissue_mask
 
 
-def mpp2objective_power(mpp):
-    """Approximate objective power from mpp.
+def mpp2common_objective_power(
+    mpp, common_powers=(1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100)
+):
+    """Approximate (commonly used value) of objective power from mpp.
 
-    Ranges for approximation::
-
-            mpp < 0.10 -> 100x
-    0.10 <= mpp < 0.15 -> 60x
-    0.15 <= mpp < 0.30 -> 40x
-    0.30 <= mpp < 0.60 -> 20x
-    0.60 <= mpp < 1.20 -> 10x
-    1.20 <= mpp < 2.40 -> 5x
-    2.40 <= mpp < 4.80 -> 2.5x
-    4.80 <= mpp < 9.60 -> 1.25x
-    9.60 <= mpp -> ValueError
+    Uses :func:`mpp2objective_power` to estimate and then rounds to the
+    nearest value in `common_powers`.
 
     Args:
         mpp (float or tuple of float): Microns per-pixel.
+        common_powers (list of float): A sequence of objective
+            power values to round to. Defaults to
+            (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
     Returns:
         float: Objective power approximation.
 
-    Raises:
-        ValueError
+    Examples:
+        >>> mpp2common_objective_power(0.253)
+        array(40)
+
+        >>> mpp2common_objective_power(
+        ...     [0.253, 0.478],
+        ...     common_powers=(10, 20, 40),
+        ... )
+        array([40, 20])
     """
-    mpp = np.mean(mpp)
-    if mpp < 0.10:
-        return 100
-    if mpp < 0.15:
-        return 60
-    if mpp < 9.60:
-        # Double the objective power as mpp halves
-        return 10 * 2 ** (np.ceil(np.log2(0.15 / mpp)) + 2)
-    raise ValueError()
+    op = mpp2objective_power(mpp)
+    distances = [np.abs(op - power) for power in common_powers]
+    closest_match = common_powers[np.argmin(distances)]
+    return closest_match
+
+
+mpp2common_objective_power = np.vectorize(
+    mpp2common_objective_power, excluded={"common_powers"}
+)
+
+
+@np.vectorize
+def objective_power2mpp(objective_power):
+    """Approximate mpp from objective power.
+
+    The formula used for estimation is :math:`power = \\frac{10}{mpp}`.
+    This is a self-inverse function and therefore
+    :func:`mpp2objective_power` is simply an alias to this function.
+
+    Note that this function is wrapped in :class:`numpy.vectorize`.
+
+    Args:
+        objective_power (float or tuple of float): Objective power.
+
+    Returns:
+        np.ndarray: Microns per-pixel (MPP) approximations.
+
+    Examples:
+        >>> objective_power2mpp(40)
+        array(0.25)
+
+        >>> objective_power2mpp([40, 20, 10])
+        array([0.25, 0.5, 1.])
+    """
+    return 10 / np.float(objective_power)
+
+
+@np.vectorize
+def mpp2objective_power(mpp):
+    """Approximate objective power from mpp.
+
+    Alias to :func:`objective_power2mpp` as it is a self-inverse
+    function.
+
+
+    Args:
+        objective_power (float or tuple of float): Microns per-pixel.
+
+    Returns:
+        np.ndarray: Objective power approximations.
+
+    Examples:
+        >>> objective_power2mpp(0.25)
+        array(40.)
+
+        >>> objective_power2mpp([0.25, 0.5, 1.0])
+        array([40., 20., 10.])
+
+        >>> objective_power2mpp(0.253)
+        array(39.5256917)
+    """
+    return objective_power2mpp(mpp)
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
