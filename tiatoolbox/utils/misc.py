@@ -19,18 +19,21 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from tiatoolbox.utils.exceptions import FileNotSupported
+
 import cv2
 import pathlib
 import yaml
 import pandas as pd
 import numpy as np
+from skimage import exposure
 
 
 def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extension.
 
     Args:
-        full_path (str): Path to a file
+        full_path (str or pathlib.Path): Path to a file
 
     Returns:
         tuple: Three sections of the input file path
@@ -153,24 +156,26 @@ def load_stain_matrix(stain_matrix_input):
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> stain_matrix = utils.misc.load_stain_matrix(stain_matrix_input)
+        >>> sm = utils.misc.load_stain_matrix(stain_matrix_input)
 
     """
-    if isinstance(stain_matrix_input, str):
+    if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, ext = split_path_name_ext(stain_matrix_input)
-        if ext == "csv":
-            stain_matrix = np.array(pd.read_csv(stain_matrix_input, header=None))
-        elif ext == "npy":
-            stain_matrix = np.load(stain_matrix_input)
+        if ext == ".csv":
+            stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
+        elif ext == ".npy":
+            stain_matrix = np.load(str(stain_matrix_input))
         else:
-            raise Exception(
+            raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
     elif isinstance(stain_matrix_input, np.ndarray):
         stain_matrix = stain_matrix_input
     else:
-        raise Exception("stain_matrix must be either a path or a numpy array")
+        raise TypeError(
+            "Stain_matrix must be either a path to npy/csv file or a numpy array"
+        )
 
     return stain_matrix
 
@@ -191,13 +196,14 @@ def get_luminosity_tissue_mask(img, threshold):
 
     """
     img = img.astype("uint8")  # ensure input image is uint8
+    img = contrast_enhancer(img, low_p=2, high_p=98)  # Contrast  enhancement
     img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     l_lab = img_lab[:, :, 0] / 255.0  # Convert to range [0,1].
     tissue_mask = l_lab < threshold
 
     # check it's not empty
     if tissue_mask.sum() == 0:
-        raise Exception("Empty tissue mask computed")
+        raise ValueError("Empty tissue mask computed")
 
     return tissue_mask
 
@@ -291,3 +297,36 @@ def mpp2objective_power(mpp):
         array(39.5256917)
     """
     return objective_power2mpp(mpp)
+
+
+def contrast_enhancer(img, low_p=2, high_p=98):
+    """Enhancing contrast of the input RGB image using intensity adjustment.
+       This method uses both image low and high percentiles.
+
+    Args:
+        img (ndarray): input image used to obtain tissue mask.
+            Image should be RGB uint8.
+        low_p (scalar): low percentile of image values to be saturated to 0.
+        high_p (scalar): high percentile of image values to be saturated to 255.
+            high_p should always be greater than low_p.
+
+    Returns:
+        img (ndarray): Image uint8 RGB with contrast enhanced.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> img = utils.misc.contrast_enhancer(img, low_p=2, high_p=98)
+
+    """
+    # check if image is not uint8
+    if not img.dtype == np.uint8:
+        raise Exception("Image should be RGB uint8.")
+    img_out = img.copy()
+    p_low, p_high = np.percentile(img_out, (low_p, high_p))
+    if p_low >= p_high:
+        p_low, p_high = np.min(img_out), np.max(img_out)
+    if p_high > p_low:
+        img_out = exposure.rescale_intensity(
+            img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
+        )
+    return np.uint8(img_out)
