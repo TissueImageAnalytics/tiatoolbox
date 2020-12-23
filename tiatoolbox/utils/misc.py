@@ -159,9 +159,7 @@ def load_stain_matrix(stain_matrix_input):
         >>> sm = utils.misc.load_stain_matrix(stain_matrix_input)
 
     """
-    if isinstance(stain_matrix_input, str) or isinstance(
-        stain_matrix_input, pathlib.Path
-    ):
+    if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, ext = split_path_name_ext(stain_matrix_input)
         if ext == ".csv":
             stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
