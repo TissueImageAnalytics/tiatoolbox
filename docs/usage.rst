@@ -20,7 +20,7 @@ Reading WSI Image Data
 .. autoclass:: OmnyxJP2WSIReader
     :show-inheritance:
 
-.. autoclass:: VFReader
+.. autoclass:: VirtualWSIReader
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -49,22 +49,7 @@ Stain Normalisation
 ^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, get_normaliser
-    :show-inheritance:
-
-.. autoclass:: CustomNormaliser
-    :show-inheritance:
-
-.. autoclass:: RuifrokNormaliser
-    :show-inheritance:
-
-.. autoclass:: MacenkoNormaliser
-    :show-inheritance:
-
-.. autoclass:: VahadaneNormaliser
-    :show-inheritance:
-
-.. autoclass:: ReinhardNormaliser
+    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -101,7 +86,11 @@ Miscellaneous
 -------------
 
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, imread, get_luminosity_tissue_mask
+    :members:
+
+    .. autofunction:: mpp2objective_power(mpp)
+    .. autofunction:: objective_power2mpp(objective_power)
+    .. autofunction:: mpp2common_objective_power(mpp, common_powers)
 
 ----------
 Transforms

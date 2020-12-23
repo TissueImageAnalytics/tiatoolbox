@@ -64,7 +64,7 @@ def background_composite(image, fill=255, alpha=False):
     return composite
 
 
-def imresize(img, scale_factor=None, output_size=None, interpolation='optimise'):
+def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
     """Resize input image.
 
     Args:
@@ -96,7 +96,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation='optimise')
 
     # Optimise interpolation
     if np.any(scale_factor != 1.0):
-        if interpolation == 'optimise':
+        if interpolation == "optimise":
             if np.any(scale_factor > 1.0):
                 interpolation = cv2.INTER_CUBIC
             else:
