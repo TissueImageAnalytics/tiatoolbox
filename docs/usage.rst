@@ -20,7 +20,7 @@ Reading WSI Image Data
 .. autoclass:: OmnyxJP2WSIReader
     :show-inheritance:
 
-.. autoclass:: VFReader
+.. autoclass:: VirtualWSIReader
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
