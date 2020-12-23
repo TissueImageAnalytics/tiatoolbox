@@ -71,7 +71,11 @@ Miscellaneous
 -------------
 
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, imread, get_luminosity_tissue_mask
+    :members:
+
+    .. autofunction:: mpp2objective_power(mpp)
+    .. autofunction:: objective_power2mpp(objective_power)
+    .. autofunction:: mpp2common_objective_power(mpp, common_powers)
 
 ----------
 Transforms
