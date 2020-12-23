@@ -56,6 +56,7 @@ def test_mpp2objective_power(_sample_svs):
 
 def test_contrast_enhancer():
     """"Test contrast enhancement funcitionality."""
+    # input array to the contrast_enhancer function
     input_array = np.array(
         [
             [[37, 244, 193], [106, 235, 128], [71, 140, 47]],
@@ -64,7 +65,7 @@ def test_contrast_enhancer():
         ],
         dtype=np.uint8,
     )
-
+    # expected output of the contrast_enhancer
     result_array = np.array(
         [
             [[35, 255, 203], [110, 248, 133], [72, 146, 46]],
@@ -73,6 +74,7 @@ def test_contrast_enhancer():
         ],
         dtype=np.uint8,
     )
-
+    # calculating the contrast enhanced version of input_array
     output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
+    # the out_put array should be equal to expected seult_array
     assert np.all(result_array == output_array)
