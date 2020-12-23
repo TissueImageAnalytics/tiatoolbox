@@ -958,8 +958,8 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_VFReader():
-    """Test VFReader"""
+def test_VirtualWSIReader():
+    """Test VirtualWSIReader"""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     with pytest.warns(UserWarning, match=r"Unknown scale"):
@@ -976,8 +976,8 @@ def test_VFReader():
     assert img.shape == (50, 100, 3)
 
 
-def test_VFReader_read_bounds():
-    """Test VFReader read bounds"""
+def test_VirtualWSIReader_read_bounds():
+    """Test VirtualWSIReader read bounds"""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
@@ -996,8 +996,8 @@ def test_VFReader_read_bounds():
         _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
 
 
-def test_VFReader_read_rect():
-    """Test VFReader read bounds"""
+def test_VirtualWSIReader_read_rect():
+    """Test VirtualWSIReader read bounds"""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
