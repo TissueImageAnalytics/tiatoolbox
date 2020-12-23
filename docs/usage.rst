@@ -50,7 +50,6 @@ Stain Normalisation
 
 .. automodule:: tiatoolbox.tools.stainnorm
     :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
-    :special-members: __init__
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
