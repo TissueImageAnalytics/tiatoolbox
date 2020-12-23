@@ -54,7 +54,7 @@ class WSIReader:
 
     def __init__(
         self,
-        input_img=".",
+        input_img,
     ):
 
         self.input_path = pathlib.Path(input_img)
@@ -773,7 +773,7 @@ class OpenSlideWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img=".",
+        input_img,
     ):
         super().__init__(
             input_img=input_img,
@@ -928,7 +928,7 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi (:obj:`glymur.Jp2k`)
     """
 
-    def __init__(self, input_img="."):
+    def __init__(self, input_img):
         super().__init__(
             input_img=input_img,
         )
@@ -1063,7 +1063,7 @@ class VirtualWSIReader(WSIReader):
 
     """
 
-    def __init__(self, input_img="."):
+    def __init__(self, input_img):
         super().__init__(
             input_img=input_img,
         )
