@@ -19,6 +19,8 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from tiatoolbox.utils.exceptions import FileNotSupported
+
 import cv2
 import pathlib
 import yaml
@@ -164,14 +166,16 @@ def load_stain_matrix(stain_matrix_input):
         elif ext == "npy":
             stain_matrix = np.load(stain_matrix_input)
         else:
-            raise Exception(
+            raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
     elif isinstance(stain_matrix_input, np.ndarray):
         stain_matrix = stain_matrix_input
     else:
-        raise Exception("stain_matrix must be either a path or a numpy array")
+        raise ValueError(
+            "Stain_matrix must be either a path to npy/csv file or a numpy array"
+        )
 
     return stain_matrix
 
@@ -266,6 +270,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     if p_low >= p_high:
         p_low, p_high = np.min(img_out), np.max(img_out)
     if p_high > p_low:
-        img_out = exposure.rescale_intensity(img_out, in_range=(p_low, p_high),
-                                             out_range=(0., 255.))
+        img_out = exposure.rescale_intensity(
+            img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
+        )
     return np.uint8(img_out)

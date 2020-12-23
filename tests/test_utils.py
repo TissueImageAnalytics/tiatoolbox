@@ -1,4 +1,5 @@
 from tiatoolbox import utils
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pytest
 import numpy as np
@@ -76,3 +77,12 @@ def test_contrast_enhancer():
 
     output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
     assert np.all(result_array == output_array)
+
+
+def test_load_stain_matrix():
+    with pytest.raises(FileNotSupported):
+        utils.misc.load_stain_matrix("/samplefile.xlsx")
+
+    with pytest.raises(ValueError):
+        # load_stain_matrix requires numpy array as input providing list here
+        utils.misc.load_stain_matrix([1, 2, 3])
