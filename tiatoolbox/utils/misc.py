@@ -242,7 +242,7 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(objective_power):
-    """Approximate mpp from objective_power.
+    """Approximate mpp from objective power.
 
     The formula used for estimation is :math:`power = \\frac{10}{mpp}`.
     This is a self-inverse function and therefore
@@ -268,7 +268,7 @@ def objective_power2mpp(objective_power):
 
 @np.vectorize
 def mpp2objective_power(mpp):
-    """Approximate objective_power from mpp.
+    """Approximate objective power from mpp.
 
     Alias to :func:`objective_power2mpp` as it is a self-inverse
     function.
