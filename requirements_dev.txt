@@ -21,6 +21,8 @@ pyyaml
 pandas
 glymur
 scikit-image
+scikit-learn==0.23.2
+recommonmark
 pre-commit
 black
 flake8-bugbear
