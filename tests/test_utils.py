@@ -83,6 +83,11 @@ def test_load_stain_matrix():
     with pytest.raises(FileNotSupported):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         # load_stain_matrix requires numpy array as input providing list here
         utils.misc.load_stain_matrix([1, 2, 3])
+
+
+def test_get_luminosity_tissue_mask():
+    with pytest.raises(ValueError):
+        utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)

@@ -173,7 +173,7 @@ def load_stain_matrix(stain_matrix_input):
     elif isinstance(stain_matrix_input, np.ndarray):
         stain_matrix = stain_matrix_input
     else:
-        raise ValueError(
+        raise TypeError(
             "Stain_matrix must be either a path to npy/csv file or a numpy array"
         )
 
@@ -203,7 +203,7 @@ def get_luminosity_tissue_mask(img, threshold):
 
     # check it's not empty
     if tissue_mask.sum() == 0:
-        raise Exception("Empty tissue mask computed")
+        raise ValueError("Empty tissue mask computed")
 
     return tissue_mask
 
