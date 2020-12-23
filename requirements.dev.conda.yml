@@ -23,5 +23,11 @@ dependencies:
   - scikit-learn==0.23.2
   - pytest==5.4.2
   - pytest-runner==5.2
+  - pre-commit
+  - flake8
+  - flake8-bugbear
+  - black
+  - pytest-cov
+  - jupyterlab
   - pip:
       - openslide-python==1.1.2

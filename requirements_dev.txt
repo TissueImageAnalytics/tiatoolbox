@@ -10,6 +10,7 @@ twine==1.14.0
 Click>=7.0
 pytest==5.4.2
 pytest-runner==5.2
+pytest-cov
 opencv-python>=4.0
 openslide-python==1.1.2
 pytest-cov==2.9.0
@@ -19,3 +20,7 @@ matplotlib
 pyyaml
 pandas
 glymur
+pre-commit
+black
+flake8-bugbear
+jupyterlab
