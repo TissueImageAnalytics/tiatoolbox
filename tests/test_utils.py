@@ -1,13 +1,11 @@
-import random
-from pathlib import Path
+from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 
+import random
 import pytest
 import numpy as np
-
-from tiatoolbox import utils
 import pandas as pd
-import pathlib
+from pathlib import Path
 
 
 def test_imresize():
@@ -257,18 +255,12 @@ def test_load_stain_matrix(tmp_path):
         utils.misc.load_stain_matrix([1, 2, 3])
 
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-    pd.DataFrame(stain_matrix).to_csv(
-        pathlib.Path(tmp_path).joinpath("sm.csv"), index=False
-    )
-    out_stain_matrix = utils.misc.load_stain_matrix(
-        pathlib.Path(tmp_path).joinpath("sm.csv")
-    )
+    pd.DataFrame(stain_matrix).to_csv(Path(tmp_path).joinpath("sm.csv"), index=False)
+    out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.csv"))
     assert np.all(out_stain_matrix == stain_matrix)
 
-    np.save(pathlib.Path(tmp_path).joinpath("sm.npy"), stain_matrix)
-    out_stain_matrix = utils.misc.load_stain_matrix(
-        pathlib.Path(tmp_path).joinpath("sm.npy")
-    )
+    np.save(Path(tmp_path).joinpath("sm.npy"), stain_matrix)
+    out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.npy"))
     assert np.all(out_stain_matrix == stain_matrix)
 
 
