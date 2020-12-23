@@ -33,7 +33,7 @@ def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extension.
 
     Args:
-        full_path (str): Path to a file
+        full_path (str or pathlib.Path): Path to a file
 
     Returns:
         tuple: Three sections of the input file path
@@ -156,15 +156,17 @@ def load_stain_matrix(stain_matrix_input):
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> stain_matrix = utils.misc.load_stain_matrix(stain_matrix_input)
+        >>> sm = utils.misc.load_stain_matrix(stain_matrix_input)
 
     """
-    if isinstance(stain_matrix_input, str):
+    if isinstance(stain_matrix_input, str) or isinstance(
+        stain_matrix_input, pathlib.Path
+    ):
         _, __, ext = split_path_name_ext(stain_matrix_input)
-        if ext == "csv":
-            stain_matrix = np.array(pd.read_csv(stain_matrix_input, header=None))
-        elif ext == "npy":
-            stain_matrix = np.load(stain_matrix_input)
+        if ext == ".csv":
+            stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
+        elif ext == ".npy":
+            stain_matrix = np.load(str(stain_matrix_input))
         else:
             raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \

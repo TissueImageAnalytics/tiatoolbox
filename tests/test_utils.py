@@ -3,6 +3,8 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pytest
 import numpy as np
+import pandas as pd
+import pathlib
 
 
 def test_imresize():
@@ -79,13 +81,28 @@ def test_contrast_enhancer():
     assert np.all(result_array == output_array)
 
 
-def test_load_stain_matrix():
+def test_load_stain_matrix(tmp_path):
     with pytest.raises(FileNotSupported):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
 
     with pytest.raises(TypeError):
         # load_stain_matrix requires numpy array as input providing list here
         utils.misc.load_stain_matrix([1, 2, 3])
+
+    stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+    pd.DataFrame(stain_matrix).to_csv(
+        pathlib.Path(tmp_path).joinpath("sm.csv"), index=False
+    )
+    out_stain_matrix = utils.misc.load_stain_matrix(
+        pathlib.Path(tmp_path).joinpath("sm.csv")
+    )
+    assert np.all(out_stain_matrix == stain_matrix)
+
+    np.save(pathlib.Path(tmp_path).joinpath("sm.npy"), stain_matrix)
+    out_stain_matrix = utils.misc.load_stain_matrix(
+        pathlib.Path(tmp_path).joinpath("sm.npy")
+    )
+    assert np.all(out_stain_matrix == stain_matrix)
 
 
 def test_get_luminosity_tissue_mask():
