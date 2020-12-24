@@ -338,7 +338,7 @@ class ReinhardNormaliser:
 
 
 def get_normaliser(method_name, stain_matrix=None):
-    """Return a stain normaliser object with corresponding name.
+    """Return a :class:`.StainNormaliser` with corresponding name.
 
     Args:
         method_name (str) : name of stain norm method, must be one of "reinhard",
