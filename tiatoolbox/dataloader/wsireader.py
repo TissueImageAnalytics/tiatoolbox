@@ -49,7 +49,7 @@ class WSIReader:
         input_img (pathlib.Path): Input path to WSI file.
 
     Args:
-        input_img (str, pathlib.Path): input path to WSI.
+        input_img (str, pathlib.Path, ndarray): input path to WSI.
 
     """
 
@@ -57,8 +57,10 @@ class WSIReader:
         self,
         input_img,
     ):
-
-        self.input_path = pathlib.Path(input_img)
+        if isinstance(input_img, np.ndarray):
+            self.input_path = None
+        else:
+            self.input_path = pathlib.Path(input_img)
 
     @property
     def info(self):
@@ -1063,7 +1065,6 @@ class VirtualWSIReader(WSIReader):
         )
         if isinstance(input_img, np.ndarray):
             self.img = input_img
-            self.input_path = None
         else:
             self.img = misc.imread(self.input_path)
 
