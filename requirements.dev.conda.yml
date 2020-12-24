@@ -28,5 +28,6 @@ dependencies:
   - flake8-bugbear
   - black
   - pytest-cov
+  - jupyterlab
   - pip:
       - openslide-python==1.1.2

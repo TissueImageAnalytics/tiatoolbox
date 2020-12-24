@@ -10,6 +10,22 @@ import cv2
 from click.testing import CliRunner
 
 # -------------------------------------------------------------------------------------
+# Constants
+# -------------------------------------------------------------------------------------
+
+NDPI_TEST_TISSUE_BOUNDS = (30400, 11810, 30912, 12322)
+NDPI_TEST_TISSUE_LOCATION = (30400, 11810)
+NDPI_TEST_TISSUE_SIZE = (512, 512)
+
+SVS_TEST_TISSUE_BOUNDS = (1000, 2000, 2000, 3000)
+SVS_TEST_TISSUE_LOCATION = (1000, 2000)
+SVS_TEST_TISSUE_SIZE = (1000, 1000)
+
+JP2_TEST_TISSUE_BOUNDS = (32768, 42880, 33792, 43904)
+JP2_TEST_TISSUE_LOCATION = (32768, 42880)
+JP2_TEST_TISSUE_SIZE = (1024, 1024)
+
+# -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
 
@@ -69,7 +85,8 @@ def test_wsireader_slide_info(_sample_svs, tmp_path):
     """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_param = wsi.info
@@ -77,9 +94,21 @@ def test_wsireader_slide_info(_sample_svs, tmp_path):
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
-def test__relative_level_scales_openslide_baseline(_sample_ndpi):
-    """Test openslide relative level scales for pixels per baseline pixel."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+def test_wsireader_slide_info_cache(_sample_svs):
+    """Test for caching slide_info in WSIReader class as a python function."""
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
+    )
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
+    info = wsi.info
+    cached_info = wsi.info
+    assert info.as_dict() == cached_info.as_dict()
+
+
+def relative_level_scales_baseline(wsi):
+    """Relative level scales for pixels per baseline pixel."""
     level_scales = wsi._relative_level_scales(0.125, "baseline")
     level_scales = np.array(level_scales)
     downsamples = np.array(wsi.info.level_downsamples)
@@ -88,19 +117,18 @@ def test__relative_level_scales_openslide_baseline(_sample_ndpi):
     assert strictly_increasing(level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], expected)
+
+
+def test__relative_level_scales_openslide_baseline(_sample_ndpi):
+    """Test openslide relative level scales for pixels per baseline pixel."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    relative_level_scales_baseline(wsi)
 
 
 def test__relative_level_scales_jp2_baseline(_sample_jp2):
     """Test jp2 relative level scales for pixels per baseline pixel."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(0.125, "baseline")
-    level_scales = np.array(level_scales)
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples * 0.125
-    assert strictly_increasing(level_scales[:, 0])
-    assert strictly_increasing(level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+    relative_level_scales_baseline(wsi)
 
 
 def test__relative_level_scales_openslide_mpp(_sample_ndpi):
@@ -123,9 +151,8 @@ def test__relative_level_scales_jp2_mpp(_sample_jp2):
     assert all(level_scales[0] == wsi.info.mpp / 0.5)
 
 
-def test__relative_level_scales_openslide_power(_sample_ndpi):
-    """Test openslide calculation of relative level scales for objective power."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+def relative_level_scales_power(wsi):
+    """Calculation of relative level scales for objective power."""
     level_scales = wsi._relative_level_scales(wsi.info.objective_power, "power")
     level_scales = np.array(level_scales)
     assert strictly_increasing(level_scales[:, 0])
@@ -134,67 +161,64 @@ def test__relative_level_scales_openslide_power(_sample_ndpi):
     downsamples = np.array(wsi.info.level_downsamples)
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], downsamples)
+
+
+def test__relative_level_scales_openslide_power(_sample_ndpi):
+    """Test openslide calculation of relative level scales for objective power."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    relative_level_scales_power(wsi)
 
 
 def test__relative_level_scales_jp2_power(_sample_jp2):
     """Test jp2 calculation of relative level scales for objective power."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(wsi.info.objective_power, "power")
+    relative_level_scales_power(wsi)
+
+
+def relative_level_scales_level(wsi):
+    """Calculation of relative level scales for level."""
+    level_scales = wsi._relative_level_scales(3, "level")
     level_scales = np.array(level_scales)
-    assert strictly_increasing(level_scales[:, 0])
-    assert strictly_increasing(level_scales[:, 1])
-    assert np.array_equal(level_scales[0], [1, 1])
+    assert np.array_equal(level_scales[3], [1, 1])
     downsamples = np.array(wsi.info.level_downsamples)
+    expected = downsamples / downsamples[3]
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], downsamples)
+    assert np.array_equal(level_scales[:, 0], expected)
 
 
 def test__relative_level_scales_openslide_level(_sample_ndpi):
     """Test openslide calculation of relative level scales for level."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    level_scales = wsi._relative_level_scales(3, "level")
-    level_scales = np.array(level_scales)
-    assert np.array_equal(level_scales[3], [1, 1])
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples / downsamples[3]
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+    relative_level_scales_level(wsi)
 
 
 def test__relative_level_scales_jp2_level(_sample_jp2):
     """Test jp2 calculation of relative level scales for level."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(3, "level")
+    relative_level_scales_level(wsi)
+
+
+def relative_level_scales_float(wsi):
+    """Calculation of relative level scales for fractional level."""
+    level_scales = wsi._relative_level_scales(1.5, "level")
     level_scales = np.array(level_scales)
-    assert np.array_equal(level_scales[3], [1, 1])
+    assert level_scales[0] == approx([1 / 3, 1 / 3])
     downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples / downsamples[3]
+    expected = downsamples / downsamples[0] * (1 / 3)
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
     assert np.array_equal(level_scales[:, 0], expected)
 
 
 def test__relative_level_scales_openslide_level_float(_sample_ndpi):
-    """Test openslide calculation of relative level scales for fracitonal level."""
+    """Test openslide calculation of relative level scales for fractional level."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    level_scales = wsi._relative_level_scales(1.5, "level")
-    level_scales = np.array(level_scales)
-    assert level_scales[0] == approx([1 / 3, 1 / 3])
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples / downsamples[0] * (1 / 3)
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+    relative_level_scales_float(wsi)
 
 
 def test__relative_level_scales_jp2_level_float(_sample_jp2):
-    """Test jp2 calculation of relative level scales for fracitonal level."""
+    """Test jp2 calculation of relative level scales for fractional level."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    level_scales = wsi._relative_level_scales(1.5, "level")
-    level_scales = np.array(level_scales)
-    assert level_scales[0] == approx([1 / 3, 1 / 3])
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples / downsamples[0] * (1 / 3)
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+    relative_level_scales_float(wsi)
 
 
 def test__relative_level_scales_invalid_units(_sample_svs):
@@ -208,6 +232,8 @@ def test__relative_level_scales_no_mpp():
     """Test _relative_level_scales objective when mpp is None."""
 
     class DummyWSI:
+        """Mock WSIReader for testing."""
+
         _relative_level_scales = wsireader.WSIReader._relative_level_scales
 
         @property
@@ -223,6 +249,8 @@ def test__relative_level_scales_no_objective_power():
     """Test _relative_level_scales objective when objective power is None."""
 
     class DummyWSI:
+        """Mock WSIReader for testing."""
+
         _relative_level_scales = wsireader.WSIReader._relative_level_scales
 
         @property
@@ -316,12 +344,15 @@ def test_find_read_rect_params_power(_sample_ndpi):
     """Test finding read rect parameters for objective power."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
 
-    location = (0, 0)
-    size = (256, 256)
+    location = NDPI_TEST_TISSUE_LOCATION
+    size = NDPI_TEST_TISSUE_SIZE
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
         (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
-            location=location, size=size, resolution=target_scale, units="power",
+            location=location,
+            size=size,
+            resolution=target_scale,
+            units="power",
         )
         assert level >= 0
         assert level < wsi.info.level_count
@@ -334,12 +365,15 @@ def test_find_read_rect_params_mpp(_sample_ndpi):
     """Test finding read rect parameters for objective mpp."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
 
-    location = (0, 0)
-    size = (256, 256)
+    location = NDPI_TEST_TISSUE_LOCATION
+    size = NDPI_TEST_TISSUE_SIZE
     # Test a range of MPP
     for target_scale in range(1, 10):
         (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
-            location=location, size=size, resolution=target_scale, units="mpp",
+            location=location,
+            size=size,
+            resolution=target_scale,
+            units="mpp",
         )
         assert level >= 0
         assert level < wsi.info.level_count
@@ -354,13 +388,13 @@ def test_read_rect_openslide_baseline(_sample_ndpi):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    location = (1000, 2000)
-    size = (1000, 1000)
+    location = NDPI_TEST_TISSUE_LOCATION
+    size = NDPI_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
 
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
-    assert im_region.shape == (1000, 1000, 3)
+    assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_rect_jp2_baseline(_sample_jp2):
@@ -369,13 +403,13 @@ def test_read_rect_jp2_baseline(_sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    location = (1000, 2000)
-    size = (1000, 1000)
+    location = JP2_TEST_TISSUE_LOCATION
+    size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
 
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
-    assert im_region.shape == (1000, 1000, 3)
+    assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_rect_openslide_levels(_sample_ndpi):
@@ -384,14 +418,14 @@ def test_read_rect_openslide_levels(_sample_ndpi):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    location = (1000, 2000)
-    size = (256, 256)
+    location = NDPI_TEST_TISSUE_LOCATION
+    size = NDPI_TEST_TISSUE_SIZE
     for level in range(wsi.info.level_count):
         im_region = wsi.read_rect(location, size, resolution=level, units="level")
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert im_region.shape == (256, 256, 3)
+        assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_rect_jp2_levels(_sample_jp2):
@@ -400,15 +434,35 @@ def test_read_rect_jp2_levels(_sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    location = (1000, 2000)
-    size = (256, 256)
+    location = (0, 0)
+    size = JP2_TEST_TISSUE_SIZE
+    width, height = size
     for level in range(wsi.info.level_count):
         level_width, level_height = wsi.info.level_dimensions[level]
         im_region = wsi.read_rect(location, size, resolution=level, units="level")
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert im_region.shape == (min(256, level_height), min(256, level_width), 3)
+        assert approx(
+            im_region.shape,
+            (
+                min(height, level_height),
+                min(width, level_width),
+                3,
+            ),
+            abs=1,
+        )
+
+
+def read_rect_mpp(wsi, location, size):
+    """Read rect with resolution in microns per pixel."""
+    for factor in range(1, 10):
+        mpp = wsi.info.mpp * factor
+        im_region = wsi.read_rect(location, size, resolution=mpp, units="mpp")
+
+        assert isinstance(im_region, np.ndarray)
+        assert im_region.dtype == "uint8"
+        assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_rect_openslide_mpp(_sample_ndpi):
@@ -417,15 +471,9 @@ def test_read_rect_openslide_mpp(_sample_ndpi):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    location = (1000, 2000)
-    size = (256, 256)
-    for factor in range(1, 10):
-        mpp = wsi.info.mpp * factor
-        im_region = wsi.read_rect(location, size, resolution=mpp, units="mpp")
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        assert im_region.shape == (256, 256, 3)
+    location = NDPI_TEST_TISSUE_LOCATION
+    size = NDPI_TEST_TISSUE_SIZE
+    read_rect_mpp(wsi, location, size)
 
 
 def test_read_rect_jp2_mpp(_sample_jp2):
@@ -434,15 +482,9 @@ def test_read_rect_jp2_mpp(_sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    location = (1000, 2000)
-    size = (256, 256)
-    for factor in range(1, 10):
-        mpp = wsi.info.mpp * factor
-        im_region = wsi.read_rect(location, size, resolution=mpp, units="mpp")
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        assert im_region.shape == (256, 256, 3)
+    location = JP2_TEST_TISSUE_LOCATION
+    size = JP2_TEST_TISSUE_SIZE
+    read_rect_mpp(wsi, location, size)
 
 
 def test_read_rect_openslide_objective_power(_sample_ndpi):
@@ -451,8 +493,8 @@ def test_read_rect_openslide_objective_power(_sample_ndpi):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    location = (0, 0)
-    size = (256, 256)
+    location = NDPI_TEST_TISSUE_LOCATION
+    size = NDPI_TEST_TISSUE_SIZE
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         im_region = wsi.read_rect(
             location, size, resolution=objective_power, units="power"
@@ -460,7 +502,7 @@ def test_read_rect_openslide_objective_power(_sample_ndpi):
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert im_region.shape == (256, 256, 3)
+        assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_rect_jp2_objective_power(_sample_jp2):
@@ -469,8 +511,8 @@ def test_read_rect_jp2_objective_power(_sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    location = (0, 0)
-    size = (256, 256)
+    location = JP2_TEST_TISSUE_LOCATION
+    size = JP2_TEST_TISSUE_SIZE
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         im_region = wsi.read_rect(
             location, size, resolution=objective_power, units="mpp"
@@ -478,7 +520,7 @@ def test_read_rect_jp2_objective_power(_sample_jp2):
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert im_region.shape == (256, 256, 3)
+        assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_bounds_openslide_baseline(_sample_ndpi):
@@ -487,12 +529,13 @@ def test_read_bounds_openslide_baseline(_sample_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = NDPI_TEST_TISSUE_BOUNDS
+    size = NDPI_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
 
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
-    assert im_region.shape == (1000, 1000, 3)
+    assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_bounds_jp2_baseline(_sample_jp2):
@@ -501,12 +544,13 @@ def test_read_bounds_jp2_baseline(_sample_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = JP2_TEST_TISSUE_BOUNDS
+    size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
 
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
-    assert im_region.shape == (1000, 1000, 3)
+    assert im_region.shape == (*size[::-1], 3)
 
 
 def test_read_bounds_openslide_levels(_sample_ndpi):
@@ -515,14 +559,15 @@ def test_read_bounds_openslide_levels(_sample_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = NDPI_TEST_TISSUE_BOUNDS
+    width, height = NDPI_TEST_TISSUE_SIZE
     for level, downsample in enumerate(wsi.info.level_downsamples):
         im_region = wsi.read_bounds(bounds, resolution=level, units="level")
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
         expected_output_shape = tuple(
-            np.round([1000 / downsample, 1000 / downsample, 3]).astype(int)
+            np.round([height / downsample, width / downsample, 3]).astype(int)
         )
         assert im_region.shape == expected_output_shape
 
@@ -533,13 +578,16 @@ def test_read_bounds_jp2_levels(_sample_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = JP2_TEST_TISSUE_BOUNDS
+    width, height = JP2_TEST_TISSUE_SIZE
     for level, downsample in enumerate(wsi.info.level_downsamples):
         im_region = wsi.read_bounds(bounds, resolution=level, units="level")
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        expected_output_shape = tuple(np.round([1000 / downsample, 1000 / downsample]))
+        expected_output_shape = tuple(
+            np.round([height / downsample, width / downsample])
+        )
         assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
         assert im_region.shape[2] == 3
 
@@ -550,7 +598,8 @@ def test_read_bounds_openslide_mpp(_sample_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = NDPI_TEST_TISSUE_BOUNDS
+    size = NDPI_TEST_TISSUE_SIZE
     slide_mpp = wsi.info.mpp
     for factor in range(1, 10):
         mpp = slide_mpp * factor
@@ -561,7 +610,7 @@ def test_read_bounds_openslide_mpp(_sample_ndpi):
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
         expected_output_shape = tuple(
-            np.round((np.array([1000] * 2) / downsample)).astype(int)
+            np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         assert im_region.shape[:2] == expected_output_shape
         assert im_region.shape[2] == 3
@@ -573,7 +622,8 @@ def test_read_bounds_jp2_mpp(_sample_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = JP2_TEST_TISSUE_BOUNDS
+    size = JP2_TEST_TISSUE_SIZE
     slide_mpp = wsi.info.mpp
     for factor in range(1, 10):
         mpp = slide_mpp * factor
@@ -584,7 +634,7 @@ def test_read_bounds_jp2_mpp(_sample_jp2):
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
         expected_output_shape = tuple(
-            np.round((np.array([1000] * 2) / downsample)).astype(int)
+            np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
         assert im_region.shape[2] == 3
@@ -596,17 +646,22 @@ def test_read_bounds_openslide_objective_power(_sample_ndpi):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = NDPI_TEST_TISSUE_BOUNDS
+    size = NDPI_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
 
-        im_region = wsi.read_bounds(bounds, resolution=objective_power, units="power",)
+        im_region = wsi.read_bounds(
+            bounds,
+            resolution=objective_power,
+            units="power",
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
         expected_output_shape = tuple(
-            np.round((np.array([1000] * 2) / downsample)).astype(int)
+            np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         assert im_region.shape[:2] == expected_output_shape
         assert im_region.shape[2] == 3
@@ -618,15 +673,20 @@ def test_read_bounds_interpolated(_sample_svs):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    bounds = (0, 0, 500, 500)
-    im_region = wsi.read_bounds(bounds, resolution=0.1, units="mpp",)
+    bounds = SVS_TEST_TISSUE_BOUNDS
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_bounds(
+        bounds,
+        resolution=0.1,
+        units="mpp",
+    )
 
     assert 0.1 < wsi.info.mpp[0]
     assert 0.1 < wsi.info.mpp[1]
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape[2] == 3
-    assert all(np.array(im_region.shape[:2]) > 500)
+    assert all(np.array(im_region.shape[:2]) > size)
 
 
 def test_read_bounds_jp2_objective_power(_sample_jp2):
@@ -635,17 +695,22 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    bounds = (1000, 2000, 2000, 3000)
+    bounds = JP2_TEST_TISSUE_BOUNDS
+    size = JP2_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
 
-        im_region = wsi.read_bounds(bounds, resolution=objective_power, units="power",)
+        im_region = wsi.read_bounds(
+            bounds,
+            resolution=objective_power,
+            units="power",
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
         expected_output_shape = tuple(
-            np.round((np.array([1000] * 2) / downsample)).astype(int)
+            np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
         assert im_region.shape[2] == 3
@@ -654,7 +719,7 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
 def test_read_bounds_level_consistency_openslide(_sample_ndpi):
     """Test read_bounds produces the same visual field across resolution levels."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
-    bounds = (30400, 11810, 30912, 12322)
+    bounds = NDPI_TEST_TISSUE_BOUNDS
     imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
     smallest_size = imgs[-1].shape[:2][::-1]
     resized = [
@@ -669,7 +734,7 @@ def test_read_bounds_level_consistency_openslide(_sample_ndpi):
 
 def test_read_bounds_level_consistency_jp2(_sample_jp2):
     """Test read_bounds produces the same visual field across resolution levels."""
-    bounds = (32768, 42880, 33792, 43904)
+    bounds = JP2_TEST_TISSUE_BOUNDS
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
     smallest_size = imgs[-1].shape[:2][::-1]
@@ -703,7 +768,8 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_svs).parent), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_svs).parent),
+        file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     wsi.save_tiles(
@@ -900,7 +966,7 @@ def test_openslide_objective_power_from_mpp(_sample_svs):
     del props["openslide.mpp-x"]
     del props["openslide.mpp-y"]
     with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        _ = wsi.info
+        _ = wsi._info()
 
 
 def test_openslide_mpp_from_tiff_resolution(_sample_svs):
@@ -920,14 +986,14 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_VFReader():
-    """Test VFReader"""
+def test_VirtualWSIReader():
+    """Test VirtualWSIReader"""
     file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     with pytest.warns(UserWarning, match=r"Unknown scale"):
-        _ = wsi.info
+        _ = wsi._info()
     with pytest.warns(UserWarning, match=r"Raw data is None"):
-        _ = wsi.info
+        _ = wsi._info()
 
     assert wsi.img.shape == (256, 256, 3)
 
@@ -938,10 +1004,10 @@ def test_VFReader():
     assert img.shape == (50, 100, 3)
 
 
-def test_VFReader_read_bounds():
-    """Test VFReader read bounds"""
+def test_VirtualWSIReader_read_bounds():
+    """Test VirtualWSIReader read bounds"""
     file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)
 
@@ -958,10 +1024,10 @@ def test_VFReader_read_bounds():
         _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
 
 
-def test_VFReader_read_rect():
-    """Test VFReader read bounds"""
+def test_VirtualWSIReader_read_rect():
+    """Test VirtualWSIReader read bounds"""
     file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VFReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
     assert img.shape == (100, 50, 3)
 

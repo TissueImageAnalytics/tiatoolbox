@@ -64,7 +64,7 @@ def background_composite(image, fill=255, alpha=False):
     return composite
 
 
-def imresize(img, scale_factor=None, output_size=None, interpolation='optimise'):
+def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
     """Resize input image.
 
     Args:
@@ -96,7 +96,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation='optimise')
 
     # Optimise interpolation
     if np.any(scale_factor != 1.0):
-        if interpolation == 'optimise':
+        if interpolation == "optimise":
             if np.any(scale_factor > 1.0):
                 interpolation = cv2.INTER_CUBIC
             else:
@@ -149,3 +149,21 @@ def convert_OD2RGB(OD):
     """
     OD = np.maximum(OD, 1e-6)
     return (255 * np.exp(-1 * OD)).astype(np.uint8)
+
+
+def bounds2size(bounds, origin="upper"):
+    """Calculate the size of a tuple of bounds.
+
+    Bounds are exptected to be in the (left, top, right, bottom) /
+    (start_x, start_y, end_x, end_y) format.
+
+    Args:
+        bounds (tuple of int): A 4-tuple or length 4 array of bounds
+            values in (left, top, right, bottom) format.
+        origin (str): Upper (Top-left) or lower (bottom-left) origin.
+            Defaults to upper.
+    """
+    left, top, right, bottom = bounds
+    if origin == "upper":
+        return np.array([right - left, bottom - top])
+    return np.array([right - left, top - bottom])
