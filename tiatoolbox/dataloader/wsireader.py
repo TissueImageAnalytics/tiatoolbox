@@ -1157,17 +1157,17 @@ def get_wsireader(input_img):
         >>> wsi = get_wsireader(input_img="./sample.svs")
 
     """
-    if isinstance(input_img, str):
+    if isinstance(input_img, (str, pathlib.Path)):
         _, _, suffix = misc.split_path_name_ext(input_img)
 
         if suffix in (".jpg", ".png"):
-            out_wsi = VirtualWSIReader(input_img)
+            wsi = VirtualWSIReader(input_img)
 
         elif suffix in (".svs", ".ndpi", ".mrxs"):
-            out_wsi = OpenSlideWSIReader(input_img)
+            wsi = OpenSlideWSIReader(input_img)
 
         elif suffix == ".jp2":
-            out_wsi = OmnyxJP2WSIReader(input_img)
+            wsi = OmnyxJP2WSIReader(input_img)
 
         else:
             raise FileNotSupported("Filetype not supported.")
@@ -1175,4 +1175,4 @@ def get_wsireader(input_img):
     else:
         raise TypeError("Please input correct image path")
 
-    return out_wsi
+    return wsi
