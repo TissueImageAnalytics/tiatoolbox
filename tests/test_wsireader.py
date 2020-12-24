@@ -1075,3 +1075,7 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.get_wsireader(file_parent_dir.joinpath("data/source_image.png"))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+    img = utils.misc.imread(str(file_parent_dir.joinpath("data/source_image.png")))
+    wsi = wsireader.get_wsireader(input_img=img)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)

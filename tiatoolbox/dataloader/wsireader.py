@@ -1171,7 +1171,8 @@ def get_wsireader(input_img):
 
         else:
             raise FileNotSupported("Filetype not supported.")
-
+    elif isinstance(input_img, np.ndarray):
+        wsi = VirtualWSIReader(input_img)
     else:
         raise TypeError("Please input correct image path")
 
