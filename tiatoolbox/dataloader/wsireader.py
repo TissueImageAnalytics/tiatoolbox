@@ -20,6 +20,7 @@
 
 """This module defines classes which can read image data from WSI formats."""
 from tiatoolbox.utils import misc, transforms
+from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
@@ -1140,3 +1141,38 @@ class VirtualWSIReader(WSIReader):
 
         im_region = transforms.background_composite(image=im_region)
         return im_region
+
+
+def get_wsireader(input_img):
+    """Return an appropriate :class:`.WSIReader` object.
+
+    Args:
+        input_img (str, pathlib.Path): input path to WSI.
+
+    Returns:
+        WSIReader: an object with base :class:`.WSIReader` as base class.
+
+    Examples:
+        >>> from tiatoolbox.dataloader.wsireader import get_wsireader
+        >>> wsi = get_wsireader(input_img="./sample.svs")
+
+    """
+    if isinstance(input_img, str):
+        _, _, suffix = misc.split_path_name_ext(input_img)
+
+        if suffix in (".jpg", ".png"):
+            out_wsi = VirtualWSIReader(input_img)
+
+        elif suffix in (".svs", ".ndpi", ".mrxs"):
+            out_wsi = OpenSlideWSIReader(input_img)
+
+        elif suffix == ".jp2":
+            out_wsi = OmnyxJP2WSIReader(input_img)
+
+        else:
+            raise FileNotSupported("Filetype not supported.")
+
+    else:
+        raise TypeError("Please input correct image path")
+
+    return out_wsi
