@@ -20,7 +20,6 @@
 
 """Get Slide Meta Data information."""
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pathlib
 
@@ -53,17 +52,9 @@ def slide_info(input_path, verbose=True):
     if verbose:
         print(input_path.name, flush=True)
 
-    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.OpenSlideWSIReader(input_img=input_path)
-        info = wsi_reader.info
-        if verbose:
-            print(info.as_dict())
-    elif input_path.suffix in (".jp2",):
-        wsi_reader = wsireader.OmnyxJP2WSIReader(input_img=input_path)
-        info = wsi_reader.info
-        if verbose:
-            print(info.as_dict())
-    else:
-        raise FileNotSupported(input_path.suffix + " file format is not supported.")
+    wsi = wsireader.get_wsireader(input_img=input_path)
+    info = wsi.info
+    if verbose:
+        print(info.as_dict())
 
     return info
