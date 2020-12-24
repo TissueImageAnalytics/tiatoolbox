@@ -165,6 +165,10 @@ class WSIMeta:
             dict: whole slide image meta data as dictionary
 
         """
+        if self.mpp is None:
+            mpp = (self.mpp, self.mpp)
+        else:
+            mpp = tuple(self.mpp)
         param = {
             "objective_power": self.objective_power,
             "slide_dimensions": self.slide_dimensions,
@@ -172,7 +176,7 @@ class WSIMeta:
             "level_dimensions": self.level_dimensions,
             "level_downsamples": self.level_downsamples,
             "vendor": self.vendor,
-            "mpp": tuple(self.mpp),
+            "mpp": mpp,
             "file_path": self.file_path,
         }
         return param
