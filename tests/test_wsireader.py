@@ -1073,5 +1073,5 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
     assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
 
     file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.get_wsireader(file_parent_dir.joinpath("data/source_image.png"))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
