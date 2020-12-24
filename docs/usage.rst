@@ -10,9 +10,8 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. currentmodule:: tiatoolbox.dataloader.wsireader
-.. autoclass:: WSIReader
-    :members: info, read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
+.. automodule:: tiatoolbox.dataloader.wsireader
+    :members: WSIReader, get_wsireader
 
 .. autoclass:: OpenSlideWSIReader
     :show-inheritance:
@@ -49,7 +48,21 @@ Stain Normalisation
 ^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
+    :members: StainNormaliser, get_normaliser
+
+.. autoclass:: CustomNormaliser
+    :show-inheritance:
+
+.. autoclass:: RuifrokNormaliser
+    :show-inheritance:
+
+.. autoclass:: MacenkoNormaliser
+    :show-inheritance:
+
+.. autoclass:: VahadaneNormaliser
+    :show-inheritance:
+
+.. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^

@@ -20,7 +20,6 @@
 
 """Save image tiles from the whole slide image."""
 from tiatoolbox.dataloader import wsireader
-from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pathlib
 
@@ -64,22 +63,10 @@ def save_tiles(
     if verbose:
         print(input_path.name, flush=True)
 
-    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.OpenSlideWSIReader(input_img=input_path)
-        wsi_reader.save_tiles(
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size=tile_read_size,
-            verbose=verbose,
-        )
-
-    elif input_path.suffix in (".jp2",):
-        wsi_reader = wsireader.OmnyxJP2WSIReader(input_img=input_path)
-        wsi_reader.save_tiles(
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size=tile_read_size,
-            verbose=verbose,
-        )
-    else:
-        raise FileNotSupported(input_path.suffix + " file format is not supported.")
+    wsi = wsireader.get_wsireader(input_img=input_path)
+    wsi.save_tiles(
+        output_dir=output_dir,
+        tile_objective_value=tile_objective_value,
+        tile_read_size=tile_read_size,
+        verbose=verbose,
+    )
