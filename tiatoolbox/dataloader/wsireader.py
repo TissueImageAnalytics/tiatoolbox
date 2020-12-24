@@ -1175,6 +1175,6 @@ def get_wsireader(input_img):
     elif isinstance(input_img, np.ndarray):
         wsi = VirtualWSIReader(input_img)
     else:
-        raise TypeError("Please input correct image path")
+        raise TypeError("Please input correct image path or an ndarray image.")
 
     return wsi
