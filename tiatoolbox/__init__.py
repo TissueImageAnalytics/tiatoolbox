@@ -27,7 +27,7 @@ from tiatoolbox import tools
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 if __name__ == "__main__":
     pass
