@@ -64,13 +64,17 @@ def background_composite(image, fill=255, alpha=False):
     return composite
 
 
-def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
+def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
     """Resize input image.
 
     Args:
         img (ndarray): input image
         scale_factor (float): scaling factor to resize the input image
-        interpolation (int): interpolation, default=cv2.INTER_CUBIC
+        output_size (tuple of int): output image size, (width, height)
+        interpolation (int): interpolation method used to interpolate the image using
+         `opencv interpolation flags <https://docs.opencv.org/3.4/da/d54/group__imgproc
+         __transform.html>`__ default='optimise', uses cv2.INTER_AREA for scale_factor
+         <1.0 otherwise uses cv2.INTER_CUBIC
 
     Returns:
         ndarray: resized image
@@ -85,11 +89,23 @@ def imresize(img, scale_factor, interpolation=cv2.INTER_CUBIC):
 
     """
     # Estimate new dimension
-    width = int(img.shape[1] * scale_factor)
-    height = int(img.shape[0] * scale_factor)
-    dim = (width, height)
-    # Resize image
-    resized_img = cv2.resize(img, dim, interpolation=interpolation)
+    if output_size is None:
+        width = int(img.shape[1] * scale_factor)
+        height = int(img.shape[0] * scale_factor)
+        output_size = (width, height)
+
+    # Optimise interpolation
+    if np.any(scale_factor != 1.0):
+        if interpolation == "optimise":
+            if np.any(scale_factor > 1.0):
+                interpolation = cv2.INTER_CUBIC
+            else:
+                interpolation = cv2.INTER_AREA
+
+        # Resize image
+        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    else:
+        resized_img = img
 
     return resized_img
 

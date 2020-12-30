@@ -6,86 +6,99 @@ To use TIA Toolbox in a project::
 
     import tiatoolbox
 
+^^^^^^^^^^^^^^^^^^^^^^
+Reading WSI Image Data
+^^^^^^^^^^^^^^^^^^^^^^
 
-----------
-Dataloader
-----------
-.. automodule:: tiatoolbox.dataloader
-
-^^^^^^^^^^^^^^^^^^^^
-dataloader.wsireader
-^^^^^^^^^^^^^^^^^^^^
-
-.. currentmodule:: tiatoolbox.dataloader.wsireader
-.. autoclass:: WSIReader
-    :members: read_region, slide_thumbnail, save_tiles
+.. automodule:: tiatoolbox.dataloader.wsireader
+    :members: WSIReader, get_wsireader
 
 .. autoclass:: OpenSlideWSIReader
-    :members: slide_info, read_region, slide_thumbnail, save_tiles
     :show-inheritance:
 
 .. autoclass:: OmnyxJP2WSIReader
-    :members: slide_info, read_region, slide_thumbnail, save_tiles
+    :show-inheritance:
+
+.. autoclass:: VirtualWSIReader
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
-dataloader.wsimeta
+Accessing Metadata
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.dataloader.wsimeta
     :members: WSIMeta
 
-^^^^^^^^^^^^^^^^^^^^^
-dataloader.slide_info
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+Functional
+^^^^^^^^^^
+
+The dataloader module also includes some functional syntax for quickly
+obtaining information about a slide or generating tiles.
 
 .. automodule:: tiatoolbox.dataloader.slide_info
     :members: slide_info
 
-^^^^^^^^^^^^^^^^^^^^^
-dataloader.save_tiles
-^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: tiatoolbox.dataloader.save_tiles
     :members: save_tiles
 
------
-Tools
------
-.. automodule:: tiatoolbox.tools
 
-^^^^^^^^^^^^^^^
-tools.stainnorm
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
+Stain Normalisation
+^^^^^^^^^^^^^^^^^^^
+
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
-    :special-members: __init__
+    :members: StainNormaliser, get_normaliser
+
+.. autoclass:: CustomNormaliser
+    :show-inheritance:
+
+.. autoclass:: RuifrokNormaliser
+    :show-inheritance:
+
+.. autoclass:: MacenkoNormaliser
+    :show-inheritance:
+
+.. autoclass:: VahadaneNormaliser
+    :show-inheritance:
+
+.. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
-tools.stainextract
+Stain Extraction
 ^^^^^^^^^^^^^^^^^^
+
 .. automodule:: tiatoolbox.tools.stainextract
     :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
 
-------
-Utils
-------
+^^^^^^^^^
+Utilities
+^^^^^^^^^
+
 .. automodule:: tiatoolbox.utils
 
-^^^^^^^^^^
-utils.misc
-^^^^^^^^^^
-.. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, imread, get_luminosity_tissue_mask
+-------------
+Miscellaneous
+-------------
 
-^^^^^^^^^^^^^^^^
-utils.transforms
-^^^^^^^^^^^^^^^^
+.. automodule:: tiatoolbox.utils.misc
+    :members:
+
+    .. autofunction:: mpp2objective_power(mpp)
+    .. autofunction:: objective_power2mpp(objective_power)
+    .. autofunction:: mpp2common_objective_power(mpp, common_powers)
+
+----------
+Transforms
+----------
+
 .. automodule:: tiatoolbox.utils.transforms
     :members: background_composite, imresize
 
-^^^^^^^^^^^^^^^^
-utils.exceptions
-^^^^^^^^^^^^^^^^
+----------
+Exceptions
+----------
+
 .. automodule:: tiatoolbox.utils.exceptions
     :members: FileNotSupported, MethodNotSupported

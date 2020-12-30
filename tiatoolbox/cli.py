@@ -67,10 +67,7 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Display or save WSI metadata."""
@@ -111,8 +108,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(),
-                out_path,
+                slide_param.as_dict(), out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -131,10 +127,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     help="image region in the whole slide image to read, default=0 0 2000 2000",
 )
 @click.option(
-    "--level",
-    type=int,
+    "--resolution",
+    type=float,
     default=0,
-    help="pyramid level to read the image, default=0",
+    help="resolution to read the image at, default=0",
+)
+@click.option(
+    "--units",
+    default="level",
+    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
+    help="resolution units, default=level",
 )
 @click.option(
     "--mode",
@@ -142,7 +144,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def read_region(wsi_input, region, level, output_path, mode):
+def read_bounds(wsi_input, region, resolution, units, output_path, mode):
     """Read a region in an whole slide image as specified."""
     if not region:
         region = [0, 0, 2000, 2000]
@@ -155,13 +157,13 @@ def read_region(wsi_input, region, level, output_path, mode):
 
     wsi = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_img=wsi_input)
 
     elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_img=wsi_input)
 
     if wsi is not None:
-        im_region = wsi.read_region(region[0], region[1], region[2], region[3], level)
+        im_region = wsi.read_bounds(region, resolution=resolution, units=units,)
         if mode == "show":
             im_region = Image.fromarray(im_region)
             im_region.show()
@@ -194,9 +196,9 @@ def slide_thumbnail(wsi_input, output_path, mode):
         output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
     wsi = None
     if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
+        wsi = dataloader.wsireader.OpenSlideWSIReader(input_img=wsi_input)
     elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_img=wsi_input)
 
     if wsi is not None:
         slide_thumb = wsi.slide_thumbnail()
@@ -230,30 +232,21 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="objective value at which tile is generated- default=20",
 )
 @click.option(
-    "--tile_read_size_w",
+    "--tile_read_size",
     type=int,
-    default=5000,
-    help="tile width, default=5000",
+    nargs=2,
+    default=[5000, 5000],
+    help="tile width, height default=5000 5000",
 )
 @click.option(
-    "--tile_read_size_h",
-    type=int,
-    default=5000,
-    help="tile height, " "default=5000",
-)
-@click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
+    "--verbose", type=bool, default=True, help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
     output_dir,
     file_types,
     tile_objective_value,
-    tile_read_size_w,
-    tile_read_size_h,
+    tile_read_size,
     verbose=True,
 ):
     """Display or save WSI metadata."""
@@ -276,8 +269,7 @@ def save_tiles(
             input_path=curr_file,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
+            tile_read_size=tile_read_size,
             verbose=verbose,
         )
 
@@ -310,10 +302,10 @@ def save_tiles(
     "--file_types",
     help="file types to capture from directory"
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
-    default="*.png, '*.jpg', '*.tif', '*.tiff'",
+    default="*.png, *.jpg, *.tif, *.tiff",
 )
 def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
-    """Stain normalise an input image/directory of input images"""
+    """Stain normalise an input image/directory of input images."""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(source_input):
         files_all = utils.misc.grab_files_from_dir(

@@ -16,10 +16,6 @@
 
 Computational Pathology Toolbox developed by TIA Lab
 
-Please try
-
-    python -m tiatoolbox -h
-
 Getting Started
 ===============
 
@@ -28,7 +24,27 @@ First, install
 - OpenJPEG [here](https://www.openjpeg.org/), using
 `conda install -c conda-forge openjpeg>=2.3.0`.
 
-Then, create and activate the conda environment:
+Git
+---
+
+1.Create the virtual environment
+
+    conda env create -f requirements.conda.yml
+or (on Windows)
+
+    conda env create -f requirements.win64.conda.yml
+
+or
+
+    pip install -r requirements.txt
+
+2.Clone the tiatoolbox
+
+    git clone https://github.com/TIA-Lab/tiatoolbox.git
+
+3.Please try
+
+    python -m tiatoolbox -h
 
 pip
 ---
@@ -38,14 +54,15 @@ pip
 conda
 -----
 
-    conda env create --name tiatoolbox --file requirements.conda.yml
+    conda env create -n tiatoolbox python=3.{6,7,8}
     conda activate tiatoolbox
+    pip install tiatoolbox
 
 tiatoolbox --help
 =================
 
     usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
-                     {read-region,
+                     {read-bounds,
                       save-tiles,
                       slide_info,
                       slide-thumbnail,
@@ -56,7 +73,7 @@ tiatoolbox --help
     positional arguments:
       {slide_info}
 
-    read-region         usage: tiatoolbox read-region -h
+    read-bounds         usage: tiatoolbox read-bounds -h
     save-tiles          usage: tiatoolbox save-tiles -h
     slide-info          usage: tiatoolbox slide-info -h
     slide-thumbnail     usage: tiatoolbox slide-thumbnail -h

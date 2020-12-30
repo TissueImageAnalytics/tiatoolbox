@@ -18,5 +18,5 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Package defines tools for the toolbox"""
+"""This package contains various tools for working with WSIs."""
 from tiatoolbox.tools import stainnorm, stainextract
