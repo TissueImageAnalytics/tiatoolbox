@@ -21,7 +21,7 @@ requirements = [
     "pandas",
     "glymur",
     "scikit-learn==0.23.2",
-    "jupyterlab",
+    "scikit-image>=0.17",
 ]
 
 setup_requirements = [
@@ -62,6 +62,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/tialab/tiatoolbox",
-    version="0.5.0",
+    version="0.5.1",
     zip_safe=False,
 )
