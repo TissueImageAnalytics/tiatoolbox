@@ -1,6 +1,13 @@
 History
 =======
 
+0.5.1 (2020-12-31)
+------------------
+### Bug Fixes and Other Changes
+- Add `scikit-image` as dependency in `setup.py`
+- Update notebooks to add instructions to install dependencies
+
+------------------
 0.5.0 (2020-12-30)
 ------------------
 ### Major and Feature Improvements
