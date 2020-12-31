@@ -21,7 +21,7 @@ requirements = [
     "pandas",
     "glymur",
     "scikit-learn==0.23.2",
-    "jupyterlab",
+    "scikit-image>=0.17",
 ]
 
 setup_requirements = [
