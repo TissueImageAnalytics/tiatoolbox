@@ -1,6 +1,7 @@
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pytest
 from pytest import approx
@@ -1048,3 +1049,33 @@ def test_VirtualWSIReader_read_rect():
 
     with pytest.raises(ValueError):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
+
+
+def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
+    """Test get_wsireader to return correct object."""
+    _sample_svs = str(_sample_svs)
+    _sample_ndpi = str(_sample_ndpi)
+    _sample_jp2 = str(_sample_jp2)
+
+    with pytest.raises(FileNotSupported):
+        _ = wsireader.get_wsireader("./sample.csv")
+
+    with pytest.raises(TypeError):
+        _ = wsireader.get_wsireader([1, 2])
+
+    wsi = wsireader.get_wsireader(_sample_svs)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+    wsi = wsireader.get_wsireader(_sample_ndpi)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+    wsi = wsireader.get_wsireader(_sample_jp2)
+    assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
+
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.get_wsireader(file_parent_dir.joinpath("data/source_image.png"))
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+    img = utils.misc.imread(str(file_parent_dir.joinpath("data/source_image.png")))
+    wsi = wsireader.get_wsireader(input_img=img)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
