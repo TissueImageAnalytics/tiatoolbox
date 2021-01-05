@@ -20,8 +20,7 @@ def test_get_patch_extractor():
         input_img=input_img,
         labels=labels,
         method_name="point",
-        img_patch_h=200,
-        img_patch_w=200,
+        patch_size=(200, 200),
     )
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
@@ -32,8 +31,7 @@ def test_get_patch_extractor():
     fixed_window = patchextraction.get_patch_extractor(
         input_img=input_img,
         method_name="fixedwindow",
-        img_patch_h=200,
-        img_patch_w=200,
+        patch_size=(200, 200),
     )
 
     assert isinstance(fixed_window, patchextraction.FixedWindowPatchExtractor)
@@ -41,8 +39,7 @@ def test_get_patch_extractor():
     variable_window = patchextraction.get_patch_extractor(
         input_img=input_img,
         method_name="variablewindow",
-        img_patch_h=200,
-        img_patch_w=200,
+        patch_size=(200, 200),
     )
 
     assert isinstance(variable_window, patchextraction.VariableWindowPatchExtractor)
@@ -60,8 +57,7 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
         input_img=input_img,
         labels=labels,
         method_name="point",
-        img_patch_h=200,
-        img_patch_w=200,
+        patch_size=(200, 200),
     )
 
     assert isinstance(points.wsi, VirtualWSIReader)
@@ -73,8 +69,7 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
         input_img=pathlib.Path(_sample_svs),
         labels=labels,
         method_name="point",
-        img_patch_h=200,
-        img_patch_w=200,
+        patch_size=(200, 200),
     )
 
     assert isinstance(points.wsi, OpenSlideWSIReader)
@@ -83,8 +78,7 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
         input_img=pathlib.Path(_sample_jp2),
         labels=labels,
         method_name="point",
-        img_patch_h=200,
-        img_patch_w=200,
+        patch_size=(200, 200),
     )
 
     assert isinstance(points.wsi, OmnyxJP2WSIReader)
@@ -95,6 +89,5 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
             input_img=false_image,
             labels=labels,
             method_name="point",
-            img_patch_h=200,
-            img_patch_w=200,
+            patch_size=(200, 200),
         )

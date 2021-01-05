@@ -34,28 +34,22 @@ class PatchExtractor(ABC):
 
     Args:
         input_img(str, pathlib.Path, ndarray): input image for patch extraction.
-        img_patch_h(int): input image patch height.
-        img_patch_w(int): input image patch width.
-        pad_y(int): symmetric padding y-axis.
-        pad_x(int): symmetric padding x-axis.
+        patch_size(Tuple of int): patch size tuple (height, width).
+        pad_size(Tuple of int): symmetric padding in (y, x) direction.
 
     Attributes:
         input_img(ndarray, WSIReader): input image for patch extraction.
           input_image type is ndarray for an image tile whereas :obj:`WSIReader`
           for an WSI.
-        img_patch_h(int): input image patch height.
-        img_patch_w(int): input image patch width.
-        pad_y(int): symmetric padding y-axis.
-        pad_x(int): symmetric padding x-axis.
+        patch_size(Tuple of int): patch size tuple (height, width).
+        pad_size(Tuple of int): symmetric padding in (y, x) direction.
         n(int): current state of the iterator.
 
     """
 
-    def __init__(self, input_img, img_patch_h, img_patch_w, pad_y=0, pad_x=0):
-        self.img_patch_h = img_patch_h
-        self.img_patch_w = img_patch_w
-        self.pad_y = pad_y
-        self.pad_x = pad_x
+    def __init__(self, input_img, patch_size, pad_size=0):
+        self.patch_size = patch_size
+        self.pad_size = pad_size
         self.n = 0
         self.wsi = get_wsireader(input_img=input_img)
 
@@ -109,29 +103,26 @@ class FixedWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
-        stride_h(int): stride in horizontal direction for patch extraction.
-        stride_w(int): stride in vertical direction for patch extraction.
+        stride(Tuple of int): stride in (y, x) direction for patch extraction.
+
+    Attributes:
+        stride(Tuple of int): stride in (y, x) direction for patch extraction.
+
     """
 
     def __init__(
         self,
         input_img,
-        img_patch_h,
-        img_patch_w,
-        pad_y=0,
-        pad_x=0,
-        stride_h=1,
-        stride_w=1,
+        patch_size,
+        pad_size=0,
+        stride=1,
     ):
         super().__init__(
             input_img=input_img,
-            img_patch_h=img_patch_h,
-            img_patch_w=img_patch_w,
-            pad_y=pad_y,
-            pad_x=pad_x,
+            patch_size=patch_size,
+            pad_size=pad_size,
         )
-        self.stride_h = stride_h
-        self.stride_w = stride_w
+        self.stride = stride
 
     # def extract_patches(self, input_img, labels=None):
     #     raise NotImplementedError
@@ -147,35 +138,30 @@ class VariableWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using variable sized windows for images and labels.
 
     Args:
-        stride_h: stride in horizontal direction for patch extraction
-        stride_w: stride in vertical direction for patch extraction
-        label_patch_h: network output label height
-        label_patch_w: network output label width
+        stride(Tuple of int): stride in (y, x) direction for patch extraction.
+        label_patch_size(Tuple of int): network output label (height, width).
+
+    Attributes:
+        stride(Tuple of int): stride in (y, x) direction for patch extraction.
+        label_patch_size(Tuple of int): network output label (height, width).
+
     """
 
     def __init__(
         self,
         input_img,
-        img_patch_h,
-        img_patch_w,
-        pad_y=0,
-        pad_x=0,
-        stride_h=1,
-        stride_w=1,
-        label_patch_h=None,
-        label_patch_w=None,
+        patch_size,
+        pad_size=0,
+        stride=1,
+        label_patch_size=None,
     ):
         super().__init__(
             input_img=input_img,
-            img_patch_h=img_patch_h,
-            img_patch_w=img_patch_w,
-            pad_y=pad_y,
-            pad_x=pad_x,
+            patch_size=patch_size,
+            pad_size=pad_size,
         )
-        self.stride_h = stride_h
-        self.stride_w = stride_w
-        self.label_patch_h = label_patch_h
-        self.label_patch_w = label_patch_w
+        self.stride_h = stride
+        self.label_patch_size = label_patch_size
 
     # def extract_patches(self, input_img, labels=None):
     #     raise NotImplementedError
@@ -208,18 +194,14 @@ class PointsPatchExtractor(PatchExtractor):
         self,
         input_img,
         labels,
-        img_patch_h=224,
-        img_patch_w=224,
-        pad_y=0,
-        pad_x=0,
+        patch_size=224,
+        pad_size=0,
         num_examples_per_patch=9,
     ):
         super().__init__(
             input_img=input_img,
-            img_patch_h=img_patch_h,
-            img_patch_w=img_patch_w,
-            pad_y=pad_y,
-            pad_x=pad_x,
+            patch_size=patch_size,
+            pad_size=pad_size,
         )
 
         self.num_examples_per_patch = num_examples_per_patch
