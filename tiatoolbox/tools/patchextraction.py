@@ -20,14 +20,12 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
-from tiatoolbox.dataloader.wsireader import OpenSlideWSIReader, OmnyxJP2WSIReader
+from tiatoolbox.dataloader.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.misc import imread, split_path_name_ext
-from tiatoolbox.utils.exceptions import FileNotSupported
 
 # import math
-import numpy as np
-import pathlib
+# import numpy as np
+# import pathlib
 
 
 class PatchExtractor(ABC):
@@ -35,14 +33,14 @@ class PatchExtractor(ABC):
     Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_image(str, pathlib.Path, ndarray): input image for patch extraction.
+        input_img(str, pathlib.Path, ndarray): input image for patch extraction.
         img_patch_h(int): input image patch height.
         img_patch_w(int): input image patch width.
         pad_y(int): symmetric padding y-axis.
         pad_x(int): symmetric padding x-axis.
 
     Attributes:
-        input_image(ndarray, WSIReader): input image for patch extraction.
+        input_img(ndarray, WSIReader): input image for patch extraction.
           input_image type is ndarray for an image tile whereas :obj:`WSIReader`
           for an WSI.
         img_patch_h(int): input image patch height.
@@ -53,13 +51,13 @@ class PatchExtractor(ABC):
 
     """
 
-    def __init__(self, input_image, img_patch_h, img_patch_w, pad_y=0, pad_x=0):
+    def __init__(self, input_img, img_patch_h, img_patch_w, pad_y=0, pad_x=0):
         self.img_patch_h = img_patch_h
         self.img_patch_w = img_patch_w
         self.pad_y = pad_y
         self.pad_x = pad_x
         self.n = 0
-        self.input_image = convert_input_image_for_patch_extraction(input_image)
+        self.wsi = get_wsireader(input_img=input_img)
 
     def __iter__(self):
         self.n = 0
@@ -117,7 +115,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
 
     def __init__(
         self,
-        input_image,
+        input_img,
         img_patch_h,
         img_patch_w,
         pad_y=0,
@@ -126,7 +124,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         stride_w=1,
     ):
         super().__init__(
-            input_image=input_image,
+            input_img=input_img,
             img_patch_h=img_patch_h,
             img_patch_w=img_patch_w,
             pad_y=pad_y,
@@ -157,7 +155,7 @@ class VariableWindowPatchExtractor(PatchExtractor):
 
     def __init__(
         self,
-        input_image,
+        input_img,
         img_patch_h,
         img_patch_w,
         pad_y=0,
@@ -168,7 +166,7 @@ class VariableWindowPatchExtractor(PatchExtractor):
         label_patch_w=None,
     ):
         super().__init__(
-            input_image=input_image,
+            input_img=input_img,
             img_patch_h=img_patch_h,
             img_patch_w=img_patch_w,
             pad_y=pad_y,
@@ -208,7 +206,7 @@ class PointsPatchExtractor(PatchExtractor):
 
     def __init__(
         self,
-        input_image,
+        input_img,
         labels,
         img_patch_h=224,
         img_patch_w=224,
@@ -217,7 +215,7 @@ class PointsPatchExtractor(PatchExtractor):
         num_examples_per_patch=9,
     ):
         super().__init__(
-            input_image=input_image,
+            input_img=input_img,
             img_patch_h=img_patch_h,
             img_patch_w=img_patch_w,
             pad_y=pad_y,
@@ -293,42 +291,6 @@ class PointsPatchExtractor(PatchExtractor):
         raise MethodNotSupported(
             message="Merge patches not supported for PointsPatchExtractor"
         )
-
-
-def convert_input_image_for_patch_extraction(input_image):
-    """Convert PatchExtraction input_image attribute to ndarray or :obj:`WSIReader`.
-
-    Args:
-        input_image(str, pathlib.Path, ndarray): input image for patch extraction.
-
-    Return:
-        ndarray, WSIReader: a numpy arrary or an object of type :obj:`WSIReader`.
-
-    """
-    if not isinstance(input_image, np.ndarray):
-
-        if isinstance(input_image, pathlib.Path):
-            input_image = str(input_image)
-
-        if isinstance(input_image, str):
-            _, _, suffix = split_path_name_ext(input_image)
-
-            if suffix in (".jpg", ".png"):
-                input_image = imread(input_image)
-
-            elif suffix in (".svs", ".ndpi", ".mrxs"):
-                input_image = OpenSlideWSIReader(input_image)
-
-            elif suffix == ".jp2":
-                input_image = OmnyxJP2WSIReader(input_image)
-
-            else:
-                raise FileNotSupported("Filetype not supported.")
-
-        else:
-            raise Exception("Please input correct image path or numpy array")
-
-    return input_image
 
 
 def get_patch_extractor(method_name, **kwargs):
