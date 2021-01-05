@@ -84,6 +84,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 def save_yaml(input_dict, output_path="output.yaml"):
     """Save dictionary as yaml.
+
     Args:
         input_dict (dict): A variable of type 'dict'
         output_path (str, pathlib.Path): Path to save the output file
@@ -94,7 +95,6 @@ def save_yaml(input_dict, output_path="output.yaml"):
         >>> from tiatoolbox import utils
         >>> input_dict = {'hello': 'Hello World!'}
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
-
 
     """
     with open(str(pathlib.Path(output_path)), "w") as yaml_file:
@@ -234,6 +234,7 @@ def mpp2common_objective_power(
         ...     common_powers=(10, 20, 40),
         ... )
         array([40, 20])
+
     """
     op = mpp2objective_power(mpp)
     distances = [np.abs(op - power) for power in common_powers]
@@ -268,6 +269,7 @@ def objective_power2mpp(objective_power):
 
         >>> objective_power2mpp([40, 20, 10])
         array([0.25, 0.5, 1.])
+
     """
     return 10 / np.float(objective_power)
 
@@ -278,7 +280,6 @@ def mpp2objective_power(mpp):
 
     Alias to :func:`objective_power2mpp` as it is a self-inverse
     function.
-
 
     Args:
         objective_power (float or tuple of float): Microns per-pixel.
@@ -295,6 +296,7 @@ def mpp2objective_power(mpp):
 
         >>> objective_power2mpp(0.253)
         array(39.5256917)
+
     """
     return objective_power2mpp(mpp)
 
