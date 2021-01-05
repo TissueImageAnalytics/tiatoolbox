@@ -39,7 +39,7 @@ def test_get_patch_extractor():
     assert isinstance(fixed_window, patchextraction.FixedWindowPatchExtractor)
 
     variable_window = patchextraction.get_patch_extractor(
-        input_image=input_img,
+        input_img=input_img,
         method_name="variablewindow",
         img_patch_h=200,
         img_patch_w=200,
@@ -92,7 +92,7 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
     with pytest.raises(FileNotSupported):
         false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
         _ = patchextraction.get_patch_extractor(
-            input_image=false_image,
+            input_img=false_image,
             labels=labels,
             method_name="point",
             img_patch_h=200,
