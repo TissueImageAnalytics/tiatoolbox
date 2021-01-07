@@ -20,11 +20,15 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
 from tiatoolbox.dataloader.wsireader import get_wsireader
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupported, FileNotSupported
+from tiatoolbox.utils.misc import split_path_name_ext
 
 # import math
-# import numpy as np
 # import pathlib
 
 
@@ -275,6 +279,48 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
+def read_point_annotations(input_table):
+    """Read annotation as pandas DataFrame
+
+    Args:
+        input_table (str or pathlib.Path or ndarray): path to csv, npy or json or
+         an ndarray. first column in the table represents x position, second column
+         represents y position. The third column represents the class. If the table has
+         headers, the header should be x, y & class.
+
+    Returns:
+        pd.DataFrame: DataFrame with x, y location and class
+
+    """
+
+    if isinstance(input_table, (str, Path)):
+        _, _, suffix = split_path_name_ext(input_table)
+
+        if suffix == ".npy":
+            out_table = np.load(input_table)
+            out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
+
+        elif suffix == ".csv":
+            out_table = pd.read_csv(input_table)
+            if "x" not in out_table.columns:
+                out_table = pd.read_csv(
+                    input_table, header=None, names=["x", "y", "class"]
+                )
+
+        elif suffix == ".json":
+            out_table = pd.read_json(input_table)
+
+        else:
+            raise FileNotSupported("Filetype not supported.")
+
+    elif isinstance(input_table, np.ndarray):
+        out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+    else:
+        raise TypeError("Please input correct image path or an ndarray image.")
+
+    return out_table
+
+
 def get_patch_extractor(method_name, **kwargs):
     """Return a patch extractor object as requested.
 
@@ -283,7 +329,7 @@ def get_patch_extractor(method_name, **kwargs):
           "fixedwindow", "variablewindow".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
-    Return:
+    Returns:
         PatchExtractor: an object with base :obj:`PatchExtractor` as base class.
 
     Examples:
