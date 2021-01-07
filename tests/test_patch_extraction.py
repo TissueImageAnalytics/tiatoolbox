@@ -133,4 +133,4 @@ def test_read_point_annotations():
         _ = patchextraction.read_point_annotations(labels)
 
     with pytest.raises(TypeError):
-        _ = patchextraction.read_point_annotations(list(["a", "b", "c"]))
+        _ = patchextraction.read_point_annotations(["a", "b", "c"])
