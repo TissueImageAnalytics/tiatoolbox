@@ -115,9 +115,8 @@ def test_read_point_annotations():
     out_table = patchextraction.read_point_annotations(labels)
     assert all(labels_table == out_table)
 
-    # Test npy read
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
-    out_table = patchextraction.read_point_annotations(labels)
+    # Test pd dataframe read
+    out_table = patchextraction.read_point_annotations(labels_table)
     assert all(labels_table == out_table)
 
     # Test json read
@@ -128,3 +127,10 @@ def test_read_point_annotations():
     # Test numpy array
     out_table = patchextraction.read_point_annotations(labels_table.to_numpy())
     assert all(labels_table == out_table)
+
+    with pytest.raises(FileNotSupported):
+        labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
+        _ = patchextraction.read_point_annotations(labels)
+
+    with pytest.raises(TypeError):
+        _ = patchextraction.read_point_annotations(list(["a", "b", "c"]))

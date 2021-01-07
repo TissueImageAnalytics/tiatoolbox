@@ -333,6 +333,10 @@ def read_point_annotations(input_table):
 
     elif isinstance(input_table, np.ndarray):
         out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+
+    elif isinstance(input_table, pd.DataFrame):
+        out_table = input_table
+
     else:
         raise TypeError("Please input correct image path or an ndarray image.")
 
