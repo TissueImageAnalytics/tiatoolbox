@@ -137,7 +137,7 @@ def sub_pixel_read(
     pad_at_baseline=False,
     read_func=None,
     pad_mode="constant",
-    **read_kwargs
+    **read_kwargs,
 ):
     """Read and resize an image region with sub-pixel bounds.
 
@@ -159,9 +159,10 @@ def sub_pixel_read(
             The desired output size.
         padding (int, tuple(int)):
             Amount of padding to apply to the image region in pixels.
+            Defaults to 0.
         interpolation (str):
-            Method of interpolation. Default is nearest
-            and possible values are: nearest, linear, cubic, lanczos.
+            Method of interpolation. Possible values are: nearest,
+            linear, cubic, lanczos. Defaults to nearest.
         pad_at_baseline (bool):
             Apply padding in terms of baseline
             pixels. Defaults to False, meaning padding is added to the
