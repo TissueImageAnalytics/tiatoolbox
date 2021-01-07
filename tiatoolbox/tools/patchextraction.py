@@ -64,6 +64,9 @@ class PatchExtractor(ABC):
     def __next__(self):
         raise NotImplementedError
 
+    def __getitem__(self, item):
+        raise NotImplementedError
+
     # @staticmethod
     # def __get_last_steps(image_dim, label_patch_dim, stride):
     #     """Get the last location for patch extraction in a specific direction.
@@ -209,10 +212,25 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
         self.num_examples_per_patch = num_examples_per_patch
-        self.labels = labels
+        self.labels = read_point_annotations(input_table=labels)
 
     def __next__(self):
-        raise NotImplementedError
+        n = self.n
+
+        if n > self.labels.shape[0]:
+            raise StopIteration
+
+        self.n = n + 1
+        return n
+
+    def __getitem__(self, item):
+        if type(item) is not int:
+            raise TypeError("Index should be an integer.")
+
+        if item < self.labels.shape[0]:
+            return item
+        else:
+            raise IndexError
 
     # def extract_patches(self, input_img, labels=None):
     #     if not isinstance(labels, np.ndarray):
