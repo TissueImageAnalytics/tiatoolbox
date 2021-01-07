@@ -227,10 +227,10 @@ class PointsPatchExtractor(PatchExtractor):
         if type(item) is not int:
             raise TypeError("Index should be an integer.")
 
-        if item < self.labels.shape[0]:
-            return item
-        else:
+        if item > self.labels.shape[0]:
             raise IndexError
+
+        return item
 
     # def extract_patches(self, input_img, labels=None):
     #     if not isinstance(labels, np.ndarray):
@@ -298,7 +298,7 @@ class PointsPatchExtractor(PatchExtractor):
 
 
 def read_point_annotations(input_table):
-    """Read annotation as pandas DataFrame
+    """Read annotations as pandas DataFrame.
 
     Args:
         input_table (str or pathlib.Path or ndarray): path to csv, npy or json or
@@ -309,8 +309,11 @@ def read_point_annotations(input_table):
     Returns:
         pd.DataFrame: DataFrame with x, y location and class
 
-    """
+    Examples:
+        >>> from tiatoolbox.tools.patchextraction import read_point_annotations
+        >>> labels = read_point_annotations('./annotations.csv')
 
+    """
     if isinstance(input_table, (str, Path)):
         _, _, suffix = split_path_name_ext(input_table)
 
