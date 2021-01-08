@@ -554,6 +554,11 @@ def test_read_bounds_jp2_baseline(_sample_jp2):
     assert im_region.dtype == "uint8"
     assert im_region.shape == (*size[::-1], 3)
 
+    bounds = (32768, 42880, 33792, 50000)
+    im_region = wsi.read_bounds(bounds, resolution=2.5, units="power")
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (445, 64, 3)
+
 
 def test_read_bounds_openslide_levels(_sample_ndpi):
     """Test openslide read bounds with resolution in levels.
