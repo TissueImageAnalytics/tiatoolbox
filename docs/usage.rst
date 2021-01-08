@@ -94,6 +94,13 @@ Utilities
 
 .. automodule:: tiatoolbox.utils
 
+-----
+Image
+-----
+
+.. automodule:: tiatoolbox.utils.image
+    :members:
+
 -------------
 Miscellaneous
 -------------
