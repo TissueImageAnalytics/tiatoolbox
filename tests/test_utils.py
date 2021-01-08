@@ -111,3 +111,45 @@ def test_load_stain_matrix(tmp_path):
 def test_get_luminosity_tissue_mask():
     with pytest.raises(ValueError):
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
+
+
+def test_read_point_annotations():
+    """Test read point annotations reads csv, ndarray, npy and json correctly."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+
+    labels_table = pd.read_csv(labels)
+
+    # Test csv read with header
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+
+    # Test csv read without header
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction-noheader.csv")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+
+    # Test npy read
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+
+    # Test pd dataframe read
+    out_table = utils.misc.read_point_annotations(labels_table)
+    assert all(labels_table == out_table)
+
+    # Test json read
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+
+    # Test numpy array
+    out_table = utils.misc.read_point_annotations(labels_table.to_numpy())
+    assert all(labels_table == out_table)
+
+    with pytest.raises(FileNotSupported):
+        labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
+        _ = utils.misc.read_point_annotations(labels)
+
+    with pytest.raises(TypeError):
+        _ = utils.misc.read_point_annotations(["a", "b", "c"])

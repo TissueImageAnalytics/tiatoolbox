@@ -9,7 +9,6 @@ from tiatoolbox.dataloader.wsireader import (
 
 import pytest
 import pathlib
-import pandas as pd
 
 
 def test_get_patch_extractor():
@@ -92,45 +91,3 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
             method_name="point",
             patch_size=(200, 200),
         )
-
-
-def test_read_point_annotations():
-    """Test read point annotations reads csv, ndarray, npy and json correctly."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
-
-    labels_table = pd.read_csv(labels)
-
-    # Test csv read with header
-    out_table = patchextraction.read_point_annotations(labels)
-    assert all(labels_table == out_table)
-
-    # Test csv read without header
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction-noheader.csv")
-    out_table = patchextraction.read_point_annotations(labels)
-    assert all(labels_table == out_table)
-
-    # Test npy read
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
-    out_table = patchextraction.read_point_annotations(labels)
-    assert all(labels_table == out_table)
-
-    # Test pd dataframe read
-    out_table = patchextraction.read_point_annotations(labels_table)
-    assert all(labels_table == out_table)
-
-    # Test json read
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
-    out_table = patchextraction.read_point_annotations(labels)
-    assert all(labels_table == out_table)
-
-    # Test numpy array
-    out_table = patchextraction.read_point_annotations(labels_table.to_numpy())
-    assert all(labels_table == out_table)
-
-    with pytest.raises(FileNotSupported):
-        labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
-        _ = patchextraction.read_point_annotations(labels)
-
-    with pytest.raises(TypeError):
-        _ = patchextraction.read_point_annotations(["a", "b", "c"])

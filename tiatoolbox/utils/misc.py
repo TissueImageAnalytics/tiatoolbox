@@ -332,3 +332,52 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
         )
     return np.uint8(img_out)
+
+
+def read_point_annotations(input_table):
+    """Read annotations as pandas DataFrame.
+
+    Args:
+        input_table (str or pathlib.Path or ndarray or pd.DataFrame): path to csv, npy
+         or json or an ndarray. first column in the table represents x position, second
+         column represents y position. The third column represents the class. If the
+         table has headers, the header should be x, y & class.
+
+    Returns:
+        pd.DataFrame: DataFrame with x, y location and class type.
+
+    Examples:
+        >>> from tiatoolbox.utils.misc import read_point_annotations
+        >>> labels = read_point_annotations('./annotations.csv')
+
+    """
+    if isinstance(input_table, (str, pathlib.Path)):
+        _, _, suffix = split_path_name_ext(input_table)
+
+        if suffix == ".npy":
+            out_table = np.load(input_table)
+            out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
+
+        elif suffix == ".csv":
+            out_table = pd.read_csv(input_table)
+            if "x" not in out_table.columns:
+                out_table = pd.read_csv(
+                    input_table, header=None, names=["x", "y", "class"]
+                )
+
+        elif suffix == ".json":
+            out_table = pd.read_json(input_table)
+
+        else:
+            raise FileNotSupported("Filetype not supported.")
+
+    elif isinstance(input_table, np.ndarray):
+        out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+
+    elif isinstance(input_table, pd.DataFrame):
+        out_table = input_table
+
+    else:
+        raise TypeError("Please input correct image path or an ndarray image.")
+
+    return out_table
