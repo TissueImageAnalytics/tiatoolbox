@@ -271,7 +271,7 @@ def test_get_luminosity_tissue_mask():
 
 def test_read_point_annotations():
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
-    file_parent_dir = pathlib.Path(__file__).parent
+    file_parent_dir = Path(__file__).parent
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
 
     labels_table = pd.read_csv(labels)
