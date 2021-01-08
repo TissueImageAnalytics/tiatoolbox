@@ -1127,7 +1127,6 @@ class VirtualWSIReader(WSIReader):
             resolution=resolution,
             units=units,
         )
-        start_x, start_y, end_x, end_y = bounds
         stride = 2 ** read_level
 
         im_region = utils.image.safe_padded_read(self.img, bounds, pad_mode="constant")
