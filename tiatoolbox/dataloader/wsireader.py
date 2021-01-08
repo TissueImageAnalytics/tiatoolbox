@@ -943,6 +943,11 @@ class OmnyxJP2WSIReader(WSIReader):
             location[0] : location[0] + baseline_read_size[0] : stride,
         ]
 
+        bounds = tuple([0, 0, *baseline_read_size // stride])
+        im_region = utils.image.safe_padded_read(
+            img=im_region, bounds=bounds, pad_mode="constant"
+        )
+
         im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=size
         )
