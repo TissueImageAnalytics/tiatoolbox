@@ -514,9 +514,10 @@ def test_read_rect_jp2_objective_power(_sample_jp2):
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
+
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         im_region = wsi.read_rect(
-            location, size, resolution=objective_power, units="mpp"
+            location, size, resolution=objective_power, units="power"
         )
 
         assert isinstance(im_region, np.ndarray)

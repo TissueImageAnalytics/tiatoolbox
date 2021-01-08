@@ -411,7 +411,7 @@ class WSIReader:
             >>> img = wsi.read_rect(
             ...     location,
             ...     size,
-            ...     resolution=[0.5, 0.75],
+            ...     resolution=(0.5, 0.75),
             ...     units="mpp",
             ... )
             >>> # Several units can be used including: objective power,
@@ -882,7 +882,9 @@ class OpenSlideWSIReader(WSIReader):
         # Fallback to calculating objective power from mpp
         if objective_power is None:
             if mpp is not None:
-                objective_power = utils.misc.mpp2common_objective_power(np.mean(mpp))
+                objective_power = utils.misc.mpp2common_objective_power(
+                    float(np.mean(mpp))
+                )
                 warnings.warn(
                     "Metadata: Objective power inferred from microns-per-pixel (MPP)."
                 )
@@ -923,7 +925,7 @@ class OmnyxJP2WSIReader(WSIReader):
         # Find parameters for optimal read
         (
             read_level,
-            level_location,
+            _,
             _,
             post_read_scale,
             baseline_read_size,
@@ -933,14 +935,13 @@ class OmnyxJP2WSIReader(WSIReader):
             resolution=resolution,
             units=units,
         )
-        # Read at optimal level and corrected read size
-        area = (
-            *level_location[::-1],
-            *(level_location[::-1] + baseline_read_size),
-        )
 
+        stride = 2 ** read_level
         glymur_wsi = self.glymur_wsi
-        im_region = glymur_wsi.read(rlevel=read_level, area=area)
+        im_region = glymur_wsi[
+            location[1] : location[1] + baseline_read_size[1] : stride,
+            location[0] : location[0] + baseline_read_size[0] : stride,
+        ]
 
         im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=size
