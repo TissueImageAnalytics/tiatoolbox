@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This module defines classes which can read image data from WSI formats."""
-from tiatoolbox.utils import misc, transforms
+from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
@@ -58,6 +58,7 @@ class WSIReader:
             self.input_path = None
         else:
             self.input_path = pathlib.Path(input_img)
+        self._m_info = None
 
     @property
     def info(self):
@@ -69,7 +70,7 @@ class WSIReader:
             WSIMetadata: An object containing normalised slide metadata
         """
         # In Python>=3.8 this could be replaced with functools.cached_property
-        if hasattr(self, "_m_info"):
+        if self._m_info is not None:
             return copy.deepcopy(self._m_info)
         self._m_info = self._info()
         return self._m_info
@@ -697,7 +698,7 @@ class WSIReader:
 
                 # Rescale to the correct objective value
                 if rescale != 1:
-                    im = transforms.imresize(img=im, scale_factor=rescale)
+                    im = utils.transforms.imresize(img=im, scale_factor=rescale)
 
                 img_save_name = (
                     "_".join(
@@ -711,7 +712,9 @@ class WSIReader:
                     + tile_format
                 )
 
-                misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
+                utils.misc.imwrite(
+                    image_path=output_dir.joinpath(img_save_name), img=im
+                )
 
                 data.append(
                     [
@@ -745,7 +748,7 @@ class WSIReader:
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
-        misc.imwrite(
+        utils.misc.imwrite(
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
 
@@ -791,11 +794,11 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        im_region = transforms.imresize(
+        im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=size
         )
 
-        im_region = transforms.background_composite(image=im_region)
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
     def read_bounds(self, bounds, resolution=0, units="level"):
@@ -819,11 +822,11 @@ class OpenSlideWSIReader(WSIReader):
         im_region = np.array(im_region)
 
         # Resize to correct scale if required
-        im_region = transforms.imresize(
+        im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=output_size
         )
 
-        im_region = transforms.background_composite(image=im_region)
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
     def _info(self):
@@ -879,7 +882,7 @@ class OpenSlideWSIReader(WSIReader):
         # Fallback to calculating objective power from mpp
         if objective_power is None:
             if mpp is not None:
-                objective_power = misc.mpp2common_objective_power(np.mean(mpp))
+                objective_power = utils.misc.mpp2common_objective_power(np.mean(mpp))
                 warnings.warn(
                     "Metadata: Objective power inferred from microns-per-pixel (MPP)."
                 )
@@ -939,11 +942,11 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
         im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        im_region = transforms.imresize(
+        im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=size
         )
 
-        im_region = transforms.background_composite(image=im_region)
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
     def read_bounds(self, bounds, resolution=0, units="level"):
@@ -963,11 +966,11 @@ class OmnyxJP2WSIReader(WSIReader):
         # area = (start_y, start_x, end_y, end_x)
         # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        im_region = transforms.imresize(
+        im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=output_size
         )
 
-        im_region = transforms.background_composite(image=im_region)
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
     def _info(self):
@@ -1060,7 +1063,7 @@ class VirtualWSIReader(WSIReader):
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
-            self.img = misc.imread(self.input_path)
+            self.img = utils.misc.imread(self.input_path)
 
     def _info(self):
         """Visual Field meta data getter.
@@ -1111,11 +1114,11 @@ class VirtualWSIReader(WSIReader):
             :,
         ]
 
-        im_region = transforms.imresize(
+        im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=size
         )
 
-        im_region = transforms.background_composite(image=im_region)
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
     def read_bounds(self, bounds, resolution=1.0, units="baseline"):
@@ -1130,11 +1133,11 @@ class VirtualWSIReader(WSIReader):
 
         im_region = self.img[start_y:end_y:stride, start_x:end_x:stride]
 
-        im_region = transforms.imresize(
+        im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=output_size
         )
 
-        im_region = transforms.background_composite(image=im_region)
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
 
@@ -1153,7 +1156,7 @@ def get_wsireader(input_img):
 
     """
     if isinstance(input_img, (str, pathlib.Path)):
-        _, _, suffix = misc.split_path_name_ext(input_img)
+        _, _, suffix = utils.misc.split_path_name_ext(input_img)
 
         if suffix in (".jpg", ".png"):
             wsi = VirtualWSIReader(input_img)
