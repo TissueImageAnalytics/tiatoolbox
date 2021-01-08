@@ -38,15 +38,15 @@ class PatchExtractor(ABC):
 
     Args:
         input_img(str, pathlib.Path, ndarray): input image for patch extraction.
-        patch_size(Tuple of int): patch size tuple (height, width).
-        pad_size(Tuple of int): symmetric padding in (y, x) direction.
+        patch_size(Tuple of int): patch size tuple (width, height).
+        pad_size(Tuple of int): symmetric padding in (x, y) direction.
 
     Attributes:
         input_img(ndarray, WSIReader): input image for patch extraction.
           input_image type is ndarray for an image tile whereas :obj:`WSIReader`
           for an WSI.
-        patch_size(Tuple of int): patch size tuple (height, width).
-        pad_size(Tuple of int): symmetric padding in (y, x) direction.
+        patch_size(Tuple of int): patch size tuple (width, height).
+        pad_size(Tuple of int): symmetric padding in (x, y) direction.
         n(int): current state of the iterator.
 
     """
@@ -110,10 +110,10 @@ class FixedWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
-        stride(Tuple of int): stride in (y, x) direction for patch extraction.
+        stride(Tuple of int): stride in (x, y) direction for patch extraction.
 
     Attributes:
-        stride(Tuple of int): stride in (y, x) direction for patch extraction.
+        stride(Tuple of int): stride in (x, y) direction for patch extraction.
 
     """
 
@@ -145,12 +145,12 @@ class VariableWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using variable sized windows for images and labels.
 
     Args:
-        stride(Tuple of int): stride in (y, x) direction for patch extraction.
-        label_patch_size(Tuple of int): network output label (height, width).
+        stride(Tuple of int): stride in (x, y) direction for patch extraction.
+        label_patch_size(Tuple of int): network output label (width, height).
 
     Attributes:
-        stride(Tuple of int): stride in (y, x) direction for patch extraction.
-        label_patch_size(Tuple of int): network output label (height, width).
+        stride(Tuple of int): stride in (x, y) direction for patch extraction.
+        label_patch_size(Tuple of int): network output label (width, height).
 
     """
 
@@ -217,20 +217,26 @@ class PointsPatchExtractor(PatchExtractor):
     def __next__(self):
         n = self.n
 
-        if n > self.labels.shape[0]:
+        if n >= self.labels.shape[0]:
             raise StopIteration
-
         self.n = n + 1
-        return n
+        return self[n]
 
     def __getitem__(self, item):
         if type(item) is not int:
             raise TypeError("Index should be an integer.")
 
-        if item > self.labels.shape[0]:
+        if item >= self.labels.shape[0]:
             raise IndexError
 
-        return item
+        x, y, _ = self.labels.values[item, :]
+
+        x = x - int((self.patch_size[1] - 1) / 2)
+        y = y - int((self.patch_size[0] - 1) / 2)
+
+        data = self.wsi.read_rect(location=(x, y), size=self.patch_size)
+
+        return data
 
     # def extract_patches(self, input_img, labels=None):
     #     if not isinstance(labels, np.ndarray):
