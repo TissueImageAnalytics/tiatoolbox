@@ -53,10 +53,7 @@ class WSIReader:
 
     """
 
-    def __init__(
-        self,
-        input_img,
-    ):
+    def __init__(self, input_img):
         if isinstance(input_img, np.ndarray):
             self.input_path = None
         else:
@@ -774,13 +771,8 @@ class OpenSlideWSIReader(WSIReader):
 
     """
 
-    def __init__(
-        self,
-        input_img,
-    ):
-        super().__init__(
-            input_img=input_img,
-        )
+    def __init__(self, input_img):
+        super().__init__(input_img=input_img)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -813,11 +805,7 @@ class OpenSlideWSIReader(WSIReader):
             level_bounds,
             output_size,
             post_read_scale,
-        ) = self._find_read_bounds_params(
-            bounds,
-            resolution=resolution,
-            units=units,
-        )
+        ) = self._find_read_bounds_params(bounds, resolution=resolution, units=units)
 
         wsi = self.openslide_wsi
 
@@ -925,9 +913,7 @@ class OmnyxJP2WSIReader(WSIReader):
     """
 
     def __init__(self, input_img):
-        super().__init__(
-            input_img=input_img,
-        )
+        super().__init__(input_img=input_img)
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -1059,7 +1045,15 @@ class VirtualWSIReader(WSIReader):
 
     """
 
-    def __init__(self, input_img):
+    def __init__(
+        self,
+        input_img,
+        baseline_size=None,
+        mpp=None,
+        power=None,
+        level_downsamples=None,
+        level_dimensions=None,
+    ):
         super().__init__(
             input_img=input_img,
         )
