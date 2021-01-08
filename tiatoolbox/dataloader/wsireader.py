@@ -1065,6 +1065,12 @@ class VirtualWSIReader(WSIReader):
         else:
             self.img = utils.misc.imread(self.input_path)
 
+        self._slide_dimensions = baseline_size
+        self._objective_power = power
+        self._mpp = mpp
+        self._level_downsamples = level_downsamples
+        self._level_dimensions = level_dimensions
+
     def _info(self):
         """Visual Field meta data getter.
 
