@@ -166,4 +166,22 @@ def bounds2size(bounds, origin="upper"):
     left, top, right, bottom = bounds
     if origin == "upper":
         return np.array([right - left, bottom - top])
-    return np.array([right - left, top - bottom])
+    elif origin == "lower":
+        return np.array([right - left, top - bottom])
+    raise ValueError("Invalid origin")
+
+
+def locsize2bounds(location, size):
+    """Convert a location and size to bounds.
+
+    Args:
+        location (tuple(int)): A 2-tuple or length 2 array of x,y coordinates.
+        size (tuple(int)): A 2-tuple or length 2 array of width and height.
+        origin (str): Upper (Top-left) or lower (bottom-left) expected
+            for location / origin. Defaults to upper.
+
+    Returns:
+        tuple: A tuple of bounds in (left, top, right, bottom) /
+        (start_x, start_y, end_x, end_y) format.
+    """
+    return (location[0], location[1], location[0] + size[0], location[1] + size[1])
