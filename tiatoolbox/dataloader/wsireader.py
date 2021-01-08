@@ -53,10 +53,7 @@ class WSIReader:
 
     """
 
-    def __init__(
-        self,
-        input_img,
-    ):
+    def __init__(self, input_img):
         if isinstance(input_img, np.ndarray):
             self.input_path = None
         else:
@@ -774,13 +771,8 @@ class OpenSlideWSIReader(WSIReader):
 
     """
 
-    def __init__(
-        self,
-        input_img,
-    ):
-        super().__init__(
-            input_img=input_img,
-        )
+    def __init__(self, input_img):
+        super().__init__(input_img=input_img)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
@@ -1059,14 +1051,50 @@ class VirtualWSIReader(WSIReader):
 
     """
 
-    def __init__(self, input_img):
-        super().__init__(
-            input_img=input_img,
-        )
+    def __init__(
+        self,
+        input_img,
+        baseline_size=None,
+        mpp=None,
+        power=None,
+        level_downsamples=None,
+        level_dimensions=None,
+    ):
+        super().__init__(input_img=input_img)
+
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
             self.img = misc.imread(self.input_path)
+
+        self.img_size = self.img.shape[:2][::-1]
+        self.baseline_size = tuple(baseline_size)
+        self.power = power
+        self.mpp = mpp
+        self.level_downsamples = level_downsamples
+        self.level_dimensions = level_dimensions
+
+        if self.baseline_size is None:
+            self.baseline_size = self.img.shape[:2][::-1]
+        np_baseline_size = np.array(self.baseline_size)
+        if self.level_dimensions is None:
+            if self.level_downsamples is None:
+                # No level downsamples or dimensions
+                self.level_dimensions = [self.baseline_size]
+                self.level_downsamples = [1]
+            else:
+                # No level dimensions but downsamples are given
+                self.level_dimensions = [
+                    np.round(np_baseline_size / x).astype(int)
+                    for x in self.level_downsamples
+                ]
+        if self.level_downsamples is None:
+            # No level downsamples but level dimensions are given
+            self.level_downsamples = [
+                np_baseline_size / np.array(x) for x in self.level_dimensions
+            ]
+            if not all(x == y for x, y in self.level_downsamples):
+                warnings.warn("Downsamples differ in x and y")
 
     def _info(self):
         """Visual Field meta data getter.
