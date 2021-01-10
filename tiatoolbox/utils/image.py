@@ -27,7 +27,9 @@ import cv2
 from tiatoolbox.utils.transforms import bounds2size
 
 
-def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
+def safe_padded_read(
+    img, bounds, stride=None, padding=0, pad_mode="constant", **pad_kwargs
+):
     """Read a region of a numpy array with padding applied to edges.
 
     Safely 'read' regions, even outside of the image bounds. Accepts
@@ -47,6 +49,9 @@ def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
         bounds (tuple(int)):
             Bounds of the region in (left, top,
             right, bottom) format.
+        stride (int, tuple(int)):
+            Stride when reading from img. Defaults to None. Tuple is
+            iterpreted as stride in x and y (axis 1 and 0 respectively).
         padding (int, tuple(int)):
             Padding to apply to each bound.
         pad_mode (str):
@@ -77,15 +82,24 @@ def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
     """
     padding = np.array(padding)
     # Ensure the bounds are integers.
-    if issubclass(np.array(bounds).dtype.type, (int, np.integer)):
+    if not issubclass(np.array(bounds).dtype.type, (int, np.integer)):
         raise ValueError("Bounds must be integers.")
 
     if np.any(padding < 0):
         raise ValueError("Padding cannot be negative.")
 
     # Allow padding to be a 2-tuple in addition to an int or 4-tuple
+    if np.size(padding) not in [1, 2, 4]:
+        raise ValueError("Padding must be of size 1, 2 or 4.")
     if np.size(padding) == 2:
         padding = np.tile(padding, 2)
+
+    # Ensure stride is a 2-tuple
+    if np.size(stride) not in [1, 2]:
+        raise ValueError("Stride must be of size 1 or 2.")
+    if np.size(stride) == 1:
+        stride = np.tile(stride, 2)
+    x_stride, y_stride = stride
 
     # Check if the padded coords outside of the image bounds
     # (over the width/height or under 0)
@@ -98,7 +112,7 @@ def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
     # If all coords are within the image then read normally
     if not any(over | under):
         l, t, r, b = padded_bounds
-        return img[t:b, l:r, ...]
+        return img[t:b:y_stride, l:r:x_stride, ...]
     # Else find the closest coordinates which are inside the image
     clamped_bounds = np.max(
         [np.min([padded_bounds, hw_limits - 1], axis=0), zeros], axis=0
@@ -106,7 +120,7 @@ def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
     clamped_bounds = np.round(clamped_bounds).astype(int)
     # Read the area within the image
     l, t, r, b = clamped_bounds
-    region = img[t:b, l:r, ...]
+    region = img[t:b:y_stride, l:r:x_stride, ...]
     # Find how much padding needs to be applied to fill the edge gaps
     # edge_padding = np.abs(padded_bounds - clamped_bounds)
     edge_padding = padded_bounds - np.array(
