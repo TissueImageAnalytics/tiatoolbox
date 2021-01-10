@@ -81,7 +81,7 @@ def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
         raise ValueError("Bounds must be integers.")
 
     if np.any(padding < 0):
-        raise ValueError("Padding can't be negative.")
+        raise ValueError("Padding cannot be negative.")
 
     # Allow padding to be a 2-tuple in addition to an int or 4-tuple
     if np.size(padding) == 2:
