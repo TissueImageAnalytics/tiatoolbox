@@ -77,7 +77,7 @@ def safe_padded_read(img, bounds, padding=0, pad_mode="constant", **pad_kwargs):
     """
     padding = np.array(padding)
     # Ensure the bounds are integers.
-    if np.array(bounds).dtype != int:
+    if issubclass(np.array(bounds).dtype.type, (int, np.integer)):
         raise ValueError("Bounds must be integers.")
 
     if np.any(padding < 0):
