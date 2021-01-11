@@ -25,10 +25,11 @@ import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import bounds2size
+from tiatoolbox.utils.misc import conv_out_size
 
 
 def safe_padded_read(
-    img, bounds, stride=None, padding=0, pad_mode="constant", **pad_kwargs
+    img, bounds, stride=1, padding=0, pad_mode="constant", **pad_kwargs
 ):
     """Read a region of a numpy array with padding applied to edges.
 
@@ -50,8 +51,9 @@ def safe_padded_read(
             Bounds of the region in (left, top,
             right, bottom) format.
         stride (int, tuple(int)):
-            Stride when reading from img. Defaults to None. Tuple is
+            Stride when reading from img. Defaults to 1. Tuple is
             iterpreted as stride in x and y (axis 1 and 0 respectively).
+            Also applies to padding.
         padding (int, tuple(int)):
             Padding to apply to each bound.
         pad_mode (str):
@@ -121,12 +123,19 @@ def safe_padded_read(
     # Read the area within the image
     l, t, r, b = clamped_bounds
     region = img[t:b:y_stride, l:r:x_stride, ...]
+    # Reduce bounds an img_size for the stride
+    if not np.all(np.isin(stride, [None, 1])):
+        # This if is not required but avoids unnecessary calculations
+        bounds = conv_out_size(np.array(bounds), stride=np.tile(stride, 2))
+        padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
+        img_size = conv_out_size(img_size, stride=stride)
     # Find how much padding needs to be applied to fill the edge gaps
     # edge_padding = np.abs(padded_bounds - clamped_bounds)
+    img_max_index = img_size
     edge_padding = padded_bounds - np.array(
         [
             *np.min([[0, 0], padded_bounds[2:]], axis=0),
-            *np.max([img_size - 1, padded_bounds[:2]], axis=0),
+            *np.max([img_max_index, padded_bounds[:2]], axis=0),
         ]
     )
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
@@ -134,7 +143,7 @@ def safe_padded_read(
     edge_padding = np.abs(edge_padding)
     l, t, r, b = edge_padding
     pad_width = [(t, b), (l, r)]
-    if len(img.shape) == 3:
+    if len(region.shape) == 3:
         pad_width += [(0, 0)]
     # Pad the image region at the edges
     region = np.pad(region, pad_width, mode=pad_mode, **pad_kwargs)
