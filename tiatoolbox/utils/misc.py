@@ -330,3 +330,22 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
         )
     return np.uint8(img_out)
+
+
+def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
+    """Calculate convolution output size.
+
+    .. math::
+        \\begin{split}
+        n_{out} &= \\bigg\\lfloor {{\\frac{n_{in} +2p - k}{s}}} \\bigg\\rfloor + 1 \\\\
+        n_{in} &: \\text{Number of input features} \\\\
+        n_{out} &: \\text{Number of output features} \\\\
+        p &: \\text{Padding size} \\\\
+        k &: \\text{Kernel size} \\\\
+        s &: \\text{Stride size} \\\\
+        \\end{split}
+
+    Returns:
+        int: Output size / number of features.
+  """
+    return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
