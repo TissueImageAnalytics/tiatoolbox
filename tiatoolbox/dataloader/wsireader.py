@@ -962,7 +962,6 @@ class OmnyxJP2WSIReader(WSIReader):
 
         glymur_wsi = self.glymur_wsi
 
-        start_x, start_y, end_x, end_y = bounds
         stride = 2 ** read_level
         # im_region = glymur_wsi[start_y:end_y:stride, start_x:end_x:stride]
         # Equivalent but deprecated read function
