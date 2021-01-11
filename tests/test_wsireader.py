@@ -966,12 +966,12 @@ def test_openslide_objective_power_from_mpp(_sample_svs):
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
     props = wsi.openslide_wsi._properties
 
-    del props["openslide.objective-power"]
+    del props["openslide.objective-power"]  # skipcq: PTC-W0043
     with pytest.warns(UserWarning, match=r"Objective power inferred"):
         _ = wsi._info()
 
-    del props["openslide.mpp-x"]
-    del props["openslide.mpp-y"]
+    del props["openslide.mpp-x"]  # skipcq: PTC-W0043
+    del props["openslide.mpp-y"]  # skipcq: PTC-W0043
     with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
         _ = wsi._info()
 
@@ -982,8 +982,8 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
     props = wsi.openslide_wsi._properties
 
-    del props["openslide.mpp-x"]
-    del props["openslide.mpp-y"]
+    del props["openslide.mpp-x"]  # skipcq: PTC-W0043
+    del props["openslide.mpp-y"]  # skipcq: PTC-W0043
     props["tiff.ResolutionUnit"] = "centimeter"
     props["tiff.XResolution"] = 1e4  # Pixels per cm
     props["tiff.YResolution"] = 1e4  # Pixels per cm
