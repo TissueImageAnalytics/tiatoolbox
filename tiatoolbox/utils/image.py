@@ -45,7 +45,7 @@ def safe_padded_read(
                 coordinates using zero padding and reflection padding.
 
     Args:
-        img (:class:`numpy.ndarray`):
+        img (:class:`numpy.ndarray` or :class:`glymur.Jp2k`):
             Input image to read from.
         bounds (tuple(int)):
             Bounds of the region in (left, top,
@@ -55,7 +55,7 @@ def safe_padded_read(
             iterpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
         padding (int, tuple(int)):
-            Padding to apply to each bound.
+            Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
             the input image. Default is constant (0 padding). Possible

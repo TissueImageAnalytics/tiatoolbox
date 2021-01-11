@@ -942,7 +942,11 @@ class OmnyxJP2WSIReader(WSIReader):
             location=location, size=baseline_read_size
         )
         im_region = utils.image.safe_padded_read(
-            img=glymur_wsi, bounds=bounds, stride=stride, pad_mode="constant"
+            img=glymur_wsi,
+            bounds=bounds,
+            stride=stride,
+            pad_mode="constant",
+            constant_values=255,
         )
 
         im_region = utils.transforms.imresize(
@@ -975,7 +979,11 @@ class OmnyxJP2WSIReader(WSIReader):
         #     int((end_y - start_y) // stride),
         # )
         im_region = utils.image.safe_padded_read(
-            img=glymur_wsi, bounds=bounds, stride=stride, pad_mode="constant"
+            img=glymur_wsi,
+            bounds=bounds,
+            stride=stride,
+            pad_mode="constant",
+            constant_values=255,
         )
 
         im_region = utils.transforms.imresize(
