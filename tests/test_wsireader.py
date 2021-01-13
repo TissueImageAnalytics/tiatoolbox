@@ -126,7 +126,7 @@ def read_bounds_level_consistency(wsi, bounds):
             assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
 
 
-def command_line_slide_thumbnail(runner, sample, tmp_path):
+def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
     """Command line slide thumbnail helper."""
     slide_thumb_result = runner.invoke(
         cli.main,
@@ -135,14 +135,15 @@ def command_line_slide_thumbnail(runner, sample, tmp_path):
             "--wsi_input",
             str(pathlib.Path(sample)),
             "--mode",
-            "save",
+            mode,
             "--output_path",
             str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
         ],
     )
 
     assert slide_thumb_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+    if mode == "save":
+        assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
 
 
 # -------------------------------------------------------------------------------------
@@ -919,13 +920,56 @@ def test_command_line_jp2_read_bounds(_sample_jp2, tmp_path):
             "level",
             "--mode",
             "save",
-            "--output_path",
-            str(pathlib.Path(tmp_path).joinpath("im_region.jpg")),
         ],
     )
 
     assert read_bounds_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("im_region.jpg").is_file()
+    assert pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
+
+
+def test_command_line_jp2_read_bounds_show(_sample_jp2, tmp_path):
+    """Test JP2 read_bounds with mode as 'show'."""
+    runner = CliRunner()
+    read_bounds_result = runner.invoke(
+        cli.main,
+        [
+            "read-bounds",
+            "--wsi_input",
+            str(pathlib.Path(_sample_jp2)),
+            "--resolution",
+            "0",
+            "--units",
+            "level",
+            "--mode",
+            "show",
+        ],
+    )
+
+    assert read_bounds_result.exit_code == 0
+    assert not pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
+
+
+def test_command_line_unsupported_file_read_bounds(_sample_svs, tmp_path):
+    """Test unsupported file read bounds."""
+    runner = CliRunner()
+    read_bounds_result = runner.invoke(
+        cli.main,
+        [
+            "read-bounds",
+            "--wsi_input",
+            str(pathlib.Path(_sample_svs))[:-1],
+            "--resolution",
+            "0",
+            "--units",
+            "level",
+            "--mode",
+            "save",
+        ],
+    )
+
+    assert read_bounds_result.output == ""
+    assert read_bounds_result.exit_code == 1
+    assert isinstance(read_bounds_result.exception, FileNotSupported)
 
 
 def test_command_line_slide_thumbnail(_sample_ndpi, tmp_path):
@@ -940,6 +984,37 @@ def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
     runner = CliRunner()
 
     command_line_slide_thumbnail(runner, sample=_sample_jp2, tmp_path=tmp_path)
+
+
+def test_command_line_jp2_slide_thumbnail_mode_show(_sample_jp2, tmp_path):
+    """Test for the jp2 slide_thumbnail CLI mode='show'."""
+    runner = CliRunner()
+
+    command_line_slide_thumbnail(
+        runner, sample=_sample_jp2, tmp_path=tmp_path, mode="show"
+    )
+
+
+def test_command_line_jp2_slide_thumbnail_file_not_supported(_sample_jp2, tmp_path):
+    """Test for the jp2 slide_thumbnail CLI."""
+    runner = CliRunner()
+
+    slide_thumb_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(_sample_jp2))[:-1],
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
+        ],
+    )
+
+    assert slide_thumb_result.output == ""
+    assert slide_thumb_result.exit_code == 1
+    assert isinstance(slide_thumb_result.exception, FileNotSupported)
 
 
 def test_openslide_objective_power_from_mpp(_sample_svs):

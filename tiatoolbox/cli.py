@@ -67,7 +67,10 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Display or save WSI metadata."""
@@ -108,7 +111,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(), out_path,
+                slide_param.as_dict(),
+                out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -163,7 +167,11 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
         wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_img=wsi_input)
 
     if wsi is not None:
-        im_region = wsi.read_bounds(region, resolution=resolution, units=units,)
+        im_region = wsi.read_bounds(
+            region,
+            resolution=resolution,
+            units=units,
+        )
         if mode == "show":
             im_region = Image.fromarray(im_region)
             im_region.show()
@@ -239,7 +247,10 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="tile width, height default=5000 5000",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
@@ -317,8 +328,6 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
         ]
     else:
         raise FileNotFoundError
-
-    print(files_all)
 
     if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise MethodNotSupported

@@ -10,7 +10,8 @@ def test_slide_info(_sample_all_wsis, tmp_path):
     """Test for slide_info as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=_sample_all_wsis, file_types=file_types,
+        input_path=_sample_all_wsis,
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -42,20 +43,60 @@ def test_command_line_slide_info(_sample_all_wsis):
 
     assert slide_info_result.exit_code == 0
 
-    file_types = "*.svs"
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_all_wsis)), file_types=file_types,
-    )
+
+def test_command_line_slide_info_svs(_sample_svs):
+    """Test CLI slide info for single file."""
+    runner = CliRunner()
     slide_info_result = runner.invoke(
         cli.main,
         [
             "slide-info",
             "--wsi_input",
-            files_all[0],
+            _sample_svs,
             "--file_types",
             '"*.ndpi, *.svs"',
             "--mode",
             "show",
+        ],
+    )
+
+    assert slide_info_result.exit_code == 0
+
+
+def test_command_line_slide_info_file_not_found(_sample_svs):
+    """Test CLI slide info file not found error."""
+    runner = CliRunner()
+    slide_info_result = runner.invoke(
+        cli.main,
+        [
+            "slide-info",
+            "--wsi_input",
+            str(_sample_svs)[:-1],
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--mode",
+            "show",
+        ],
+    )
+
+    assert slide_info_result.output == ""
+    assert slide_info_result.exit_code == 1
+    assert isinstance(slide_info_result.exception, FileNotFoundError)
+
+
+def test_command_line_slide_info_output_none_mode_save(_sample_svs):
+    """Test CLI slide info for single file."""
+    runner = CliRunner()
+    slide_info_result = runner.invoke(
+        cli.main,
+        [
+            "slide-info",
+            "--wsi_input",
+            _sample_svs,
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--mode",
+            "save",
         ],
     )
 
