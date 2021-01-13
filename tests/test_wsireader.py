@@ -56,6 +56,94 @@ def strictly_decreasing(seq):
     return all(a > b for a, b in zip(seq, seq[1:]))
 
 
+def read_rect_objective_power(wsi, location, size):
+    """Read rect objective helper."""
+    for objective_power in [20, 10, 5, 2.5, 1.25]:
+        im_region = wsi.read_rect(
+            location, size, resolution=objective_power, units="power"
+        )
+
+        assert isinstance(im_region, np.ndarray)
+        assert im_region.dtype == "uint8"
+        assert im_region.shape == (*size[::-1], 3)
+
+
+def read_bounds_mpp(wsi, slide_mpp, bounds, size, jp2=False):
+    """Read bounds mpp helper."""
+    for factor in range(1, 10):
+        mpp = slide_mpp * factor
+        downsample = mpp / slide_mpp
+
+        im_region = wsi.read_bounds(bounds, resolution=mpp, units="mpp")
+
+        assert isinstance(im_region, np.ndarray)
+        assert im_region.dtype == "uint8"
+        expected_output_shape = tuple(
+            np.round((np.array(size[::-1]) / downsample)).astype(int)
+        )
+        if jp2:
+            assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
+        else:
+            assert im_region.shape[:2] == expected_output_shape
+        assert im_region.shape[2] == 3
+
+
+def read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False):
+    """Read bounds objective power helper."""
+    for objective_power in [20, 10, 5, 2.5, 1.25]:
+        downsample = slide_power / objective_power
+
+        im_region = wsi.read_bounds(
+            bounds,
+            resolution=objective_power,
+            units="power",
+        )
+
+        assert isinstance(im_region, np.ndarray)
+        assert im_region.dtype == "uint8"
+        expected_output_shape = tuple(
+            np.round((np.array(size[::-1]) / downsample)).astype(int)
+        )
+        if jp2:
+            assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
+        else:
+            assert im_region.shape[:2] == expected_output_shape
+        assert im_region.shape[2] == 3
+
+
+def read_bounds_level_consistency(wsi, bounds):
+    """Read bounds level consistency helper."""
+    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [
+        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
+        for img in imgs
+    ]
+    # Pair-wise check resolutions for mean squared error
+    for a in resized:
+        for b in resized:
+            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
+
+
+def command_line_slide_thumbnail(runner, sample, tmp_path):
+    """Command line slide thumbnail helper."""
+    slide_thumb_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(sample)),
+            "--mode",
+            "save",
+            "--output_path",
+            str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
+        ],
+    )
+
+    assert slide_thumb_result.exit_code == 0
+    assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+
+
 # -------------------------------------------------------------------------------------
 # Utility Test Classes
 # -------------------------------------------------------------------------------------
@@ -496,14 +584,8 @@ def test_read_rect_openslide_objective_power(_sample_ndpi):
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
-    for objective_power in [20, 10, 5, 2.5, 1.25]:
-        im_region = wsi.read_rect(
-            location, size, resolution=objective_power, units="power"
-        )
 
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        assert im_region.shape == (*size[::-1], 3)
+    read_rect_objective_power(wsi, location, size)
 
 
 def test_read_rect_jp2_objective_power(_sample_jp2):
@@ -515,14 +597,7 @@ def test_read_rect_jp2_objective_power(_sample_jp2):
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
 
-    for objective_power in [20, 10, 5, 2.5, 1.25]:
-        im_region = wsi.read_rect(
-            location, size, resolution=objective_power, units="power"
-        )
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        assert im_region.shape == (*size[::-1], 3)
+    read_rect_objective_power(wsi, location, size)
 
 
 def test_read_bounds_openslide_baseline(_sample_ndpi):
@@ -608,19 +683,8 @@ def test_read_bounds_openslide_mpp(_sample_ndpi):
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
     slide_mpp = wsi.info.mpp
-    for factor in range(1, 10):
-        mpp = slide_mpp * factor
-        downsample = mpp / slide_mpp
 
-        im_region = wsi.read_bounds(bounds, resolution=mpp, units="mpp")
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        expected_output_shape = tuple(
-            np.round((np.array(size[::-1]) / downsample)).astype(int)
-        )
-        assert im_region.shape[:2] == expected_output_shape
-        assert im_region.shape[2] == 3
+    read_bounds_mpp(wsi, slide_mpp, bounds, size)
 
 
 def test_read_bounds_jp2_mpp(_sample_jp2):
@@ -632,19 +696,8 @@ def test_read_bounds_jp2_mpp(_sample_jp2):
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     slide_mpp = wsi.info.mpp
-    for factor in range(1, 10):
-        mpp = slide_mpp * factor
-        downsample = mpp / slide_mpp
 
-        im_region = wsi.read_bounds(bounds, resolution=mpp, units="mpp")
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        expected_output_shape = tuple(
-            np.round((np.array(size[::-1]) / downsample)).astype(int)
-        )
-        assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
-        assert im_region.shape[2] == 3
+    read_bounds_mpp(wsi, bounds, size, slide_mpp, jp2=True)
 
 
 def test_read_bounds_openslide_objective_power(_sample_ndpi):
@@ -656,22 +709,21 @@ def test_read_bounds_openslide_objective_power(_sample_ndpi):
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
-    for objective_power in [20, 10, 5, 2.5, 1.25]:
-        downsample = slide_power / objective_power
 
-        im_region = wsi.read_bounds(
-            bounds,
-            resolution=objective_power,
-            units="power",
-        )
+    read_bounds_objective_power(wsi, slide_power, bounds, size)
 
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        expected_output_shape = tuple(
-            np.round((np.array(size[::-1]) / downsample)).astype(int)
-        )
-        assert im_region.shape[:2] == expected_output_shape
-        assert im_region.shape[2] == 3
+
+def test_read_bounds_jp2_objective_power(_sample_jp2):
+    """Test jp2 read bounds with resolution in objective power.
+
+    Coordinates in baseline (level 0) reference frame.
+    """
+    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
+    bounds = JP2_TEST_TISSUE_BOUNDS
+    size = JP2_TEST_TISSUE_SIZE
+    slide_power = wsi.info.objective_power
+
+    read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=True)
 
 
 def test_read_bounds_interpolated(_sample_svs):
@@ -696,63 +748,20 @@ def test_read_bounds_interpolated(_sample_svs):
     assert all(np.array(im_region.shape[:2]) > size)
 
 
-def test_read_bounds_jp2_objective_power(_sample_jp2):
-    """Test jp2 read bounds with resolution in objective power.
-
-    Coordinates in baseline (level 0) reference frame.
-    """
-    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    bounds = JP2_TEST_TISSUE_BOUNDS
-    size = JP2_TEST_TISSUE_SIZE
-    slide_power = wsi.info.objective_power
-    for objective_power in [20, 10, 5, 2.5, 1.25]:
-        downsample = slide_power / objective_power
-
-        im_region = wsi.read_bounds(
-            bounds,
-            resolution=objective_power,
-            units="power",
-        )
-
-        assert isinstance(im_region, np.ndarray)
-        assert im_region.dtype == "uint8"
-        expected_output_shape = tuple(
-            np.round((np.array(size[::-1]) / downsample)).astype(int)
-        )
-        assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
-        assert im_region.shape[2] == 3
-
-
 def test_read_bounds_level_consistency_openslide(_sample_ndpi):
     """Test read_bounds produces the same visual field across resolution levels."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
-    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
-    smallest_size = imgs[-1].shape[:2][::-1]
-    resized = [
-        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
-        for img in imgs
-    ]
-    # Pair-wise check resolutions for mean squared error
-    for a in resized:
-        for b in resized:
-            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
+
+    read_bounds_level_consistency(wsi, bounds)
 
 
 def test_read_bounds_level_consistency_jp2(_sample_jp2):
     """Test read_bounds produces the same visual field across resolution levels."""
     bounds = JP2_TEST_TISSUE_BOUNDS
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
-    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10]]
-    smallest_size = imgs[-1].shape[:2][::-1]
-    resized = [
-        cv2.GaussianBlur(cv2.resize(img, smallest_size), (5, 5), cv2.BORDER_REFLECT)
-        for img in imgs
-    ]
-    # Pair-wise check resolutions for mean squared error
-    for a in resized:
-        for b in resized:
-            assert np.sum((a - b) ** 2) / np.prod(a.shape) < 16
+
+    read_bounds_level_consistency(wsi, bounds)
 
 
 def test_wsireader_get_thumbnail_openslide(_sample_svs):
@@ -923,41 +932,15 @@ def test_command_line_jp2_read_bounds(_sample_jp2, tmp_path):
 def test_command_line_slide_thumbnail(_sample_ndpi, tmp_path):
     """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
-    slide_thumb_result = runner.invoke(
-        cli.main,
-        [
-            "slide-thumbnail",
-            "--wsi_input",
-            str(pathlib.Path(_sample_ndpi)),
-            "--mode",
-            "save",
-            "--output_path",
-            str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
-        ],
-    )
 
-    assert slide_thumb_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+    command_line_slide_thumbnail(runner, sample=_sample_ndpi, tmp_path=tmp_path)
 
 
 def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
-    slide_thumb_result = runner.invoke(
-        cli.main,
-        [
-            "slide-thumbnail",
-            "--wsi_input",
-            str(pathlib.Path(_sample_jp2)),
-            "--mode",
-            "save",
-            "--output_path",
-            str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
-        ],
-    )
 
-    assert slide_thumb_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("slide_thumb.jpg").is_file()
+    command_line_slide_thumbnail(runner, sample=_sample_jp2, tmp_path=tmp_path)
 
 
 def test_openslide_objective_power_from_mpp(_sample_svs):
