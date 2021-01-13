@@ -946,7 +946,6 @@ def test_command_line_jp2_read_bounds_show(_sample_jp2, tmp_path):
     )
 
     assert read_bounds_result.exit_code == 0
-    assert not pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
 
 
 def test_command_line_unsupported_file_read_bounds(_sample_svs, tmp_path):
