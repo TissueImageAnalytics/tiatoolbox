@@ -90,6 +90,24 @@ def test_safe_padded_read_padding_formats():
         assert region.shape == (8 + 2, 8 + 2)
 
 
+def test_safe_padded_read_padding_shape():
+    """Test safe_padded_read for padding shape."""
+    data = np.zeros((16, 16))
+
+    bounds = (1.5, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, padding=(1, 1, 1))
+
+
+def test_safe_padded_read_stride_shape():
+    """Test safe_padded_read for padding size."""
+    data = np.zeros((16, 16))
+
+    bounds = (1.5, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
+
+
 def test_sub_pixel_read():
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(__file__).parent / "data" / "source_image.png"
