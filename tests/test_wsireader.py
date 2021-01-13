@@ -68,8 +68,9 @@ def read_rect_objective_power(wsi, location, size):
         assert im_region.shape == (*size[::-1], 3)
 
 
-def read_bounds_mpp(wsi, slide_mpp, bounds, size, jp2=False):
+def read_bounds_mpp(wsi, bounds, size, jp2=False):
     """Read bounds mpp helper."""
+    slide_mpp = wsi.info.mpp
     for factor in range(1, 10):
         mpp = slide_mpp * factor
         downsample = mpp / slide_mpp
@@ -682,9 +683,8 @@ def test_read_bounds_openslide_mpp(_sample_ndpi):
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
-    slide_mpp = wsi.info.mpp
 
-    read_bounds_mpp(wsi, slide_mpp, bounds, size)
+    read_bounds_mpp(wsi, bounds, size)
 
 
 def test_read_bounds_jp2_mpp(_sample_jp2):
@@ -695,9 +695,8 @@ def test_read_bounds_jp2_mpp(_sample_jp2):
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
-    slide_mpp = wsi.info.mpp
 
-    read_bounds_mpp(wsi, bounds, size, slide_mpp, jp2=True)
+    read_bounds_mpp(wsi, bounds, size, jp2=True)
 
 
 def test_read_bounds_openslide_objective_power(_sample_ndpi):
