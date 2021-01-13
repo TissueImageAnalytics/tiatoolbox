@@ -1137,7 +1137,9 @@ class VirtualWSIReader(WSIReader):
         bounds = utils.transforms.locsize2bounds(
             location=level_location, size=baseline_read_size
         )
-        im_region = utils.image.safe_padded_read(self.img, bounds, pad_mode="constant")
+        im_region = utils.image.safe_padded_read(
+            self.img, bounds, pad_mode="constant", constant_values=255
+        )
 
         im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=size
@@ -1155,7 +1157,9 @@ class VirtualWSIReader(WSIReader):
         )
         stride = 2 ** read_level
 
-        im_region = utils.image.safe_padded_read(self.img, bounds, pad_mode="constant")
+        im_region = utils.image.safe_padded_read(
+            self.img, bounds, pad_mode="constant", constant_values=255
+        )
         im_region = utils.transforms.imresize(img=im_region, scale_factor=stride)
 
         im_region = utils.transforms.imresize(
