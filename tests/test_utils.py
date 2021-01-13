@@ -220,6 +220,12 @@ def test_fuzz_bounds2size_lower():
         )
 
 
+def test_bounds2size_value_error():
+    """Test bounds to size ValueError."""
+    with pytest.raises(ValueError):
+        utils.transforms.bounds2size((0, 0, 1, 1), origin="middle")
+
+
 def test_contrast_enhancer():
     """"Test contrast enhancement funcitionality."""
     # input array to the contrast_enhancer function

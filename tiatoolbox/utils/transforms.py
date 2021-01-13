@@ -164,6 +164,7 @@ def bounds2size(bounds, origin="upper"):
             Defaults to upper.
     """
     left, top, right, bottom = bounds
+    origin = origin.lower()
     if origin == "upper":
         return np.array([right - left, bottom - top])
     if origin == "lower":
