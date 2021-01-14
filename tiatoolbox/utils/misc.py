@@ -71,7 +71,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     if type(file_types) is str:
         if len(file_types.split(",")) > 1:
-            file_types = tuple(file_types.split(","))
+            file_types = tuple(file_types.replace(" ", "").split(","))
         else:
             file_types = (file_types,)
 

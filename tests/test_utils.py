@@ -289,5 +289,27 @@ def test_load_stain_matrix(tmp_path):
 
 
 def test_get_luminosity_tissue_mask():
+    """Test get luminosity tissue mask."""
     with pytest.raises(ValueError):
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
+
+
+def test_grab_files_from_dir():
+    """Test grab files from dir utils.misc."""
+    file_parent_dir = Path(__file__).parent
+    input_path = file_parent_dir.joinpath("data")
+
+    file_types = "*.tif, *.png, *.jpg"
+
+    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
+    assert len(out) == 5
+
+    out = utils.misc.grab_files_from_dir(
+        input_path=input_path.parent, file_types="test_utils*"
+    )
+
+    assert len(out) == 1
+    assert str(Path(__file__)) == str(out[0])
+
+    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
+    assert len(out) == 0
