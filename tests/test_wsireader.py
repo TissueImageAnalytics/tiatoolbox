@@ -978,6 +978,24 @@ def test_command_line_slide_thumbnail(_sample_ndpi, tmp_path):
     command_line_slide_thumbnail(runner, sample=_sample_ndpi, tmp_path=tmp_path)
 
 
+def test_command_line_slide_thumbnail_output_none(_sample_svs, tmp_path):
+    """Test cli slide thumbnail with output dir None."""
+    runner = CliRunner()
+    slide_thumb_result = runner.invoke(
+        cli.main,
+        [
+            "slide-thumbnail",
+            "--wsi_input",
+            str(pathlib.Path(_sample_svs)),
+            "--mode",
+            "save",
+        ],
+    )
+
+    assert slide_thumb_result.exit_code == 0
+    assert pathlib.Path(tmp_path).joinpath("../slide_thumb.jpg").is_file()
+
+
 def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
