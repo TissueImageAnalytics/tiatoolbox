@@ -71,7 +71,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     if type(file_types) is str:
         if len(file_types.split(",")) > 1:
-            file_types = tuple(file_types.split(","))
+            file_types = tuple(file_types.replace(" ", "").split(","))
         else:
             file_types = (file_types,)
 
@@ -330,3 +330,40 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
         )
     return np.uint8(img_out)
+
+
+@np.vectorize
+def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
+    r"""Calculate convolution output size.
+
+    This is a numpy vectorised function.
+
+    .. math::
+        \begin{split}
+        n_{out} &= \bigg\lfloor {{\frac{n_{in} +2p - k}{s}}} \bigg\rfloor + 1 \\
+        n_{in} &: \text{Number of input features} \\
+        n_{out} &: \text{Number of output features} \\
+        p &: \text{Padding size} \\
+        k &: \text{Kernel size} \\
+        s &: \text{Stride size} \\
+        \end{split}
+
+    Args:
+        in_size (int): Input size / number of input features.
+        kernel_size (int): Kernel size.
+        padding (int): Kernel size.
+        stride (int): Stride size.
+
+    Returns:
+        int: Output size / number of features.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> utils.misc.conv_out_size(100, 3)
+        >>> array(98)
+        >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
+        >>> array(98)
+        >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
+        >>> array([49, 49])
+  """
+    return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)

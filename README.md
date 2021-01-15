@@ -12,6 +12,9 @@
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
+    <a href="https://codecov.io/gh/TIA-Lab/tiatoolbox">
+      <img src="https://codecov.io/gh/TIA-Lab/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
+    </a>
 </p>
 
 Computational Pathology Toolbox developed by TIA Lab

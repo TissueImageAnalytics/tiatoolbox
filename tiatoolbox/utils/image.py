@@ -25,9 +25,12 @@ import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import bounds2size
+from tiatoolbox.utils.misc import conv_out_size
 
 
-def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs):
+def safe_padded_read(
+    img, bounds, stride=1, padding=0, pad_mode="constant", **pad_kwargs
+):
     """Read a region of a numpy array with padding applied to edges.
 
     Safely 'read' regions, even outside of the image bounds. Accepts
@@ -42,13 +45,17 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
                 coordinates using zero padding and reflection padding.
 
     Args:
-        img (:class:`numpy.ndarray`):
+        img (:class:`numpy.ndarray` or :class:`glymur.Jp2k`):
             Input image to read from.
         bounds (tuple(int)):
             Bounds of the region in (left, top,
             right, bottom) format.
+        stride (int, tuple(int)):
+            Stride when reading from img. Defaults to 1. Tuple is
+            iterpreted as stride in x and y (axis 1 and 0 respectively).
+            Also applies to padding.
         padding (int, tuple(int)):
-            Padding to apply to each bound.
+            Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
             the input image. Default is constant (0 padding). Possible
@@ -67,30 +74,39 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
 
     Examples:
         >>> bounds = (-5, -5, 5, 5)
-        >>> safe_padded_read(image, bounds)
+        >>> safe_padded_read(img, bounds)
 
         >>> bounds = (-5, -5, 5, 5)
-        >>> safe_padded_read(image, bounds, pad_mode="reflect")
+        >>> safe_padded_read(img, bounds, pad_mode="reflect")
 
         >>> bounds = (1, 1, 6, 6)
-        >>> safe_padded_read(image, bounds, padding=2 pad_mode="reflect")
+        >>> safe_padded_read(img, bounds, padding=2 pad_mode="reflect")
     """
     padding = np.array(padding)
     # Ensure the bounds are integers.
-    if np.array(bounds).dtype != int:
+    if not issubclass(np.array(bounds).dtype.type, (int, np.integer)):
         raise ValueError("Bounds must be integers.")
 
     if np.any(padding < 0):
-        raise ValueError("Padding can't be negative.")
+        raise ValueError("Padding cannot be negative.")
 
     # Allow padding to be a 2-tuple in addition to an int or 4-tuple
+    if np.size(padding) not in [1, 2, 4]:
+        raise ValueError("Padding must be of size 1, 2 or 4.")
     if np.size(padding) == 2:
         padding = np.tile(padding, 2)
+
+    # Ensure stride is a 2-tuple
+    if np.size(stride) not in [1, 2]:
+        raise ValueError("Stride must be of size 1 or 2.")
+    if np.size(stride) == 1:
+        stride = np.tile(stride, 2)
+    x_stride, y_stride = stride
 
     # Check if the padded coords outside of the image bounds
     # (over the width/height or under 0)
     padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
-    img_size = np.array(image.shape[:2][::-1])
+    img_size = np.array(img.shape[:2][::-1])
     hw_limits = np.tile(img_size, 2)  # height/width limits
     zeros = np.zeros(hw_limits.shape)
     over = padded_bounds >= hw_limits
@@ -98,7 +114,7 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
     # If all coords are within the image then read normally
     if not any(over | under):
         l, t, r, b = padded_bounds
-        return image[t:b, l:r, ...]
+        return img[t:b:y_stride, l:r:x_stride, ...]
     # Else find the closest coordinates which are inside the image
     clamped_bounds = np.max(
         [np.min([padded_bounds, hw_limits - 1], axis=0), zeros], axis=0
@@ -106,13 +122,20 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
     clamped_bounds = np.round(clamped_bounds).astype(int)
     # Read the area within the image
     l, t, r, b = clamped_bounds
-    region = image[t:b, l:r, ...]
+    region = img[t:b:y_stride, l:r:x_stride, ...]
+    # Reduce bounds an img_size for the stride
+    if not np.all(np.isin(stride, [None, 1])):
+        # This if is not required but avoids unnecessary calculations
+        bounds = conv_out_size(np.array(bounds), stride=np.tile(stride, 2))
+        padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
+        img_size = conv_out_size(img_size, stride=stride)
     # Find how much padding needs to be applied to fill the edge gaps
     # edge_padding = np.abs(padded_bounds - clamped_bounds)
+    img_max_index = img_size
     edge_padding = padded_bounds - np.array(
         [
             *np.min([[0, 0], padded_bounds[2:]], axis=0),
-            *np.max([img_size - 1, padded_bounds[:2]], axis=0),
+            *np.max([img_max_index, padded_bounds[:2]], axis=0),
         ]
     )
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
@@ -120,7 +143,7 @@ def safe_padded_read(image, bounds, padding=0, pad_mode="constant", **pad_kwargs
     edge_padding = np.abs(edge_padding)
     l, t, r, b = edge_padding
     pad_width = [(t, b), (l, r)]
-    if len(image.shape) == 3:
+    if len(region.shape) == 3:
         pad_width += [(0, 0)]
     # Pad the image region at the edges
     region = np.pad(region, pad_width, mode=pad_mode, **pad_kwargs)
@@ -137,7 +160,7 @@ def sub_pixel_read(
     pad_at_baseline=False,
     read_func=None,
     pad_mode="constant",
-    **read_kwargs
+    **read_kwargs,
 ):
     """Read and resize an image region with sub-pixel bounds.
 
@@ -159,9 +182,10 @@ def sub_pixel_read(
             The desired output size.
         padding (int, tuple(int)):
             Amount of padding to apply to the image region in pixels.
+            Defaults to 0.
         interpolation (str):
-            Method of interpolation. Default is nearest
-            and possible values are: nearest, linear, cubic, lanczos.
+            Method of interpolation. Possible values are: nearest,
+            linear, cubic, lanczos. Defaults to nearest.
         pad_at_baseline (bool):
             Apply padding in terms of baseline
             pixels. Defaults to False, meaning padding is added to the

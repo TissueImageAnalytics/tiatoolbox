@@ -1,7 +1,6 @@
 import random
 from pathlib import Path
 
-
 import pytest
 import numpy as np
 import pandas as pd
@@ -90,6 +89,24 @@ def test_safe_padded_read_padding_formats():
             padding=padding,
         )
         assert region.shape == (8 + 2, 8 + 2)
+
+
+def test_safe_padded_read_padding_shape():
+    """Test safe_padded_read for padding shape."""
+    data = np.zeros((16, 16))
+
+    bounds = (1, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, padding=(1, 1, 1))
+
+
+def test_safe_padded_read_stride_shape():
+    """Test safe_padded_read for padding size."""
+    data = np.zeros((16, 16))
+
+    bounds = (1, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
 
 
 def test_sub_pixel_read():
@@ -222,6 +239,12 @@ def test_fuzz_bounds2size_lower():
         )
 
 
+def test_bounds2size_value_error():
+    """Test bounds to size ValueError."""
+    with pytest.raises(ValueError):
+        utils.transforms.bounds2size((0, 0, 1, 1), origin="middle")
+
+
 def test_contrast_enhancer():
     """"Test contrast enhancement funcitionality."""
     # input array to the contrast_enhancer function
@@ -267,5 +290,27 @@ def test_load_stain_matrix(tmp_path):
 
 
 def test_get_luminosity_tissue_mask():
+    """Test get luminosity tissue mask."""
     with pytest.raises(ValueError):
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
+
+
+def test_grab_files_from_dir():
+    """Test grab files from dir utils.misc."""
+    file_parent_dir = Path(__file__).parent
+    input_path = file_parent_dir.joinpath("data")
+
+    file_types = "*.tif, *.png, *.jpg"
+
+    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
+    assert len(out) == 5
+
+    out = utils.misc.grab_files_from_dir(
+        input_path=input_path.parent, file_types="test_utils*"
+    )
+
+    assert len(out) == 1
+    assert str(Path(__file__)) == str(out[0])
+
+    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
+    assert len(out) == 0
