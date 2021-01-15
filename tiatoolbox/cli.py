@@ -81,16 +81,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
             input_path=wsi_input, file_types=file_types
         )
         if output_dir is None and mode == "save":
-            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("meta")
+            input_dir = pathlib.Path(wsi_input).parent
+            output_dir = input_dir / "meta"
 
     elif os.path.isfile(wsi_input):
         files_all = [
             wsi_input,
         ]
         if output_dir is None and mode == "save":
-            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
+            input_dir = pathlib.Path(wsi_input).parent
+            output_dir = input_dir.parent / "meta"
     else:
         raise FileNotFoundError
 
@@ -154,7 +154,8 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
         region = [0, 0, 2000, 2000]
 
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(wsi_input) / "../im_region.jpg")
+        input_dir = pathlib.Path(wsi_input).parent
+        output_path = str(input_dir.parent / "im_region.jpg")
 
     wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
@@ -187,7 +188,8 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 def slide_thumbnail(wsi_input, output_path, mode):
     """Read whole slide image thumbnail."""
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(wsi_input) / "../slide_thumb.jpg")
+        input_dir = pathlib.Path(wsi_input).parent
+        output_path = str(input_dir.parent / "slide_thumb.jpg")
 
     wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
