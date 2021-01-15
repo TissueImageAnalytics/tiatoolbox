@@ -34,7 +34,7 @@ import pandas as pd
 import re
 import numbers
 import os
-from typing import Tuple
+from typing import Tuple, Union
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -597,8 +597,8 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: [str, pathlib.Path],
-        tile_objective_value: [int],
+        output_dir: Union[str, pathlib.Path],
+        tile_objective_value: int,
         tile_read_size: Tuple[int, int],
         tile_format=".jpg",
         verbose=True,
