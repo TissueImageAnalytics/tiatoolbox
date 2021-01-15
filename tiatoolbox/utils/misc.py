@@ -332,6 +332,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
+@np.vectorize
 def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
     r"""Calculate convolution output size.
 
