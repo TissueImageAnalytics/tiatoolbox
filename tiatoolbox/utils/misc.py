@@ -336,6 +336,8 @@ def contrast_enhancer(img, low_p=2, high_p=98):
 def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
     r"""Calculate convolution output size.
 
+    This is a numpy vectorised function.
+
     .. math::
         \begin{split}
         n_{out} &= \bigg\lfloor {{\frac{n_{in} +2p - k}{s}}} \bigg\rfloor + 1 \\
@@ -346,7 +348,22 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         s &: \text{Stride size} \\
         \end{split}
 
+    Args:
+        in_size (int): Input size / number of input features.
+        kernel_size (int): Kernel size.
+        padding (int): Kernel size.
+        stride (int): Stride size.
+
     Returns:
         int: Output size / number of features.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> utils.misc.conv_out_size(100, 3)
+        >>> array(98)
+        >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
+        >>> array(98)
+        >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
+        >>> array([49, 49])
   """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
