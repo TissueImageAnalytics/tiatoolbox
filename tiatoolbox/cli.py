@@ -82,7 +82,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
         )
         if output_dir is None and mode == "save":
             input_dir = pathlib.Path(wsi_input).parent
-            output_dir = input_dir / "meta"
+            output_dir = input_dir.parent / "meta"
 
     elif os.path.isfile(wsi_input):
         files_all = [
