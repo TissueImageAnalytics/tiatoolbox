@@ -189,11 +189,8 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 )
 def slide_thumbnail(wsi_input, output_path, mode):
     """Read whole slide image thumbnail."""
-    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
-        full_path=wsi_input
-    )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../slide_thumb.jpg"))
+        output_path = str(pathlib.Path(wsi_input) / "../slide_thumb.jpg")
 
     wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
