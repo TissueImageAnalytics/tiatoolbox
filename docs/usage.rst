@@ -95,6 +95,7 @@ Miscellaneous
     .. autofunction:: mpp2objective_power(mpp)
     .. autofunction:: objective_power2mpp(objective_power)
     .. autofunction:: mpp2common_objective_power(mpp, common_powers)
+    .. autofunction:: conv_out_size(in_size, kernel_size=1, padding=0, stride=1)
 
 ----------
 Transforms
