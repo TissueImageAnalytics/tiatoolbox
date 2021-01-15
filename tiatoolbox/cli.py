@@ -23,7 +23,7 @@ from tiatoolbox import __version__
 from tiatoolbox import dataloader
 from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 import sys
 import click
@@ -161,20 +161,17 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 
     wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
-    if wsi is not None:
-        im_region = wsi.read_bounds(
-            region,
-            resolution=resolution,
-            units=units,
-        )
-        if mode == "show":
-            im_region = Image.fromarray(im_region)
-            im_region.show()
+    im_region = wsi.read_bounds(
+        region,
+        resolution=resolution,
+        units=units,
+    )
+    if mode == "show":
+        im_region = Image.fromarray(im_region)
+        im_region.show()
 
-        if mode == "save":
-            utils.misc.imwrite(output_path, im_region)
-    else:
-        raise FileNotSupported
+    if mode == "save":
+        utils.misc.imwrite(output_path, im_region)
 
 
 @main.command()
@@ -200,17 +197,14 @@ def slide_thumbnail(wsi_input, output_path, mode):
 
     wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
-    if wsi is not None:
-        slide_thumb = wsi.slide_thumbnail()
+    slide_thumb = wsi.slide_thumbnail()
 
-        if mode == "show":
-            im_region = Image.fromarray(slide_thumb)
-            im_region.show()
+    if mode == "show":
+        im_region = Image.fromarray(slide_thumb)
+        im_region.show()
 
-        if mode == "save":
-            utils.misc.imwrite(output_path, slide_thumb)
-    else:
-        raise FileNotSupported
+    if mode == "save":
+        utils.misc.imwrite(output_path, slide_thumb)
 
 
 @main.command()
