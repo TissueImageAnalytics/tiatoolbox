@@ -23,6 +23,7 @@ import warnings
 
 import numpy as np
 import cv2
+from PIL import Image
 
 from tiatoolbox.utils.transforms import bounds2size
 from tiatoolbox.utils.misc import conv_out_size
@@ -275,7 +276,8 @@ def sub_pixel_read(
 
 
     """
-    image = np.array(image)
+    if isinstance(image, Image.Image):
+        image = np.array(image)
     bounds = np.array(bounds)
     bounds_size = bounds2size(bounds)
     output_size = np.array(output_size)
