@@ -268,7 +268,7 @@ def test_contrast_enhancer():
 
     with pytest.raises(AssertionError):
         # contrast_enhancer requires image input to be of dtype uint18
-        utils.misc.contrast_enhancer(np.float(input_array), low_p=2, high_p=98)
+        utils.misc.contrast_enhancer(np.float32(input_array), low_p=2, high_p=98)
 
     # calculating the contrast enhanced version of input_array
     output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
