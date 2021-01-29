@@ -313,6 +313,9 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     Returns:
         img (ndarray): Image uint8 RGB with contrast enhanced.
 
+    Raises:
+        AssertionError: Internal errors due to invalid img type.
+
     Examples:
         >>> from tiatoolbox import utils
         >>> img = utils.misc.contrast_enhancer(img, low_p=2, high_p=98)
@@ -320,7 +323,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     """
     # check if image is not uint8
     if not img.dtype == np.uint8:
-        raise Exception("Image should be RGB uint8.")
+        raise AssertionError("Image should be RGB uint8.")
     img_out = img.copy()
     p_low, p_high = np.percentile(img_out, (low_p, high_p))
     if p_low >= p_high:
