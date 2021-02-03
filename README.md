@@ -13,76 +13,38 @@
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
 </p>
+###### Computational Pathology Toolbox developed by TIA Lab
 
-Computational Pathology Toolbox developed by TIA Lab
+# Prerequisites
+
+This package is aimed at begining graduate students and, hopefully, at medical staff interested in digital pathology. Please send comments and criticisms to **tialab@dcs.warwick.ac.uk**
+
+We assume some knowledge of the following topics, though, initially, it may be sufficient to glance through a brief introduction using Google.
+
+1. **`Anaconda`** is a distribution of the Python language containing many useful Python packages. To offset its many advantages, it's quite large (about 2Gb). But that is not too much space for a modern home computer.
+2. **`Conda`**is an app, found in Anaconda, giving convenient management of large software packages.
+3. When working on a computer, one works in a certain *environment*, in which certain commands and procedures make sense. When working on large **Python** projects, such as ours, it is often convenient to work in a *virtual environment*. These virtual environments are controlled by `conda`. 
+4. Github: the site where this repository is found.
+5. `git, a language giving control of different versions of the same program. A modern novelist might find it useful for keeping different versions of a novel, but usually it's used for software development.
 
 Getting Started
 ===============
 
-First, install
-- OpenSlide [here](https://openslide.org/download/).
-- OpenJPEG [here](https://www.openjpeg.org/), using
-`conda install -c conda-forge openjpeg>=2.3.0`.
+1. Make a directory (also known as a *folder*) into which you will download this repositor. You can call it anything you like. We will call it tb.
+2. Navigate to the directory `tb`
+3. Clone (download a copy) of the official repository for `tiatoolbox`using the typed command
+   `conda clone https://github.com/TIA-Lab/tiatoolbox.git` 
+4. Change into the new subdirectory `tb/tiatoolbox`.
+5. Create the virtual environment `tiatoolbox` with
+   `conda env create -f requirements.conda.yml`
+   (The name `tiatoolbox` for the environment is hidden inside the requirements file.)
+6. `conda activate tiatoolbox`
+7. Check success with `condo list`, which lists all the Python packages in the `tiatoolbox` virtual environment and also the version of Python that will be used in that environment.
 
-Git
----
+The above steps have installed the package `tiatoolbox`and created a function, also called `tiatoolbox`, whose usage is given with the command
+`tiatoolbox --help`.
 
-1.Create the virtual environment
 
-    conda env create -f requirements.conda.yml
-or (on Windows)
-
-    conda env create -f requirements.win64.conda.yml
-
-or
-
-    pip install -r requirements.txt
-
-2.Clone the tiatoolbox
-
-    git clone https://github.com/TIA-Lab/tiatoolbox.git
-
-3.Please try
-
-    python -m tiatoolbox -h
-
-pip
----
-
-    pip install tiatoolbox
-
-conda
------
-
-    conda env create -n tiatoolbox python=3.{6,7,8}
-    conda activate tiatoolbox
-    pip install tiatoolbox
-
-tiatoolbox --help
-=================
-
-    usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
-                     {read-bounds,
-                      save-tiles,
-                      slide_info,
-                      slide-thumbnail,
-                      stainnorm,
-                      }
-                     ...
-
-    positional arguments:
-      {slide_info}
-
-    read-bounds         usage: tiatoolbox read-bounds -h
-    save-tiles          usage: tiatoolbox save-tiles -h
-    slide-info          usage: tiatoolbox slide-info -h
-    slide-thumbnail     usage: tiatoolbox slide-thumbnail -h
-    stainnorm           usage: tiatoolbox stainnorm -h
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      --version             show program`s version number and exit
-      --verbose             VERBOSE
 
 
 License
