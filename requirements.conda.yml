@@ -11,6 +11,7 @@ dependencies:
   - matplotlib
   - numpy<=1.19.3
   - opencv>=4.0
+  - openjpeg>=2.3.0
   - pillow
   - pip
   - pyyaml
