@@ -25,23 +25,31 @@ We assume some knowledge of the following topics, though, initially, it may be s
 2. **`Conda`**is an app, found in Anaconda, giving convenient management of large software packages.
 3. When working on a computer, one works in a certain *environment*, in which certain commands and procedures make sense. When working on large **Python** projects, such as ours, it is often convenient to work in a *virtual environment*. These virtual environments are controlled by `conda`. 
 4. Github: the site where this repository is found.
-5. `git, a language giving control of different versions of the same program. A modern novelist might find it useful for keeping different versions of a novel, but usually it's used for software development.
+5. git, a language giving control of different versions of the same program. A modern novelist might find it useful for keeping different versions of a novel, but usually it's used for software development.
 
 Getting Started
 ===============
 
-1. Make a directory (also known as a *folder*) into which you will download this repositor. You can call it anything you like. We will call it tb.
-2. Navigate to the directory `tb`
-3. Clone (download a copy) of the official repository for `tiatoolbox`using the typed command
+1. Make a directory (also known as a *folder*) into which you will download this repository. You can call it anything you like. We will call it **tb**.
+
+2. Open a terminal window, while in **tb**, for inputting commands.
+
+3. Clone (download a copy) of  the official repository for `tiatoolbox`using 
    `conda clone https://github.com/TIA-Lab/tiatoolbox.git` 
+   
 4. Change into the new subdirectory `tb/tiatoolbox`.
+
 5. Create the virtual environment `tiatoolbox` with
    `conda env create -f requirements.conda.yml`
    (The name `tiatoolbox` for the environment is hidden inside the requirements file.)
+   
 6. `conda activate tiatoolbox`
-7. Check success with `condo list`, which lists all the Python packages in the `tiatoolbox` virtual environment and also the version of Python that will be used in that environment.
 
-The above steps have installed the package `tiatoolbox`and created a function, also called `tiatoolbox`, whose usage is given with the command
+   You now have several different objects called *tiatoolbox*, among them the directory in which your terminal is operating, and the environment *tiatoolbox* , created by conda.
+
+7. Check success with `conda list`, which lists all the Python packages in the `tiatoolbox` virtual environment and also the version of Python that will be used in that environment.
+
+The above steps have installed the package `tiatoolbox`and created a function, also called `tiatoolbox`, whose usage is explained when you give the command
 `tiatoolbox --help`.
 
 
