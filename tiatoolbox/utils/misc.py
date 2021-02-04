@@ -300,18 +300,18 @@ def mpp2objective_power(mpp):
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
-    """Enhancing contrast of the input RGB image using intensity adjustment.
+    """Enhancing contrast of the input image using intensity adjustment.
        This method uses both image low and high percentiles.
 
     Args:
         img (ndarray): input image used to obtain tissue mask.
-            Image should be RGB uint8.
+            Image should be uint8.
         low_p (scalar): low percentile of image values to be saturated to 0.
         high_p (scalar): high percentile of image values to be saturated to 255.
             high_p should always be greater than low_p.
 
     Returns:
-        img (ndarray): Image uint8 RGB with contrast enhanced.
+        img (ndarray): Image (uint8) with contrast enhanced.
 
     Raises:
         AssertionError: Internal errors due to invalid img type.
@@ -323,7 +323,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     """
     # check if image is not uint8
     if not img.dtype == np.uint8:
-        raise AssertionError("Image should be RGB uint8.")
+        raise AssertionError("Image should be uint8.")
     img_out = img.copy()
     p_low, p_high = np.percentile(img_out, (low_p, high_p))
     if p_low >= p_high:
