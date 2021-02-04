@@ -221,7 +221,7 @@ def test_fuzz_bounds2size():
         size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         bounds = (*location, *(sum(x) for x in zip(size, location)))
-        assert np.array_equal(utils.transforms.bounds2size(bounds), size)
+        assert np.array_equal(utils.transforms.bounds2locsize(bounds)[1], size)
 
 
 def test_fuzz_bounds2size_lower():
@@ -234,14 +234,14 @@ def test_fuzz_bounds2size_lower():
         bounds = (starts[0], ends[1], ends[0], starts[1])
 
         assert np.array_equal(
-            utils.transforms.bounds2size(bounds, origin="lower"), size
+            utils.transforms.bounds2locsize(bounds, origin="lower")[1], size
         )
 
 
 def test_bounds2size_value_error():
     """Test bounds to size ValueError."""
     with pytest.raises(ValueError):
-        utils.transforms.bounds2size((0, 0, 1, 1), origin="middle")
+        utils.transforms.bounds2locsize((0, 0, 1, 1), origin="middle")
 
 
 def test_contrast_enhancer():

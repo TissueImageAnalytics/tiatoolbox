@@ -25,7 +25,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from tiatoolbox.utils.transforms import bounds2size
+from tiatoolbox.utils.transforms import bounds2locsize
 from tiatoolbox.utils.misc import conv_out_size
 
 
@@ -279,7 +279,7 @@ def sub_pixel_read(
     if isinstance(image, Image.Image):
         image = np.array(image)
     bounds = np.array(bounds)
-    bounds_size = bounds2size(bounds)
+    _, bounds_size = bounds2locsize(bounds)
     output_size = np.array(output_size)
     scale_factor = output_size / bounds_size
 
@@ -374,7 +374,7 @@ def sub_pixel_read(
         sign = 1 if resized_indexes[i] >= 0 else -1
         up_down = [np.ceil, np.floor][::sign]
         # Check if removing the current amount would make the image too small
-        dim = bounds2size(resized_indexes + np.array([0, 0, *scaled_size]))[i % 2]
+        _, dim = bounds2locsize(resized_indexes + np.array([0, 0, *scaled_size]))[i % 2]
         target_dim = padded_output_size[i % 2]
         # If so, round so that less is cropped
         if dim < target_dim:
