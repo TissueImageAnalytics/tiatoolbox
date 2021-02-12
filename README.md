@@ -22,8 +22,8 @@ This package is aimed at begining graduate students and, hopefully, at medical s
 
 We assume some knowledge of the following topics, though, initially, it may be sufficient to glance through a brief introduction using Google.
 
-1. **`Anaconda`** is a distribution of the Python language containing many useful Python packages. To offset its many advantages, it's quite large (about 2Gb). But that is not too much space for a modern home computer.
-2. **`Conda`**is an app, found in Anaconda, giving convenient management of large software packages.
+1. **Anaconda** is a distribution of the Python language containing many useful Python packages. To offset its many advantages, it's quite large (about 2Gb). But that is not too much space for a modern home computer.
+2. **Conda** is an app, found in Anaconda, giving convenient management of large software packages.
 3. When working on a computer, one works in a certain *environment*, in which certain commands and procedures make sense. When working on large **Python** projects, such as ours, it is often convenient to work in a *virtual environment*. These virtual environments are controlled by `conda`. 
 4. Github: the site where this repository is found.
 5. git, a language giving control of different versions of the same program. A modern novelist might find it useful for keeping different versions of a novel, but usually it's used for software development.
