@@ -13,11 +13,12 @@
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
 </p>
-###### Computational Pathology Toolbox developed by TIA Lab
+
+Computational Pathology Toolbox developed by TIA Lab
 
 # Prerequisites
 
-This package is aimed at begining graduate students and, hopefully, at medical staff interested in digital pathology. Please send comments and criticisms to **tialab@dcs.warwick.ac.uk**
+This package is aimed at begining graduate students and, hopefully, at medical staff interested in digital pathology. Please send comments and criticisms to **[tialab@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
 
 We assume some knowledge of the following topics, though, initially, it may be sufficient to glance through a brief introduction using Google.
 
