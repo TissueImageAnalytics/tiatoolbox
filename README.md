@@ -14,44 +14,48 @@
   </a>
 </p>
 
-Computational Pathology Toolbox developed by TIA Lab
+Computational Pathology Toolbox developed by TIA Centre
 
-# Prerequisites
+# All Users
 
-This package is aimed at begining graduate students and, hopefully, at medical staff interested in digital pathology. Please send comments and criticisms to **[tialab@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
+This package is for those interested in digital pathology: including graduate students, medical staff, members of the Tia Centre and of Pathlake, and anyone, anywhere, who may find it useful. We will continue to improve this package,people taking account of developments in pathology, microscopy, computing and related disciplines. Please send comments and criticisms to **[tialab@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
 
-We assume some knowledge of the following topics, though, initially, it may be sufficient to glance through a brief introduction using Google.
+**`tiatoolbox`** is a multipurpose name that we use for 1) a certain computer program, 2) a collection of related programs, created by us at the Tia Centre to help peopleon get started in Digital Pathology, 3) this repository, 4) a certain virtual environment.
 
-1. **Anaconda** is a distribution of the Python language containing many useful Python packages. To offset its many advantages, it's quite large (about 2GB). But that is not too much space for a modern home computer.
-2. **Conda** is an app, found in Anaconda, giving convenient management of large software packages.
-3. When working on a computer, one works in a certain *environment*, in which certain commands and procedures make sense. When working on large **Python** projects, such as ours, it is often convenient to work in a *virtual environment*. These virtual environments are controlled by `conda`. 
-4. Github: the site where this repository is found.
-5. git, a language giving control of different versions of the same program. A modern novelist might find it useful for keeping different versions of a novel, but usually it's used for software development.
 
-Getting Started
-===============
+# Developers
 
-1. Make a directory (also known as a *folder*) into which you will download this repository. You can call it anything you like. We will call it **tb**.
+Anyone wanting to contribute to this repository, please consult **XXX**, for our naming conventions and other useful information.
 
-2. Open a terminal window, while in **tb**, for inputting commands.
+# Links, if needed
+The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Windows users look [here](https://docs.microsoft.com/en-us/windows/wsl/about). Commands in this README are in bash.
 
-3. Clone (download a copy) of  the official repository for `tiatoolbox`using 
-   `conda clone https://github.com/TIA-Lab/tiatoolbox.git` 
-   
-4. Change into the new subdirectory `tb/tiatoolbox`.
+[`conda`](https://github.com/conda/conda) is a management system for software packages and [virtual environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html). To get `conda`, download [Anaconda](https://www.anaconda.com/), which includes hundreds of the most useful Python packages, using 2GB disk space. Alternatively, [miniconda](https://docs.conda.io/en/latest/miniconda.html) uses 400MB, and one adds packages as needed.
 
-5. Create the virtual environment `tiatoolbox` with
-   `conda env create -f requirements.conda.yml`
-   (The name `tiatoolbox` for the environment is hidden inside the requirements file.)
-   
-6. `conda activate tiatoolbox`
+[Github](https://github.com/about) is powered by the version control system [git](https://git-scm.com/), which has many uses, for example to keep track of different drafts of a PhD thesis.
 
-   You now have several different objects called *tiatoolbox*, among them the directory in which your terminal is operating, and the environment *tiatoolbox* , created by conda.
 
-7. Check success with `conda list`, which lists all the Python packages in the `tiatoolbox` virtual environment and also the version of Python that will be used in that environment.
+# Examples Taster
 
-The above steps have installed the package `tiatoolbox`and created a function, also called `tiatoolbox`, whose usage is explained when you give the command
-`tiatoolbox --help`.
+1. *__Without a single prior download or file edit__* [click here](https://github.com/TIA-Lab/tiatoolbox/tree/develop/examples) for [jupyter notebooks](https://jupyter.org/) providing `tiatoolbox` demos.
+2. Click on a filename with suffix `.ipynb` and the notebook will open in your browser.
+3.  Click on one of the two blue checkboxes in your browser window labelled either <span style="color:blue"> **Open in Colab**</span> or <span style="color:blue"> **Open in Kaggle**</span>. **Note** [colab](https://colab.research.google.com/notebooks/intro.ipynb#) and [kaggle](https://www.kaggle.com/) are websites providing free-of-charge platforms for running jupyter notebooks.
+4. Operate the notebook in your browser, editing, inserting or deleting cells as desired.
+5. Changes last no longer than your colab or kaggle session.
+
+# Prepare computer for `tiatoolbox`
+
+Preparation is needed to run the example jupyter notebooks (see above) on your computer. 
+1. Open a `bash` terminal window and `cd`
+to the directory where `tiatoolbox` will be located.
+2. `conda clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
+downloads a complete copy of the `tiatoolbox` repository to your computer.
+3. `cd tiatoolbox`
+4. `conda env create -f requirements.conda.yml`<br/>
+creates the virtual environment `tiatoolbox`. Take a quick look at the contents of the text file `requirements.conda.yml` to get an idea of what the command installed.
+4. To use the packages installed in the environment run the command:<br/>`conda activate tiatoolbox`<br/>
+Subsequently `(tiatoolbox)` is prefixed to the bash prompt, until the command `conda deactivate`.
+5. `tiatoolbox --help` gives info about how to use the program.
 
 
 
