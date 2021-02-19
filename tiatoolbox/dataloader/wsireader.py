@@ -589,7 +589,7 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
+            >>> wsi = wsireader.WSIReader((input_path="./CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
         """
         slide_dimensions = self.info.slide_dimensions
@@ -627,7 +627,7 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
-            >>> slide_param = wsi.info()
+            >>> slide_param = wsi.info
 
         """
         output_dir = pathlib.Path(output_dir, self.input_path.name)

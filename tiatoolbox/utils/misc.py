@@ -287,16 +287,16 @@ def mpp2objective_power(mpp):
         np.ndarray: Objective power approximations.
 
     Examples:
-        >>> objective_power2mpp(0.25)
+        >>> mpp2objective_power(0.25)
         array(40.)
 
-        >>> objective_power2mpp([0.25, 0.5, 1.0])
+        >>> mpp2objective_power([0.25, 0.5, 1.0])
         array([40., 20., 10.])
 
-        >>> objective_power2mpp(0.253)
+        >>> mpp2objective_power(0.253)
         array(39.5256917)
     """
-    return objective_power2mpp(mpp)
+    return mpp2common_objective_power(mpp)
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):

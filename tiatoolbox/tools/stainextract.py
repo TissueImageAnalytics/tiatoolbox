@@ -36,7 +36,7 @@ class CustomExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import CustomExtractor()
+        >>> from tiatoolbox.tools.stainextract import CustomExtractor
         >>> extractor = CustomExtractor(stain_matrix)
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -70,7 +70,7 @@ class RuifrokExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import RuifrokExtractor()
+        >>> from tiatoolbox.tools.stainextract import RuifrokExtractor
         >>> extractor = RuifrokExtractor()
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -100,7 +100,7 @@ class MacenkoExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import MacenkoExtractor()
+        >>> from tiatoolbox.tools.stainextract import MacenkoExtractor
         >>> extractor = MacenkoExtractor()
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -176,7 +176,7 @@ class VahadaneExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import VahadaneExtractor()
+        >>> from tiatoolbox.tools.stainextract import VahadaneExtractor
         >>> extractor = VahadaneExtractor()
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
