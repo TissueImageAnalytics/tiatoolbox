@@ -52,7 +52,7 @@ Section _**(still to be written)**_ for readers wanting to use our programs, rat
 
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs.
 1. Open a `bash` terminal window<br/> 
-`cd <future-home-of-tiathetoolbox>` <br/>
+`cd <future-home-of-tiatoolbox>` <br/>
 2. Download a complete copy of the `tiatoolbox`.<br/>`conda clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
 3. `cd tiatoolbox`
 4. `conda env create -f requirements.conda.yml`<br/>
