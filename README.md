@@ -41,16 +41,19 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 2. Click on a filename with suffix `.ipynb` and the notebook will open in your browser.
 3.  Click on one of the two blue checkboxes in your browser window labelled either **Open in Colab** or **Open in Kaggle**: [colab](https://colab.research.google.com/notebooks/intro.ipynb#) and [kaggle](https://www.kaggle.com/) are websites providing free-of-charge platforms for running jupyter notebooks.
 4. Operate the notebook in your browser, editing, inserting or deleting cells as desired.
-5. Changes last no longer than your colab or kaggle session.
+5. Changes you make to the notebook will last no longer than your colab or kaggle session.
  
 
 ## Install Python package
 
-Section _**(still to be written)**_ for readers wanting to use our programs, rather than extend them, or develop new ones. Possible list of programs and what they do. How to download with `pip` or `conda`. Download from Github or from PyPI or from elsewhere?
+If you wish to use our programs, without developing them further, run the command<br/>
+`pip install tiatoolbox`<br/>
+To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**. For more information, you may also run<br/>
+`program_name --help`<br/>
 
 ## Prepare for development
 
-Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs.
+Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
 1. Open a `bash` terminal window<br/> 
 `cd <future-home-of-tiatoolbox>` <br/>
 2. Download a complete copy of the `tiatoolbox`.<br/>`conda clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
@@ -58,7 +61,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
 4. `conda env create -f requirements.conda.yml`<br/>
 creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
 5. To use the packages installed in the environment, run the command:<br/>`conda activate tiatoolbox`
-6. Install `tiatoolbox` as explained [above](#nstall-python-package).
+6. `pip install tiatoolbox`<br/>installs the module and makes available the programs in the module.
 
 License
 =======
