@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="450" height="200" src="https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/tialab_logo.png">
+  <img src="docs/tia_logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
 <p align="center">
@@ -16,20 +16,20 @@
 
 Computational Pathology Toolbox developed by TIA Lab
 
-Getting Started
-===============
+# Getting Started
 
 First, install
-- OpenSlide [here](https://openslide.org/download/).
-- OpenJPEG [here](https://www.openjpeg.org/), using
-`conda install -c conda-forge openjpeg>=2.3.0`.
 
-Git
----
+-   OpenSlide [here](https://openslide.org/download/).
+-   OpenJPEG [here](https://www.openjpeg.org/), using
+    `conda install -c conda-forge openjpeg>=2.3.0`.
+
+## Git
 
 1.Create the virtual environment
 
     conda env create -f requirements.conda.yml
+
 or (on Windows)
 
     conda env create -f requirements.win64.conda.yml
@@ -46,20 +46,17 @@ or
 
     python -m tiatoolbox -h
 
-pip
----
+## pip
 
     pip install tiatoolbox
 
-conda
------
+## conda
 
     conda env create -n tiatoolbox python=3.{6,7,8}
     conda activate tiatoolbox
     pip install tiatoolbox
 
-tiatoolbox --help
-=================
+# tiatoolbox --help
 
     usage: tiatoolbox [-h] [--version] [--verbose VERBOSE]
                      {read-bounds,
@@ -84,24 +81,18 @@ tiatoolbox --help
       --version             show program`s version number and exit
       --verbose             VERBOSE
 
-
-License
-=======
+# License
 
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
 
 The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/LICENSE.md).
 
-[GNU General Public License (Version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
+[gnu general public license (version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
 
-
-Auxiliary Files
----------------
+## Auxiliary Files
 
 Auxiliary files, such as pre-trained model weights downloaded from the TIA Lab webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
-
-Dual License
-------------
+## Dual License
 
 If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk).
