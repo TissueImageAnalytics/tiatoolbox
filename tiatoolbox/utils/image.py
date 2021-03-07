@@ -401,7 +401,6 @@ def sub_pixel_read(
     result_size = np.array(result.shape[:2][::-1])
 
     if not np.all(np.abs(result_size - padded_output_size) <= 1):
-        print(result_size, padded_output_size)
         raise AssertionError("Output size should not differ from requested size.")
 
     return result
