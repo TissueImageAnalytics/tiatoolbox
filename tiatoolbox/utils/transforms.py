@@ -185,4 +185,9 @@ def locsize2bounds(location, size):
         tuple: A tuple of bounds in (left, top, right, bottom) /
         (start_x, start_y, end_x, end_y) format.
     """
-    return (location[0], location[1], location[0] + size[0], location[1] + size[1])
+    return (
+        location[0],
+        location[1],
+        location[0] + size[0],
+        location[1] + size[1],
+    )
