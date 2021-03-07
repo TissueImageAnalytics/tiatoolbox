@@ -117,9 +117,7 @@ def safe_padded_read(
         l, t, r, b = padded_bounds
         return img[t:b:y_stride, l:r:x_stride, ...]
     # Else find the closest coordinates which are inside the image
-    clamped_bounds = np.max(
-        [np.min([padded_bounds, hw_limits - 1], axis=0), zeros], axis=0
-    )
+    clamped_bounds = np.max([np.min([padded_bounds, hw_limits], axis=0), zeros], axis=0)
     clamped_bounds = np.round(clamped_bounds).astype(int)
     # Read the area within the image
     l, t, r, b = clamped_bounds
@@ -132,11 +130,10 @@ def safe_padded_read(
         img_size = conv_out_size(img_size, stride=stride)
     # Find how much padding needs to be applied to fill the edge gaps
     # edge_padding = np.abs(padded_bounds - clamped_bounds)
-    img_max_index = img_size
     edge_padding = padded_bounds - np.array(
         [
             *np.min([[0, 0], padded_bounds[2:]], axis=0),
-            *np.max([img_max_index, padded_bounds[:2]], axis=0),
+            *np.max([img_size, padded_bounds[:2] - img_size], axis=0),
         ]
     )
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
