@@ -21,6 +21,7 @@
 """This module defines classes which can read image data from WSI formats."""
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
@@ -944,7 +945,7 @@ class OmnyxJP2WSIReader(WSIReader):
         im_region = utils.image.sub_pixel_read(
             image=glymur_wsi,
             bounds=bounds,
-            output_size=baseline_read_size // stride,
+            output_size=conv_out_size(baseline_read_size, stride=stride),
             stride=stride,
             pad_mode="constant",
             constant_values=255,
@@ -979,9 +980,11 @@ class OmnyxJP2WSIReader(WSIReader):
         #     int((end_x - start_x) // stride),
         #     int((end_y - start_y) // stride),
         # )
-        im_region = utils.image.safe_padded_read(
-            img=glymur_wsi,
+        _, bounds_size = utils.transforms.bounds2locsize(bounds)
+        im_region = utils.image.sub_pixel_read(
+            image=glymur_wsi,
             bounds=bounds,
+            output_size=conv_out_size(bounds_size, stride=stride),
             stride=stride,
             pad_mode="constant",
             constant_values=255,
