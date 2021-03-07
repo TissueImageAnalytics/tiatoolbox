@@ -156,6 +156,7 @@ def sub_pixel_read(
     bounds,
     output_size,
     padding=0,
+    stride=1,
     interpolation="nearest",
     pad_for_interpolation=True,
     pad_at_baseline=False,
@@ -184,6 +185,9 @@ def sub_pixel_read(
         padding (int, tuple(int)):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
+        stride (int, tuple(int)):
+            Stride when reading from img. Defaults to 1. A tuple is
+            interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):
             Method of interpolation. Possible values are: nearest,
             linear, cubic, lanczos. Defaults to nearest.
@@ -280,7 +284,12 @@ def sub_pixel_read(
         image = np.array(image)
     bounds = np.array(bounds)
     _, bounds_size = bounds2locsize(bounds)
-    output_size = np.array(output_size)
+    if np.size(stride) == 2:
+        stride = np.tile(stride, 2)
+    bounds_size = bounds_size / stride
+    if 0 in bounds_size:
+        raise AssertionError("Bounds must have non-zero size in each dimension")
+    output_size = output_size
     scale_factor = output_size / bounds_size
 
     # Set interpolation variables.
@@ -348,7 +357,9 @@ def sub_pixel_read(
         read_func = safe_padded_read
 
     # Perform the pixel-aligned read.
-    region = read_func(image, int_bounds, pad_mode=pad_mode, **read_kwargs)
+    region = read_func(
+        image, int_bounds, pad_mode=pad_mode, stride=stride, **read_kwargs
+    )
 
     if not np.all(np.array(region.shape[:2]) > 0):
         raise AssertionError("Region should not be empty.")
