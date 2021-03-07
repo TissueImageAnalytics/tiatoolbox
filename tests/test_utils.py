@@ -3,6 +3,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 import random
 import pytest
+from pytest import approx
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -88,6 +89,27 @@ def test_safe_padded_read_padding_formats():
             padding=padding,
         )
         assert region.shape == (8 + 2, 8 + 2)
+
+
+def test_fuzz_safe_padded_read_edge_padding():
+    """Fuzz test for padding at edges of an image."""
+    random.seed(0)
+    for _ in range(1000):
+        data = np.repeat([range(1, 17)], 16, axis=0)
+
+        # Create bounds to fit the image and shift off by one
+        # randomly in x or y
+        sign = (-1) ** np.random.randint(0, 1)
+        axis = random.randint(0, 1)
+        shift = np.tile([1 - axis, axis], 2)
+        shift_magnitude = random.randint(1, 16)
+        shift_magnitude = 16
+        bounds = np.array([0, 0, 16, 16]) + (shift * sign * shift_magnitude)
+
+        region = utils.image.safe_padded_read(data, bounds)
+        if np.sum(region == 0) != (16 * shift_magnitude):
+            print("hi")
+        assert np.sum(region == 0) == (16 * shift_magnitude)
 
 
 def test_safe_padded_read_padding_shape():
@@ -214,27 +236,43 @@ def test_sub_pixel_read_interpolation_modes():
         assert output.shape == out_size
 
 
-def test_fuzz_bounds2size():
+def test_fuzz_bounds2locsize():
     """Fuzz test for bounds2size."""
     random.seed(0)
     for _ in range(1000):
         size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         bounds = (*location, *(sum(x) for x in zip(size, location)))
-        assert np.array_equal(utils.transforms.bounds2locsize(bounds)[1], size)
+        assert utils.transforms.bounds2locsize(bounds)[1] == approx(size)
 
 
-def test_fuzz_bounds2size_lower():
+def test_fuzz_bounds2locsize_lower():
     """Fuzz test for bounds2size with origin lower."""
     random.seed(0)
     for _ in range(1000):
-        size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
-        starts = (random.randint(-1000, 1000), random.randint(-1000, 1000))
-        ends = [sum(x) for x in zip(size, starts)]
-        bounds = (starts[0], ends[1], ends[0], starts[1])
+        loc = (np.random.rand(2) - 0.5) * 1000
+        size = (np.random.rand(2) - 0.5) * 1000
+        bounds = np.tile(loc, 2) + [
+            0,
+            *size[::-1],
+            0,
+        ]  # L T R B
 
-        assert np.array_equal(
-            utils.transforms.bounds2locsize(bounds, origin="lower")[1], size
+        l, s = utils.transforms.bounds2locsize(bounds, origin="lower")
+
+        assert utils.transforms.bounds2locsize(bounds, origin="lower")[1] == approx(
+            size
+        )
+
+
+def test_fuzz_roundtrip_bounds2size():
+    """Fuzz roundtrip"""
+    random.seed(0)
+    for _ in range(1000):
+        loc = (np.random.rand(2) - 0.5) * 1000
+        size = (np.random.rand(2) - 0.5) * 1000
+        assert utils.transforms.bounds2locsize(
+            utils.transforms.locsize2bounds(loc, size)
         )
 
 
