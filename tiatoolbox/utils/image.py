@@ -52,8 +52,8 @@ def safe_padded_read(
             Bounds of the region in (left, top,
             right, bottom) format.
         stride (int, tuple(int)):
-            Stride when reading from img. Defaults to 1. Tuple is
-            iterpreted as stride in x and y (axis 1 and 0 respectively).
+            Stride when reading from img. Defaults to 1. A tuple is
+            interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
         padding (int, tuple(int)):
             Padding to apply to each bound. Default to 0.
