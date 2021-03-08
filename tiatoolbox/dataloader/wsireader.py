@@ -88,6 +88,12 @@ class WSIReader:
     def _info(self):
         """WSI metadata internal getter used to update info property.
 
+        Mssing values for MPP and objective power are approximated and
+        a warning raised. Objective power is calculated as the mean of
+        the :func:utils.transforms.mpp2common_objective_power in x and
+        y. MPP (x and y) is approximated using objective power via
+        :func:utils.transforms.objective_power2mpp.
+
         Returns:
             WSIMetadata: An object containing normalised slide metadata
         """
