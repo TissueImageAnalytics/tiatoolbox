@@ -173,9 +173,8 @@ def test_sub_pixel_read_invalid_bounds():
     out_size = data.shape
 
     bounds = (1.5, 1, -5, 5)
-    with pytest.warns(UserWarning):
-        with pytest.raises(AssertionError):
-            utils.image.sub_pixel_read(data, bounds, out_size)
+    with pytest.warns(UserWarning), pytest.raises(AssertionError):
+        utils.image.sub_pixel_read(data, bounds, out_size)
 
 
 def test_sub_pixel_read_pad_at_baseline():
@@ -258,15 +257,13 @@ def test_fuzz_bounds2locsize_lower():
             0,
         ]  # L T R B
 
-        l, s = utils.transforms.bounds2locsize(bounds, origin="lower")
+        _, s = utils.transforms.bounds2locsize(bounds, origin="lower")
 
-        assert utils.transforms.bounds2locsize(bounds, origin="lower")[1] == approx(
-            size
-        )
+        assert s == approx(size)
 
 
 def test_fuzz_roundtrip_bounds2size():
-    """Fuzz roundtrip"""
+    """Fuzz roundtrip bounds2locsize and locsize2bounds."""
     random.seed(0)
     for _ in range(1000):
         loc = (np.random.rand(2) - 0.5) * 1000

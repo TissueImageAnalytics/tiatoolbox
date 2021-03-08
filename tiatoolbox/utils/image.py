@@ -286,7 +286,6 @@ def sub_pixel_read(
     bounds_size = bounds_size / stride
     if 0 in bounds_size:
         raise AssertionError("Bounds must have non-zero size in each dimension")
-    output_size = output_size
     scale_factor = output_size / bounds_size
 
     # Set interpolation variables.
