@@ -1075,11 +1075,7 @@ class VirtualWSIReader(WSIReader):
     def __init__(
         self,
         input_img,
-        baseline_size=None,
-        mpp=None,
-        power=None,
-        level_downsamples=None,
-        level_dimensions=None,
+        info: WSIMeta = None,
     ):
         super().__init__(
             input_img=input_img,
@@ -1089,11 +1085,8 @@ class VirtualWSIReader(WSIReader):
         else:
             self.img = utils.misc.imread(self.input_path)
 
-        self._slide_dimensions = baseline_size
-        self._objective_power = power
-        self._mpp = mpp
-        self._level_downsamples = level_downsamples
-        self._level_dimensions = level_dimensions
+        if info is not None:
+            self.info = info
 
     def _info(self):
         """Visual Field meta data getter.
