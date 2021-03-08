@@ -92,7 +92,13 @@ def test_safe_padded_read_padding_formats():
 
 
 def test_fuzz_safe_padded_read_edge_padding():
-    """Fuzz test for padding at edges of an image."""
+    """Fuzz test for padding at edges of an image.
+
+    This test creates a 16x16 image with a gradient from 1 to 17 across
+    it. A region is read using safe_padded_read with a constant padding
+    of 0 and an offset by some random 'shift' amount between 1 and 16.
+    The resulting image is checked for the correct number of 0 values.
+    """
     random.seed(0)
     for _ in range(1000):
         data = np.repeat([range(1, 17)], 16, axis=0)
@@ -103,12 +109,10 @@ def test_fuzz_safe_padded_read_edge_padding():
         axis = random.randint(0, 1)
         shift = np.tile([1 - axis, axis], 2)
         shift_magnitude = random.randint(1, 16)
-        shift_magnitude = 16
         bounds = np.array([0, 0, 16, 16]) + (shift * sign * shift_magnitude)
 
         region = utils.image.safe_padded_read(data, bounds)
-        if np.sum(region == 0) != (16 * shift_magnitude):
-            print("hi")
+
         assert np.sum(region == 0) == (16 * shift_magnitude)
 
 
