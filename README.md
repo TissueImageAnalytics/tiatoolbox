@@ -18,17 +18,18 @@ Computational Pathology Toolbox developed at the TIA Centre
 
 ## All Users
 
-This package is for those interested in digital pathology: including graduate students, medical staff, members of the Tia Centre and of Pathlake, and anyone, anywhere, who may find it useful. We will continue to improve this package, taking account of developments in pathology, microscopy, computing and related disciplines. Send comments and criticisms to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
+This package is for those interested in digital pathology: including graduate students, medical staff, members of the TIA Centre and of PathLAKE, and anyone, anywhere, who may find it useful. We will continue to improve this package, taking account of developments in pathology, microscopy, computing and related disciplines. Please send comments and criticisms to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
 
-**`tiatoolbox`** is a multipurpose name that we use for 1) a certain computer program, 2) a Python package of related programs, created by us at the Tia Centre to help people get started in Digital Pathology, 3) this repository, 4) a certain virtual environment.
+**`tiatoolbox`** is a multipurpose name that we use for 1) a certain computer program, 2) a Python package of related programs, created by us at the TIA Centre to help people get started in Digital Pathology, 3) this repository, 4) a certain virtual environment.
 
 
 ## Developers
 
-Anyone wanting to contribute to this repository, please look [here](https://livewarwickac.sharepoint.com/sites/TIAlab/_layouts/15/Doc.aspx?sourcedoc={1a829baa-2b3e-436a-be6f-b7ea2854cb15}&action=edit&wd=target%28Contributing.one%7C0f5698ce-9ff5-4928-8e09-7004afcbbc87%2FStart%20Here%7Ce55b8846-0037-4917-9911-304566877f9a%2F%29pa), for our naming conventions and other useful information.
+Anyone wanting to contribute to this repository, please first look [here] (missing link to our Wiki) and at our web page for [contributors](https://github.com/TIA-Lab/tiatoolbox/blob/master/README.md).
 
 ## Links, if needed
-The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Windows users look [here](https://docs.microsoft.com/en-us/windows/wsl/about). Commands in this README are in bash.
+The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Commands in this README are in bash. Windows users can use the command prompt to install conda and python packages. 
+
 
 [`conda`](https://github.com/conda/conda) is a management system for software packages and [virtual environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html). To get `conda`, download [Anaconda](https://www.anaconda.com/), which includes hundreds of the most useful Python packages, using 2GB disk space. Alternatively, [miniconda](https://docs.conda.io/en/latest/miniconda.html) uses 400MB, and packages can be added as needed.
 
@@ -39,29 +40,28 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 
 1. [Click here](https://github.com/TIA-Lab/tiatoolbox/tree/develop/examples) for [jupyter notebooks](https://jupyter.org/), hosted on the web, with demos of `tiatoolbox`. All necessary resources to run the notebooks are remotely provided, so you don't need to have Python installed on your computer. 
 2. Click on a filename with suffix `.ipynb` and the notebook will open in your browser.
-3.  Click on one of the two blue checkboxes in your browser window labelled either **Open in Colab** or **Open in Kaggle**: [colab](https://colab.research.google.com/notebooks/intro.ipynb#) and [kaggle](https://www.kaggle.com/) are websites providing free-of-charge platforms for running jupyter notebooks.
+3. Click on one of the two blue checkboxes in your browser window labelled either **Open in Colab** or **Open in Kaggle**: [colab](https://colab.research.google.com/notebooks/intro.ipynb#) and [kaggle](https://www.kaggle.com/) are websites providing free-of-charge platforms for running jupyter notebooks.
 4. Operate the notebook in your browser, editing, inserting or deleting cells as desired.
 5. Changes you make to the notebook will last no longer than your colab or kaggle session.
  
 
 ## Install Python package
 
-If you wish to use our programs, without developing them further, run the command<br/>
+If you wish to use our programs, perhaps without developing them further, run the command<br/>
 `pip install tiatoolbox`<br/>
 To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**. For more information, you may also run<br/>
-`program_name --help`<br/>
+`tiatoolbox --help`<br/>
 
 ## Prepare for development
 
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
 1. Open a `bash` terminal window<br/> 
-`cd <future-home-of-tiatoolbox>` <br/>
+`cd <future-home-of-tiatoolbox-directory>` <br/>
 2. Download a complete copy of the `tiatoolbox`.<br/>`conda clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
 3. `cd tiatoolbox`
 4. `conda env create -f requirements.conda.yml`<br/>
 creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
 5. To use the packages installed in the environment, run the command:<br/>`conda activate tiatoolbox`
-6. `pip install tiatoolbox`<br/>installs the module and makes available the programs in the module.
 
 License
 =======
@@ -76,10 +76,11 @@ The full text of the licence is included in [LICENSE.md](https://raw.githubuserc
 Auxiliary Files
 ---------------
 
-Auxiliary files, such as pre-trained model weights downloaded from the TIA Lab webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 
 Dual License
 ------------
 
 If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk).
+d
