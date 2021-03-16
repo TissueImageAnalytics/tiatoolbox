@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/tia_logo.png">
+  <img src="https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/docs/tia_logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
 <p align="center">
