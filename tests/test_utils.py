@@ -380,6 +380,7 @@ def test_read_point_annotations():
     with pytest.raises(TypeError):
         _ = utils.misc.read_point_annotations(["a", "b", "c"])
 
+
 def test_grab_files_from_dir():
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
@@ -388,7 +389,7 @@ def test_grab_files_from_dir():
     file_types = "*.tif, *.png, *.jpg"
 
     out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
-    assert len(out) == 5
+    assert len(out) == 6
 
     out = utils.misc.grab_files_from_dir(
         input_path=input_path.parent, file_types="test_utils*"
