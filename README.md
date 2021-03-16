@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="450" height="200" src="https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files/tialab_logo.png">
+  <img src="docs/tia_logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
 <p align="center">
@@ -43,7 +43,6 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 3. Click on one of the two blue checkboxes in your browser window labelled either **Open in Colab** or **Open in Kaggle**: [colab](https://colab.research.google.com/notebooks/intro.ipynb#) and [kaggle](https://www.kaggle.com/) are websites providing free-of-charge platforms for running jupyter notebooks.
 4. Operate the notebook in your browser, editing, inserting or deleting cells as desired.
 5. Changes you make to the notebook will last no longer than your colab or kaggle session.
- 
 
 ## Install Python package
 
@@ -63,24 +62,19 @@ Prepare a computer as a convenient platform for further development of the Pytho
 creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
 5. To use the packages installed in the environment, run the command:<br/>`conda activate tiatoolbox`
 
-License
-=======
+# License
 
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
 
 The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/LICENSE.md).
 
-[GNU General Public License (Version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
+[gnu general public license (version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
 
-
-Auxiliary Files
----------------
+## Auxiliary Files
 
 Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/cross_fac/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
-
-Dual License
-------------
+## Dual License
 
 If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk).
 d
