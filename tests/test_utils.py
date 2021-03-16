@@ -3,6 +3,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 import random
 import pytest
+from pytest import approx
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -90,6 +91,49 @@ def test_safe_padded_read_padding_formats():
         assert region.shape == (8 + 2, 8 + 2)
 
 
+def test_fuzz_safe_padded_read_edge_padding():
+    """Fuzz test for padding at edges of an image.
+
+    This test creates a 16x16 image with a gradient from 1 to 17 across
+    it. A region is read using safe_padded_read with a constant padding
+    of 0 and an offset by some random 'shift' amount between 1 and 16.
+    The resulting image is checked for the correct number of 0 values.
+    """
+    random.seed(0)
+    for _ in range(1000):
+        data = np.repeat([range(1, 17)], 16, axis=0)
+
+        # Create bounds to fit the image and shift off by one
+        # randomly in x or y
+        sign = (-1) ** np.random.randint(0, 1)
+        axis = random.randint(0, 1)
+        shift = np.tile([1 - axis, axis], 2)
+        shift_magnitude = random.randint(1, 16)
+        bounds = np.array([0, 0, 16, 16]) + (shift * sign * shift_magnitude)
+
+        region = utils.image.safe_padded_read(data, bounds)
+
+        assert np.sum(region == 0) == (16 * shift_magnitude)
+
+
+def test_safe_padded_read_padding_shape():
+    """Test safe_padded_read for padding shape."""
+    data = np.zeros((16, 16))
+
+    bounds = (1, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, padding=(1, 1, 1))
+
+
+def test_safe_padded_read_stride_shape():
+    """Test safe_padded_read for padding size."""
+    data = np.zeros((16, 16))
+
+    bounds = (1, 1, 5, 5)
+    with pytest.raises(ValueError):
+        utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
+
+
 def test_sub_pixel_read():
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(__file__).parent / "data" / "source_image.png"
@@ -133,9 +177,8 @@ def test_sub_pixel_read_invalid_bounds():
     out_size = data.shape
 
     bounds = (1.5, 1, -5, 5)
-    with pytest.warns(UserWarning):
-        with pytest.raises(AssertionError):
-            utils.image.sub_pixel_read(data, bounds, out_size)
+    with pytest.warns(UserWarning), pytest.raises(AssertionError):
+        utils.image.sub_pixel_read(data, bounds, out_size)
 
 
 def test_sub_pixel_read_pad_at_baseline():
@@ -196,28 +239,48 @@ def test_sub_pixel_read_interpolation_modes():
         assert output.shape == out_size
 
 
-def test_fuzz_bounds2size():
+def test_fuzz_bounds2locsize():
     """Fuzz test for bounds2size."""
     random.seed(0)
     for _ in range(1000):
         size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         bounds = (*location, *(sum(x) for x in zip(size, location)))
-        assert np.array_equal(utils.transforms.bounds2size(bounds), size)
+        assert utils.transforms.bounds2locsize(bounds)[1] == approx(size)
 
 
-def test_fuzz_bounds2size_lower():
+def test_fuzz_bounds2locsize_lower():
     """Fuzz test for bounds2size with origin lower."""
     random.seed(0)
     for _ in range(1000):
-        size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
-        starts = (random.randint(-1000, 1000), random.randint(-1000, 1000))
-        ends = [sum(x) for x in zip(size, starts)]
-        bounds = (starts[0], ends[1], ends[0], starts[1])
+        loc = (np.random.rand(2) - 0.5) * 1000
+        size = (np.random.rand(2) - 0.5) * 1000
+        bounds = np.tile(loc, 2) + [
+            0,
+            *size[::-1],
+            0,
+        ]  # L T R B
 
-        assert np.array_equal(
-            utils.transforms.bounds2size(bounds, origin="lower"), size
+        _, s = utils.transforms.bounds2locsize(bounds, origin="lower")
+
+        assert s == approx(size)
+
+
+def test_fuzz_roundtrip_bounds2size():
+    """Fuzz roundtrip bounds2locsize and locsize2bounds."""
+    random.seed(0)
+    for _ in range(1000):
+        loc = (np.random.rand(2) - 0.5) * 1000
+        size = (np.random.rand(2) - 0.5) * 1000
+        assert utils.transforms.bounds2locsize(
+            utils.transforms.locsize2bounds(loc, size)
         )
+
+
+def test_bounds2size_value_error():
+    """Test bounds to size ValueError."""
+    with pytest.raises(ValueError):
+        utils.transforms.bounds2locsize((0, 0, 1, 1), origin="middle")
 
 
 def test_contrast_enhancer():
@@ -231,6 +294,7 @@ def test_contrast_enhancer():
         ],
         dtype=np.uint8,
     )
+
     # expected output of the contrast_enhancer
     result_array = np.array(
         [
@@ -240,6 +304,11 @@ def test_contrast_enhancer():
         ],
         dtype=np.uint8,
     )
+
+    with pytest.raises(AssertionError):
+        # contrast_enhancer requires image input to be of dtype uint18
+        utils.misc.contrast_enhancer(np.float32(input_array), low_p=2, high_p=98)
+
     # calculating the contrast enhanced version of input_array
     output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
     # the out_put array should be equal to expected seult_array
@@ -265,6 +334,7 @@ def test_load_stain_matrix(tmp_path):
 
 
 def test_get_luminosity_tissue_mask():
+    """Test get luminosity tissue mask."""
     with pytest.raises(ValueError):
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
@@ -309,3 +379,23 @@ def test_read_point_annotations():
 
     with pytest.raises(TypeError):
         _ = utils.misc.read_point_annotations(["a", "b", "c"])
+
+def test_grab_files_from_dir():
+    """Test grab files from dir utils.misc."""
+    file_parent_dir = Path(__file__).parent
+    input_path = file_parent_dir.joinpath("data")
+
+    file_types = "*.tif, *.png, *.jpg"
+
+    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
+    assert len(out) == 5
+
+    out = utils.misc.grab_files_from_dir(
+        input_path=input_path.parent, file_types="test_utils*"
+    )
+
+    assert len(out) == 1
+    assert str(Path(__file__)) == str(out[0])
+
+    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
+    assert len(out) == 0

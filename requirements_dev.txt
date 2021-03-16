@@ -14,7 +14,7 @@ pytest-cov
 opencv-python>=4.0
 openslide-python==1.1.2
 pytest-cov==2.9.0
-numpy<=1.19.3
+numpy
 pillow
 matplotlib
 pyyaml
