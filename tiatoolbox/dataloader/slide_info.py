@@ -43,7 +43,7 @@ def slide_info(input_path, verbose=True):
         >>> for curr_file in files_all:
         ...     slide_param = slide_info(input_path=curr_file)
         ...     utils.misc.save_yaml(slide_param.as_dict(),
-        ...           slide_param.file_name + ".yaml")
+        ...           str(slide_param.file_name) + ".yaml")
         ...     print(slide_param.as_dict())
 
     """
