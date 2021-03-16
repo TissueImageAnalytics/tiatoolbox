@@ -385,6 +385,7 @@ def read_point_annotations(input_table):
 
     return out_table
 
+
 @np.vectorize
 def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
     r"""Calculate convolution output size.
