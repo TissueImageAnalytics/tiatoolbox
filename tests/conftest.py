@@ -51,8 +51,7 @@ def _sample_jp2(tmpdir_factory):
     if not pathlib.Path(jp2_file_path).is_file():
         print("\nDownloading JP2")
         r = requests.get(
-            "https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox/files"
-            "/test2.jp2"
+            "https://warwick.ac.uk/fac/sci/dcs/people/csundo/test2.jp2"
         )
         with open(jp2_file_path, "wb") as f:
             f.write(r.content)
