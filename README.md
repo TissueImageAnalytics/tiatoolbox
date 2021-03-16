@@ -25,7 +25,7 @@ This package is for those interested in digital pathology: including graduate st
 
 ## Developers
 
-Anyone wanting to contribute to this repository, please first look at our [Wiki](https://github.com/TIA-Lab/tiatoolbox/wiki) and at our web page for [contributors](https://github.com/TIA-Lab/tiatoolbox/blob/master/README.md). See also the *Prepare for development* section of this document.
+Anyone wanting to contribute to this repository, please first look at our [Wiki](https://github.com/TIA-Lab/tiatoolbox/wiki) and at our web page for [contributors](https://github.com/TIA-Lab/tiatoolbox/blob/master/CONTRIBUTING.rst). See also the *Prepare for development* section of this document.
 
 ## Links, if needed
 The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Commands in this README are in bash. Windows users can use the command prompt to install conda and python packages. 
@@ -76,7 +76,7 @@ The full text of the licence is included in [LICENSE.md](https://raw.githubuserc
 Auxiliary Files
 ---------------
 
-Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/sci/dcs/research/tia/tiatoolbox), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/cross_fac/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 
 Dual License
