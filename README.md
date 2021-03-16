@@ -77,4 +77,3 @@ Auxiliary files, such as pre-trained model weights downloaded from the TIA Centr
 ## Dual License
 
 If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Lab at the University of Warwick (tialab@dcs.warwick.ac.uk).
-d
