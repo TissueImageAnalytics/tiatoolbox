@@ -71,7 +71,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     if type(file_types) is str:
         if len(file_types.split(",")) > 1:
-            file_types = tuple(file_types.split(","))
+            file_types = tuple(file_types.replace(" ", "").split(","))
         else:
             file_types = (file_types,)
 
@@ -300,18 +300,21 @@ def mpp2objective_power(mpp):
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
-    """Enhancing contrast of the input RGB image using intensity adjustment.
+    """Enhancing contrast of the input image using intensity adjustment.
        This method uses both image low and high percentiles.
 
     Args:
         img (ndarray): input image used to obtain tissue mask.
-            Image should be RGB uint8.
+            Image should be uint8.
         low_p (scalar): low percentile of image values to be saturated to 0.
         high_p (scalar): high percentile of image values to be saturated to 255.
             high_p should always be greater than low_p.
 
     Returns:
-        img (ndarray): Image uint8 RGB with contrast enhanced.
+        img (ndarray): Image (uint8) with contrast enhanced.
+
+    Raises:
+        AssertionError: Internal errors due to invalid img type.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -320,7 +323,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     """
     # check if image is not uint8
     if not img.dtype == np.uint8:
-        raise Exception("Image should be RGB uint8.")
+        raise AssertionError("Image should be uint8.")
     img_out = img.copy()
     p_low, p_high = np.percentile(img_out, (low_p, high_p))
     if p_low >= p_high:
@@ -330,3 +333,40 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
         )
     return np.uint8(img_out)
+
+
+@np.vectorize
+def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
+    r"""Calculate convolution output size.
+
+    This is a numpy vectorised function.
+
+    .. math::
+        \begin{split}
+        n_{out} &= \bigg\lfloor {{\frac{n_{in} +2p - k}{s}}} \bigg\rfloor + 1 \\
+        n_{in} &: \text{Number of input features} \\
+        n_{out} &: \text{Number of output features} \\
+        p &: \text{Padding size} \\
+        k &: \text{Kernel size} \\
+        s &: \text{Stride size} \\
+        \end{split}
+
+    Args:
+        in_size (int): Input size / number of input features.
+        kernel_size (int): Kernel size.
+        padding (int): Kernel size.
+        stride (int): Stride size.
+
+    Returns:
+        int: Output size / number of features.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> utils.misc.conv_out_size(100, 3)
+        >>> array(98)
+        >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
+        >>> array(98)
+        >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
+        >>> array([49, 49])
+  """
+    return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)

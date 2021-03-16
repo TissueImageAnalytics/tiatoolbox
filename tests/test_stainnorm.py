@@ -1,6 +1,7 @@
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox import cli
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 import pathlib
 import numpy as np
@@ -157,3 +158,73 @@ def test_command_line_stainnorm():
     )
 
     assert stainnorm_result.exit_code == 0
+
+
+def test_cli_stainnorm_dir():
+    """Test directory input for the stain normalisation CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = file_parent_dir.joinpath("data")
+    target_img = file_parent_dir.joinpath("../data/target_image.png")
+    runner = CliRunner()
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            str(source_img),
+            "--target_input",
+            target_img,
+            "--method",
+            "vahadane",
+        ],
+    )
+
+    assert stainnorm_result.exit_code == 0
+
+
+def test_cli_stainnorm_file_not_found_error():
+    """Test file not found error for the stain normalisation CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = file_parent_dir.joinpath("data/source_image.png")
+    target_img = file_parent_dir.joinpath("../data/target_image.png")
+    runner = CliRunner()
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            str(source_img)[:-1],
+            "--target_input",
+            target_img,
+            "--method",
+            "vahadane",
+        ],
+    )
+
+    assert stainnorm_result.output == ""
+    assert stainnorm_result.exit_code == 1
+    assert isinstance(stainnorm_result.exception, FileNotFoundError)
+
+
+def test_cli_stainnorm_method_not_supported():
+    """Test method not supported for the stain normalisation CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    source_img = file_parent_dir.joinpath("data/source_image.png")
+    target_img = file_parent_dir.joinpath("../data/target_image.png")
+    runner = CliRunner()
+    stainnorm_result = runner.invoke(
+        cli.main,
+        [
+            "stainnorm",
+            "--source_input",
+            str(source_img),
+            "--target_input",
+            target_img,
+            "--method",
+            "Test",
+        ],
+    )
+
+    assert stainnorm_result.output == ""
+    assert stainnorm_result.exit_code == 1
+    assert isinstance(stainnorm_result.exception, MethodNotSupported)

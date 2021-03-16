@@ -151,7 +151,7 @@ def convert_OD2RGB(OD):
     return (255 * np.exp(-1 * OD)).astype(np.uint8)
 
 
-def bounds2size(bounds, origin="upper"):
+def bounds2locsize(bounds, origin="upper"):
     """Calculate the size of a tuple of bounds.
 
     Bounds are exptected to be in the (left, top, right, bottom) /
@@ -164,6 +164,30 @@ def bounds2size(bounds, origin="upper"):
             Defaults to upper.
     """
     left, top, right, bottom = bounds
+    origin = origin.lower()
     if origin == "upper":
-        return np.array([right - left, bottom - top])
-    return np.array([right - left, top - bottom])
+        return np.array([left, top]), np.array([right - left, bottom - top])
+    if origin == "lower":
+        return np.array([left, bottom]), np.array([right - left, top - bottom])
+    raise ValueError("Invalid origin. Only 'upper' or 'lower' are valid.")
+
+
+def locsize2bounds(location, size):
+    """Convert a location and size to bounds.
+
+    Args:
+        location (tuple(int)): A 2-tuple or length 2 array of x,y coordinates.
+        size (tuple(int)): A 2-tuple or length 2 array of width and height.
+        origin (str): Upper (Top-left) or lower (bottom-left) expected
+            for location / origin. Defaults to upper.
+
+    Returns:
+        tuple: A tuple of bounds in (left, top, right, bottom) /
+        (start_x, start_y, end_x, end_y) format.
+    """
+    return (
+        location[0],
+        location[1],
+        location[0] + size[0],
+        location[1] + size[1],
+    )

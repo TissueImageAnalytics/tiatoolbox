@@ -12,7 +12,7 @@ with open("HISTORY.md") as history_file:
 
 requirements = [
     "Click>=7.0",
-    "numpy<=1.19.3",
+    "numpy",
     "pillow",
     "matplotlib",
     "opencv-python>=4.0",
