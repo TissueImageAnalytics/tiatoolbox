@@ -1109,6 +1109,7 @@ class VirtualWSIReader(WSIReader):
             mpp=None,
             raw=None,
         )
+        self._m_info = param
 
         return param
 
