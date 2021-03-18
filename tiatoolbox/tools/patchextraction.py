@@ -64,19 +64,6 @@ class PatchExtractor(ABC):
     def __getitem__(self, item):
         raise NotImplementedError
 
-    def extract_patches(self, pixel_locations=None):
-        """Extract patches from an image.
-
-        Args:
-            pixel_locations (str, ndarray, optional): pixel locations required for
-             :obj:`PointsPatchExtractor`.
-
-        Returns:
-            img_patches (ndarray): extracted image patches of size NxHxWxD.
-
-        """
-        raise NotImplementedError
-
     def merge_patches(self, patches):
         """Merge the patch-level results to get the overall image-level prediction.
 
@@ -115,9 +102,6 @@ class FixedWindowPatchExtractor(PatchExtractor):
         )
         self.stride = stride
 
-    def extract_patches(self, pixel_locations=None):
-        raise NotImplementedError
-
     def __next__(self):
         raise NotImplementedError
 
@@ -154,9 +138,6 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self.stride_h = stride
         self.label_patch_size = label_patch_size
 
-    def extract_patches(self, pixel_locations=None):
-        raise NotImplementedError
-
     def __next__(self):
         raise NotImplementedError
 
@@ -168,14 +149,14 @@ class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
 
     Args:
-        labels(ndarray, pd.DataFrame, str, pathlib.Path): contains location and/or
-         type of patch. Input can be path to a csv or json file.
+        locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
+         and/or type of patch. Input can be path to a csv or json file.
         num_examples_per_patch(int): Number of examples per patch for ensemble
          classification, default=9 (centre of patch and all the eight neighbours as
          centre).
 
     Attributes:
-        labels(pd.DataFrame): A table containing location and/or type of patch.
+        locations_list(pd.DataFrame): A table containing location and/or type of patch.
         num_examples_per_patch(int): Number of examples per patch for ensemble
          classification.
 
@@ -184,7 +165,7 @@ class PointsPatchExtractor(PatchExtractor):
     def __init__(
         self,
         input_img,
-        labels,
+        locations_list,
         patch_size=224,
         pad_size=0,
         num_examples_per_patch=9,
@@ -196,12 +177,12 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
         self.num_examples_per_patch = num_examples_per_patch
-        self.labels = read_point_annotations(input_table=labels)
+        self.locations_list = read_point_annotations(input_table=locations_list)
 
     def __next__(self):
         n = self.n
 
-        if n >= self.labels.shape[0]:
+        if n >= self.locations_list.shape[0]:
             raise StopIteration
         self.n = n + 1
         return self[n]
@@ -210,10 +191,10 @@ class PointsPatchExtractor(PatchExtractor):
         if type(item) is not int:
             raise TypeError("Index should be an integer.")
 
-        if item >= self.labels.shape[0]:
+        if item >= self.locations_list.shape[0]:
             raise IndexError
 
-        x, y, _ = self.labels.values[item, :]
+        x, y, _ = self.locations_list.values[item, :]
 
         x = x - int((self.patch_size[1] - 1) / 2)
         y = y - int((self.patch_size[0] - 1) / 2)
@@ -221,9 +202,6 @@ class PointsPatchExtractor(PatchExtractor):
         data = self.wsi.read_rect(location=(x, y), size=self.patch_size)
 
         return data
-
-    def extract_patches(self, pixel_locations=None):
-        raise NotImplementedError
 
     def merge_patches(self, patches=None):
         """Merge patch is not supported by :obj:`PointsPatchExtractor`.
