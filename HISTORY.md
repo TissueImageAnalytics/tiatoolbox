@@ -1,6 +1,14 @@
 History
 =======
 
+0.5.2 (2021-03-12)
+------------------
+### Bug Fixes and Other Changes
+- Fix URL for downloading test JP2 image.
+- Update readme with new logo.
+
+------------------
+
 0.5.1 (2020-12-31)
 ------------------
 ### Bug Fixes and Other Changes
