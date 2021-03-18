@@ -1110,10 +1110,6 @@ class VirtualWSIReader(WSIReader):
             raw=None,
         )
 
-        warnings.warn("Unknown scale (no objective_power or mpp).")
-
-        warnings.warn("Raw data is None.")
-
         return param
 
     def read_rect(self, location, size, resolution=1.0, units="baseline"):
