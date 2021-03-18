@@ -64,32 +64,18 @@ class PatchExtractor(ABC):
     def __getitem__(self, item):
         raise NotImplementedError
 
-    # @staticmethod
-    # def __get_last_steps(image_dim, label_patch_dim, stride):
-    #     """Get the last location for patch extraction in a specific direction.
-    #
-    #     Args:
-    #         image_dim: 1D size of image
-    #         label_patch_dim: 1D size of patches
-    #         stride: 1D size of stride for patch extraction
-    #
-    #     Returns:
-    #         last_step: the final location for patch extraction
-    #     """
-    #     nr_step = math.ceil((image_dim - label_patch_dim) / stride)
-    #     last_step = (nr_step + 1) * stride
-    #     return int(last_step)
+    def extract_patches(self, pixel_locations=None):
+        """Extract patches from an image.
 
-    # def extract_patches(self):
-    #     """Extract patches from an image using locations provided by labels data.
-    #
-    #     Args:
-    #         labels (str, ndarray):
-    #
-    #     Returns:
-    #         img_patches (ndarray): extracted image patches of size NxHxWxD.
-    #     """
-    #     raise NotImplementedError
+        Args:
+            pixel_locations (str, ndarray, optional): pixel locations required for
+             :obj:`PointsPatchExtractor`.
+
+        Returns:
+            img_patches (ndarray): extracted image patches of size NxHxWxD.
+
+        """
+        raise NotImplementedError
 
     def merge_patches(self, patches):
         """Merge the patch-level results to get the overall image-level prediction.
@@ -99,6 +85,7 @@ class PatchExtractor(ABC):
 
         Returns:
             image: merged prediction
+
         """
         raise NotImplementedError
 
@@ -128,8 +115,8 @@ class FixedWindowPatchExtractor(PatchExtractor):
         )
         self.stride = stride
 
-    # def extract_patches(self, input_img, labels=None):
-    #     raise NotImplementedError
+    def extract_patches(self, pixel_locations=None):
+        raise NotImplementedError
 
     def __next__(self):
         raise NotImplementedError
@@ -167,8 +154,8 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self.stride_h = stride
         self.label_patch_size = label_patch_size
 
-    # def extract_patches(self, input_img, labels=None):
-    #     raise NotImplementedError
+    def extract_patches(self, pixel_locations=None):
+        raise NotImplementedError
 
     def __next__(self):
         raise NotImplementedError
@@ -235,59 +222,8 @@ class PointsPatchExtractor(PatchExtractor):
 
         return data
 
-    # def extract_patches(self, input_img, labels=None):
-    #     if not isinstance(labels, np.ndarray):
-    #         raise Exception("Please input correct csv, json path or csv data")
-    #
-    #
-    #     patch_h = self.img_patch_h
-    #     patch_w = self.img_patch_w
-    #
-    #     image = np.lib.pad(
-    #         image,
-    #         ((self.pad_y, self.pad_y), (self.pad_x, self.pad_x), (0, 0)),
-    #         "symmetric",
-    #     )
-    #
-    #     num_patches_img = len(labels) * self.num_examples_per_patch
-    #     img_patches = np.zeros(
-    #         (num_patches_img, patch_h, patch_w, image.shape[2]), dtype=image.dtype
-    #     )
-    #     labels = [None] * num_patches_img
-    #     class_id = [None] * num_patches_img
-    #
-    #     cell_tot = 1
-    #     iter_tot = 0
-    #     for row in labels:
-    #         patch_label = row[0]
-    #         cell_location = np.array([row[2], row[1]], dtype=np.int)
-    #         cell_location[0] = (
-    #             cell_location[0] + self.pad_y - 1
-    #         )  # Python index starts from 0
-    #         cell_location[1] = (
-    #             cell_location[1] + self.pad_x - 1
-    #         )  # Python index starts from 0
-    #         if self.num_examples_per_patch > 1:
-    #             root_num_examples = np.sqrt(self.num_examples_per_patch)
-    #             start_location = -int(root_num_examples / 2)
-    #             end_location = int(root_num_examples + start_location)
-    #         else:
-    #             start_location = 0
-    #             end_location = 1
-    #
-    #         for h in range(start_location, end_location):
-    #             for w in range(start_location, end_location):
-    #                 start_h = cell_location[0] - h - int((patch_h - 1) / 2)
-    #                 start_w = cell_location[1] - w - int((patch_w - 1) / 2)
-    #                 end_h = start_h + patch_h
-    #                 end_w = start_w + patch_w
-    #                 labels[iter_tot] = patch_label
-    #                 class_id[iter_tot] = cell_tot
-    #              img_patches[iter_tot, :, :, :] = image[start_h:end_h, start_w:end_w]
-    #                 iter_tot += 1
-    #
-    #         cell_tot += 1
-    #     return img_patches, labels, class_id
+    def extract_patches(self, pixel_locations=None):
+        raise NotImplementedError
 
     def merge_patches(self, patches=None):
         """Merge patch is not supported by :obj:`PointsPatchExtractor`.
