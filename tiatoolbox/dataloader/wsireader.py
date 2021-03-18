@@ -1086,7 +1086,7 @@ class VirtualWSIReader(WSIReader):
             self.img = utils.misc.imread(self.input_path)
 
         if info is not None:
-            self.info = info
+            self._m_info = info
 
     def _info(self):
         """Visual Field meta data getter.
