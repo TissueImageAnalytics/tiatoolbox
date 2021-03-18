@@ -359,7 +359,7 @@ def read_point_annotations(input_table):
 
         if suffix == ".npy":
             out_table = np.load(input_table)
-            if out_table.shape[1] == 3:
+            if out_table.shape[1] == 2:
                 out_table = pd.DataFrame(out_table, columns=["x", "y"])
                 out_table["class"] = None
             else:
