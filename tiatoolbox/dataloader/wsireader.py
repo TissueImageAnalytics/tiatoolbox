@@ -1091,8 +1091,10 @@ class VirtualWSIReader(WSIReader):
     def _info(self):
         """Visual Field meta data getter.
 
-        For missing metadata values such as `mpp` or `objective` the value is
-        set to None.
+        This generates a WSIMeta object for the slide if none exists.
+        There is 1 level with dimensions equal to the image and no
+        mpp, objective power, or vendor data.
+
 
         Returns:
             WSIMetadata: containing meta information.
