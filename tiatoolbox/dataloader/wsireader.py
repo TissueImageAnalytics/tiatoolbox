@@ -186,8 +186,8 @@ class WSIReader:
 
         The optimal level is the most downscaled level of the image
         pyramid (or multi-resolution layer) which is larger than the
-        desired target scale. The returned downsample is the scale factor
-        required, post read, to achieve the desired resolution.
+        desired target resolution. The returned scale is the downsample
+        factor required, post read, to achieve the desired resolution.
 
         Args:
             resolution (float or tuple of float): Resolution to
