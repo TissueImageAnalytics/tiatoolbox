@@ -980,12 +980,6 @@ class OmnyxJP2WSIReader(WSIReader):
         # area = (start_y, start_x, end_y, end_x)
         # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        # bounds = (
-        #     0,
-        #     0,
-        #     int((end_x - start_x) // stride),
-        #     int((end_y - start_y) // stride),
-        # )
         _, bounds_size = utils.transforms.bounds2locsize(bounds)
         im_region = utils.image.sub_pixel_read(
             image=glymur_wsi,
