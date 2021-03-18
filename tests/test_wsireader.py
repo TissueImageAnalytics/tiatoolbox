@@ -851,6 +851,133 @@ def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
     )
 
 
+def test_openslide_objective_power_from_mpp(_sample_svs):
+    """Test OpenSlideWSIReader approximation of objective power from mpp."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
+    props = wsi.openslide_wsi._properties
+
+    del props["openslide.objective-power"]  # skipcq: PTC-W0043
+    with pytest.warns(UserWarning, match=r"Objective power inferred"):
+        _ = wsi.info
+
+    del props["openslide.mpp-x"]  # skipcq: PTC-W0043
+    del props["openslide.mpp-y"]  # skipcq: PTC-W0043
+    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
+        _ = wsi._info()
+
+
+def test_openslide_mpp_from_tiff_resolution(_sample_svs):
+    """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
+    props = wsi.openslide_wsi._properties
+
+    del props["openslide.mpp-x"]  # skipcq: PTC-W0043
+    del props["openslide.mpp-y"]  # skipcq: PTC-W0043
+    props["tiff.ResolutionUnit"] = "centimeter"
+    props["tiff.XResolution"] = 1e4  # Pixels per cm
+    props["tiff.YResolution"] = 1e4  # Pixels per cm
+    with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
+        _ = wsi.info
+
+    assert np.array_equal(wsi.info.mpp, [1, 1])
+
+
+def test_VirtualWSIReader():
+    """Test VirtualWSIReader"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    with pytest.warns(UserWarning, match=r"Unknown scale"):
+        _ = wsi._info()
+    with pytest.warns(UserWarning, match=r"Raw data is None"):
+        _ = wsi._info()
+
+    assert wsi.img.shape == (256, 256, 3)
+
+    img = wsi.read_rect(location=(0, 0), size=(100, 50))
+    assert img.shape == (50, 100, 3)
+
+    img = wsi.read_region(location=(0, 0), size=(100, 50), level=0)
+    assert img.shape == (50, 100, 3)
+
+
+def test_VirtualWSIReader_read_bounds():
+    """Test VirtualWSIReader read bounds"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100))
+    assert img.shape == (100, 50, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1.5, units="baseline")
+    assert img.shape == (150, 75, 3)
+
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="baseline")
+    assert img.shape == (50, 25, 3)
+
+    with pytest.raises(IndexError):
+        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="level")
+
+    with pytest.raises(ValueError):
+        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
+
+
+def test_VirtualWSIReader_read_rect():
+    """Test VirtualWSIReader read bounds"""
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    img = wsi.read_rect(location=(0, 0), size=(50, 100))
+    assert img.shape == (100, 50, 3)
+
+    img = wsi.read_rect(
+        location=(0, 0), size=(50, 100), resolution=1.5, units="baseline"
+    )
+    assert img.shape == (100, 50, 3)
+
+    img = wsi.read_rect(
+        location=(0, 0), size=(50, 100), resolution=0.5, units="baseline"
+    )
+    assert img.shape == (100, 50, 3)
+
+    with pytest.raises(IndexError):
+        _ = wsi.read_rect(
+            location=(0, 0), size=(50, 100), resolution=0.5, units="level"
+        )
+
+    with pytest.raises(ValueError):
+        _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
+
+
+def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
+    """Test get_wsireader to return correct object."""
+    _sample_svs = str(_sample_svs)
+    _sample_ndpi = str(_sample_ndpi)
+    _sample_jp2 = str(_sample_jp2)
+
+    with pytest.raises(FileNotSupported):
+        _ = wsireader.get_wsireader("./sample.csv")
+
+    with pytest.raises(TypeError):
+        _ = wsireader.get_wsireader([1, 2])
+
+    wsi = wsireader.get_wsireader(_sample_svs)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+    wsi = wsireader.get_wsireader(_sample_ndpi)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+    wsi = wsireader.get_wsireader(_sample_jp2)
+    assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
+
+    file_parent_dir = pathlib.Path(__file__).parent
+    wsi = wsireader.get_wsireader(file_parent_dir.joinpath("data/source_image.png"))
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+    img = utils.misc.imread(str(file_parent_dir.joinpath("data/source_image.png")))
+    wsi = wsireader.get_wsireader(input_img=img)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
@@ -1032,130 +1159,3 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(_sample_jp2, tmp_pa
     assert slide_thumb_result.output == ""
     assert slide_thumb_result.exit_code == 1
     assert isinstance(slide_thumb_result.exception, FileNotSupported)
-
-
-def test_openslide_objective_power_from_mpp(_sample_svs):
-    """Test OpenSlideWSIReader approximation of objective power from mpp."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
-    props = wsi.openslide_wsi._properties
-
-    del props["openslide.objective-power"]  # skipcq: PTC-W0043
-    with pytest.warns(UserWarning, match=r"Objective power inferred"):
-        _ = wsi.info
-
-    del props["openslide.mpp-x"]  # skipcq: PTC-W0043
-    del props["openslide.mpp-y"]  # skipcq: PTC-W0043
-    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        _ = wsi._info()
-
-
-def test_openslide_mpp_from_tiff_resolution(_sample_svs):
-    """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
-    props = wsi.openslide_wsi._properties
-
-    del props["openslide.mpp-x"]  # skipcq: PTC-W0043
-    del props["openslide.mpp-y"]  # skipcq: PTC-W0043
-    props["tiff.ResolutionUnit"] = "centimeter"
-    props["tiff.XResolution"] = 1e4  # Pixels per cm
-    props["tiff.YResolution"] = 1e4  # Pixels per cm
-    with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
-        _ = wsi.info
-
-    assert np.array_equal(wsi.info.mpp, [1, 1])
-
-
-def test_VirtualWSIReader():
-    """Test VirtualWSIReader"""
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
-    with pytest.warns(UserWarning, match=r"Unknown scale"):
-        _ = wsi._info()
-    with pytest.warns(UserWarning, match=r"Raw data is None"):
-        _ = wsi._info()
-
-    assert wsi.img.shape == (256, 256, 3)
-
-    img = wsi.read_rect(location=(0, 0), size=(100, 50))
-    assert img.shape == (50, 100, 3)
-
-    img = wsi.read_region(location=(0, 0), size=(100, 50), level=0)
-    assert img.shape == (50, 100, 3)
-
-
-def test_VirtualWSIReader_read_bounds():
-    """Test VirtualWSIReader read bounds"""
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
-    img = wsi.read_bounds(bounds=(0, 0, 50, 100))
-    assert img.shape == (100, 50, 3)
-
-    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1.5, units="baseline")
-    assert img.shape == (150, 75, 3)
-
-    img = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="baseline")
-    assert img.shape == (50, 25, 3)
-
-    with pytest.raises(IndexError):
-        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=0.5, units="level")
-
-    with pytest.raises(ValueError):
-        _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
-
-
-def test_VirtualWSIReader_read_rect():
-    """Test VirtualWSIReader read bounds"""
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
-    img = wsi.read_rect(location=(0, 0), size=(50, 100))
-    assert img.shape == (100, 50, 3)
-
-    img = wsi.read_rect(
-        location=(0, 0), size=(50, 100), resolution=1.5, units="baseline"
-    )
-    assert img.shape == (100, 50, 3)
-
-    img = wsi.read_rect(
-        location=(0, 0), size=(50, 100), resolution=0.5, units="baseline"
-    )
-    assert img.shape == (100, 50, 3)
-
-    with pytest.raises(IndexError):
-        _ = wsi.read_rect(
-            location=(0, 0), size=(50, 100), resolution=0.5, units="level"
-        )
-
-    with pytest.raises(ValueError):
-        _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
-
-
-def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
-    """Test get_wsireader to return correct object."""
-    _sample_svs = str(_sample_svs)
-    _sample_ndpi = str(_sample_ndpi)
-    _sample_jp2 = str(_sample_jp2)
-
-    with pytest.raises(FileNotSupported):
-        _ = wsireader.get_wsireader("./sample.csv")
-
-    with pytest.raises(TypeError):
-        _ = wsireader.get_wsireader([1, 2])
-
-    wsi = wsireader.get_wsireader(_sample_svs)
-    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
-
-    wsi = wsireader.get_wsireader(_sample_ndpi)
-    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
-
-    wsi = wsireader.get_wsireader(_sample_jp2)
-    assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
-
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.get_wsireader(file_parent_dir.joinpath("data/source_image.png"))
-    assert isinstance(wsi, wsireader.VirtualWSIReader)
-
-    img = utils.misc.imread(str(file_parent_dir.joinpath("data/source_image.png")))
-    wsi = wsireader.get_wsireader(input_img=img)
-    assert isinstance(wsi, wsireader.VirtualWSIReader)

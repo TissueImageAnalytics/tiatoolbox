@@ -21,6 +21,7 @@
 """This module defines classes which can read image data from WSI formats."""
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 
 import pathlib
@@ -34,7 +35,7 @@ import pandas as pd
 import re
 import numbers
 import os
-from typing import Tuple
+from typing import Tuple, Union
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -86,6 +87,12 @@ class WSIReader:
 
     def _info(self):
         """WSI metadata internal getter used to update info property.
+
+        Mssing values for MPP and objective power are approximated and
+        a warning raised. Objective power is calculated as the mean of
+        the :func:utils.transforms.mpp2common_objective_power in x and
+        y. MPP (x and y) is approximated using objective power via
+        :func:utils.transforms.objective_power2mpp.
 
         Returns:
             WSIMetadata: An object containing normalised slide metadata
@@ -597,8 +604,8 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: [str, pathlib.Path],
-        tile_objective_value: [int],
+        output_dir: Union[str, pathlib.Path],
+        tile_objective_value: int,
         tile_read_size: Tuple[int, int],
         tile_format=".jpg",
         verbose=True,
@@ -941,9 +948,10 @@ class OmnyxJP2WSIReader(WSIReader):
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
         )
-        im_region = utils.image.safe_padded_read(
-            img=glymur_wsi,
+        im_region = utils.image.sub_pixel_read(
+            image=glymur_wsi,
             bounds=bounds,
+            output_size=conv_out_size(baseline_read_size, stride=stride),
             stride=stride,
             pad_mode="constant",
             constant_values=255,
@@ -978,9 +986,11 @@ class OmnyxJP2WSIReader(WSIReader):
         #     int((end_x - start_x) // stride),
         #     int((end_y - start_y) // stride),
         # )
-        im_region = utils.image.safe_padded_read(
-            img=glymur_wsi,
+        _, bounds_size = utils.transforms.bounds2locsize(bounds)
+        im_region = utils.image.sub_pixel_read(
+            image=glymur_wsi,
             bounds=bounds,
+            output_size=conv_out_size(bounds_size, stride=stride),
             stride=stride,
             pad_mode="constant",
             constant_values=255,
@@ -1071,53 +1081,18 @@ class VirtualWSIReader(WSIReader):
     def __init__(
         self,
         input_img,
-        baseline_size=None,
-        mpp=None,
-        power=None,
-        level_downsamples=None,
-        level_dimensions=None,
+        info: WSIMeta = None,
     ):
-        super().__init__(input_img=input_img)
-
+        super().__init__(
+            input_img=input_img,
+        )
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
             self.img = utils.misc.imread(self.input_path)
 
-        self._slide_dimensions = baseline_size
-        self._objective_power = power
-        self._mpp = mpp
-        self._level_downsamples = level_downsamples
-        self._level_dimensions = level_dimensions
-
-        self.img_size = self.img.shape[:2][::-1]
-        self.baseline_size = tuple(baseline_size)
-        self.power = power
-        self.mpp = mpp
-        self.level_downsamples = level_downsamples
-        self.level_dimensions = level_dimensions
-
-        if self.baseline_size is None:
-            self.baseline_size = self.img.shape[:2][::-1]
-        np_baseline_size = np.array(self.baseline_size)
-        if self.level_dimensions is None:
-            if self.level_downsamples is None:
-                # No level downsamples or dimensions
-                self.level_dimensions = [self.baseline_size]
-                self.level_downsamples = [1]
-            else:
-                # No level dimensions but downsamples are given
-                self.level_dimensions = [
-                    np.round(np_baseline_size / x).astype(int)
-                    for x in self.level_downsamples
-                ]
-        if self.level_downsamples is None:
-            # No level downsamples but level dimensions are given
-            self.level_downsamples = [
-                np_baseline_size / np.array(x) for x in self.level_dimensions
-            ]
-            if not all(x == y for x, y in self.level_downsamples):
-                warnings.warn("Downsamples differ in x and y")
+        if info is not None:
+            self.info = info
 
     def _info(self):
         """Visual Field meta data getter.

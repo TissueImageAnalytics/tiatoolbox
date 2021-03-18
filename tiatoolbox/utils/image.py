@@ -23,8 +23,9 @@ import warnings
 
 import numpy as np
 import cv2
+from PIL import Image
 
-from tiatoolbox.utils.transforms import bounds2size
+from tiatoolbox.utils.transforms import bounds2locsize
 from tiatoolbox.utils.misc import conv_out_size
 
 
@@ -51,8 +52,8 @@ def safe_padded_read(
             Bounds of the region in (left, top,
             right, bottom) format.
         stride (int, tuple(int)):
-            Stride when reading from img. Defaults to 1. Tuple is
-            iterpreted as stride in x and y (axis 1 and 0 respectively).
+            Stride when reading from img. Defaults to 1. A tuple is
+            interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
         padding (int, tuple(int)):
             Padding to apply to each bound. Default to 0.
@@ -116,9 +117,7 @@ def safe_padded_read(
         l, t, r, b = padded_bounds
         return img[t:b:y_stride, l:r:x_stride, ...]
     # Else find the closest coordinates which are inside the image
-    clamped_bounds = np.max(
-        [np.min([padded_bounds, hw_limits - 1], axis=0), zeros], axis=0
-    )
+    clamped_bounds = np.max([np.min([padded_bounds, hw_limits], axis=0), zeros], axis=0)
     clamped_bounds = np.round(clamped_bounds).astype(int)
     # Read the area within the image
     l, t, r, b = clamped_bounds
@@ -131,11 +130,10 @@ def safe_padded_read(
         img_size = conv_out_size(img_size, stride=stride)
     # Find how much padding needs to be applied to fill the edge gaps
     # edge_padding = np.abs(padded_bounds - clamped_bounds)
-    img_max_index = img_size
     edge_padding = padded_bounds - np.array(
         [
             *np.min([[0, 0], padded_bounds[2:]], axis=0),
-            *np.max([img_max_index, padded_bounds[:2]], axis=0),
+            *np.max([img_size, padded_bounds[:2] - img_size], axis=0),
         ]
     )
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
@@ -155,6 +153,7 @@ def sub_pixel_read(
     bounds,
     output_size,
     padding=0,
+    stride=1,
     interpolation="nearest",
     pad_for_interpolation=True,
     pad_at_baseline=False,
@@ -183,6 +182,9 @@ def sub_pixel_read(
         padding (int, tuple(int)):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
+        stride (int, tuple(int)):
+            Stride when reading from img. Defaults to 1. A tuple is
+            interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):
             Method of interpolation. Possible values are: nearest,
             linear, cubic, lanczos. Defaults to nearest.
@@ -275,10 +277,15 @@ def sub_pixel_read(
 
 
     """
-    image = np.array(image)
+    if isinstance(image, Image.Image):
+        image = np.array(image)
     bounds = np.array(bounds)
-    bounds_size = bounds2size(bounds)
-    output_size = np.array(output_size)
+    _, bounds_size = bounds2locsize(bounds)
+    if np.size(stride) == 2:
+        stride = np.tile(stride, 2)
+    bounds_size = bounds_size / stride
+    if 0 in bounds_size:
+        raise AssertionError("Bounds must have non-zero size in each dimension")
     scale_factor = output_size / bounds_size
 
     # Set interpolation variables.
@@ -346,7 +353,9 @@ def sub_pixel_read(
         read_func = safe_padded_read
 
     # Perform the pixel-aligned read.
-    region = read_func(image, int_bounds, pad_mode=pad_mode, **read_kwargs)
+    region = read_func(
+        image, int_bounds, pad_mode=pad_mode, stride=stride, **read_kwargs
+    )
 
     if not np.all(np.array(region.shape[:2]) > 0):
         raise AssertionError("Region should not be empty.")
@@ -372,7 +381,7 @@ def sub_pixel_read(
         sign = 1 if resized_indexes[i] >= 0 else -1
         up_down = [np.ceil, np.floor][::sign]
         # Check if removing the current amount would make the image too small
-        dim = bounds2size(resized_indexes + np.array([0, 0, *scaled_size]))[i % 2]
+        _, dim = bounds2locsize(resized_indexes + np.array([0, 0, *scaled_size]))[i % 2]
         target_dim = padded_output_size[i % 2]
         # If so, round so that less is cropped
         if dim < target_dim:
@@ -388,7 +397,6 @@ def sub_pixel_read(
     result_size = np.array(result.shape[:2][::-1])
 
     if not np.all(np.abs(result_size - padded_output_size) <= 1):
-        print(result_size, padded_output_size)
         raise AssertionError("Output size should not differ from requested size.")
 
     return result
