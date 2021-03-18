@@ -359,7 +359,11 @@ def read_point_annotations(input_table):
 
         if suffix == ".npy":
             out_table = np.load(input_table)
-            out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
+            if out_table.shape[1] == 3:
+                out_table = pd.DataFrame(out_table, columns=["x", "y"])
+                out_table["class"] = None
+            else:
+                out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
 
         elif suffix == ".csv":
             out_table = pd.read_csv(input_table)
