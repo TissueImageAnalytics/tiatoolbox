@@ -36,12 +36,24 @@ def read_points_patches(input_img, locations_list):
 
     with pytest.raises(StopIteration):
         patches.n = 1870
-        next(patches)
+        try:
+            next(patches)
+        except StopIteration:
+            raise StopIteration("Index out of bounds.")
 
     with pytest.raises(IndexError):
         print(patches[1870])
 
     return data
+
+
+def test_patch_extractor():
+    """Test base class patch extractor."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    input_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    patches = patchextraction.PatchExtractor(input_img=input_img, patch_size=(20, 20))
+    next_patches = iter(patches)
+    assert next_patches.n == 0
 
 
 def test_get_patch_extractor():
