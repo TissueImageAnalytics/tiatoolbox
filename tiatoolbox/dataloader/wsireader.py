@@ -1093,10 +1093,13 @@ class VirtualWSIReader(WSIReader):
 
     Attributes:
         img (ndarray)
+        mode (str)
 
     Args:
         input_img (str, pathlib.Path, ndarray): input path to WSI.
-
+        info (WSIMeta): Metadata for the virtual wsi.
+        mode (str): Mode of the input image. Default is 'rgb'. Allowed
+            values are: rgb, bool.
     """
 
     def __init__(
