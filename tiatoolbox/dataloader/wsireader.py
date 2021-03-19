@@ -23,6 +23,7 @@ from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.dataloader.wsimeta import WSIMeta
+from tiatoolbox.tools import tissuemask
 
 import pathlib
 import warnings
@@ -603,6 +604,31 @@ class WSIReader:
         thumb = self.read_bounds(bounds, resolution=resolution, units=units)
         return thumb
 
+    def tissue_mask(
+        self, method="otsu", resolution=1.25, units="power", **masker_kwargs
+    ):
+        """Create a tissue mask and wrap it in a VirtualWSIReader.
+
+        Args:
+            method (str): Method to use for creating the mask. Defaults
+                to 'otsu'. Methods are: otsu, morphological.
+            resolution (float): Resolution to produce the mask at.
+                Defaults to 1.25.
+            units (str): Units of resolution. Defaults to 'power'.
+            **masker_kwargs: Extra kwargs passed to the masker class.
+        """
+        thumbnail = self.slide_thumbnail(resolution, units)
+        if method == "otsu":
+            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
+        elif method == "morphological":
+            masker = tissuemask.MorphologicalMasker(**masker_kwargs)
+        else:
+            raise ValueError("Invalid tissue masker method.")
+
+        mask_img = masker.fit_transform(thumbnail)
+        mask = VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
+        return mask
+
     def save_tiles(
         self,
         output_dir: Union[str, pathlib.Path],
@@ -1077,10 +1103,14 @@ class VirtualWSIReader(WSIReader):
         self,
         input_img,
         info: WSIMeta = None,
+        mode="RGB",
     ):
         super().__init__(
             input_img=input_img,
         )
+        if mode.lower() not in ["rgb", "bool"]:
+            raise ValueError("Invalid mode.")
+        self.mode = mode.lower()
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
@@ -1168,7 +1198,8 @@ class VirtualWSIReader(WSIReader):
                 raise AssertionError("Read: Output region size inconsistent.")
             im_region = cv2.resize(im_region, size)
 
-        im_region = utils.transforms.background_composite(image=im_region)
+        if self.mode == "rgb":
+            im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
     def read_bounds(self, bounds, resolution=1.0, units="baseline"):
@@ -1197,7 +1228,8 @@ class VirtualWSIReader(WSIReader):
             img=im_region, scale_factor=post_read_scale, output_size=output_size
         )
 
-        im_region = utils.transforms.background_composite(image=im_region)
+        if self.mode == "rgb":
+            im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
 
