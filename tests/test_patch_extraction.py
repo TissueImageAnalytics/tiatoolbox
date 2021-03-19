@@ -22,9 +22,24 @@ def read_points_patches(input_img, locations_list):
     )
 
     data = np.empty([3, 20, 20, 3])
-    data[0] = next(patches, None)
-    data[1] = next(patches, None)
+    try:
+        data[0] = next(patches)
+    except StopIteration:
+        raise StopIteration("Index out of bounds.")
+
+    try:
+        data[1] = next(patches)
+    except StopIteration:
+        raise StopIteration("Index out of bounds.")
+
     data[2] = patches[23]
+
+    with pytest.raises(StopIteration):
+        patches.n = 1870
+        next(patches)
+
+    with pytest.raises(IndexError):
+        print(patches[1870])
 
     return data
 
