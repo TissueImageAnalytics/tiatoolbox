@@ -307,6 +307,9 @@ def sub_pixel_read(
         inter_padding = 0
     # Make interpolation padding a length 4 array.
     inter_padding = np.repeat(inter_padding, 4)
+    # Scale the interpolation padding to ensure it is >1 if downscaling for output_size.
+    inter_scaling = np.max([np.ones(4), np.tile(1 / scale_factor, 2)], axis=0)
+    inter_padding = np.ceil(inter_padding * inter_scaling).astype(int)
 
     # Normalise desired padding to be a length 4 array.
     if np.size(padding) == 1:
@@ -372,8 +375,10 @@ def sub_pixel_read(
 
     # Complex rounding to make output size consistent with requested size.
     # Can swap for simple np.round if a 1-off error is acceptable.
-    while not np.all(resized_indexes % 1.0 == 0):
-        # Find the non-zero fracitonal part furthest from an integer value
+    for _ in range(len(resized_indexes)):
+        if not np.all(resized_indexes % 1.0 == 0):
+            break
+        # Find the non-zero fracitonal part closest an integer value
         to_round = np.abs(np.abs(resized_indexes % 1.0) - 0.5)
         to_round[to_round == 0] = np.inf
         i = np.argmin(to_round)

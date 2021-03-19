@@ -36,6 +36,7 @@ import re
 import numbers
 import os
 from typing import Tuple, Union
+import cv2
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -1115,31 +1116,56 @@ class VirtualWSIReader(WSIReader):
 
         return param
 
+    def _find_params_form_baseline(self, location, baseline_read_size):
+        """Convert read parameters from (virtual) baseline coordinates.
+
+        Args:
+            location (tuple(int)): Location of the location to read in
+                (virtual) baseline coordinates.
+            size ()
+            baseline_read_size (tuple(int)): Size of the region to read
+                in (virtual) baseline coordinates.
+        """
+        baseline_size = np.array(self.info.slide_dimensions)
+        image_size = np.array(self.img.shape[:2][::-1])
+        # if np.all(baseline_size == image_size):
+        #     return location, baseline_read_size
+        size_ratio = image_size / baseline_size
+        image_location = np.array(location, dtype=np.float) * size_ratio
+        read_size = np.array(baseline_read_size) * size_ratio
+        return image_location, read_size
+
     def read_rect(self, location, size, resolution=1.0, units="baseline"):
         # Find parameters for optimal read
-        (
-            _,
-            level_location,
-            _,
-            post_read_scale,
-            baseline_read_size,
-        ) = self._find_read_rect_params(
+        (_, _, _, post_read_scale, baseline_read_size,) = self._find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
             units=units,
         )
 
-        bounds = utils.transforms.locsize2bounds(
-            location=level_location, size=baseline_read_size
-        )
-        im_region = utils.image.safe_padded_read(
-            self.img, bounds, pad_mode="constant", constant_values=255
+        image_location, image_read_size = self._find_params_form_baseline(
+            location, baseline_read_size
         )
 
-        im_region = utils.transforms.imresize(
-            img=im_region, scale_factor=post_read_scale, output_size=size
+        bounds = utils.transforms.locsize2bounds(
+            location=image_location,
+            size=image_read_size,
         )
+
+        im_region = utils.image.sub_pixel_read(
+            self.img,
+            bounds,
+            output_size=size,
+            interpolation="cubic",
+            pad_mode="reflect",
+        )
+
+        im_region_size = np.array(im_region.shape[:2][::-1], dtype=int)
+        if not np.all(im_region_size == size):
+            if np.any(np.abs(im_region_size - size) > 1):
+                raise AssertionError("Read: Output region size inconsistent.")
+            im_region = cv2.resize(im_region, size)
 
         im_region = utils.transforms.background_composite(image=im_region)
         return im_region

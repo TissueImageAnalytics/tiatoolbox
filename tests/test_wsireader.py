@@ -1,3 +1,4 @@
+from tiatoolbox.dataloader.wsimeta import WSIMeta
 from tiatoolbox.dataloader import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli
@@ -946,6 +947,79 @@ def test_VirtualWSIReader_read_rect():
 
     with pytest.raises(ValueError):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
+
+
+def test_VirtualWSIReader_read_rect_virtual_baseline():
+    """Test VirtualWSIReader read bounds with virtual baseline.
+
+    Creates a virtual slide with a virtualbaseline size which is twice
+    as large as the input image.
+    """
+    file_parent_dir = pathlib.Path(__file__).parent
+    img_array = utils.misc.imread("tests/data/source_image.png")
+    img_size = np.array(img_array.shape[:2][::-1])
+    double_size = tuple((img_size * 2).astype(int))
+    meta = WSIMeta(slide_dimensions=double_size)
+    wsi = wsireader.VirtualWSIReader(
+        file_parent_dir.joinpath("data/source_image.png"), info=meta
+    )
+    region = wsi.read_rect(location=(0, 0), size=(50, 100))
+    target = cv2.resize(img_array[:50, :25, :], (50, 100))
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
+
+
+def test_VirtualWSIReader_read_rect_virtual_levels():
+    """Test VirtualWSIReader read bounds with vritual levels.
+
+    Creates a virtual slide with a virtualbaseline size which is twice
+    as large as the input image and the pyramid/resolution levels.
+
+    Checks that the regions read at each level line up with expected values.
+    """
+    file_parent_dir = pathlib.Path(__file__).parent
+    img_array = utils.misc.imread("tests/data/source_image.png")
+    img_size = np.array(img_array.shape[:2][::-1])
+    double_size = tuple((img_size * 2).astype(int))
+    meta = WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
+    wsi = wsireader.VirtualWSIReader(
+        file_parent_dir.joinpath("data/source_image.png"), info=meta
+    )
+    region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
+    target = img_array[:100, :50, :]
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
+
+    region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=2, units="level")
+    target = cv2.resize(img_array[:200, :100, :], (50, 100))
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.15
+
+
+def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
+    """Test VirtualWSIReader read bounds with vritual levels and MPP.
+
+    Creates a virtual slide with a virtualbaseline size which is twice
+    as large as the input image and the pyramid/resolution levels and
+    a baseline MPP specified.
+
+    Checks that the regions read with specified MPP for each level lines up
+    with expected values.
+    """
+    file_parent_dir = pathlib.Path(__file__).parent
+    img_array = utils.misc.imread("tests/data/source_image.png")
+    img_size = np.array(img_array.shape[:2][::-1])
+    double_size = tuple((img_size * 2).astype(int))
+    meta = WSIMeta(
+        slide_dimensions=double_size, level_downsamples=[1, 2, 4], mpp=(0.25, 0.25)
+    )
+    wsi = wsireader.VirtualWSIReader(
+        file_parent_dir.joinpath("data/source_image.png"), info=meta
+    )
+    region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=0.5, units="mpp")
+    target = img_array[:100, :50, :]
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
+
+    region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="mpp")
+    target = cv2.resize(img_array[:200, :100, :], (50, 100))
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.15
 
 
 def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
