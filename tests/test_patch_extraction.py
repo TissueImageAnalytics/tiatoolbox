@@ -19,6 +19,8 @@ def read_points_patches(input_img, locations_list):
         locations_list=locations_list,
         method_name="point",
         patch_size=(20, 20),
+        units="level",
+        resolution=0,
     )
 
     data = np.empty([3, 20, 20, 3])
