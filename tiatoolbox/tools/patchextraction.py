@@ -219,7 +219,7 @@ class PointsPatchExtractor(PatchExtractor):
         y = y - int((self.patch_size[0] - 1) / 2)
 
         data = self.wsi.read_rect(
-            location=(x, y),
+            location=(int(x), int(y)),
             size=self.patch_size,
             resolution=self.resolution,
             units=self.units,
