@@ -161,6 +161,11 @@ def test_points_patch_extractor():
 
     assert np.all(data == saved_data)
 
+    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction_2col.npy")
+    data = read_points_patches(input_img, locations_list)
+
+    assert np.all(data == saved_data)
+
     locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.json")
     data = read_points_patches(input_img, locations_list)
 
