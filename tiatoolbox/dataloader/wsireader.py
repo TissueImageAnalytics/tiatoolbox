@@ -1103,7 +1103,7 @@ class VirtualWSIReader(WSIReader):
         self,
         input_img,
         info: WSIMeta = None,
-        mode="RGB",
+        mode="rgb",
     ):
         super().__init__(
             input_img=input_img,
