@@ -1155,7 +1155,6 @@ class VirtualWSIReader(WSIReader):
         Args:
             location (tuple(int)): Location of the location to read in
                 (virtual) baseline coordinates.
-            size ()
             baseline_read_size (tuple(int)): Size of the region to read
                 in (virtual) baseline coordinates.
         """
