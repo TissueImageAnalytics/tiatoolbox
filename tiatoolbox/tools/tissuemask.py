@@ -32,6 +32,11 @@ from tiatoolbox.utils.misc import objective_power2mpp
 
 
 class TissueMasker(ABC):
+    """Base class for tissue maskers.
+
+    Takes an image as in put and outputs a mask.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.fitted = False
