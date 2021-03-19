@@ -36,21 +36,34 @@ class PatchExtractor(ABC):
     Args:
         input_img(str, pathlib.Path, ndarray): input image for patch extraction.
         patch_size(Tuple of int): patch size tuple (width, height).
-        pad_size(Tuple of int): symmetric padding in (x, y) direction.
+        resolution (int or float or tuple of float): resolution at
+          which to read the image, default = 0. Either a single
+          number or a sequence of two numbers for x and y are
+          valid. This value is in terms of the corresponding
+          units. For example: resolution=0.5 and units="mpp" will
+          read the slide at 0.5 microns per-pixel, and
+          resolution=3, units="level" will read at level at
+          pyramid level / resolution layer 3.
+        units (str): the units of resolution, default = "level".
+          Supported units are: microns per pixel (mpp), objective
+          power (power), pyramid / resolution level (level),
+          pixels per baseline pixel (baseline).
 
     Attributes:
         input_img(ndarray, WSIReader): input image for patch extraction.
           input_image type is ndarray for an image tile whereas :obj:`WSIReader`
           for an WSI.
         patch_size(Tuple of int): patch size tuple (width, height).
-        pad_size(Tuple of int): symmetric padding in (x, y) direction.
+        resolution(Tuple of int): resolution at which to read the image.
+        units (str): the units of resolution.
         n(int): current state of the iterator.
 
     """
 
-    def __init__(self, input_img, patch_size, pad_size=0):
+    def __init__(self, input_img, patch_size, resolution=0, units="level"):
         self.patch_size = patch_size
-        self.pad_size = pad_size
+        self.resolution = resolution
+        self.units = units
         self.n = 0
         self.wsi = get_wsireader(input_img=input_img)
 
@@ -92,13 +105,15 @@ class FixedWindowPatchExtractor(PatchExtractor):
         self,
         input_img,
         patch_size,
-        pad_size=0,
+        resolution=0,
+        units="level",
         stride=1,
     ):
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
-            pad_size=pad_size,
+            resolution=resolution,
+            units=units,
         )
         self.stride = stride
 
@@ -126,14 +141,16 @@ class VariableWindowPatchExtractor(PatchExtractor):
         self,
         input_img,
         patch_size,
-        pad_size=0,
+        resolution=0,
+        units="level",
         stride=1,
         label_patch_size=None,
     ):
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
-            pad_size=pad_size,
+            resolution=resolution,
+            units=units,
         )
         self.stride_h = stride
         self.label_patch_size = label_patch_size
@@ -167,13 +184,15 @@ class PointsPatchExtractor(PatchExtractor):
         input_img,
         locations_list,
         patch_size=224,
-        pad_size=0,
+        resolution=0,
+        units="level",
         num_examples_per_patch=9,
     ):
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
-            pad_size=pad_size,
+            resolution=resolution,
+            units=units,
         )
 
         self.num_examples_per_patch = num_examples_per_patch
@@ -199,7 +218,12 @@ class PointsPatchExtractor(PatchExtractor):
         x = x - int((self.patch_size[1] - 1) / 2)
         y = y - int((self.patch_size[0] - 1) / 2)
 
-        data = self.wsi.read_rect(location=(x, y), size=self.patch_size)
+        data = self.wsi.read_rect(
+            location=(x, y),
+            size=self.patch_size,
+            resolution=self.resolution,
+            units=self.units,
+        )
 
         return data
 
