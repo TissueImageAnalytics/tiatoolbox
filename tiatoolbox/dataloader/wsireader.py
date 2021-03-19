@@ -1157,8 +1157,9 @@ class VirtualWSIReader(WSIReader):
             self.img,
             bounds,
             output_size=size,
-            interpolation="cubic",
-            pad_mode="reflect",
+            interpolation="linear",
+            pad_mode="constant",
+            constant_values=255,
         )
 
         im_region_size = np.array(im_region.shape[:2][::-1], dtype=int)
@@ -1172,17 +1173,25 @@ class VirtualWSIReader(WSIReader):
 
     def read_bounds(self, bounds, resolution=1.0, units="baseline"):
         # Find parameters for optimal read
-        read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
+        _, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
             resolution=resolution,
             units=units,
         )
-        stride = 2 ** read_level
 
-        im_region = utils.image.safe_padded_read(
-            self.img, bounds, pad_mode="constant", constant_values=255
+        location, size = self._find_params_form_baseline(
+            *utils.transforms.bounds2locsize(bounds)
         )
-        im_region = utils.transforms.imresize(img=im_region, scale_factor=stride)
+        image_bounds = utils.transforms.locsize2bounds(location, size)
+
+        im_region = utils.image.sub_pixel_read(
+            self.img,
+            image_bounds,
+            output_size=output_size,
+            interpolation="linear",
+            pad_mode="constant",
+            constant_values=255,
+        )
 
         im_region = utils.transforms.imresize(
             img=im_region, scale_factor=post_read_scale, output_size=output_size
