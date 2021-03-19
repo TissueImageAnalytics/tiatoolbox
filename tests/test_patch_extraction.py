@@ -13,7 +13,12 @@ import numpy as np
 
 
 def read_points_patches(
-    input_img, locations_list, patch_size=(20, 20), units="level", resolution=0, item=2
+    input_img,
+    locations_list,
+    patch_size=(20, 20),
+    units="level",
+    resolution=0.0,
+    item=2,
 ):
     """Read patches with the help of PointsPatchExtractor using different formats."""
     patches = patchextraction.get_patch_extractor(
@@ -193,6 +198,26 @@ def test_points_patch_extractor_svs(_sample_svs):
 
     data = read_points_patches(
         pathlib.Path(_sample_svs),
+        locations_list,
+        item=2,
+        patch_size=(100, 100),
+        units="power",
+        resolution=2.5,
+    )
+
+    assert np.all(data == saved_data)
+
+
+def test_points_patch_extractor_jp2(_sample_jp2):
+    """Test PointsPatchExtractor for jp2 image."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction_jp2.csv")
+    saved_data = np.load(
+        file_parent_dir.joinpath("data/sample_patch_extraction_jp2read.npy")
+    )
+
+    data = read_points_patches(
+        pathlib.Path(_sample_jp2),
         locations_list,
         item=2,
         patch_size=(100, 100),
