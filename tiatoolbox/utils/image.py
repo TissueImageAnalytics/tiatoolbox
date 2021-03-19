@@ -375,7 +375,7 @@ def sub_pixel_read(
 
     # Complex rounding to make output size consistent with requested size.
     # Can swap for simple np.round if a 1-off error is acceptable.
-    for _ in range(len(resized_indexes)):
+    for _ in enumerate(resized_indexes):
         if not np.all(resized_indexes % 1.0 == 0):
             break
         # Find the non-zero fracitonal part closest an integer value
