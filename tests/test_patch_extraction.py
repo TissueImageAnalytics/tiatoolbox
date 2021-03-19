@@ -13,6 +13,7 @@ import numpy as np
 
 
 def read_points_patches(input_img, locations_list):
+    """Read patches with the help of PointsPatchExtractor using different formats. """
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
         locations_list=locations_list,
@@ -21,8 +22,8 @@ def read_points_patches(input_img, locations_list):
     )
 
     data = np.empty([3, 20, 20, 3])
-    data[0] = next(patches)
-    data[1] = next(patches)
+    data[0] = next(patches, None)
+    data[1] = next(patches, None)
     data[2] = patches[23]
 
     return data
