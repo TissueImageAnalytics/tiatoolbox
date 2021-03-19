@@ -784,7 +784,7 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """ Find parameters for optimal read. """
         (read_level, _, read_size, post_read_scale, _) = self._find_read_rect_params(
             location=location,
             size=size,
@@ -807,7 +807,7 @@ class OpenSlideWSIReader(WSIReader):
         return im_region
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """ Find parameters for optimal read. """
         (
             read_level,
             level_bounds,
@@ -931,7 +931,7 @@ class OmnyxJP2WSIReader(WSIReader):
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """  Find parameters for optimal read. """
         (
             read_level,
             level_location,
@@ -961,7 +961,7 @@ class OmnyxJP2WSIReader(WSIReader):
         return im_region
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """ Find parameters for optimal read. """
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
             resolution=resolution,
@@ -1097,7 +1097,7 @@ class VirtualWSIReader(WSIReader):
         return param
 
     def read_rect(self, location, size, resolution=1.0, units="baseline"):
-        # Find parameters for optimal read
+        """ Find parameters for optimal read. """
         (
             _,
             level_location,
@@ -1125,7 +1125,7 @@ class VirtualWSIReader(WSIReader):
         return im_region
 
     def read_bounds(self, bounds, resolution=1.0, units="baseline"):
-        # Find parameters for optimal read
+        """ Find parameters for optimal read. """
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
             resolution=resolution,
