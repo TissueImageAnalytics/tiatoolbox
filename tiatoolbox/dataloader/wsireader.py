@@ -1149,7 +1149,7 @@ class VirtualWSIReader(WSIReader):
 
         return param
 
-    def _find_params_form_baseline(self, location, baseline_read_size):
+    def _find_params_from_baseline(self, location, baseline_read_size):
         """Convert read parameters from (virtual) baseline coordinates.
 
         Args:
@@ -1176,7 +1176,7 @@ class VirtualWSIReader(WSIReader):
             units=units,
         )
 
-        image_location, image_read_size = self._find_params_form_baseline(
+        image_location, image_read_size = self._find_params_from_baseline(
             location, baseline_read_size
         )
 
@@ -1212,7 +1212,7 @@ class VirtualWSIReader(WSIReader):
             units=units,
         )
 
-        location, size = self._find_params_form_baseline(
+        location, size = self._find_params_from_baseline(
             *utils.transforms.bounds2locsize(bounds)
         )
         image_bounds = utils.transforms.locsize2bounds(location, size)
