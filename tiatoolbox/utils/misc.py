@@ -282,7 +282,7 @@ def mpp2objective_power(mpp):
     function.
 
     Args:
-        objective_power (float or tuple of float): Microns per-pixel.
+        mpp (float or tuple of float): Microns per-pixel.
 
     Returns:
         np.ndarray: Objective power approximations.

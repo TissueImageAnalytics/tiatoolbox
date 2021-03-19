@@ -9,6 +9,23 @@ from tiatoolbox.dataloader.wsireader import (
 
 import pytest
 import pathlib
+import numpy as np
+
+
+def read_points_patches(input_img, locations_list):
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        locations_list=locations_list,
+        method_name="point",
+        patch_size=(20, 20),
+    )
+
+    data = np.empty([3, 20, 20, 3])
+    data[0] = next(patches)
+    data[1] = next(patches)
+    data[2] = patches[23]
+
+    return data
 
 
 def test_get_patch_extractor():
@@ -48,7 +65,7 @@ def test_get_patch_extractor():
         patchextraction.get_patch_extractor("unknown")
 
 
-def test_points_patch_extractor(_sample_svs, _sample_jp2):
+def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2):
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
     input_img = pathlib.Path(file_parent_dir.joinpath("data/source_image.png"))
@@ -91,3 +108,36 @@ def test_points_patch_extractor(_sample_svs, _sample_jp2):
             method_name="point",
             patch_size=(200, 200),
         )
+
+
+def test_points_patch_extractor():
+    """Test PointsPatchExtractor returns the right value."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    input_img = pathlib.Path(
+        file_parent_dir.joinpath("data/TCGA-HE-7130-01Z-00-DX1.png")
+    )
+    saved_data = np.load(
+        file_parent_dir.joinpath("data/sample_patch_extraction_read.npy")
+    )
+
+    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+    data = read_points_patches(input_img, locations_list)
+
+    assert np.all(data == saved_data)
+
+    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
+    data = read_points_patches(input_img, locations_list)
+
+    assert np.all(data == saved_data)
+
+    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.json")
+    data = read_points_patches(input_img, locations_list)
+
+    assert np.all(data == saved_data)
+
+    locations_list = file_parent_dir.joinpath(
+        "data/sample_patch_extraction-noheader.csv"
+    )
+    data = read_points_patches(input_img, locations_list)
+
+    assert np.all(data == saved_data)
