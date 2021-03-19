@@ -1137,7 +1137,7 @@ class VirtualWSIReader(WSIReader):
 
     def read_rect(self, location, size, resolution=1.0, units="baseline"):
         # Find parameters for optimal read
-        (_, _, _, post_read_scale, baseline_read_size,) = self._find_read_rect_params(
+        (_, _, _, _, baseline_read_size,) = self._find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
