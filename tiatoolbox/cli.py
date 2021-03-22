@@ -72,7 +72,7 @@ def main():
     default=True,
     help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
+def slide_info(wsi_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
 

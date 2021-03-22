@@ -57,6 +57,8 @@ def test_command_line_slide_info_svs(_sample_svs):
             '"*.ndpi, *.svs"',
             "--mode",
             "show",
+            "--verbose",
+            "False",
         ],
     )
 
