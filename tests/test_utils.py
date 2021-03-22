@@ -11,6 +11,14 @@ from PIL import Image
 import cv2
 
 
+def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    output = utils.image.sub_pixel_read(pillow_test_image, bounds, (ow, oh))
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+
 def test_imresize():
     """Test for imresize."""
     img = np.zeros((2000, 1000, 3))
@@ -152,6 +160,7 @@ def test_sub_pixel_read():
     image_path = Path(__file__).parent / "data" / "source_image.png"
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
+    pillow_test_image = Image.fromarray(test_image)
 
     x = 6
     y = -4
@@ -160,8 +169,8 @@ def test_sub_pixel_read():
     bounds = (x, y, x + w, y + h)
     ow = 88
     oh = 98
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
-    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
     x = 13
     y = 15
@@ -170,8 +179,8 @@ def test_sub_pixel_read():
     bounds = (x, y, x + w, y + h)
     ow = 93
     oh = 34
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
-    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
 def test_sub_pixel_read_invalid_interpolation():
