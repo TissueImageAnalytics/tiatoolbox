@@ -7,6 +7,7 @@ from pytest import approx
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from PIL import Image
 
 
 def test_imresize():
@@ -27,6 +28,10 @@ def test_background_composite():
     assert np.all(im[1000:, :, :] == 255)
     assert np.all(im[:1000, :, :] == 0)
 
+    im = utils.transforms.background_composite(new_im, alpha=True)
+    assert np.all(im[:, :, 3] == 255)
+
+    new_im = Image.fromarray(new_im)
     im = utils.transforms.background_composite(new_im, alpha=True)
     assert np.all(im[:, :, 3] == 255)
 
