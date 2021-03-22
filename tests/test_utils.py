@@ -103,11 +103,13 @@ def test_safe_padded_read_padding_formats():
     """Test safe_padded_read with different padding argument formats."""
     data = np.zeros((16, 16))
     bounds = (0, 0, 8, 8)
+    stride = (1, 1)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.safe_padded_read(
             data,
             bounds,
             padding=padding,
+            stride=stride,
         )
         assert region.shape == (8 + 2, 8 + 2)
 
