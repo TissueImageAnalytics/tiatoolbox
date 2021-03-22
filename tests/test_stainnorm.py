@@ -6,6 +6,7 @@ from tiatoolbox.utils.exceptions import MethodNotSupported
 import pathlib
 import numpy as np
 from click.testing import CliRunner
+import pytest
 
 
 def test_reinhard_normalise():
@@ -38,6 +39,13 @@ def test_custom_normalise():
 
     assert np.shape(transform) == np.shape(source_img)
     assert np.mean(np.absolute(custom_img / 255.0 - transform / 255.0)) < 1e-2
+
+
+def test_get_normaliser_assertion():
+    """Test get normaliser assertion error."""
+    stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+    with pytest.raises(ValueError):
+        _ = get_normaliser("ruifrok", stain_matrix)
 
 
 def test_ruifrok_normalise():
