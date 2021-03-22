@@ -281,7 +281,7 @@ def sub_pixel_read(
         image = np.array(image)
     bounds = np.array(bounds)
     _, bounds_size = bounds2locsize(bounds)
-    if np.size(stride) == 2:
+    if np.size(stride) == 1:
         stride = np.tile(stride, 2)
     bounds_size = bounds_size / stride
     if 0 in bounds_size:

@@ -15,7 +15,9 @@ def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
     output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
-    output = utils.image.sub_pixel_read(pillow_test_image, bounds, (ow, oh))
+    output = utils.image.sub_pixel_read(
+        pillow_test_image, bounds, (ow, oh), stride=[1, 1]
+    )
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
