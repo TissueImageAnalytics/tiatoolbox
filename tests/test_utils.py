@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from PIL import Image
+import cv2
 
 
 def test_imresize():
@@ -18,6 +19,13 @@ def test_imresize():
 
     resized_img = utils.transforms.imresize(resized_img, scale_factor=2.0)
     assert resized_img.shape == (2000, 1000, 3)
+
+    resized_img = utils.transforms.imresize(
+        img,
+        scale_factor=0.5,
+        interpolation=cv2.INTER_CUBIC,
+    )
+    assert resized_img.shape == (1000, 500, 3)
 
 
 def test_background_composite():
