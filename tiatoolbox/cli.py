@@ -76,6 +76,9 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
 
+    if isinstance(output_dir, str):
+        output_dir = pathlib.Path(output_dir)
+
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=wsi_input, file_types=file_types
