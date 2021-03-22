@@ -206,6 +206,10 @@ def test_sub_pixel_read_invalid_bounds():
     with pytest.warns(UserWarning), pytest.raises(AssertionError):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
+    bounds = (1.5, 1, -5, 0)
+    with pytest.warns(UserWarning), pytest.raises(AssertionError):
+        utils.image.sub_pixel_read(data, bounds, out_size)
+
 
 def test_sub_pixel_read_pad_at_baseline():
     """Test sub_pixel_read with baseline padding."""
@@ -217,6 +221,11 @@ def test_sub_pixel_read_pad_at_baseline():
             data, bounds, out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
+
+    region = utils.image.sub_pixel_read(
+        data, bounds, out_size, pad_for_interpolation=False, pad_at_baseline=True
+    )
+    assert region.shape == (16, 16)
 
 
 def test_sub_pixel_read_padding_formats():
@@ -310,7 +319,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """"Test contrast enhancement funcitionality."""
+    """"Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [
