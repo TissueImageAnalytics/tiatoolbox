@@ -830,6 +830,16 @@ def test_incompatible_objective_value(_sample_svs, tmp_path):
             verbose=True,
         )
 
+    with pytest.warns(UserWarning):
+        wsi.save_tiles(
+            output_dir=str(
+                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")
+            ),
+            tile_objective_value=1,
+            tile_read_size=(5000, 5000),
+            verbose=True,
+        )
+
 
 def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
     """Test for save_tiles in wsireader as a python function."""

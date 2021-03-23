@@ -655,7 +655,8 @@ class WSIReader:
                 warnings.warn(
                     "Reading WSI at level 0. Reading at tile_objective_value"
                     + str(tile_objective_value)
-                    + "not allowed."
+                    + "not allowed.",
+                    UserWarning,
                 )
         else:
             raise ValueError("rescaling factor must be an integer.")
