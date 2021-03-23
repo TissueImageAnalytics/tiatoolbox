@@ -93,7 +93,8 @@ def safe_padded_read(
         >>> safe_padded_read(img, bounds, pad_mode="reflect")
 
         >>> bounds = (1, 1, 6, 6)
-        >>> safe_padded_read(img, bounds, padding=2 pad_mode="reflect")
+        >>> safe_padded_read(img, bounds, padding=2, pad_mode="reflect")
+
     """
     padding = np.array(padding)
     # Ensure the bounds are integers.
@@ -254,7 +255,7 @@ def sub_pixel_read(
 
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> region = sub_pixel_read(image, bounds)
-        >>> reguin = np.pad(region, padding=2, mode="reflect")
+        >>> region = np.pad(region, padding=2, mode="reflect")
 
         Read with no temporary padding to account for interpolation mode:
 
@@ -339,15 +340,15 @@ def sub_pixel_read(
     padded_output_size = np.round(output_size + output_padding.reshape(2, 2).sum(0))
 
     # Find the pixel-aligned indexes to read the image at
-    PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
-    padded_bounds = bounds + (bounds_padding * PADDING_TO_BOUNDS)
+    padding_to_bounds = np.array([-1, -1, 1, 1])
+    padded_bounds = bounds + (bounds_padding * padding_to_bounds)
     pixel_aligned_bounds = padded_bounds.copy()
     pixel_aligned_bounds[:2] = np.floor(pixel_aligned_bounds[:2])
     pixel_aligned_bounds[2:] = np.ceil(pixel_aligned_bounds[2:])
     pixel_aligned_bounds = pixel_aligned_bounds.astype(int)
     # Add interpolation padding to integer bounds so that read_func
     # doesn't need to handle anything except the bounds.
-    int_bounds = pixel_aligned_bounds + (inter_padding * PADDING_TO_BOUNDS)
+    int_bounds = pixel_aligned_bounds + (inter_padding * padding_to_bounds)
     # Keep the difference between pixel-aligned and original coordinates
     residuals = padded_bounds - int_bounds
 
@@ -384,7 +385,7 @@ def sub_pixel_read(
     # Complex rounding to make output size consistent with requested size.
     # Can swap for simple np.round if a 1-off error is acceptable.
     while not np.all(resized_indexes % 1.0 == 0):
-        # Find the non-zero fracitonal part furthest from an integer value
+        # Find the non-zero fractional part furthest from an integer value
         to_round = np.abs(np.abs(resized_indexes % 1.0) - 0.5)
         to_round[to_round == 0] = np.inf
         i = np.argmin(to_round)
