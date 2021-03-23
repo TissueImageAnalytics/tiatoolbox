@@ -52,9 +52,9 @@ def test_h_e_in_correct_order():
 def test_dl_output_for_h_and_e():
     """Test if correct value for H and E from dictionary learning output is returned."""
     dictionary = np.zeros([20, 15])
-    dictionary = stainextract.dl_output_for_h_and_e(dictionary=dictionary)
+    dictionary1 = stainextract.dl_output_for_h_and_e(dictionary=dictionary)
 
-    assert np.all(dictionary == dictionary)
+    assert np.all(dictionary1 == dictionary)
     dictionary[1, :] = 1
     dictionary2 = stainextract.dl_output_for_h_and_e(dictionary=dictionary)
 

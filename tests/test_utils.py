@@ -12,7 +12,7 @@ import cv2
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
-    """Helper function to test sub_pixel_read."""
+    """Helper function for testing sub_pixel_read."""
     output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
