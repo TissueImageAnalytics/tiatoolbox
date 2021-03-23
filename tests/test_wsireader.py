@@ -817,6 +817,20 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     )
 
 
+def test_incompatible_objective_value(_sample_svs, tmp_path):
+    """Test for incompatible objective value."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    with pytest.raises(ValueError):
+        wsi.save_tiles(
+            output_dir=str(
+                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")
+            ),
+            tile_objective_value=3,
+            tile_read_size=(5000, 5000),
+            verbose=True,
+        )
+
+
 def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)

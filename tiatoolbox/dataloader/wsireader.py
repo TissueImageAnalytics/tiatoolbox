@@ -652,6 +652,11 @@ class WSIReader:
                 level = 0
                 slide_dimension = self.info.level_dimensions[level]
                 rescale = np.int(rescale)
+                warnings.warn(
+                    "Reading WSI at level 0. Reading at tile_objective_value"
+                    + str(tile_objective_value)
+                    + "not allowed."
+                )
         else:
             raise ValueError("rescaling factor must be an integer.")
 
