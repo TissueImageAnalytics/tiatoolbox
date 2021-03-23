@@ -648,7 +648,11 @@ class WSIReader:
                     raise ValueError
             # Raise index error if desired pyramid level not embedded
             # in level_dimensions
-            except (IndexError, ValueError):
+            except IndexError:
+                level = 0
+                slide_dimension = self.info.level_dimensions[level]
+                rescale = np.int(rescale)
+            except ValueError:
                 level = 0
                 slide_dimension = self.info.level_dimensions[level]
                 rescale = 1
