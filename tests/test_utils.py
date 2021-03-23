@@ -12,7 +12,7 @@ import cv2
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
-    """Helper function for testing sub_pixel_read."""
+    """sub_pixel_read test helper function."""
     output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
@@ -90,10 +90,6 @@ def test_assert_dtype_int():
         utils.misc.assert_dtype_int(
             input_var=np.array([1.0, 2]), message="Bounds must be integers."
         )
-    out = utils.misc.assert_dtype_int(
-        input_var=np.array([1, 2]), message="Bounds must be integers."
-    )
-    assert out is None
 
 
 def test_safe_padded_read_non_int_bounds():
