@@ -290,7 +290,7 @@ def sub_pixel_read(
 
     # Set interpolation variables.
     inter_padding = 0
-    inter_cv2 = cv2.INTER_CUBIC
+
     if interpolation == "nearest":
         inter_cv2 = cv2.INTER_NEAREST
     elif interpolation == "linear":

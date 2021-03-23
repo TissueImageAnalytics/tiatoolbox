@@ -207,8 +207,8 @@ def test_sub_pixel_read_invalid_bounds():
     with pytest.warns(UserWarning), pytest.raises(AssertionError):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
-    bounds = (1.5, 1, -5, 0)
-    with pytest.warns(UserWarning), pytest.raises(AssertionError):
+    bounds = (1.5, 1, 1.5, 0)
+    with pytest.raises(AssertionError):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
 
@@ -224,7 +224,12 @@ def test_sub_pixel_read_pad_at_baseline():
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
 
     region = utils.image.sub_pixel_read(
-        data, bounds, out_size, pad_for_interpolation=False, pad_at_baseline=True
+        data,
+        bounds,
+        out_size,
+        pad_for_interpolation=False,
+        pad_at_baseline=True,
+        read_func=utils.image.safe_padded_read,
     )
     assert region.shape == (16, 16)
 
