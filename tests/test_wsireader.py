@@ -830,13 +830,17 @@ def test_incompatible_objective_value(_sample_svs, tmp_path):
             verbose=True,
         )
 
+
+def test_incompatible_level(_sample_svs, tmp_path):
+    """Test for incompatible objective value."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     with pytest.warns(UserWarning):
         wsi.save_tiles(
             output_dir=str(
                 pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")
             ),
             tile_objective_value=1,
-            tile_read_size=(5000, 5000),
+            tile_read_size=(500, 500),
             verbose=True,
         )
 
