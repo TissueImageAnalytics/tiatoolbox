@@ -877,25 +877,22 @@ class OpenSlideWSIReader(WSIReader):
         # Fallback to TIFF resolution units and convert to mpp
         except KeyError:
             tiff_res_units = props.get("tiff.ResolutionUnit")
-            if tiff_res_units is not None:
-                try:
-                    microns_per_unit = {
-                        "centimeter": 1e4,  # 10k
-                        "inch": 25400,
-                    }
-                    x_res = float(props["tiff.XResolution"])
-                    y_res = float(props["tiff.YResolution"])
-                    mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
-                    mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
-                    mpp = [mpp_x, mpp_y]
-                    warnings.warn(
-                        "Metadata: Falling back to TIFF resolution tag"
-                        " for microns-per-pixel (MPP)."
-                    )
-                except KeyError:
-                    warnings.warn(
-                        "Metadata: Unable to determine microns-per-pixel (MPP)."
-                    )
+            try:
+                microns_per_unit = {
+                    "centimeter": 1e4,  # 10k
+                    "inch": 25400,
+                }
+                x_res = float(props["tiff.XResolution"])
+                y_res = float(props["tiff.YResolution"])
+                mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
+                mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
+                mpp = [mpp_x, mpp_y]
+                warnings.warn(
+                    "Metadata: Falling back to TIFF resolution tag"
+                    " for microns-per-pixel (MPP)."
+                )
+            except KeyError:
+                warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
 
         # Fallback to calculating objective power from mpp
         if objective_power is None:
