@@ -370,3 +370,18 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         >>> array([49, 49])
   """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
+
+
+def assert_dtype_int(input_var, message="Input must be integer."):
+    """Generate error if dtype is not int.
+
+    Args:
+        input_var (ndarray): input variable to be tested.
+        message (str): Error message to be displayed.
+
+    Returns:
+        Generates an AssertionError message if input is not an int.
+
+    """
+    if input_var.dtype != int:
+        raise AssertionError(message)

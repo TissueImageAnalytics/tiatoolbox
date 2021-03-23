@@ -26,7 +26,7 @@ import cv2
 from PIL import Image
 
 from tiatoolbox.utils.transforms import bounds2locsize
-from tiatoolbox.utils.misc import conv_out_size
+from tiatoolbox.utils.misc import conv_out_size, assert_dtype_int
 
 
 def safe_padded_read(
@@ -345,8 +345,7 @@ def sub_pixel_read(
         warnings.warn("Read: Bounds have negative size.")
 
     # Ensure the pixel-aligned + interpolation padded bounds are integers.
-    if int_bounds.dtype != int:
-        raise AssertionError("Bounds must be integers.")
+    assert_dtype_int(input_var=int_bounds, message="Bounds must be integers.")
 
     # If no read function is given, use the default.
     if read_func is None:

@@ -84,6 +84,18 @@ def test_mpp2common_objective_power(_sample_svs):
         )
 
 
+def test_assert_dtype_int():
+    """Test AssertionError for dtype test."""
+    with pytest.raises(AssertionError):
+        utils.misc.assert_dtype_int(
+            input_var=np.array([1.0, 2]), message="Bounds must be integers."
+        )
+    out = utils.misc.assert_dtype_int(
+        input_var=np.array([1, 2]), message="Bounds must be integers."
+    )
+    assert out is None
+
+
 def test_safe_padded_read_non_int_bounds():
     """Test safe_padded_read with non-integer bounds."""
     data = np.zeros((16, 16))
