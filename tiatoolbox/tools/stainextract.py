@@ -66,6 +66,22 @@ def h_and_e_in_right_order(v1, v2):
     return he
 
 
+def dl_output_for_h_and_e(dictionary):
+    """Return correct value for H and E from dictionary learning output.
+
+    Args:
+        dictionary (ndarray): sklearn DictionaryLearning output.
+
+    Returns:
+        ndarray with correct values for H and E
+
+    """
+    if dictionary[0, 0] < dictionary[1, 0]:
+        dictionary = dictionary[[1, 0], :]
+
+    return dictionary
+
+
 class CustomExtractor:
     """Get the user-defined stain matrix.
 
@@ -258,8 +274,8 @@ class VahadaneExtractor:
 
         # order H and E.
         # H on first row.
-        if dictionary[0, 0] < dictionary[1, 0]:
-            dictionary = dictionary[[1, 0], :]
+        dictionary = dl_output_for_h_and_e(dictionary)
+
         normalised_rows = dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
 
         return normalised_rows
