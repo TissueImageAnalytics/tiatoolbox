@@ -36,7 +36,7 @@ class CustomExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import CustomExtractor()
+        >>> from tiatoolbox.tools.stainextract import CustomExtractor()
         >>> extractor = CustomExtractor(stain_matrix)
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -45,7 +45,7 @@ class CustomExtractor:
     def __init__(self, stain_matrix):
         self.stain_matrix = stain_matrix
         if self.stain_matrix.shape != (2, 3) and self.stain_matrix.shape != (3, 3):
-            raise Exception("Stain matrix must be either (2,3) or (3,3)")
+            raise ValueError("Stain matrix must be either (2,3) or (3,3)")
 
     def get_stain_matrix(self, _):
         """Get the user defined stain matrix.

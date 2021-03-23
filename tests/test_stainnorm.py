@@ -1,5 +1,6 @@
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.tools.stainnorm import get_normaliser
+from tiatoolbox.tools import stainextract
 from tiatoolbox import cli
 from tiatoolbox.utils.exceptions import MethodNotSupported
 
@@ -7,6 +8,13 @@ import pathlib
 import numpy as np
 from click.testing import CliRunner
 import pytest
+
+
+def test_stain_extract():
+    """Test stain extraction class."""
+    stain_matrix = np.array([0.65, 0.70, 0.29])
+    with pytest.raises(ValueError):
+        _ = stainextract.CustomExtractor(stain_matrix)
 
 
 def test_reinhard_normalise():
