@@ -29,6 +29,18 @@ from tiatoolbox.utils.transforms import bounds2locsize
 from tiatoolbox.utils.misc import conv_out_size, assert_dtype_int
 
 
+def output_size_vs_requested_size(result_size, padded_output_size):
+    """Generates an error if output size is different from requested size.
+
+    Args:
+        result_size (ndarray): Output size
+        padded_output_size (ndarray): Requested size
+
+    """
+    if not np.all(np.abs(result_size - padded_output_size) <= 1):
+        raise AssertionError("Output size should not differ from requested size.")
+
+
 def safe_padded_read(
     img, bounds, stride=1, padding=0, pad_mode="constant", **pad_kwargs
 ):
@@ -395,7 +407,6 @@ def sub_pixel_read(
     result = scaled_region[t:b, l:r, ...]
     result_size = np.array(result.shape[:2][::-1])
 
-    if not np.all(np.abs(result_size - padded_output_size) <= 1):
-        raise AssertionError("Output size should not differ from requested size.")
+    output_size_vs_requested_size(result_size, padded_output_size)
 
     return result
