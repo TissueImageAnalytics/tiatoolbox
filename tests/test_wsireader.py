@@ -950,6 +950,8 @@ def test_VirtualWSIReader_read_rect():
     """Test VirtualWSIReader read bounds"""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    info = wsi.info
+
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
     assert img.shape == (100, 50, 3)
 
@@ -970,6 +972,12 @@ def test_VirtualWSIReader_read_rect():
 
     with pytest.raises(ValueError):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
+
+    wsi = wsireader.VirtualWSIReader(
+        file_parent_dir.joinpath("data/source_image.png"), info=info
+    )
+
+    assert info.as_dict() == wsi.info.as_dict()
 
 
 def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
