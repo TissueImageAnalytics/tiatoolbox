@@ -47,6 +47,25 @@ def vectors_in_right_direction(e_vectors):
     return e_vectors
 
 
+def h_and_e_in_right_order(v1, v2):
+    """Rearranges input vectors for H&E in correct order with H as first output.
+
+    Args:
+        v1 (ndarray): Input vector for stain extraction.
+        v2 (ndarray): Input vector for stain extraction.
+
+    Returns:
+        input vectors in the correct order.
+
+    """
+    if v1[0] > v2[0]:
+        he = np.array([v1, v2])
+    else:
+        he = np.array([v2, v1])
+
+    return he
+
+
 class CustomExtractor:
     """Get the user-defined stain matrix.
 
@@ -55,7 +74,9 @@ class CustomExtractor:
 
     Examples:
         >>> from tiatoolbox.tools.stainextract import CustomExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = CustomExtractor(stain_matrix)
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
@@ -88,8 +109,10 @@ class RuifrokExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import RuifrokExtractor()
+        >>> from tiatoolbox.tools.stainextract import RuifrokExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = RuifrokExtractor()
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
@@ -118,8 +141,10 @@ class MacenkoExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import MacenkoExtractor()
+        >>> from tiatoolbox.tools.stainextract import MacenkoExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = MacenkoExtractor()
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
@@ -169,10 +194,7 @@ class MacenkoExtractor:
         v2 = np.dot(e_vects, np.array([np.cos(max_phi), np.sin(max_phi)]))
 
         # order of H&E - H first row
-        if v1[0] > v2[0]:
-            he = np.array([v1, v2])
-        else:
-            he = np.array([v2, v1])
+        he = h_and_e_in_right_order(v1, v2)
 
         normalised_rows = he / np.linalg.norm(he, axis=1)[:, None]
         return normalised_rows
@@ -191,8 +213,10 @@ class VahadaneExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import VahadaneExtractor()
+        >>> from tiatoolbox.tools.stainextract import VahadaneExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = VahadaneExtractor()
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """

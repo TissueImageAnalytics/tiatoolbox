@@ -38,6 +38,17 @@ def test_vectors_in_right_direction():
     assert e_vect[1, 1] == -1
 
 
+def test_h_e_in_correct_order():
+    """Test if H&E vectors are returned in the correct order."""
+    v1 = np.ones(3)
+    v2 = np.zeros(3)
+    he = stainextract.h_and_e_in_right_order(v1, v2)
+    assert np.all(he == np.array([v1, v2]))
+
+    he = stainextract.h_and_e_in_right_order(v2, v1)
+    assert np.all(he == np.array([v1, v2]))
+
+
 def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
     file_parent_dir = pathlib.Path(__file__).parent
