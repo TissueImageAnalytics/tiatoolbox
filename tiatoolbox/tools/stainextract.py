@@ -29,6 +29,24 @@ from tiatoolbox.utils.transforms import convert_RGB2OD
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
+def vectors_in_right_direction(e_vectors):
+    """Points the eigen vectors in the right direction.
+
+    Args:
+        e_vectors (ndarray): eigen vectors
+
+    Returns:
+        ndarray pointing in the correct direction
+
+    """
+    if e_vectors[0, 0] < 0:
+        e_vectors[:, 0] *= -1
+    if e_vectors[0, 1] < 0:
+        e_vectors[:, 1] *= -1
+
+    return e_vectors
+
+
 class CustomExtractor:
     """Get the user-defined stain matrix.
 
@@ -134,10 +152,7 @@ class MacenkoExtractor:
         e_vects = e_vects[:, [2, 1]]
 
         # make sure vectors are pointing the right way
-        if e_vects[0, 0] < 0:
-            e_vects[:, 0] *= -1
-        if e_vects[0, 1] < 0:
-            e_vects[:, 1] *= -1
+        e_vects = vectors_in_right_direction(e_vectors=e_vects)
 
         # project on this basis.
         proj = np.dot(img_od, e_vects)

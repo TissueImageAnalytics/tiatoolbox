@@ -17,6 +17,27 @@ def test_stain_extract():
         _ = stainextract.CustomExtractor(stain_matrix)
 
 
+def test_vectors_in_right_direction():
+    """Test if eigen vectors are corrected in the right direction."""
+    e_vect = np.ones([2, 2])
+    e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
+    assert np.all(e_vect == 1)
+
+    e_vect = np.ones([2, 2])
+    e_vect[0, 0] = -1
+    e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
+    assert np.all(e_vect[:, 1] == 1)
+    assert e_vect[0, 0] == 1
+    assert e_vect[1, 0] == -1
+
+    e_vect = np.ones([2, 2])
+    e_vect[0, 1] = -1
+    e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
+    assert np.all(e_vect[:, 0] == 1)
+    assert e_vect[0, 1] == 1
+    assert e_vect[1, 1] == -1
+
+
 def test_reinhard_normalise():
     """Test for Reinhard colour normalisation."""
     file_parent_dir = pathlib.Path(__file__).parent
