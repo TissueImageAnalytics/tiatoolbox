@@ -296,7 +296,7 @@ def mpp2objective_power(mpp):
         >>> mpp2objective_power(0.253)
         array(39.5256917)
     """
-    return mpp2common_objective_power(mpp)
+    return objective_power2mpp(mpp)
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
