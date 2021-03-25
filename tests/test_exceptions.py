@@ -30,5 +30,5 @@ def test_exception_tests():
         get_normaliser(method_name="invalid_normaliser")
 
     with pytest.raises(Exception) as e:
-        get_normaliser(method_name="reinhard",stain_matrix="[1,2]")
+        get_normaliser(method_name="reinhard", stain_matrix="[1, 2]")
     assert str(e.value) == "stain_matrix is only defined when using custom"
