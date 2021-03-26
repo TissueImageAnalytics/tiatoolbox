@@ -67,9 +67,8 @@ class Model_Base(tia_model_abc.Model_Base):
         """
         raise NotImplementedError
 
-
 import torchvision.transforms as transforms
-class VanillaCNN(Model_Base):
+class CNN_Predictor(Model_Base):
     def __init__(self, 
         backbone,
         batch_size,
@@ -84,14 +83,18 @@ class VanillaCNN(Model_Base):
         args and kwargs
         """
         super().__init__()
-        model_creator = get_model_creator(backbone)
-        self.model = model_creator(*args, **kwargs)
         self.batch_size = batch_size
         self.nr_loader_worker = nr_loader_worker
         self.infer_input_shape = infer_input_shape
         self.infer_output_shape = infer_output_shape
         self.nr_loader_worker = nr_loader_worker
         self.nr_posproc_worker = nr_posproc_worker
+
+        ###
+        model_creator = get_model_creator(backbone)
+        self.model = model_creator(*args, **kwargs)
+
+        ###        
 
         # ! A hack to hijack the self.preprocess func def
         # ! Any ways to set this normally?
@@ -104,7 +107,7 @@ class VanillaCNN(Model_Base):
                 std=[0.229, 0.224, 0.225]),
         ])
         return
-
+    
     def load_model(self, checkpoint_path, *args, **kwargs):
         """Load model checkpoint."""
         saved_state_dict = torch.load(checkpoint_path) # ! assume to be saved in single GPU mode
@@ -152,12 +155,6 @@ class VanillaCNN(Model_Base):
         and return output should be compatible with input of __infer_image_list
         """
         raise NotImplementedError
-
-    def predict_wsi(self, wsi_path, *args, **kwargs):
-        """
-        Contain dedicated functionality to run inference on an entire WSI
-        """
-        raise NotImplementedError    
 
 if __name__ == '__main__':
     print('Local sample test')
