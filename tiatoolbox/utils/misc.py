@@ -366,23 +366,41 @@ def read_point_annotations(input_table):
                 out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
 
         elif suffix == ".csv":
-            out_table = pd.read_csv(input_table)
+            out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
-                    input_table, header=None, names=["x", "y", "class"]
+                    input_table,
+                    header=None,
+                    names=["x", "y", "class"],
+                    sep=None,
+                    engine="python",
                 )
+            if out_table.shape[1] == 2:
+                out_table["class"] = None
 
         elif suffix == ".json":
             out_table = pd.read_json(input_table)
+            if out_table.shape[1] == 2:
+                out_table["class"] = None
 
         else:
             raise FileNotSupported("Filetype not supported.")
 
     elif isinstance(input_table, np.ndarray):
-        out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+        if input_table.shape[1] == 3:
+            out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+        elif input_table.shape[1] == 2:
+            out_table = pd.DataFrame(input_table, columns=["x", "y"])
+            out_table["class"] = None
+        else:
+            raise ValueError("Input array must have 2 or 3 columns.")
 
     elif isinstance(input_table, pd.DataFrame):
         out_table = input_table
+        if out_table.shape[1] == 2:
+            out_table["class"] = None
+        elif out_table.shape[1] < 2:
+            raise ValueError("Input table must have 2 or 3 columns.")
 
     else:
         raise TypeError("Please input correct image path or an ndarray image.")
