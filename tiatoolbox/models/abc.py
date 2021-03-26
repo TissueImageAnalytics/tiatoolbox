@@ -5,7 +5,7 @@ import torch.nn as nn
 class Model_Base(nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(self, , *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__()
         raise NotImplementedError
 
