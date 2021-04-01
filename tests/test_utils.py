@@ -349,29 +349,35 @@ def test_read_point_annotations():
     # Test csv read with header
     out_table = utils.misc.read_point_annotations(labels)
     assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
 
     # Test csv read without header
     labels = file_parent_dir.joinpath("data/sample_patch_extraction-noheader.csv")
     out_table = utils.misc.read_point_annotations(labels)
     assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
 
     # Test npy read
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
     out_table = utils.misc.read_point_annotations(labels)
     assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
 
     # Test pd dataframe read
     out_table = utils.misc.read_point_annotations(labels_table)
     assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
 
     # Test json read
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
     out_table = utils.misc.read_point_annotations(labels)
     assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
 
     # Test numpy array
     out_table = utils.misc.read_point_annotations(labels_table.to_numpy())
     assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
 
     with pytest.raises(FileNotSupported):
         labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
