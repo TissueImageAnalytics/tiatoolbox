@@ -379,6 +379,14 @@ def test_read_point_annotations():
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
+    out_table = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:2])
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test if input array does not have 2 or 3 columns
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:1])
+
     with pytest.raises(FileNotSupported):
         labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
         _ = utils.misc.read_point_annotations(labels)
