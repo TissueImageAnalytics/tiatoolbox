@@ -186,7 +186,7 @@ class PointsPatchExtractor(PatchExtractor):
         patch_size=224,
         resolution=0,
         units="level",
-        num_examples_per_patch=9,
+        num_examples_per_patch=1,
     ):
         super().__init__(
             input_img=input_img,
