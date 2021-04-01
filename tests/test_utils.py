@@ -368,6 +368,11 @@ def test_read_point_annotations():
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
+    labels_table_2 = labels_table.drop("class", axis=1)
+    out_table = utils.misc.read_point_annotations(labels_table_2)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
     # Test json read
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
     out_table = utils.misc.read_point_annotations(labels)
@@ -386,6 +391,10 @@ def test_read_point_annotations():
     # Test if input array does not have 2 or 3 columns
     with pytest.raises(ValueError):
         _ = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:1])
+
+    # Test if input pd DataFrame does not have 2 or 3 columns
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels_table.drop(["y", "class"], axis=1))
 
     with pytest.raises(FileNotSupported):
         labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
