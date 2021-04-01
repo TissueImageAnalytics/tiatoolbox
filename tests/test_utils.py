@@ -383,6 +383,12 @@ def test_read_point_annotations():
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
+    # Test json read 2 columns
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction_2col.json")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
     # Test numpy array
     out_table = utils.misc.read_point_annotations(labels_table.to_numpy())
     assert all(labels_table == out_table)
