@@ -33,7 +33,7 @@ def vectors_in_right_direction(e_vectors):
     """Points the eigen vectors in the right direction.
 
     Args:
-        e_vectors (ndarray): eigen vectors
+        e_vectors (:class:`numpy.ndarray`): eigen vectors
 
     Returns:
         ndarray pointing in the correct direction
@@ -51,8 +51,8 @@ def h_and_e_in_right_order(v1, v2):
     """Rearranges input vectors for H&E in correct order with H as first output.
 
     Args:
-        v1 (ndarray): Input vector for stain extraction.
-        v2 (ndarray): Input vector for stain extraction.
+        v1 (:class:`numpy.ndarray`): Input vector for stain extraction.
+        v2 (:class:`numpy.ndarray`): Input vector for stain extraction.
 
     Returns:
         input vectors in the correct order.
@@ -70,7 +70,8 @@ def dl_output_for_h_and_e(dictionary):
     """Return correct value for H and E from dictionary learning output.
 
     Args:
-        dictionary (ndarray): sklearn DictionaryLearning output.
+        dictionary (:class:`numpy.ndarray`):
+         :class:`sklearn.decomposition.DictionaryLearning` output
 
     Returns:
         ndarray with correct values for H and E

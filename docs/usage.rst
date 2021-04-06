@@ -70,7 +70,7 @@ Stain Extraction
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainextract
-    :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
+    :members:
 
 ^^^^^^^^^
 Utilities
