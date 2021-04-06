@@ -84,6 +84,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 def save_yaml(input_dict, output_path="output.yaml"):
     """Save dictionary as yaml.
+
     Args:
         input_dict (dict): A variable of type 'dict'
         output_path (str or pathlib.Path): Path to save the output file
@@ -94,7 +95,6 @@ def save_yaml(input_dict, output_path="output.yaml"):
         >>> from tiatoolbox import utils
         >>> input_dict = {'hello': 'Hello World!'}
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
-
 
     """
     with open(str(pathlib.Path(output_path)), "w") as yaml_file:
@@ -281,7 +281,6 @@ def mpp2objective_power(mpp):
     Alias to :func:`objective_power2mpp` as it is a self-inverse
     function.
 
-
     Args:
         mpp (float or tuple(float)): Microns per-pixel.
 
@@ -336,6 +335,84 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
         )
     return np.uint8(img_out)
+
+
+def read_point_annotations(input_table):
+    """Read annotations as pandas DataFrame.
+
+    Args:
+        input_table (str or pathlib.Path or :class:`numpy.ndarray` or
+         :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+         :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+         First column in the table represents x position, second
+         column represents y position. The third column represents the class. If the
+         table has headers, the header should be x, y & class. Json should have `x`, `y`
+         and `class` fields.
+
+    Returns:
+        pd.DataFrame: DataFrame with x, y location and class type.
+
+    Examples:
+        >>> from tiatoolbox.utils.misc import read_point_annotations
+        >>> labels = read_point_annotations('./annotations.csv')
+
+    """
+    if isinstance(input_table, (str, pathlib.Path)):
+        _, _, suffix = split_path_name_ext(input_table)
+
+        if suffix == ".npy":
+            out_table = np.load(input_table)
+            if out_table.shape[1] == 2:
+                out_table = pd.DataFrame(out_table, columns=["x", "y"])
+                out_table["class"] = None
+            elif out_table.shape[1] == 3:
+                out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
+            else:
+                raise ValueError(
+                    "numpy table should be of format `x, y` or " "`x, y, class`"
+                )
+
+        elif suffix == ".csv":
+            out_table = pd.read_csv(input_table, sep=None, engine="python")
+            if "x" not in out_table.columns:
+                out_table = pd.read_csv(
+                    input_table,
+                    header=None,
+                    names=["x", "y", "class"],
+                    sep=None,
+                    engine="python",
+                )
+            if out_table.shape[1] == 2:
+                out_table["class"] = None
+
+        elif suffix == ".json":
+            out_table = pd.read_json(input_table)
+            if out_table.shape[1] == 2:
+                out_table["class"] = None
+
+        else:
+            raise FileNotSupported("Filetype not supported.")
+
+    elif isinstance(input_table, np.ndarray):
+        if input_table.shape[1] == 3:
+            out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+        elif input_table.shape[1] == 2:
+            out_table = pd.DataFrame(input_table, columns=["x", "y"])
+            out_table["class"] = None
+        else:
+            raise ValueError("Input array must have 2 or 3 columns.")
+
+    elif isinstance(input_table, pd.DataFrame):
+        out_table = input_table
+        if out_table.shape[1] == 2:
+            out_table["class"] = None
+        elif out_table.shape[1] < 2:
+            raise ValueError("Input table must have 2 or 3 columns.")
+
+    else:
+        raise TypeError("Please input correct image path or an ndarray image.")
+
+    return out_table
 
 
 @np.vectorize

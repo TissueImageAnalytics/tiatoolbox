@@ -73,6 +73,22 @@ Stain Extraction
 .. automodule:: tiatoolbox.tools.stainextract
     :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
 
+^^^^^^^^^^^^^^^^^^
+Patch Extraction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.patchextraction
+    :members: PatchExtractor, get_patch_extractor, convert_input_image_for_patch_extraction
+
+.. autoclass:: PointsPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: FixedWindowPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: VariableWindowPatchExtractor
+    :show-inheritance:
+
 ^^^^^^^^^
 Utilities
 ^^^^^^^^^
