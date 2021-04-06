@@ -48,14 +48,14 @@ def safe_padded_read(
     Args:
         img (:class:`numpy.ndarray` or :class:`glymur.Jp2k`):
             Input image to read from.
-        bounds (tuple(int)):
+        bounds (:obj:`tuple` of :obj:`int`):
             Bounds of the region in (left, top,
             right, bottom) format.
-        stride (int, tuple(int)):
+        stride (int, :obj:`tuple` of :obj:`int`):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
-        padding (int, tuple(int)):
+        padding (int, :obj:`tuple` of :obj:`int`):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
@@ -67,7 +67,7 @@ def safe_padded_read(
             padding function :func:`numpy.pad`.
 
     Returns:
-        np.ndarray: Padded image region.
+        numpy.ndarray: Padded image region.
 
     Raises:
         ValueError: Bounds must be integers.
@@ -82,6 +82,7 @@ def safe_padded_read(
 
         >>> bounds = (1, 1, 6, 6)
         >>> safe_padded_read(img, bounds, padding=2 pad_mode="reflect")
+
     """
     padding = np.array(padding)
     # Ensure the bounds are integers.
@@ -174,15 +175,15 @@ def sub_pixel_read(
     Args:
         image (:class:`numpy.ndarray`):
             Image to read from.
-        bounds (tuple(float)):
+        bounds (:obj:`tuple` of :obj:`float`):
             Bounds of the image to read in
             (left, top, right, bottom) format.
-        output_size (tuple(int)):
+        output_size (:obj:`tuple` of :obj:`int`):
             The desired output size.
-        padding (int, tuple(int)):
+        padding (int, :obj:`tuple` of :obj:`int`):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
-        stride (int, tuple(int)):
+        stride (int, :obj:`tuple` of :obj:`int`):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):
@@ -215,7 +216,7 @@ def sub_pixel_read(
             Arbitrary keyword arguments passed through to `read_func`.
 
     Return:
-        np.ndimage: Output image region.
+        numpy.ndimage: Output image region.
 
     Raises:
         ValueError: Invalid arguments.
@@ -274,7 +275,6 @@ def sub_pixel_read(
         ...     pil_img = image.read_region((left, top), level=0, size=size)
         ...     return np.array(pil_img.convert("RGB"))
         >>> sub_pixel_read(bounds, read_func=openslide_read)
-
 
     """
     if isinstance(image, Image.Image):
