@@ -107,7 +107,7 @@ class CustomExtractor:
         """Get the user defined stain matrix.
 
         Returns:
-            ndarray: user defined stain matrix.
+            :class:`numpy.ndarray`: user defined stain matrix.
 
         """
         return self.stain_matrix
@@ -171,12 +171,12 @@ class MacenkoExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (ndarray): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
             angular_percentile (int):
 
         Returns:
-            ndarray: estimated stain matrix.
+            :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -243,12 +243,12 @@ class VahadaneExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (ndarray): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
             regulariser (float): regulariser used in dictionary learning
 
         Returns:
-            ndarray: estimated stain matrix.
+            :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8

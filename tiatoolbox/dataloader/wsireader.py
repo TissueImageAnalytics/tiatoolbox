@@ -50,7 +50,8 @@ class WSIReader:
         input_img (pathlib.Path): Input path to WSI file.
 
     Args:
-        input_img (str, pathlib.Path, ndarray): input path to WSI.
+        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`): input
+         path to WSI.
 
     """
 
@@ -68,7 +69,8 @@ class WSIReader:
         This property is cached and only generated on the first call.
 
         Returns:
-            WSIMetadata: An object containing normalised slide metadata
+            WSIMeta: An object containing normalised slide metadata
+
         """
         # In Python>=3.8 this could be replaced with functools.cached_property
         if self._m_info is not None:
@@ -82,20 +84,22 @@ class WSIReader:
 
         Args:
             meta (WSIMeta): Metadata object.
+
         """
         self._m_info = meta
 
     def _info(self):
         """WSI metadata internal getter used to update info property.
 
-        Mssing values for MPP and objective power are approximated and
+        Missing values for MPP and objective power are approximated and
         a warning raised. Objective power is calculated as the mean of
         the :func:utils.transforms.mpp2common_objective_power in x and
         y. MPP (x and y) is approximated using objective power via
         :func:utils.transforms.objective_power2mpp.
 
         Returns:
-            WSIMetadata: An object containing normalised slide metadata
+            WSIMeta: An object containing normalised slide metadata.
+
         """
         raise NotImplementedError
 
@@ -109,8 +113,8 @@ class WSIReader:
         target and < 1 indicates that it is smaller.
 
         Args:
-            resolution (float or tuple of float): Scale to calculate
-                relative to
+            resolution (float or tuple(float)): Scale to calculate
+                relative to units.
             units (str): Units of the scale. Allowed values are: mpp,
                 power, level, baseline. Baseline refers to the largest
                 resolution in the WSI (level 0).
@@ -134,6 +138,7 @@ class WSIReader:
             >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "baseline"))
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
+
         """
         info = self.info
 
@@ -190,19 +195,20 @@ class WSIReader:
         required, post read, to achieve the desired resolution.
 
         Args:
-            resolution (float or tuple of float): Resolution to
+            resolution (float or tuple(float)): Resolution to
                 find optimal read parameters for
             units (str): Units of the scale. Allowed values are the same
                 as for `WSIReader._relative_level_scales`
-            precision (int, optional): Decimal places to use when
+            precision (int or optional): Decimal places to use when
                 finding optimal scale. This can be adjusted to avoid
-                errors when an unecessary precision is used. E.g.
+                errors when an unnecessary precision is used. E.g.
                 1.1e-10 > 1 is insignificant in most cases.
                 Defaults to 3.
 
         Returns:
-            (int, float): Optimal read level and scale factor between
+            tuple(int, float): Optimal read level and scale factor between
                 the optimal level and the target scale (usually <= 1).
+
         """
         level_scales = self._relative_level_scales(resolution, units)
         level_resolution_sufficient = [
@@ -243,25 +249,28 @@ class WSIReader:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
-            location (tuple of int): in terms of the baseline image (level 0).
-            size (tuple of int): desired output size in pixels (width, height) tuple.
+            location (tuple(int)): in terms of the baseline image
+             (level 0).
+            size (tuple(int)): desired output size in pixels (width,
+             height) tuple.
             resolution (float): desired output resolution.
             units (str): the units of scale, default = "level".
-                Supported units are: microns per pixel (mpp), objective
-                power (power), pyramid / resolution level (level),
-                pixels per baseline pixel (baseline).
+             Supported units are: microns per pixel (mpp), objective
+             power (power), pyramid / resolution level (level),
+             pixels per baseline pixel (baseline).
             precision (int, optional): Decimal places to use when
-                finding optimal scale. See
-                :func:`find_optimal_level_and_downsample` for more.
+             finding optimal scale. See
+             :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            (int, tuple of int, tuple of int, float, tuple of float):
-                Read parameters of optimal read level, location in level
-                reference frame, size (width, height) of the region to
-                read in level reference frame, downscaling factor to
-                apply after reading to get the correct output size and
-                resolution, the size of the region in baseline reference
-                frame.
+            tuple(int, tuple(int), tuple(int), float, tuple(float)): Read parameters of
+             optimal read level,
+             location in level reference frame, size (width, height) of the region to
+             read in level reference frame, downscaling factor to
+             apply after reading to get the correct output size and
+             resolution, the size of the region in baseline reference
+             frame.
+
         """
         read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
@@ -285,7 +294,7 @@ class WSIReader:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
-            bounds (tuple of int): Tuple of (start_x, start_y, end_x,
+            bounds (tuple(int)): Tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame.
             resolution (float): desired output resolution
@@ -298,12 +307,14 @@ class WSIReader:
                 :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            (int, tuple of int, tuple of int, float): Read parameters of
-                optimal read level, bounds (start_w, start_h, end_w,
-                end_h) of the region in the optimal level reference
-                frame, correct size to output after reading and applying
-                downscaling, downscaling factor to apply after reading
-                to get the correct output size and resolution.
+            tuple(int, tuple(int), tuple(int), float):
+             Read parameters of
+             optimal read level, bounds (start_w, start_h, end_w,
+             end_h) of the region in the optimal level reference
+             frame, correct size to output after reading and applying
+             downscaling, downscaling factor to apply after reading
+             to get the correct output size and resolution.
+
         """
         start_x, start_y, end_x, end_y = bounds
         read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
@@ -334,12 +345,12 @@ class WSIReader:
         field of view see :func:`read_bounds`.
 
         Args:
-            location (tuple of int): (x, y) tuple giving
+            location (tuple(int)): (x, y) tuple giving
                 the top left pixel in the baseline (level 0)
                 reference frame.
-            size (tuple of int): (width, height) tuple
+            size (tuple(int)): (width, height) tuple
                 giving the desired output image size.
-            resolution (int or float or tuple of float): resolution at
+            resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
                 valid. This value is in terms of the corresponding
@@ -353,8 +364,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray: array of size MxNx3
-            M=size[0], N=size[1]
+            :class:`numpy.ndarray`: array of size MxNx3 M=size[0], N=size[1]
 
         Example:
             >>> from tiatoolbox.dataloader import wsireader
@@ -494,10 +504,10 @@ class WSIReader:
         :func:`read_rect`.
 
         Args:
-            bounds (tuple of int): Tuple of (start_x, start_y, end_x,
+            bounds (tuple(int)): Tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame.
-            resolution (int or float or tuple of float): resolution at
+            resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
                 valid. This value is in terms of the corresponding
@@ -511,7 +521,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray: array of size MxNx3
+            :class:`numpy.ndarray`: array of size MxNx3
             M=end_h-start_h, N=end_w-start_w
 
         Examples:
@@ -551,6 +561,7 @@ class WSIReader:
         If the requested resolution is higher than the
         baseline (maximum resultion of the image), then bicubic
         interpolation is applied to the output image.
+
         """
         raise NotImplementedError
 
@@ -567,13 +578,15 @@ class WSIReader:
         also be readable with the same syntax.
 
         Args:
-            location: (x, y) tuple giving the top left pixel in the
-                level 0 reference frame.
-            level: the level number.
-            size: (width, height) tuple giving the region size.
+            location (tuple(int)): (x, y) tuple giving the top left
+             pixel in the level 0 reference frame.
+            level (int): the level number.
+            size (tuple(int)): (width, height) tuple giving the region
+             size.
 
         Returns:
-            ndarray: array of size MxNx3.
+            :class:`numpy.ndarray`: array of size MxNx3.
+
         """
         return self.read_rect(
             location=location, size=size, resolution=level, units="level"
@@ -585,17 +598,18 @@ class WSIReader:
         For more information on resolution and units see :func:`read_rect`
 
         Args:
-            resolution (int or float or tuple of float): resolution to
+            resolution (int or float or tuple(float)): resolution to
                 read thumbnail at, default = 1.25 (objective power)
             units (str): resolution units, default = "power"
 
         Returns:
-            ndarray: thumbnail image
+            :class:`numpy.ndarray`: thumbnail image
 
         Examples:
             >>> from tiatoolbox.dataloader import wsireader
             >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
+
         """
         slide_dimensions = self.info.slide_dimensions
         bounds = (0, 0, *slide_dimensions)
@@ -613,9 +627,9 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str, pathlib.Path): Output directory to save the tiles.
+            output_dir(str or pathlib.Path): Output directory to save the tiles.
             tile_objective_value (int): Objective value at which tile is generated.
-            tile_read_size (tuple of int): Tile (width, height).
+            tile_read_size (tuple(int)): Tile (width, height).
             tile_format (str): file format to save image tiles, default=".jpg"
             verbose (bool): Print output, default=True
 
@@ -851,7 +865,7 @@ class OpenSlideWSIReader(WSIReader):
         """Openslide WSI meta data reader.
 
         Returns:
-            WSIMetadata: containing meta information.
+            WSIMeta: containing meta information.
 
         """
         props = self.openslide_wsi.properties
@@ -930,6 +944,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
     Attributes:
         glymur_wsi (:obj:`glymur.Jp2k`)
+
     """
 
     def __init__(self, input_img):
@@ -1015,7 +1030,7 @@ class OmnyxJP2WSIReader(WSIReader):
         """JP2 meta data reader.
 
         Returns:
-            WSIMetadata: containing meta information
+            WSIMeta: containing meta information
 
         """
         glymur_wsi = self.glymur_wsi
@@ -1070,19 +1085,19 @@ class OmnyxJP2WSIReader(WSIReader):
 
 
 class VirtualWSIReader(WSIReader):
-    """Class for reading non-pyramidal images e.g. visual fields.
+    """Class for reading non-pyramidal images e.g., visual fields.
 
     Supported formats:
 
     - .jpg
     - .png
-    - np.ndarray
+    - :class:`numpy.ndarray`
 
     Attributes:
-        img (ndarray)
+        img (:class:`numpy.ndarray`)
 
     Args:
-        input_img (str, pathlib.Path, ndarray): input path to WSI.
+        input_img (str or pathlib.Path or :class:`numpy.ndarray`): input path to WSI.
 
     """
 
@@ -1109,7 +1124,7 @@ class VirtualWSIReader(WSIReader):
         set to None.
 
         Returns:
-            WSIMetadata: containing meta information.
+            WSIMeta: containing meta information.
 
         """
         param = WSIMeta(
@@ -1185,7 +1200,7 @@ def get_wsireader(input_img):
     """Return an appropriate :class:`.WSIReader` object.
 
     Args:
-        input_img (str, pathlib.Path): input path to WSI.
+        input_img (str or pathlib.Path): input path to WSI.
 
     Returns:
         WSIReader: an object with base :class:`.WSIReader` as base class.
