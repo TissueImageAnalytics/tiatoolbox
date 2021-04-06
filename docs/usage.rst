@@ -12,6 +12,7 @@ Reading WSI Image Data
 
 .. automodule:: tiatoolbox.dataloader.wsireader
     :members: WSIReader, get_wsireader
+    :private-members:
 
 .. autoclass:: OpenSlideWSIReader
     :show-inheritance:
@@ -118,7 +119,14 @@ Transforms
 ----------
 
 .. automodule:: tiatoolbox.utils.transforms
-    :members: background_composite, imresize
+    :members:
+
+    .. autofunction:: background_composite
+    .. autofunction:: imresize
+    .. autofunction:: convert_RGB2OD
+    .. autofunction:: convert_OD2RGB
+    .. autofunction:: bounds2locsize
+    .. autofunction:: locsize2bounds
 
 ----------
 Exceptions

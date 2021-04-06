@@ -35,11 +35,12 @@ def save_tiles(
     Default file format for tiles is jpg.
 
     Args:
-        input_path (str): Path to whole slide image
-        output_dir (str): Path to output directory to save the output
+        input_path (str or pathlib.Path): Path to whole slide image
+        output_dir (str or pathlib.Path): Path to output directory to save the output
         tile_objective_value (int): objective value at which tile is generated,
-                default=20
-        tile_read_size (tuple of int): Tile (width, height), default=(5000, 5000).
+         default=20
+        tile_read_size (tuple(int)): Tile (width, height),
+         default=(5000, 5000).
         verbose (bool): Print output, default=True
 
     Returns:

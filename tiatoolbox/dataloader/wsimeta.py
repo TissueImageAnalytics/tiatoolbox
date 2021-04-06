@@ -57,7 +57,7 @@ class WSIMeta:
                 object under the key "xml".
 
     Attributes:
-        slide_dimensions (:obj:`tuple` of :obj:`int`): Tuple containing the width and
+        slide_dimensions (tuple(int)): Tuple containing the width and
             height of the WSI. These are for the baseline (full resolution)
             image if the WSI is a pyramid or multi-resoltion. Required.
         level_dimensions (list): A list of dimensions for each level of the
@@ -80,6 +80,7 @@ class WSIMeta:
         raw (dict): Dictionary of unprocessed metadata extracted
             from the WSI format. For JP2 images this contains an xml object
             under the key "xml". Defaults to empty dictionary.
+
     """
 
     def __init__(
@@ -123,6 +124,7 @@ class WSIMeta:
 
         Returns:
             bool: True is validation passed, False otherwise.
+
         """
         passed = True
 

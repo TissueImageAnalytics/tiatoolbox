@@ -36,7 +36,7 @@ class CustomExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import CustomExtractor()
+        >>> from tiatoolbox.tools.stainextract import CustomExtractor()
         >>> extractor = CustomExtractor(stain_matrix)
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -51,7 +51,7 @@ class CustomExtractor:
         """Get the user defined stain matrix.
 
         Returns:
-            ndarray: user defined stain matrix.
+            :class:`numpy.ndarray`: user defined stain matrix.
 
         """
         return self.stain_matrix
@@ -70,7 +70,7 @@ class RuifrokExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import RuifrokExtractor()
+        >>> from tiatoolbox.tools.stainextract import RuifrokExtractor()
         >>> extractor = RuifrokExtractor()
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -100,7 +100,7 @@ class MacenkoExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import MacenkoExtractor()
+        >>> from tiatoolbox.tools.stainextract import MacenkoExtractor()
         >>> extractor = MacenkoExtractor()
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -111,12 +111,12 @@ class MacenkoExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (ndarray): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
             angular_percentile (int):
 
         Returns:
-            ndarray: estimated stain matrix.
+            :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -176,7 +176,7 @@ class VahadaneExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import VahadaneExtractor()
+        >>> from tiatoolbox.tools.stainextract import VahadaneExtractor()
         >>> extractor = VahadaneExtractor()
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
@@ -187,12 +187,12 @@ class VahadaneExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (ndarray): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
             regulariser (float): regulariser used in dictionary learning
 
         Returns:
-            ndarray: estimated stain matrix.
+            :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
