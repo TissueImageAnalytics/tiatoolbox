@@ -363,8 +363,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
 
         Returns:
-            ndarray: array of size MxNx3
-            M=size[0], N=size[1]
+            :class:`numpy.ndarray`: array of size MxNx3 M=size[0], N=size[1]
 
         Example:
             >>> from tiatoolbox.dataloader import wsireader
