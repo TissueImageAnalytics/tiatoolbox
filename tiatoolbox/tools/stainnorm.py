@@ -68,7 +68,7 @@ class StainNormaliser:
              eosin stains.
 
         Returns:
-            :class:`numpy.ndarray`: stain concentrations of input image.
+            numpy.ndarray: stain concentrations of input image.
 
         """
         OD = convert_RGB2OD(img).reshape((-1, 3))
