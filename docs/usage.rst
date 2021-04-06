@@ -12,6 +12,7 @@ Reading WSI Image Data
 
 .. automodule:: tiatoolbox.dataloader.wsireader
     :members: WSIReader, get_wsireader
+    :private-members:
 
 .. autoclass:: OpenSlideWSIReader
     :show-inheritance:
