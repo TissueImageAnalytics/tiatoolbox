@@ -367,13 +367,6 @@ def test_read_point_annotations(tmp_path):
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
-    labels = tmp_path.joinpath("test_gt_3col.npy")
-    with open(labels, "wb") as f:
-        np.save(f, np.zeros((3, 4)))
-
-    with pytest.raises(ValueError):
-        _ = utils.misc.read_point_annotations(labels)
-
     # Test pd dataframe read
     out_table = utils.misc.read_point_annotations(labels_table)
     assert all(labels_table == out_table)
@@ -408,6 +401,14 @@ def test_read_point_annotations(tmp_path):
     # Test if input array does not have 2 or 3 columns
     with pytest.raises(ValueError):
         _ = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:1])
+
+    # Test if input npy does not have 2 or 3 columns
+    labels = tmp_path.joinpath("test_gt_3col.npy")
+    with open(labels, "wb") as f:
+        np.save(f, np.zeros((3, 4)))
+
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels)
 
     # Test if input pd DataFrame does not have 2 or 3 columns
     with pytest.raises(ValueError):
