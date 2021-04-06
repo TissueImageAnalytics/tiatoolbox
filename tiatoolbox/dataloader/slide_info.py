@@ -28,8 +28,7 @@ def slide_info(input_path, verbose=True):
     """Return WSI meta data.
 
     Args:
-        input_path (str, pathlib.Path): Path to whole slide image
-        output_dir (str, pathlib.Path): Path to output directory to save the output
+        input_path (str or pathlib.Path): Path to whole slide image
         verbose (bool): Print output, default=True
 
     Returns:
