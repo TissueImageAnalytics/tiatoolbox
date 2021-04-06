@@ -341,10 +341,13 @@ def read_point_annotations(input_table):
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table (str or pathlib.Path or ndarray or pd.DataFrame): path to csv, npy
-         or json or an ndarray. first column in the table represents x position, second
+        input_table (str or pathlib.Path or :class:`numpy.ndarray` or
+         :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+         :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+         First column in the table represents x position, second
          column represents y position. The third column represents the class. If the
-         table has headers, the header should be x, y & class.
+         table has headers, the header should be x, y & class. Json should have `x`, `y`
+         and `class` fields.
 
     Returns:
         pd.DataFrame: DataFrame with x, y location and class type.
@@ -362,8 +365,12 @@ def read_point_annotations(input_table):
             if out_table.shape[1] == 2:
                 out_table = pd.DataFrame(out_table, columns=["x", "y"])
                 out_table["class"] = None
-            else:
+            elif out_table.shape[1] == 3:
                 out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
+            else:
+                raise ValueError(
+                    "numpy table should be of format `x, y` or " "`x, y, class`"
+                )
 
         elif suffix == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")

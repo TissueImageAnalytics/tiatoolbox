@@ -339,7 +339,7 @@ def test_get_luminosity_tissue_mask():
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
 
-def test_read_point_annotations():
+def test_read_point_annotations(tmp_path):
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
     file_parent_dir = Path(__file__).parent
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
@@ -366,6 +366,13 @@ def test_read_point_annotations():
     out_table = utils.misc.read_point_annotations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
+
+    labels = tmp_path.joinpath("test_gt_3col.npy")
+    with open(labels, "wb") as f:
+        np.save(f, np.zeros((3, 4)))
+
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels)
 
     # Test pd dataframe read
     out_table = utils.misc.read_point_annotations(labels_table)
