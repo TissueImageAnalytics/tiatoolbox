@@ -29,6 +29,7 @@ def slide_info(input_path, verbose=True):
 
     Args:
         input_path (str, pathlib.Path): Path to whole slide image
+        output_dir (str, pathlib.Path): Path to output directory to save the output
         verbose (bool): Print output, default=True
 
     Returns:
