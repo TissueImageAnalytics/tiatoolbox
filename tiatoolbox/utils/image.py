@@ -216,7 +216,7 @@ def sub_pixel_read(
             Arbitrary keyword arguments passed through to `read_func`.
 
     Return:
-        numpy.ndimage: Output image region.
+        :class:`numpy.ndimage`: Output image region.
 
     Raises:
         ValueError: Invalid arguments.
