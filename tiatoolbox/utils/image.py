@@ -51,11 +51,11 @@ def safe_padded_read(
         bounds (tuple(int)):
             Bounds of the region in (left, top,
             right, bottom) format.
-        stride (int, tuple(int)):
+        stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
-        padding (int, tuple(int)):
+        padding (int or tuple(int)):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
@@ -180,10 +180,10 @@ def sub_pixel_read(
             (left, top, right, bottom) format.
         output_size (tuple(int)):
             The desired output size.
-        padding (int, tuple(int)):
+        padding (int or tuple(int)):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
-        stride (int, tuple(int)):
+        stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):

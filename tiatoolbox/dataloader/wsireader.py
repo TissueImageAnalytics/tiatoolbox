@@ -50,7 +50,8 @@ class WSIReader:
         input_img (pathlib.Path): Input path to WSI file.
 
     Args:
-        input_img (str, pathlib.Path, :class:`numpy.ndarray`): input path to WSI.
+        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`): input
+         path to WSI.
 
     """
 
@@ -112,7 +113,7 @@ class WSIReader:
         target and < 1 indicates that it is smaller.
 
         Args:
-            resolution (float, tuple(float)): Scale to calculate
+            resolution (float or tuple(float)): Scale to calculate
                 relative to units.
             units (str): Units of the scale. Allowed values are: mpp,
                 power, level, baseline. Baseline refers to the largest
@@ -198,14 +199,14 @@ class WSIReader:
                 find optimal read parameters for
             units (str): Units of the scale. Allowed values are the same
                 as for `WSIReader._relative_level_scales`
-            precision (int, optional): Decimal places to use when
+            precision (int or optional): Decimal places to use when
                 finding optimal scale. This can be adjusted to avoid
                 errors when an unnecessary precision is used. E.g.
                 1.1e-10 > 1 is insignificant in most cases.
                 Defaults to 3.
 
         Returns:
-            (int, float): Optimal read level and scale factor between
+            tuple(int, float): Optimal read level and scale factor between
                 the optimal level and the target scale (usually <= 1).
 
         """
@@ -262,7 +263,7 @@ class WSIReader:
              :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            (int, tuple(int), tuple(int), float, tuple(float)): Read parameters of
+            tuple(int, tuple(int), tuple(int), float, tuple(float)): Read parameters of
              optimal read level,
              location in level reference frame, size (width, height) of the region to
              read in level reference frame, downscaling factor to
@@ -306,7 +307,7 @@ class WSIReader:
                 :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            (int, tuple(int), tuple(int), float):
+            tuple(int, tuple(int), tuple(int), float):
              Read parameters of
              optimal read level, bounds (start_w, start_h, end_w,
              end_h) of the region in the optimal level reference
@@ -626,7 +627,7 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str, pathlib.Path): Output directory to save the tiles.
+            output_dir(str or pathlib.Path): Output directory to save the tiles.
             tile_objective_value (int): Objective value at which tile is generated.
             tile_read_size (tuple(int)): Tile (width, height).
             tile_format (str): file format to save image tiles, default=".jpg"
@@ -1096,7 +1097,7 @@ class VirtualWSIReader(WSIReader):
         img (:class:`numpy.ndarray`)
 
     Args:
-        input_img (str, pathlib.Path, :class:`numpy.ndarray`): input path to WSI.
+        input_img (str or pathlib.Path or :class:`numpy.ndarray`): input path to WSI.
 
     """
 
@@ -1199,7 +1200,7 @@ def get_wsireader(input_img):
     """Return an appropriate :class:`.WSIReader` object.
 
     Args:
-        input_img (str, pathlib.Path): input path to WSI.
+        input_img (str or pathlib.Path): input path to WSI.
 
     Returns:
         WSIReader: an object with base :class:`.WSIReader` as base class.

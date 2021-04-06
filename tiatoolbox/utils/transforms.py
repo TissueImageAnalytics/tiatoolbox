@@ -28,7 +28,7 @@ def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
 
     Args:
-        image (ndarray, PIL.Image): input image
+        image (ndarray or PIL.Image): input image
         fill (int): fill value for the background, default=255
         alpha (bool): True if alpha channel is required
 

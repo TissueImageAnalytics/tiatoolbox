@@ -53,9 +53,9 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str, pathlib.Path): Path to the directory where files
+        input_path (str or pathlib.Path): Path to the directory where files
             need to be searched
-        file_types (str, tuple): File types (extensions) to be searched
+        file_types (str or tuple(str)): File types (extensions) to be searched
 
     Returns:
         list: File paths as a python list
@@ -86,7 +86,7 @@ def save_yaml(input_dict, output_path="output.yaml"):
     """Save dictionary as yaml.
     Args:
         input_dict (dict): A variable of type 'dict'
-        output_path (str, pathlib.Path): Path to save the output file
+        output_path (str or pathlib.Path): Path to save the output file
 
     Returns:
 
@@ -105,7 +105,7 @@ def imwrite(image_path, img):
     """Write numpy array to an image.
 
     Args:
-        image_path (str, pathlib.Path): file path (including extension)
+        image_path (str or pathlib.Path): file path (including extension)
             to save image
         img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
 
@@ -127,7 +127,7 @@ def imread(image_path):
     """Read an image as numpy array.
 
     Args:
-        image_path (str, pathlib.Path): file path (including extension) to read image
+        image_path (str or pathlib.Path): file path (including extension) to read image
 
     Returns:
         img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
@@ -258,7 +258,7 @@ def objective_power2mpp(objective_power):
     Note that this function is wrapped in :class:`numpy.vectorize`.
 
     Args:
-        objective_power (float, tuple(float)): Objective power.
+        objective_power (float or tuple(float)): Objective power.
 
     Returns:
         numpy.ndarray: Microns per-pixel (MPP) approximations.
@@ -283,7 +283,7 @@ def mpp2objective_power(mpp):
 
 
     Args:
-        mpp (float, tuple(float)): Microns per-pixel.
+        mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
         np.ndarray: Objective power approximations.

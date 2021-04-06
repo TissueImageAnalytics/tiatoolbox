@@ -348,9 +348,9 @@ def get_normaliser(method_name, stain_matrix=None):
     Args:
         method_name (str) : name of stain norm method, must be one of "reinhard",
          "custom", "ruifrok", "macenko" or "vahadane".
-        stain_matrix (:class:`numpy.ndarray` or str, pathlib.Path) : user-defined stain
-         matrix. This must either be a numpy array or a path to either a .csv or .npy
-         file. This is only utilised if using "custom" method name.
+        stain_matrix (:class:`numpy.ndarray` or str or pathlib.Path) : user-defined
+         stain matrix. This must either be a numpy array or a path to either a .csv or
+         .npy file. This is only utilised if using "custom" method name.
 
     Returns:
         StainNormaliser : an object with base :class:'.StainNormaliser' as base class.
