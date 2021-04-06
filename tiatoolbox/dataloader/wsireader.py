@@ -112,7 +112,7 @@ class WSIReader:
         target and < 1 indicates that it is smaller.
 
         Args:
-            resolution (float or :obj:`tuple` of :obj:`float`): Scale to calculate
+            resolution (float, tuple(float)): Scale to calculate
                 relative to units.
             units (str): Units of the scale. Allowed values are: mpp,
                 power, level, baseline. Baseline refers to the largest
@@ -194,7 +194,7 @@ class WSIReader:
         required, post read, to achieve the desired resolution.
 
         Args:
-            resolution (float or tuple of float): Resolution to
+            resolution (float or tuple(float)): Resolution to
                 find optimal read parameters for
             units (str): Units of the scale. Allowed values are the same
                 as for `WSIReader._relative_level_scales`
@@ -248,9 +248,9 @@ class WSIReader:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
-            location (:obj:`tuple` of :obj:`int`): in terms of the baseline image
+            location (tuple(int)): in terms of the baseline image
              (level 0).
-            size (:obj:`tuple` of :obj:`int`): desired output size in pixels (width,
+            size (tuple(int)): desired output size in pixels (width,
              height) tuple.
             resolution (float): desired output resolution.
             units (str): the units of scale, default = "level".
@@ -262,8 +262,8 @@ class WSIReader:
              :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            (int, :obj:`tuple` of :obj:`int`, :obj:`tuple` of :obj:`int`, float,
-             :obj:`tuple` of :obj:`float`): Read parameters of optimal read level,
+            (int, tuple(int), tuple(int), float, tuple(float)): Read parameters of
+             optimal read level,
              location in level reference frame, size (width, height) of the region to
              read in level reference frame, downscaling factor to
              apply after reading to get the correct output size and
@@ -293,7 +293,7 @@ class WSIReader:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
-            bounds (:obj:`tuple` of :obj:`int`): Tuple of (start_x, start_y, end_x,
+            bounds (tuple(int)): Tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame.
             resolution (float): desired output resolution
@@ -306,7 +306,7 @@ class WSIReader:
                 :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            (int, :obj:`tuple` of :obj:`int`, :obj:`tuple` of :obj:`int`, float):
+            (int, tuple(int), tuple(int), float):
              Read parameters of
              optimal read level, bounds (start_w, start_h, end_w,
              end_h) of the region in the optimal level reference
@@ -344,12 +344,12 @@ class WSIReader:
         field of view see :func:`read_bounds`.
 
         Args:
-            location (:obj:`tuple` of :obj:`int`): (x, y) tuple giving
+            location (tuple(int)): (x, y) tuple giving
                 the top left pixel in the baseline (level 0)
                 reference frame.
-            size (:obj:`tuple` of :obj:`int`): (width, height) tuple
+            size (tuple(int)): (width, height) tuple
                 giving the desired output image size.
-            resolution (int or float or :obj:`tuple` of :obj:`float`): resolution at
+            resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
                 valid. This value is in terms of the corresponding
@@ -503,10 +503,10 @@ class WSIReader:
         :func:`read_rect`.
 
         Args:
-            bounds (:obj:`tuple` of :obj:`int`): Tuple of (start_x, start_y, end_x,
+            bounds (tuple(int)): Tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame.
-            resolution (int or float or :obj:`tuple` of :obj:`float`): resolution at
+            resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
                 valid. This value is in terms of the corresponding
@@ -577,10 +577,10 @@ class WSIReader:
         also be readable with the same syntax.
 
         Args:
-            location (:obj:`tuple` of :obj:`int`): (x, y) tuple giving the top left
+            location (tuple(int)): (x, y) tuple giving the top left
              pixel in the level 0 reference frame.
             level (int): the level number.
-            size (:obj:`tuple` of :obj:`int`): (width, height) tuple giving the region
+            size (tuple(int)): (width, height) tuple giving the region
              size.
 
         Returns:
@@ -597,7 +597,7 @@ class WSIReader:
         For more information on resolution and units see :func:`read_rect`
 
         Args:
-            resolution (int or float or :obj:`tuple` of :obj:`float`): resolution to
+            resolution (int or float or tuple(float)): resolution to
                 read thumbnail at, default = 1.25 (objective power)
             units (str): resolution units, default = "power"
 
@@ -628,7 +628,7 @@ class WSIReader:
         Args:
             output_dir(str, pathlib.Path): Output directory to save the tiles.
             tile_objective_value (int): Objective value at which tile is generated.
-            tile_read_size (:obj:`tuple` of :obj:`int`): Tile (width, height).
+            tile_read_size (tuple(int)): Tile (width, height).
             tile_format (str): file format to save image tiles, default=".jpg"
             verbose (bool): Print output, default=True
 

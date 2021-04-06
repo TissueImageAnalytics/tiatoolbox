@@ -217,7 +217,7 @@ def mpp2common_objective_power(
     nearest value in `common_powers`.
 
     Args:
-        mpp (float or tuple of float): Microns per-pixel.
+        mpp (float or tuple(float)): Microns per-pixel.
         common_powers (list of float): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
@@ -258,7 +258,7 @@ def objective_power2mpp(objective_power):
     Note that this function is wrapped in :class:`numpy.vectorize`.
 
     Args:
-        objective_power (float or :obj:`tuple` of :obj:`float`): Objective power.
+        objective_power (float, tuple(float)): Objective power.
 
     Returns:
         numpy.ndarray: Microns per-pixel (MPP) approximations.
@@ -283,7 +283,7 @@ def mpp2objective_power(mpp):
 
 
     Args:
-        mpp (float or tuple of float): Microns per-pixel.
+        mpp (float, tuple(float)): Microns per-pixel.
 
     Returns:
         np.ndarray: Objective power approximations.

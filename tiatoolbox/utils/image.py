@@ -48,14 +48,14 @@ def safe_padded_read(
     Args:
         img (:class:`numpy.ndarray` or :class:`glymur.Jp2k`):
             Input image to read from.
-        bounds (:obj:`tuple` of :obj:`int`):
+        bounds (tuple(int)):
             Bounds of the region in (left, top,
             right, bottom) format.
-        stride (int, :obj:`tuple` of :obj:`int`):
+        stride (int, tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
-        padding (int, :obj:`tuple` of :obj:`int`):
+        padding (int, tuple(int)):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
@@ -175,15 +175,15 @@ def sub_pixel_read(
     Args:
         image (:class:`numpy.ndarray`):
             Image to read from.
-        bounds (:obj:`tuple` of :obj:`float`):
+        bounds (tuple(float)):
             Bounds of the image to read in
             (left, top, right, bottom) format.
-        output_size (:obj:`tuple` of :obj:`int`):
+        output_size (tuple(int)):
             The desired output size.
-        padding (int, :obj:`tuple` of :obj:`int`):
+        padding (int, tuple(int)):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
-        stride (int, :obj:`tuple` of :obj:`int`):
+        stride (int, tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):

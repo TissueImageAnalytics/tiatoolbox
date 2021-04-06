@@ -36,7 +36,7 @@ class WSIMeta:
     """Whole slide image metadata class.
 
     Attributes:
-        slide_dimensions (:obj:`tuple` of :obj:`int`): Tuple containing the width and
+        slide_dimensions (tuple(int)): Tuple containing the width and
             height of the WSI. These are for the baseline (full resolution)
             image if the WSI is a pyramid or multi-resoltion. Required.
         level_dimensions (list): A list of dimensions for each level of the
@@ -77,7 +77,7 @@ class WSIMeta:
         """Initialise the metadata object.
 
         Args:
-            slide_dimensions (int, int): Tuple containing the width and
+            slide_dimensions (tuple(int)): Tuple containing the width and
                 height of the WSI. These are for the baseline (full resolution)
                 image if the WSI is a pyramid or multi-resoltion.
             level_dimensions (list): A list of dimensions for each level of the
