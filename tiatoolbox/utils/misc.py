@@ -107,7 +107,7 @@ def imwrite(image_path, img):
     Args:
         image_path (str, pathlib.Path): file path (including extension)
             to save image
-        img (ndarray): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
 
     Returns:
 
@@ -130,11 +130,11 @@ def imread(image_path):
         image_path (str, pathlib.Path): file path (including extension) to read image
 
     Returns:
-        img (ndarray): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> image = utils.misc.imread('ImagePath.jpg')
+        >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
     if isinstance(image_path, pathlib.Path):
@@ -152,7 +152,7 @@ def load_stain_matrix(stain_matrix_input):
             there should be no column headers provided
 
     Returns:
-        stain_matrix (ndarray): the loaded stain matrix
+        stain_matrix (:class:`numpy.ndarray`): the loaded stain matrix.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -184,11 +184,11 @@ def get_luminosity_tissue_mask(img, threshold):
     """Get tissue mask based on the luminosity of the input image.
 
     Args:
-        img (ndarray): input image used to obtain tissue mask.
+        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
         threshold (float): luminosity threshold used to determine tissue area.
 
     Returns:
-        tissue_mask (ndarray): binary tissue mask.
+        tissue_mask (:class:`numpy.ndarray`): binary tissue mask.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -234,6 +234,7 @@ def mpp2common_objective_power(
         ...     common_powers=(10, 20, 40),
         ... )
         array([40, 20])
+
     """
     op = mpp2objective_power(mpp)
     distances = [np.abs(op - power) for power in common_powers]
@@ -257,10 +258,10 @@ def objective_power2mpp(objective_power):
     Note that this function is wrapped in :class:`numpy.vectorize`.
 
     Args:
-        objective_power (float or tuple of float): Objective power.
+        objective_power (float or :obj:`tuple` of :obj:`float`): Objective power.
 
     Returns:
-        np.ndarray: Microns per-pixel (MPP) approximations.
+        numpy.ndarray: Microns per-pixel (MPP) approximations.
 
     Examples:
         >>> objective_power2mpp(40)
@@ -268,6 +269,7 @@ def objective_power2mpp(objective_power):
 
         >>> objective_power2mpp([40, 20, 10])
         array([0.25, 0.5, 1.])
+
     """
     return 10 / np.float(objective_power)
 
@@ -281,7 +283,7 @@ def mpp2objective_power(mpp):
 
 
     Args:
-        objective_power (float or tuple of float): Microns per-pixel.
+        mpp (float or tuple of float): Microns per-pixel.
 
     Returns:
         np.ndarray: Objective power approximations.
@@ -295,6 +297,7 @@ def mpp2objective_power(mpp):
 
         >>> objective_power2mpp(0.253)
         array(39.5256917)
+
     """
     return objective_power2mpp(mpp)
 
@@ -304,14 +307,14 @@ def contrast_enhancer(img, low_p=2, high_p=98):
        This method uses both image low and high percentiles.
 
     Args:
-        img (ndarray): input image used to obtain tissue mask.
+        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
             Image should be uint8.
         low_p (scalar): low percentile of image values to be saturated to 0.
         high_p (scalar): high percentile of image values to be saturated to 255.
             high_p should always be greater than low_p.
 
     Returns:
-        img (ndarray): Image (uint8) with contrast enhanced.
+        img (:class:`numpy.ndarray`): Image (uint8) with contrast enhanced.
 
     Raises:
         AssertionError: Internal errors due to invalid img type.
@@ -368,5 +371,6 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         >>> array(98)
         >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
         >>> array([49, 49])
+
   """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
