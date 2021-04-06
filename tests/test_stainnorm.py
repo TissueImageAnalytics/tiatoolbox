@@ -18,7 +18,7 @@ def test_stain_extract():
 
 
 def test_vectors_in_right_direction():
-    """Test if eigen vectors are corrected in the right direction."""
+    """Test if eigenvectors are corrected in the right direction."""
     e_vect = np.ones([2, 2])
     e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
     assert np.all(e_vect == 1)
