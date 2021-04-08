@@ -155,9 +155,9 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
         input_dir = pathlib.Path(wsi_input).parent
         output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = wsi.wsireader.get_wsireader(input_img=wsi_input)
+    wsi_read = wsi.wsireader.get_wsireader(input_img=wsi_input)
 
-    im_region = wsi.read_bounds(
+    im_region = wsi_read.read_bounds(
         region,
         resolution=resolution,
         units=units,
@@ -189,9 +189,9 @@ def slide_thumbnail(wsi_input, output_path, mode):
         input_dir = pathlib.Path(wsi_input).parent
         output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    wsi = wsi.wsireader.get_wsireader(input_img=wsi_input)
+    wsi_read = wsi.wsireader.get_wsireader(input_img=wsi_input)
 
-    slide_thumb = wsi.slide_thumbnail()
+    slide_thumb = wsi_read.slide_thumbnail()
 
     if mode == "show":
         im_region = Image.fromarray(slide_thumb)
