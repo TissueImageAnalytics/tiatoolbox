@@ -39,6 +39,7 @@ def strictly_increasing(seq):
 
     Returns:
         bool: True if strictly increasing.
+
     """
     return all(a < b for a, b in zip(seq, seq[1:]))
 
@@ -52,6 +53,7 @@ def strictly_decreasing(seq):
 
     Returns:
         bool: True if strictly decreasing.
+
     """
     return all(a > b for a, b in zip(seq, seq[1:]))
 
@@ -367,6 +369,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
 
     This tests the case where the scale is found to be > 1 and interpolation
     will be applied to the output. A UserWarning should be raised in this case.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     with pytest.warns(UserWarning):
@@ -378,6 +381,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2
 
     This tests the case where the scale is found to be > 1 and interpolation
     will be applied to the output. A UserWarning should be raised in this case.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     with pytest.warns(UserWarning):
@@ -477,6 +481,7 @@ def test_read_rect_openslide_baseline(_sample_ndpi):
     """Test openslide read rect at baseline.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
@@ -492,6 +497,7 @@ def test_read_rect_jp2_baseline(_sample_jp2):
     """Test jp2 read rect at baseline.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
@@ -507,6 +513,7 @@ def test_read_rect_openslide_levels(_sample_ndpi):
     """Test openslide read rect with resolution in levels.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
@@ -523,6 +530,7 @@ def test_read_rect_jp2_levels(_sample_jp2):
     """Test jp2 read rect with resolution in levels.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     location = (0, 0)
@@ -560,6 +568,7 @@ def test_read_rect_openslide_mpp(_sample_ndpi):
     """Test openslide read rect with resolution in microns per pixel.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
@@ -571,6 +580,7 @@ def test_read_rect_jp2_mpp(_sample_jp2):
     """Test jp2 read rect with resolution in microns per pixel.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
@@ -582,6 +592,7 @@ def test_read_rect_openslide_objective_power(_sample_ndpi):
     """Test openslide read rect with resolution in objective power.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
@@ -594,6 +605,7 @@ def test_read_rect_jp2_objective_power(_sample_jp2):
     """Test jp2 read rect with resolution in objective power.
 
     Location coordinate is in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
@@ -606,6 +618,7 @@ def test_read_bounds_openslide_baseline(_sample_ndpi):
     """Test openslide read bounds at baseline.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
@@ -621,6 +634,7 @@ def test_read_bounds_jp2_baseline(_sample_jp2):
     """Test jp2 read bounds at baseline.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
@@ -641,6 +655,7 @@ def test_read_bounds_openslide_levels(_sample_ndpi):
     """Test openslide read bounds with resolution in levels.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
@@ -660,6 +675,7 @@ def test_read_bounds_jp2_levels(_sample_jp2):
     """Test jp2 read bounds with resolution in levels.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
@@ -680,6 +696,7 @@ def test_read_bounds_openslide_mpp(_sample_ndpi):
     """Test openslide read bounds with resolution in microns per pixel.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
@@ -692,6 +709,7 @@ def test_read_bounds_jp2_mpp(_sample_jp2):
     """Test jp2 read bounds with resolution in microns per pixel.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
@@ -704,6 +722,7 @@ def test_read_bounds_openslide_objective_power(_sample_ndpi):
     """Test openslide read bounds with resolution in objective power.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
@@ -717,6 +736,7 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
     """Test jp2 read bounds with resolution in objective power.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
@@ -730,6 +750,7 @@ def test_read_bounds_interpolated(_sample_svs):
     """Test openslide read bounds with interpolated output.
 
     Coordinates in baseline (level 0) reference frame.
+
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     bounds = SVS_TEST_TISSUE_BOUNDS
