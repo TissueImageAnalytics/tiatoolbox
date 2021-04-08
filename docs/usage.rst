@@ -10,7 +10,7 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. currentmodule:: tiatoolbox.dataloader.wsireader
+.. currentmodule:: tiatoolbox.wsi.wsireader
 .. autoclass:: WSIReader
     :members: read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
 
@@ -26,20 +26,20 @@ Reading WSI Image Data
 Accessing Metadata
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.dataloader.wsimeta
+.. automodule:: tiatoolbox.wsi.wsimeta
     :members: WSIMeta
 
 ^^^^^^^^^^
 Functional
 ^^^^^^^^^^
 
-The dataloader module also includes some functional syntax for quickly
+The wsi module also includes some functional syntax for quickly
 obtaining information about a slide or generating tiles.
 
-.. automodule:: tiatoolbox.dataloader.slide_info
+.. automodule:: tiatoolbox.wsi.slide_info
     :members: slide_info
 
-.. automodule:: tiatoolbox.dataloader.save_tiles
+.. automodule:: tiatoolbox.wsi.save_tiles
     :members: save_tiles
 
 

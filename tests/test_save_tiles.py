@@ -1,5 +1,5 @@
-from tiatoolbox.dataloader import wsireader
-from tiatoolbox.dataloader.save_tiles import save_tiles
+from tiatoolbox.wsi import wsireader
+from tiatoolbox.wsi.save_tiles import save_tiles
 from tiatoolbox import utils
 from tiatoolbox import cli
 
@@ -12,7 +12,8 @@ def test_save_tiles(_sample_all_wsis, tmp_path):
     """Test for save_tiles as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_all_wsis)),
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -127,7 +128,8 @@ def test_command_line_save_tiles(_sample_all_wsis, tmp_path):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_all_wsis)),
+        file_types=file_types,
     )
     save_svs_tiles_result = runner.invoke(
         cli.main,

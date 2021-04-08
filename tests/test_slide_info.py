@@ -1,4 +1,4 @@
-from tiatoolbox.dataloader.slide_info import slide_info
+from tiatoolbox.wsi.slide_info import slide_info
 from tiatoolbox import utils
 from tiatoolbox import cli
 
@@ -10,7 +10,8 @@ def test_slide_info(_sample_all_wsis, tmp_path):
     """Test for slide_info as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=_sample_all_wsis, file_types=file_types,
+        input_path=_sample_all_wsis,
+        file_types=file_types,
     )
 
     for curr_file in files_all:
@@ -44,7 +45,8 @@ def test_command_line_slide_info(_sample_all_wsis):
 
     file_types = "*.svs"
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_all_wsis)), file_types=file_types,
+        input_path=str(pathlib.Path(_sample_all_wsis)),
+        file_types=file_types,
     )
     slide_info_result = runner.invoke(
         cli.main,

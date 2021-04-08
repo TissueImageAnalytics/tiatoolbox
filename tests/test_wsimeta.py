@@ -1,4 +1,4 @@
-from tiatoolbox.dataloader import wsimeta, wsireader
+from tiatoolbox.wsi import wsimeta, wsireader
 
 import pytest
 
@@ -23,10 +23,16 @@ def test_wsimeta_validate_fail():
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_downsamples=[1, 2],)
+    meta = wsimeta.WSIMeta(
+        slide_dimensions=(512, 512),
+        level_downsamples=[1, 2],
+    )
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
