@@ -10,15 +10,9 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-<<<<<<< HEAD
-.. currentmodule:: tiatoolbox.wsi.wsireader
-.. autoclass:: WSIReader
-    :members: read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
-=======
-.. automodule:: tiatoolbox.dataloader.wsireader
+.. automodule:: tiatoolbox.wsi.wsireader
     :members: WSIReader, get_wsireader
     :private-members:
->>>>>>> d307a1328e49af96321e7139f59aa24ef17f2956
 
 .. autoclass:: OpenSlideWSIReader
     :show-inheritance:

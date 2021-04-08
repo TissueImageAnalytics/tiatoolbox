@@ -20,7 +20,6 @@
 
 """Save image tiles from the whole slide image."""
 from tiatoolbox.wsi import wsireader
-from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pathlib
 
@@ -29,20 +28,19 @@ def save_tiles(
     input_path,
     output_dir="tiles",
     tile_objective_value=20,
-    tile_read_size_w=5000,
-    tile_read_size_h=5000,
+    tile_read_size=(5000, 5000),
     verbose=True,
 ):
     """Save image tiles for whole slide image.
     Default file format for tiles is jpg.
 
     Args:
-        input_path (str): Path to whole slide image
-        output_dir (str): Path to output directory to save the output
+        input_path (str or pathlib.Path): Path to whole slide image
+        output_dir (str or pathlib.Path): Path to output directory to save the output
         tile_objective_value (int): objective value at which tile is generated,
-                default=20
-        tile_read_size_w (int): tile width, default=5000
-        tile_read_size_h (int): tile height, default=5000
+         default=20
+        tile_read_size (tuple(int)): Tile (width, height),
+         default=(5000, 5000).
         verbose (bool): Print output, default=True
 
     Returns:
@@ -66,24 +64,10 @@ def save_tiles(
     if verbose:
         print(input_path.name, flush=True)
 
-    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.OpenSlideWSIReader(
-            input_path=input_path,
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
-        )
-        wsi_reader.save_tiles(verbose=verbose)
-
-    elif input_path.suffix in (".jp2",):
-        wsi_reader = wsireader.OmnyxJP2WSIReader(
-            input_path=input_path,
-            output_dir=output_dir,
-            tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
-        )
-        wsi_reader.save_tiles(verbose=verbose)
-    else:
-        raise FileNotSupported(input_path.suffix + " file format is not supported.")
+    wsi = wsireader.get_wsireader(input_img=input_path)
+    wsi.save_tiles(
+        output_dir=output_dir,
+        tile_objective_value=tile_objective_value,
+        tile_read_size=tile_read_size,
+        verbose=verbose,
+    )

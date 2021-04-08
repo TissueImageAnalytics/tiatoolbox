@@ -20,17 +20,15 @@
 
 """Get Slide Meta Data information."""
 from tiatoolbox.wsi import wsireader
-from tiatoolbox.utils.exceptions import FileNotSupported
 
 import pathlib
 
 
-def slide_info(input_path, output_dir=None, verbose=True):
+def slide_info(input_path, verbose=True):
     """Return WSI meta data.
 
     Args:
-        input_path (str, pathlib.Path): Path to whole slide image
-        output_dir (str, pathlib.Path): Path to output directory to save the output
+        input_path (str or pathlib.Path): Path to whole slide image
         verbose (bool): Print output, default=True
 
     Returns:
@@ -45,7 +43,7 @@ def slide_info(input_path, output_dir=None, verbose=True):
         >>> for curr_file in files_all:
         ...     slide_param = slide_info(input_path=curr_file)
         ...     utils.misc.save_yaml(slide_param.as_dict(),
-        ...           slide_param.file_name + ".yaml")
+        ...           str(slide_param.file_name) + ".yaml")
         ...     print(slide_param.as_dict())
 
     """
@@ -53,22 +51,9 @@ def slide_info(input_path, output_dir=None, verbose=True):
     if verbose:
         print(input_path.name, flush=True)
 
-    if input_path.suffix in (".svs", ".ndpi", ".mrxs"):
-        wsi_reader = wsireader.OpenSlideWSIReader(
-            input_path=input_path, output_dir=output_dir
-        )
-        info = wsi_reader.info
-        if verbose:
-            print(info.as_dict())
-    elif input_path.suffix in (".jp2",):
-        wsi_reader = wsireader.OmnyxJP2WSIReader(
-            input_path=input_path,
-            output_dir=output_dir,
-        )
-        info = wsi_reader.info
-        if verbose:
-            print(info.as_dict())
-    else:
-        raise FileNotSupported(input_path.suffix + " file format is not supported.")
+    wsi = wsireader.get_wsireader(input_img=input_path)
+    info = wsi.info
+    if verbose:
+        print(info.as_dict())
 
     return info
