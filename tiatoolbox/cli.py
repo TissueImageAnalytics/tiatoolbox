@@ -23,7 +23,7 @@ from tiatoolbox import __version__
 from tiatoolbox import dataloader
 from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 import sys
 import click
@@ -67,7 +67,10 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
     """Display or save WSI metadata."""
@@ -78,16 +81,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
             input_path=wsi_input, file_types=file_types
         )
         if output_dir is None and mode == "save":
-            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("meta")
+            input_dir = pathlib.Path(wsi_input).parent
+            output_dir = input_dir / "meta"
 
     elif os.path.isfile(wsi_input):
         files_all = [
             wsi_input,
         ]
         if output_dir is None and mode == "save":
-            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
+            input_dir = pathlib.Path(wsi_input).parent
+            output_dir = input_dir.parent / "meta"
     else:
         raise FileNotFoundError
 
@@ -108,7 +111,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(), out_path,
+                slide_param.as_dict(),
+                out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -149,29 +153,23 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
     if not region:
         region = [0, 0, 2000, 2000]
 
-    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
-        full_path=wsi_input
-    )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
+        input_dir = pathlib.Path(wsi_input).parent
+        output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = None
-    if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
+    wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
-    elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+    im_region = wsi.read_bounds(
+        region,
+        resolution=resolution,
+        units=units,
+    )
+    if mode == "show":
+        im_region = Image.fromarray(im_region)
+        im_region.show()
 
-    if wsi is not None:
-        im_region = wsi.read_bounds(region, resolution=resolution, units=units,)
-        if mode == "show":
-            im_region = Image.fromarray(im_region)
-            im_region.show()
-
-        if mode == "save":
-            utils.misc.imwrite(output_path, im_region)
-    else:
-        raise FileNotSupported
+    if mode == "save":
+        utils.misc.imwrite(output_path, im_region)
 
 
 @main.command()
@@ -189,28 +187,20 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 )
 def slide_thumbnail(wsi_input, output_path, mode):
     """Read whole slide image thumbnail."""
-    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
-        full_path=wsi_input
-    )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi = None
-    if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(input_path=wsi_input)
-    elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_path=wsi_input)
+        input_dir = pathlib.Path(wsi_input).parent
+        output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    if wsi is not None:
-        slide_thumb = wsi.get_thumbnail()
+    wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
 
-        if mode == "show":
-            im_region = Image.fromarray(slide_thumb)
-            im_region.show()
+    slide_thumb = wsi.slide_thumbnail()
 
-        if mode == "save":
-            utils.misc.imwrite(output_path, slide_thumb)
-    else:
-        raise FileNotSupported
+    if mode == "show":
+        im_region = Image.fromarray(slide_thumb)
+        im_region.show()
+
+    if mode == "save":
+        utils.misc.imwrite(output_path, slide_thumb)
 
 
 @main.command()
@@ -232,21 +222,24 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="objective value at which tile is generated- default=20",
 )
 @click.option(
-    "--tile_read_size_w", type=int, default=5000, help="tile width, default=5000",
+    "--tile_read_size",
+    type=int,
+    nargs=2,
+    default=[5000, 5000],
+    help="tile width, height default=5000 5000",
 )
 @click.option(
-    "--tile_read_size_h", type=int, default=5000, help="tile height, " "default=5000",
-)
-@click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
     output_dir,
     file_types,
     tile_objective_value,
-    tile_read_size_w,
-    tile_read_size_h,
+    tile_read_size,
     verbose=True,
 ):
     """Display or save WSI metadata."""
@@ -269,8 +262,7 @@ def save_tiles(
             input_path=curr_file,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
-            tile_read_size_w=tile_read_size_w,
-            tile_read_size_h=tile_read_size_h,
+            tile_read_size=tile_read_size,
             verbose=verbose,
         )
 
@@ -303,7 +295,7 @@ def save_tiles(
     "--file_types",
     help="file types to capture from directory"
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
-    default="*.png, '*.jpg', '*.tif', '*.tiff'",
+    default="*.png, *.jpg, *.tif, *.tiff",
 )
 def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
     """Stain normalise an input image/directory of input images."""
@@ -318,8 +310,6 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
         ]
     else:
         raise FileNotFoundError
-
-    print(files_all)
 
     if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise MethodNotSupported

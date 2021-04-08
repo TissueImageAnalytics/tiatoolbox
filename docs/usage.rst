@@ -10,16 +10,23 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
+<<<<<<< HEAD
 .. currentmodule:: tiatoolbox.wsi.wsireader
 .. autoclass:: WSIReader
     :members: read_rect, read_bounds, read_region, slide_thumbnail, save_tiles
+=======
+.. automodule:: tiatoolbox.dataloader.wsireader
+    :members: WSIReader, get_wsireader
+    :private-members:
+>>>>>>> d307a1328e49af96321e7139f59aa24ef17f2956
 
 .. autoclass:: OpenSlideWSIReader
-    :members: slide_info
     :show-inheritance:
 
 .. autoclass:: OmnyxJP2WSIReader
-    :members: slide_info
+    :show-inheritance:
+
+.. autoclass:: VirtualWSIReader
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -48,8 +55,21 @@ Stain Normalisation
 ^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, CustomNormaliser, RuifrokNormaliser, MacenkoNormaliser, VahadaneNormaliser, ReinhardNormaliser, get_stain_normaliser
-    :special-members: __init__
+    :members: StainNormaliser, get_normaliser
+
+.. autoclass:: CustomNormaliser
+    :show-inheritance:
+
+.. autoclass:: RuifrokNormaliser
+    :show-inheritance:
+
+.. autoclass:: MacenkoNormaliser
+    :show-inheritance:
+
+.. autoclass:: VahadaneNormaliser
+    :show-inheritance:
+
+.. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^
@@ -59,25 +79,60 @@ Stain Extraction
 .. automodule:: tiatoolbox.tools.stainextract
     :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
 
+^^^^^^^^^^^^^^^^^^
+Patch Extraction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.patchextraction
+    :members: PatchExtractor, get_patch_extractor, convert_input_image_for_patch_extraction
+
+.. autoclass:: PointsPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: FixedWindowPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: VariableWindowPatchExtractor
+    :show-inheritance:
+
 ^^^^^^^^^
 Utilities
 ^^^^^^^^^
 
 .. automodule:: tiatoolbox.utils
 
+-----
+Image
+-----
+
+.. automodule:: tiatoolbox.utils.image
+    :members:
+
 -------------
 Miscellaneous
 -------------
 
 .. automodule:: tiatoolbox.utils.misc
-    :members: save_yaml, split_path_name_ext, grab_files_from_dir, imwrite, load_stain_matrix, imread, get_luminosity_tissue_mask
+    :members:
+
+    .. autofunction:: mpp2objective_power(mpp)
+    .. autofunction:: objective_power2mpp(objective_power)
+    .. autofunction:: mpp2common_objective_power(mpp, common_powers)
+    .. autofunction:: conv_out_size(in_size, kernel_size=1, padding=0, stride=1)
 
 ----------
 Transforms
 ----------
 
 .. automodule:: tiatoolbox.utils.transforms
-    :members: background_composite, imresize
+    :members:
+
+    .. autofunction:: background_composite
+    .. autofunction:: imresize
+    .. autofunction:: convert_RGB2OD
+    .. autofunction:: convert_OD2RGB
+    .. autofunction:: bounds2locsize
+    .. autofunction:: locsize2bounds
 
 ----------
 Exceptions

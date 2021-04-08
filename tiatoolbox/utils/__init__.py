@@ -19,4 +19,4 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Utils package for toolbox utilities"""
-from tiatoolbox.utils import misc, transforms, exceptions
+from tiatoolbox.utils import misc, transforms, exceptions, image

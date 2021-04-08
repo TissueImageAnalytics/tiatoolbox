@@ -35,8 +35,29 @@ import numpy as np
 class WSIMeta:
     """Whole slide image metadata class.
 
+    Args:
+            slide_dimensions (int, int): Tuple containing the width and
+                height of the WSI. These are for the baseline (full resolution)
+                image if the WSI is a pyramid or multi-resoltion.
+            level_dimensions (list): A list of dimensions for each level of the
+                pyramid or for each resolution in the WSI.
+            objective_power (float, optional): The power of the objective lens
+                used to create the image.
+            level_count: (int, optional): The number of levels or resolutions
+                in the WSI. If not given this is assigned
+                len(level_dimensions). Defaults to None.
+            level_downsamples (:obj:`list` of :obj:`float`): List of scale
+                values which describe how many times smaller the current level
+                is compared with the baseline.
+            vendor (str, optional): Scanner vendor/manufacturer description.
+            mpp (float, float, optional): Microns per pixel.
+            file_path (Path, optional): Path to the corresponding WSI file.
+            raw (dict, optional): Dictionary of unprocessed metadata extracted
+                from the WSI format. For JPEG-2000 images this contains an xml
+                object under the key "xml".
+
     Attributes:
-        slide_dimensions (:obj:`tuple` of :obj:`int`): Tuple containing the width and
+        slide_dimensions (tuple(int)): Tuple containing the width and
             height of the WSI. These are for the baseline (full resolution)
             image if the WSI is a pyramid or multi-resoltion. Required.
         level_dimensions (list): A list of dimensions for each level of the
@@ -59,6 +80,7 @@ class WSIMeta:
         raw (dict): Dictionary of unprocessed metadata extracted
             from the WSI format. For JP2 images this contains an xml object
             under the key "xml". Defaults to empty dictionary.
+
     """
 
     def __init__(
@@ -73,29 +95,6 @@ class WSIMeta:
         file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
     ):
-        """Initialise the metadata object.
-
-        Args:
-            slide_dimensions (int, int): Tuple containing the width and
-                height of the WSI. These are for the baseline (full resolution)
-                image if the WSI is a pyramid or multi-resoltion.
-            level_dimensions (list): A list of dimensions for each level of the
-                pyramid or for each resolution in the WSI.
-            objective_power (float, optional): The power of the objective lens
-                used to create the image.
-            level_count: (int, optional): The number of levels or resolutions
-                in the WSI. If not given this is assigned
-                len(level_dimensions). Defaults to None.
-            level_downsamples (:obj:`list` of :obj:`float`): List of scale
-                values which describe how many times smaller the current level
-                is compared with the baseline.
-            vendor (str, optional): Scanner vendor/manufacturer description.
-            mpp (float, float, optional): Microns per pixel.
-            file_path (Path, optional): Path to the corresponding WSI file.
-            raw (dict, optional): Dictionary of unprocessed metadata extracted
-                from the WSI format. For JPEG-2000 images this contains an xml
-                object under the key "xml".
-        """
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple([int(x) for x in slide_dimensions])
         self.level_dimensions = (
@@ -111,9 +110,9 @@ class WSIMeta:
         self.level_count = (
             int(level_count) if level_count is not None else len(self.level_dimensions)
         )
-        self.vendor = vendor
+        self.vendor = str(vendor)
         self.mpp = np.array([float(x) for x in mpp]) if mpp is not None else None
-        self.file_path = file_path
+        self.file_path = Path(file_path) if file_path is not None else None
         self.raw = raw if raw is not None else None
 
         self.validate()
@@ -125,6 +124,7 @@ class WSIMeta:
 
         Returns:
             bool: True is validation passed, False otherwise.
+
         """
         passed = True
 
@@ -165,6 +165,10 @@ class WSIMeta:
             dict: whole slide image meta data as dictionary
 
         """
+        if self.mpp is None:
+            mpp = (self.mpp, self.mpp)
+        else:
+            mpp = tuple(self.mpp)
         param = {
             "objective_power": self.objective_power,
             "slide_dimensions": self.slide_dimensions,
@@ -172,7 +176,7 @@ class WSIMeta:
             "level_dimensions": self.level_dimensions,
             "level_downsamples": self.level_downsamples,
             "vendor": self.vendor,
-            "mpp": tuple(self.mpp),
+            "mpp": mpp,
             "file_path": self.file_path,
         }
         return param
