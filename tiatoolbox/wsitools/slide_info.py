@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Get Slide Meta Data information."""
-from tiatoolbox.wsi import wsireader
+from tiatoolbox.wsitools import wsireader
 
 import pathlib
 
@@ -35,7 +35,7 @@ def slide_info(input_path, verbose=True):
         WSIMeta: containing meta information
 
     Examples:
-        >>> from tiatoolbox.wsi.slide_info import slide_info
+        >>> from tiatoolbox.wsitools.slide_info import slide_info
         >>> from tiatoolbox import utils
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,

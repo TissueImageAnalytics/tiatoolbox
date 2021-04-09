@@ -1,4 +1,4 @@
-from tiatoolbox.wsi.save_tiles import save_tiles
+from tiatoolbox.wsitools.save_tiles import save_tiles
 from tiatoolbox import utils
 from tiatoolbox import cli
 

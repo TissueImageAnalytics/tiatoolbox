@@ -20,7 +20,7 @@
 
 """Top-level package for TIA Toolbox."""
 from tiatoolbox import tiatoolbox
-from tiatoolbox import wsi
+from tiatoolbox import wsitools
 from tiatoolbox import utils
 from tiatoolbox import tools
 

@@ -21,7 +21,7 @@
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
 
-from tiatoolbox.wsi.wsireader import get_wsireader
+from tiatoolbox.wsitools.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import read_point_annotations
 

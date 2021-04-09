@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Save image tiles from the whole slide image."""
-from tiatoolbox.wsi import wsireader
+from tiatoolbox.wsitools import wsireader
 
 import pathlib
 
@@ -46,7 +46,7 @@ def save_tiles(
     Returns:
 
     Examples:
-        >>> from tiatoolbox.wsi.save_tiles import save_tiles
+        >>> from tiatoolbox.wsitools.save_tiles import save_tiles
         >>> from tiatoolbox.utils import misc
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
         >>> files_all = misc.grab_files_from_dir(input_path,

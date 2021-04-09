@@ -1,4 +1,4 @@
-from tiatoolbox.wsi import wsireader
+from tiatoolbox.wsitools import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli
 from tiatoolbox.utils.exceptions import FileNotSupported

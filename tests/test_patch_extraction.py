@@ -1,7 +1,7 @@
 from tiatoolbox.tools import patchextraction
 from tiatoolbox.utils.exceptions import MethodNotSupported, FileNotSupported
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.wsi.wsireader import (
+from tiatoolbox.wsitools.wsireader import (
     OpenSlideWSIReader,
     OmnyxJP2WSIReader,
     VirtualWSIReader,
