@@ -28,7 +28,7 @@ def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
 
     Args:
-        image (ndarray, PIL.Image): input image
+        image (ndarray or PIL.Image): input image
         fill (int): fill value for the background, default=255
         alpha (bool): True if alpha channel is required
 
@@ -68,19 +68,20 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     """Resize input image.
 
     Args:
-        img (ndarray): input image
-        scale_factor (float): scaling factor to resize the input image
-        output_size (tuple of int): output image size, (width, height)
-        interpolation (int): interpolation method used to interpolate the image using
-         `opencv interpolation flags <https://docs.opencv.org/3.4/da/d54/group__imgproc
-         __transform.html>`__ default='optimise', uses cv2.INTER_AREA for scale_factor
+        img (:class:`numpy.ndarray`): input image
+        scale_factor (tuple(float)): scaling factor to resize the input image
+        output_size (tuple(int)): output image size, (width, height)
+        interpolation (str or int): interpolation method used to interpolate the image
+         using `opencv interpolation flags
+         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`
+         __ default='optimise', uses cv2.INTER_AREA for scale_factor
          <1.0 otherwise uses cv2.INTER_CUBIC
 
     Returns:
-        ndarray: resized image
+        :class:`numpy.ndarray`: resized image
 
     Examples:
-        >>> from tiatoolbox.dataloader import wsireader
+        >>> from tiatoolbox.wsicore import wsireader
         >>> from tiatoolbox.utils import transforms
         >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
         >>> slide_thumbnail = wsi.slide_thumbnail()
@@ -115,10 +116,10 @@ def convert_RGB2OD(img):
     RGB = 255 * exp(-1*OD_RGB).
 
     Args:
-        img (ndarray uint8): Image RGB
+        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Image RGB
 
     Returns:
-        ndarray: Optical denisty RGB image.
+        :class:`numpy.ndarray`: Optical denisty RGB image.
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -136,10 +137,10 @@ def convert_OD2RGB(OD):
     RGB = 255 * exp(-1*OD_RGB)
 
     Args:
-        OD (ndrray): Optical denisty RGB image
+        OD (:class:`numpy.ndarray`): Optical denisty RGB image
 
     Returns:
-        ndarray uint8: Image RGB
+        numpy.ndarray: Image RGB
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -151,19 +152,44 @@ def convert_OD2RGB(OD):
     return (255 * np.exp(-1 * OD)).astype(np.uint8)
 
 
-def bounds2size(bounds, origin="upper"):
+def bounds2locsize(bounds, origin="upper"):
     """Calculate the size of a tuple of bounds.
 
-    Bounds are exptected to be in the (left, top, right, bottom) /
+    Bounds are expected to be in the (left, top, right, bottom) /
     (start_x, start_y, end_x, end_y) format.
 
     Args:
-        bounds (tuple of int): A 4-tuple or length 4 array of bounds
+        bounds (tuple(int)): A 4-tuple or length 4 array of bounds
             values in (left, top, right, bottom) format.
         origin (str): Upper (Top-left) or lower (bottom-left) origin.
             Defaults to upper.
+
     """
     left, top, right, bottom = bounds
+    origin = origin.lower()
     if origin == "upper":
-        return np.array([right - left, bottom - top])
-    return np.array([right - left, top - bottom])
+        return np.array([left, top]), np.array([right - left, bottom - top])
+    if origin == "lower":
+        return np.array([left, bottom]), np.array([right - left, top - bottom])
+    raise ValueError("Invalid origin. Only 'upper' or 'lower' are valid.")
+
+
+def locsize2bounds(location, size):
+    """Convert a location and size to bounds.
+
+    Args:
+        location (tuple(int)): A 2-tuple or length 2 array of x,y
+         coordinates.
+        size (tuple(int)): A 2-tuple or length 2 array of width and
+         height.
+
+    Returns:
+        tuple: A tuple of bounds in (left, top, right, bottom) /
+        (start_x, start_y, end_x, end_y) format.
+    """
+    return (
+        location[0],
+        location[1],
+        location[0] + size[0],
+        location[1] + size[1],
+    )

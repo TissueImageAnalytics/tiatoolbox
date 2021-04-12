@@ -12,7 +12,7 @@ with open("HISTORY.md") as history_file:
 
 requirements = [
     "Click>=7.0",
-    "numpy<=1.19.3",
+    "numpy",
     "pillow",
     "matplotlib",
     "opencv-python>=4.0",
@@ -62,6 +62,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/tialab/tiatoolbox",
-    version="0.5.1",
+    version="0.5.2",
     zip_safe=False,
 )
