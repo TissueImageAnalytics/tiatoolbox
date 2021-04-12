@@ -20,19 +20,19 @@ def test_stain_extract():
 def test_vectors_in_right_direction():
     """Test if eigenvectors are corrected in the right direction."""
     e_vect = np.ones([2, 2])
-    e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
+    e_vect = stainextract.vectors_in_correct_direction(e_vectors=e_vect)
     assert np.all(e_vect == 1)
 
     e_vect = np.ones([2, 2])
     e_vect[0, 0] = -1
-    e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
+    e_vect = stainextract.vectors_in_correct_direction(e_vectors=e_vect)
     assert np.all(e_vect[:, 1] == 1)
     assert e_vect[0, 0] == 1
     assert e_vect[1, 0] == -1
 
     e_vect = np.ones([2, 2])
     e_vect[0, 1] = -1
-    e_vect = stainextract.vectors_in_right_direction(e_vectors=e_vect)
+    e_vect = stainextract.vectors_in_correct_direction(e_vectors=e_vect)
     assert np.all(e_vect[:, 0] == 1)
     assert e_vect[0, 1] == 1
     assert e_vect[1, 1] == -1

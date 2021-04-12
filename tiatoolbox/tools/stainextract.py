@@ -29,7 +29,7 @@ from tiatoolbox.utils.transforms import convert_RGB2OD
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
-def vectors_in_right_direction(e_vectors):
+def vectors_in_correct_direction(e_vectors):
     """Points the eigen vectors in the right direction.
 
     Args:
@@ -194,7 +194,7 @@ class MacenkoExtractor:
         e_vects = e_vects[:, [2, 1]]
 
         # make sure vectors are pointing the right way
-        e_vects = vectors_in_right_direction(e_vectors=e_vects)
+        e_vects = vectors_in_correct_direction(e_vectors=e_vects)
 
         # project on this basis.
         proj = np.dot(img_od, e_vects)
