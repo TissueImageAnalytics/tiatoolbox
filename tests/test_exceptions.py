@@ -1,6 +1,6 @@
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
-from tiatoolbox.dataloader.save_tiles import save_tiles
-from tiatoolbox.dataloader.slide_info import slide_info
+from tiatoolbox.wsicore.save_tiles import save_tiles
+from tiatoolbox.wsicore.slide_info import slide_info
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox import utils
 

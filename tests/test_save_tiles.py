@@ -1,4 +1,4 @@
-from tiatoolbox.dataloader.save_tiles import save_tiles
+from tiatoolbox.wsicore.save_tiles import save_tiles
 from tiatoolbox import utils
 from tiatoolbox import cli
 
