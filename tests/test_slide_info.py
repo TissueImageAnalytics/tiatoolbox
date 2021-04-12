@@ -1,4 +1,4 @@
-from tiatoolbox.wsitools.slide_info import slide_info
+from tiatoolbox.wsicore.slide_info import slide_info
 from tiatoolbox import utils
 from tiatoolbox import cli
 

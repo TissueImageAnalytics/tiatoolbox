@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from tiatoolbox.wsitools import wsimeta, wsireader
+from tiatoolbox.wsicore import wsimeta, wsireader
 
 
 # noinspection PyTypeChecker
