@@ -13,3 +13,4 @@ exclude_lines =
 ignore_errors = True
 omit =
     tests/*
+    tiatoolbox/__main__.py

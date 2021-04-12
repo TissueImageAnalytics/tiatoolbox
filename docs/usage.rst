@@ -71,7 +71,7 @@ Stain Extraction
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainextract
-    :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
+    :members:
 
 ^^^^^^^^^^^^^^^^^^
 Patch Extraction
