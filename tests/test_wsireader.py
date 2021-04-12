@@ -817,6 +817,34 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     )
 
 
+def test_incompatible_objective_value(_sample_svs, tmp_path):
+    """Test for incompatible objective value."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    with pytest.raises(ValueError):
+        wsi.save_tiles(
+            output_dir=str(
+                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles")
+            ),
+            tile_objective_value=3,
+            tile_read_size=(5000, 5000),
+            verbose=True,
+        )
+
+
+def test_incompatible_level(_sample_svs, tmp_path):
+    """Test for incompatible objective value."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    with pytest.warns(UserWarning):
+        wsi.save_tiles(
+            output_dir=str(
+                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")
+            ),
+            tile_objective_value=1,
+            tile_read_size=(500, 500),
+            verbose=True,
+        )
+
+
 def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
@@ -926,6 +954,8 @@ def test_VirtualWSIReader_read_rect():
     """Test VirtualWSIReader read bounds"""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    info = wsi.info
+
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
     assert img.shape == (100, 50, 3)
 
@@ -946,6 +976,12 @@ def test_VirtualWSIReader_read_rect():
 
     with pytest.raises(ValueError):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
+
+    wsi = wsireader.VirtualWSIReader(
+        file_parent_dir.joinpath("data/source_image.png"), info=info
+    )
+
+    assert info.as_dict() == wsi.info.as_dict()
 
 
 def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
