@@ -387,5 +387,5 @@ def assert_dtype_int(input_var, message="Input must be integer."):
         Generates an AssertionError message if input is not an int.
 
     """
-    if not np.issubdtype(input_var.dtype, np.integer):
+    if not np.issubdtype(np.array(input_var).dtype, np.integer):
         raise AssertionError(message)
