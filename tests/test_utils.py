@@ -92,18 +92,6 @@ def test_assert_dtype_int():
         )
 
 
-def test_output_size_vs_requested_size():
-    """Test AssertionError for output size vs requested size."""
-    result_size = np.ones([2, 2]) * 10
-    padded_output_size = np.ones([2, 2]) * 10
-
-    utils.image.output_size_vs_requested_size(result_size, padded_output_size)
-
-    padded_output_size = np.ones([2, 2]) * 11.1
-    with pytest.raises(AssertionError):
-        utils.image.output_size_vs_requested_size(result_size, padded_output_size)
-
-
 def test_safe_padded_read_non_int_bounds():
     """Test safe_padded_read with non-integer bounds."""
     data = np.zeros((16, 16))
