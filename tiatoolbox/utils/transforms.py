@@ -81,7 +81,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         :class:`numpy.ndarray`: resized image
 
     Examples:
-        >>> from tiatoolbox.dataloader import wsireader
+        >>> from tiatoolbox.wsicore import wsireader
         >>> from tiatoolbox.utils import transforms
         >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
         >>> slide_thumbnail = wsi.slide_thumbnail()

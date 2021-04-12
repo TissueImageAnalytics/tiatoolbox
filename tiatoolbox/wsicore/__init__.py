@@ -20,4 +20,4 @@
 
 """Package to read whole slide images"""
 
-from tiatoolbox.dataloader import slide_info, wsireader, wsimeta, save_tiles
+from tiatoolbox.wsicore import slide_info, wsireader, wsimeta, save_tiles
