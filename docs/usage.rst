@@ -10,7 +10,7 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.wsitools.wsireader
+.. automodule:: tiatoolbox.wsicore.wsireader
     :members: WSIReader, get_wsireader
     :private-members:
 
@@ -27,20 +27,20 @@ Reading WSI Image Data
 Accessing Metadata
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.wsitools.wsimeta
+.. automodule:: tiatoolbox.wsicore.wsimeta
     :members: WSIMeta
 
 ^^^^^^^^^^
 Functional
 ^^^^^^^^^^
 
-The wsitools module also includes some functional syntax for quickly
+The wsicore module also includes some functional syntax for quickly
 obtaining information about a slide or generating tiles.
 
-.. automodule:: tiatoolbox.wsitools.slide_info
+.. automodule:: tiatoolbox.wsicore.slide_info
     :members: slide_info
 
-.. automodule:: tiatoolbox.wsitools.save_tiles
+.. automodule:: tiatoolbox.wsicore.save_tiles
     :members: save_tiles
 
 
