@@ -73,6 +73,10 @@ def test_wsimeta_openslidewsireader_svs(_sample_svs, tmp_path):
     meta = wsi_obj.info
     assert meta.validate()
 
+    meta.mpp = None
+    m = meta.as_dict()
+    assert isinstance(m["mpp"], tuple)
+
 
 def test_wsimeta_setter(_sample_svs):
     """Test setter for metadata."""

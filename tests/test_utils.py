@@ -7,6 +7,19 @@ from pytest import approx
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from PIL import Image
+import cv2
+
+
+def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
+    """sub_pixel_read test helper function."""
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    output = utils.image.sub_pixel_read(
+        pillow_test_image, bounds, (ow, oh), stride=[1, 1]
+    )
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
 def test_imresize():
@@ -18,6 +31,13 @@ def test_imresize():
     resized_img = utils.transforms.imresize(resized_img, scale_factor=2.0)
     assert resized_img.shape == (2000, 1000, 3)
 
+    resized_img = utils.transforms.imresize(
+        img,
+        scale_factor=0.5,
+        interpolation=cv2.INTER_CUBIC,
+    )
+    assert resized_img.shape == (1000, 500, 3)
+
 
 def test_background_composite():
     """Test for background composite."""
@@ -27,6 +47,10 @@ def test_background_composite():
     assert np.all(im[1000:, :, :] == 255)
     assert np.all(im[:1000, :, :] == 0)
 
+    im = utils.transforms.background_composite(new_im, alpha=True)
+    assert np.all(im[:, :, 3] == 255)
+
+    new_im = Image.fromarray(new_im)
     im = utils.transforms.background_composite(new_im, alpha=True)
     assert np.all(im[:, :, 3] == 255)
 
@@ -60,6 +84,14 @@ def test_mpp2common_objective_power(_sample_svs):
         )
 
 
+def test_assert_dtype_int():
+    """Test AssertionError for dtype test."""
+    with pytest.raises(AssertionError):
+        utils.misc.assert_dtype_int(
+            input_var=np.array([1.0, 2]), message="Bounds must be integers."
+        )
+
+
 def test_safe_padded_read_non_int_bounds():
     """Test safe_padded_read with non-integer bounds."""
     data = np.zeros((16, 16))
@@ -82,11 +114,13 @@ def test_safe_padded_read_padding_formats():
     """Test safe_padded_read with different padding argument formats."""
     data = np.zeros((16, 16))
     bounds = (0, 0, 8, 8)
+    stride = (1, 1)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.safe_padded_read(
             data,
             bounds,
             padding=padding,
+            stride=stride,
         )
         assert region.shape == (8 + 2, 8 + 2)
 
@@ -139,6 +173,7 @@ def test_sub_pixel_read():
     image_path = Path(__file__).parent / "data" / "source_image.png"
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
+    pillow_test_image = Image.fromarray(test_image)
 
     x = 6
     y = -4
@@ -147,8 +182,8 @@ def test_sub_pixel_read():
     bounds = (x, y, x + w, y + h)
     ow = 88
     oh = 98
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
-    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
     x = 13
     y = 15
@@ -157,8 +192,8 @@ def test_sub_pixel_read():
     bounds = (x, y, x + w, y + h)
     ow = 93
     oh = 34
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
-    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
 def test_sub_pixel_read_invalid_interpolation():
@@ -180,6 +215,10 @@ def test_sub_pixel_read_invalid_bounds():
     with pytest.warns(UserWarning), pytest.raises(AssertionError):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
+    bounds = (1.5, 1, 1.5, 0)
+    with pytest.raises(AssertionError):
+        utils.image.sub_pixel_read(data, bounds, out_size)
+
 
 def test_sub_pixel_read_pad_at_baseline():
     """Test sub_pixel_read with baseline padding."""
@@ -191,6 +230,16 @@ def test_sub_pixel_read_pad_at_baseline():
             data, bounds, out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
+
+    region = utils.image.sub_pixel_read(
+        data,
+        bounds,
+        out_size,
+        pad_for_interpolation=False,
+        pad_at_baseline=True,
+        read_func=utils.image.safe_padded_read,
+    )
+    assert region.shape == (16, 16)
 
 
 def test_sub_pixel_read_padding_formats():
@@ -284,7 +333,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """"Test contrast enhancement funcitionality."""
+    """"Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [

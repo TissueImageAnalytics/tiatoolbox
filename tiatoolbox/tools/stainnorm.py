@@ -362,9 +362,11 @@ def get_normaliser(method_name, stain_matrix=None):
         >>> norm_img = norm.transform(source_img)
 
     """
-    if method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]:
-        if stain_matrix is not None:
-            raise Exception("stain_matrix is only defined when using custom")
+    if (
+        method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]
+        and stain_matrix is not None
+    ):
+        raise ValueError("stain_matrix is only defined when using custom")
 
     if method_name.lower() == "reinhard":
         norm = ReinhardNormaliser()
