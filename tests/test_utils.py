@@ -410,6 +410,10 @@ def test_read_point_annotations(tmp_path):
     out_table = utils.misc.read_point_annotations(labels)
     assert out_table.shape[1] == 3
 
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs_header.csv")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert out_table.shape[1] == 3
+
     # Test npy read
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
     out_table = utils.misc.read_point_annotations(labels)
