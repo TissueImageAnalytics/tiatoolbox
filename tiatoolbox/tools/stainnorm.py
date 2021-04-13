@@ -130,7 +130,7 @@ class CustomNormaliser(StainNormaliser):
          either 2x3 or 3x3.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import CustomNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import CustomNormaliser
         >>> norm = CustomNormaliser(stain_matrix)
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -156,7 +156,7 @@ class RuifrokNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser
         >>> norm = RuifrokNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -181,7 +181,7 @@ class MacenkoNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser
         >>> norm = MacenkoNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -206,7 +206,7 @@ class VahadaneNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser
         >>> norm = VahadaneNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -234,7 +234,7 @@ class ReinhardNormaliser:
         target_stds (float) : standard deviation of each LAB channel.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import ReinhardNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import ReinhardNormaliser
         >>> norm = ReinhardNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(src_img)

@@ -55,9 +55,7 @@ def save_tiles(
         ...     save_tiles(input_path=curr_file,
         ...         output_dir="tiles",
         ...         tile_objective_value=10,
-        ...         tile_read_size_w=5000,
-        ...         tile_read_size_h=5000
-        ...         )
+        ...         tile_read_size = (5000,5000))
 
     """
     input_path = pathlib.Path(input_path)

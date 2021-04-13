@@ -646,7 +646,7 @@ class WSIReader:
         Examples:
             >>> from tiatoolbox.wsicore import wsireader
             >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
-            >>> slide_param = wsi.info()
+            >>> slide_param = wsi.info
 
         """
         output_dir = pathlib.Path(output_dir, self.input_path.name)
@@ -817,7 +817,7 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """Find parameters for optimal read."""
         (read_level, _, read_size, post_read_scale, _) = self._find_read_rect_params(
             location=location,
             size=size,
@@ -840,7 +840,7 @@ class OpenSlideWSIReader(WSIReader):
         return im_region
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """Find parameters for optimal read."""
         (
             read_level,
             level_bounds,
@@ -958,7 +958,7 @@ class OmnyxJP2WSIReader(WSIReader):
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(self, location, size, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """Find parameters for optimal read."""
         (
             read_level,
             _,
@@ -994,7 +994,7 @@ class OmnyxJP2WSIReader(WSIReader):
         return im_region
 
     def read_bounds(self, bounds, resolution=0, units="level"):
-        # Find parameters for optimal read
+        """Find parameters for optimal read."""
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
             resolution=resolution,
@@ -1004,17 +1004,7 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
 
         stride = 2 ** read_level
-        # im_region = glymur_wsi[start_y:end_y:stride, start_x:end_x:stride]
-        # Equivalent but deprecated read function
-        # area = (start_y, start_x, end_y, end_x)
-        # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        # bounds = (
-        #     0,
-        #     0,
-        #     int((end_x - start_x) // stride),
-        #     int((end_y - start_y) // stride),
-        # )
         _, bounds_size = utils.transforms.bounds2locsize(bounds)
         im_region = utils.image.sub_pixel_read(
             image=glymur_wsi,
@@ -1152,7 +1142,7 @@ class VirtualWSIReader(WSIReader):
         return param
 
     def read_rect(self, location, size, resolution=1.0, units="baseline"):
-        # Find parameters for optimal read
+        """Find parameters for optimal read."""
         (
             _,
             level_location,
@@ -1181,7 +1171,7 @@ class VirtualWSIReader(WSIReader):
         return im_region
 
     def read_bounds(self, bounds, resolution=1.0, units="baseline"):
-        # Find parameters for optimal read
+        """Find parameters for optimal read."""
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
             resolution=resolution,
