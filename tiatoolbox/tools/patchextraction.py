@@ -25,9 +25,6 @@ from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import read_point_annotations
 
-# import math
-# import pathlib
-
 
 class PatchExtractor(ABC):
     """
@@ -94,10 +91,12 @@ class FixedWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
 
     Attributes:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+        current_location(tuple(int)): current starting point location in
+         (x, y) direction.
 
     """
 
@@ -107,7 +106,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
-        stride=1,
+        stride=(1, 1),
     ):
         super().__init__(
             input_img=input_img,
@@ -116,9 +115,16 @@ class FixedWindowPatchExtractor(PatchExtractor):
             units=units,
         )
         self.stride = stride
+        self.current_location = (0, 0)
 
     def __next__(self):
-        raise NotImplementedError
+        current_location = self.current_location
+
+        self.current_location = tuple(
+            map(lambda x, y: x + y, self.current_location, self.stride)
+        )
+
+        return self[current_location]
 
     def merge_patches(self, patches):
         raise NotImplementedError
@@ -128,12 +134,14 @@ class VariableWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using variable sized windows for images and labels.
 
     Args:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
-        label_patch_size(Tuple of int): network output label (width, height).
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+        label_patch_size(tuple(int)): network output label (width, height).
 
     Attributes:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
-        label_patch_size(Tuple of int): network output label (width, height).
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+        label_patch_size(tuple(int)): network output label (width, height).
+        current_location(tuple(int)): current starting point location in
+         (x, y) direction.
 
     """
 
@@ -143,7 +151,7 @@ class VariableWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
-        stride=1,
+        stride=(1, 1),
         label_patch_size=None,
     ):
         super().__init__(
@@ -152,8 +160,9 @@ class VariableWindowPatchExtractor(PatchExtractor):
             resolution=resolution,
             units=units,
         )
-        self.stride_h = stride
+        self.stride = stride
         self.label_patch_size = label_patch_size
+        self.current_location = (0, 0)
 
     def __next__(self):
         raise NotImplementedError
