@@ -20,10 +20,12 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
+import numpy as np
+import math
 
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.misc import read_point_annotations
+from tiatoolbox.utils.misc import read_locations
 
 
 class PatchExtractor(ABC):
@@ -54,6 +56,9 @@ class PatchExtractor(ABC):
         resolution(Tuple of int): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
+        num_examples_per_patch(int): Number of examples per patch for ensemble
+         classification.
+        locations_df(pd.DataFrame): A table containing location and/or type of patch.
 
     """
 
@@ -63,6 +68,8 @@ class PatchExtractor(ABC):
         self.units = units
         self.n = 0
         self.wsi = get_wsireader(input_img=input_img)
+        self.num_examples_per_patch = None
+        self.locations_df = None
 
     def __iter__(self):
         self.n = 0
@@ -91,12 +98,11 @@ class FixedWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
-        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+        stride(tuple(int)): stride in (x, y) direction for patch extraction,
+         default = patch_size
 
     Attributes:
         stride(tuple(int)): stride in (x, y) direction for patch extraction.
-        current_location(tuple(int)): current starting point location in
-         (x, y) direction.
 
     """
 
@@ -106,7 +112,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
-        stride=(1, 1),
+        stride=None,
     ):
         super().__init__(
             input_img=input_img,
@@ -114,8 +120,51 @@ class FixedWindowPatchExtractor(PatchExtractor):
             resolution=resolution,
             units=units,
         )
-        self.stride = stride
-        self.current_location = (0, 0)
+        if stride is None:
+            self.stride = patch_size
+        else:
+            self.stride = stride
+
+        self.locations_list, self.num_examples_per_patch = self._generate_location_df
+
+    def _generate_location_df(self):
+        """Generate location list based on slide dimension.
+        The slide dimension is calculated using units and resolution.
+
+        """
+        level, _ = self.wsi._find_optimal_level_and_downsample(
+            resolution=self.resolution, units=self.units
+        )
+        try:
+            level = np.int(level)
+            slide_dimension = self.wsi.info.level_dimensions[level]
+        except IndexError:
+            slide_dimension = self.wsi.info.level_dimensions[0]
+            rescale = 2 ** level
+            slide_dimension = tuple([int(x / rescale) for x in slide_dimension])
+
+        img_w = slide_dimension[0]
+        img_h = slide_dimension[1]
+        img_patch_w = self.patch_size[0]
+        img_patch_h = self.patch_size[1]
+        stride_w = self.stride[0]
+        stride_h = self.stride[1]
+
+        num_patches_img_h = math.ceil((img_h - img_patch_h) / stride_h + 1)
+        num_patches_img_w = math.ceil(((img_w - img_patch_w) / stride_w + 1))
+        num_patches_img = num_patches_img_h * num_patches_img_w
+
+        data = []
+
+        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+                start_h = h * stride_h
+                start_w = w * stride_w
+                data.append([start_w, start_h, None])
+
+        locations_df = read_locations(input_table=np.array(data))
+
+        return locations_df, num_patches_img
 
     def __next__(self):
         current_location = self.current_location
@@ -181,11 +230,6 @@ class PointsPatchExtractor(PatchExtractor):
          classification, default=9 (centre of patch and all the eight neighbours as
          centre).
 
-    Attributes:
-        locations_list(pd.DataFrame): A table containing location and/or type of patch.
-        num_examples_per_patch(int): Number of examples per patch for ensemble
-         classification.
-
     """
 
     def __init__(
@@ -205,7 +249,7 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
         self.num_examples_per_patch = num_examples_per_patch
-        self.locations_list = read_point_annotations(input_table=locations_list)
+        self.locations_list = read_locations(input_table=locations_list)
 
     def __next__(self):
         n = self.n

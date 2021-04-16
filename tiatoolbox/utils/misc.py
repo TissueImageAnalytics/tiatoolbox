@@ -337,7 +337,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
-def read_point_annotations(input_table):
+def read_locations(input_table):
     """Read annotations as pandas DataFrame.
 
     Args:
@@ -353,8 +353,8 @@ def read_point_annotations(input_table):
         pd.DataFrame: DataFrame with x, y location and class type.
 
     Examples:
-        >>> from tiatoolbox.utils.misc import read_point_annotations
-        >>> labels = read_point_annotations('./annotations.csv')
+        >>> from tiatoolbox.utils.misc import read_locations
+        >>> labels = read_locations('./annotations.csv')
 
     """
     if isinstance(input_table, (str, pathlib.Path)):
