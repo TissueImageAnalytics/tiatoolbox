@@ -52,7 +52,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
     """
 
-    def __init__(self, patch_info, preproc_list=None):
+    def __init__(self, patch_info, labels=None, preproc_list=None):
         super().__init__()
 
         if preproc_list is None:

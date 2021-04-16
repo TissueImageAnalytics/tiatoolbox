@@ -51,7 +51,7 @@ class CNN_Patch_Model(nn.Module):
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifer = nn.Linear(nr_feat, nr_class)
+        self.classifer = nn.Linear(512, nr_class)
 
     def forward(self, imgs):
         feat = self.feat_extract(imgs)
