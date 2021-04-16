@@ -64,7 +64,7 @@ class WSIReader:
         self._m_info = None
 
     @property
-    def info(self):
+    def info(self) -> WSIMeta:
         """WSI metadata property.
 
         This property is cached and only generated on the first call.
