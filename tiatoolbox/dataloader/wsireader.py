@@ -609,6 +609,14 @@ class WSIReader:
     ):
         """Create a tissue mask and wrap it in a VirtualWSIReader.
 
+        For the morphological method, mpp is used for calculating the
+        scale of the morphological operations. If no mpp is available,
+        objective power is used instead to estimate a good scale.
+        This can be overridden with a custom size, via passing a `kernel_size`
+        key-word argument in `masker_kwargs`, see
+        :class:`tissuemask.MorphologicalMasker` for more.
+
+
         Args:
             method (str): Method to use for creating the mask. Defaults
                 to 'otsu'. Methods are: otsu, morphological.
@@ -621,7 +629,15 @@ class WSIReader:
         if method == "otsu":
             masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         elif method == "morphological":
-            masker = tissuemask.MorphologicalMasker(**masker_kwargs)
+            mpp = None
+            power = None
+            if units == "power":
+                power = resolution
+            elif units == "mpp":
+                mpp = resolution
+            masker = tissuemask.MorphologicalMasker(
+                mpp=mpp, power=power, **masker_kwargs
+            )
         else:
             raise ValueError("Invalid tissue masker method.")
 
