@@ -840,31 +840,6 @@ class OpenSlideWSIReader(WSIReader):
         super().__init__(input_img=input_img)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
-    @staticmethod
-    def _read_func(image, bounds, level, baseline_location=None, **kwargs):
-        """Read helper function for handling pixel-aligned reads.
-
-        This is a simple wrapper around OpenSlide's read_region to make
-        OpenSlideWSIReader compatible with :func:`utils.image.sub_pixel_read`.
-
-        Args:
-            image (OpenSlide): OpenSlide object to read from.
-            bounds (tuple(int)): Integer bounds of the region to read.
-                In coordinates for the level.
-            baseline_location (tuple(int)): Location (upper left) of the read
-                in baseline coordinates.
-            **kwargs: Extra key-word arguments. Currently ignored.
-
-        Returns:
-            np.ndarray: The read image region.
-        """
-        location, size = utils.transforms.bounds2locsize(bounds)
-        if baseline_location is not None:
-            location = baseline_location
-        region = image.read_region(location, level=level, size=size)
-        region = utils.transforms.background_composite(region)
-        return np.array(region)
-
     def read_rect(
         self,
         location,
