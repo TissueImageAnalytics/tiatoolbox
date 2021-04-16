@@ -171,7 +171,7 @@ class MorphologicalMasker(TissueMasker):
             mpp = np.array(mpp)
             if mpp.size != 2:
                 mpp = mpp.repeat(2)
-            kernel_size = np.max([64 / mpp, [1, 1]], axis=0)
+            kernel_size = np.max([32 / mpp, [1, 1]], axis=0)
 
         # Ensure kernel_size is a length 2 numpy array
         kernel_size = np.array(kernel_size)
