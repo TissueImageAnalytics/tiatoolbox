@@ -23,6 +23,8 @@ import numpy as np
 from PIL import Image
 import cv2
 
+from tiatoolbox import utils
+
 
 def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
@@ -88,26 +90,29 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
-    # Estimate new dimension
+    # Handle None arguments
     if output_size is None:
         width = int(img.shape[1] * scale_factor)
         height = int(img.shape[0] * scale_factor)
         output_size = (width, height)
 
-    # Optimise interpolation
-    if np.any(scale_factor != 1.0):
-        if interpolation == "optimise":
-            if np.any(scale_factor > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            else:
-                interpolation = cv2.INTER_AREA
+    if scale_factor is None:
+        scale_factor = img.shape[:2][::-1] / np.array(output_size)
 
-        # Resize image
-        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
-    else:
-        resized_img = img
+    # Return original if scale factor is 1
+    if np.all(scale_factor == 1.0):
+        return img
 
-    return resized_img
+    # Get appropriate cv2 interpolation enum
+    if interpolation == "optimise":
+        if np.any(scale_factor > 1.0):
+            interpolation = "cubic"
+        else:
+            interpolation = "area"
+    interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
+
+    # Resize the image
+    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
 def convert_RGB2OD(img):

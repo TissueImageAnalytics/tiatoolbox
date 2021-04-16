@@ -20,6 +20,13 @@ def test_imresize():
     assert resized_img.shape == (2000, 1000, 3)
 
 
+def test_imresize_no_scale_factor():
+    """Test for imresize with no scale_factor given."""
+    img = np.zeros((2000, 1000, 3))
+    resized_img = utils.transforms.imresize(img, output_size=(50, 100))
+    assert resized_img.shape == (100, 50, 3)
+
+
 def test_background_composite():
     """Test for background composite."""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
