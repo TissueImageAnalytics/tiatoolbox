@@ -25,8 +25,8 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from tiatoolbox.utils.transforms import bounds2locsize
-from tiatoolbox.utils.misc import conv_out_size, parse_cv2_interpolaton
+from tiatoolbox.utils.transforms import bounds2locsize, imresize
+from tiatoolbox.utils.misc import conv_out_size
 
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
@@ -377,9 +377,6 @@ def sub_pixel_read(
         raise ValueError("Bounds must have non-zero size in each dimension")
     scale_factor = np.abs(output_size / bounds_size)
 
-    # Set interpolation variables.
-    inter_cv2 = parse_cv2_interpolaton(interpolation)
-
     # Normalise desired padding to be a length 4 array.
     padding = normalise_padding_size(padding)
 
@@ -439,7 +436,9 @@ def sub_pixel_read(
     scaled_size = region_size * scale_factor
     scaled_size = tuple(scaled_size.astype(int))
     # Resize/scale the region and residuals
-    scaled_region = cv2.resize(region, scaled_size, interpolation=inter_cv2)
+    scaled_region = imresize(
+        region, output_size=scaled_size, interpolation=interpolation
+    )
     scaled_residuals = residuals * np.tile(scale_factor, 2)
 
     # Trim extra whole pixels (residuals) which resulted from expanding
