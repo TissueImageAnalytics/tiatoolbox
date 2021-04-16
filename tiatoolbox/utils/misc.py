@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from typing import Union
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 import cv2
@@ -370,3 +371,34 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         >>> array([49, 49])
   """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
+
+
+def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
+    """Convert a string to a OpenCV (cv2) interpolation enum.
+
+    Valid integer values for cv2 INTER_ enums are passed through.
+
+    Args:
+        interpolation (Union[str, int]): Interpolation mode string.
+            Possible values are: neares, linear, cubic, lanczos, area.
+
+    Raises:
+        ValueError: Invalid interpolation mode.
+
+    Returns:
+        int: OpenCV (cv2) interpolation enum.
+    """
+    if isinstance(interpolation, str):
+        interpolation = interpolation.lower()
+    if interpolation in ["nearest", cv2.INTER_NEAREST]:
+        return cv2.INTER_NEAREST
+    elif interpolation in ["area", cv2.INTER_AREA]:
+        return cv2.INTER_AREA
+    elif interpolation in ["linear", cv2.INTER_LINEAR]:
+        return cv2.INTER_LINEAR
+    elif interpolation in ["cubic", cv2.INTER_CUBIC]:
+        return cv2.INTER_CUBIC
+    elif interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
+        return cv2.INTER_LANCZOS4
+    else:
+        raise ValueError("Invalid interpolation mode.")
