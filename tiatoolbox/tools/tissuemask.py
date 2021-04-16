@@ -124,6 +124,10 @@ class MorphologicalMasker(TissueMasker):
     argument is given instead of mpp to the initialiser.
     For small region removal, the minimum area size defaults to the area
     of the kernel.
+
+    If the scale of the morphological operations can also be manually
+    specified with the `kernel_size` argument, for example if the
+    automatic scale from mpp or objective power is too large or small.
     """
 
     def __init__(
