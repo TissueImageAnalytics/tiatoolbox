@@ -106,3 +106,8 @@ class Patch_Dataset(torch.utils.data.Dataset):
         # apply preprocessing to selected patch
         patch = self.preproc(patch)
         return patch
+
+
+def get_patch_dataset(dataset_name=None):
+    """Helper funntion for initialising the Patch_Dataset."""
+    pass
