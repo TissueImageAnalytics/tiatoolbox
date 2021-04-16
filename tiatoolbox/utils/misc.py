@@ -269,7 +269,7 @@ def objective_power2mpp(objective_power):
         >>> objective_power2mpp([40, 20, 10])
         array([0.25, 0.5, 1.])
     """
-    return 10 / np.float(objective_power)
+    return 10 / float(objective_power)
 
 
 @np.vectorize
