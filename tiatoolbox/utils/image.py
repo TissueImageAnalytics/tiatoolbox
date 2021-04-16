@@ -26,7 +26,7 @@ import cv2
 from PIL import Image
 
 from tiatoolbox.utils.transforms import bounds2locsize
-from tiatoolbox.utils.misc import conv_out_size
+from tiatoolbox.utils.misc import conv_out_size, assert_dtype_int
 
 
 def safe_padded_read(
@@ -51,11 +51,11 @@ def safe_padded_read(
         bounds (tuple(int)):
             Bounds of the region in (left, top,
             right, bottom) format.
-        stride (int, tuple(int)):
+        stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
-        padding (int, tuple(int)):
+        padding (int or tuple(int)):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
@@ -67,7 +67,7 @@ def safe_padded_read(
             padding function :func:`numpy.pad`.
 
     Returns:
-        np.ndarray: Padded image region.
+        numpy.ndarray: Padded image region.
 
     Raises:
         ValueError: Bounds must be integers.
@@ -81,7 +81,8 @@ def safe_padded_read(
         >>> safe_padded_read(img, bounds, pad_mode="reflect")
 
         >>> bounds = (1, 1, 6, 6)
-        >>> safe_padded_read(img, bounds, padding=2 pad_mode="reflect")
+        >>> safe_padded_read(img, bounds, padding=2, pad_mode="reflect")
+
     """
     padding = np.array(padding)
     # Ensure the bounds are integers.
@@ -179,10 +180,10 @@ def sub_pixel_read(
             (left, top, right, bottom) format.
         output_size (tuple(int)):
             The desired output size.
-        padding (int, tuple(int)):
+        padding (int or tuple(int)):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
-        stride (int, tuple(int)):
+        stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):
@@ -215,7 +216,7 @@ def sub_pixel_read(
             Arbitrary keyword arguments passed through to `read_func`.
 
     Return:
-        np.ndimage: Output image region.
+        :class:`numpy.ndimage`: Output image region.
 
     Raises:
         ValueError: Invalid arguments.
@@ -242,7 +243,7 @@ def sub_pixel_read(
 
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> region = sub_pixel_read(image, bounds)
-        >>> reguin = np.pad(region, padding=2, mode="reflect")
+        >>> region = np.pad(region, padding=2, mode="reflect")
 
         Read with no temporary padding to account for interpolation mode:
 
@@ -281,7 +282,7 @@ def sub_pixel_read(
         image = np.array(image)
     bounds = np.array(bounds)
     _, bounds_size = bounds2locsize(bounds)
-    if np.size(stride) == 2:
+    if np.size(stride) == 1:
         stride = np.tile(stride, 2)
     bounds_size = bounds_size / stride
     if 0 in bounds_size:
@@ -290,7 +291,7 @@ def sub_pixel_read(
 
     # Set interpolation variables.
     inter_padding = 0
-    inter_cv2 = cv2.INTER_CUBIC
+
     if interpolation == "nearest":
         inter_cv2 = cv2.INTER_NEAREST
     elif interpolation == "linear":
@@ -327,15 +328,15 @@ def sub_pixel_read(
     padded_output_size = np.round(output_size + output_padding.reshape(2, 2).sum(0))
 
     # Find the pixel-aligned indexes to read the image at
-    PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
-    padded_bounds = bounds + (bounds_padding * PADDING_TO_BOUNDS)
+    padding_to_bounds = np.array([-1, -1, 1, 1])
+    padded_bounds = bounds + (bounds_padding * padding_to_bounds)
     pixel_aligned_bounds = padded_bounds.copy()
     pixel_aligned_bounds[:2] = np.floor(pixel_aligned_bounds[:2])
     pixel_aligned_bounds[2:] = np.ceil(pixel_aligned_bounds[2:])
     pixel_aligned_bounds = pixel_aligned_bounds.astype(int)
     # Add interpolation padding to integer bounds so that read_func
     # doesn't need to handle anything except the bounds.
-    int_bounds = pixel_aligned_bounds + (inter_padding * PADDING_TO_BOUNDS)
+    int_bounds = pixel_aligned_bounds + (inter_padding * padding_to_bounds)
     # Keep the difference between pixel-aligned and original coordinates
     residuals = padded_bounds - int_bounds
 
@@ -345,8 +346,7 @@ def sub_pixel_read(
         warnings.warn("Read: Bounds have negative size.")
 
     # Ensure the pixel-aligned + interpolation padded bounds are integers.
-    if int_bounds.dtype != int:
-        raise AssertionError("Bounds must be integers.")
+    assert_dtype_int(input_var=int_bounds, message="Bounds must be integers.")
 
     # If no read function is given, use the default.
     if read_func is None:
@@ -373,7 +373,7 @@ def sub_pixel_read(
     # Complex rounding to make output size consistent with requested size.
     # Can swap for simple np.round if a 1-off error is acceptable.
     while not np.all(resized_indexes % 1.0 == 0):
-        # Find the non-zero fracitonal part furthest from an integer value
+        # Find the non-zero fractional part furthest from an integer value
         to_round = np.abs(np.abs(resized_indexes % 1.0) - 0.5)
         to_round[to_round == 0] = np.inf
         i = np.argmin(to_round)
@@ -394,9 +394,5 @@ def sub_pixel_read(
     resized_indexes += np.array([0, 0, *scaled_size])
     l, t, r, b = resized_indexes
     result = scaled_region[t:b, l:r, ...]
-    result_size = np.array(result.shape[:2][::-1])
-
-    if not np.all(np.abs(result_size - padded_output_size) <= 1):
-        raise AssertionError("Output size should not differ from requested size.")
 
     return result

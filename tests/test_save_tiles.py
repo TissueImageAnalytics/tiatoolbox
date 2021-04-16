@@ -1,4 +1,4 @@
-from tiatoolbox.dataloader.save_tiles import save_tiles
+from tiatoolbox.wsicore.save_tiles import save_tiles
 from tiatoolbox import utils
 from tiatoolbox import cli
 
@@ -108,6 +108,8 @@ def test_command_line_save_tiles_single_file(_sample_svs, tmp_path):
             "5",
             "--output_dir",
             tmp_path,
+            "--verbose",
+            "False",
         ],
     )
 

@@ -7,6 +7,19 @@ from pytest import approx
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from PIL import Image
+import cv2
+
+
+def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
+    """sub_pixel_read test helper function."""
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    output = utils.image.sub_pixel_read(
+        pillow_test_image, bounds, (ow, oh), stride=[1, 1]
+    )
+    assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
 def test_imresize():
@@ -18,6 +31,13 @@ def test_imresize():
     resized_img = utils.transforms.imresize(resized_img, scale_factor=2.0)
     assert resized_img.shape == (2000, 1000, 3)
 
+    resized_img = utils.transforms.imresize(
+        img,
+        scale_factor=0.5,
+        interpolation=cv2.INTER_CUBIC,
+    )
+    assert resized_img.shape == (1000, 500, 3)
+
 
 def test_background_composite():
     """Test for background composite."""
@@ -27,6 +47,10 @@ def test_background_composite():
     assert np.all(im[1000:, :, :] == 255)
     assert np.all(im[:1000, :, :] == 0)
 
+    im = utils.transforms.background_composite(new_im, alpha=True)
+    assert np.all(im[:, :, 3] == 255)
+
+    new_im = Image.fromarray(new_im)
     im = utils.transforms.background_composite(new_im, alpha=True)
     assert np.all(im[:, :, 3] == 255)
 
@@ -60,6 +84,14 @@ def test_mpp2common_objective_power(_sample_svs):
         )
 
 
+def test_assert_dtype_int():
+    """Test AssertionError for dtype test."""
+    with pytest.raises(AssertionError):
+        utils.misc.assert_dtype_int(
+            input_var=np.array([1.0, 2]), message="Bounds must be integers."
+        )
+
+
 def test_safe_padded_read_non_int_bounds():
     """Test safe_padded_read with non-integer bounds."""
     data = np.zeros((16, 16))
@@ -82,11 +114,13 @@ def test_safe_padded_read_padding_formats():
     """Test safe_padded_read with different padding argument formats."""
     data = np.zeros((16, 16))
     bounds = (0, 0, 8, 8)
+    stride = (1, 1)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.safe_padded_read(
             data,
             bounds,
             padding=padding,
+            stride=stride,
         )
         assert region.shape == (8 + 2, 8 + 2)
 
@@ -139,6 +173,7 @@ def test_sub_pixel_read():
     image_path = Path(__file__).parent / "data" / "source_image.png"
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
+    pillow_test_image = Image.fromarray(test_image)
 
     x = 6
     y = -4
@@ -147,8 +182,8 @@ def test_sub_pixel_read():
     bounds = (x, y, x + w, y + h)
     ow = 88
     oh = 98
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
-    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
     x = 13
     y = 15
@@ -157,8 +192,8 @@ def test_sub_pixel_read():
     bounds = (x, y, x + w, y + h)
     ow = 93
     oh = 34
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
-    assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+    sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
 def test_sub_pixel_read_invalid_interpolation():
@@ -180,6 +215,10 @@ def test_sub_pixel_read_invalid_bounds():
     with pytest.warns(UserWarning), pytest.raises(AssertionError):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
+    bounds = (1.5, 1, 1.5, 0)
+    with pytest.raises(AssertionError):
+        utils.image.sub_pixel_read(data, bounds, out_size)
+
 
 def test_sub_pixel_read_pad_at_baseline():
     """Test sub_pixel_read with baseline padding."""
@@ -191,6 +230,16 @@ def test_sub_pixel_read_pad_at_baseline():
             data, bounds, out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
+
+    region = utils.image.sub_pixel_read(
+        data,
+        bounds,
+        out_size,
+        pad_for_interpolation=False,
+        pad_at_baseline=True,
+        read_func=utils.image.safe_padded_read,
+    )
+    assert region.shape == (16, 16)
 
 
 def test_sub_pixel_read_padding_formats():
@@ -284,7 +333,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """"Test contrast enhancement funcitionality."""
+    """"Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [
@@ -339,6 +388,93 @@ def test_get_luminosity_tissue_mask():
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
 
+def test_read_point_annotations(tmp_path):
+    """Test read point annotations reads csv, ndarray, npy and json correctly."""
+    file_parent_dir = Path(__file__).parent
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+
+    labels_table = pd.read_csv(labels)
+
+    # Test csv read with header
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test csv read without header
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction-noheader.csv")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs.csv")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert out_table.shape[1] == 3
+
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs_header.csv")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert out_table.shape[1] == 3
+
+    # Test npy read
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test pd dataframe read
+    out_table = utils.misc.read_point_annotations(labels_table)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    labels_table_2 = labels_table.drop("class", axis=1)
+    out_table = utils.misc.read_point_annotations(labels_table_2)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test json read
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test json read 2 columns
+    labels = file_parent_dir.joinpath("data/sample_patch_extraction_2col.json")
+    out_table = utils.misc.read_point_annotations(labels)
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test numpy array
+    out_table = utils.misc.read_point_annotations(labels_table.to_numpy())
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    out_table = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:2])
+    assert all(labels_table == out_table)
+    assert out_table.shape[1] == 3
+
+    # Test if input array does not have 2 or 3 columns
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:1])
+
+    # Test if input npy does not have 2 or 3 columns
+    labels = tmp_path.joinpath("test_gt_3col.npy")
+    with open(labels, "wb") as f:
+        np.save(f, np.zeros((3, 4)))
+
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels)
+
+    # Test if input pd DataFrame does not have 2 or 3 columns
+    with pytest.raises(ValueError):
+        _ = utils.misc.read_point_annotations(labels_table.drop(["y", "class"], axis=1))
+
+    with pytest.raises(FileNotSupported):
+        labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
+        _ = utils.misc.read_point_annotations(labels)
+
+    with pytest.raises(TypeError):
+        _ = utils.misc.read_point_annotations(["a", "b", "c"])
+
+
 def test_grab_files_from_dir():
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
@@ -347,7 +483,7 @@ def test_grab_files_from_dir():
     file_types = "*.tif, *.png, *.jpg"
 
     out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
-    assert len(out) == 5
+    assert len(out) == 6
 
     out = utils.misc.grab_files_from_dir(
         input_path=input_path.parent, file_types="test_utils*"

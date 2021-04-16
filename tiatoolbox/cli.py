@@ -20,7 +20,7 @@
 
 """Console script for tiatoolbox."""
 from tiatoolbox import __version__
-from tiatoolbox import dataloader
+from tiatoolbox import wsicore
 from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -72,9 +72,12 @@ def main():
     default=True,
     help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
+def slide_info(wsi_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
+
+    if isinstance(output_dir, str):
+        output_dir = pathlib.Path(output_dir)
 
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(
@@ -100,7 +103,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
         output_dir.mkdir(parents=True, exist_ok=True)
 
     for curr_file in files_all:
-        slide_param = dataloader.slide_info.slide_info(
+        slide_param = wsicore.slide_info.slide_info(
             input_path=curr_file, verbose=verbose
         )
         if mode == "show":
@@ -157,7 +160,7 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
         input_dir = pathlib.Path(wsi_input).parent
         output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
 
     im_region = wsi.read_bounds(
         region,
@@ -191,7 +194,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
         input_dir = pathlib.Path(wsi_input).parent
         output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    wsi = dataloader.wsireader.get_wsireader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
 
     slide_thumb = wsi.slide_thumbnail()
 
@@ -258,7 +261,7 @@ def save_tiles(
     print(files_all)
 
     for curr_file in files_all:
-        dataloader.save_tiles.save_tiles(
+        wsicore.save_tiles.save_tiles(
             input_path=curr_file,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
