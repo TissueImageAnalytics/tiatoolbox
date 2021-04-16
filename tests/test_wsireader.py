@@ -11,6 +11,8 @@ import numpy as np
 import cv2
 from click.testing import CliRunner
 
+from typing import Tuple
+
 # -------------------------------------------------------------------------------------
 # Constants
 # -------------------------------------------------------------------------------------
@@ -1368,3 +1370,51 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(_sample_jp2, tmp_pa
     assert slide_thumb_result.output == ""
     assert slide_thumb_result.exit_code == 1
     assert isinstance(slide_thumb_result.exception, FileNotSupported)
+
+
+def test_openslide__crop_and_pad_edges(_sample_svs):
+    """Test openslide private edge padding function."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+
+    def edge_mask(location: Tuple[int, int], size: Tuple[int, int]) -> np.ndarray:
+        """Produce a mask of regions outside of the slide dimensions."""
+        l, t, r, b = utils.transforms.locsize2bounds(location, size)
+        slide_width, slide_height = wsi.info.slide_dimensions
+        X, Y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
+        under = np.logical_or(X < 0, Y < 0).astype(np.int)
+        over = np.logical_or(X >= slide_width, Y >= slide_height).astype(np.int)
+        return under, over
+
+    loc = (-5, -5)
+    size = (10, 10)
+    under, over = edge_mask(loc, size)
+    region = -under + over
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+    output = wsi._crop_and_pad_edges(loc, size, 0, region, "constant")
+
+    assert np.all(np.logical_or(output >= 10, output == 0))
+    assert output.shape == region.shape
+
+    slide_width, slide_height = wsi.info.slide_dimensions
+
+    loc = (slide_width - 5, slide_height - 5)
+    under, over = edge_mask(loc, size)
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+    output = wsi._crop_and_pad_edges(loc, size, 0, region, "constant")
+
+    assert np.all(np.logical_or(output >= 10, output == 0))
+    assert output.shape == region.shape
+
+
+def test_openslide_read_rect_edge_reflect_padding(_sample_svs):
+    """Test openslide edge reflect padding for read_rect."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    region = wsi.read_rect((-64, -64), (128, 128), pad_mode="reflect")
+    assert 0 not in region.min(axis=-1)
+
+
+def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
+    """Test openslide edge reflect padding for read_bounds."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    region = wsi.read_bounds((-64, -64, 64, 64), pad_mode="reflect")
+    assert 0 not in region.min(axis=-1)
