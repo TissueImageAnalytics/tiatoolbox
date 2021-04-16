@@ -21,7 +21,6 @@
 """This module defines classes which can read image data from WSI formats."""
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.dataloader.wsimeta import WSIMeta
 from tiatoolbox.tools import tissuemask
 
@@ -321,7 +320,9 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return read_level, level_bounds, output_size, post_read_scale_factor
 
-    def read_rect(self, location, size, resolution=0, units="level"):
+    def read_rect(
+        self, location, size, resolution=0, interpolation="optimise", units="level"
+    ):
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  /
@@ -354,8 +355,10 @@ class WSIReader:
                 power (power), pyramid / resolution level (level),
                 pixels per baseline pixel (baseline).
             interpolation (str): Method to use when resampling the output
-                image. If None or 'none' then no scaling is applied.
-                Defaults to 'linear'.
+                image. Possible values are "linear", "cubic", "lanczos",
+                "area", and "optimse". Defaults to 'optimise' which
+                will use cubic interpolation for upscaling and area
+                interpolation for downscaling to avoid moiré patterns.
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
@@ -837,7 +840,40 @@ class OpenSlideWSIReader(WSIReader):
         super().__init__(input_img=input_img)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
-    def read_rect(self, location, size, resolution=0, units="level"):
+    @staticmethod
+    def _read_func(image, bounds, level, baseline_location=None, **kwargs):
+        """Read helper function for handling pixel-aligned reads.
+
+        This is a simple wrapper around OpenSlide's read_region to make
+        OpenSlideWSIReader compatible with :func:`utils.image.sub_pixel_read`.
+
+        Args:
+            image (OpenSlide): OpenSlide object to read from.
+            bounds (tuple(int)): Integer bounds of the region to read.
+                In coordinates for the level.
+            baseline_location (tuple(int)): Location (upper left) of the read
+                in baseline coordinates.
+            **kwargs: Extra key-word arguments. Currently ignored.
+
+        Returns:
+            np.ndarray: The read image region.
+        """
+        location, size = utils.transforms.bounds2locsize(bounds)
+        if baseline_location is not None:
+            location = baseline_location
+        region = image.read_region(location, level=level, size=size)
+        region = utils.transforms.background_composite(region)
+        return np.array(region)
+
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+    ):
+
         # Find parameters for optimal read
         (read_level, _, read_size, post_read_scale, _) = self._find_read_rect_params(
             location=location,
@@ -854,13 +890,23 @@ class OpenSlideWSIReader(WSIReader):
 
         # Resize to correct scale if required
         im_region = utils.transforms.imresize(
-            img=im_region, scale_factor=post_read_scale, output_size=size
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation=interpolation,
         )
 
         im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
-    def read_bounds(self, bounds, resolution=0, units="level"):
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+    ):
+
         # Find parameters for optimal read
         (
             read_level,
@@ -882,7 +928,10 @@ class OpenSlideWSIReader(WSIReader):
 
         # Resize to correct scale if required
         im_region = utils.transforms.imresize(
-            img=im_region, scale_factor=post_read_scale, output_size=output_size
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=output_size,
+            interpolation=interpolation,
         )
 
         im_region = utils.transforms.background_composite(image=im_region)
@@ -980,7 +1029,16 @@ class OmnyxJP2WSIReader(WSIReader):
         super().__init__(input_img=input_img)
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
-    def read_rect(self, location, size, resolution=0, units="level"):
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+    ):
         # Find parameters for optimal read
         (
             read_level,
@@ -1000,23 +1058,33 @@ class OmnyxJP2WSIReader(WSIReader):
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
         )
-        im_region = utils.image.sub_pixel_read(
+        im_region = utils.image.safe_padded_read(
             image=glymur_wsi,
             bounds=bounds,
-            output_size=conv_out_size(baseline_read_size, stride=stride),
             stride=stride,
-            pad_mode="constant",
-            constant_values=255,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
 
         im_region = utils.transforms.imresize(
-            img=im_region, scale_factor=post_read_scale, output_size=size
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation=interpolation,
         )
 
         im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
-    def read_bounds(self, bounds, resolution=0, units="level"):
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+    ):
         # Find parameters for optimal read
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
@@ -1027,23 +1095,27 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
 
         stride = 2 ** read_level
+
+        # Method without sub-pixel reads
         # im_region = glymur_wsi[start_y:end_y:stride, start_x:end_x:stride]
+
         # Equivalent but deprecated read function
         # area = (start_y, start_x, end_y, end_x)
         # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
-        _, bounds_size = utils.transforms.bounds2locsize(bounds)
-        im_region = utils.image.sub_pixel_read(
+        im_region = utils.image.safe_padded_read(
             image=glymur_wsi,
             bounds=bounds,
-            output_size=conv_out_size(bounds_size, stride=stride),
             stride=stride,
-            pad_mode="constant",
-            constant_values=255,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
 
         im_region = utils.transforms.imresize(
-            img=im_region, scale_factor=post_read_scale, output_size=output_size
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=output_size,
+            interpolation=interpolation,
         )
 
         im_region = utils.transforms.background_composite(image=im_region)
