@@ -1192,7 +1192,20 @@ class VirtualWSIReader(WSIReader):
         read_size = np.array(baseline_read_size) * size_ratio
         return image_location, read_size
 
-    def read_rect(self, location, size, resolution=1.0, units="baseline"):
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=1.0,
+        units="baseline",
+        interpolation="cubic",
+        pad_mode="constant",
+        pad_constant_values=0,
+        read_kwargs=None,
+    ):
+        if read_kwargs is None:
+            read_kwargs = dict()
+
         # Find parameters for optimal read
         (_, _, _, _, baseline_read_size,) = self._find_read_rect_params(
             location=location,
@@ -1210,26 +1223,44 @@ class VirtualWSIReader(WSIReader):
             size=image_read_size,
         )
 
+        output_size = size
+        if interpolation is None or interpolation.lower() == "none":
+            output_size = tuple(np.round(image_read_size).astype(int))
+            interpolation = "nearest"
+
         im_region = utils.image.sub_pixel_read(
             self.img,
             bounds,
-            output_size=size,
-            interpolation="linear",
-            pad_mode="constant",
-            constant_values=255,
+            output_size=output_size,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            read_kwargs=read_kwargs,
         )
 
         im_region_size = np.array(im_region.shape[:2][::-1], dtype=int)
-        if not np.all(im_region_size == size):
-            if np.any(np.abs(im_region_size - size) > 1):
+        if not np.all(im_region_size == output_size):
+            if np.any(np.abs(im_region_size - output_size) > 1):
                 raise AssertionError("Read: Output region size inconsistent.")
-            im_region = cv2.resize(im_region, size)
+            im_region = cv2.resize(im_region, output_size)
 
         if self.mode == "rgb":
             im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
-    def read_bounds(self, bounds, resolution=1.0, units="baseline"):
+    def read_bounds(
+        self,
+        bounds,
+        resolution=1.0,
+        units="baseline",
+        interpolation="cubic",
+        pad_mode="constant",
+        pad_constant_values=0,
+        read_kwargs=None,
+    ):
+        if read_kwargs is None:
+            read_kwargs = dict()
+
         # Find parameters for optimal read
         _, _, output_size, post_read_scale = self._find_read_bounds_params(
             bounds,
@@ -1246,9 +1277,10 @@ class VirtualWSIReader(WSIReader):
             self.img,
             image_bounds,
             output_size=output_size,
-            interpolation="linear",
-            pad_mode="constant",
-            constant_values=255,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            read_kwargs=read_kwargs,
         )
 
         im_region = utils.transforms.imresize(
