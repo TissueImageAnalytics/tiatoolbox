@@ -52,8 +52,8 @@ class PatchExtractor(ABC):
         input_img(ndarray, WSIReader): input image for patch extraction.
           input_image type is ndarray for an image tile whereas :obj:`WSIReader`
           for an WSI.
-        patch_size(Tuple of int): patch size tuple (width, height).
-        resolution(Tuple of int): resolution at which to read the image.
+        patch_size(tuple(int)): patch size tuple (width, height).
+        resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
         num_examples_per_patch(int): Number of examples per patch for ensemble
@@ -125,7 +125,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         else:
             self.stride = stride
 
-        self.locations_list, self.num_examples_per_patch = self._generate_location_df
+        self.locations_df, self.num_examples_per_patch = self._generate_location_df()
 
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
@@ -230,7 +230,7 @@ class PointsPatchExtractor(PatchExtractor):
         self,
         input_img,
         locations_list,
-        patch_size=224,
+        patch_size=(224, 224),
         resolution=0,
         units="level",
         num_examples_per_patch=1,
@@ -243,12 +243,12 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
         self.num_examples_per_patch = num_examples_per_patch
-        self.locations_list = read_locations(input_table=locations_list)
+        self.locations_df = read_locations(input_table=locations_list)
 
     def __next__(self):
         n = self.n
 
-        if n >= self.locations_list.shape[0]:
+        if n >= self.locations_df.shape[0]:
             raise StopIteration
         self.n = n + 1
         return self[n]
@@ -257,10 +257,10 @@ class PointsPatchExtractor(PatchExtractor):
         if type(item) is not int:
             raise TypeError("Index should be an integer.")
 
-        if item >= self.locations_list.shape[0]:
+        if item >= self.locations_df.shape[0]:
             raise IndexError
 
-        x, y, _ = self.locations_list.values[item, :]
+        x, y, _ = self.locations_df.values[item, :]
 
         x = x - int((self.patch_size[1] - 1) / 2)
         y = y - int((self.patch_size[0] - 1) / 2)
