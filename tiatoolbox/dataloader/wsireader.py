@@ -370,9 +370,7 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
-            **kwargs (dict): Extra key-word arguments passed on to
-                :func:`utils.image.sub_pixel_read`. Defaults to {
-                    "constant_values": 255 }.
+            **kwargs (dict): Extra key-word arguments.
 
         Returns:
             ndarray: array of size MxNx3
