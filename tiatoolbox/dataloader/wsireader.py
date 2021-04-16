@@ -353,6 +353,15 @@ class WSIReader:
                 Supported units are: microns per pixel (mpp), objective
                 power (power), pyramid / resolution level (level),
                 pixels per baseline pixel (baseline).
+            interpolation (str): Method to use when resampling the output
+                image. If None or 'none' then no scaling is applied.
+                Defaults to 'linear'.
+            pad_mode (str): Method to use when padding at the edges of the
+                image. Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            extra_kwargs (dict): Extra key-word arguments passed on to
+                :func:`utils.image.sub_pixel_read`. Defaults to {
+                    "constant_values": 255 }.
 
         Returns:
             ndarray: array of size MxNx3
