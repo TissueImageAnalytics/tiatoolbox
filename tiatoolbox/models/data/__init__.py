@@ -18,9 +18,6 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Package where patch-level classification models are stored."""
+"""Contains dataset functionality for use with models in tiatoolbox."""
 
-from tiatoolbox.models.classification.patch_predictor import (
-    CNN_Patch_Predictor,
-    CNN_Patch_Predictor_Engine,
-)
+from tiatoolbox.models.data.classification import Patch_Dataset

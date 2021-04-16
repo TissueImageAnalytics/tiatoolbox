@@ -18,6 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
+"""Defines a set of models to be used within tiatoolbox."""
 
 import torchvision.models as torch_models
 import torch.nn as nn
