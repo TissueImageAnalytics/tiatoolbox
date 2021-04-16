@@ -1,5 +1,6 @@
 import random
 from pathlib import Path
+from tiatoolbox.utils.transforms import locsize2bounds
 
 import pytest
 from pytest import approx
@@ -169,6 +170,63 @@ def test_sub_pixel_read():
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
+def test_aligned_padded_sub_pixel_read():
+    """Test sub-pixel numpy image reads with pixel-aligned bounds."""
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    x = 1
+    y = 1
+    w = 5
+    h = 5
+    padding = 1
+    bounds = (x, y, x + w, y + h)
+    ow = 4 + 2 * padding
+    oh = 4 + 2 * padding
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
+    assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
+
+
+def test_non_aligned_padded_sub_pixel_read():
+    """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    x = 0.5
+    y = 0.5
+    w = 4.5
+    h = 4.5
+    padding = 1
+    bounds = (x, y, x + w, y + h)
+    ow = 4
+    oh = 4
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
+
+    assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
+
+
+def test_non_baseline_padded_sub_pixel_read():
+    """Test sub-pixel numpy image reads with baseline padding."""
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    x = 0.5
+    y = 0.5
+    w = 4.5
+    h = 4.5
+    padding = 1
+    bounds = (x, y, x + w, y + h)
+    ow = 8
+    oh = 8
+    output = utils.image.sub_pixel_read(
+        test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
+    )
+    assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(output.shape[:2][::-1])
+
+
 def test_sub_pixel_read_invalid_interpolation():
     """Test sub_pixel_read with invalid interpolation."""
     data = np.zeros((16, 16))
@@ -184,8 +242,8 @@ def test_sub_pixel_read_invalid_bounds():
     data = np.zeros((16, 16))
     out_size = data.shape
 
-    bounds = (1.5, 1, -5, 5)
-    with pytest.warns(UserWarning), pytest.raises(AssertionError):
+    bounds = (0, 0, 0, 0)
+    with pytest.raises(ValueError):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
 
@@ -215,6 +273,33 @@ def test_sub_pixel_read_padding_formats():
         assert region.shape == (16 + 2, 16 + 2)
 
 
+def test_sub_pixel_read_negative_size_bounds():
+    """Test sub_pixel_read with different padding argument formats."""
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    ow = 25
+    oh = 25
+
+    x = 5
+    y = 5
+    w = -4.5
+    h = -4.5
+    bounds = locsize2bounds((x, y), (w, h))
+    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+
+    x = 0.5
+    y = 0.5
+    w = 4.5
+    h = 4.5
+    bounds = locsize2bounds((x, y), (w, h))
+    print(bounds)
+    flipped_output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+
+    assert np.all(np.fliplr(np.flipud(flipped_output)) == output)
+
+
 def test_fuzz_sub_pixel_read():
     """Fuzz test for numpy sub-pixel image reads."""
     random.seed(0)
@@ -232,9 +317,39 @@ def test_fuzz_sub_pixel_read():
         ow = random.randint(4, 128)
         oh = random.randint(4, 128)
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), interpolation="linear"
+            test_image,
+            bounds,
+            (ow, oh),
+            interpolation="linear",
         )
         assert (ow, oh) == tuple(output.shape[:2][::-1])
+
+
+def test_fuzz_padded_sub_pixel_read():
+    """Fuzz test for numpy sub-pixel image reads with padding."""
+    random.seed(0)
+
+    image_path = Path(__file__).parent / "data" / "source_image.png"
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    for _ in range(10000):
+        x = random.randint(-5, 32 - 5)
+        y = random.randint(-5, 32 - 5)
+        w = random.random() * random.randint(1, 32)
+        h = random.random() * random.randint(1, 32)
+        padding = random.randint(0, 2)
+        bounds = (x, y, x + w, y + h)
+        ow = random.randint(4, 128)
+        oh = random.randint(4, 128)
+        output = utils.image.sub_pixel_read(
+            test_image,
+            bounds,
+            (ow, oh),
+            interpolation="linear",
+            padding=padding,
+        )
+        assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
 def test_sub_pixel_read_interpolation_modes():
@@ -366,3 +481,19 @@ def test_grab_files_from_dir():
 
     out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
     assert len(out) == 0
+
+
+def test_parse_cv2_interpolaton():
+    """Test parsing interpolation modes for cv2."""
+    import cv2
+
+    cases = [str.upper, str.lower, str.capitalize]
+    mode_strings = ["cubic", "linear", "area", "lanczos"]
+    mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
+    for string, cv2_enum in zip(mode_strings, mode_enums):
+        for case in cases:
+            assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
+            assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum
+
+    with pytest.raises(ValueError):
+        assert utils.misc.parse_cv2_interpolaton(1337)
