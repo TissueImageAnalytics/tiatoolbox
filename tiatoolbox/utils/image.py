@@ -191,7 +191,7 @@ def safe_padded_read(
         >>> safe_padded_read(img, bounds, padding=2 pad_mode="reflect")
     """
     if pad_kwargs is None:
-        pad_kwargs = dict()
+        pad_kwargs = {}
     if pad_mode == "constant" and "constant_values" not in pad_kwargs:
         pad_kwargs["constant_values"] = pad_constant_values
 
@@ -364,7 +364,7 @@ def sub_pixel_read(
         >>> sub_pixel_read(bounds, read_func=openslide_read)
     """
     if read_kwargs is None:
-        read_kwargs = dict()
+        read_kwargs = {}
 
     if isinstance(image, Image.Image):
         image = np.array(image)

@@ -126,7 +126,7 @@ def read_bounds_level_consistency(wsi, bounds):
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
         for b in as_float[i + 1 :]:
-            shifts, error, phase_diff = phase_cross_correlation(a, b)
+            _, error, phase_diff = phase_cross_correlation(a, b)
             assert phase_diff < 0.1
             assert error < 0.1
 
@@ -890,7 +890,7 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
 
 
 def test_VirtualWSIReader():
-    """Test VirtualWSIReader"""
+    """Test VirtualWSIReader creation."""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     with pytest.warns(UserWarning, match=r"Unknown scale"):
@@ -900,15 +900,9 @@ def test_VirtualWSIReader():
 
     assert wsi.img.shape == (256, 256, 3)
 
-    img = wsi.read_rect(location=(0, 0), size=(100, 50))
-    assert img.shape == (50, 100, 3)
-
-    img = wsi.read_region(location=(0, 0), size=(100, 50), level=0)
-    assert img.shape == (50, 100, 3)
-
 
 def test_VirtualWSIReader_read_bounds():
-    """Test VirtualWSIReader read bounds"""
+    """Test VirtualWSIReader read bounds."""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
@@ -928,7 +922,7 @@ def test_VirtualWSIReader_read_bounds():
 
 
 def test_VirtualWSIReader_read_rect():
-    """Test VirtualWSIReader read rect"""
+    """Test VirtualWSIReader read rect."""
     file_parent_dir = pathlib.Path(__file__).parent
     wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
     img = wsi.read_rect(location=(0, 0), size=(50, 100))

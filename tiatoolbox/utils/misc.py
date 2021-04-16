@@ -249,9 +249,9 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(objective_power):
-    """Approximate mpp from objective power.
+    r"""Approximate mpp from objective power.
 
-    The formula used for estimation is :math:`power = \\frac{10}{mpp}`.
+    The formula used for estimation is :math:`power = \frac{10}{mpp}`.
     This is a self-inverse function and therefore
     :func:`mpp2objective_power` is simply an alias to this function.
 
@@ -392,13 +392,12 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
         interpolation = interpolation.lower()
     if interpolation in ["nearest", cv2.INTER_NEAREST]:
         return cv2.INTER_NEAREST
-    elif interpolation in ["area", cv2.INTER_AREA]:
+    if interpolation in ["area", cv2.INTER_AREA]:
         return cv2.INTER_AREA
-    elif interpolation in ["linear", cv2.INTER_LINEAR]:
+    if interpolation in ["linear", cv2.INTER_LINEAR]:
         return cv2.INTER_LINEAR
-    elif interpolation in ["cubic", cv2.INTER_CUBIC]:
+    if interpolation in ["cubic", cv2.INTER_CUBIC]:
         return cv2.INTER_CUBIC
-    elif interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
+    if interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
         return cv2.INTER_LANCZOS4
-    else:
-        raise ValueError("Invalid interpolation mode.")
+    raise ValueError("Invalid interpolation mode.")
