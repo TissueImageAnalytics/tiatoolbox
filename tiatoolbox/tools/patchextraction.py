@@ -132,7 +132,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         The slide dimension is calculated using units and resolution.
 
         """
-        level, _ = self.wsi._find_optimal_level_and_downsample(
+        level, _ = self.wsi.find_optimal_level_and_downsample(
             resolution=self.resolution, units=self.units
         )
         try:
@@ -167,13 +167,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         return locations_df, num_patches_img
 
     def __next__(self):
-        current_location = self.current_location
-
-        self.current_location = tuple(
-            map(lambda x, y: x + y, self.current_location, self.stride)
-        )
-
-        return self[current_location]
+        raise NotImplementedError
 
     def merge_patches(self, patches):
         raise NotImplementedError

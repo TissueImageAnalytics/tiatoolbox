@@ -186,7 +186,7 @@ class WSIReader:
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
-    def _find_optimal_level_and_downsample(self, resolution, units, precision=3):
+    def find_optimal_level_and_downsample(self, resolution, units, precision=3):
         """Find the optimal level to read at for a desired resolution and units.
 
         The optimal level is the most downscaled level of the image
@@ -272,7 +272,7 @@ class WSIReader:
              frame.
 
         """
-        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
@@ -317,7 +317,7 @@ class WSIReader:
 
         """
         start_x, start_y, end_x, end_y = bounds
-        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
