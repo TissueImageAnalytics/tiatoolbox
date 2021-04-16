@@ -110,7 +110,7 @@ class OtsuTissueMasker(TissueMasker):
 
         mask = gray < self.threshold
 
-        return mask.astype(np.bool)
+        return mask.astype(bool)
 
 
 class MorphologicalMasker(TissueMasker):
@@ -219,4 +219,4 @@ class MorphologicalMasker(TissueMasker):
 
         mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, self.kernel)
 
-        return mask.astype(np.bool)
+        return mask.astype(bool)
