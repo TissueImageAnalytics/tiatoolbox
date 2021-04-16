@@ -329,6 +329,7 @@ class WSIReader:
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        **kwargs,
     ):
         """Read a region of the whole slide image at a location and size.
 
@@ -369,7 +370,7 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
-            extra_kwargs (dict): Extra key-word arguments passed on to
+            **kwargs (dict): Extra key-word arguments passed on to
                 :func:`utils.image.sub_pixel_read`. Defaults to {
                     "constant_values": 255 }.
 
@@ -506,6 +507,7 @@ class WSIReader:
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        **kwargs,
     ):
         """Read a region of the whole slide image within given bounds.
 
@@ -538,6 +540,17 @@ class WSIReader:
                 Supported units are: microns per pixel (mpp), objective
                 power (power), pyramid / resolution level (level),
                 pixels per baseline pixel (baseline).
+            interpolation (str): Method to use when resampling the output
+                image. Possible values are "linear", "cubic", "lanczos",
+                "area", and "optimse". Defaults to 'optimise' which
+                will use cubic interpolation for upscaling and area
+                interpolation for downscaling to avoid moiré patterns.
+            pad_mode (str): Method to use when padding at the edges of the
+                image. Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            **kwargs (dict): Extra key-word arguments passed on to
+                :func:`utils.image.sub_pixel_read`. Defaults to {
+                    "constant_values": 255 }.
 
         Returns:
             ndarray: array of size MxNx3
@@ -1095,6 +1108,7 @@ class OmnyxJP2WSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        **kwargs,
     ):
         # Find parameters for optimal read
         (
@@ -1141,6 +1155,7 @@ class OmnyxJP2WSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        **kwargs,
     ):
         # Find parameters for optimal read
         read_level, _, output_size, post_read_scale = self._find_read_bounds_params(
@@ -1330,11 +1345,8 @@ class VirtualWSIReader(WSIReader):
         interpolation="cubic",
         pad_mode="constant",
         pad_constant_values=0,
-        read_kwargs=None,
+        **kwargs,
     ):
-        if read_kwargs is None:
-            read_kwargs = dict()
-
         # Find parameters for optimal read
         (_, _, _, _, baseline_read_size,) = self._find_read_rect_params(
             location=location,
@@ -1364,7 +1376,7 @@ class VirtualWSIReader(WSIReader):
             interpolation=interpolation,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
-            read_kwargs=read_kwargs,
+            read_kwargs=kwargs,
         )
 
         im_region_size = np.array(im_region.shape[:2][::-1], dtype=int)
@@ -1385,10 +1397,8 @@ class VirtualWSIReader(WSIReader):
         interpolation="cubic",
         pad_mode="constant",
         pad_constant_values=0,
-        read_kwargs=None,
+        **kwargs,
     ):
-        if read_kwargs is None:
-            read_kwargs = dict()
 
         # Find parameters for optimal read
         _, _, output_size, post_read_scale = self._find_read_bounds_params(
@@ -1409,7 +1419,7 @@ class VirtualWSIReader(WSIReader):
             interpolation=interpolation,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
-            read_kwargs=read_kwargs,
+            read_kwargs=kwargs,
         )
 
         im_region = utils.transforms.imresize(
