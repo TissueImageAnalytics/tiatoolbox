@@ -321,7 +321,14 @@ class WSIReader:
         return read_level, level_bounds, output_size, post_read_scale_factor
 
     def read_rect(
-        self, location, size, resolution=0, interpolation="optimise", units="level"
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
     ):
         """Read a region of the whole slide image at a location and size.
 
@@ -491,7 +498,15 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def read_bounds(self, bounds, resolution=0, units="level"):
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+    ):
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  /
