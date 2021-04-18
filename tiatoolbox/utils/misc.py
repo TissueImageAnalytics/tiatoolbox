@@ -286,7 +286,7 @@ def mpp2objective_power(mpp):
         mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
-        np.ndarray: Objective power approximations.
+        :class:`numpy.ndarray`: Objective power approximations.
 
     Examples:
         >>> mpp2objective_power(0.25)

@@ -46,8 +46,8 @@ class TissueMasker(ABC):
         """Fit the masker to the image and given key word parameters.
 
         Args:
-            image (np.ndarray): RGB image, usually a WSI thumbnail.
-            mask (np.ndarray): Target/ground-truth mask.
+            image (:class:`numpy.ndarray`): RGB image, usually a WSI thumbnail.
+            mask (:class:`numpy.ndarray`): Target/ground-truth mask.
         """
         self.fitted = True
 
@@ -56,7 +56,7 @@ class TissueMasker(ABC):
         """Create and return a tissue mask.
 
         Args:
-            thumbnail (np.ndarray): RGB image, usually a WSI thumbnail.
+            thumbnail (:class:`numpy.ndarray`): RGB image, usually a WSI thumbnail.
 
         Returns:
             np.ndarary: Map of semantic classes spatially over the WSI
@@ -73,7 +73,7 @@ class TissueMasker(ABC):
         of :fun:`fit` followed by :func:`transform` can be overridden.
 
         Args:
-            image (np.ndarray): Image to create mask from.
+            image (:class:`numpy.ndarray`): Image to create mask from.
             fit_params (dict): Generic key word arguments passed to fit.
         """
         self.fit(image, **fit_params)
