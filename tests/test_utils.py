@@ -1,5 +1,6 @@
 import random
 from pathlib import Path
+from typing import Tuple
 from tiatoolbox.utils.transforms import locsize2bounds
 
 import pytest
@@ -497,3 +498,109 @@ def test_parse_cv2_interpolaton():
 
     with pytest.raises(ValueError):
         assert utils.misc.parse_cv2_interpolaton(1337)
+
+
+def test_crop_and_pad_edges():
+    """Test crop and pad util function."""
+    slide_dimensions = (1024, 1024)
+
+    def edge_mask(bounds: Tuple[int, int, int, int]) -> np.ndarray:
+        """Produce a mask of regions outside of the slide dimensions."""
+        l, t, r, b = bounds
+        slide_width, slide_height = slide_dimensions
+        X, Y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
+        under = np.logical_or(X < 0, Y < 0).astype(np.int)
+        over = np.logical_or(X >= slide_width, Y >= slide_height).astype(np.int)
+        return under, over
+
+    loc = (-5, -5)
+    size = (10, 10)
+    bounds = utils.transforms.locsize2bounds(loc, size)
+    under, over = edge_mask(bounds)
+    region = -under + over
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+    output = utils.image.crop_and_pad_edges(
+        bounds=bounds,
+        max_dimensions=slide_dimensions,
+        region=region,
+        pad_mode="constant",
+    )
+
+    assert np.all(np.logical_or(output >= 10, output == 0))
+    assert output.shape == region.shape
+
+    slide_width, slide_height = slide_dimensions
+
+    loc = (slide_width - 5, slide_height - 5)
+    bounds = utils.transforms.locsize2bounds(loc, size)
+    under, over = edge_mask(bounds)
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+    output = utils.image.crop_and_pad_edges(
+        bounds=bounds,
+        max_dimensions=slide_dimensions,
+        region=region,
+        pad_mode="constant",
+    )
+
+    assert np.all(np.logical_or(output >= 10, output == 0))
+    assert output.shape == region.shape
+
+
+def test_fuzz_crop_and_pad_edges_output_size():
+    """Fuzz test crop and pad util function output size."""
+    random.seed(0)
+
+    for _ in range(1000):
+        slide_dimensions = (random.randint(0, 50), random.randint(0, 50))
+
+        loc = (-5, -5)
+        size = (10, 10)
+        bounds = utils.transforms.locsize2bounds(loc, size)
+        region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+        output = utils.image.crop_and_pad_edges(
+            bounds=bounds,
+            max_dimensions=slide_dimensions,
+            region=region,
+            pad_mode="constant",
+        )
+
+        assert output.shape == region.shape
+
+
+def test_crop_and_pad_edges_negative_max_dims():
+    for max_dims in [(-1, 1), (1, -1), (-1, -1)]:
+        with pytest.raises(ValueError):
+            utils.image.crop_and_pad_edges(
+                bounds=(0, 0, 1, 1),
+                max_dimensions=max_dims,
+                region=np.zeros((10, 10)),
+                pad_mode="constant",
+            )
+
+    # Zero dimensions
+    utils.image.crop_and_pad_edges(
+        bounds=(0, 0, 1, 1),
+        max_dimensions=(0, 0),
+        region=np.zeros((10, 10)),
+        pad_mode="constant",
+    )
+
+
+def test_crop_and_pad_edges_non_positive_bounds_size():
+    with pytest.raises(ValueError):
+        # Zero dimensions and negative bounds size
+        utils.image.crop_and_pad_edges(
+            bounds=(0, 0, -1, -1),
+            max_dimensions=(0, 0),
+            region=np.zeros((10, 10)),
+            pad_mode="constant",
+        )
+
+    with pytest.raises(ValueError):
+        # Zero dimensions and negative bounds size
+        utils.image.crop_and_pad_edges(
+            bounds=(0, 0, 0, 0),
+            max_dimensions=(0, 0),
+            region=np.zeros((10, 10)),
+            pad_mode="constant",
+        )

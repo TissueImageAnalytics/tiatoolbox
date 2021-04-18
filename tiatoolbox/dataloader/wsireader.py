@@ -866,43 +866,6 @@ class OpenSlideWSIReader(WSIReader):
         super().__init__(input_img=input_img)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
-    def _crop_and_pad_edges(
-        self,
-        location: Tuple[int, int],
-        size: Tuple[int, int],
-        level: int,
-        region: np.ndarray,
-        pad_mode: str = "constant",
-        pad_constant_values: Union[int, Tuple] = 0,
-    ) -> np.ndarray:
-        """Apply padding to areas of a region which are outside the slide dimensions."""
-        bounds = utils.transforms.locsize2bounds(location, size)
-        l, t, r, b = bounds
-        slide_width, slide_height = self.info.level_dimensions[level]
-        X, Y = np.arange(l, r), np.arange(t, b)
-        _, (bounds_width, bounds_height) = utils.transforms.bounds2locsize(bounds)
-        x_before = np.argmin(np.abs(X))
-        y_before = np.argmin(np.abs(Y))
-        x_end = np.argmin(np.abs(slide_width - 1 - X))
-        y_end = np.argmin(np.abs(slide_height - 1 - Y))
-        x_after = bounds_width - 1 - x_end
-        y_after = bounds_height - 1 - y_end
-        padding = (
-            (y_before, y_after),
-            (x_before, x_after),
-        )
-
-        if len(region.shape) > 2:
-            padding = padding + ((0, 0),)
-
-        crop = region[y_before : y_end + 1, x_before : x_end + 1, ...]
-
-        if pad_mode == "constant":
-            return np.pad(
-                crop, padding, mode=pad_mode, constant_values=pad_constant_values
-            )
-        return np.pad(crop, padding, mode=pad_mode)
-
     def read_rect(
         self,
         location,
@@ -918,7 +881,7 @@ class OpenSlideWSIReader(WSIReader):
         (
             read_level,
             level_location,
-            read_size,
+            level_size,
             post_read_scale,
             _,
         ) = self._find_read_rect_params(
@@ -931,14 +894,13 @@ class OpenSlideWSIReader(WSIReader):
         wsi = self.openslide_wsi
 
         # Read at optimal level and corrected read size
-        im_region = wsi.read_region(location, read_level, read_size)
+        im_region = wsi.read_region(location, read_level, level_size)
         im_region = np.array(im_region)
 
         # Apply padding outside of the slide area
-        im_region = self._crop_and_pad_edges(
-            location=level_location,
-            size=read_size,
-            level=read_level,
+        im_region = utils.image.crop_and_pad_edges(
+            bounds=utils.transforms.locsize2bounds(level_location, level_size),
+            max_dimensions=self.info.level_dimensions[read_level],
             region=im_region,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
@@ -976,19 +938,17 @@ class OpenSlideWSIReader(WSIReader):
         wsi = self.openslide_wsi
 
         # Read at optimal level and corrected read size
-        location = bounds[:2]
-        read_size = (
-            level_bounds[2] - level_bounds[0],
-            level_bounds[3] - level_bounds[1],
+        baseline_location = bounds[:2]
+        _, level_size = utils.transforms.bounds2locsize(level_bounds)
+        im_region = wsi.read_region(
+            location=baseline_location, level=read_level, size=level_size
         )
-        im_region = wsi.read_region(location=location, level=read_level, size=read_size)
         im_region = np.array(im_region)
 
         # Apply padding outside of the slide area
-        im_region = self._crop_and_pad_edges(
-            location=location,
-            size=read_size,
-            level=read_level,
+        im_region = utils.image.crop_and_pad_edges(
+            bounds=level_bounds,
+            max_dimensions=self.info.level_dimensions[read_level],
             region=im_region,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,

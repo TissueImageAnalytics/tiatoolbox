@@ -20,6 +20,7 @@
 
 """Miscellaneous utilities which operate on image data."""
 import warnings
+from typing import Tuple, Union
 
 import numpy as np
 import cv2
@@ -122,6 +123,80 @@ def flip_padding(padding, hflip=False, vflip=False):
     if vflip:
         t, b = b, t
     return np.array([l, t, r, b])
+
+
+def crop_and_pad_edges(
+    bounds: Tuple[int, int, int, int],
+    max_dimensions: Tuple[int, int],
+    region: np.ndarray,
+    pad_mode: str = "constant",
+    pad_constant_values: Union[int, Tuple] = 0,
+) -> np.ndarray:
+    """Apply padding to areas of a region which are outside max dimensions.
+
+    Applies padding to areas of the image region which have coordinates
+    less than zero or above the width and height in `max_dimensions`.
+    Note that bounds and max_dimensions must given for the same image
+    pyramid level (or more generally resolution e.g. if interpolated
+    between levels or working in other units).
+
+    Args:
+        bounds (tuple(int)): Bounds of the image region.
+        max_dimensions (tuple(int)): The maximum valid x and y
+            values of the bounds, i.e. the width and height of the
+            slide.
+        region (np.ndimage): The image region to be cropped and
+            padded.
+        pad_mode (str): The pad mode to use, see :func:`numpy.pad`
+            for valid pad modes. Defaults to 'constant'.
+        pad_constant_values (int or tuple(int)): Constant value(s)
+            to use when padding. Only used with pad_mode constant.
+
+    Returns:
+        np.ndarray: The cropped and padded image.
+    """
+    left, top, right, bottom = bounds
+    _, (bounds_width, bounds_height) = bounds2locsize(bounds)
+    slide_width, slide_height = max_dimensions
+
+    if slide_width < 0 or slide_height < 0:
+        raise ValueError("max_dimensions must be >= 0.")
+
+    if bounds_width <= 0 or bounds_height <= 0:
+        raise ValueError("Bounds must have size (width and height) > 0.")
+
+    # Create value ranges across x and y coordinates
+    X, Y = np.arange(left, right), np.arange(top, bottom)
+    # Find padding before (also the crop start index)
+    x_before = np.argmin(np.abs(X))
+    y_before = np.argmin(np.abs(Y))
+    # Find the end index of the crop
+    x_end = np.argmin(np.abs(slide_width - 1 - X))
+    y_end = np.argmin(np.abs(slide_height - 1 - Y))
+    # Find padding after the cropped sub-region
+    x_after = bounds_width - 1 - x_end
+    y_after = bounds_height - 1 - y_end
+    # Full padding tuple for np.pad
+    padding = (
+        (y_before, y_after),
+        (x_before, x_after),
+    )
+
+    # If no padding is required then return the original image unmodified
+    if np.all(np.array(padding) == 0):
+        return region
+
+    # Add extra padding dimension for colour channels
+    if len(region.shape) > 2:
+        padding = padding + ((0, 0),)
+
+    # Crop the region
+    crop = region[y_before : y_end + 1, x_before : x_end + 1, ...]
+
+    # Pad the region and return
+    if pad_mode == "constant":
+        return np.pad(crop, padding, mode=pad_mode, constant_values=pad_constant_values)
+    return np.pad(crop, padding, mode=pad_mode)
 
 
 def safe_padded_read(
