@@ -60,10 +60,20 @@ class PatchExtractor(ABC):
 
     """
 
-    def __init__(self, input_img, patch_size, resolution=0, units="level"):
+    def __init__(
+        self,
+        input_img,
+        patch_size,
+        resolution=0,
+        units="level",
+        pad_mode="constant",
+        pad_constant_values=0,
+    ):
         self.patch_size = patch_size
         self.resolution = resolution
         self.units = units
+        self.pad_mode = pad_mode
+        self.pad_constant_values = pad_constant_values
         self.n = 0
         self.wsi = wsireader.get_wsireader(input_img=input_img)
 
@@ -107,6 +117,8 @@ class FixedWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
+        pad_mode="constant",
+        pad_constant_values=0,
         stride=1,
     ):
         super().__init__(
@@ -114,6 +126,8 @@ class FixedWindowPatchExtractor(PatchExtractor):
             patch_size=patch_size,
             resolution=resolution,
             units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
         self.stride = stride
 
@@ -143,6 +157,8 @@ class VariableWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
+        pad_mode="constant",
+        pad_constant_values=0,
         stride=1,
         label_patch_size=None,
     ):
@@ -151,6 +167,8 @@ class VariableWindowPatchExtractor(PatchExtractor):
             patch_size=patch_size,
             resolution=resolution,
             units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
         self.stride_h = stride
         self.label_patch_size = label_patch_size
@@ -186,6 +204,8 @@ class PointsPatchExtractor(PatchExtractor):
         patch_size=224,
         resolution=0,
         units="level",
+        pad_mode="constant",
+        pad_constant_values=0,
         num_examples_per_patch=1,
     ):
         super().__init__(
@@ -193,6 +213,8 @@ class PointsPatchExtractor(PatchExtractor):
             patch_size=patch_size,
             resolution=resolution,
             units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
 
         self.num_examples_per_patch = num_examples_per_patch
@@ -223,6 +245,8 @@ class PointsPatchExtractor(PatchExtractor):
             size=self.patch_size,
             resolution=self.resolution,
             units=self.units,
+            pad_mode=self.pad_mode,
+            pad_constant_values=self.pad_constant_values,
         )
 
         return data
