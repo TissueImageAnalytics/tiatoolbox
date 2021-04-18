@@ -134,7 +134,7 @@ def crop_and_pad_edges(
             to use when padding. Only used with pad_mode constant.
 
     Returns:
-        np.ndarray: The cropped and padded image.
+        :class:`numpy.ndarray`: The cropped and padded image.
     """
     left, top, right, bottom = bounds
     _, (bounds_width, bounds_height) = bounds2locsize(bounds)
@@ -211,11 +211,11 @@ def safe_padded_read(
         bounds (tuple(int)):
             Bounds of the region in (left, top,
             right, bottom) format.
-        stride (int, tuple(int)):
+        stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
             Also applies to padding.
-        padding (int, tuple(int)):
+        padding (int or tuple(int)):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
             Method for padding when reading areas outside of
@@ -230,7 +230,7 @@ def safe_padded_read(
             padding function :func:`numpy.pad`.
 
     Returns:
-        np.ndarray: Padded image region.
+        numpy.ndarray: Padded image region.
 
     Raises:
         ValueError: Bounds must be integers.
@@ -244,7 +244,8 @@ def safe_padded_read(
         >>> safe_padded_read(img, bounds, pad_mode="reflect")
 
         >>> bounds = (1, 1, 6, 6)
-        >>> safe_padded_read(img, bounds, padding=2 pad_mode="reflect")
+        >>> safe_padded_read(img, bounds, padding=2, pad_mode="reflect")
+
     """
     if pad_kwargs is None:
         pad_kwargs = {}
@@ -352,10 +353,10 @@ def sub_pixel_read(
             (left, top, right, bottom) format.
         output_size (tuple(int)):
             The desired output size.
-        padding (int, tuple(int)):
+        padding (int or tuple(int)):
             Amount of padding to apply to the image region in pixels.
             Defaults to 0.
-        stride (int, tuple(int)):
+        stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
             interpreted as stride in x and y (axis 1 and 0 respectively).
         interpolation (str):
@@ -382,7 +383,8 @@ def sub_pixel_read(
         **read_kwargs (dict):
             Arbitrary keyword arguments passed through to `read_func`.
     Return:
-        np.ndimage: Output image region.
+        :class:`numpy.ndimage`: Output image region.
+
     Raises:
         ValueError: Invalid arguments.
         AssertionError: Internal errors, possibly due to invalid values.
@@ -401,7 +403,7 @@ def sub_pixel_read(
         Read with padding applied after reading:
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> region = sub_pixel_read(image, bounds)
-        >>> reguin = np.pad(region, padding=2, mode="reflect")
+        >>> region = np.pad(region, padding=2, mode="reflect")
 
         Custom read function which generates a diagonal gradient:
         >>> bounds = (0, 0, 10.5, 10.5)
@@ -426,7 +428,7 @@ def sub_pixel_read(
         image = np.array(image)
     bounds = np.array(bounds)
     _, bounds_size = bounds2locsize(bounds)
-    if np.size(stride) == 2:
+    if np.size(stride) == 1:
         stride = np.tile(stride, 2)
     bounds_size = bounds_size / stride
     if 0 in bounds_size:

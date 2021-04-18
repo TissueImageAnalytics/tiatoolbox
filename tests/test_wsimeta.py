@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from tiatoolbox.dataloader import wsimeta, wsireader
+from tiatoolbox.wsicore import wsimeta, wsireader
 
 
 # noinspection PyTypeChecker
@@ -72,6 +72,10 @@ def test_wsimeta_openslidewsireader_svs(_sample_svs, tmp_path):
     wsi_obj = wsireader.OpenSlideWSIReader(_sample_svs)
     meta = wsi_obj.info
     assert meta.validate()
+
+    meta.mpp = None
+    m = meta.as_dict()
+    assert isinstance(m["mpp"], tuple)
 
 
 def test_wsimeta_setter(_sample_svs):

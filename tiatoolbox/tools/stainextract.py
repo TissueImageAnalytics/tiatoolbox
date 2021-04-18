@@ -29,6 +29,60 @@ from tiatoolbox.utils.transforms import convert_RGB2OD
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
+def vectors_in_correct_direction(e_vectors):
+    """Points the eigen vectors in the right direction.
+
+    Args:
+        e_vectors (:class:`numpy.ndarray`): eigen vectors
+
+    Returns:
+        ndarray pointing in the correct direction
+
+    """
+    if e_vectors[0, 0] < 0:
+        e_vectors[:, 0] *= -1
+    if e_vectors[0, 1] < 0:
+        e_vectors[:, 1] *= -1
+
+    return e_vectors
+
+
+def h_and_e_in_right_order(v1, v2):
+    """Rearranges input vectors for H&E in correct order with H as first output.
+
+    Args:
+        v1 (:class:`numpy.ndarray`): Input vector for stain extraction.
+        v2 (:class:`numpy.ndarray`): Input vector for stain extraction.
+
+    Returns:
+        input vectors in the correct order.
+
+    """
+    if v1[0] > v2[0]:
+        he = np.array([v1, v2])
+    else:
+        he = np.array([v2, v1])
+
+    return he
+
+
+def dl_output_for_h_and_e(dictionary):
+    """Return correct value for H and E from dictionary learning output.
+
+    Args:
+        dictionary (:class:`numpy.ndarray`):
+         :class:`sklearn.decomposition.DictionaryLearning` output
+
+    Returns:
+        ndarray with correct values for H and E
+
+    """
+    if dictionary[0, 0] < dictionary[1, 0]:
+        dictionary = dictionary[[1, 0], :]
+
+    return dictionary
+
+
 class CustomExtractor:
     """Get the user-defined stain matrix.
 
@@ -36,22 +90,24 @@ class CustomExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import CustomExtractor()
+        >>> from tiatoolbox.tools.stainextract import CustomExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = CustomExtractor(stain_matrix)
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
 
     def __init__(self, stain_matrix):
         self.stain_matrix = stain_matrix
-        if self.stain_matrix.shape != (2, 3) and self.stain_matrix.shape != (3, 3):
-            raise Exception("Stain matrix must be either (2,3) or (3,3)")
+        if self.stain_matrix.shape not in [(2, 3), (3, 3)]:
+            raise ValueError("Stain matrix must be either (2,3) or (3,3)")
 
     def get_stain_matrix(self, _):
         """Get the user defined stain matrix.
 
         Returns:
-            ndarray: user defined stain matrix.
+            :class:`numpy.ndarray`: user defined stain matrix.
 
         """
         return self.stain_matrix
@@ -70,8 +126,10 @@ class RuifrokExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import RuifrokExtractor()
+        >>> from tiatoolbox.tools.stainextract import RuifrokExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = RuifrokExtractor()
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
@@ -100,8 +158,10 @@ class MacenkoExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import MacenkoExtractor()
+        >>> from tiatoolbox.tools.stainextract import MacenkoExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = MacenkoExtractor()
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
@@ -111,12 +171,12 @@ class MacenkoExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (ndarray): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
             angular_percentile (int):
 
         Returns:
-            ndarray: estimated stain matrix.
+            :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -134,10 +194,7 @@ class MacenkoExtractor:
         e_vects = e_vects[:, [2, 1]]
 
         # make sure vectors are pointing the right way
-        if e_vects[0, 0] < 0:
-            e_vects[:, 0] *= -1
-        if e_vects[0, 1] < 0:
-            e_vects[:, 1] *= -1
+        e_vects = vectors_in_correct_direction(e_vectors=e_vects)
 
         # project on this basis.
         proj = np.dot(img_od, e_vects)
@@ -154,10 +211,7 @@ class MacenkoExtractor:
         v2 = np.dot(e_vects, np.array([np.cos(max_phi), np.sin(max_phi)]))
 
         # order of H&E - H first row
-        if v1[0] > v2[0]:
-            he = np.array([v1, v2])
-        else:
-            he = np.array([v2, v1])
+        he = h_and_e_in_right_order(v1, v2)
 
         normalised_rows = he / np.linalg.norm(he, axis=1)[:, None]
         return normalised_rows
@@ -176,8 +230,10 @@ class VahadaneExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.staiextract import VahadaneExtractor()
+        >>> from tiatoolbox.tools.stainextract import VahadaneExtractor()
+        >>> from tiatoolbox.utils.misc import imread
         >>> extractor = VahadaneExtractor()
+        >>> img = imread('path/to/image')
         >>> stain_matrix = extractor.get_stain_matrix(img)
 
     """
@@ -187,12 +243,12 @@ class VahadaneExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (ndarray): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
             regulariser (float): regulariser used in dictionary learning
 
         Returns:
-            ndarray: estimated stain matrix.
+            :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -219,8 +275,8 @@ class VahadaneExtractor:
 
         # order H and E.
         # H on first row.
-        if dictionary[0, 0] < dictionary[1, 0]:
-            dictionary = dictionary[[1, 0], :]
+        dictionary = dl_output_for_h_and_e(dictionary)
+
         normalised_rows = dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
 
         return normalised_rows
