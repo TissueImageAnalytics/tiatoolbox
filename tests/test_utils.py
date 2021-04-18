@@ -621,8 +621,6 @@ def test_grab_files_from_dir():
 
 def test_parse_cv2_interpolaton():
     """Test parsing interpolation modes for cv2."""
-    import cv2
-
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
     mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
