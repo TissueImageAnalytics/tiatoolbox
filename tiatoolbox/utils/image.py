@@ -106,25 +106,6 @@ def make_bounds_size_positive(bounds):
     return (bounds, hflip, vflip)
 
 
-def flip_padding(padding, hflip=False, vflip=False):
-    """Apply horizontal and/or vertical flips to padding vector.
-
-    Args:
-        padding (np.ndarray): Length 4 padding vector (left, top, right, bottom).
-        hflip (bool): Flip horizontally.
-        vflip (bool): FLip vertically:
-
-    Returns:
-        np.ndarray: Flipped padding vector.
-    """
-    l, t, r, b = padding
-    if hflip:
-        l, r = r, l
-    if vflip:
-        t, b = b, t
-    return np.array([l, t, r, b])
-
-
 def crop_and_pad_edges(
     bounds: Tuple[int, int, int, int],
     max_dimensions: Tuple[int, int],
