@@ -875,6 +875,7 @@ class OpenSlideWSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        **kwargs,
     ):
 
         # Find parameters for optimal read
@@ -925,6 +926,7 @@ class OpenSlideWSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        **kwargs,
     ):
 
         # Find parameters for optimal read
