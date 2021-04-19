@@ -70,6 +70,7 @@ class PatchExtractor(ABC):
         self.wsi = get_wsireader(input_img=input_img)
         self.num_examples_per_patch = None
         self.locations_df = None
+        self.stride = None
 
     def __iter__(self):
         self.n = 0
@@ -77,6 +78,45 @@ class PatchExtractor(ABC):
 
     def __next__(self):
         raise NotImplementedError
+
+    def _generate_location_df(self):
+        """Generate location list based on slide dimension.
+        The slide dimension is calculated using units and resolution.
+
+        """
+        level, _ = self.wsi.find_optimal_level_and_downsample(
+            resolution=self.resolution, units=self.units
+        )
+        try:
+            level = np.int(level)
+            slide_dimension = self.wsi.info.level_dimensions[level]
+        except IndexError:
+            slide_dimension = self.wsi.info.level_dimensions[0]
+            rescale = 2 ** level
+            slide_dimension = tuple([int(x / rescale) for x in slide_dimension])
+
+        img_w = slide_dimension[0]
+        img_h = slide_dimension[1]
+        img_patch_w = self.patch_size[0]
+        img_patch_h = self.patch_size[1]
+        stride_w = self.stride[0]
+        stride_h = self.stride[1]
+
+        num_patches_img_h = math.ceil((img_h - img_patch_h) / stride_h + 1)
+        num_patches_img_w = math.ceil(((img_w - img_patch_w) / stride_w + 1))
+        num_patches_img = num_patches_img_h * num_patches_img_w
+
+        data = []
+
+        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+                start_h = h * stride_h
+                start_w = w * stride_w
+                data.append([start_w, start_h, None])
+
+        locations_df = read_locations(input_table=np.array(data))
+
+        return locations_df, num_patches_img
 
     def __getitem__(self, item):
         raise NotImplementedError
@@ -126,45 +166,6 @@ class FixedWindowPatchExtractor(PatchExtractor):
             self.stride = stride
 
         self.locations_df, self.num_examples_per_patch = self._generate_location_df()
-
-    def _generate_location_df(self):
-        """Generate location list based on slide dimension.
-        The slide dimension is calculated using units and resolution.
-
-        """
-        level, _ = self.wsi.find_optimal_level_and_downsample(
-            resolution=self.resolution, units=self.units
-        )
-        try:
-            level = np.int(level)
-            slide_dimension = self.wsi.info.level_dimensions[level]
-        except IndexError:
-            slide_dimension = self.wsi.info.level_dimensions[0]
-            rescale = 2 ** level
-            slide_dimension = tuple([int(x / rescale) for x in slide_dimension])
-
-        img_w = slide_dimension[0]
-        img_h = slide_dimension[1]
-        img_patch_w = self.patch_size[0]
-        img_patch_h = self.patch_size[1]
-        stride_w = self.stride[0]
-        stride_h = self.stride[1]
-
-        num_patches_img_h = math.ceil((img_h - img_patch_h) / stride_h + 1)
-        num_patches_img_w = math.ceil(((img_w - img_patch_w) / stride_w + 1))
-        num_patches_img = num_patches_img_h * num_patches_img_w
-
-        data = []
-
-        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-                start_h = h * stride_h
-                start_w = w * stride_w
-                data.append([start_w, start_h, None])
-
-        locations_df = read_locations(input_table=np.array(data))
-
-        return locations_df, num_patches_img
 
     def __next__(self):
         raise NotImplementedError
