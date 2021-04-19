@@ -77,7 +77,31 @@ class PatchExtractor(ABC):
         return self
 
     def __next__(self):
-        raise NotImplementedError
+        n = self.n
+
+        if n >= self.locations_df.shape[0]:
+            raise StopIteration
+        self.n = n + 1
+        return self[n]
+
+    def __getitem__(self, item):
+        if type(item) is not int:
+            raise TypeError("Index should be an integer.")
+
+        if item >= self.locations_df.shape[0]:
+            raise IndexError
+
+        x = self.locations_df["x"][item]
+        y = self.locations_df["y"][item]
+
+        data = self.wsi.read_rect(
+            location=(int(x), int(y)),
+            size=self.patch_size,
+            resolution=self.resolution,
+            units=self.units,
+        )
+
+        return data
 
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
@@ -117,9 +141,6 @@ class PatchExtractor(ABC):
         locations_df = read_locations(input_table=np.array(data))
 
         return locations_df, num_patches_img
-
-    def __getitem__(self, item):
-        raise NotImplementedError
 
     def merge_patches(self, patches):
         """Merge the patch-level results to get the overall image-level prediction.
@@ -245,35 +266,12 @@ class PointsPatchExtractor(PatchExtractor):
 
         self.num_examples_per_patch = num_examples_per_patch
         self.locations_df = read_locations(input_table=locations_list)
-
-    def __next__(self):
-        n = self.n
-
-        if n >= self.locations_df.shape[0]:
-            raise StopIteration
-        self.n = n + 1
-        return self[n]
-
-    def __getitem__(self, item):
-        if type(item) is not int:
-            raise TypeError("Index should be an integer.")
-
-        if item >= self.locations_df.shape[0]:
-            raise IndexError
-
-        x, y, _ = self.locations_df.values[item, :]
-
-        x = x - int((self.patch_size[1] - 1) / 2)
-        y = y - int((self.patch_size[0] - 1) / 2)
-
-        data = self.wsi.read_rect(
-            location=(int(x), int(y)),
-            size=self.patch_size,
-            resolution=self.resolution,
-            units=self.units,
+        self.locations_df["x"] = self.locations_df["x"] - int(
+            (self.patch_size[1] - 1) / 2
         )
-
-        return data
+        self.locations_df["y"] = self.locations_df["y"] - int(
+            (self.patch_size[1] - 1) / 2
+        )
 
     def merge_patches(self, patches=None):
         """Merge patch is not supported by :obj:`PointsPatchExtractor`.
