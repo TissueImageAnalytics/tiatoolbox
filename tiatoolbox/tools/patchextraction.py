@@ -25,7 +25,7 @@ import math
 
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils import misc, transforms
+from tiatoolbox.utils import misc
 
 
 class PatchExtractor(ABC):
@@ -101,9 +101,6 @@ class PatchExtractor(ABC):
             resolution=self.resolution,
             units=self.units,
         )
-
-        if self.rescale != 1:
-            data = transforms.imresize(data, output_size=self.patch_size)
 
         return data
 
