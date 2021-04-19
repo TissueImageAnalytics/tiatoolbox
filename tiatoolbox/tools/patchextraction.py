@@ -115,7 +115,7 @@ class PatchExtractor(ABC):
         level, _ = self.wsi.find_optimal_level_and_downsample(
             resolution=self.resolution, units=self.units
         )
-        level = level
+
         slide_dimension = self.wsi.info.level_dimensions[level]
 
         img_w = slide_dimension[0]
