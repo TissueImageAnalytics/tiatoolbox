@@ -56,8 +56,6 @@ class PatchExtractor(ABC):
         resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
-        num_examples_per_patch(int): Number of examples per patch for ensemble
-         classification.
         locations_df(pd.DataFrame): A table containing location and/or type of patch.
 
     """
@@ -68,10 +66,8 @@ class PatchExtractor(ABC):
         self.units = units
         self.n = 0
         self.wsi = get_wsireader(input_img=input_img)
-        self.num_examples_per_patch = None
         self.locations_df = None
         self.stride = None
-        self.rescale = 1
 
     def __iter__(self):
         self.n = 0
@@ -231,7 +227,6 @@ class PointsPatchExtractor(PatchExtractor):
     Args:
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
          and/or type of patch. Input can be path to a csv or json file.
-        num_examples_per_patch(int): Number of examples per patch for ensemble
          classification, default=9 (centre of patch and all the eight neighbours as
          centre).
 
@@ -244,7 +239,6 @@ class PointsPatchExtractor(PatchExtractor):
         patch_size=(224, 224),
         resolution=0,
         units="level",
-        num_examples_per_patch=1,
     ):
         super().__init__(
             input_img=input_img,
@@ -253,7 +247,6 @@ class PointsPatchExtractor(PatchExtractor):
             units=units,
         )
 
-        self.num_examples_per_patch = num_examples_per_patch
         self.locations_df = misc.read_locations(input_table=locations_list)
         self.locations_df["x"] = self.locations_df["x"] - int(
             (self.patch_size[1] - 1) / 2
