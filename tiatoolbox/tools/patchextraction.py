@@ -25,7 +25,7 @@ import math
 
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.misc import read_locations
+from tiatoolbox.utils import misc, transforms
 
 
 class PatchExtractor(ABC):
@@ -71,6 +71,7 @@ class PatchExtractor(ABC):
         self.num_examples_per_patch = None
         self.locations_df = None
         self.stride = None
+        self.rescale = 1
 
     def __iter__(self):
         self.n = 0
@@ -101,6 +102,9 @@ class PatchExtractor(ABC):
             units=self.units,
         )
 
+        if self.rescale != 1:
+            data = transforms.imresize(data, output_size=self.patch_size)
+
         return data
 
     def _generate_location_df(self):
@@ -111,13 +115,8 @@ class PatchExtractor(ABC):
         level, _ = self.wsi.find_optimal_level_and_downsample(
             resolution=self.resolution, units=self.units
         )
-        try:
-            level = np.int(level)
-            slide_dimension = self.wsi.info.level_dimensions[level]
-        except IndexError:
-            slide_dimension = self.wsi.info.level_dimensions[0]
-            rescale = 2 ** level
-            slide_dimension = tuple([int(x / rescale) for x in slide_dimension])
+        level = level
+        slide_dimension = self.wsi.info.level_dimensions[level]
 
         img_w = slide_dimension[0]
         img_h = slide_dimension[1]
@@ -125,10 +124,6 @@ class PatchExtractor(ABC):
         img_patch_h = self.patch_size[1]
         stride_w = self.stride[0]
         stride_h = self.stride[1]
-
-        num_patches_img_h = math.ceil((img_h - img_patch_h) / stride_h + 1)
-        num_patches_img_w = math.ceil(((img_w - img_patch_w) / stride_w + 1))
-        num_patches_img = num_patches_img_h * num_patches_img_w
 
         data = []
 
@@ -138,9 +133,9 @@ class PatchExtractor(ABC):
                 start_w = w * stride_w
                 data.append([start_w, start_h, None])
 
-        locations_df = read_locations(input_table=np.array(data))
+        self.locations_df = misc.read_locations(input_table=np.array(data))
 
-        return locations_df, num_patches_img
+        return self
 
     def merge_patches(self, patches):
         """Merge the patch-level results to get the overall image-level prediction.
@@ -186,10 +181,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         else:
             self.stride = stride
 
-        self.locations_df, self.num_examples_per_patch = self._generate_location_df()
-
-    def __next__(self):
-        raise NotImplementedError
+        self._generate_location_df()
 
     def merge_patches(self, patches):
         raise NotImplementedError
@@ -265,7 +257,7 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
         self.num_examples_per_patch = num_examples_per_patch
-        self.locations_df = read_locations(input_table=locations_list)
+        self.locations_df = misc.read_locations(input_table=locations_list)
         self.locations_df["x"] = self.locations_df["x"] - int(
             (self.patch_size[1] - 1) / 2
         )
