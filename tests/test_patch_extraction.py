@@ -243,8 +243,8 @@ def test_fixed_window_patch_extractor():
     img_h = img.shape[1]
     img_w = img.shape[0]
 
-    num_patches_img_h = math.ceil((img_h - patch_size[1]) / stride[1] + 1)
-    num_patches_img_w = math.ceil(((img_w - patch_size[0]) / stride[0] + 1))
+    num_patches_img_h = int(math.ceil((img_h - patch_size[1]) / stride[1] + 1))
+    num_patches_img_w = int(math.ceil(((img_w - patch_size[0]) / stride[0] + 1)))
     num_patches_img = num_patches_img_h * num_patches_img_w
     iter_tot = 0
 
@@ -252,8 +252,8 @@ def test_fixed_window_patch_extractor():
         (num_patches_img, patch_size[1], patch_size[0], 3), dtype=img.dtype
     )
 
-    for h in range(int(math.ceil((img_h - patch_size[1]) / stride[1] + 1))):
-        for w in range(int(math.ceil((img_w - patch_size[0]) / stride[0] + 1))):
+    for h in range(num_patches_img_h):
+        for w in range(num_patches_img_w):
             start_h = h * stride[1]
             end_h = (h * stride[1]) + patch_size[1]
             start_w = w * stride[0]
@@ -277,6 +277,26 @@ def test_fixed_window_patch_extractor():
         resolution=0,
         units="level",
         stride=stride,
+    )
+
+    assert np.all(img_patches[0] == patches[0])
+
+    img_patches_test = []
+    for patch in patches:
+        img_patches_test.append(patch)
+
+    img_patches_test = np.array(img_patches_test)
+
+    assert np.all(img_patches == img_patches_test)
+
+    # Test for integer (single) patch_size and stride input
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        method_name="fixedwindow",
+        patch_size=patch_size[0],
+        resolution=0,
+        units="level",
+        stride=stride[0],
     )
 
     assert np.all(img_patches[0] == patches[0])
