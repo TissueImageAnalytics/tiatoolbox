@@ -61,7 +61,7 @@ class PatchExtractor(ABC):
     """
 
     def __init__(self, input_img, patch_size, resolution=0, units="level"):
-        if isinstance(patch_size, tuple) or isinstance(patch_size, list):
+        if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
         else:
             self.patch_size = (int(patch_size), int(patch_size))
@@ -175,7 +175,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         if stride is None:
             self.stride = self.patch_size
         else:
-            if isinstance(stride, list) or isinstance(stride, tuple):
+            if isinstance(stride, (tuple, list)):
                 self.stride = (int(stride[0]), int(stride[1]))
             else:
                 self.stride = (int(stride), int(stride))
