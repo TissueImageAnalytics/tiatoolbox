@@ -519,64 +519,64 @@ def test_read_point_annotations(tmp_path):
     labels_table = pd.read_csv(labels)
 
     # Test csv read with header
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test csv read without header
     labels = file_parent_dir.joinpath("data/sample_patch_extraction-noheader.csv")
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs.csv")
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
     labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs_header.csv")
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
     # Test npy read
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test pd dataframe read
-    out_table = utils.misc.read_point_annotations(labels_table)
+    out_table = utils.misc.read_locations(labels_table)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     labels_table_2 = labels_table.drop("class", axis=1)
-    out_table = utils.misc.read_point_annotations(labels_table_2)
+    out_table = utils.misc.read_locations(labels_table_2)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test json read
     labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test json read 2 columns
     labels = file_parent_dir.joinpath("data/sample_patch_extraction_2col.json")
-    out_table = utils.misc.read_point_annotations(labels)
+    out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test numpy array
-    out_table = utils.misc.read_point_annotations(labels_table.to_numpy())
+    out_table = utils.misc.read_locations(labels_table.to_numpy())
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
-    out_table = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:2])
+    out_table = utils.misc.read_locations(labels_table.to_numpy()[:, 0:2])
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test if input array does not have 2 or 3 columns
     with pytest.raises(ValueError):
-        _ = utils.misc.read_point_annotations(labels_table.to_numpy()[:, 0:1])
+        _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
     labels = tmp_path.joinpath("test_gt_3col.npy")
@@ -584,18 +584,18 @@ def test_read_point_annotations(tmp_path):
         np.save(f, np.zeros((3, 4)))
 
     with pytest.raises(ValueError):
-        _ = utils.misc.read_point_annotations(labels)
+        _ = utils.misc.read_locations(labels)
 
     # Test if input pd DataFrame does not have 2 or 3 columns
     with pytest.raises(ValueError):
-        _ = utils.misc.read_point_annotations(labels_table.drop(["y", "class"], axis=1))
+        _ = utils.misc.read_locations(labels_table.drop(["y", "class"], axis=1))
 
     with pytest.raises(FileNotSupported):
         labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
-        _ = utils.misc.read_point_annotations(labels)
+        _ = utils.misc.read_locations(labels)
 
     with pytest.raises(TypeError):
-        _ = utils.misc.read_point_annotations(["a", "b", "c"])
+        _ = utils.misc.read_locations(["a", "b", "c"])
 
 
 def test_grab_files_from_dir():

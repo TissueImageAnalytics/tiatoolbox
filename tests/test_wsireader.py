@@ -374,7 +374,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2):
@@ -385,7 +385,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
@@ -399,7 +399,7 @@ def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
     for mpp, expected_level, expected_scale in zip(
         mpps, expected_levels, expected_scales
     ):
-        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
             mpp, "mpp"
         )
 
@@ -414,7 +414,7 @@ def test_find_optimal_level_and_downsample_power(_sample_ndpi):
     objective_powers = [20, 10, 5, 2.5, 1.25]
     expected_levels = [0, 1, 2, 3, 4]
     for objective_power, expected_level in zip(objective_powers, expected_levels):
-        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
             objective_power, "power"
         )
 
@@ -427,7 +427,7 @@ def test_find_optimal_level_and_downsample_level(_sample_ndpi):
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
 
     for level in range(wsi.info.level_count):
-        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
             level, "level"
         )
 
