@@ -1165,7 +1165,7 @@ def test_tissue_mask_otsu(_sample_svs):
     assert np.mean(np.logical_xor(mask_thumb, otsu_mask)) < 0.01
 
 
-def test_tissue_mask_morphalogical(_sample_svs):
+def test_tissue_mask_morphological(_sample_svs):
     """Test wsi.tissue_mask with morphological method."""
     from skimage.filters import threshold_otsu
     from skimage.morphology import disk, binary_dilation, remove_small_objects
