@@ -1155,9 +1155,9 @@ def test_tissue_mask_otsu(_sample_svs):
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     mask = wsi.tissue_mask(method="otsu")
 
+    mask_thumb = mask.slide_thumbnail()
     tissue_thumb = wsi.slide_thumbnail()
     grey_thumb = tissue_thumb.mean(axis=-1)
-    mask_thumb = mask.slide_thumbnail()
 
     otsu_threhold = threshold_otsu(grey_thumb)
     otsu_mask = grey_thumb < otsu_threhold
