@@ -135,14 +135,14 @@ class MorphologicalMasker(TissueMasker):
         """Initialise a morphological masker.
 
         Args:
-            mpp (float or tuple of float):
+            mpp (float or tuple(float)):
                 The microns per-pixel of the image to be masked. Used to
                 calculate kernel_size a 64/mpp, optional.
-            power (float or tuple of float):
+            power (float or tuple(float)):
                 The objective power of the image to be masked. Used to
                 calculate kernel_size as 64/objective_power2mpp(power),
                 optional.
-            kernel_size (int or tuple of int):
+            kernel_size (int or tuple(int)):
                 Size of elliptical kernel in x and y, optional.
             min_region_size (int):
                 Minimum region size in pixels to consider as foreground.

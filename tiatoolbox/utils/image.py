@@ -55,7 +55,7 @@ def normalise_padding_size(padding):
         ValueError: Invalid input shape of padding (e.g. 3 dimensional).
 
     Returns:
-        np.ndarray: Numpy array of length 4 with elements containing
+        :class:`numpy.ndarray`: Numpy array of length 4 with elements containing
             padding for left, top, right, bottom.
     """
     padding_shape = np.shape(padding)
@@ -85,7 +85,7 @@ def make_bounds_size_positive(bounds):
     output to reflect the swaps which occurred.
 
     Args:
-        bounds (np.ndarray): Length 4 array-like of bounds.
+        bounds (:class:`numpy.ndarray`): Length 4 array-like of bounds.
 
     Returns:
         tuple: Three tuple of: positive bounds, horizontal_flip boolean,
@@ -126,8 +126,8 @@ def crop_and_pad_edges(
         max_dimensions (tuple(int)): The maximum valid x and y
             values of the bounds, i.e. the width and height of the
             slide.
-        region (np.ndimage): The image region to be cropped and
-            padded.
+        region (:class:`numpy.ndarray`): The image region to be cropped
+            and padded.
         pad_mode (str): The pad mode to use, see :func:`numpy.pad`
             for valid pad modes. Defaults to 'constant'.
         pad_constant_values (int or tuple(int)): Constant value(s)
