@@ -34,7 +34,7 @@ class PatchExtractor(ABC):
 
     Args:
         input_img(str, pathlib.Path, ndarray): input image for patch extraction.
-        patch_size(Tuple of int): patch size tuple (width, height).
+        patch_size(int or tuple(int)): patch size tuple (width, height).
         resolution (int or float or tuple of float): resolution at
           which to read the image, default = 0. Either a single
           number or a sequence of two numbers for x and y are
@@ -150,7 +150,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
-        stride(tuple(int)): stride in (x, y) direction for patch extraction,
+        stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
          default = patch_size
 
     Attributes:
