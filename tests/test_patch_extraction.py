@@ -312,8 +312,8 @@ def test_fixed_window_patch_extractor():
 
 def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
     """Test FixedWindowPatchExtractor for ndpi image."""
-    stride = (20, 20)
-    patch_size = (200, 200)
+    stride = (40, 20)
+    patch_size = (400, 200)
     input_img = pathlib.Path(_sample_ndpi)
 
     patches = patchextraction.get_patch_extractor(
@@ -326,7 +326,7 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
     )
 
     wsi = OpenSlideWSIReader(input_img=input_img)
-    x = 200
+    x = 400
     y = 0
     patch = wsi.read_rect(
         location=(int(x), int(y)),
@@ -336,3 +336,4 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
     )
 
     assert np.all(patches[10] == patch)
+    assert patches[0].shape == (200, 400, 3)
