@@ -20,13 +20,12 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
+import numpy as np
+import math
 
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.misc import read_point_annotations
-
-# import math
-# import pathlib
+from tiatoolbox.utils import misc
 
 
 class PatchExtractor(ABC):
@@ -35,7 +34,7 @@ class PatchExtractor(ABC):
 
     Args:
         input_img(str, pathlib.Path, ndarray): input image for patch extraction.
-        patch_size(Tuple of int): patch size tuple (width, height).
+        patch_size(int or tuple(int)): patch size tuple (width, height).
         resolution (int or float or tuple of float): resolution at
           which to read the image, default = 0. Either a single
           number or a sequence of two numbers for x and y are
@@ -53,29 +52,86 @@ class PatchExtractor(ABC):
         input_img(ndarray, WSIReader): input image for patch extraction.
           input_image type is ndarray for an image tile whereas :obj:`WSIReader`
           for an WSI.
-        patch_size(Tuple of int): patch size tuple (width, height).
-        resolution(Tuple of int): resolution at which to read the image.
+        patch_size(tuple(int)): patch size tuple (width, height).
+        resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
+        locations_df(pd.DataFrame): A table containing location and/or type of patch.
 
     """
 
     def __init__(self, input_img, patch_size, resolution=0, units="level"):
-        self.patch_size = patch_size
+        if isinstance(patch_size, (tuple, list)):
+            self.patch_size = (int(patch_size[0]), int(patch_size[1]))
+        else:
+            self.patch_size = (int(patch_size), int(patch_size))
         self.resolution = resolution
         self.units = units
         self.n = 0
         self.wsi = get_wsireader(input_img=input_img)
+        self.locations_df = None
+        self.stride = None
 
     def __iter__(self):
         self.n = 0
         return self
 
     def __next__(self):
-        raise NotImplementedError
+        n = self.n
+
+        if n >= self.locations_df.shape[0]:
+            raise StopIteration
+        self.n = n + 1
+        return self[n]
 
     def __getitem__(self, item):
-        raise NotImplementedError
+        if type(item) is not int:
+            raise TypeError("Index should be an integer.")
+
+        if item >= self.locations_df.shape[0]:
+            raise IndexError
+
+        x = self.locations_df["x"][item]
+        y = self.locations_df["y"][item]
+
+        data = self.wsi.read_rect(
+            location=(int(x), int(y)),
+            size=self.patch_size,
+            resolution=self.resolution,
+            units=self.units,
+        )
+
+        return data
+
+    def _generate_location_df(self):
+        """Generate location list based on slide dimension.
+        The slide dimension is calculated using units and resolution.
+
+        """
+        level, _ = self.wsi.find_optimal_level_and_downsample(
+            resolution=self.resolution, units=self.units
+        )
+
+        slide_dimension = self.wsi.info.level_dimensions[level]
+
+        img_w = slide_dimension[0]
+        img_h = slide_dimension[1]
+        img_patch_w = self.patch_size[0]
+        img_patch_h = self.patch_size[1]
+        stride_w = self.stride[0]
+        stride_h = self.stride[1]
+
+        data = []
+
+        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+                start_h = h * stride_h
+                start_w = w * stride_w
+                data.append([start_w, start_h, None])
+
+        self.locations_df = misc.read_locations(input_table=np.array(data))
+
+        return self
 
     def merge_patches(self, patches):
         """Merge the patch-level results to get the overall image-level prediction.
@@ -94,10 +150,11 @@ class FixedWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using fixed sized windows for images and labels.
 
     Args:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
+        stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
+         default = patch_size
 
     Attributes:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
 
     """
 
@@ -107,7 +164,7 @@ class FixedWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
-        stride=1,
+        stride=None,
     ):
         super().__init__(
             input_img=input_img,
@@ -115,10 +172,15 @@ class FixedWindowPatchExtractor(PatchExtractor):
             resolution=resolution,
             units=units,
         )
-        self.stride = stride
+        if stride is None:
+            self.stride = self.patch_size
+        else:
+            if isinstance(stride, (tuple, list)):
+                self.stride = (int(stride[0]), int(stride[1]))
+            else:
+                self.stride = (int(stride), int(stride))
 
-    def __next__(self):
-        raise NotImplementedError
+        self._generate_location_df()
 
     def merge_patches(self, patches):
         raise NotImplementedError
@@ -128,12 +190,14 @@ class VariableWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using variable sized windows for images and labels.
 
     Args:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
-        label_patch_size(Tuple of int): network output label (width, height).
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+        label_patch_size(tuple(int)): network output label (width, height).
 
     Attributes:
-        stride(Tuple of int): stride in (x, y) direction for patch extraction.
-        label_patch_size(Tuple of int): network output label (width, height).
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+        label_patch_size(tuple(int)): network output label (width, height).
+        current_location(tuple(int)): current starting point location in
+         (x, y) direction.
 
     """
 
@@ -143,7 +207,7 @@ class VariableWindowPatchExtractor(PatchExtractor):
         patch_size,
         resolution=0,
         units="level",
-        stride=1,
+        stride=(1, 1),
         label_patch_size=None,
     ):
         super().__init__(
@@ -152,8 +216,9 @@ class VariableWindowPatchExtractor(PatchExtractor):
             resolution=resolution,
             units=units,
         )
-        self.stride_h = stride
+        self.stride = stride
         self.label_patch_size = label_patch_size
+        self.current_location = (0, 0)
 
     def __next__(self):
         raise NotImplementedError
@@ -168,14 +233,8 @@ class PointsPatchExtractor(PatchExtractor):
     Args:
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
          and/or type of patch. Input can be path to a csv or json file.
-        num_examples_per_patch(int): Number of examples per patch for ensemble
          classification, default=9 (centre of patch and all the eight neighbours as
          centre).
-
-    Attributes:
-        locations_list(pd.DataFrame): A table containing location and/or type of patch.
-        num_examples_per_patch(int): Number of examples per patch for ensemble
-         classification.
 
     """
 
@@ -183,10 +242,9 @@ class PointsPatchExtractor(PatchExtractor):
         self,
         input_img,
         locations_list,
-        patch_size=224,
+        patch_size=(224, 224),
         resolution=0,
         units="level",
-        num_examples_per_patch=1,
     ):
         super().__init__(
             input_img=input_img,
@@ -195,37 +253,13 @@ class PointsPatchExtractor(PatchExtractor):
             units=units,
         )
 
-        self.num_examples_per_patch = num_examples_per_patch
-        self.locations_list = read_point_annotations(input_table=locations_list)
-
-    def __next__(self):
-        n = self.n
-
-        if n >= self.locations_list.shape[0]:
-            raise StopIteration
-        self.n = n + 1
-        return self[n]
-
-    def __getitem__(self, item):
-        if type(item) is not int:
-            raise TypeError("Index should be an integer.")
-
-        if item >= self.locations_list.shape[0]:
-            raise IndexError
-
-        x, y, _ = self.locations_list.values[item, :]
-
-        x = x - int((self.patch_size[1] - 1) / 2)
-        y = y - int((self.patch_size[0] - 1) / 2)
-
-        data = self.wsi.read_rect(
-            location=(int(x), int(y)),
-            size=self.patch_size,
-            resolution=self.resolution,
-            units=self.units,
+        self.locations_df = misc.read_locations(input_table=locations_list)
+        self.locations_df["x"] = self.locations_df["x"] - int(
+            (self.patch_size[1] - 1) / 2
         )
-
-        return data
+        self.locations_df["y"] = self.locations_df["y"] - int(
+            (self.patch_size[1] - 1) / 2
+        )
 
     def merge_patches(self, patches=None):
         """Merge patch is not supported by :obj:`PointsPatchExtractor`.
