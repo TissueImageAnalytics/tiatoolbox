@@ -459,7 +459,19 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
 def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
     """Convert a string to a OpenCV (cv2) interpolation enum.
 
-    Valid integer values for cv2 INTER_ enums are passed through.
+    Interpolation modes:
+        - nearest
+        - linear
+        - area
+        - cubic
+        - lanczos
+
+    Valid integer values for cv2 interpolation enums are passed through.
+    See the `cv::InterpolationFlags`_ documentation for more
+    on cv2 (OpenCV) interpolation modes.
+
+    .. _cv::InterpolationFlags:
+        https://docs.opencv.org/4.0.0/da/d54/group__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121
 
     Args:
         interpolation (Union[str, int]): Interpolation mode string.
