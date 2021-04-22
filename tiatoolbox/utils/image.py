@@ -123,6 +123,13 @@ def crop_and_pad_edges(
     pyramid level (or more generally resolution e.g. if interpolated
     between levels or working in other units).
 
+    Note: This function is planned to be deprecated in the future when a
+    transition from OpenSlide to tifffile as a dependency is complete.
+    It is currently used to remove padding from OpenSlide regions before
+    applying custom padding via :func:`numpy.pad`. This allows the
+    behaviour when reading OpenSlide images to be consistent with other
+    formats.
+
     Args:
         bounds (tuple(int)): Bounds of the image region.
         max_dimensions (tuple(int)): The maximum valid x and y
