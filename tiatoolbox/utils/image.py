@@ -85,11 +85,13 @@ def make_bounds_size_positive(bounds):
     output to reflect the swaps which occurred.
 
     Args:
-        bounds (:class:`numpy.ndarray`): Length 4 array-like of bounds.
+        bounds (:class:`numpy.ndarray`): Length 4 array of bounds.
 
     Returns:
-        tuple: Three tuple of: positive bounds, horizontal_flip boolean,
-            and vertical_flip boolean.
+        tuple: Three tuple containing positive bounds and flips:
+            - :class:`numpy.ndarray` - Positive bounds
+            - :py:obj:`bool` - Horizontal flip
+            - :py:obj:`bool` - Vertical flip
     """
     hflip, vflip = False, False
     _, (width, height) = bounds2locsize(bounds)

@@ -189,8 +189,11 @@ def locsize2bounds(location, size):
          height.
 
     Returns:
-        tuple: A tuple of bounds in (left, top, right, bottom) /
-        (start_x, start_y, end_x, end_y) format.
+        tuple: A tuple of bounds:
+          - :py:obj:`int` - left / start_x
+          - :py:obj:`int` - top / start_y
+          - :py:obj:`int` - right / end_x
+          - :py:obj:`int` - bottom / end_y
     """
     return (
         location[0],

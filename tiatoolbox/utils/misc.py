@@ -37,8 +37,10 @@ def split_path_name_ext(full_path):
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
-        tuple: Three sections of the input file path
-        (input directory path, file name, file extension)
+        tuple: Three parts of the input file path:
+            - :py:obj:`pathlib.Path` - parent directory path
+            - :py:obj:`str` - file name
+            - :py:obj:`str` - file extension
 
     Examples:
         >>> from tiatoolbox import utils

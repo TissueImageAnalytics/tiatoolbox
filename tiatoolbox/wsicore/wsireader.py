@@ -127,7 +127,7 @@ class WSIReader:
 
         Returns:
             list: Scale for each level relative to the given scale and
-                units
+                units.
 
         Examples:
             >>> from tiatoolbox.wsicore import wsireader
@@ -187,7 +187,9 @@ class WSIReader:
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
-    def find_optimal_level_and_downsample(self, resolution, units, precision=3):
+    def find_optimal_level_and_downsample(
+        self, resolution, units, precision=3
+    ) -> Tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
 
         The optimal level is the most downscaled level of the image
@@ -207,8 +209,10 @@ class WSIReader:
                 Defaults to 3.
 
         Returns:
-            tuple(int, float): Optimal read level and scale factor between
-                the optimal level and the target scale (usually <= 1).
+            tuple: Optimal read level and scale factor between the
+                optimal level and the target scale (usually <= 1):
+                - :py:obj:`int` - Level
+                - :py:obj:`float` - Scale factor
 
         """
         level_scales = self._relative_level_scales(resolution, units)
@@ -249,28 +253,50 @@ class WSIReader:
     def _find_read_rect_params(self, location, size, resolution, units, precision=3):
         """Find optimal parameters for reading a rect at a given resolution.
 
+        Reading the image at full baseline resolution and re-sampling to
+        the desired resolution would require a large amount of memeory
+        and be very slow. This function checks the other resolutions
+        stored in the WSI's pyramid of resolutions to find the lowest
+        resolution (smallest level) which is higher resolution (a larger
+        level) than the requested output resolution.
+
+        In addition to finding this 'optimal level', the scale
+        factor to apply after reading in order to obtain the
+        desired resolution is found along with conversions of the
+        location and size into level and baseline coordinates.
+
         Args:
-            location (tuple(int)): in terms of the baseline image
-             (level 0).
-            size (tuple(int)): desired output size in pixels (width,
-             height) tuple.
-            resolution (float): desired output resolution.
-            units (str): the units of scale, default = "level".
-             Supported units are: microns per pixel (mpp), objective
-             power (power), pyramid / resolution level (level),
-             pixels per baseline pixel (baseline).
+            location (tuple(int)): Location in terms of the baseline
+                image (level 0) resolution.
+            size (tuple(int)): Desired output size in pixels (width,
+                height) tuple.
+            resolution (float): Desired output resolution.
+            units (str): Units of scale, default = "level".
+                Supported units are:
+                - microns per pixel ('mpp')
+                - objective power ('power')
+                - pyramid / resolution level ('level')
+                - pixels per baseline pixel ('baseline')
             precision (int, optional): Decimal places to use when
-             finding optimal scale. See
-             :func:`find_optimal_level_and_downsample` for more.
+                finding optimal scale. See
+                :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            tuple(int, tuple(int), tuple(int), float, tuple(float)): Read parameters of
-             optimal read level,
-             location in level reference frame, size (width, height) of the region to
-             read in level reference frame, downscaling factor to
-             apply after reading to get the correct output size and
-             resolution, the size of the region in baseline reference
-             frame.
+            tuple: Parameters for reading the requested region
+            - :py:obj:`int` - Optimal read level
+            - :py:obj:`tuple` - Read location in level coordinates
+                - :py:obj:`int` - X location
+                - :py:obj:`int` - Y location
+            - :py:obj:`tuple` - Region size in level coordinates
+                - :py:obj:`int` - Width
+                - :py:obj:`int` - Height
+            - :py:obj:`tuple` - Scaling to apply after level read to achieve
+              desired output resolution.
+                - :py:obj:`float` - X scale factor
+                - :py:obj:`float` - Y scale factor
+            - :py:obj:`tuple` - Region size in baseline coordinates
+                - :py:obj:`int` - Width
+                - :py:obj:`int` - Height
 
         """
         read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
@@ -308,13 +334,17 @@ class WSIReader:
                 :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
-            tuple(int, tuple(int), tuple(int), float):
-             Read parameters of
-             optimal read level, bounds (start_w, start_h, end_w,
-             end_h) of the region in the optimal level reference
-             frame, correct size to output after reading and applying
-             downscaling, downscaling factor to apply after reading
-             to get the correct output size and resolution.
+            tuple: Parameters for reading the requested bounds area
+                - :py:obj:`int` - Optimal read level
+                - :py:obj:`tuple` - Bounds of the region in level coordinates
+                    - :py:obj:`int` - Left (start x value)
+                    - :py:obj:`int` - Top (start y value)
+                    - :py:obj:`int` - Right (end x value)
+                    - :py:obj:`int` - Bottom (end y value)
+                - :py:obj:`tuple` - Expected size of the output image
+                    - :py:obj:`int` - Width
+                    - :py:obj:`int` - Height
+                - :py:obj:`float` - Scale factor of re-sampling to apply after reading.
 
         """
         start_x, start_y, end_x, end_y = bounds
