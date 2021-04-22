@@ -60,20 +60,18 @@ def read_points_patches(
     return data
 
 
-def test_patch_extractor():
+def test_patch_extractor(_source_image):
     """Test base class patch extractor."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    input_img = misc.imread(file_parent_dir.joinpath("data/source_image.png"))
+    input_img = misc.imread(pathlib.Path(_source_image))
     patches = patchextraction.PatchExtractor(input_img=input_img, patch_size=(20, 20))
     next_patches = iter(patches)
     assert next_patches.n == 0
 
 
-def test_get_patch_extractor():
+def test_get_patch_extractor(_source_image, _patch_extr_csv):
     """Test get_patch_extractor returns the right object."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    input_img = misc.imread(file_parent_dir.joinpath("data/source_image.png"))
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+    input_img = misc.imread(pathlib.Path(_source_image))
+    locations_list = pathlib.Path(_patch_extr_csv)
     points = patchextraction.get_patch_extractor(
         input_img=input_img,
         locations_list=locations_list,
@@ -106,13 +104,14 @@ def test_get_patch_extractor():
         patchextraction.get_patch_extractor("unknown")
 
 
-def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2):
+def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2,
+                                             _source_image, _patch_extr_csv):
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
-    input_img = pathlib.Path(file_parent_dir.joinpath("data/source_image.png"))
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+    locations_list = pathlib.Path(_patch_extr_csv)
+
     points = patchextraction.get_patch_extractor(
-        input_img=input_img,
+        input_img=pathlib.Path(_source_image),
         locations_list=locations_list,
         method_name="point",
         patch_size=(200, 200),
@@ -151,50 +150,48 @@ def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2):
         )
 
 
-def test_points_patch_extractor():
+def test_points_patch_extractor(_tcga_he_7130, _patch_extr_read,
+                                _patch_extr_csv, _patch_extr_npy,
+                                _patch_extr_2col_npy, _patch_extr_json,
+                                _patch_extr_noheader):
     """Test PointsPatchExtractor for VirtualWSIReader."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    input_img = pathlib.Path(
-        file_parent_dir.joinpath("data/TCGA-HE-7130-01Z-00-DX1.png")
-    )
+    input_img = pathlib.Path(_tcga_he_7130)
+
     saved_data = np.load(
-        str(file_parent_dir.joinpath("data/sample_patch_extraction_read.npy"))
+        str(pathlib.Path(_patch_extr_read))
     )
 
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+    locations_list = pathlib.Path(_patch_extr_csv)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
+    locations_list = pathlib.Path(_patch_extr_npy)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction_2col.npy")
+    locations_list = pathlib.Path(_patch_extr_2col_npy)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction.json")
+    locations_list = pathlib.Path(_patch_extr_json)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = file_parent_dir.joinpath(
-        "data/sample_patch_extraction-noheader.csv"
-    )
+    locations_list = pathlib.Path(_patch_extr_noheader)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
 
-def test_points_patch_extractor_svs(_sample_svs):
+def test_points_patch_extractor_svs(_sample_svs, _patch_extr_svs, _patch_extr_svs_read):
     """Test PointsPatchExtractor for svs image."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction_svs.csv")
+    locations_list = pathlib.Path(_patch_extr_svs)
     saved_data = np.load(
-        str(file_parent_dir.joinpath("data/sample_patch_extraction_svsread.npy"))
+        str(pathlib.Path(_patch_extr_svs_read))
     )
 
     data = read_points_patches(
@@ -209,12 +206,12 @@ def test_points_patch_extractor_svs(_sample_svs):
     assert np.all(data == saved_data)
 
 
-def test_points_patch_extractor_jp2(_sample_jp2):
+def test_points_patch_extractor_jp2(_sample_jp2, _patch_extr_jp2_csv,
+                                    _patch_extr_jp2_read):
     """Test PointsPatchExtractor for jp2 image."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    locations_list = file_parent_dir.joinpath("data/sample_patch_extraction_jp2.csv")
+    locations_list = pathlib.Path(_patch_extr_jp2_csv)
     saved_data = np.load(
-        str(file_parent_dir.joinpath("data/sample_patch_extraction_jp2read.npy"))
+        str(pathlib.Path(_patch_extr_jp2_read))
     )
 
     data = read_points_patches(
@@ -229,12 +226,9 @@ def test_points_patch_extractor_jp2(_sample_jp2):
     assert np.all(data == saved_data)
 
 
-def test_fixed_window_patch_extractor():
+def test_fixed_window_patch_extractor(_tcga_he_7130):
     """Test FixedWindowPatchExtractor for VF."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    input_img = pathlib.Path(
-        file_parent_dir.joinpath("data/TCGA-HE-7130-01Z-00-DX1.png")
-    )
+    input_img = pathlib.Path(_tcga_he_7130)
 
     stride = (20, 20)
     patch_size = (200, 200)

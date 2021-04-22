@@ -62,12 +62,12 @@ def test_dl_output_for_h_and_e():
     assert np.all(dictionary2 == dictionary[[1, 0], :])
 
 
-def test_reinhard_normalise():
+def test_reinhard_normalise(_source_image, _norm_reinhard):
     """Test for Reinhard colour normalisation."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    source_img = imread(pathlib.Path(_source_image))
     target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
-    reinhard_img = imread(file_parent_dir.joinpath("data/norm_reinhard.png"))
+    reinhard_img = imread(pathlib.Path(_norm_reinhard))
 
     norm = get_normaliser("reinhard")
     norm.fit(target_img)  # get stain information of target image
@@ -77,12 +77,12 @@ def test_reinhard_normalise():
     assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_custom_normalise():
+def test_custom_normalise(_source_image, _norm_ruifrok):
     """Test for stain normalisation with user-defined stain matrix."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    source_img = imread(pathlib.Path(_source_image))
     target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
-    custom_img = imread(file_parent_dir.joinpath("data/norm_ruifrok.png"))
+    custom_img = imread(pathlib.Path(_norm_ruifrok))
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
@@ -101,12 +101,12 @@ def test_get_normaliser_assertion():
         _ = get_normaliser("ruifrok", stain_matrix)
 
 
-def test_ruifrok_normalise():
+def test_ruifrok_normalise(_source_image, _norm_ruifrok):
     """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    source_img = imread(pathlib.Path(_source_image))
     target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
-    ruifrok_img = imread(file_parent_dir.joinpath("data/norm_ruifrok.png"))
+    ruifrok_img = imread(pathlib.Path(_norm_ruifrok))
 
     # init class with Ruifrok & Johnston method
     norm = get_normaliser("ruifrok")
@@ -117,12 +117,12 @@ def test_ruifrok_normalise():
     assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_macenko_normalise():
+def test_macenko_normalise(_source_image, _norm_macenko):
     """Test for stain normalisation with stain matrix from Macenko et al."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    source_img = imread(pathlib.Path(_source_image))
     target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
-    macenko_img = imread(file_parent_dir.joinpath("data/norm_macenko.png"))
+    macenko_img = imread(pathlib.Path(_norm_macenko))
 
     # init class with Macenko method
     norm = get_normaliser("macenko")
@@ -133,12 +133,12 @@ def test_macenko_normalise():
     assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_vahadane_normalise():
+def test_vahadane_normalise(_source_image, _norm_vahadane):
     """Test for stain normalisation with stain matrix from Vahadane et al."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = imread(file_parent_dir.joinpath("data/source_image.png"))
+    source_img = imread(pathlib.Path(_source_image))
     target_img = imread(file_parent_dir.joinpath("../data/target_image.png"))
-    vahadane_img = imread(file_parent_dir.joinpath("data/norm_vahadane.png"))
+    vahadane_img = imread(pathlib.Path(_norm_vahadane))
 
     # init class with Vahadane method
     norm = get_normaliser("vahadane")
@@ -154,10 +154,10 @@ def test_vahadane_normalise():
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm():
+def test_command_line_stainnorm(_source_image):
     """Test for the stain normalisation CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = file_parent_dir.joinpath("data/source_image.png")
+    source_img = pathlib.Path(_source_image)
     target_img = file_parent_dir.joinpath("../data/target_image.png")
     runner = CliRunner()
     stainnorm_result = runner.invoke(
@@ -243,10 +243,10 @@ def test_cli_stainnorm_dir():
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_file_not_found_error():
+def test_cli_stainnorm_file_not_found_error(_source_image):
     """Test file not found error for the stain normalisation CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = file_parent_dir.joinpath("data/source_image.png")
+    source_img = pathlib.Path(_source_image)
     target_img = file_parent_dir.joinpath("../data/target_image.png")
     runner = CliRunner()
     stainnorm_result = runner.invoke(
@@ -267,10 +267,10 @@ def test_cli_stainnorm_file_not_found_error():
     assert isinstance(stainnorm_result.exception, FileNotFoundError)
 
 
-def test_cli_stainnorm_method_not_supported():
+def test_cli_stainnorm_method_not_supported(_source_image):
     """Test method not supported for the stain normalisation CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = file_parent_dir.joinpath("data/source_image.png")
+    source_img = pathlib.Path(_source_image)
     target_img = file_parent_dir.joinpath("../data/target_image.png")
     runner = CliRunner()
     stainnorm_result = runner.invoke(
