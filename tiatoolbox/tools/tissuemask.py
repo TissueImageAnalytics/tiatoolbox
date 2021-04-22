@@ -81,7 +81,18 @@ class TissueMasker(ABC):
 
 
 class OtsuTissueMasker(TissueMasker):
-    """Tissue masker which uses Otsu's method to determine background."""
+    """Tissue masker which uses Otsu's method to determine background.
+
+    Examples:
+        >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
+        >>> masker = OtsuTissueMasker()
+        >>> masker.fit(thumbnail)
+        >>> mask = masker.transform(thumbnail)
+
+        >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
+        >>> masker = OtsuTissueMasker()
+        >>> mask = masker.fit_transform(thumbnail)
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -124,9 +135,27 @@ class MorphologicalMasker(TissueMasker):
     argument is given instead of mpp to the initialiser.
     For small region removal, the minimum area size defaults to the area
     of the kernel.
-    If the scale of the morphological operations can also be manually
+
+    The scale of the morphological operations can also be manually
     specified with the `kernel_size` argument, for example if the
     automatic scale from mpp or objective power is too large or small.
+
+    Examples:
+        >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
+        >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+        >>> wsi = get_wsireader("slide.svs")
+        >>> thumbnail = wsi.get_thumbnail(32, "mpp")
+        >>> masker = MorphologicalMasker(mpp=32)
+        >>> mask = masker.fit_transform(thumbnail)
+
+        An example reading a thumbnail from a file where the objective
+        power is known:
+        >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
+        >>> from tiatoolbox.utils.misc import imread
+        >>> thumbnail = imread("thumbnail.png")
+        >>> masker = MorphologicalMasker(power=1.25)
+        >>> mask = masker.fit_transform(thumbnail)
+
     """
 
     def __init__(
