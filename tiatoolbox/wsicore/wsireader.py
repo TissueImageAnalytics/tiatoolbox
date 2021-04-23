@@ -411,7 +411,10 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
-            **kwargs (dict): Extra key-word arguments.
+            **kwargs (dict): Extra key-word arguments for reader
+                specific parameters. Currently only used by
+                VirtualWSIReader. See class docstrings for more
+                information.
 
         Returns:
             :class:`numpy.ndarray`: array of size MxNx3 M=size[0], N=size[1]
@@ -586,9 +589,10 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
-            **kwargs (dict): Extra key-word arguments passed on to
-                :func:`utils.image.sub_pixel_read`. Defaults to {
-                    "constant_values": 255 }.
+            **kwargs (dict): Extra key-word arguments for reader
+                specific parameters. Currently only used by
+                :obj:`VirtualWSIReader`. See class docstrings for more
+                information.
 
         Returns:
             :class:`numpy.ndarray`: array of size MxNx3
@@ -1278,6 +1282,16 @@ class VirtualWSIReader(WSIReader):
     - .jpg
     - .png
     - :class:`numpy.ndarray`
+
+    This reader uses :func:`tiatoolbox.utils.image.sub_pixel_read` to
+    allow reading low resolution images as if they are larger i.e. with
+    'virtual' pyramid resolutions. This is useful for reading low
+    resolution masks as if they were stretched to overlay a higher
+    resolution WSI.
+
+    Extra key-word arugments given to :func:`~WSIReader.read_region`
+    and :func:`~WSIReader.read_bounds` will be passed to
+    :func:`~tiatoolbox.utils.image.sub_pixel_read`.
 
     Attributes:
         img (:class:`numpy.ndarray`)
