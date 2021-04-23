@@ -47,6 +47,11 @@ class PatchExtractor(ABC):
           Supported units are: microns per pixel (mpp), objective
           power (power), pyramid / resolution level (level),
           pixels per baseline pixel (baseline).
+        pad_mode (str): Method for padding at edges of the WSI. Default
+            to 'constant'. See :func:`numpy.pad` for more information.
+        pad_constant_values (int or tuple(int)): Values to use with
+            constant padding. Defaults to 0. See :func:`numpy.pad` for
+            more.
 
     Attributes:
         input_img(ndarray, WSIReader): input image for patch extraction.
