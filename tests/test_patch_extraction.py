@@ -150,15 +150,15 @@ def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2,
         )
 
 
-def test_points_patch_extractor(_tcga_he_7130, _patch_extr_read,
+def test_points_patch_extractor(_patch_extr_vf_image, _patch_extr_npy_read,
                                 _patch_extr_csv, _patch_extr_npy,
                                 _patch_extr_2col_npy, _patch_extr_json,
-                                _patch_extr_noheader):
+                                _patch_extr_csv_noheader):
     """Test PointsPatchExtractor for VirtualWSIReader."""
-    input_img = pathlib.Path(_tcga_he_7130)
+    input_img = pathlib.Path(_patch_extr_vf_image)
 
     saved_data = np.load(
-        str(pathlib.Path(_patch_extr_read))
+        str(pathlib.Path(_patch_extr_npy_read))
     )
 
     locations_list = pathlib.Path(_patch_extr_csv)
@@ -181,17 +181,18 @@ def test_points_patch_extractor(_tcga_he_7130, _patch_extr_read,
 
     assert np.all(data == saved_data)
 
-    locations_list = pathlib.Path(_patch_extr_noheader)
+    locations_list = pathlib.Path(_patch_extr_csv_noheader)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
 
-def test_points_patch_extractor_svs(_sample_svs, _patch_extr_svs, _patch_extr_svs_read):
+def test_points_patch_extractor_svs(_sample_svs, _patch_extr_svs_csv,
+                                    _patch_extr_svs_npy_read):
     """Test PointsPatchExtractor for svs image."""
-    locations_list = pathlib.Path(_patch_extr_svs)
+    locations_list = pathlib.Path(_patch_extr_svs_csv)
     saved_data = np.load(
-        str(pathlib.Path(_patch_extr_svs_read))
+        str(pathlib.Path(_patch_extr_svs_npy_read))
     )
 
     data = read_points_patches(
@@ -226,9 +227,9 @@ def test_points_patch_extractor_jp2(_sample_jp2, _patch_extr_jp2_csv,
     assert np.all(data == saved_data)
 
 
-def test_fixed_window_patch_extractor(_tcga_he_7130):
+def test_fixed_window_patch_extractor(_patch_extr_vf_image):
     """Test FixedWindowPatchExtractor for VF."""
-    input_img = pathlib.Path(_tcga_he_7130)
+    input_img = pathlib.Path(_patch_extr_vf_image)
 
     stride = (20, 20)
     patch_size = (200, 200)

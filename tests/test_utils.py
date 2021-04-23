@@ -389,7 +389,7 @@ def test_get_luminosity_tissue_mask():
 
 
 def test_read_point_annotations(tmp_path, _patch_extr_csv,
-                                _patch_extr_noheader, _patch_extr_svs,
+                                _patch_extr_csv_noheader, _patch_extr_svs_csv,
                                 _patch_extr_svs_header, _patch_extr_npy,
                                 _patch_extr_json, _patch_extr_2col_json):
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
@@ -404,12 +404,12 @@ def test_read_point_annotations(tmp_path, _patch_extr_csv,
     assert out_table.shape[1] == 3
 
     # Test csv read without header
-    labels = Path(_patch_extr_noheader)
+    labels = Path(_patch_extr_csv_noheader)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
-    labels = Path(_patch_extr_svs)
+    labels = Path(_patch_extr_svs_csv)
     out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
