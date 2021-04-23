@@ -974,7 +974,7 @@ def test_VirtualWSIReader_read_rect(_source_image):
     with pytest.raises(ValueError):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
 
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=info)
 
     assert info.as_dict() == wsi.info.as_dict()
 
