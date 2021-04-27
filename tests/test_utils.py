@@ -168,9 +168,9 @@ def test_safe_padded_read_stride_shape():
         utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
 
 
-def test_sub_pixel_read():
+def test_sub_pixel_read(_source_image):
     """Test sub-pixel numpy image reads with known tricky parameters."""
-    image_path = Path(__file__).parent / "data" / "source_image.png"
+    image_path = Path(_source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
     pillow_test_image = Image.fromarray(test_image)
@@ -256,11 +256,11 @@ def test_sub_pixel_read_padding_formats():
         assert region.shape == (16 + 2, 16 + 2)
 
 
-def test_fuzz_sub_pixel_read():
+def test_fuzz_sub_pixel_read(_source_image):
     """Fuzz test for numpy sub-pixel image reads."""
     random.seed(0)
 
-    image_path = Path(__file__).parent / "data" / "source_image.png"
+    image_path = Path(_source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -388,10 +388,13 @@ def test_get_luminosity_tissue_mask():
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
 
-def test_read_point_annotations(tmp_path):
+def test_read_point_annotations(tmp_path, _patch_extr_csv,
+                                _patch_extr_csv_noheader, _patch_extr_svs_csv,
+                                _patch_extr_svs_header, _patch_extr_npy,
+                                _patch_extr_json, _patch_extr_2col_json):
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
     file_parent_dir = Path(__file__).parent
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.csv")
+    labels = Path(_patch_extr_csv)
 
     labels_table = pd.read_csv(labels)
 
@@ -401,21 +404,21 @@ def test_read_point_annotations(tmp_path):
     assert out_table.shape[1] == 3
 
     # Test csv read without header
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction-noheader.csv")
+    labels = Path(_patch_extr_csv_noheader)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs.csv")
+    labels = Path(_patch_extr_svs_csv)
     out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction_svs_header.csv")
+    labels = Path(_patch_extr_svs_header)
     out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
     # Test npy read
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.npy")
+    labels = Path(_patch_extr_npy)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
@@ -431,13 +434,13 @@ def test_read_point_annotations(tmp_path):
     assert out_table.shape[1] == 3
 
     # Test json read
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction.json")
+    labels = Path(_patch_extr_json)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test json read 2 columns
-    labels = file_parent_dir.joinpath("data/sample_patch_extraction_2col.json")
+    labels = Path(_patch_extr_2col_json)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
