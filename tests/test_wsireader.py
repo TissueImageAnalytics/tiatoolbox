@@ -983,10 +983,9 @@ def test_VirtualWSIReader_read_rect(_source_image):
     assert info.as_dict() == wsi.info.as_dict()
 
 
-def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
+def test_VirtualWSIReader_read_bounds_virtual_baseline(_source_image):
     """Test VirtualWSIReader read bounds with virtual baseline."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    image_path = file_parent_dir.joinpath("data/source_image.png")
+    image_path = pathlib.Path(_source_image)
     img_array = utils.misc.imread(image_path)
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
@@ -1193,7 +1192,7 @@ def test_tissue_mask_morphological(_sample_svs):
     assert np.mean(np.logical_xor(mask_thumb, morpho_mask)) < 0.1
 
 
-def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
+def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     """Test get_wsireader to return correct object."""
     _sample_svs = str(_sample_svs)
     _sample_ndpi = str(_sample_ndpi)
