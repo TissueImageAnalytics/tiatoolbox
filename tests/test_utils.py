@@ -1,6 +1,3 @@
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
-
 import random
 from pathlib import Path
 from typing import Tuple
@@ -503,7 +500,7 @@ def test_load_stain_matrix(tmp_path):
     out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.csv"))
     assert np.all(out_stain_matrix == stain_matrix)
 
-    np.save(Path(tmp_path).joinpath("sm.npy"), stain_matrix)
+    np.save(str(Path(tmp_path).joinpath("sm.npy")), stain_matrix)
     out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.npy"))
     assert np.all(out_stain_matrix == stain_matrix)
 
@@ -514,10 +511,16 @@ def test_get_luminosity_tissue_mask():
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
 
-def test_read_point_annotations(tmp_path, _patch_extr_csv,
-                                _patch_extr_csv_noheader, _patch_extr_svs_csv,
-                                _patch_extr_svs_header, _patch_extr_npy,
-                                _patch_extr_json, _patch_extr_2col_json):
+def test_read_point_annotations(
+    tmp_path,
+    _patch_extr_csv,
+    _patch_extr_csv_noheader,
+    _patch_extr_svs_csv,
+    _patch_extr_svs_header,
+    _patch_extr_npy,
+    _patch_extr_json,
+    _patch_extr_2col_json,
+):
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
     file_parent_dir = Path(__file__).parent
     labels = Path(_patch_extr_csv)
