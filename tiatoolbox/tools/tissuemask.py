@@ -27,6 +27,7 @@ from abc import ABC, abstractmethod
 
 import cv2
 import numpy as np
+from skimage.filters import threshold_otsu
 
 from tiatoolbox.utils.misc import objective_power2mpp
 
@@ -42,21 +43,26 @@ class TissueMasker(ABC):
         self.fitted = False
 
     @abstractmethod
-    def fit(self, image: np.ndarray, mask=None) -> None:
-        """Fit the masker to the image and given key word parameters.
+    def fit(self, images: np.ndarray, masks=None) -> None:
+        """Fit the masker to the images and parameters.
 
         Args:
-            image (:class:`numpy.ndarray`): RGB image, usually a WSI thumbnail.
-            mask (:class:`numpy.ndarray`): Target/ground-truth mask.
+            images (:class:`numpy.ndarray`):
+                List of images, usually WSI thumbnails. Expected shape is
+                NHWC (number images, height, width, channels).
+            mask (:class:`numpy.ndarray`):
+                Target/ground-truth masks. Expected shape is NHW (n
+                images, height, width).
         """
         self.fitted = True
 
     @abstractmethod
-    def transform(self, image: np.ndarray) -> np.ndarray:
+    def transform(self, images: np.ndarray) -> np.ndarray:
         """Create and return a tissue mask.
 
         Args:
-            thumbnail (:class:`numpy.ndarray`): RGB image, usually a WSI thumbnail.
+            thumbnail (:class:`numpy.ndarray`): RGB image, usually a WSI
+                thumbnail.
 
         Returns:
             np.ndarary: Map of semantic classes spatially over the WSI
@@ -65,8 +71,8 @@ class TissueMasker(ABC):
         if not self.fitted:
             raise Exception("Fit must be called before transform.")
 
-    def fit_transform(self, image: np.ndarray, **fit_params) -> np.ndarray:
-        """Apply :func:`fit` and :func:`transform` in one step.
+    def fit_transform(self, images: np.ndarray, **kwargs) -> np.ndarray:
+        """Perform :func:`fit` then :func:`transform`.
 
         Sometimes it can be more optimal to perform both at the same
         time for a single sample. In this case the base implementation
@@ -74,14 +80,16 @@ class TissueMasker(ABC):
 
         Args:
             image (:class:`numpy.ndarray`): Image to create mask from.
-            fit_params (dict): Generic key word arguments passed to fit.
+            kwargs (dict): Other key word arguments passed to fit.
         """
-        self.fit(image, **fit_params)
-        return self.transform(image)
+        self.fit(images, **kwargs)
+        return self.transform(images)
 
 
 class OtsuTissueMasker(TissueMasker):
     """Tissue masker which uses Otsu's method to determine background.
+
+    Otsu's method
 
     Examples:
         >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
@@ -98,33 +106,43 @@ class OtsuTissueMasker(TissueMasker):
         super().__init__()
         self.threshold = None
 
-    def fit(self, image: np.ndarray, mask=None) -> None:
-        # find Otsu's threshold
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        else:
-            gray = image
+    def fit(self, images: np.ndarray, masks=None) -> None:
+        """"""
+        images_shape = np.shape(images)
+        if len(images_shape) != 4:
+            ValueError(
+                "Expected 4 dimensional input shape (N, height, width, 3)"
+                f" but recieved shape of {images_shape}."
+            )
 
-        self.threshold, _ = cv2.threshold(
-            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-        )
+        grey_images = np.zeros(images_shape[:-1])
+
+        # Convert RGB images to greyscale
+        if images_shape[-1] == 3:
+            for n, image in enumerate(images):
+                grey_images[n] = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
+        pixels = np.concatenate([np.array(grey).flatten() for grey in grey_images])
+
+        # Find Otsu's threshold for all pixels
+        self.threshold = threshold_otsu(pixels)
 
         self.fitted = True
 
-    def transform(self, image: np.ndarray) -> np.ndarray:
-        super().transform(image)
+    def transform(self, images: np.ndarray) -> np.ndarray:
+        super().transform(images)
 
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        else:
-            gray = image
+        masks = []
+        for image in images:
+            if len(image.shape) == 3 and image.shape[-1] == 3:
+                grey = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            mask = (grey < self.threshold).astype(bool)
+            masks.append(mask)
 
-        mask = gray < self.threshold
-
-        return mask.astype(bool)
+        return masks
 
 
-class MorphologicalMasker(TissueMasker):
+class MorphologicalMasker(OtsuTissueMasker):
     """Tissue masker which uses a threshold and simple morphological operations.
 
     This method applies Otsu's threshold before a simple small region
@@ -220,35 +238,25 @@ class MorphologicalMasker(TissueMasker):
         if self.min_region_size is None:
             self.min_region_size = np.sum(self.kernel)
 
-    def fit(self, image: np.ndarray = None, mask=None) -> None:
-        # Find Otsu's threshold
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        else:
-            gray = image
+    def transform(self, images: np.ndarray):
+        super().transform(images)
 
-        self.threshold, _ = cv2.threshold(
-            gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-        )
+        results = []
+        for image in images:
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = image
 
-        self.fitted = True
+            mask = (gray < self.threshold).astype(np.uint8)
 
-    def transform(self, image: np.ndarray):
-        super().transform(image)
+            _, output, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+            sizes = stats[1:, -1]
+            for i, size in enumerate(sizes):
+                if size < self.min_region_size:
+                    mask[output == i + 1] = 0
 
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        else:
-            gray = image
+            mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, self.kernel)
 
-        mask = (gray < self.threshold).astype(np.uint8)
-
-        _, output, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-        sizes = stats[1:, -1]
-        for i, size in enumerate(sizes):
-            if size < self.min_region_size:
-                mask[output == i + 1] = 0
-
-        mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, self.kernel)
-
-        return mask.astype(bool)
+            results.append(mask.astype(bool))
+        return results

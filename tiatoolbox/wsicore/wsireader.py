@@ -727,7 +727,7 @@ class WSIReader:
         else:
             raise ValueError("Invalid tissue masker method.")
 
-        mask_img = masker.fit_transform(thumbnail)
+        mask_img = masker.fit_transform([thumbnail])[0]
         mask = VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
         return mask
 
