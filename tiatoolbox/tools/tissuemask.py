@@ -118,7 +118,7 @@ class OtsuTissueMasker(TissueMasker):
         # Convert RGB images to greyscale
         grey_images = [x[..., 0] for x in images]
         if images_shape[-1] == 3:
-            grey_images = np.zeros(images_shape[:-1])
+            grey_images = np.zeros(images_shape[:-1], dtype=np.uint8)
             for n, image in enumerate(images):
                 grey_images[n] = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -135,12 +135,12 @@ class OtsuTissueMasker(TissueMasker):
         masks = []
         for image in images:
             grey = image[..., 0]
-            if len(grey.shape) == 3 and grey.shape[-1] == 3:
+            if len(image.shape) == 3 and image.shape[-1] == 3:
                 grey = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             mask = (grey < self.threshold).astype(bool)
             masks.append(mask)
 
-        return masks
+        return [mask]
 
 
 class MorphologicalMasker(OtsuTissueMasker):
