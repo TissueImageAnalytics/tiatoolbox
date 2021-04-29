@@ -53,6 +53,7 @@ class CNN_Patch_Model(nn.Module):
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        #! TODO: remove hard-coding of 512 channels below
         self.classifer = nn.Linear(512, nr_classes)
 
     def forward(self, imgs):
@@ -141,7 +142,6 @@ class CNN_Patch_Predictor(object):
 
         # get the preprocessing information
         self.preproc_list = preproc_info(pretrained)
-        print(self.preproc_list)
 
         if model is not None:
             self.model = model
@@ -166,6 +166,7 @@ class CNN_Patch_Predictor(object):
         if model_path == None:
             dataset = dataset.lower()
             # download and save model weights
+            #! TODO Decide where to dump models - ask Shan
             model_path = "model_weights/%s_%s.pth" % (self.backbone, dataset)
             if not pathlib.Path(model_path).is_file():
                 url_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
@@ -180,7 +181,7 @@ class CNN_Patch_Predictor(object):
         self.model.load_state_dict(saved_state_dict, strict=True)
         return
 
-    def predict(self, X, return_logits=False, return_names=False, *args, **kwargs):
+    def predict(self, X, return_probs=False, return_names=False, *args, **kwargs):
         """Make a prediction on a dataset. Internally, this will create a
         dataset using tiatoolbox.models.data.classification.Patch_Dataset
         and call predict_dataset.
@@ -190,13 +191,14 @@ class CNN_Patch_Predictor(object):
 
         """
         ds = Patch_Dataset(X, preproc_list=self.preproc_list)
-        output = self.predict_dataset(ds, return_logits, return_names)
+        output = self.predict_dataset(ds, return_probs, return_names)
         return output
 
     def predict_dataset(
-        self, dataset, return_logits=False, return_names=False, *args, **kwargs
+        self, dataset, return_probs=False, return_names=False, *args, **kwargs
     ):
         """Make a prediction on a custom dataset object. Dataset object is Torch compliant."""
+        # TODO preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
             num_workers=self.nr_loader_worker,
@@ -213,20 +215,20 @@ class CNN_Patch_Predictor(object):
         model = model.to("cuda")
 
         all_output = {}
-        pred_output = []
-        logits_output = []
+        preds_output = []
+        probs_output = []
         names_output = []
         for batch_idx, batch_input in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
             # on the an instance of ModelDesc, may be there is a nicer way
             # to go about this
-            batch_output_logits = self.model.infer_batch(model, batch_input)
+            batch_output_probs = self.model.infer_batch(model, batch_input)
             # get the index of the class with the maximum probability
-            batch_output = np.argmax(batch_output_logits, axis=-1)
-            pred_output.extend(batch_output.tolist())
-            if return_logits:
+            batch_output = np.argmax(batch_output_probs, axis=-1)
+            preds_output.extend(batch_output.tolist())
+            if return_probs:
                 # return raw output
-                logits_output.extend(batch_output_logits.tolist())
+                probs_output.extend(batch_output_probs.tolist())
             if return_names:
                 # return class names
                 names_output.extend(self.class_names[batch_output])
@@ -237,10 +239,10 @@ class CNN_Patch_Predictor(object):
         if self.verbose:
             pbar.close()
 
-        pred_output = np.array(pred_output)
-        all_output = {"pred": pred_output}
-        if return_logits:
-            all_output["logits"] = logits_output
+        pred_output = np.array(preds_output)
+        all_output = {"preds": preds_output}
+        if return_probs:
+            all_output["probs"] = probs_output
         if return_names:
             all_output["names"] = names_output
 

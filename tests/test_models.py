@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 
 import sys
 
-sys.path.append(".")
+sys.path.append("..")
 
 
 from tiatoolbox.models.classification import CNN_Patch_Predictor
