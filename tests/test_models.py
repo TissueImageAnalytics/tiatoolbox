@@ -52,7 +52,7 @@ class Kather_Dataset(torch.utils.data.Dataset):
         return image
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ds = Kather_Dataset(root_dir="dataset/sample_exp/data/Kather_Sample/")
 
@@ -69,6 +69,7 @@ model.load_state_dict(new_dict)
 
 random.seed(5)
 model = CNN_Patch_Predictor(
-    backbone="resnet18", nr_class=8, batch_size=16, nr_loader_worker=4
+    backbone="resnet18", nr_class=9, batch_size=16, nr_loader_worker=4
 )
+model.load_model("toolbox_weights/resnet18_kather.pth")
 output = model.predict_dataset(ds)

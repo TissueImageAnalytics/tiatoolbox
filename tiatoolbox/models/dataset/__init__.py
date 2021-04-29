@@ -20,4 +20,4 @@
 
 """Contains dataset functionality for use with models in tiatoolbox."""
 
-from tiatoolbox.models.data.classification import Patch_Dataset
+from tiatoolbox.models.dataset.classification import Patch_Dataset
