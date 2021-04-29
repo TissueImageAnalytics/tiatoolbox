@@ -1,4 +1,6 @@
 import numpy as np
+import pytest
+import cv2
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.tools import tissuemask
@@ -19,6 +21,25 @@ def test_otsu_masker(_sample_svs):
 
     masker.fit([thumb])
     mask_b = masker.transform([thumb])[0]
+
+    assert np.array_equal(mask_a, mask_b)
+    assert masker.threshold is not None
+    assert len(np.unique(mask_a)) == 2
+    assert mask_a.shape == thumb.shape[:2]
+
+
+def test_otsu_grescale_masker(_sample_svs):
+    """Test Otsu's thresholding method with greyscale inputs."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    mpp = 32
+    thumb = wsi.slide_thumbnail(mpp, "mpp")
+    thumb = cv2.cvtColor(thumb, cv2.COLOR_RGB2GRAY)
+    inputs = thumb[np.newaxis, ..., np.newaxis]
+    masker = tissuemask.OtsuTissueMasker()
+    mask_a = masker.fit_transform(inputs)[0]
+
+    masker.fit(inputs)
+    mask_b = masker.transform(inputs)[0]
 
     assert np.array_equal(mask_a, mask_b)
     assert masker.threshold is not None
@@ -91,3 +112,33 @@ def test_morphological_masker_power(_sample_svs):
     assert masker.threshold is not None
     assert len(np.unique(mask_a)) == 2
     assert mask_a.shape == thumb.shape[:2]
+
+
+def test_transform_before_fit_otsu():
+    image = np.ones((1, 10, 10))
+    masker = tissuemask.OtsuTissueMasker()
+    with pytest.raises(Exception):
+        masker.transform([image])[0]
+
+
+def test_transform_before_fit_morphological():
+    image = np.ones((1, 10, 10))
+    masker = tissuemask.MorphologicalMasker()
+    with pytest.raises(Exception):
+        masker.transform([image])[0]
+
+
+def test_transform_fit_otsu_wrong_shape():
+    image = np.ones((10, 10))
+    masker = tissuemask.OtsuTissueMasker()
+    with pytest.raises(ValueError):
+        masker.fit([image])[0]
+
+
+def test_transform_morphological_conflicting_args():
+    with pytest.raises(ValueError):
+        tissuemask.MorphologicalMasker(mpp=32, power=1.25)
+
+
+def test_kernel_size_none():
+    tissuemask.MorphologicalMasker(kernel_size=None)

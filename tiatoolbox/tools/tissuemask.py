@@ -115,10 +115,10 @@ class OtsuTissueMasker(TissueMasker):
                 f" but recieved shape of {images_shape}."
             )
 
-        grey_images = np.zeros(images_shape[:-1])
-
         # Convert RGB images to greyscale
+        grey_images = [x[..., 0] for x in images]
         if images_shape[-1] == 3:
+            grey_images = np.zeros(images_shape[:-1])
             for n, image in enumerate(images):
                 grey_images[n] = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -134,7 +134,8 @@ class OtsuTissueMasker(TissueMasker):
 
         masks = []
         for image in images:
-            if len(image.shape) == 3 and image.shape[-1] == 3:
+            grey = image[..., 0]
+            if len(grey.shape) == 3 and grey.shape[-1] == 3:
                 grey = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             mask = (grey < self.threshold).astype(bool)
             masks.append(mask)
@@ -223,10 +224,6 @@ class MorphologicalMasker(OtsuTissueMasker):
         kernel_size = np.array(kernel_size)
         if kernel_size.size != 2:
             kernel_size = kernel_size.repeat(2)
-
-        # Sanity check: At this point _kernel_size should not be None
-        if kernel_size is None or None in kernel_size:
-            raise AssertionError("Internal _kernel_size is None")
 
         # Convert to an integer double/ pair
         self.kernel_size = tuple(np.round(kernel_size).astype(int))
