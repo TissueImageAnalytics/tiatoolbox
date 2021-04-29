@@ -1162,7 +1162,7 @@ def test_tissue_mask_otsu(_sample_svs):
     otsu_threhold = threshold_otsu(grey_thumb)
     otsu_mask = grey_thumb < otsu_threhold
 
-    assert np.mean(np.logical_xor(mask_thumb, otsu_mask)) < 0.01
+    assert np.mean(np.logical_xor(mask_thumb, otsu_mask)) < 0.05
 
 
 def test_tissue_mask_morphological(_sample_svs):
