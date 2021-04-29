@@ -29,7 +29,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.data import Patch_Dataset
+from tiatoolbox.models.dataset import Patch_Dataset
 
 
 class CNN_Patch_Model(nn.Module):
@@ -150,7 +150,7 @@ class CNN_Patch_Predictor(object):
         """
         # ! assume to be saved in single GPU mode
         saved_state_dict = torch.load(model_path)
-        self.model = self.model.load_state_dict(saved_state_dict, strict=True)
+        self.model.load_state_dict(saved_state_dict, strict=True)
         return
 
     def predict(self, X, *args, **kwargs):
