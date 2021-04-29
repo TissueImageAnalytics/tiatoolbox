@@ -1153,14 +1153,15 @@ def test_tissue_mask_otsu(_sample_svs):
     from skimage.filters import threshold_otsu
 
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
-    mask = wsi.tissue_mask(method="otsu")
 
-    mask_thumb = mask.slide_thumbnail()
     tissue_thumb = wsi.slide_thumbnail()
-    grey_thumb = tissue_thumb.mean(axis=-1)
+    grey_thumb = cv2.cvtColor(tissue_thumb, cv2.COLOR_RGB2GRAY)
 
     otsu_threhold = threshold_otsu(grey_thumb)
     otsu_mask = grey_thumb < otsu_threhold
+
+    mask = wsi.tissue_mask(method="otsu")
+    mask_thumb = mask.slide_thumbnail()
 
     assert np.mean(np.logical_xor(mask_thumb, otsu_mask)) < 0.05
 
