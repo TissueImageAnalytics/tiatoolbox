@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 
 import sys
 
-sys.path.append("..")
+sys.path.append(".")
 
 
 from tiatoolbox.models.classification import CNN_Patch_Predictor
@@ -54,11 +54,21 @@ class Kather_Dataset(torch.utils.data.Dataset):
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-ds = Kather_Dataset(root_dir="sample_exp/data/Kather_Sample/")
+ds = Kather_Dataset(root_dir="dataset/sample_exp/data/Kather_Sample/")
+
+from tiatoolbox.models.backbone import get_model
+pretrained_path = 'dataset/sample_exp/models/Kather_resnet18.h5.pth'
+pretrained = torch.load(pretrained_path)['model']
+
+new_dict = {}
+for k, v in pretrained.items():
+    new_dict[k[2:]] = v
+    
+model = get_model('resnet18')
+model.load_state_dict(new_dict)
 
 random.seed(5)
 model = CNN_Patch_Predictor(
     backbone="resnet18", nr_class=8, batch_size=16, nr_loader_worker=4
 )
-model.load_model("sample_exp/models/Kather_resnet18.h5.pth")
 output = model.predict_dataset(ds)
