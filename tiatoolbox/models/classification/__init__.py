@@ -18,6 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
+
 """Package where patch-level classification models are stored."""
 
 from tiatoolbox.models.classification.patch_predictor import CNN_Patch_Predictor

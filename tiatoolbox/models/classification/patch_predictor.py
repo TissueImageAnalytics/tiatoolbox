@@ -24,12 +24,14 @@ import math
 import tqdm
 import numpy as np
 import PIL
+import requests
+import pathlib
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.data import Patch_Dataset
+from tiatoolbox.models.dataset import Patch_Dataset, dataset_info, preproc_info
 
 
 class CNN_Patch_Model(nn.Module):
@@ -37,7 +39,7 @@ class CNN_Patch_Model(nn.Module):
     at the output of the network.
 
     Attributes:
-        nr_class (int): number of classes output by the model.
+        nr_classes (int): number of classes output by the model.
         feat_extract (nn.Module): backbone CNN model.
         pool (nn.Module): type of pooling applied after feature extraction.
         classifier (nn.Module): linear classifier module used to map the features
@@ -45,13 +47,13 @@ class CNN_Patch_Model(nn.Module):
 
     """
 
-    def __init__(self, backbone, nr_input_ch=3, nr_class=1):
+    def __init__(self, backbone, nr_input_ch=3, nr_classes=1):
         super().__init__()
-        self.nr_class = nr_class
+        self.nr_classes = nr_classes
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifer = nn.Linear(512, nr_class)
+        self.classifer = nn.Linear(512, nr_classes)
 
     def forward(self, imgs):
         feat = self.feat_extract(imgs)
@@ -105,9 +107,9 @@ class CNN_Patch_Predictor(object):
         self,
         batch_size,
         model=None,
-        backbone="resnet50",
-        nr_class=2,
-        nr_input_ch=None,
+        backbone="resnet18",
+        pretrained="kather",
+        nr_input_ch=3,
         nr_loader_worker=0,
         verbose=True,
         *args,
@@ -120,7 +122,7 @@ class CNN_Patch_Predictor(object):
             batch_size (int): number of images fed into the model each time.
             model (nn.Module): defined PyTorch model with the define backbone as the feature extractor.
             backbone (str): name of the backbone model. This is obtained from tiatoolbox.models.backbone.
-            nr_class (int): number of classes predicted by the model.
+            nr_classes (int): number of classes predicted by the model.
             nr_input_ch (int): number of input channels of the image. If RGB, then this is 3.
             nr_loader_worker (int): number of workers used in torch.utils.data.DataLoader.
             verbose (bool): whether to output logging information.
@@ -128,32 +130,57 @@ class CNN_Patch_Predictor(object):
         """
         super().__init__()
         self.batch_size = batch_size
+        self.backbone = backbone
         self.nr_input_ch = nr_input_ch
         self.nr_loader_worker = nr_loader_worker
         self.verbose = verbose
+
+        # get the names and number of class labels
+        class_names, nr_classes = dataset_info(pretrained)
+        self.class_names = np.array(class_names)
+
+        # get the preprocessing information
+        self.preproc_list = preproc_info(pretrained)
+        print(self.preproc_list)
 
         if model is not None:
             self.model = model
         else:
             self.model = CNN_Patch_Model(
-                backbone, nr_input_ch=nr_input_ch, nr_class=nr_class
+                backbone, nr_input_ch=nr_input_ch, nr_classes=nr_classes
             )
+
+        self.load_model(dataset=pretrained)
         return
 
-    def load_model(self, model_path, *args, **kwargs):
-        """Load model checkpoint.
+    def load_model(self, model_path=None, dataset=None, *args, **kwargs):
+        """Load model checkpoint either using a supplied model_path or
+        by providing a supported dataset name for which the model has been
+        trained on.
 
         Args:
-            model_path: path to a PyTorch trained checkpoint. Supplied model
-                        must match the initialised model in __init__.
+            model_path (pathlib.Path) = path to checkpoint file.
+            dataset (str) = name of dataset that the model has been trained on.
 
         """
+        if model_path == None:
+            dataset = dataset.lower()
+            # download and save model weights
+            model_path = "model_weights/%s_%s.pth" % (self.backbone, dataset)
+            if not pathlib.Path(model_path).is_file():
+                url_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
+                url_path = "%s%s_%s.pth" % (url_root, backbone, dataset)
+                print("Downloading model weights from %s" % url_path)
+                r = requests.get(url_path)
+                with open(model_path, "wb") as f:
+                    f.write(r.content)
+
         # ! assume to be saved in single GPU mode
         saved_state_dict = torch.load(model_path)
-        self.model = self.model.load_state_dict(saved_state_dict, strict=True)
+        self.model.load_state_dict(saved_state_dict, strict=True)
         return
 
-    def predict(self, X, *args, **kwargs):
+    def predict(self, X, return_logits=False, return_names=False, *args, **kwargs):
         """Make a prediction on a dataset. Internally, this will create a
         dataset using tiatoolbox.models.data.classification.Patch_Dataset
         and call predict_dataset.
@@ -162,11 +189,13 @@ class CNN_Patch_Predictor(object):
             output: predictions of the input dataset
 
         """
-        ds = Patch_Dataset(X)
-        output = self.predict_dataset(ds)
-        raise output
+        ds = Patch_Dataset(X, preproc_list=self.preproc_list)
+        output = self.predict_dataset(ds, return_logits, return_names)
+        return output
 
-    def predict_dataset(self, dataset, *args, **kwargs):
+    def predict_dataset(
+        self, dataset, return_logits=False, return_names=False, *args, **kwargs
+    ):
         """Make a prediction on a custom dataset object. Dataset object is Torch compliant."""
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -183,17 +212,36 @@ class CNN_Patch_Predictor(object):
         model = torch.nn.DataParallel(self.model)
         model = model.to("cuda")
 
-        all_output = []
+        all_output = {}
+        pred_output = []
+        logits_output = []
+        names_output = []
         for batch_idx, batch_input in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
             # on the an instance of ModelDesc, may be there is a nicer way
             # to go about this
-            batch_output = self.model.infer_batch(model, batch_input)
-            all_output.extend(batch_output.tolist())
+            batch_output_logits = self.model.infer_batch(model, batch_input)
+            # get the index of the class with the maximum probability
+            batch_output = np.argmax(batch_output_logits, axis=-1)
+            pred_output.extend(batch_output.tolist())
+            if return_logits:
+                # return raw output
+                logits_output.extend(batch_output_logits.tolist())
+            if return_names:
+                # return class names
+                names_output.extend(self.class_names[batch_output])
+
             # may be a with block + flag would be nicer
             if self.verbose:
                 pbar.update()
         if self.verbose:
             pbar.close()
-        all_output = np.array(all_output)
+
+        pred_output = np.array(pred_output)
+        all_output = {"pred": pred_output}
+        if return_logits:
+            all_output["logits"] = logits_output
+        if return_names:
+            all_output["names"] = names_output
+
         return all_output
