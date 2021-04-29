@@ -115,6 +115,7 @@ def test_morphological_masker_power(_sample_svs):
 
 
 def test_transform_before_fit_otsu():
+    """Test otsu masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.OtsuTissueMasker()
     with pytest.raises(Exception):
@@ -122,6 +123,7 @@ def test_transform_before_fit_otsu():
 
 
 def test_transform_before_fit_morphological():
+    """Test morphological masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.MorphologicalMasker()
     with pytest.raises(Exception):
@@ -129,6 +131,7 @@ def test_transform_before_fit_morphological():
 
 
 def test_transform_fit_otsu_wrong_shape():
+    """Test giving the incorrect input shape to otsu masker."""
     image = np.ones((10, 10))
     masker = tissuemask.OtsuTissueMasker()
     with pytest.raises(ValueError):
@@ -136,9 +139,11 @@ def test_transform_fit_otsu_wrong_shape():
 
 
 def test_transform_morphological_conflicting_args():
+    """Test giving conflicting arguments to morphological masker."""
     with pytest.raises(ValueError):
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 
 
 def test_kernel_size_none():
+    """Test giveing a None kernel size for morphological masker."""
     tissuemask.MorphologicalMasker(kernel_size=None)
