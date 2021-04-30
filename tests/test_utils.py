@@ -135,6 +135,62 @@ def test_safe_padded_read_padding_formats():
         assert region.shape == (8 + 2, 8 + 2)
 
 
+def test_safe_padded_read_pad_kwargs(_source_image):
+    """Test passing extra kwargs to safe_padded_read for np.pad."""
+    data = utils.misc.imread(str(_source_image))
+    bounds = (0, 0, 8, 8)
+    padding = 2
+    region = utils.image.safe_padded_read(
+        data,
+        bounds,
+        pad_mode="reflect",
+        padding=padding,
+    )
+    even_region = utils.image.safe_padded_read(
+        data,
+        bounds,
+        pad_mode="reflect",
+        padding=padding,
+        pad_kwargs={
+            "reflect_type": "even",
+        },
+    )
+    assert np.all(region == even_region)
+
+    odd_region = utils.image.safe_padded_read(
+        data,
+        bounds,
+        pad_mode="reflect",
+        padding=padding,
+        pad_kwargs={
+            "reflect_type": "odd",
+        },
+    )
+    assert not np.all(region == odd_region)
+
+
+def test_safe_padded_read_pad_constant_values():
+    """Test safe_padded_read with custom pad constant values.
+
+    This test creates an image of zeros and reads the whole image with a
+    padding of 1 and constant values of 10 for padding. It then checks
+    for a 1px border of 10s all the way around the zeros.
+    """
+    for side_len in range(1, 5):
+        data = np.zeros((side_len, side_len))
+        bounds = (0, 0, side_len, side_len)
+        padding = 1
+        region = utils.image.safe_padded_read(
+            data,
+            bounds,
+            padding=padding,
+            pad_constant_values=10,
+        )
+        _, size = utils.transforms.bounds2locsize(bounds)
+
+        assert np.sum(region == 10) == (4 * side_len) + 4
+
+
 def test_fuzz_safe_padded_read_edge_padding():
     """Fuzz test for padding at edges of an image.
 
@@ -501,7 +557,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """"Test contrast enhancement functionality."""
+    """ "Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [
@@ -685,6 +741,39 @@ def test_parse_cv2_interpolaton():
 
     with pytest.raises(ValueError):
         assert utils.misc.parse_cv2_interpolaton(1337)
+
+
+def test_make_bounds_size_positive():
+    """Test make_bounds_size_positive outputs positive bounds."""
+    # Horizontal only
+    bounds = (0, 0, -10, 10)
+    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    _, size = utils.transforms.bounds2locsize(pos_bounds)
+    assert len(size) == 2
+    assert size[0] > 0
+    assert size[1] > 0
+    assert hflip is True
+    assert vflip is False
+
+    # Vertical only
+    bounds = (0, 0, 10, -10)
+    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    _, size = utils.transforms.bounds2locsize(pos_bounds)
+    assert len(size) == 2
+    assert size[0] > 0
+    assert size[1] > 0
+    assert hflip is False
+    assert vflip is True
+
+    # Both
+    bounds = (0, 0, -10, -10)
+    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    _, size = utils.transforms.bounds2locsize(pos_bounds)
+    assert len(size) == 2
+    assert size[0] > 0
+    assert size[1] > 0
+    assert hflip is True
+    assert vflip is True
 
 
 def test_crop_and_pad_edges():
