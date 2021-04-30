@@ -11,28 +11,39 @@ import torchvision.transforms as transforms
 
 import sys
 
-sys.path.append("..")
+sys.path.append(".")
 
 
-from tiatoolbox.models.classification import CNN_Patch_Predictor
+from tiatoolbox.models.classification import CNN_Patch_Predictor, CNN_Patch_Model
 from tiatoolbox.models.dataset import Patch_Dataset, Kather_Patch_Dataset
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 # getitem test
 
 # kather download test
 
-# kather return label test
-random.seed(5)
-# model = CNN_Patch_Predictor(
-#     backbone="resnet18", pretrained="kather", batch_size=16, nr_loader_worker=4
-# )
+# API call style 0 (do we need this?, the ultimate lazy way?)
+# predictor = get_predictor('resnet18#kather', )
+#   internally this will perform name mapping to create API call style 1
 
+# API call style 1
+# dataset = Kather_Patch_Dataset()
+# predictor = CNN_Patch_Predictor(predefined_model="resnet18#kather", 
+#                                 batch_size=16)
+# output = predictor.predict(dataset, return_labels=True)
+
+# API call style 2
+my_special_sauce_weights = '/home/tialab-dang/local/project/tiatoolbox/resnet18_kather.pth'
 dataset = Kather_Patch_Dataset()
-model = CNN_Patch_Predictor(pretrained_model="resnet18_kather_pc", batch_size=16)
-output = model.predict(dataset, return_labels=True)
+predictor = CNN_Patch_Predictor(predefined_model="resnet18#kather", 
+                                pretrained_weight=my_special_sauce_weights, 
+                                batch_size=16)
+output = predictor.predict(dataset, return_labels=True)
+print('here')
 
-
-model = get_patch_predictor(pretrained_model="resnet18_kather_pc", batch_size=16)
+# # API call style 3 (advance)
+# model = CNN_Patch_Model(backbone='resnet50', nr_classes=9)
+# predictor = CNN_Patch_Predictor(model=model, batch_size=16)
+# output = predictor.predict(dataset, return_labels=True)

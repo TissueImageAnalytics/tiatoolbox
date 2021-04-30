@@ -21,4 +21,4 @@
 
 """Package where patch-level classification models are stored."""
 
-from tiatoolbox.models.classification.patch_predictor import CNN_Patch_Predictor
+from tiatoolbox.models.classification.patch_predictor import CNN_Patch_Predictor, CNN_Patch_Model

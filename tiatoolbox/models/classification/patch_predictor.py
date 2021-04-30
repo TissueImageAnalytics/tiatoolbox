@@ -29,15 +29,17 @@ import pathlib
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+import os
 
+from tiatoolbox import TIATOOLBOX_HOME
 from tiatoolbox.models.abc import Model_Base
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import Patch_Dataset
-
+from tiatoolbox.utils.misc import download_data
 
 class CNN_Patch_Model(Model_Base):
-    """Extends the backbone model so that is performs classification
-    at the output of the network.
+    """Retrieve the model backbone and attach a new FCN ontop for new class
+    to perform classification.
 
     Attributes:
         nr_classes (int): number of classes output by the model.
@@ -54,8 +56,10 @@ class CNN_Patch_Model(Model_Base):
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        #! TODO: remove hard-coding of 512 channels below @ Dang
-        self.classifer = nn.Linear(512, nr_classes)
+
+        # best way to retrieve channel dynamically is passing a small forward
+        prev_nr_ch = self.feat_extract(torch.rand([2,3,4,4])).shape[1]
+        self.classifer = nn.Linear(prev_nr_ch, nr_classes)
 
     def forward(self, imgs):
         feat = self.feat_extract(imgs)
@@ -87,7 +91,6 @@ class CNN_Patch_Model(Model_Base):
         # output should be a single tensor or scalar
         return output.cpu().numpy()
 
-
 class CNN_Patch_Predictor(object):
     """Patch-level predictor.
 
@@ -107,13 +110,11 @@ class CNN_Patch_Predictor(object):
 
     def __init__(
         self,
-        batch_size,
-        model=None,
-        pretrained_model=None,
-        nr_input_ch=3,
-        nr_classes=None,
+        batch_size=8,
         nr_loader_worker=0,
-        model_dir='model_weights/'
+        model=None,
+        predefined_model=None,
+        pretrained_weight=None,
         verbose=True,
         *args,
         **kwargs,
@@ -122,88 +123,43 @@ class CNN_Patch_Predictor(object):
         will override the backbone.
 
         Args:
-            batch_size (int): number of images fed into the model each time.
-            model (nn.Module): defined PyTorch model with the define backbone as the feature extractor.
-            pretrained_model (str): name of the pretrained model used to process the data.
-            nr_input_ch (int): number of input channels of the image. If RGB, then this is 3.
-            nr_loader_worker (int): number of workers used in torch.utils.data.DataLoader.
+            model (nn.Module): use this externally defined PyTorch model for prediction. Default is `None`. 
+                            Upon provided, `pretrained_model` argument is ignored, 
+
+            predefined_model (str): name of the existing models support by tiatoolbox for processing the data. 
+                                    Currently support.
+                                    - resnet18#kather : resnet18 backbone trained on Kather dataset [URL] 
+
+                                    By default, their pretrained weights will also be downloaded. However, you can 
+                                    overload with your own set of weights via `pretrained_weight` argument.
+                                    Argument is case insensitive
+
+            pretrained_weight (str): path to the weight of one of the corresponding `predefined_model`.
+
+            batch_size (int) : number of images fed into the model each time.
+            nr_loader_worker (int) : number of workers to load the data. 
+                                Take note that they will also perform preprocessing.
             verbose (bool): whether to output logging information.
 
         """
         super().__init__()
 
-        if model and pretrained_model:
-            raise ValueError("Must only provide one of model or pretrained_model")
-
-        #! first check to see whether model checkpoint path exists on server (if pretrained is not None)
-        if pretrained_model:
-            # do something
-            # get backbone and dataset from string info
-            pass
-
-        if not pretrained:
-            # get kwargs
-            backbone = kwargs["backbone"]
-            pretrained = kwargs["pretrained"]
-            # etc etc :)
-
-        # self.batch_size = batch_size
-        # self.backbone = backbone
-        # self.nr_input_ch = nr_input_ch
-        # self.nr_loader_worker = nr_loader_worker
-        # self.verbose = verbose
-
-        self.model_dir = model_dir
-        self.batch_size = batch_size
-        nr_classes = 9
-        backbone = "resnet18"
-        self.backbone = backbone
-        pretrained = "kather"
-        self.nr_input_ch = nr_input_ch
-        self.nr_loader_worker = nr_loader_worker
-        self.verbose = verbose
+        if model is None and predefined_model is None:
+            raise ValueError("Must provide either of `model` or `predefined_model`")
 
         if model is not None:
             self.model = model
         else:
-            # ! TODO: will provide the pretrained model for speicifc
-            # ! checkpoint, so querry the # class from that @Dang
-            self.model = CNN_Patch_Model(
-                backbone, nr_input_ch=nr_input_ch, nr_classes=nr_classes
-            )
-
-        self.load_model(dataset=pretrained)
+            self.model = get_predefined_model(predefined_model, pretrained_weight)
+        
+        self.batch_size = batch_size
+        self.nr_loader_worker = nr_loader_worker
+        self.verbose = verbose
         return
 
-    def load_model(self, model_path=None, dataset=None, *args, **kwargs):
-        """Load model checkpoint either using a supplied model_path or
-        by providing a supported dataset name for which the model has been
-        trained on.
-
-        Args:
-            model_path (pathlib.Path) = path to checkpoint file.
-            dataset (str) = name of dataset that the model has been trained on.
-
-        """
-        if model_path == None:
-            dataset = dataset.lower()
-            # download and save model weights
-            #! TODO Decide where to dump models - ask Shan
-            model_path = "%s/%s_%s.pth" % (self.model_dir, self.backbone, dataset)
-            if not pathlib.Path(model_path).is_file():
-                url_path = "%s%s_%s.pth" % (self.url_root, backbone, dataset)
-                print("Downloading model weights from %s" % url_path)
-                r = requests.get(url_path)
-                with open(model_path, "wb") as f:
-                    f.write(r.content)
-
-        # ! assume to be saved in single GPU mode
-        saved_state_dict = torch.load(model_path)
-        self.model.load_state_dict(saved_state_dict, strict=True)
-        return
-
+    # ! @simon, remove return_labels till we can finalize where to go with it
     def predict(
-        self, dataset, return_probs=False, return_labels=False, *args, **kwargs
+        self, dataset, return_probs=False, on_gpu=True, *args, **kwargs
     ):
         """Make a prediction on a dataset.
 
@@ -211,7 +167,6 @@ class CNN_Patch_Predictor(object):
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
                 tiatoolbox.models.data.classification.Patch_Dataset.
             return_probs (bool): whether to return per-class model probabilities.
-            return_labels (bool): whether to return the predicted class labels.
 
         Returns:
             output: predictions of the input dataset
@@ -233,18 +188,13 @@ class CNN_Patch_Predictor(object):
 
         # ! may need to take into account CPU/GPU mode
         model = torch.nn.DataParallel(self.model)
-        model = model.to("cuda")
+        if on_gpu:
+            model = model.to("cuda")
 
         all_output = {}
         preds_output = []
         probs_output = []
         labels_output = []
-
-        if return_labels and not dataset.return_label:
-            # TODO use python warning!
-            print(
-                "WARNING: return_labels selected but dataset does not return any labels."
-            )
 
         for batch_idx, batch_data in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
@@ -254,6 +204,7 @@ class CNN_Patch_Predictor(object):
                 batch_input, batch_label = batch_data
             else:
                 batch_input = batch_data
+
             batch_output_probs = self.model.infer_batch(model, batch_input)
             # get the index of the class with the maximum probability
             batch_output = np.argmax(batch_output_probs, axis=-1)
@@ -261,9 +212,6 @@ class CNN_Patch_Predictor(object):
             if return_probs:
                 # return raw output
                 probs_output.extend(batch_output_probs.tolist())
-            if return_labels and dataset.return_label:
-                # return class labels
-                labels_output.extend(batch_label.numpy())
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -279,16 +227,33 @@ class CNN_Patch_Predictor(object):
         all_output = {"preds": preds_output}
         if return_probs:
             all_output["probs"] = probs_output
-        if return_labels:
-            all_output["labels"] = labels_output
-
         return all_output
 
+__pretrained_model = {
+    'resnet18#kather' : {
+        'pretrained' : 'URL' , # ! path on server @simon
+        'nr_input_ch' : 3,
+        'nr_classes'  : 9
+    }
+}
 
-class Kather_CNN_Patch_Predictor(CNN_Patch_Predictor):
-    def __init__():
-        pass
+def get_predefined_model(predefined_model=None, pretrained_weight=None):
+    assert isinstance(predefined_model, str)
+    # parsing protocol 
+    predefined_model = predefined_model.lower()
+    backbone, dataset = predefined_model.split('#')
+    cfg = __pretrained_model[predefined_model]
+    model = CNN_Patch_Model(backbone=backbone, 
+                    nr_input_ch=cfg['nr_input_ch'],
+                    nr_classes=cfg['nr_classes'])
+    
+    if pretrained_weight is None:
+        pretrained_weight_url = cfg['pretrained']
+        pretrained_weight = os.path.join(TIATOOLBOX_HOME, 'models/', )
+        if not os.path.exists(pretrained_weight):
+            download_data(pretrained_weight_url, pretrained_weight)
+    # ! assume to be saved in single GPU mode
+    saved_state_dict = torch.load(pretrained_weight)
+    model.load_state_dict(saved_state_dict, strict=True)
+    return model
 
-
-def get_patch_predictor():
-    pass
