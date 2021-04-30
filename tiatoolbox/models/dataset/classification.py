@@ -67,7 +67,6 @@ class Patch_Dataset(torch.utils.data.Dataset):
             self.patch_info = grab_files_from_dir(
                 input_path=patch_info, file_types=file_types
             )
-
         return
 
     @staticmethod
@@ -87,7 +86,8 @@ class Patch_Dataset(torch.utils.data.Dataset):
         if preproc_list is not None:
             # using torchvision pipeline demands input is pillow format
             patch = PIL.Image.fromarray(patch)
-            patch = transforms.Compose(preproc_list)
+            trans = transforms.Compose(preproc_list)
+            patch = trans(patch)
             patch = patch.permute(1, 2, 0)
         return patch
 
@@ -95,7 +95,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
         return len(self.patch_info)
 
     def __getitem__(self, idx):
-        patch = self.patch_list[idx]
+        patch = self.patch_info[idx]
 
         if isinstance(patch, (str, pathlib.Path)):
             if patch.suffix == "npy":
@@ -108,6 +108,54 @@ class Patch_Dataset(torch.utils.data.Dataset):
         return patch
 
 
-def get_patch_dataset(dataset_name=None):
-    """Helper funntion for initialising the Patch_Dataset."""
-    pass
+def preproc_info(pretrained):
+    """Get the preprocessing information used for the pretrained model.
+
+    Args:
+        pretrained (str): xx.
+
+    """
+    preproc_dict = {
+        "kather": [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    }
+
+    preproc_list = preproc_dict[pretrained]
+
+    return preproc_list
+
+
+def dataset_info(dataset_name):
+    """Get the class labels and the number of classes of
+    a dataset that has been used for training.
+
+    Args:
+        dataset_name (str): name of dataset model has been trained on. Use 'kather'
+
+    Returns:
+        class_names (list): list of class names corresponding to each predicted value
+        nr_classes (int): number of classes in the trained dataset.
+
+    """
+
+    class_names_dict = {
+        "kather": [
+            "adipose",
+            "bakground",
+            "debris",
+            "lymphocytes",
+            "mucosa",
+            "muscle",
+            "normal",
+            "stroma",
+            "tumour",
+        ]
+    }
+    nr_classes_dict = {"kather": 9}
+
+    class_names = class_names_dict[dataset_name]
+    nr_classes = nr_classes_dict[dataset_name]
+
+    return class_names, nr_classes
