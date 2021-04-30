@@ -57,19 +57,21 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 ds = Kather_Dataset(root_dir="dataset/sample_exp/data/Kather_Sample/")
 
 from tiatoolbox.models.backbone import get_model
-pretrained_path = 'dataset/sample_exp/models/Kather_resnet18.h5.pth'
-pretrained = torch.load(pretrained_path)['model']
+pretrained_path = 'resnet18_kather.pth'
+pretrained = torch.load(pretrained_path)#['model']
 
-new_dict = {}
-for k, v in pretrained.items():
-    new_dict[k[2:]] = v
+# new_dict = {}
+# for k, v in pretrained.items():
+#     new_dict[k[2:]] = v
     
-model = get_model('resnet18')
-model.load_state_dict(new_dict)
+# model = get_model('resnet18')
+# model.load_state_dict(pretrained)
 
 random.seed(5)
 model = CNN_Patch_Predictor(
     backbone="resnet18", nr_class=9, batch_size=16, nr_loader_worker=4
 )
-model.load_model("toolbox_weights/resnet18_kather.pth")
+model.load_model("resnet18_kather.pth")
 output = model.predict_dataset(ds)
+
+print('here')
