@@ -493,11 +493,11 @@ def sub_pixel_read(
 
     # Error checking
     region_size = np.array(region.shape[:2][::-1])
-    if any(region_size != conv_out_size(pixel_aligned_size, stride=stride)):
-        raise ValueError("Read func returned region of incorrect size.")
-
     if not np.all(region_size > 0):
         raise ValueError("Region returned from read_func is empty.")
+
+    if any(region_size != conv_out_size(pixel_aligned_size, stride=stride)):
+        raise ValueError("Read func returned region of incorrect size.")
 
     # Find the size which the region should be scaled to.
     scaled_size = region_size * scale_factor
