@@ -113,6 +113,7 @@ class CNN_Patch_Predictor(object):
         nr_input_ch=3,
         nr_classes=None,
         nr_loader_worker=0,
+        model_dir='model_weights/'
         verbose=True,
         *args,
         **kwargs,
@@ -152,6 +153,7 @@ class CNN_Patch_Predictor(object):
         # self.nr_loader_worker = nr_loader_worker
         # self.verbose = verbose
 
+        self.model_dir = model_dir
         self.batch_size = batch_size
         nr_classes = 9
         backbone = "resnet18"
@@ -187,7 +189,7 @@ class CNN_Patch_Predictor(object):
             dataset = dataset.lower()
             # download and save model weights
             #! TODO Decide where to dump models - ask Shan
-            model_path = "model_weights/%s_%s.pth" % (self.backbone, dataset)
+            model_path = "%s/%s_%s.pth" % (self.model_dir, self.backbone, dataset)
             if not pathlib.Path(model_path).is_file():
                 url_path = "%s%s_%s.pth" % (self.url_root, backbone, dataset)
                 print("Downloading model weights from %s" % url_path)

@@ -233,7 +233,13 @@ class Kather_Patch_Dataset(Patch_Dataset):
 
     """
 
-    def __init__(self, root_dir=None, return_label=True, preproc_list=None):
+    def __init__(
+        self,
+        root_dir=None,
+        save_dir="data_dump/kather",
+        return_label=True,
+        preproc_list=None,
+    ):
         if preproc_list is None:
             preproc_info = _preproc_info("kather")
 
@@ -255,11 +261,10 @@ class Kather_Patch_Dataset(Patch_Dataset):
         if root_dir is None or not os.path.isdir(root_dir):
             print("Dataset directory not provided / invalid.")
             url = "https://zenodo.org/record/53169/files/Kather_texture_2016_image_tiles_5000.zip"
-            unzip_dir = "data_dump/kather"  #! currently a hack - sort proper location!
-            download_and_unzip_data(url, unzip_dir)
+            download_and_unzip_data(url, save_dir)
 
             #! TODO below is a hack - need to return the root location when unzipping the file
-            root_dir = unzip_dir + "/Kather_texture_2016_image_tiles_5000"
+            root_dir = save_dir + "/Kather_texture_2016_image_tiles_5000"
 
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):
