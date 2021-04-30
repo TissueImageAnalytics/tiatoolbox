@@ -166,7 +166,7 @@ class MorphologicalMasker(OtsuTissueMasker):
     This method applies Otsu's threshold before a simple small region
     removal, followed by a morphological dilation. The kernel for the
     dilation is an ellipse of radius 64/mpp unless a value is given for
-    kernel_size to :func:`fit`. MPP is estimated from objective power
+    kernel_size. MPP is estimated from objective power
     via func:`tiatoolbox.utils.misc.objective_power2mpp` if a power
     argument is given instead of mpp to the initialiser.
 
