@@ -163,6 +163,36 @@ def test_transform_morphological_conflicting_args():
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 
 
-def test_kernel_size_none():
+def test_morphological_kernel_size_none():
     """Test giveing a None kernel size for morphological masker."""
     tissuemask.MorphologicalMasker(kernel_size=None)
+
+
+def test_morphological_min_region_size():
+    """Test morphological masker with min_region_size set.
+
+    Creates a test image (0=foreground, 1=background) and applies the
+    morphological masker with min_region_size=6. This should output
+    only the largest square region as foreground in the mask
+    (0=background, 1=foreground).
+    """
+
+    # Create a blank image of 1s
+    img = np.ones((10, 10))
+    # Create a large square region of 9 zeros
+    img[1:4, 1:4] = 0
+    # Create a row of 5 zeros
+    img[1, 5:10] = 0
+    # Create a single 0
+    img[8, 8] = 0
+
+    masker = tissuemask.MorphologicalMasker(kernel_size=1, min_region_size=6)
+    output = masker.fit_transform([img[..., np.newaxis]])
+    assert np.sum(output[0]) == 9
+
+    # Create the expected output with jsut the large square region
+    # but as ones against zeros (the mask is the inverse of the input).
+    expected = np.zeros((10, 10))
+    expected[1:4, 1:4] = 1
+
+    assert np.all(output[0] == expected)
