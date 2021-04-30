@@ -8,5 +8,13 @@ import pathlib
 import numpy as np
 
 
-def test():
+def test_patch_dataset():
+    return
+
+
+def test_kather_patch_dataset():
+    return
+
+
+def test_patch_predictor_kather_resnet18():
     return
