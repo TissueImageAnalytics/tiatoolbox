@@ -22,6 +22,6 @@
 
 from tiatoolbox.models.dataset.classification import (
     Patch_Dataset,
-    dataset_info,
+    Kather_Patch_Dataset,
     preproc_info,
 )

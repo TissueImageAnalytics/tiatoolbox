@@ -87,45 +87,61 @@ class Patch_Dataset(torch.utils.data.Dataset):
             self.preproc = lambda x: x
         else:
             self.preproc = lambda x: self.preprocess_one_image(x, preproc_list)
-
+        
+        self.data_mode = -1
+        # nd check
         # !!! May want to decouple this portion into an util later
-        # Input Integrity checking
-        if not (any([not isinstance(v, str) for v in img_list]) \
-            and any([not isinstance(v, np.ndarray) for v in img_list])):
-            # mixed data types
-            raise ValueError("Input must be either a list/array of images" 
-                                "or a list of valid paths to image.")
-    
-        if isinstance(img_list, list): # a list of path
-            if any([not os.path.exists(v) for v in img_list]):
-                # one or many members are not valid paths
+        if isinstance(img_list, list):
+            # Input Integrity checking
+            all_path_list = [isinstance(v, str) for v in img_list]
+            all_npyd_list = [isinstance(v, np.ndarray) for v in img_list]
+            if not (any(all_path_list) or any(all_npyd_list)):
+                # mixed data types
+                raise ValueError("Input must be either a list/array of images" 
+                                    "or a list of valid paths to image.")
+
+            shape_list = []
+            if any(all_path_list): # when list of path
+                if any([not os.path.exists(v) for v in img_list]):
+                    # one or many members are not valid paths
+                    raise ValueError("Input must be either a list/array of images" 
+                                    "or a list of valid paths to image.")
+                # preload test for sanity check
+                try:
+                    shape_list = [self.__load_img(v).shape for v in img_list]
+                except: # when list of ndarray
+                    raise ValueError("Invalid path") # may want to raise actual error
+                self.data_mode = 0
+            else:
+                shape_list = [v.shape for v in img_list]
+                self.data_mode = 1
+
+            max_shape = np.max(shape_list, axis=0)
+            # how will this behave for mixed channel ?
+            if (shape_list - max_shape[None]).sum() != 0: 
+                raise ValueError("Has images of differen shapes in list.")
+        elif isinstance(img_list, np.ndarray):
+            if not np.issubdtype(img_list.dtype, np.number):
+                # ndarray of mixed data types
                 raise ValueError("Input must be either a list/array of images" 
                                  "or a list of valid paths to image.")
-            # preload test for sanity check
-            try:
-                shape_list = [self.__load_img(v).shape for v in img_list]
-            except:
-                raise ValueError("Invalid path") # may want to raise actual error
-
-            shape_list = np.array(shape_list)
-            max_shape = np.max(shape_list, axis=0)
-            if (shape_list - max_shape[None]).sum() != 0:
-                raise ValueError("A path point to an image of differen shape.")
-        elif not np.issubdtype(img_list, np.number):
-            # mixed data types
+            if len(img_list.shape) != 4: # N H W C | N C H W
+                raise ValueError("Input must be an array of images of form NHWC")            
+            self.data_mode = 2
+        else:
             raise ValueError("Input must be either a list/array of images" 
-                            "or a list of valid paths to image.")
-        else: # numeric np.ndarray
-            if len(img_list.shape) != 4: # NHWC
-                raise ValueError("Input must be a list/array of images of form NHWC")
-        
+                             "or a list of valid paths to image.")
+
         if label_list is None:
             label_list = [None for i in range(len(img_list))]
 
         self.img_list = img_list
         self.label_list = label_list
         self.return_label = return_label
-        self.classes = np.unique(label_list).tolist() # TODO comment for attribute access ?
+        if label_list is None:
+            self.class_names = np.unique(label_list).tolist() # TODO comment for attribute access ?
+        else:
+            self.class_names = [None]
         return
 
     def __load_img(self, path):
@@ -167,11 +183,8 @@ class Patch_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         patch = self.img_list[idx]
 
-        if isinstance(patch, (str, pathlib.Path)):
-            if patch.suffix == "npy":
-                patch = np.load(patch)
-            else:
-                patch = imread(patch)
+        if self.data_mode == 0: # mode 0 is list of paths
+            patch = self.__load_img(patch)
 
         # apply preprocessing to selected patch
         patch = self.preproc(patch)

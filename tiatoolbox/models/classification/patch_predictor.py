@@ -31,7 +31,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.dataset import Patch_Dataset, dataset_info, preproc_info
+from tiatoolbox.models.dataset import Patch_Dataset, preproc_info
 
 
 class CNN_Patch_Model(nn.Module):
@@ -136,16 +136,14 @@ class CNN_Patch_Predictor(object):
         self.nr_loader_worker = nr_loader_worker
         self.verbose = verbose
 
-        # get the names and number of class labels
-        class_names, nr_classes = dataset_info(pretrained)
-        self.class_names = np.array(class_names)
-
         # get the preprocessing information
         self.preproc_list = preproc_info(pretrained)
 
         if model is not None:
             self.model = model
         else:
+            # ! TODO: will provide the pretrained model for speicifc 
+            # ! checkpoint, so querry the # class from that
             self.model = CNN_Patch_Model(
                 backbone, nr_input_ch=nr_input_ch, nr_classes=nr_classes
             )
@@ -198,7 +196,7 @@ class CNN_Patch_Predictor(object):
 
         """
         # defer sanity checking to Dataset class, or do it here ?
-        ds = Patch_Dataset(X, return_label=False, preproc_list=self.preproc_list)
+        ds = Patch_Dataset(X, return_label=return_names, preproc_list=self.preproc_list)
         output = self.predict_dataset(ds, return_probs, return_names)
         return output
 
@@ -232,10 +230,14 @@ class CNN_Patch_Predictor(object):
         preds_output = []
         probs_output = []
         names_output = []
-        for batch_idx, batch_input in enumerate(dataloader):
+        for batch_idx, batch_data in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
             # on the an instance of ModelDesc, may be there is a nicer way
             # to go about this
+            if dataset.return_label:
+                batch_input, batch_label = batch_data
+            else:
+                batch_input = batch_data
             batch_output_probs = self.model.infer_batch(model, batch_input)
             # get the index of the class with the maximum probability
             batch_output = np.argmax(batch_output_probs, axis=-1)
@@ -245,7 +247,7 @@ class CNN_Patch_Predictor(object):
                 probs_output.extend(batch_output_probs.tolist())
             if return_names:
                 # return class names
-                names_output.extend(self.class_names[batch_output])
+                names_output.extend(batch_label)
 
             # may be a with block + flag would be nicer
             if self.verbose:
