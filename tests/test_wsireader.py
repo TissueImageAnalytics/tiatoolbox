@@ -9,8 +9,8 @@ import pathlib
 import numpy as np
 import cv2
 from click.testing import CliRunner
-from skimage.filters.thresholding import threshold_otsu
-from skimage.morphology import binary_closing, disk
+from skimage.filters import threshold_otsu
+from skimage.morphology import disk, binary_dilation, remove_small_objects
 
 # -------------------------------------------------------------------------------------
 # Constants
@@ -1162,7 +1162,6 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
 
 def test_tissue_mask_otsu(_sample_svs):
     """Test wsi.tissue_mask with Otsu's method."""
-    from skimage.filters import threshold_otsu
 
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
 
@@ -1180,9 +1179,6 @@ def test_tissue_mask_otsu(_sample_svs):
 
 def test_tissue_mask_morphological(_sample_svs):
     """Test wsi.tissue_mask with morphological method."""
-    from skimage.filters import threshold_otsu
-    from skimage.morphology import disk, binary_dilation, remove_small_objects
-
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     resolutions = [5, 10]
     units = ["power", "mpp"]
@@ -1217,7 +1213,7 @@ def test_tissue_mask_morphological_levels(_sample_svs):
     mask_thumb = mask.slide_thumbnail(0, "level")
     assert np.mean(mask_thumb == reference) > 0.99
     # Custom kernel_size (should still be close to refernce)
-    reference = binary_closing(reference, disk(3))
+    reference = binary_dilation(reference, disk(3))
     mask = wsi.tissue_mask("morphological", 0, "level", kernel_size=3)
     mask_thumb = mask.slide_thumbnail(0, "level")
     assert np.mean(mask_thumb == reference) > 0.95
