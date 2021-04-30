@@ -29,10 +29,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 #   internally this will perform name mapping to create API call style 1
 
 # API call style 1
-dataset = Kather_Patch_Dataset()
-predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather", batch_size=16)
-output = predictor.predict(dataset)
-print(output.keys())
+# dataset = Kather_Patch_Dataset()
+# predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather", batch_size=16)
+# output = predictor.predict(dataset)
+# print(output.keys())
 
 # API call style 2
 # my_special_sauce_weights = (
@@ -47,7 +47,7 @@ print(output.keys())
 # output = predictor.predict(dataset, return_labels=True)
 
 # # API call style 3 (advance)
-# dataset = Kather_Patch_Dataset()
-# model = CNN_Patch_Model(backbone="resnet50", nr_classes=9)
-# predictor = CNN_Patch_Predictor(model=model, batch_size=16)
-# output = predictor.predict(dataset, return_labels=True)
+dataset = Kather_Patch_Dataset()
+model = CNN_Patch_Model(backbone="resnet50", nr_classes=9)
+predictor = CNN_Patch_Predictor(model=model, batch_size=16)
+output = predictor.predict(dataset, return_labels=True)

@@ -36,6 +36,7 @@ from tiatoolbox.models.abc import Model_Base
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import Patch_Dataset
 from tiatoolbox.utils.misc import download_data
+from tiatoolbox.models.classification.pretrained_info import __pretrained_model
 
 
 class CNN_Patch_Model(Model_Base):
@@ -171,6 +172,7 @@ class CNN_Patch_Predictor(object):
 
         """
 
+        # TODO @Dang check whether you think this is suitable
         if not isinstance(dataset, torch.utils.data.Dataset):
             raise ValueError(
                 "Dataset supplied to predict() must be a PyTorch map style dataset (torch.utils.data.Dataset)."
@@ -228,15 +230,6 @@ class CNN_Patch_Predictor(object):
         if return_probs:
             all_output["probs"] = probs_output
         return all_output
-
-
-__pretrained_model = {
-    "resnet18_kather": {
-        "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth",
-        "nr_input_ch": 3,
-        "nr_classes": 9,
-    }
-}
 
 
 def get_predefined_model(predefined_model=None, pretrained_weight=None):

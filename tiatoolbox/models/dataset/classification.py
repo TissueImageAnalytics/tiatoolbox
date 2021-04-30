@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-import glob  # ! to be deprecated later
+
 import os
 import pathlib
 
@@ -36,7 +36,7 @@ def _preproc_info(pretrained):
     """Get the preprocessing information used for the pretrained model.
 
     Args:
-        pretrained (str):  .
+        pretrained (str): .
 
     """
     preproc_dict = {
@@ -243,6 +243,7 @@ class Kather_Patch_Dataset(Patch_Dataset):
         preproc_list=None,
     ):
         if preproc_list is None:
+            #! TODO @Dang configure preproc differently to make it dynamnic per defined model
             preproc_info = _preproc_info("kather")
 
         self.return_label = return_label

@@ -18,10 +18,12 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
+"""Module that defines the pretrained patch classification models available."""
 
-"""Package where patch-level classification models are stored."""
-
-from tiatoolbox.models.classification.patch_predictor import (
-    CNN_Patch_Predictor,
-    CNN_Patch_Model,
-)
+__pretrained_model = {
+    "resnet18_kather": {
+        "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth",
+        "nr_input_ch": 3,
+        "nr_classes": 9,
+    }
+}
