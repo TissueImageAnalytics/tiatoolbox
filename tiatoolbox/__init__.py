@@ -19,15 +19,28 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Top-level package for TIA Toolbox."""
+import os
 from tiatoolbox import tiatoolbox
 from tiatoolbox import wsicore
 from tiatoolbox import utils
 from tiatoolbox import tools
 
-
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
 __version__ = "0.5.2"
+
+# will set the tiatoolbox external data
+# default to be the user home folder, should work on both Window and Unix/Linux
+# C:\Users\USER\.tiatoolbox
+# /home/USER/.tiatoolbox
+TIATOOLBOX_HOME = os.path.join(os.path.expanduser("~"), '.tiatoolbox')
+
+def set_home_dir(dir_path):
+    """
+    """
+    global TIATOOLBOX_HOME
+    TIATOOLBOX_HOME = dir_path
+    return
 
 if __name__ == "__main__":
     pass

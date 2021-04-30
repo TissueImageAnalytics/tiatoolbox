@@ -20,14 +20,17 @@
 
 import glob  # ! to be deprecated later
 import os
-import torch
 import pathlib
-import requests
-import PIL
+
 import numpy as np
+import PIL
+import requests
+import torch
 import torchvision.transforms as transforms
 
-from tiatoolbox.utils.misc import grab_files_from_dir, imread, download_and_unzip_data
+from tiatoolbox import TIATOOLBOX_HOME
+from tiatoolbox.utils.misc import (download_data, grab_files_from_dir, imread,
+                                   unzip_data)
 
 
 def _preproc_info(pretrained):
@@ -258,13 +261,18 @@ class Kather_Patch_Dataset(Patch_Dataset):
             "08_EMPTY",
         ]
 
-        if root_dir is None or not os.path.isdir(root_dir):
-            print("Dataset directory not provided / invalid.")
-            url = "https://zenodo.org/record/53169/files/Kather_texture_2016_image_tiles_5000.zip"
-            download_and_unzip_data(url, save_dir)
+        if root_dir is None:
+            save_dir_path = os.path.join(TIATOOLBOX_HOME, 'dataset/')
+            if not os.path.exists(save_dir_path):                
+                save_zip_path = os.path.join(TIATOOLBOX_HOME, 'dataset/Kather.zip')
+                url = "https://zenodo.org/record/53169/files/Kather_texture_2016_image_tiles_5000.zip"
+                download_data(url, save_zip_path)
+                unzip_data(save_zip_path, save_dir_path)
+            root_dir = os.path.join(TIATOOLBOX_HOME, 'dataset/Kather_texture_2016_image_tiles_5000/')
 
-            #! TODO below is a hack - need to return the root location when unzipping the file
-            root_dir = save_dir + "/Kather_texture_2016_image_tiles_5000"
+        # what will happen if contents modified / corrupt ?
+        if not os.path.exists(save_dir_path):
+            print('Dataset does not exists at %s' % save_dir_path)
 
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):
