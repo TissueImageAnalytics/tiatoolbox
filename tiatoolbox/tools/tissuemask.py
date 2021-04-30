@@ -95,11 +95,11 @@ class OtsuTissueMasker(TissueMasker):
         >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
         >>> masker = OtsuTissueMasker()
         >>> masker.fit(thumbnail)
-        >>> mask = masker.transform(thumbnail)
+        >>> masks = masker.transform([thumbnail])
 
         >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
         >>> masker = OtsuTissueMasker()
-        >>> mask = masker.fit_transform(thumbnail)
+        >>> masks = masker.fit_transform([thumbnail])
     """
 
     def __init__(self) -> None:
@@ -107,7 +107,14 @@ class OtsuTissueMasker(TissueMasker):
         self.threshold = None
 
     def fit(self, images: np.ndarray, masks=None) -> None:
-        """"""
+        """Find a binary threshold using Otsu's method.
+
+        Args:
+            images (:class:`numpy.ndarray`): List of images with a
+                length 4 shape (N, height, width, channels).
+            masks (:class:`numpy.ndarray`): Unused here, for API
+                consistency.
+        """
         images_shape = np.shape(images)
         if len(images_shape) != 4:
             ValueError(
@@ -152,8 +159,10 @@ class MorphologicalMasker(OtsuTissueMasker):
     kernel_size to :func:`fit`. MPP is estimated from objective power
     via func:`tiatoolbox.utils.misc.objective_power2mpp` if a power
     argument is given instead of mpp to the initialiser.
+
     For small region removal, the minimum area size defaults to the area
-    of the kernel.
+    of the kernel. If no mpp, objective power, or kernel_size areguments
+    are given then the kernel defualts to a size of 1x1.
 
     The scale of the morphological operations can also be manually
     specified with the `kernel_size` argument, for example if the
@@ -165,7 +174,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         >>> wsi = get_wsireader("slide.svs")
         >>> thumbnail = wsi.get_thumbnail(32, "mpp")
         >>> masker = MorphologicalMasker(mpp=32)
-        >>> mask = masker.fit_transform(thumbnail)
+        >>> masks = masker.fit_transform([thumbnail])
 
         An example reading a thumbnail from a file where the objective
         power is known:
@@ -173,7 +182,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         >>> from tiatoolbox.utils.misc import imread
         >>> thumbnail = imread("thumbnail.png")
         >>> masker = MorphologicalMasker(power=1.25)
-        >>> mask = masker.fit_transform(thumbnail)
+        >>> masks = masker.fit_transform([thumbnail])
 
     """
 
@@ -236,6 +245,17 @@ class MorphologicalMasker(OtsuTissueMasker):
             self.min_region_size = np.sum(self.kernel)
 
     def transform(self, images: np.ndarray):
+        """Create masks using the found threshold followed by morphological operations.
+
+
+        Args:
+            images (:class:`numpy.ndarray`): List of images with a
+                length 4 shape (N, height, width, channels).
+
+        Returns:
+            :class:`numpy.ndarray`: List of images with a length 4
+                shape (N, height, width, channels).
+        """
         super().transform(images)
 
         results = []
