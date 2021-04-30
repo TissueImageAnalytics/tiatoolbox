@@ -423,7 +423,11 @@ def test_find_optimal_level_and_downsample_power(_sample_ndpi):
 
 
 def test_find_optimal_level_and_downsample_level(_sample_ndpi):
-    """Test finding optimal level for level read."""
+    """Test finding optimal level for level read.
+
+    For integer levels, the returned level should always be the same as
+    the input level.
+    """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
 
     for level in range(wsi.info.level_count):
