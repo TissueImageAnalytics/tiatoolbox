@@ -117,7 +117,7 @@ class OtsuTissueMasker(TissueMasker):
         """
         images_shape = np.shape(images)
         if len(images_shape) != 4:
-            ValueError(
+            raise ValueError(
                 "Expected 4 dimensional input shape (N, height, width, 3)"
                 f" but recieved shape of {images_shape}."
             )
