@@ -444,14 +444,15 @@ def test_sub_pixel_read_empty_read_func_return():
 
 
 def test_sub_pixel_read_empty_bounds():
-    bounds = (0, 0, 0, 0)
+    bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
     with pytest.raises(ValueError):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
-            output_size=(10, 10),
+            output_size=(2, 2),
+            padding=-1,
         )
 
 

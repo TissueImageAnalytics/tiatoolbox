@@ -479,7 +479,7 @@ def sub_pixel_read(
 
     _, pixel_aligned_size = bounds2locsize(pixel_aligned_bounds)
     if any(pixel_aligned_size <= 0):
-        raise ValueError("Pixel aligned bounds have zero size.")
+        raise ValueError("Bounds have zero size after padding and integer alignment.")
 
     # Perform the pixel-aligned read.
     region = read_func(
