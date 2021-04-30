@@ -502,6 +502,11 @@ def sub_pixel_read(
     # Find the size which the region should be scaled to.
     scaled_size = region_size * scale_factor
     scaled_size = tuple(scaled_size.astype(int))
+
+    # If no interpolation is to be used, return the region without resampling
+    if interpolation == "none":
+        return region
+
     # Resize/scale the region and residuals
     scaled_region = imresize(
         region, output_size=scaled_size, interpolation=interpolation

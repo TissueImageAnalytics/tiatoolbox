@@ -54,7 +54,6 @@ class TissueMasker(ABC):
                 Target/ground-truth masks. Expected shape is NHW (n
                 images, height, width).
         """
-        self.fitted = True
 
     @abstractmethod
     def transform(self, images: np.ndarray) -> np.ndarray:
@@ -271,7 +270,7 @@ class MorphologicalMasker(OtsuTissueMasker):
 
         results = []
         for image in images:
-            if len(image.shape) == 3:
+            if len(image.shape) == 3 and image.shape[-1] == 3:
                 gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             else:
                 gray = image

@@ -1193,6 +1193,31 @@ def test_tissue_mask_morphological(_sample_svs):
     assert np.mean(np.logical_xor(mask_thumb, morpho_mask)) < 0.1
 
 
+def test_tissue_mask_read_bounds_none_interpolation(_sample_svs):
+    """Test reading a mask using read_bounds with no interpolation."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    mask = wsi.tissue_mask("otsu")
+    mask_region = mask.read_bounds((0, 0, 512, 512), interpolation="none")
+    assert mask_region.shape[0] == 32
+    assert mask_region.shape[1] == 33
+
+
+def test_tissue_mask_read_rect_none_interpolation(_sample_svs):
+    """Test reading a mask using read_rect with no interpolation."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    mask = wsi.tissue_mask("otsu")
+    mask_region = mask.read_rect((0, 0), (512, 512), interpolation="none")
+    assert mask_region.shape[0] == 32
+    assert mask_region.shape[1] == 33
+
+
+def test_invalid_masker_method(_sample_svs):
+    """Test that an invalid masker method string raises a ValueError."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    with pytest.raises(ValueError):
+        wsi.tissue_mask(method="foo")
+
+
 def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     """Test get_wsireader to return correct object."""
     _sample_svs = str(_sample_svs)
@@ -1220,6 +1245,14 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     img = utils.misc.imread(str(pathlib.Path(_source_image)))
     wsi = wsireader.get_wsireader(input_img=img)
     assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+
+def test_jp2_missing_cod(_sample_jp2):
+    """Test for warning if JP2 is missing COD segment."""
+    wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
+    wsi.glymur_wsi.codestream.segment = []
+    with pytest.warns(UserWarning, match="missing COD"):
+        _ = wsi.info
 
 
 # -------------------------------------------------------------------------------------

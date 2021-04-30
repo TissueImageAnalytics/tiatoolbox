@@ -63,6 +63,25 @@ def test_morphological_masker(_sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
+def test_morphological_grescale_masker(_sample_svs):
+    """Test morphological masker with greyscale inputs."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    mpp = 32
+    thumb = wsi.slide_thumbnail(mpp, "mpp")
+    thumb = cv2.cvtColor(thumb, cv2.COLOR_RGB2GRAY)
+    inputs = thumb[np.newaxis, ..., np.newaxis]
+    masker = tissuemask.MorphologicalMasker()
+    mask_a = masker.fit_transform(inputs)[0]
+
+    masker.fit(inputs)
+    mask_b = masker.transform(inputs)[0]
+
+    assert np.array_equal(mask_a, mask_b)
+    assert masker.threshold is not None
+    assert len(np.unique(mask_a)) == 2
+    assert mask_a.shape == thumb.shape[:2]
+
+
 def test_morphological_masker_int_kernel_size(_sample_svs):
     """Test simple morphological thresholding with mpp with int kernel_size."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
