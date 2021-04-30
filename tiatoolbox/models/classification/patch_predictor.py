@@ -182,22 +182,35 @@ class CNN_Patch_Predictor(object):
         return
 
     def predict(self, X, return_probs=False, return_names=False, *args, **kwargs):
-        """Make a prediction on a dataset. Internally, this will create a
-        dataset using tiatoolbox.models.data.classification.Patch_Dataset
+        """Make a prediction on a list of images or list of paths pointing to images
+        of the same shape. Internally, this will create a dataset using 
+        tiatoolbox.models.data.classification.Patch_Dataset
         and call predict_dataset.
+
+        Args:
+            X(List of :class:`numpy.ndarray` or List of str): a list of numpy.array
+            where each is an image or a list of file paths with an extension of
+            *.jpg, *.jpeg, *.tif, *.tiff, *.png, *.npy . In either case, all images
+            are assumed to be of the same shape.
 
         Returns:
             output: predictions of the input dataset
 
         """
-        ds = Patch_Dataset(X, preproc_list=self.preproc_list)
+        # defer sanity checking to Dataset class, or do it here ?
+        ds = Patch_Dataset(X, return_label=False, preproc_list=self.preproc_list)
         output = self.predict_dataset(ds, return_probs, return_names)
         return output
 
     def predict_dataset(
         self, dataset, return_probs=False, return_names=False, *args, **kwargs
     ):
-        """Make a prediction on a custom dataset object. Dataset object is Torch compliant."""
+        """
+        Make a prediction on a custom dataset object. Dataset object is Torch compliant.
+
+        # TODO: need check for getitem output form ?
+        """
+
         # TODO preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -206,6 +219,7 @@ class CNN_Patch_Predictor(object):
             drop_last=False,
         )
 
+        # !TODO: need to have a single protocol later for this
         pbar = tqdm.tqdm(
             total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
         )
