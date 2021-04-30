@@ -30,11 +30,12 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 
+from tiatoolbox.models.abc import Model_Base
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.dataset import Patch_Dataset, preproc_info
+from tiatoolbox.models.dataset import Patch_Dataset
 
 
-class CNN_Patch_Model(nn.Module):
+class CNN_Patch_Model(Model_Base):
     """Extends the backbone model so that is performs classification
     at the output of the network.
 
@@ -53,7 +54,7 @@ class CNN_Patch_Model(nn.Module):
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        #! TODO: remove hard-coding of 512 channels below
+        #! TODO: remove hard-coding of 512 channels below @ Dang
         self.classifer = nn.Linear(512, nr_classes)
 
     def forward(self, imgs):
@@ -108,9 +109,9 @@ class CNN_Patch_Predictor(object):
         self,
         batch_size,
         model=None,
-        backbone="resnet18",
-        pretrained="kather",
+        pretrained_model=None,
         nr_input_ch=3,
+        nr_classes=None,
         nr_loader_worker=0,
         verbose=True,
         *args,
@@ -122,28 +123,49 @@ class CNN_Patch_Predictor(object):
         Args:
             batch_size (int): number of images fed into the model each time.
             model (nn.Module): defined PyTorch model with the define backbone as the feature extractor.
-            backbone (str): name of the backbone model. This is obtained from tiatoolbox.models.backbone.
-            nr_classes (int): number of classes predicted by the model.
+            pretrained_model (str): name of the pretrained model used to process the data.
             nr_input_ch (int): number of input channels of the image. If RGB, then this is 3.
             nr_loader_worker (int): number of workers used in torch.utils.data.DataLoader.
             verbose (bool): whether to output logging information.
 
         """
         super().__init__()
+
+        if model and pretrained_model:
+            raise ValueError("Must only provide one of model or pretrained_model")
+
+        #! first check to see whether model checkpoint path exists on server (if pretrained is not None)
+        if pretrained_model:
+            # do something
+            # get backbone and dataset from string info
+            pass
+
+        if not pretrained:
+            # get kwargs
+            backbone = kwargs["backbone"]
+            pretrained = kwargs["pretrained"]
+            # etc etc :)
+
+        # self.batch_size = batch_size
+        # self.backbone = backbone
+        # self.nr_input_ch = nr_input_ch
+        # self.nr_loader_worker = nr_loader_worker
+        # self.verbose = verbose
+
         self.batch_size = batch_size
+        nr_classes = 9
+        backbone = "resnet18"
         self.backbone = backbone
+        pretrained = "kather"
         self.nr_input_ch = nr_input_ch
         self.nr_loader_worker = nr_loader_worker
         self.verbose = verbose
 
-        # get the preprocessing information
-        self.preproc_list = preproc_info(pretrained)
-
         if model is not None:
             self.model = model
         else:
-            # ! TODO: will provide the pretrained model for speicifc 
-            # ! checkpoint, so querry the # class from that
+            # ! TODO: will provide the pretrained model for speicifc
+            # ! checkpoint, so querry the # class from that @Dang
             self.model = CNN_Patch_Model(
                 backbone, nr_input_ch=nr_input_ch, nr_classes=nr_classes
             )
@@ -167,8 +189,7 @@ class CNN_Patch_Predictor(object):
             #! TODO Decide where to dump models - ask Shan
             model_path = "model_weights/%s_%s.pth" % (self.backbone, dataset)
             if not pathlib.Path(model_path).is_file():
-                url_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
-                url_path = "%s%s_%s.pth" % (url_root, backbone, dataset)
+                url_path = "%s%s_%s.pth" % (self.url_root, backbone, dataset)
                 print("Downloading model weights from %s" % url_path)
                 r = requests.get(url_path)
                 with open(model_path, "wb") as f:
@@ -179,34 +200,20 @@ class CNN_Patch_Predictor(object):
         self.model.load_state_dict(saved_state_dict, strict=True)
         return
 
-    def predict(self, X, return_probs=False, return_names=False, *args, **kwargs):
-        """Make a prediction on a list of images or list of paths pointing to images
-        of the same shape. Internally, this will create a dataset using 
-        tiatoolbox.models.data.classification.Patch_Dataset
-        and call predict_dataset.
+    def predict(
+        self, dataset, return_probs=False, return_labels=False, *args, **kwargs
+    ):
+        """Make a prediction on a dataset.
 
         Args:
-            X(List of :class:`numpy.ndarray` or List of str): a list of numpy.array
-            where each is an image or a list of file paths with an extension of
-            *.jpg, *.jpeg, *.tif, *.tiff, *.png, *.npy . In either case, all images
-            are assumed to be of the same shape.
+            dataset (torch.utils.data.Dataset): PyTorch dataset object created using
+                tiatoolbox.models.data.classification.Patch_Dataset.
+            return_probs (bool): whether to return per-class model probabilities.
+            return_labels (bool): whether to return the predicted class labels.
 
         Returns:
             output: predictions of the input dataset
 
-        """
-        # defer sanity checking to Dataset class, or do it here ?
-        ds = Patch_Dataset(X, return_label=return_names, preproc_list=self.preproc_list)
-        output = self.predict_dataset(ds, return_probs, return_names)
-        return output
-
-    def predict_dataset(
-        self, dataset, return_probs=False, return_names=False, *args, **kwargs
-    ):
-        """
-        Make a prediction on a custom dataset object. Dataset object is Torch compliant.
-
-        # TODO: need check for getitem output form ?
         """
 
         # TODO preprocessing must be defined with the dataset
@@ -229,10 +236,17 @@ class CNN_Patch_Predictor(object):
         all_output = {}
         preds_output = []
         probs_output = []
-        names_output = []
+        labels_output = []
+
+        if return_labels and not dataset.return_label:
+            # TODO use python warning!
+            print(
+                "WARNING: return_labels selected but dataset does not return any labels."
+            )
+
         for batch_idx, batch_data in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
-            # on the an instance of ModelDesc, may be there is a nicer way
+            # on the an instance of ModelDesc, maybe there is a better way
             # to go about this
             if dataset.return_label:
                 batch_input, batch_label = batch_data
@@ -245,9 +259,9 @@ class CNN_Patch_Predictor(object):
             if return_probs:
                 # return raw output
                 probs_output.extend(batch_output_probs.tolist())
-            if return_names:
-                # return class names
-                names_output.extend(batch_label)
+            if return_labels and dataset.return_label:
+                # return class labels
+                labels_output.extend(batch_label.numpy())
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -256,10 +270,23 @@ class CNN_Patch_Predictor(object):
             pbar.close()
 
         pred_output = np.array(preds_output)
+
+        #! use something like below @Dang - get class names by indexing with predictions
+        # class_names = label_code[pred_output]
+
         all_output = {"preds": preds_output}
         if return_probs:
             all_output["probs"] = probs_output
-        if return_names:
-            all_output["names"] = names_output
+        if return_labels:
+            all_output["labels"] = labels_output
 
         return all_output
+
+
+class Kather_CNN_Patch_Predictor(CNN_Patch_Predictor):
+    def __init__():
+        pass
+
+
+def get_patch_predictor():
+    pass

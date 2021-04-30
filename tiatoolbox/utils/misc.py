@@ -26,6 +26,9 @@ import pathlib
 import yaml
 import pandas as pd
 import numpy as np
+import os
+import zipfile
+import requests
 from skimage import exposure
 
 
@@ -466,3 +469,26 @@ def assert_dtype_int(input_var, message="Input must be integer."):
     """
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
         raise AssertionError(message)
+
+
+def download_and_unzip_data(url, unzip_dir):
+    """Download data from a given URL and extract.
+
+    Args:
+        url (path): URL from where to download the data.
+        unzip_dir (str): location to unzip the data.
+
+    """
+    # download zip file
+    zip_file_path = unzip_dir + "temp.zip"
+    print("Downloading dataset from %s" % url)
+    r = requests.get(url)
+    with open(zip_file_path, "wb") as f:
+        f.write(r.content)
+
+    # extract data from zip file
+    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
+        zip_ref.extractall(unzip_dir)
+
+    # remove zip file
+    os.remove(zip_file_path)
