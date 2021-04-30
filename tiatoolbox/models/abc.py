@@ -5,11 +5,8 @@ import torch.nn as nn
 class Model_Base(nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(
-        self, url_root="https://tiatoolbox.dcs.warwick.ac.uk/models/", *args, **kwargs
-    ):
+    def __init__(self, *args, **kwargs):
         super().__init__()
-        self.url_root = url_root
 
     def load_model(self, checkpoint_path, *args, **kwargs):
         """Load model checkpoint."""

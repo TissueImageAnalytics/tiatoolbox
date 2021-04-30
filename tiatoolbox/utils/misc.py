@@ -470,6 +470,7 @@ def assert_dtype_int(input_var, message="Input must be integer."):
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
         raise AssertionError(message)
 
+
 def download_data(url, save_path, overwrite=False):
     """Download data from a given URL to location. Can overwrite data if demanded
     else no action is taken
@@ -479,7 +480,7 @@ def download_data(url, save_path, overwrite=False):
         unzip_dir (str): location to unzip the data.
     """
     print("Download from %s" % url)
-    print('Save to %s' % save_path)
+    print("Save to %s" % save_path)
     save_dir = pathlib.Path(save_path).parent
 
     if not os.path.exists(save_dir):
@@ -492,7 +493,16 @@ def download_data(url, save_path, overwrite=False):
         f.write(r.content)
     return
 
+
 def unzip_data(zip_path, save_path, remove_zip=True):
+    """Extract data from zip file.
+
+    Args:
+        zip_path (str): path where the zip file is located.
+        save_path (str): path where to save extracted files.
+        remove_zip (bool): whether to remove initial zip file after extraction.
+
+    """
     # extract data from zip file
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(save_path)

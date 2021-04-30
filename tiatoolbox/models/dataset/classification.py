@@ -29,15 +29,14 @@ import torch
 import torchvision.transforms as transforms
 
 from tiatoolbox import TIATOOLBOX_HOME
-from tiatoolbox.utils.misc import (download_data, grab_files_from_dir, imread,
-                                   unzip_data)
+from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
 
 def _preproc_info(pretrained):
     """Get the preprocessing information used for the pretrained model.
 
     Args:
-        pretrained (str): xx.
+        pretrained (str):  .
 
     """
     preproc_dict = {
@@ -207,7 +206,8 @@ class Patch_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         patch = self.img_list[idx]
 
-        if self.data_mode == 0:  # mode 0 is list of paths
+        # mode 0 is list of paths
+        if self.data_mode == 0:
             patch = self.__load_img(patch)
 
         # apply preprocessing to selected patch
@@ -226,10 +226,10 @@ class Kather_Patch_Dataset(Patch_Dataset):
         root_dir (str or None): path to directory containing the Kather dataset,
                  assumed to be as is after extracted. If the argument is `None`,
                  the dataset will be downloaded and extracted into the
-                 'run_dir/download/Kather'
+                 'run_dir/download/Kather'.
 
         preproc_list: list of preprocessing to be applied. If not provided, by default
-                      the following are applied in sequential order
+                      the following are applied in sequential order.
 
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -239,7 +239,6 @@ class Kather_Patch_Dataset(Patch_Dataset):
     def __init__(
         self,
         root_dir=None,
-        save_dir="data_dump/kather",
         return_label=True,
         preproc_list=None,
     ):
@@ -262,17 +261,19 @@ class Kather_Patch_Dataset(Patch_Dataset):
         ]
 
         if root_dir is None:
-            save_dir_path = os.path.join(TIATOOLBOX_HOME, 'dataset/')
-            if not os.path.exists(save_dir_path):                
-                save_zip_path = os.path.join(TIATOOLBOX_HOME, 'dataset/Kather.zip')
+            save_dir_path = os.path.join(TIATOOLBOX_HOME, "dataset/")
+            if not os.path.exists(save_dir_path):
+                save_zip_path = os.path.join(TIATOOLBOX_HOME, "dataset/Kather.zip")
                 url = "https://zenodo.org/record/53169/files/Kather_texture_2016_image_tiles_5000.zip"
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
-            root_dir = os.path.join(TIATOOLBOX_HOME, 'dataset/Kather_texture_2016_image_tiles_5000/')
+            root_dir = os.path.join(
+                TIATOOLBOX_HOME, "dataset/Kather_texture_2016_image_tiles_5000/"
+            )
 
         # what will happen if contents modified / corrupt ?
         if not os.path.exists(save_dir_path):
-            print('Dataset does not exists at %s' % save_dir_path)
+            print("Dataset does not exists at %s" % save_dir_path)
 
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):

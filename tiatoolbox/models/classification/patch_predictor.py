@@ -37,9 +37,9 @@ from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import Patch_Dataset
 from tiatoolbox.utils.misc import download_data
 
+
 class CNN_Patch_Model(Model_Base):
-    """Retrieve the model backbone and attach a new FCN ontop for new class
-    to perform classification.
+    """Retrieve the model backbone and attach an extra FCN to perform classification.
 
     Attributes:
         nr_classes (int): number of classes output by the model.
@@ -57,8 +57,8 @@ class CNN_Patch_Model(Model_Base):
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # best way to retrieve channel dynamically is passing a small forward
-        prev_nr_ch = self.feat_extract(torch.rand([2,3,4,4])).shape[1]
+        # best way to retrieve channel dynamically is passing a small forward pass
+        prev_nr_ch = self.feat_extract(torch.rand([2, 3, 4, 4])).shape[1]
         self.classifer = nn.Linear(prev_nr_ch, nr_classes)
 
     def forward(self, imgs):
@@ -91,20 +91,20 @@ class CNN_Patch_Model(Model_Base):
         # output should be a single tensor or scalar
         return output.cpu().numpy()
 
+
 class CNN_Patch_Predictor(object):
     """Patch-level predictor.
 
     Attributes:
         batch_size (int): number of images fed into the model each time.
-        nr_input_ch (int): number of input channels of the image. If RGB, then this is 3.
         nr_loader_worker (int): number of workers used in torch.utils.data.DataLoader.
-        verbose (bool): whether to output logging information.
         model (nn.Module): Defined PyTorch model.
+        verbose (bool): whether to output logging information.
 
     Usage:
-        >>> image_list = np.random.randint(0, 255, [4, 512, 512, 3])
-        >>> model = CNN_Patch_Predictor('resnet50', nr_class=8, batch_size=4, nr_loader_workers=4)
-        >>> model.predict(image_list)
+        >>> dataset = Kather_Patch_Dataset()
+        >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather", batch_size=16)
+        >>> output = predictor.predict(dataset)
 
     """
 
@@ -119,25 +119,25 @@ class CNN_Patch_Predictor(object):
         *args,
         **kwargs,
     ):
-        """Initialise the Patch Predictor. Note, if model is supplied in the arguments, the it
+        """Initialise the Patch Predictor. Note, if model is supplied in the arguments, it
         will override the backbone.
 
         Args:
-            model (nn.Module): use this externally defined PyTorch model for prediction. Default is `None`. 
-                            Upon provided, `pretrained_model` argument is ignored, 
+            model (nn.Module): use externally defined PyTorch model for prediction. Default is `None`.
+                            If provided, `pretrained_model` argument is ignored,
 
-            predefined_model (str): name of the existing models support by tiatoolbox for processing the data. 
-                                    Currently support.
-                                    - resnet18#kather : resnet18 backbone trained on Kather dataset [URL] 
+            predefined_model (str): name of the existing models support by tiatoolbox for processing the data.
+                Currently support:
+                - resnet18_kather : resnet18 backbone trained on Kather dataset.
 
-                                    By default, their pretrained weights will also be downloaded. However, you can 
-                                    overload with your own set of weights via `pretrained_weight` argument.
-                                    Argument is case insensitive
+                By default, the corresponding pretrained weights will also be downloaded.
+                However, you can override with your own set of weights via the
+                `pretrained_weight` argument. Argument is case insensitive.
 
-            pretrained_weight (str): path to the weight of one of the corresponding `predefined_model`.
+            pretrained_weight (str): path to the weight of the corresponding `predefined_model`.
 
             batch_size (int) : number of images fed into the model each time.
-            nr_loader_worker (int) : number of workers to load the data. 
+            nr_loader_worker (int) : number of workers to load the data.
                                 Take note that they will also perform preprocessing.
             verbose (bool): whether to output logging information.
 
@@ -151,27 +151,30 @@ class CNN_Patch_Predictor(object):
             self.model = model
         else:
             self.model = get_predefined_model(predefined_model, pretrained_weight)
-        
+
         self.batch_size = batch_size
         self.nr_loader_worker = nr_loader_worker
         self.verbose = verbose
         return
 
-    # ! @simon, remove return_labels till we can finalize where to go with it
-    def predict(
-        self, dataset, return_probs=False, on_gpu=True, *args, **kwargs
-    ):
+    def predict(self, dataset, return_probs=False, on_gpu=True, *args, **kwargs):
         """Make a prediction on a dataset.
 
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
                 tiatoolbox.models.data.classification.Patch_Dataset.
             return_probs (bool): whether to return per-class model probabilities.
+            on_gpu (bool): whether to run model on the GPU.
 
         Returns:
-            output: predictions of the input dataset
+            output (ndarray): model predictions of the input dataset
 
         """
+
+        if not isinstance(dataset, torch.utils.data.Dataset):
+            raise ValueError(
+                "Dataset supplied to predict() must be a PyTorch map style dataset (torch.utils.data.Dataset)."
+            )
 
         # TODO preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -181,7 +184,7 @@ class CNN_Patch_Predictor(object):
             drop_last=False,
         )
 
-        # !TODO: need to have a single protocol later for this
+        # TODO: have a single protocol later for this
         pbar = tqdm.tqdm(
             total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
         )
@@ -221,39 +224,55 @@ class CNN_Patch_Predictor(object):
 
         pred_output = np.array(preds_output)
 
-        #! use something like below @Dang - get class names by indexing with predictions
-        # class_names = label_code[pred_output]
-
         all_output = {"preds": preds_output}
         if return_probs:
             all_output["probs"] = probs_output
         return all_output
 
+
 __pretrained_model = {
-    'resnet18#kather' : {
-        'pretrained' : 'URL' , # ! path on server @simon
-        'nr_input_ch' : 3,
-        'nr_classes'  : 9
+    "resnet18_kather": {
+        "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth",
+        "nr_input_ch": 3,
+        "nr_classes": 9,
     }
 }
 
+
 def get_predefined_model(predefined_model=None, pretrained_weight=None):
+    """Load a predefined PyTorch model with the appropriate pretrained weights.
+
+    Args:
+        predefined_model (str): name of the existing models support by tiatoolbox for processing the data.
+            Currently support:
+            - resnet18_kather: resnet18 backbone trained on Kather dataset.
+
+            By default, the corresponding pretrained weights will also be downloaded.
+            However, you can override with your own set of weights via the
+            `pretrained_weight` argument. Argument is case insensitive.
+
+        pretrained_weight (str): path to the weight of the corresponding `predefined_model`.
+
+    """
     assert isinstance(predefined_model, str)
-    # parsing protocol 
+    # parsing protocol
     predefined_model = predefined_model.lower()
-    backbone, dataset = predefined_model.split('#')
+    backbone, dataset = predefined_model.split("_")
     cfg = __pretrained_model[predefined_model]
-    model = CNN_Patch_Model(backbone=backbone, 
-                    nr_input_ch=cfg['nr_input_ch'],
-                    nr_classes=cfg['nr_classes'])
-    
+    model = CNN_Patch_Model(
+        backbone=backbone, nr_input_ch=cfg["nr_input_ch"], nr_classes=cfg["nr_classes"]
+    )
+
     if pretrained_weight is None:
-        pretrained_weight_url = cfg['pretrained']
-        pretrained_weight = os.path.join(TIATOOLBOX_HOME, 'models/', )
+        pretrained_weight_url = cfg["pretrained"]
+        pretrained_weight_url_split = pretrained_weight_url.split("/")
+        pretrained_weight = os.path.join(
+            TIATOOLBOX_HOME, "models/", pretrained_weight_url_split[-1]
+        )
         if not os.path.exists(pretrained_weight):
             download_data(pretrained_weight_url, pretrained_weight)
+
     # ! assume to be saved in single GPU mode
     saved_state_dict = torch.load(pretrained_weight)
     model.load_state_dict(saved_state_dict, strict=True)
     return model
-
