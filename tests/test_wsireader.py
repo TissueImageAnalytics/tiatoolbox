@@ -937,6 +937,12 @@ def test_VirtualWSIReader(_source_image):
     assert img.shape == (50, 100, 3)
 
 
+def test_VirtualWSIReader_invalid_mode(_source_image):
+    """Test creating a VritualWSIReader with an invalid mode."""
+    with pytest.raises(ValueError):
+        wsireader.VirtualWSIReader(pathlib.Path(_source_image), mode="foo")
+
+
 def test_VirtualWSIReader_read_bounds(_source_image):
     """Test VirtualWSIReader read bounds"""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
