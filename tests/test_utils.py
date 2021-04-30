@@ -186,7 +186,6 @@ def test_safe_padded_read_pad_constant_values():
             padding=padding,
             pad_constant_values=10,
         )
-        _, size = utils.transforms.bounds2locsize(bounds)
 
         assert np.sum(region == 10) == (4 * side_len) + 4
 
