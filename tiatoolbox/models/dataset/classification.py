@@ -279,7 +279,7 @@ class Kather_Patch_Dataset(Patch_Dataset):
             path_list = grab_files_from_dir(
                 "%s/%s/" % (root_dir, label_code), file_types="*.tif"
             )
-            path_list = [[v, label_id] for v in path_list][:4]
+            path_list = [[v, label_id] for v in path_list]
             path_list.sort()
             all_path_list.extend(path_list)
         img_list, label_list = list(zip(*all_path_list))

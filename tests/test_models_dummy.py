@@ -35,15 +35,17 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # output = predictor.predict(dataset, return_labels=True)
 
 # API call style 2
-my_special_sauce_weights = '/home/tialab-dang/local/project/tiatoolbox/resnet18_kather.pth'
-dataset = Kather_Patch_Dataset()
-predictor = CNN_Patch_Predictor(predefined_model="resnet18#kather", 
-                                pretrained_weight=my_special_sauce_weights, 
-                                batch_size=16)
-output = predictor.predict(dataset, return_labels=True)
-print('here')
+# my_special_sauce_weights = '/home/tialab-dang/local/project/tiatoolbox/resnet18_kather.pth'
+# dataset = Kather_Patch_Dataset()
+# predictor = CNN_Patch_Predictor(predefined_model="resnet18#kather", 
+#                                 pretrained_weight=my_special_sauce_weights, 
+#                                 batch_size=16)
+# output = predictor.predict(dataset, return_labels=True)
 
 # # API call style 3 (advance)
-# model = CNN_Patch_Model(backbone='resnet50', nr_classes=9)
-# predictor = CNN_Patch_Predictor(model=model, batch_size=16)
-# output = predictor.predict(dataset, return_labels=True)
+dataset = Kather_Patch_Dataset()
+model = CNN_Patch_Model(backbone='resnet50', nr_classes=9)
+predictor = CNN_Patch_Predictor(model=model, batch_size=16)
+output = predictor.predict(dataset, return_labels=True)
+
+print('here')
