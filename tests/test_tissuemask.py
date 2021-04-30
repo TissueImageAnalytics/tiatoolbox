@@ -135,7 +135,7 @@ def test_transform_fit_otsu_wrong_shape():
     image = np.ones((10, 10))
     masker = tissuemask.OtsuTissueMasker()
     with pytest.raises(ValueError):
-        masker.fit([image])[0]
+        masker.fit([image])
 
 
 def test_transform_morphological_conflicting_args():
