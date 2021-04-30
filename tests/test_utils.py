@@ -411,6 +411,50 @@ def test_sub_pixel_read_interpolation_modes():
         assert output.shape == out_size
 
 
+def test_sub_pixel_read_incorrect_read_func_return():
+    bounds = (0, 0, 8, 8)
+    image = np.ones((10, 10))
+
+    def read_func(*args, **kwargs):
+        return np.ones((5, 5))
+
+    with pytest.raises(ValueError):
+        utils.image.sub_pixel_read(
+            image,
+            bounds=bounds,
+            output_size=(10, 10),
+            read_func=read_func,
+        )
+
+
+def test_sub_pixel_read_empty_read_func_return():
+    bounds = (0, 0, 8, 8)
+    image = np.ones((10, 10))
+
+    def read_func(*args, **kwargs):
+        return np.ones((0, 0))
+
+    with pytest.raises(ValueError):
+        utils.image.sub_pixel_read(
+            image,
+            bounds=bounds,
+            output_size=(10, 10),
+            read_func=read_func,
+        )
+
+
+def test_sub_pixel_read_empty_bounds():
+    bounds = (0, 0, 0, 0)
+    image = np.ones((10, 10))
+
+    with pytest.raises(ValueError):
+        utils.image.sub_pixel_read(
+            image,
+            bounds=bounds,
+            output_size=(10, 10),
+        )
+
+
 def test_fuzz_bounds2locsize():
     """Fuzz test for bounds2size."""
     random.seed(0)
@@ -746,3 +790,9 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
             region=np.zeros((10, 10)),
             pad_mode="constant",
         )
+
+
+def test_normalise_padding_input_dims():
+    """Test that normalise padding error with input dimensions > 1."""
+    with pytest.raises(ValueError):
+        utils.image.normalise_padding_size(((0, 0), (0, 0)))
