@@ -9,6 +9,8 @@ import pathlib
 import numpy as np
 import cv2
 from click.testing import CliRunner
+from skimage.filters.thresholding import threshold_otsu
+from skimage.morphology import binary_closing, disk
 
 # -------------------------------------------------------------------------------------
 # Constants
@@ -1201,6 +1203,24 @@ def test_tissue_mask_morphological(_sample_svs):
             morpho_mask = remove_small_objects(morpho_mask, 100 * scaler(resolution))
 
     assert np.mean(np.logical_xor(mask_thumb, morpho_mask)) < 0.1
+
+
+def test_tissue_mask_morphological_levels(_sample_svs):
+    """Test wsi.tissue_mask with morphological method and resolution in level."""
+    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    thumb = wsi.slide_thumbnail(0, "level")
+    grey_thumb = cv2.cvtColor(thumb, cv2.COLOR_RGB2GRAY)
+    threshold = threshold_otsu(grey_thumb)
+    reference = grey_thumb < threshold
+    # Using kernel_size of 1
+    mask = wsi.tissue_mask("morphological", 0, "level")
+    mask_thumb = mask.slide_thumbnail(0, "level")
+    assert np.mean(mask_thumb == reference) > 0.99
+    # Custom kernel_size (should still be close to refernce)
+    reference = binary_closing(reference, disk(3))
+    mask = wsi.tissue_mask("morphological", 0, "level", kernel_size=3)
+    mask_thumb = mask.slide_thumbnail(0, "level")
+    assert np.mean(mask_thumb == reference) > 0.95
 
 
 def test_tissue_mask_read_bounds_none_interpolation(_sample_svs):

@@ -96,6 +96,7 @@ def test_mpp2common_objective_power(_sample_svs):
 
 def test_assert_dtype_int():
     """Test AssertionError for dtype test."""
+    utils.misc.assert_dtype_int(input_var=np.array([1, 2]))
     with pytest.raises(AssertionError):
         utils.misc.assert_dtype_int(
             input_var=np.array([1.0, 2]), message="Bounds must be integers."
