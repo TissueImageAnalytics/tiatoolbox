@@ -37,18 +37,44 @@ def get_model(backbone, **kwargs):
 
     """
     backbone_dict = {
+        "alexnex": torch_models.alexnet,
         "resnet18": torch_models.resnet18,
         "resnet34": torch_models.resnet34,
         "resnet50": torch_models.resnet50,
+        "resnet101": torch_models.resnet101,
+        "resnext50_32x4d" : torch_models.resnext50_32x4d,
+        "resnext101_32x8d": torch_models.resnext101_32x8d,
+        "wide_resnet50_2":  torch_models.wide_resnet50_2,
+        "wide_resnet101_2": torch_models.wide_resnet101_2,
+
         "densenet121": torch_models.densenet121,
+        "densenet161": torch_models.densenet161,
+        "densenet169": torch_models.densenet169,
+        "densenet201": torch_models.densenet201,
+
+        'inception_v3': torch_models.inception_v3,
+        'googlenet' :  torch_models.googlenet,
+        
+        'mobilenet_v2' : torch_models.mobilenet_v2,
+        'mobilenet_v3_large' : torch_models.mobilenet_v3_large,
+        'mobilenet_v3_small' : torch_models.mobilenet_v3_small,
     }
+    if backbone not in backbone_dict:
+        raise ValueError('Backbone `%s` is not supported.' % backbone)
+
     creator = backbone_dict[backbone]
     model = creator(**kwargs)  # ! abit too hacky
 
     # unroll all the definition and strip off the final GAP and FCN
     # different model will have diffent form, sample resnet and densenet atm
-    if "resnet" in backbone:
+    if "resnet" in backbone or "resnext" in backbone:
         feat_extract = nn.Sequential(*list(model.children())[:-2])
     elif "densenet" in backbone:
-        feat_extract = nn.Sequential(*list(model.children())[0])
+        feat_extract = model.features
+    elif "alexnet" in backbone:
+        feat_extract = model.features
+    if "inception_v3" in backbone or "googlenet" in backbone:
+        feat_extract = nn.Sequential(*list(model.children())[:-3])
+    if "mobilenet" in backbone:
+        feat_extract = model.features
     return feat_extract
