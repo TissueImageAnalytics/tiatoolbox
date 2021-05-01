@@ -246,7 +246,7 @@ class CNN_Patch_Predictor(object):
         if self.verbose:
             pbar.close()
 
-        pred_output = np.array(preds_output)
+        preds_output = np.array(preds_output)
 
         all_output = {"preds": preds_output}
         if return_probs:
