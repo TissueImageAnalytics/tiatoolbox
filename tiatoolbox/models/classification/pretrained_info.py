@@ -20,6 +20,7 @@
 
 """Module that defines the pretrained patch classification models available."""
 
+
 __pretrained_model = {
     "resnet18_kather": {
         "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth",

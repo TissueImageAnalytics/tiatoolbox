@@ -31,8 +31,17 @@ import torchvision.transforms as transforms
 from tiatoolbox import TIATOOLBOX_HOME
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
+class __Torch_Tform_Wrapper_Caller(object):
+    def __init__(self, preproc_list):
+        self.func = transforms.Compose(preproc_list)
+    def __call__(self, img):
+        img = PIL.Image.fromarray(img)
+        img = self.func(img)
+        img = img.permute(1, 2, 0)
+        return img
 
-def _preproc_info(pretrained):
+
+def predefined_preproc_func(dataset_name):
     """Get the preprocessing information used for the pretrained model.
 
     Args:
@@ -45,10 +54,12 @@ def _preproc_info(pretrained):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     }
+    if dataset_name not in preproc_dict:
+        raise ValueError('Predefined preprocessing for dataset `%s` does not exist.')
 
-    preproc_list = preproc_dict[pretrained]
-
-    return preproc_list
+    preproc_list = preproc_dict[dataset_name]
+    preproc_func = __Torch_Tform_Wrapper_Caller(preproc_list)
+    return preproc_func
 
 
 class Patch_Dataset(torch.utils.data.Dataset):
@@ -83,15 +94,11 @@ class Patch_Dataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-        self, img_list, label_list=None, return_label=False, preproc_list=None
+        self, img_list, label_list=None, return_label=False, preproc_func=None
     ):
         super().__init__()
 
-        if preproc_list is None:
-            self.preproc = lambda x: x
-        else:
-            self.preproc = lambda x: self.preprocess_one_image(x, preproc_list)
-
+        self.preproc_func = self.set_preproc_func(preproc_func)
         self.data_mode = -1
 
         # perform check on the input
@@ -178,27 +185,17 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
         return patch
 
-    @staticmethod
-    def preprocess_one_image(patch, preproc_list=None):
-        """Apply preprocessing to a single input image patch.
-
-        Args:
-            patch (ndarray): input image patch.
-            preproc_list (list): list of torchvision transforms for preprocessing the image.
-                          The transforms will be applied in the order that they are
-                          given in the list. https://pytorch.org/vision/stable/transforms.html.
-
-        Returns:
-            patch (ndarray): preprocessed image patch.
-
+    def set_preproc_func(self, func):
         """
-        if preproc_list is not None:
-            # using torchvision pipeline demands input is pillow format
-            patch = PIL.Image.fromarray(patch)
-            trans = transforms.Compose(preproc_list)
-            patch = trans(patch)
-            patch = patch.permute(1, 2, 0)
-        return patch
+        Set the `preproc_func` to this `func` if it is not None.
+        Else the `preproc_func` is reset to return source image.
+
+        `func` must behave in the following manner
+
+        >>> transformed_img = func(img)
+        """
+        self.preproc_func = func if func is not None else lambda x : x
+        return 
 
     def __len__(self):
         return len(self.img_list)
@@ -211,7 +208,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
             patch = self.__load_img(patch)
 
         # apply preprocessing to selected patch
-        patch = self.preproc(patch)
+        patch = self.preproc_func(patch)
 
         if self.return_label:
             return patch, self.label_list[idx]
@@ -240,14 +237,11 @@ class Kather_Patch_Dataset(Patch_Dataset):
         self,
         root_dir=None,
         return_label=True,
-        preproc_list=None,
+        preproc_func=None
     ):
-        if preproc_list is None:
-            #! TODO @Dang configure preproc differently to make it dynamnic per defined model
-            preproc_info = _preproc_info("kather")
-
         self.return_label = return_label
-        self.preproc = lambda x: self.preprocess_one_image(x, preproc_list)
+        self.preproc_func = self.set_preproc_func(preproc_func)
+
         self.data_mode = 0
 
         label_code_list = [

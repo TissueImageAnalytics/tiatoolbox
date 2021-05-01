@@ -30,11 +30,12 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 import os
+import copy
 
 from tiatoolbox import TIATOOLBOX_HOME
 from tiatoolbox.models.abc import Model_Base
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.dataset import Patch_Dataset
+from tiatoolbox.models.dataset import Patch_Dataset, predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
 from tiatoolbox.models.classification.pretrained_info import __pretrained_model
 
@@ -62,6 +63,8 @@ class CNN_Patch_Model(Model_Base):
         prev_nr_ch = self.feat_extract(torch.rand([2, 3, 4, 4])).shape[1]
         self.classifer = nn.Linear(prev_nr_ch, nr_classes)
 
+        self.preproc_func = None
+
     def forward(self, imgs):
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
@@ -70,6 +73,21 @@ class CNN_Patch_Model(Model_Base):
         prob = torch.softmax(logit, -1)
         return prob
 
+    def set_preproc_func(self, func):
+        """
+        Set the `preproc_func` to this `func` if it is not None.
+        Else the `preproc_func` is reset to return source image.
+
+        `func` must behave in the following manner
+
+        >>> transformed_img = func(img)
+        """
+        self.preproc_func = func if func is not None else lambda x : x
+        return 
+    
+    def get_preproc_func(self):
+        return self.preproc_func
+    
     @staticmethod
     def infer_batch(model, batch_data):
         """Run inference on an input batch. Contains logic for
@@ -159,11 +177,12 @@ class CNN_Patch_Predictor(object):
         return
 
     def predict(self, dataset, return_probs=False, on_gpu=True, *args, **kwargs):
-        """Make a prediction on a dataset.
+        """Make a prediction on a dataset. Internally will make a deep copy of the provided
+        dataset to ensure user provided dataset is unchanged.
 
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
-                tiatoolbox.models.data.classification.Patch_Dataset.
+                tiatoolbox.models.data.classification.Patch_Dataset. 
             return_probs (bool): whether to return per-class model probabilities.
             on_gpu (bool): whether to run model on the GPU.
 
@@ -172,11 +191,14 @@ class CNN_Patch_Predictor(object):
 
         """
 
-        # TODO @Dang check whether you think this is suitable
         if not isinstance(dataset, torch.utils.data.Dataset):
             raise ValueError(
                 "Dataset supplied to predict() must be a PyTorch map style dataset (torch.utils.data.Dataset)."
             )
+
+        # may be expensive
+        dataset = copy.deepcopy(dataset) # make a deep copy of this
+        dataset.set_preproc_func(self.model.get_preproc_func())
 
         # TODO preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -250,11 +272,17 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     assert isinstance(predefined_model, str)
     # parsing protocol
     predefined_model = predefined_model.lower()
-    backbone, dataset = predefined_model.split("_")
+
+    if predefined_model not in __pretrained_model:
+        raise ValueError('Predefined model `%s` does not exist.' % predefined_model )
     cfg = __pretrained_model[predefined_model]
+    backbone, dataset = predefined_model.split("_")
+
+    preproc_func = predefined_preproc_func(dataset)
     model = CNN_Patch_Model(
         backbone=backbone, nr_input_ch=cfg["nr_input_ch"], nr_classes=cfg["nr_classes"]
     )
+    model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
         pretrained_weight_url = cfg["pretrained"]
