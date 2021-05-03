@@ -324,6 +324,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
             download_data(pretrained_weight_url, pretrained_weight)
 
     # ! assume to be saved in single GPU mode
-    saved_state_dict = torch.load(pretrained_weight)
+    # always load to CPU
+    saved_state_dict = torch.load(pretrained_weight, map_location='cpu')
     model.load_state_dict(saved_state_dict, strict=True)
     return model
