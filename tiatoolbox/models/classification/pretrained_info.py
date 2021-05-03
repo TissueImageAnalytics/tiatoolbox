@@ -20,11 +20,13 @@
 
 """Module that defines the pretrained patch classification models available."""
 
+import os
+
+models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
 
 __pretrained_model = {
     "resnet18_kather": {
-        "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/"
-        "resnet18_kather_pc.pth",
+        "pretrained": os.path.join(models_root, "resnet18_kather_pc.pth"),
         "nr_input_ch": 3,
         "nr_classes": 9,
     }
