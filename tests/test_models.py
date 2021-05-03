@@ -155,7 +155,7 @@ def test_patch_predictor_kather_resnet18_api1():
     # API 1
     predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather", batch_size=1)
     # don't run test on GPU
-    output = predictor.predict(dataset, return_probs=True, on_gpu=True)
+    output = predictor.predict(dataset, return_probs=True, on_gpu=False)
     probs = output["probs"]
     preds = output["preds"]
 
@@ -189,7 +189,7 @@ def test_patch_predictor_kather_resnet18_api2():
         batch_size=1,
     )
     # don't run test on GPU
-    output = predictor.predict(dataset, return_probs=True, on_gpu=True)
+    output = predictor.predict(dataset, return_probs=True, on_gpu=False)
     probs = output["probs"]
     preds = output["preds"]
 
@@ -211,7 +211,7 @@ def test_patch_predictor_kather_resnet18_api3():
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
     predictor = CNN_Patch_Predictor(model=model, batch_size=1)
     # don't run test on GPU
-    output = predictor.predict(dataset, return_probs=True, on_gpu=True)
+    output = predictor.predict(dataset, return_probs=True, on_gpu=False)
 
     probs = output["probs"]
     preds = output["preds"]

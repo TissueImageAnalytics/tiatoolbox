@@ -236,11 +236,11 @@ class CNN_Patch_Predictor:
         )
 
         # ! may need to take into account CPU/GPU mode
-        model = torch.nn.DataParallel(self.model)
-        if on_gpu:
+        if on_gpu: # DataParallel work only for cuda
+            model = torch.nn.DataParallel(self.model)
             model = model.to("cuda")
         else:
-            model = model.to("cpu")
+            model = self.model.to("cpu")
 
         all_output = {}
         preds_output = []
