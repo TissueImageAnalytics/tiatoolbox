@@ -37,8 +37,6 @@ class Model_Base(tia_model_abc.Model_Base):
         nr_posproc_worker=0,
         preproc_args=None,
         postproc_args=None,
-        *args,
-        **kwargs,
     ):
         super().__init__()
         raise NotImplementedError

@@ -32,7 +32,7 @@ from tiatoolbox import TIATOOLBOX_HOME
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
 
-class __Torch_Preproc_Caller(object):
+class __Torch_Preproc_Caller:
     """Wrapper for applying PyTorch transforms.
 
     Args:
@@ -77,9 +77,9 @@ class Patch_Dataset(torch.utils.data.Dataset):
     from the torch.utils.data.Dataset class.
 
     Attributes:
-        img_list: Either a list of patches, where each patch is a ndarray or a list of valid path
-                 with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png") pointing to
-                 an image.
+        img_list: Either a list of patches, where each patch is a ndarray or a list of
+            valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
+            pointing to an image.
 
         label_list: List of label for sample at the same index in `img_list` .
                  Default is `None`
@@ -87,18 +87,22 @@ class Patch_Dataset(torch.utils.data.Dataset):
         return_label (bool, False): __getitem__ will return both the img and its label.
                 If `label_list` is `None`, `None` is returned
 
-        preproc_func: preprocessing function used to transform the input data. If supplied, then
-                 torch.Compose will be used on the input preproc_list. preproc_list is a
-                 list of torchvision transforms for preprocessing the image.
-                 The transforms will be applied in the order that they are
-                 given in the list. https://pytorch.org/vision/stable/transforms.html.
+        preproc_func: preprocessing function used to transform the input data. If
+        supplied, then torch.Compose will be used on the input preproc_list.
+        preproc_list is a list of torchvision transforms for preprocessing the image.
+        The transforms will be applied in the order that they are given in the list.
+        https://pytorch.org/vision/stable/transforms.html.
 
     Examples:
         >>> from tiatoolbox.models.data import Patch_Dataset
-        >>> preproc_list = [transforms.Resize(224),
-                            transforms.ToTensor(),
-                            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                            ]
+        >>> mean = [0.485, 0.456, 0.406]
+        >>> std = [0.229, 0.224, 0.225]
+        >>> preproc_list =
+                [
+                    transforms.Resize(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=mean, std=std)
+                ]
         >>> ds = Patch_Dataset('/path/to/data/', preproc_list=preproc_list)
 
     """
@@ -137,8 +141,9 @@ class Patch_Dataset(torch.utils.data.Dataset):
                 except:
                     raise ValueError(
                         "At least one of the provided image paths is invalid. "
-                        "Check to make sure the supplied paths correspond to image files. Supported "
-                        "image formats include: `.npy`, `.jpg`, `.jpeg`, `.tif`, `.tiff` or `.png`."
+                        "Check to make sure the supplied paths correspond to image "
+                        "files. Supported image formats include: `.npy`, `.jpg`, "
+                        "`.jpeg`, `.tif`, `.tiff` or `.png`."
                     )
                 self.data_mode = 0
             else:
@@ -181,7 +186,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
         return
 
     @staticmethod
-    def __load_img(self, path):
+    def __load_img(path):
         """Load an image from a provided path.
 
         Args:
@@ -230,7 +235,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
 class Kather_Patch_Dataset(Patch_Dataset):
     """Define a dataset class specifically for the Kather dataset, obtain from [URL]
 
-    Attributes: # ! TODO: support for path object ?
+    Attributes:
         root_dir (str or None): path to directory containing the Kather dataset,
                  assumed to be as is after extracted. If the argument is `None`,
                  the dataset will be downloaded and extracted into the
@@ -238,9 +243,6 @@ class Kather_Patch_Dataset(Patch_Dataset):
 
         preproc_list: list of preprocessing to be applied. If not provided, by default
                       the following are applied in sequential order.
-
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 
     """
 
@@ -270,7 +272,10 @@ class Kather_Patch_Dataset(Patch_Dataset):
         if root_dir is None:
             if not os.path.exists(save_dir_path):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
-                url = "https://zenodo.org/record/53169/files/Kather_texture_2016_image_tiles_5000.zip"
+                url = (
+                    "https://zenodo.org/record/53169/files/"
+                    "Kather_texture_2016_image_tiles_5000.zip"
+                )
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             root_dir = os.path.join(

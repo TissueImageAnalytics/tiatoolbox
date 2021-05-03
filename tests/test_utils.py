@@ -335,7 +335,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """ "Test contrast enhancement functionality."""
+    """Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [
@@ -512,7 +512,8 @@ def test_download_unzip_data():
     url = "https://tiatoolbox.dcs.warwick.ac.uk/utils/test_directory.zip"
     save_dir_path = (os.path.join(TIATOOLBOX_HOME, "tmp/"),)
     os.mkdir(save_dir_path)
-    utils.download_data(url, save_dir_path)
+    save_zip_path = (os.path.join(save_dir_path, "test_directory.zip"),)
+    utils.download_data(url, save_zip_path)
     utils.unzip_data(save_zip_path, save_dir_path)
 
     assert os.listdir(save_dir_path) == ["dir1", "dir2", "dir3"]

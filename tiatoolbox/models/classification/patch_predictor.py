@@ -52,7 +52,7 @@ class CNN_Patch_Model(Model_Base):
 
     """
 
-    def __init__(self, backbone, nr_input_ch=3, nr_classes=1):
+    def __init__(self, backbone, nr_classes=1):
         super().__init__()
         self.nr_classes = nr_classes
 
@@ -117,7 +117,7 @@ class CNN_Patch_Model(Model_Base):
         return output.cpu().numpy()
 
 
-class CNN_Patch_Predictor(object):
+class CNN_Patch_Predictor:
     """Patch-level predictor.
 
     Attributes:
@@ -128,7 +128,7 @@ class CNN_Patch_Predictor(object):
 
     Usage:
         >>> dataset = Kather_Patch_Dataset()
-        >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather", batch_size=16)
+        >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather")
         >>> output = predictor.predict(dataset)
 
     """
@@ -142,26 +142,27 @@ class CNN_Patch_Predictor(object):
         pretrained_weight=None,
         verbose=True,
     ):
-        """Initialise the Patch Predictor. Note, if model is supplied in the arguments, it
-        will override the backbone.
+        """Initialise the Patch Predictor. Note, if model is supplied in the
+        arguments, it will override the backbone.
 
         Args:
-            model (nn.Module): use externally defined PyTorch model for prediction. Default is `None`.
-                            If provided, `pretrained_model` argument is ignored,
+            model (nn.Module): use externally defined PyTorch model for prediction.
+                Default is `None`. If provided, `pretrained_model` argument is ignored.
 
-            predefined_model (str): name of the existing models support by tiatoolbox for processing the data.
-                Currently support:
+            predefined_model (str): name of the existing models support by tiatoolbox
+                for processing the data. Currently support:
                 - resnet18_kather : resnet18 backbone trained on Kather dataset.
 
-                By default, the corresponding pretrained weights will also be downloaded.
-                However, you can override with your own set of weights via the
-                `pretrained_weight` argument. Argument is case insensitive.
+                By default, the corresponding pretrained weights will also be
+                downloaded. However, you can override with your own set of weights
+                via the `pretrained_weight` argument. Argument is case insensitive.
 
-            pretrained_weight (str): path to the weight of the corresponding `predefined_model`.
+            pretrained_weight (str): path to the weight of the corresponding
+                `predefined_model`.
 
             batch_size (int) : number of images fed into the model each time.
             nr_loader_worker (int) : number of workers to load the data.
-                                Take note that they will also perform preprocessing.
+                Take note that they will also perform preprocessing.
             verbose (bool): whether to output logging information.
 
         """
@@ -180,14 +181,15 @@ class CNN_Patch_Predictor(object):
         self.verbose = verbose
         return
 
-    def predict(self, dataset, return_probs=False, on_gpu=True):
-        """Make a prediction on a dataset. Internally will make a deep copy of the provided
-        dataset to ensure user provided dataset is unchanged.
+    def predict(self, dataset, return_probs=False, return_labels=False, on_gpu=True):
+        """Make a prediction on a dataset. Internally will make a deep copy
+        of the provided dataset to ensure user provided dataset is unchanged.
 
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
                 tiatoolbox.models.data.classification.Patch_Dataset.
             return_probs (bool): whether to return per-class model probabilities.
+            return_labels (bool): whether to return labels.
             on_gpu (bool): whether to run model on the GPU.
 
         Returns:
@@ -197,7 +199,8 @@ class CNN_Patch_Predictor(object):
 
         if not isinstance(dataset, torch.utils.data.Dataset):
             raise ValueError(
-                "Dataset supplied to predict() must be a PyTorch map style dataset (torch.utils.data.Dataset)."
+                "Dataset supplied to predict() must be a PyTorch map style "
+                "dataset (torch.utils.data.Dataset)."
             )
 
         # may be expensive
@@ -227,13 +230,13 @@ class CNN_Patch_Predictor(object):
         all_output = {}
         preds_output = []
         probs_output = []
-
+        labels_output = []
         for _, batch_data in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
             # on the an instance of ModelDesc, maybe there is a better way
             # to go about this
             if dataset.return_label:
-                batch_input, batch_label = batch_data
+                batch_input, batch_labels = batch_data
             else:
                 batch_input = batch_data
 
@@ -244,6 +247,8 @@ class CNN_Patch_Predictor(object):
             if return_probs:
                 # return raw output
                 probs_output.extend(batch_output_probs.tolist())
+            if return_labels:
+                labels_output.extend(batch_labels.tolist())
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -256,6 +261,8 @@ class CNN_Patch_Predictor(object):
         all_output = {"preds": preds_output}
         if return_probs:
             all_output["probs"] = probs_output
+        if return_labels:
+            all_output["labels"] = labels_output
         return all_output
 
 
@@ -263,15 +270,16 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
-        predefined_model (str): name of the existing models support by tiatoolbox for processing the data.
-            Currently support:
+        predefined_model (str): name of the existing models support by tiatoolbox
+            for processing the data. Currently support:
             - resnet18_kather: resnet18 backbone trained on Kather dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the
             `pretrained_weight` argument. Argument is case insensitive.
 
-        pretrained_weight (str): path to the weight of the corresponding `predefined_model`.
+        pretrained_weight (str): path to the weight of the
+            corresponding `predefined_model`.
 
     """
     assert isinstance(predefined_model, str)

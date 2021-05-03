@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Top-level package for TIA Toolbox."""
+
 import os
 from tiatoolbox import tiatoolbox
 from tiatoolbox import wsicore
@@ -33,14 +34,15 @@ __version__ = "0.5.2"
 # default to be the user home folder, should work on both Window and Unix/Linux
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
-TIATOOLBOX_HOME = os.path.join(os.path.expanduser("~"), '.tiatoolbox')
+TIATOOLBOX_HOME = os.path.join(os.path.expanduser("~"), ".tiatoolbox")
+
 
 def set_home_dir(dir_path):
-    """
-    """
+    """Set the home directory for saving data."""
     global TIATOOLBOX_HOME
     TIATOOLBOX_HOME = dir_path
     return
+
 
 if __name__ == "__main__":
     pass
