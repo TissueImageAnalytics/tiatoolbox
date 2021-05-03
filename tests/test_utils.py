@@ -5,6 +5,7 @@ import random
 import pytest
 from pytest import approx
 import numpy as np
+import os
 import pandas as pd
 from pathlib import Path
 from PIL import Image
@@ -333,7 +334,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """"Test contrast enhancement functionality."""
+    """ "Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [
@@ -494,3 +495,16 @@ def test_grab_files_from_dir():
 
     out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
     assert len(out) == 0
+
+
+def test_download_unzip_data():
+    """Test download and unzip data from utils.misc."""
+    url = "https://tiatoolbox.dcs.warwick.ac.uk/utils/test_directory.zip"
+    save_dir_path = (os.path.join(TIATOOLBOX_HOME, "tmp/"),)
+    os.mkdir(save_dir_path)
+    download_data(url, save_zip_path)
+    unzip_data(save_zip_path, save_dir_path)
+
+    assert os.listdir(save_dir_path) == ["dir1", "dir2", "dir3"]
+
+    os.rmdir(save_dir_path)

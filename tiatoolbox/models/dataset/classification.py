@@ -31,9 +31,19 @@ import torchvision.transforms as transforms
 from tiatoolbox import TIATOOLBOX_HOME
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
-class __Torch_Tform_Wrapper_Caller(object):
+
+class __Torch_Preproc_Caller(object):
+    """Wrapper for applying PyTorch transforms.
+
+    Args:
+        preproc_list (list): list of torchvision transforms for preprocessing the image.
+            The transforms will be applied in the order that they are
+            given in the list. https://pytorch.org/vision/stable/transforms.html.
+    """
+
     def __init__(self, preproc_list):
         self.func = transforms.Compose(preproc_list)
+
     def __call__(self, img):
         img = PIL.Image.fromarray(img)
         img = self.func(img)
@@ -55,10 +65,10 @@ def predefined_preproc_func(dataset_name):
         ]
     }
     if dataset_name not in preproc_dict:
-        raise ValueError('Predefined preprocessing for dataset `%s` does not exist.')
+        raise ValueError("Predefined preprocessing for dataset `%s` does not exist.")
 
     preproc_list = preproc_dict[dataset_name]
-    preproc_func = __Torch_Tform_Wrapper_Caller(preproc_list)
+    preproc_func = __Torch_Preproc_Caller(preproc_list)
     return preproc_func
 
 
@@ -77,7 +87,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
         return_label (bool, False): __getitem__ will return both the img and its label.
                 If `label_list` is `None`, `None` is returned
 
-        preproc: preprocessing function used to transform the input data. If supplied, then
+        preproc_func: preprocessing function used to transform the input data. If supplied, then
                  torch.Compose will be used on the input preproc_list. preproc_list is a
                  list of torchvision transforms for preprocessing the image.
                  The transforms will be applied in the order that they are
@@ -194,8 +204,8 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
         >>> transformed_img = func(img)
         """
-        self.preproc_func = func if func is not None else lambda x : x
-        return 
+        self.preproc_func = func if func is not None else lambda x: x
+        return
 
     def __len__(self):
         return len(self.img_list)
@@ -236,8 +246,9 @@ class Kather_Patch_Dataset(Patch_Dataset):
     def __init__(
         self,
         root_dir=None,
+        save_dir_path=os.path.join(TIATOOLBOX_HOME, "dataset/"),
         return_label=True,
-        preproc_func=None
+        preproc_func=None,
     ):
         self.return_label = return_label
         self.preproc_func = self.set_preproc_func(preproc_func)
@@ -256,9 +267,8 @@ class Kather_Patch_Dataset(Patch_Dataset):
         ]
 
         if root_dir is None:
-            save_dir_path = os.path.join(TIATOOLBOX_HOME, "dataset/")
             if not os.path.exists(save_dir_path):
-                save_zip_path = os.path.join(TIATOOLBOX_HOME, "dataset/Kather.zip")
+                save_zip_path = os.path.join(save_dir_path, "Kather.zip")
                 url = "https://zenodo.org/record/53169/files/Kather_texture_2016_image_tiles_5000.zip"
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
