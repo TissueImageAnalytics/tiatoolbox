@@ -1,10 +1,13 @@
 from tiatoolbox.models.classification import CNN_Patch_Model, CNN_Patch_Predictor
 from tiatoolbox.models.dataset import Patch_Dataset, Kather_Patch_Dataset
+from tiatoolbox.utils.misc import download_data
 from tiatoolbox import TIATOOLBOX_HOME
 from tiatoolbox.utils.misc import grab_files_from_dir
 
 import pytest
+import torch
 import pathlib
+import os
 import numpy as np
 
 
@@ -43,7 +46,8 @@ def test_patch_dataset_list_imgs():
 
 def test_patch_dataset_array_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
-    img = np.random.randint(0, 255, size=(5, 5, 3))
+    size = (5, 5, 3)
+    img = np.random.randint(0, 255, size=size)
     list_imgs = [img, img, img]
     array_imgs = np.array(list_imgs)
     dataset = Patch_Dataset(array_imgs)
@@ -62,7 +66,7 @@ def test_kather_patch_dataset():
     # save to temporary location
     save_dir_path = (os.path.join(TIATOOLBOX_HOME, "tmp/"),)
     os.mkdir(save_dir_path)
-    ds = Kather_Patch_Dataset(save_dir_path=save_dir_path)
+    dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path)
     # remove generated data - just a test!
     os.rmdir(save_dir_path)
 
