@@ -112,7 +112,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
     ):
         super().__init__()
 
-        self.preproc_func = self.set_preproc_func(preproc_func)
+        self.set_preproc_func(preproc_func)
         self.data_mode = -1
 
         # perform check on the input
@@ -254,11 +254,11 @@ class Kather_Patch_Dataset(Patch_Dataset):
         self,
         root_dir=None,
         save_dir_path=os.path.join(TIATOOLBOX_HOME, "dataset/"),
-        return_label=True,
+        return_label=False,
         preproc_func=None,
     ):
         self.return_label = return_label
-        self.preproc_func = self.set_preproc_func(preproc_func)
+        self.set_preproc_func(preproc_func)
 
         self.data_mode = 0
 
