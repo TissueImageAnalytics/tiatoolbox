@@ -14,32 +14,30 @@ class Model_Base(nn.Module):
 
     @staticmethod
     def __infer_batch(model, img_list, info_list=None):
-        """
-        Contain logic for forward operation as well as i/o aggregation
+        """Contains logic for forward operation as well as i/o aggregation
 
-        image_list: Torch.Tensor (N,...)
-        info_list : A list of (N,...), each item is metadata correspond to
-                    image at same index in `image_list`
+        image_list: Torch.Tensor (N,...).
+        info_list : A list of (N,...), each item is metadata corresponding to
+                    image at same index in `image_list`.
+
         """
         raise NotImplementedError
 
     @staticmethod
     def __postprocess(image, *args, **kwargs):
+        """Process the raw model output to generate the final prediction."""
         raise NotImplementedError
 
     def predict(self, X, *args, **kwargs):
-        """
-        The most basics and is in line with sklearn model.predict(X)
-        where X is an image list (np.array). Internally, this will
-        create an internall dataset and call predict_dataset
+        """Make a prediction on the input. In line with
+        sklearn model.predict(X) where X is an image list (np.array).
 
-        Return the prediction after being post process
+        Return the prediction after being post processed.
+
         """
         raise NotImplementedError
 
     def predict_wsi(self, wsi_path, *args, **kwargs):
-        """
-        Contain dedicated functionality to run inference on an entire WSI
-        """
+        """Dedicated functionality to run inference on an entire WSI."""
         # currently just pass as not implemented yet
         pass
