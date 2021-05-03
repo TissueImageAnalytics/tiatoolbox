@@ -13,7 +13,7 @@ class Model_Base(nn.Module):
         raise NotImplementedError
 
     @staticmethod
-    def __infer_batch(model, img_list, info_list=None):
+    def infer_batch(model, img_list, info_list=None):
         """Contains logic for forward operation as well as i/o aggregation
 
         image_list: Torch.Tensor (N,...).

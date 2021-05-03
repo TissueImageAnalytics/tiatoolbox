@@ -46,7 +46,7 @@ class Model_Base(tia_model_abc.Model_Base):
         raise NotImplementedError
 
     @staticmethod
-    def __infer_batch(model, batch_data):
+    def infer_batch(model, batch_data):
         """Contains logic for forward operation as well as i/o aggregation
 
         image_list: Torch.Tensor (N,...).

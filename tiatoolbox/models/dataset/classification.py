@@ -119,7 +119,9 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
         # if input is a list - can contain a list of images or a list of image paths
         if isinstance(img_list, list):
-            all_path_list = [isinstance(v, str) for v in img_list]
+            all_path_list = [
+                isinstance(v, str) or isinstance(v, pathlib.Path) for v in img_list
+            ]
             all_npy_list = [isinstance(v, np.ndarray) for v in img_list]
             if not (any(all_path_list) or any(all_npy_list)):
                 raise ValueError(
@@ -221,7 +223,6 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         patch = self.img_list[idx]
-
         # mode 0 is list of paths
         if self.data_mode == 0:
             patch = self.__load_img(patch)

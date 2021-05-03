@@ -24,6 +24,9 @@ from tiatoolbox import wsicore
 from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.models.classification.pretrained_info import __pretrained_model
+from tiatoolbox.models.classification.patch_predictor import CNN_Patch_Predictor
+from tiatoolbox.models.dataset.classification import Patch_Dataset
 
 import sys
 import click
@@ -291,7 +294,7 @@ def save_tiles(
 )
 @click.option(
     "--output_dir",
-    help="Output directory for stain normalisation",
+    help="output directory for stain normalisation",
     default="stainorm_output",
 )
 @click.option(
@@ -328,6 +331,78 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
         # transform source image
         transform = norm.transform(utils.misc.imread(curr_file))
         utils.misc.imwrite(os.path.join(output_dir, basename), transform)
+
+
+@main.command()
+@click.option(
+    "--predefined_model",
+    help="predefined model used to process the data. the format is "
+    "<model_name>_<dataset_trained_on>. For example, `resnet18_kather` "
+    "is a resnet18 model trained on the kather dataset.",
+    default="resnet18_kather",
+)
+@click.option(
+    "--predefined_weight",
+    help="path to the model weight file. If not supplied, the default "
+    "pretrained weight will be used.",
+    default=None,
+)
+@click.option(
+    "--input_dir", help="path to the input directory containing images to process"
+)
+@click.option(
+    "--output_dir", help="output directory where model predictions will be saved."
+)
+@click.option(
+    "--batch_size",
+    help="number of images to feed into the model each time.",
+    default=16,
+)
+@click.option(
+    "--return_probs",
+    help="whether to return raw model probabilities.",
+    default=False,
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory"
+    "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
+    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
+)
+def patch_predictor(
+    predefined_model,
+    predefined_weight,
+    data_type,
+    input_dir,
+    output_dir,
+    batch_size,
+    file_types,
+):
+    """Process an image/directory of input images with a patch classification CNN."""
+    file_types = tuple(file_types.split(", "))
+    if os.path.isdir(input_dir):
+        img_files = utils.misc.grab_files_from_dir(
+            input_path=input_dir, file_types=file_types
+        )
+    elif os.path.isfile(input_dir):
+        img_files = [
+            input_dir,
+        ]
+    else:
+        raise FileNotFoundError
+
+    if predefined_model not in __pretrained_model:
+        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+
+    dataset = Patch_Dataset(img_files)
+
+    predictor = CNN_Patch_Predictor(
+        predefined_model=predefined_weight,
+        pretrained_weight=pretrained_weight,
+        batch_size=batch_size,
+    )
+
+    output = predictor.predict(dataset, return_probs=return_probs)
 
 
 if __name__ == "__main__":

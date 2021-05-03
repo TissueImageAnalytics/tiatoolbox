@@ -52,7 +52,7 @@ class CNN_Patch_Model(Model_Base):
 
     """
 
-    def __init__(self, backbone, nr_classes=1):
+    def __init__(self, backbone, nr_input_ch=3, nr_classes=1):
         super().__init__()
         self.nr_classes = nr_classes
 
@@ -95,7 +95,7 @@ class CNN_Patch_Model(Model_Base):
         return self.preproc_func
 
     @staticmethod
-    def __infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch. Contains logic for
         forward operation as well as i/o aggregation.
 

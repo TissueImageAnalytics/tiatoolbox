@@ -9,6 +9,7 @@ import torch
 import pathlib
 import os
 import numpy as np
+import shutil
 
 
 def test_patch_dataset_path_imgs():
@@ -19,12 +20,22 @@ def test_patch_dataset_path_imgs():
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
     dataset = Patch_Dataset(list_paths)
 
+    dataset.preproc_func = lambda x: x
+
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=0
+        dataset,
+        num_workers=0,
+        batch_size=1,
+        drop_last=False,
     )
 
     for _, sampled_img in enumerate(dataloader):
-        assert (sampled_img.shape.shape == size).all()
+        sampled_img_shape = sampled_img.shape
+        assert (
+            sampled_img_shape[1] == size[0]
+            and sampled_img_shape[2] == size[1]
+            and sampled_img_shape[3] == size[2]
+        )
 
 
 def test_patch_dataset_list_imgs():
@@ -34,12 +45,22 @@ def test_patch_dataset_list_imgs():
     list_imgs = [img, img, img]
     dataset = Patch_Dataset(list_imgs)
 
+    dataset.preproc_func = lambda x: x
+
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=0
+        dataset,
+        num_workers=0,
+        batch_size=1,
+        drop_last=False,
     )
 
     for _, sampled_img in enumerate(dataloader):
-        assert (sampled_img.shape.shape == size).all()
+        sampled_img_shape = sampled_img.shape
+        assert (
+            sampled_img_shape[1] == size[0]
+            and sampled_img_shape[2] == size[1]
+            and sampled_img_shape[3] == size[2]
+        )
 
 
 def test_patch_dataset_array_imgs():
@@ -50,12 +71,22 @@ def test_patch_dataset_array_imgs():
     array_imgs = np.array(list_imgs)
     dataset = Patch_Dataset(array_imgs)
 
+    dataset.preproc_func = lambda x: x
+
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=0
+        dataset,
+        num_workers=0,
+        batch_size=1,
+        drop_last=False,
     )
 
     for _, sampled_img in enumerate(dataloader):
-        assert (sampled_img.shape.shape == size).all()
+        sampled_img_shape = sampled_img.shape
+        assert (
+            sampled_img_shape[1] == size[0]
+            and sampled_img_shape[2] == size[1]
+            and sampled_img_shape[3] == size[2]
+        )
 
 
 def test_patch_dataset_crash():
@@ -96,11 +127,9 @@ def test_kather_patch_dataset():
     """Test for kather patch dataset."""
     size = (224, 224, 3)
     # save to temporary location
-    save_dir_path = (os.path.join(TIATOOLBOX_HOME, "tmp/"),)
+    save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
     os.mkdir(save_dir_path)
     dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path)
-    # remove generated data - just a test!
-    os.rmdir(save_dir_path)
 
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=0
@@ -108,6 +137,9 @@ def test_kather_patch_dataset():
 
     for _, sampled_img in enumerate(dataloader):
         assert (sampled_img.shape.shape == size).all()
+
+    # remove generated data - just a test!
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
 def test_patch_predictor_kather_resnet18_api1():
@@ -120,9 +152,12 @@ def test_patch_predictor_kather_resnet18_api1():
     # API 1
     predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather", batch_size=1)
     # don't run test on GPU
-    output = predictor.predict(dataset, on_gpu=False)
-    # ensure that the raw output is correct
-    assert np.sum(output) == 1.5
+    output = predictor.predict(dataset, return_probs=True, on_gpu=True)
+    probs = output["probs"]
+    preds = output["preds"]
+
+    # ensure that the output is correct
+    len(probs[0]) == 9
 
 
 def test_patch_predictor_kather_resnet18_api2():
@@ -134,10 +169,11 @@ def test_patch_predictor_kather_resnet18_api2():
 
     # API 2
     pretrained_weight_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth",
+        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth"
     )
-    os.mkdir = os.path.join(TIATOOLBOX_HOME, "tmp/")
-    pretrained_weight = os.path.join(TIATOOLBOX_HOME, "tmp/", "resnet18_kather_pc.pth")
+
+    os.mkdir = os.path.join(TIATOOLBOX_HOME, "tmp")
+    pretrained_weight = os.path.join(TIATOOLBOX_HOME, "tmp", "resnet18_kather_pc.pth")
     download_data(pretrained_weight_url, pretrained_weight)
 
     predictor = CNN_Patch_Predictor(
@@ -146,11 +182,15 @@ def test_patch_predictor_kather_resnet18_api2():
         batch_size=1,
     )
     # don't run test on GPU
-    output = predictor.predict(dataset, on_gpu=False)
-    # ensure that the raw output is correct
-    assert np.sum(output) == 1.5
+    output = predictor.predict(dataset, return_probs=True, on_gpu=True)
+    probs = output["probs"]
+    preds = output["preds"]
 
-    os.rmdir(os.path.join(TIATOOLBOX_HOME, "tmp/"))
+    # ensure that the output is correct
+    assert len(probs[0]) == 9
+
+    # remove generated data - just a test!
+    shutil.rmtree(os.path.join(TIATOOLBOX_HOME, "tmp"), ignore_errors=True)
 
 
 def test_patch_predictor_kather_resnet18_api3():
@@ -164,6 +204,10 @@ def test_patch_predictor_kather_resnet18_api3():
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
     predictor = CNN_Patch_Predictor(model=model, batch_size=1)
     # don't run test on GPU
-    output = predictor.predict(dataset, on_gpu=False)
+    output = predictor.predict(dataset, return_probs=True, on_gpu=True)
+
+    probs = output["probs"]
+    preds = output["preds"]
+
     # ensure that the raw output is correct
-    assert np.sum(output) == 1.5
+    len(probs[0]) == 9
