@@ -293,9 +293,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
 
     """
     if not isinstance(predefined_model, str):
-        raise ValueError(
-            "Input dataset must be a " "`torch.utils.dataset.Dataset` object."
-        )
+        raise ValueError("predefined_model must be a string.")
 
     # parsing protocol
     predefined_model = predefined_model.lower()

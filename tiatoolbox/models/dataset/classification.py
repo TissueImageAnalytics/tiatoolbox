@@ -130,10 +130,16 @@ class Patch_Dataset(torch.utils.data.Dataset):
             shape_list = []
             # when a list of paths is provided
             if any(all_path_list):
-                if any([not os.path.exists(v) for v in img_list]):
+                if any([isinstance(v, (int, float)) for v in img_list]):
+                    raise ValueError(
+                        "Input must be either a list/array of images "
+                        "or a list of valid image paths."
+                    )
+                elif any([not os.path.exists(v) for v in img_list]):
                     # at least one of the paths are invalid
                     raise ValueError(
-                        "At least one of the provided image paths does not exist."
+                        "Input must be either a list/array of images "
+                        "or a list of valid image paths."
                     )
                 # preload test for sanity check
                 try:
@@ -153,7 +159,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
             max_shape = np.max(shape_list, axis=0)
             # how will this behave for mixed channel ?
             if (shape_list - max_shape[None]).sum() != 0:
-                raise ValueError("Images must have the same dimensions")
+                raise ValueError("Images must have the same dimensions.")
 
         # if input is a numpy array
         elif isinstance(img_list, np.ndarray):

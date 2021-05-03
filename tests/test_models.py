@@ -65,7 +65,7 @@ def test_patch_dataset_crash():
 
     # ndarray of mixed dtype
     img_list = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         dataset = Patch_Dataset(img_list)
 
     # list of ndarrays with different sizes
@@ -73,17 +73,23 @@ def test_patch_dataset_crash():
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 5, 3)),
     ]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Images must have the same dimensions."):
         dataset = Patch_Dataset(img_list)
 
     # list of mixed dtype
     img_list = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Input must be either a list/array of images or a list of valid image paths.",
+    ):
         dataset = Patch_Dataset(img_list)
 
     # list of mixed dtype
     img_list = ["you_should_crash_here", 123, 456]
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Input must be either a list/array of images or a list of valid image paths.",
+    ):
         dataset = Patch_Dataset(img_list)
 
 
