@@ -370,7 +370,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2):
@@ -381,7 +381,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
@@ -395,7 +395,7 @@ def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
     for mpp, expected_level, expected_scale in zip(
         mpps, expected_levels, expected_scales
     ):
-        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
             mpp, "mpp"
         )
 
@@ -410,7 +410,7 @@ def test_find_optimal_level_and_downsample_power(_sample_ndpi):
     objective_powers = [20, 10, 5, 2.5, 1.25]
     expected_levels = [0, 1, 2, 3, 4]
     for objective_power, expected_level in zip(objective_powers, expected_levels):
-        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
             objective_power, "power"
         )
 
@@ -423,7 +423,7 @@ def test_find_optimal_level_and_downsample_level(_sample_ndpi):
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
 
     for level in range(wsi.info.level_count):
-        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
             level, "level"
         )
 
@@ -912,10 +912,9 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_VirtualWSIReader():
+def test_VirtualWSIReader(_source_image):
     """Test VirtualWSIReader"""
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
     with pytest.warns(UserWarning, match=r"Unknown scale"):
         _ = wsi._info()
     with pytest.warns(UserWarning, match=r"Raw data is None"):
@@ -930,10 +929,9 @@ def test_VirtualWSIReader():
     assert img.shape == (50, 100, 3)
 
 
-def test_VirtualWSIReader_read_bounds():
+def test_VirtualWSIReader_read_bounds(_source_image):
     """Test VirtualWSIReader read bounds"""
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)
 
@@ -950,10 +948,9 @@ def test_VirtualWSIReader_read_bounds():
         _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
 
 
-def test_VirtualWSIReader_read_rect():
+def test_VirtualWSIReader_read_rect(_source_image):
     """Test VirtualWSIReader read bounds"""
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.VirtualWSIReader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
     info = wsi.info
 
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
@@ -977,14 +974,12 @@ def test_VirtualWSIReader_read_rect():
     with pytest.raises(ValueError):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
 
-    wsi = wsireader.VirtualWSIReader(
-        file_parent_dir.joinpath("data/source_image.png"), info=info
-    )
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=info)
 
     assert info.as_dict() == wsi.info.as_dict()
 
 
-def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
+def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     """Test get_wsireader to return correct object."""
     _sample_svs = str(_sample_svs)
     _sample_ndpi = str(_sample_ndpi)
@@ -1005,11 +1000,10 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2):
     wsi = wsireader.get_wsireader(_sample_jp2)
     assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
 
-    file_parent_dir = pathlib.Path(__file__).parent
-    wsi = wsireader.get_wsireader(file_parent_dir.joinpath("data/source_image.png"))
+    wsi = wsireader.get_wsireader(pathlib.Path(_source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
-    img = utils.misc.imread(str(file_parent_dir.joinpath("data/source_image.png")))
+    img = utils.misc.imread(str(pathlib.Path(_source_image)))
     wsi = wsireader.get_wsireader(input_img=img)
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
