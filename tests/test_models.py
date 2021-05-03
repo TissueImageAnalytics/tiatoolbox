@@ -60,13 +60,12 @@ def test_patch_dataset_array_imgs():
 
 def test_patch_dataset_crash():
     """Test to make sure patch dataset crashes with incorrect input."""
-
     # all examples below should fail when input to Patch_Dataset
 
     # ndarray of mixed dtype
     img_list = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
-        dataset = Patch_Dataset(img_list)
+        _ = Patch_Dataset(img_list)
 
     # list of ndarrays with different sizes
     img_list = [
@@ -74,7 +73,7 @@ def test_patch_dataset_crash():
         np.random.randint(0, 255, (4, 5, 3)),
     ]
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
-        dataset = Patch_Dataset(img_list)
+        _ = Patch_Dataset(img_list)
 
     # list of mixed dtype
     img_list = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
@@ -82,7 +81,7 @@ def test_patch_dataset_crash():
         ValueError,
         match="Input must be either a list/array of images or a list of valid image paths.",
     ):
-        dataset = Patch_Dataset(img_list)
+        _ = Patch_Dataset(img_list)
 
     # list of mixed dtype
     img_list = ["you_should_crash_here", 123, 456]
@@ -90,7 +89,7 @@ def test_patch_dataset_crash():
         ValueError,
         match="Input must be either a list/array of images or a list of valid image paths.",
     ):
-        dataset = Patch_Dataset(img_list)
+        _ = Patch_Dataset(img_list)
 
 
 def test_kather_patch_dataset():
@@ -113,7 +112,6 @@ def test_kather_patch_dataset():
 
 def test_patch_predictor_kather_resnet18_api1():
     """Test for patch predictor on kather dataset with resnet18 using method 1."""
-
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
@@ -129,7 +127,6 @@ def test_patch_predictor_kather_resnet18_api1():
 
 def test_patch_predictor_kather_resnet18_api2():
     """Test for patch predictor on kather dataset with resnet18 using method 2."""
-
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
@@ -158,7 +155,6 @@ def test_patch_predictor_kather_resnet18_api2():
 
 def test_patch_predictor_kather_resnet18_api3():
     """Test for patch predictor on kather dataset with resnet18 using method 3."""
-
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")

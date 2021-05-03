@@ -55,7 +55,7 @@ def predefined_preproc_func(dataset_name):
     """Get the preprocessing information used for the pretrained model.
 
     Args:
-        pretrained (str): .
+        dataset_name (str): dataset name used to determine what preprocessing was used.
 
     """
     preproc_dict = {
@@ -135,7 +135,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
                         "Input must be either a list/array of images "
                         "or a list of valid image paths."
                     )
-                elif any([not os.path.exists(v) for v in img_list]):
+                if any([not os.path.exists(v) for v in img_list]):
                     # at least one of the paths are invalid
                     raise ValueError(
                         "Input must be either a list/array of images "
@@ -206,16 +206,15 @@ class Patch_Dataset(torch.utils.data.Dataset):
         return patch
 
     def set_preproc_func(self, func):
-        """
-        Set the `preproc_func` to this `func` if it is not None.
+        """Set the `preproc_func` to this `func` if it is not None.
         Else the `preproc_func` is reset to return source image.
 
-        `func` must behave in the following manner
+        `func` must behave in the following manner:
 
         >>> transformed_img = func(img)
+
         """
         self.preproc_func = func if func is not None else lambda x: x
-        return
 
     def __len__(self):
         return len(self.img_list)
@@ -237,7 +236,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
 
 class Kather_Patch_Dataset(Patch_Dataset):
-    """Define a dataset class specifically for the Kather dataset, obtain from [URL]
+    """Define a dataset class specifically for the Kather dataset, obtain from [URL].
 
     Attributes:
         root_dir (str or None): path to directory containing the Kather dataset,

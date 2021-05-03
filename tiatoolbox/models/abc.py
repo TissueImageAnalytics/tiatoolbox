@@ -36,8 +36,3 @@ class Model_Base(nn.Module):
 
         """
         raise NotImplementedError
-
-    def predict_wsi(self, wsi_path, *args, **kwargs):
-        """Dedicated functionality to run inference on an entire WSI."""
-        # currently just pass as not implemented yet
-        pass

@@ -69,7 +69,3 @@ class Model_Base(tia_model_abc.Model_Base):
 
         """
         raise NotImplementedError
-
-    def predict_wsi(self, wsi_path, *args, **kwargs):
-        """Dedicated functionality to run inference on an entire WSI."""
-        raise NotImplementedError

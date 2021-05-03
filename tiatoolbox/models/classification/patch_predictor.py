@@ -206,7 +206,6 @@ class CNN_Patch_Predictor:
             output (ndarray): model predictions of the input dataset
 
         """
-
         if not isinstance(dataset, torch.utils.data.Dataset):
             raise ValueError(
                 "Dataset supplied to predict() must be a PyTorch map style "
@@ -217,7 +216,7 @@ class CNN_Patch_Predictor:
         dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
 
-        # TODO preprocessing must be defined with the dataset
+        # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
             num_workers=self.nr_loader_worker,
@@ -225,7 +224,6 @@ class CNN_Patch_Predictor:
             drop_last=False,
         )
 
-        # TODO: have a single protocol later for this
         pbar = tqdm.tqdm(
             total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
         )
