@@ -128,15 +128,18 @@ def test_kather_patch_dataset():
     size = (224, 224, 3)
     # save to temporary location
     save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
+    # remove prev generated data - just a test!
+    shutil.rmtree(save_dir_path, ignore_errors=True)
     os.mkdir(save_dir_path)
-    dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path)
+    dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_label=True)
 
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=0
     )
 
-    for _, sampled_img in enumerate(dataloader):
-        assert (sampled_img.shape.shape == size).all()
+    for _, sampled_data in enumerate(dataloader):
+        sampled_img, sampled_labels = sampled_data
+        assert np.sum(sampled_img.shape == size) == 0
 
     # remove generated data - just a test!
     shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -172,7 +175,11 @@ def test_patch_predictor_kather_resnet18_api2():
         "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth"
     )
 
-    os.mkdir = os.path.join(TIATOOLBOX_HOME, "tmp")
+    save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
+    # remove prev generated data - just a test!
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+    os.mkdir(save_dir_path)
+
     pretrained_weight = os.path.join(TIATOOLBOX_HOME, "tmp", "resnet18_kather_pc.pth")
     download_data(pretrained_weight_url, pretrained_weight)
 
@@ -190,7 +197,7 @@ def test_patch_predictor_kather_resnet18_api2():
     assert len(probs[0]) == 9
 
     # remove generated data - just a test!
-    shutil.rmtree(os.path.join(TIATOOLBOX_HOME, "tmp"), ignore_errors=True)
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
 def test_patch_predictor_kather_resnet18_api3():
