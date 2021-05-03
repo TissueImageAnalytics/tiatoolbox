@@ -89,7 +89,7 @@ class CNN_Patch_Model(Model_Base):
         return self.preproc_func
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def __infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch. Contains logic for
         forward operation as well as i/o aggregation.
 
@@ -181,6 +181,17 @@ class CNN_Patch_Predictor:
         self.verbose = verbose
         return
 
+    @staticmethod
+    def __postprocess(probs):
+        """Apply post processing to output probablities. For classification, we apply
+        a simple method and simply take the class with the highest probability.
+
+        Args:
+            probs (ndarray): model output probabilities.
+
+        """
+        return np.argmax(probs, axis=-1)
+
     def predict(self, dataset, return_probs=False, return_labels=False, on_gpu=True):
         """Make a prediction on a dataset. Internally will make a deep copy
         of the provided dataset to ensure user provided dataset is unchanged.
@@ -242,7 +253,7 @@ class CNN_Patch_Predictor:
 
             batch_output_probs = self.model.infer_batch(model, batch_input, on_gpu)
             # get the index of the class with the maximum probability
-            batch_output = np.argmax(batch_output_probs, axis=-1)
+            batch_output = __postprocess(batch_output_probs)
             preds_output.extend(batch_output.tolist())
             if return_probs:
                 # return raw output

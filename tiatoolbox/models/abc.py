@@ -37,15 +37,9 @@ class Model_Base(nn.Module):
         """
         raise NotImplementedError
 
-    def predict_dataset(self, dataset, *args, **kwargs):
-        """
-        Apply the prediction on a dataset object. Dataset object is Torch compliance
-        and return output should be compatible with input of __infer_image_list
-        """
-        raise NotImplementedError
-
     def predict_wsi(self, wsi_path, *args, **kwargs):
         """
         Contain dedicated functionality to run inference on an entire WSI
         """
-        raise NotImplementedError
+        # currently just pass as not implemented yet
+        pass

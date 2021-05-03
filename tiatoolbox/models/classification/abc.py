@@ -57,11 +57,7 @@ class Model_Base(tia_model_abc.Model_Base):
         raise NotImplementedError
 
     @staticmethod
-    def postprocess(image, *args, **kwargs):
-        raise NotImplementedError
-
-    @staticmethod
-    def preprocess(image, *args, **kwargs):
+    def __postprocess(image, *args, **kwargs):
         raise NotImplementedError
 
     def predict(self, X, *args, **kwargs):
@@ -73,13 +69,6 @@ class Model_Base(tia_model_abc.Model_Base):
         ! or we pad it on the fly?
 
         Return the prediction after being post process.
-
-        """
-        raise NotImplementedError
-
-    def predict_dataset(self, dataset, *args, **kwargs):
-        """Apply the prediction on a dataset object. Dataset object is Torch compliance
-        and return output should be compatible with input of __infer_batch.
 
         """
         raise NotImplementedError

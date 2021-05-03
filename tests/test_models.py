@@ -94,7 +94,7 @@ def test_patch_predictor_kather_resnet18_api1():
     assert np.sum(output) == 1.5
 
 
-def test_patch_predictor_kather_resnet18_api1():
+def test_patch_predictor_kather_resnet18_api2():
     """Test for patch predictor on kather dataset with resnet18 using method 2."""
 
     file_parent_dir = pathlib.Path(__file__).parent
@@ -123,7 +123,7 @@ def test_patch_predictor_kather_resnet18_api1():
     os.rmdir(os.path.join(TIATOOLBOX_HOME, "tmp/"))
 
 
-def test_patch_predictor_kather_resnet18_api1():
+def test_patch_predictor_kather_resnet18_api3():
     """Test for patch predictor on kather dataset with resnet18 using method 3."""
 
     file_parent_dir = pathlib.Path(__file__).parent
