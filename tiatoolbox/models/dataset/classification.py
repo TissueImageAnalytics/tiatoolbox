@@ -183,8 +183,6 @@ class Patch_Dataset(torch.utils.data.Dataset):
         self.label_list = label_list
         self.return_label = return_label
 
-        return
-
     @staticmethod
     def __load_img(path):
         """Load an image from a provided path.

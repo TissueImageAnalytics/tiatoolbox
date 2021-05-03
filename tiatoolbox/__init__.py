@@ -41,7 +41,6 @@ def set_home_dir(dir_path):
     """Set the home directory for saving data."""
     global TIATOOLBOX_HOME
     TIATOOLBOX_HOME = dir_path
-    return
 
 
 if __name__ == "__main__":

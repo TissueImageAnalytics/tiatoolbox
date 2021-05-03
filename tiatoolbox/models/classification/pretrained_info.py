@@ -23,7 +23,8 @@
 
 __pretrained_model = {
     "resnet18_kather": {
-        "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth",
+        "pretrained": "https://tiatoolbox.dcs.warwick.ac.uk/models/"
+        "resnet18_kather_pc.pth",
         "nr_input_ch": 3,
         "nr_classes": 9,
     }

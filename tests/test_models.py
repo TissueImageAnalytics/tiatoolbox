@@ -23,10 +23,8 @@ def test_patch_dataset_path_imgs():
         dataset, batch_size=1, shuffle=False, num_workers=0
     )
 
-    for idx, sampled_img in enumerate(dataloader):
+    for _, sampled_img in enumerate(dataloader):
         assert (sampled_img.shape.shape == size).all()
-
-    return
 
 
 def test_patch_dataset_list_imgs():
@@ -58,6 +56,35 @@ def test_patch_dataset_array_imgs():
 
     for _, sampled_img in enumerate(dataloader):
         assert (sampled_img.shape.shape == size).all()
+
+
+def test_patch_dataset_crash():
+    """Test to make sure patch dataset crashes with incorrect input."""
+
+    # all examples below should fail when input to Patch_Dataset
+
+    # ndarray of mixed dtype
+    img_list = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
+    with pytest.raises(ValueError):
+        dataset = Patch_Dataset(img_list)
+
+    # list of ndarrays with different sizes
+    img_list = [
+        np.random.randint(0, 255, (4, 4, 3)),
+        np.random.randint(0, 255, (4, 5, 3)),
+    ]
+    with pytest.raises(ValueError):
+        dataset = Patch_Dataset(img_list)
+
+    # list of mixed dtype
+    img_list = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
+    with pytest.raises(ValueError):
+        dataset = Patch_Dataset(img_list)
+
+    # list of mixed dtype
+    img_list = ["you_should_crash_here", 123, 456]
+    with pytest.raises(ValueError):
+        dataset = Patch_Dataset(img_list)
 
 
 def test_kather_patch_dataset():

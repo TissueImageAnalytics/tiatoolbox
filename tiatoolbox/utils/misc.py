@@ -491,7 +491,6 @@ def download_data(url, save_path, overwrite=False):
     r = requests.get(url)
     with open(save_path, "wb") as f:
         f.write(r.content)
-    return
 
 
 def unzip_data(zip_path, save_path, remove_zip=True):
@@ -509,4 +508,3 @@ def unzip_data(zip_path, save_path, remove_zip=True):
     if remove_zip:
         # remove zip file
         os.remove(zip_path)
-    return
