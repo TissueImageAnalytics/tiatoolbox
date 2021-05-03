@@ -180,6 +180,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
         return
 
+    @staticmethod
     def __load_img(self, path):
         """Load an image from a provided path.
 

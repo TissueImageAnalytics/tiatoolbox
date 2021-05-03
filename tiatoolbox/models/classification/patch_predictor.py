@@ -141,8 +141,6 @@ class CNN_Patch_Predictor(object):
         predefined_model=None,
         pretrained_weight=None,
         verbose=True,
-        *args,
-        **kwargs,
     ):
         """Initialise the Patch Predictor. Note, if model is supplied in the arguments, it
         will override the backbone.
@@ -182,7 +180,7 @@ class CNN_Patch_Predictor(object):
         self.verbose = verbose
         return
 
-    def predict(self, dataset, return_probs=False, on_gpu=True, *args, **kwargs):
+    def predict(self, dataset, return_probs=False, on_gpu=True):
         """Make a prediction on a dataset. Internally will make a deep copy of the provided
         dataset to ensure user provided dataset is unchanged.
 
@@ -229,9 +227,8 @@ class CNN_Patch_Predictor(object):
         all_output = {}
         preds_output = []
         probs_output = []
-        labels_output = []
 
-        for batch_idx, batch_data in enumerate(dataloader):
+        for _, batch_data in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
             # on the an instance of ModelDesc, maybe there is a better way
             # to go about this

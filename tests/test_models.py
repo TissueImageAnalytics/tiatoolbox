@@ -40,7 +40,7 @@ def test_patch_dataset_list_imgs():
         dataset, batch_size=1, shuffle=False, num_workers=0
     )
 
-    for idx, sampled_img in enumerate(dataloader):
+    for _, sampled_img in enumerate(dataloader):
         assert (sampled_img.shape.shape == size).all()
 
 
@@ -56,7 +56,7 @@ def test_patch_dataset_array_imgs():
         dataset, batch_size=1, shuffle=False, num_workers=0
     )
 
-    for idx, sampled_img in enumerate(dataloader):
+    for _, sampled_img in enumerate(dataloader):
         assert (sampled_img.shape.shape == size).all()
 
 
@@ -74,7 +74,7 @@ def test_kather_patch_dataset():
         dataset, batch_size=1, shuffle=False, num_workers=0
     )
 
-    for idx, sampled_img in enumerate(dataloader):
+    for _, sampled_img in enumerate(dataloader):
         assert (sampled_img.shape.shape == size).all()
 
 
