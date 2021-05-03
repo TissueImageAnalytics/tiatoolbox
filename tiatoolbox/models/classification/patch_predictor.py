@@ -60,12 +60,18 @@ class CNN_Patch_Model(Model_Base):
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
         # best way to retrieve channel dynamically is passing a small forward pass
-        prev_nr_ch = self.feat_extract(torch.rand([2, 3, 4, 4])).shape[1]
+        prev_nr_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_nr_ch, nr_classes)
 
         self.preproc_func = None
 
     def forward(self, imgs):
+        """Pass input data through the model.
+
+        Args:
+            imgs (torch.Tensor): model input.
+
+        """
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
@@ -85,6 +91,7 @@ class CNN_Patch_Model(Model_Base):
         self.preproc_func = func if func is not None else lambda x: x
 
     def get_preproc_func(self):
+        """Get preprocessing function."""
         return self.preproc_func
 
     @staticmethod
