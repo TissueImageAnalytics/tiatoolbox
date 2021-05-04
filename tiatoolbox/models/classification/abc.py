@@ -32,10 +32,6 @@ class Model_Base(tia_model_abc.Model_Base):
         super().__init__()
         raise NotImplementedError
 
-    def load_model(self, checkpoint_path, *args, **kwargs):
-        """Load model checkpoint."""
-        raise NotImplementedError
-
     @staticmethod
     def infer_batch(model, batch_data):
         """Contains logic for forward operation as well as i/o aggregation

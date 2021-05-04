@@ -8,10 +8,6 @@ class Model_Base(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-    def load_model(self, checkpoint_path, *args, **kwargs):
-        """Load model checkpoint."""
-        raise NotImplementedError
-
     @staticmethod
     def infer_batch(model, img_list, info_list=None):
         """Contains logic for forward operation as well as i/o aggregation
@@ -19,20 +15,6 @@ class Model_Base(nn.Module):
         image_list: Torch.Tensor (N,...).
         info_list : A list of (N,...), each item is metadata corresponding to
                     image at same index in `image_list`.
-
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def __postprocess(image, *args, **kwargs):
-        """Process the raw model output to generate the final prediction."""
-        raise NotImplementedError
-
-    def predict(self, X, *args, **kwargs):
-        """Make a prediction on the input. In line with
-        sklearn model.predict(X) where X is an image list (np.array).
-
-        Return the prediction after being post processed.
 
         """
         raise NotImplementedError
