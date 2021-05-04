@@ -73,7 +73,8 @@ def predefined_preproc_func(dataset_name):
 
 
 class __ABC_Dataset(torch.utils.data.Dataset):
-    """Defines abstract base class for patch dataset 
+    """Defines abstract base class for patch dataset.
+
 
     Attributes:
         return_labels (bool, False): __getitem__ will return both the img and its label.
