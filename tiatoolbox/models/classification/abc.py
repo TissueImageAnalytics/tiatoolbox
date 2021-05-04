@@ -28,16 +28,7 @@ import torch.nn as nn
 class Model_Base(tia_model_abc.Model_Base):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(
-        self,
-        batch_size,
-        infer_input_shape=None,
-        infer_output_shape=None,
-        nr_loader_worker=0,
-        nr_posproc_worker=0,
-        preproc_args=None,
-        postproc_args=None,
-    ):
+    def __init__(self,):
         super().__init__()
         raise NotImplementedError
 
@@ -52,20 +43,6 @@ class Model_Base(tia_model_abc.Model_Base):
         image_list: Torch.Tensor (N,...).
         info_list : A list of (N,...), each item is metadata corresponding to
                     image at same index in `image_list`.
-
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def __postprocess(image, *args, **kwargs):
-        """Process the raw model output to generate the final prediction."""
-        raise NotImplementedError
-
-    def predict(self, X, *args, **kwargs):
-        """Make a prediction on the input. In line with
-        sklearn model.predict(X) where X is an image list (np.array).
-
-        Return the prediction after being post processed.
 
         """
         raise NotImplementedError
