@@ -52,7 +52,7 @@ class CNN_Patch_Model(Model_Base):
 
     """
 
-    def __init__(self, backbone, nr_input_ch=3, nr_classes=1):
+    def __init__(self, backbone, nr_classes=1):
         super().__init__()
         self.nr_classes = nr_classes
 
@@ -222,6 +222,7 @@ class CNN_Patch_Predictor:
         # may be expensive
         dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
+        dataset.return_labels = return_labels # HACK
 
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -250,7 +251,7 @@ class CNN_Patch_Predictor:
             # calling the static method of that specific ModelDesc
             # on the an instance of ModelDesc, maybe there is a better way
             # to go about this
-            if dataset.return_label:
+            if return_labels:
                 batch_input, batch_labels = batch_data
             else:
                 batch_input = batch_data
@@ -310,7 +311,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
 
     preproc_func = predefined_preproc_func(dataset)
     model = CNN_Patch_Model(
-        backbone=backbone, nr_input_ch=cfg["nr_input_ch"], nr_classes=cfg["nr_classes"]
+        backbone=backbone, nr_classes=cfg["nr_classes"]
     )
     model.set_preproc_func(preproc_func)
 
