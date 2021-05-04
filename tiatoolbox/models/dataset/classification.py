@@ -71,8 +71,72 @@ def predefined_preproc_func(dataset_name):
     preproc_func = __Torch_Preproc_Caller(preproc_list)
     return preproc_func
 
+class __ABC_Dataset(torch.utils.data.Dataset):
+    """Defines abstract base class for patch dataset, which inherits
+    from the torch.utils.data.Dataset class.
 
-class Patch_Dataset(torch.utils.data.Dataset):
+    Attributes:
+        return_labels (bool, False): __getitem__ will return both the img and its label.
+                If `label_list` is `None`, `None` is returned
+
+        preproc_func: preprocessing function used to transform the input data. If
+        supplied, then torch.Compose will be used on the input preproc_list.
+        preproc_list is a list of torchvision transforms for preprocessing the image.
+        The transforms will be applied in the order that they are given in the list.
+        https://pytorch.org/vision/stable/transforms.html.
+    """
+    def __init__(self, return_labels=False, preproc_func=None):
+        super().__init__()
+        self.set_preproc_func(preproc_func)
+        self.data_is_npy_alike = False
+        self.return_labels = return_labels
+
+    @staticmethod
+    def load_img(path):
+        """Load an image from a provided path.
+
+        Args:
+            path (str): path to an image file.
+
+        """
+        path = pathlib.Path(path)
+        if path.suffix == ".npy":
+            patch = np.load(path)
+        elif path.suffix in (".jpg", ".jpeg", ".tif", ".tiff", ".png"):
+            patch = imread(path)
+        else:
+            raise ValueError('Can not load data of `.%s`' % path.suffix)
+        return patch
+
+    def set_preproc_func(self, func):
+        """Set the `preproc_func` to this `func` if it is not None.
+        Else the `preproc_func` is reset to return source image.
+
+        `func` must behave in the following manner:
+
+        >>> transformed_img = func(img)
+
+        """
+        self.preproc_func = func if func is not None else lambda x: x
+
+    def __len__(self):
+        return len(self.img_list)
+
+    def __getitem__(self, idx):
+        patch = self.img_list[idx]
+        # mode 0 is list of paths
+        if not self.data_is_npy_alike:
+            patch = self.load_img(patch)
+
+        # apply preprocessing to selected patch
+        patch = self.preproc_func(patch)
+
+        if self.return_labels:
+            return patch, self.label_list[idx]
+
+        return patch
+
+class Patch_Dataset(__ABC_Dataset):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
 
@@ -84,7 +148,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
         label_list: List of label for sample at the same index in `img_list` .
                  Default is `None`
 
-        return_label (bool, False): __getitem__ will return both the img and its label.
+        return_labels (bool, False): __getitem__ will return both the img and its label.
                 If `label_list` is `None`, `None` is returned
 
         preproc_func: preprocessing function used to transform the input data. If
@@ -108,22 +172,22 @@ class Patch_Dataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-        self, img_list, label_list=None, return_label=False, preproc_func=None
+        self, img_list, label_list=None, return_labels=False, preproc_func=None
     ):
-        super().__init__()
+        super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
-        self.set_preproc_func(preproc_func)
-        self.data_mode = -1
+        self.data_is_npy_alike = False
 
         # perform check on the input
+        # ? move to ABC ?
 
         # if input is a list - can contain a list of images or a list of image paths
         if isinstance(img_list, list):
-            all_path_list = [
+            is_all_path_list = all([
                 isinstance(v, str) or isinstance(v, pathlib.Path) for v in img_list
-            ]
-            all_npy_list = [isinstance(v, np.ndarray) for v in img_list]
-            if not (any(all_path_list) or any(all_npy_list)):
+            ])
+            is_all_npy_list = all([isinstance(v, np.ndarray) for v in img_list])
+            if not (is_all_path_list or is_all_npy_list):
                 raise ValueError(
                     "Input must be either a list/array of images "
                     "or a list of valid image paths."
@@ -131,12 +195,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
 
             shape_list = []
             # when a list of paths is provided
-            if any(all_path_list):
-                if any([isinstance(v, (int, float)) for v in img_list]):
-                    raise ValueError(
-                        "Input must be either a list/array of images "
-                        "or a list of valid image paths."
-                    )
+            if is_all_path_list:
                 if any([not os.path.exists(v) for v in img_list]):
                     # at least one of the paths are invalid
                     raise ValueError(
@@ -144,19 +203,19 @@ class Patch_Dataset(torch.utils.data.Dataset):
                         "or a list of valid image paths."
                     )
                 # preload test for sanity check
-                try:
-                    shape_list = [self.__load_img(v).shape for v in img_list]
-                except:
-                    raise ValueError(
-                        "At least one of the provided image paths is invalid. "
-                        "Check to make sure the supplied paths correspond to image "
-                        "files. Supported image formats include: `.npy`, `.jpg`, "
-                        "`.jpeg`, `.tif`, `.tiff` or `.png`."
-                    )
-                self.data_mode = 0
+                # try:
+                shape_list = [self.load_img(v).shape for v in img_list]
+                # except:
+                #     raise ValueError(
+                #         "At least one of the provided image paths is invalid. "
+                #         "Check to make sure the supplied paths correspond to image "
+                #         "files. Supported image formats include: `.npy`, `.jpg`, "
+                #         "`.jpeg`, `.tif`, `.tiff` or `.png`."
+                #     )
+                self.data_is_npy_alike = False
             else:
                 shape_list = [v.shape for v in img_list]
-                self.data_mode = 1
+                self.data_is_npy_alike = True
 
             max_shape = np.max(shape_list, axis=0)
             # how will this behave for mixed channel ?
@@ -176,7 +235,7 @@ class Patch_Dataset(torch.utils.data.Dataset):
                     "be achieved by converting a list of images to a numpy array. "
                     " eg., np.array([img1, img2])."
                 )
-            self.data_mode = 2
+            self.data_is_npy_alike = True
 
         else:
             raise ValueError(
@@ -185,58 +244,14 @@ class Patch_Dataset(torch.utils.data.Dataset):
             )
 
         if label_list is None:
-            label_list = [None for i in range(len(img_list))]
+            label_list = [np.nan for i in range(len(img_list))]
 
         self.img_list = img_list
         self.label_list = label_list
-        self.return_label = return_label
-
-    @staticmethod
-    def __load_img(path):
-        """Load an image from a provided path.
-
-        Args:
-            path (str): path to an image file.
-
-        """
-        path = pathlib.Path(path)
-        if path.suffix == ".npy":
-            patch = np.load(path)
-        elif path.suffix in (".jpg", ".jpeg", ".tif", ".tiff", ".png"):
-            patch = imread(path)
-
-        return patch
-
-    def set_preproc_func(self, func):
-        """Set the `preproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return source image.
-
-        `func` must behave in the following manner:
-
-        >>> transformed_img = func(img)
-
-        """
-        self.preproc_func = func if func is not None else lambda x: x
-
-    def __len__(self):
-        return len(self.img_list)
-
-    def __getitem__(self, idx):
-        patch = self.img_list[idx]
-        # mode 0 is list of paths
-        if self.data_mode == 0:
-            patch = self.__load_img(patch)
-
-        # apply preprocessing to selected patch
-        patch = self.preproc_func(patch)
-
-        if self.return_label:
-            return patch, self.label_list[idx]
-
-        return patch
+        self.return_labels = return_labels
 
 
-class Kather_Patch_Dataset(Patch_Dataset):
+class Kather_Patch_Dataset(__ABC_Dataset):
     """Define a dataset class specifically for the Kather dataset, obtain from [URL].
 
     Attributes:
@@ -254,13 +269,12 @@ class Kather_Patch_Dataset(Patch_Dataset):
         self,
         root_dir=None,
         save_dir_path=os.path.join(TIATOOLBOX_HOME, "dataset/"),
-        return_label=False,
+        return_labels=False,
         preproc_func=None,
     ):
-        self.return_label = return_label
-        self.set_preproc_func(preproc_func)
+        super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
-        self.data_mode = 0
+        self.data_is_npy_alike = False
 
         label_code_list = [
             "01_TUMOR",
