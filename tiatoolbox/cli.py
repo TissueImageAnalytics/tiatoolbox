@@ -371,12 +371,13 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 )
 def patch_predictor(
     predefined_model,
-    predefined_weight,
+    pretrained_weight,
     data_type,
     input_dir,
     output_dir,
     batch_size,
     file_types,
+    return_probs,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     file_types = tuple(file_types.split(", "))
@@ -397,7 +398,7 @@ def patch_predictor(
     dataset = Patch_Dataset(img_files)
 
     predictor = CNN_Patch_Predictor(
-        predefined_model=predefined_weight,
+        predefined_model=predefined_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
     )
