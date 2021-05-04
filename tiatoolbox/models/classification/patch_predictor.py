@@ -222,7 +222,7 @@ class CNN_Patch_Predictor:
         # may be expensive
         dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
-        dataset.return_labels = return_labels # HACK
+        dataset.return_labels = return_labels  # HACK
 
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -237,7 +237,7 @@ class CNN_Patch_Predictor:
         )
 
         # ! may need to take into account CPU/GPU mode
-        if on_gpu: # DataParallel work only for cuda
+        if on_gpu:  # DataParallel work only for cuda
             model = torch.nn.DataParallel(self.model)
             model = model.to("cuda")
         else:

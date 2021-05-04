@@ -85,6 +85,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         preproc_list is a list of torchvision transforms for preprocessing the image.
         The transforms will be applied in the order that they are given in the list.
         https://pytorch.org/vision/stable/transforms.html.
+    
     """
     def __init__(self, return_labels=False, preproc_func=None):
         super().__init__()
@@ -186,7 +187,7 @@ class Patch_Dataset(__ABC_Dataset):
         # if input is a list - can contain a list of images or a list of image paths
         if isinstance(img_list, list):
             is_all_path_list = all([
-                isinstance(v, str) or isinstance(v, pathlib.Path) for v in img_list
+                isinstance(v, (pathlib.Path, str)) for v in img_list
             ])
             is_all_npy_list = all([isinstance(v, np.ndarray) for v in img_list])
             if not (is_all_path_list or is_all_npy_list):
