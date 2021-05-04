@@ -123,27 +123,27 @@ def test_patch_dataset_crash():
         _ = Patch_Dataset(img_list)
 
 
-def test_kather_patch_dataset():
-    """Test for kather patch dataset."""
-    size = (224, 224, 3)
-    # save to temporary location
-    save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
-    # remove prev generated data - just a test!
-    shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.mkdir(save_dir_path)
-    dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_labels=True)
+# def test_kather_patch_dataset():
+#     """Test for kather patch dataset."""
+#     size = (224, 224, 3)
+#     # save to temporary location
+#     save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
+#     # remove prev generated data - just a test!
+#     shutil.rmtree(save_dir_path, ignore_errors=True)
+#     os.mkdir(save_dir_path)
+#     dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_labels=True)
 
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=0
-    )
+#     dataloader = torch.utils.data.DataLoader(
+#         dataset, batch_size=1, shuffle=False, num_workers=0
+#     )
 
-    for _, sampled_data in enumerate(dataloader):
-        sampled_img, sampled_labels = sampled_data
-        assert np.sum(sampled_img.shape == size) == 0
-        assert len(sampled_labels) == 1
+#     for _, sampled_data in enumerate(dataloader):
+#         sampled_img, sampled_labels = sampled_data
+#         assert np.sum(sampled_img.shape == size) == 0
+#         assert len(sampled_labels) == 1
 
-    # remove generated data - just a test!
-    shutil.rmtree(save_dir_path, ignore_errors=True)
+#     # remove generated data - just a test!
+#     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
 def test_patch_predictor_kather_resnet18_api1():
@@ -170,44 +170,44 @@ def test_patch_predictor_kather_resnet18_api1():
     assert len(probs) == len(labels)
 
 
-def test_patch_predictor_kather_resnet18_api2():
-    """Test for patch predictor on kather dataset with resnet18 using method 2."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
+# def test_patch_predictor_kather_resnet18_api2():
+#     """Test for patch predictor on kather dataset with resnet18 using method 2."""
+#     file_parent_dir = pathlib.Path(__file__).parent
+#     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+#     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+#     dataset = Patch_Dataset(list_paths)
 
-    # API 2
-    pretrained_weight_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth"
-    )
+#     # API 2
+#     pretrained_weight_url = (
+#         "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth"
+#     )
 
-    save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
-    # remove prev generated data - just a test!
-    shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.mkdir(save_dir_path)
+#     save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
+#     # remove prev generated data - just a test!
+#     shutil.rmtree(save_dir_path, ignore_errors=True)
+#     os.mkdir(save_dir_path)
 
-    pretrained_weight = os.path.join(TIATOOLBOX_HOME, "tmp", "resnet18_kather_pc.pth")
-    download_data(pretrained_weight_url, pretrained_weight)
+#     pretrained_weight = os.path.join(TIATOOLBOX_HOME, "tmp", "resnet18_kather_pc.pth")
+#     download_data(pretrained_weight_url, pretrained_weight)
 
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnet18_kather",
-        pretrained_weight=pretrained_weight,
-        batch_size=1,
-    )
-    # don't run test on GPU
-    output = predictor.predict(dataset, return_probs=True, on_gpu=False)
-    probs = output["probs"]
-    preds = output["preds"]
+#     predictor = CNN_Patch_Predictor(
+#         predefined_model="resnet18_kather",
+#         pretrained_weight=pretrained_weight,
+#         batch_size=1,
+#     )
+#     # don't run test on GPU
+#     output = predictor.predict(dataset, return_probs=True, on_gpu=False)
+#     probs = output["probs"]
+#     preds = output["preds"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
+#     # ensure that the raw output is correct
+#     # ! @SIMON how to assert check ^^^^ this ?
 
-    # placeholder
-    assert len(probs) == len(preds)
+#     # placeholder
+#     assert len(probs) == len(preds)
 
-    # remove generated data - just a test!
-    shutil.rmtree(save_dir_path, ignore_errors=True)
+#     # remove generated data - just a test!
+#     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
 def test_patch_predictor_kather_resnet18_api3():
