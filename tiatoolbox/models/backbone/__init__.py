@@ -37,7 +37,7 @@ def get_model(backbone, **kwargs):
 
     """
     backbone_dict = {
-        "alexnex": torch_models.alexnet,
+        "alexnet": torch_models.alexnet,
         "resnet18": torch_models.resnet18,
         "resnet34": torch_models.resnet34,
         "resnet50": torch_models.resnet50,
