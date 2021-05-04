@@ -21,4 +21,3 @@ class Model_Base(nn.Module):
 
         """
         raise NotImplementedError
-        
