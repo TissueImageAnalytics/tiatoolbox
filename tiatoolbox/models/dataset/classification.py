@@ -71,6 +71,7 @@ def predefined_preproc_func(dataset_name):
     preproc_func = __Torch_Preproc_Caller(preproc_list)
     return preproc_func
 
+
 class __ABC_Dataset(torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset, which inherits
     from the torch.utils.data.Dataset class.
@@ -135,6 +136,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
             return patch, self.label_list[idx]
 
         return patch
+
 
 class Patch_Dataset(__ABC_Dataset):
     """Defines a simple patch dataset, which inherits
