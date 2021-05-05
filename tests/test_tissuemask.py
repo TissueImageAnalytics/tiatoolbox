@@ -28,7 +28,7 @@ def test_otsu_masker(_sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_otsu_grescale_masker(_sample_svs):
+def test_otsu_greyscale_masker(_sample_svs):
     """Test Otsu's thresholding method with greyscale inputs."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     mpp = 32
@@ -63,7 +63,7 @@ def test_morphological_masker(_sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_morphological_grescale_masker(_sample_svs):
+def test_morphological_greyscale_masker(_sample_svs):
     """Test morphological masker with greyscale inputs."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     mpp = 32
