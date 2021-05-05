@@ -262,9 +262,9 @@ def test_sub_pixel_read(_source_image):
     sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
-def test_aligned_padded_sub_pixel_read():
+def test_aligned_padded_sub_pixel_read(_source_image):
     """Test sub-pixel numpy image reads with pixel-aligned bounds."""
-    image_path = Path(__file__).parent / "data" / "source_image.png"
+    image_path = Path(_source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -280,9 +280,9 @@ def test_aligned_padded_sub_pixel_read():
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_aligned_padded_sub_pixel_read():
+def test_non_aligned_padded_sub_pixel_read(_source_image):
     """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
-    image_path = Path(__file__).parent / "data" / "source_image.png"
+    image_path = Path(_source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -299,9 +299,9 @@ def test_non_aligned_padded_sub_pixel_read():
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_baseline_padded_sub_pixel_read():
+def test_non_baseline_padded_sub_pixel_read(_source_image):
     """Test sub-pixel numpy image reads with baseline padding."""
-    image_path = Path(__file__).parent / "data" / "source_image.png"
+    image_path = Path(_source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -430,11 +430,11 @@ def test_fuzz_sub_pixel_read(_source_image):
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_fuzz_padded_sub_pixel_read():
+def test_fuzz_padded_sub_pixel_read(_source_image):
     """Fuzz test for numpy sub-pixel image reads with padding."""
     random.seed(0)
 
-    image_path = Path(__file__).parent / "data" / "source_image.png"
+    image_path = Path(_source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -627,7 +627,6 @@ def test_read_point_annotations(
     _patch_extr_2col_json,
 ):
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
-    file_parent_dir = Path(__file__).parent
     labels = Path(_patch_extr_csv)
 
     labels_table = pd.read_csv(labels)
@@ -705,7 +704,7 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(labels_table.drop(["y", "class"], axis=1))
 
     with pytest.raises(FileNotSupported):
-        labels = file_parent_dir.joinpath("data/sample_patch_extraction.test")
+        labels = Path("./sample_patch_extraction.test")
         _ = utils.misc.read_locations(labels)
 
     with pytest.raises(TypeError):
