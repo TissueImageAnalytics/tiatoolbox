@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from typing import Union
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 import cv2
@@ -36,8 +37,10 @@ def split_path_name_ext(full_path):
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
-        tuple: Three sections of the input file path
-        (input directory path, file name, file extension)
+        tuple: Three parts of the input file path:
+            - :py:obj:`pathlib.Path` - parent directory path
+            - :py:obj:`str` - file name
+            - :py:obj:`str` - file extension
 
     Examples:
         >>> from tiatoolbox import utils
@@ -249,9 +252,9 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(objective_power):
-    """Approximate mpp from objective power.
+    r"""Approximate mpp from objective power.
 
-    The formula used for estimation is :math:`power = \\frac{10}{mpp}`.
+    The formula used for estimation is :math:`power = \frac{10}{mpp}`.
     This is a self-inverse function and therefore
     :func:`mpp2objective_power` is simply an alias to this function.
 
@@ -271,12 +274,12 @@ def objective_power2mpp(objective_power):
         array([0.25, 0.5, 1.])
 
     """
-    return 10 / np.float(objective_power)
+    return 10 / float(objective_power)
 
 
 @np.vectorize
 def mpp2objective_power(mpp):
-    """Approximate objective power from mpp.
+    """Approximate objective_power from mpp.
 
     Alias to :func:`objective_power2mpp` as it is a self-inverse
     function.
@@ -285,7 +288,7 @@ def mpp2objective_power(mpp):
         mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
-        np.ndarray: Objective power approximations.
+        :class:`numpy.ndarray`: Objective power approximations.
 
     Examples:
         >>> mpp2objective_power(0.25)
@@ -451,6 +454,48 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
 
   """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
+
+
+def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
+    """Convert a string to a OpenCV (cv2) interpolation enum.
+
+    Interpolation modes:
+        - nearest
+        - linear
+        - area
+        - cubic
+        - lanczos
+
+    Valid integer values for cv2 interpolation enums are passed through.
+    See the `cv::InterpolationFlags`_ documentation for more
+    on cv2 (OpenCV) interpolation modes.
+
+    .. _cv::InterpolationFlags:
+        https://docs.opencv.org/4.0.0/da/d54/group__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121
+
+    Args:
+        interpolation (Union[str, int]): Interpolation mode string.
+            Possible values are: neares, linear, cubic, lanczos, area.
+
+    Raises:
+        ValueError: Invalid interpolation mode.
+
+    Returns:
+        int: OpenCV (cv2) interpolation enum.
+    """
+    if isinstance(interpolation, str):
+        interpolation = interpolation.lower()
+    if interpolation in ["nearest", cv2.INTER_NEAREST]:
+        return cv2.INTER_NEAREST
+    if interpolation in ["area", cv2.INTER_AREA]:
+        return cv2.INTER_AREA
+    if interpolation in ["linear", cv2.INTER_LINEAR]:
+        return cv2.INTER_LINEAR
+    if interpolation in ["cubic", cv2.INTER_CUBIC]:
+        return cv2.INTER_CUBIC
+    if interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
+        return cv2.INTER_LANCZOS4
+    raise ValueError("Invalid interpolation mode.")
 
 
 def assert_dtype_int(input_var, message="Input must be integer."):
