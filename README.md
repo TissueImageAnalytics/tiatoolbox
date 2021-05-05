@@ -53,8 +53,10 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 
 If you wish to use our programs, perhaps without developing them further, run the command<br/>
 `pip install tiatoolbox`<br/>
-To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**. For more information, you may also run<br/>
-`tiatoolbox --help`<br/>
+To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**.
+
+### Command Line
+tiatoolbox supports various features through command line. For more information, please try <br/>`tiatoolbox --help`<br/>
 
 ### Prepare for development
 
