@@ -468,6 +468,7 @@ def test_sub_pixel_read_interpolation_modes():
 
 
 def test_sub_pixel_read_incorrect_read_func_return():
+    """Test for sub pixel reading with incorrect read func return."""
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
@@ -484,6 +485,7 @@ def test_sub_pixel_read_incorrect_read_func_return():
 
 
 def test_sub_pixel_read_empty_read_func_return():
+    """Test for sub pixel reading with empty read func return."""
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
@@ -500,6 +502,7 @@ def test_sub_pixel_read_empty_read_func_return():
 
 
 def test_sub_pixel_read_empty_bounds():
+    """Test for sub pixel reading with empty bounds."""
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
@@ -557,7 +560,7 @@ def test_bounds2size_value_error():
 
 
 def test_contrast_enhancer():
-    """ "Test contrast enhancement functionality."""
+    """Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
         [
@@ -589,6 +592,7 @@ def test_contrast_enhancer():
 
 
 def test_load_stain_matrix(tmp_path):
+    """Test to load stain matrix."""
     with pytest.raises(FileNotSupported):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
 
@@ -844,6 +848,7 @@ def test_fuzz_crop_and_pad_edges_output_size():
 
 
 def test_crop_and_pad_edges_negative_max_dims():
+    """Test crop and pad edges for negative max dims."""
     for max_dims in [(-1, 1), (1, -1), (-1, -1)]:
         with pytest.raises(ValueError):
             utils.image.crop_and_pad_edges(
@@ -863,6 +868,7 @@ def test_crop_and_pad_edges_negative_max_dims():
 
 
 def test_crop_and_pad_edges_non_positive_bounds_size():
+    """Test crop and pad edges for non positive bound size."""
     with pytest.raises(ValueError):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
