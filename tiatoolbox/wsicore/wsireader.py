@@ -702,6 +702,7 @@ class WSIReader:
                 Defaults to 1.25.
             units (str): Units of resolution. Defaults to 'power'.
             **masker_kwargs: Extra kwargs passed to the masker class.
+
         """
         thumbnail = self.slide_thumbnail(resolution, units)
         if method == "otsu":
@@ -1294,6 +1295,7 @@ class VirtualWSIReader(WSIReader):
         info (WSIMeta): Metadata for the virtual wsi.
         mode (str): Mode of the input image. Default is 'rgb'. Allowed
             values are: rgb, bool.
+
     """
 
     def __init__(
@@ -1351,6 +1353,7 @@ class VirtualWSIReader(WSIReader):
                 (virtual) baseline coordinates.
             baseline_read_size (tuple(int)): Size of the region to read
                 in (virtual) baseline coordinates.
+
         """
         baseline_size = np.array(self.info.slide_dimensions)
         image_size = np.array(self.img.shape[:2][::-1])

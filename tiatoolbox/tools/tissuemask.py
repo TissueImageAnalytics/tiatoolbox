@@ -36,6 +36,7 @@ class TissueMasker(ABC):
     """Base class for tissue maskers.
 
     Takes an image as in put and outputs a mask.
+
     """
 
     def __init__(self) -> None:
@@ -50,9 +51,10 @@ class TissueMasker(ABC):
             images (:class:`numpy.ndarray`):
                 List of images, usually WSI thumbnails. Expected shape is
                 NHWC (number images, height, width, channels).
-            mask (:class:`numpy.ndarray`):
+            masks (:class:`numpy.ndarray`):
                 Target/ground-truth masks. Expected shape is NHW (n
                 images, height, width).
+
         """
 
     @abstractmethod
@@ -60,12 +62,13 @@ class TissueMasker(ABC):
         """Create and return a tissue mask.
 
         Args:
-            thumbnail (:class:`numpy.ndarray`): RGB image, usually a WSI
+            images (:class:`numpy.ndarray`): RGB image, usually a WSI
                 thumbnail.
 
         Returns:
-            np.ndarary: Map of semantic classes spatially over the WSI
+            :class:`numpy.ndarray`: Map of semantic classes spatially over the WSI
                 e.g. regions of tissue vs background.
+
         """
         if not self.fitted:
             raise Exception("Fit must be called before transform.")
@@ -78,7 +81,7 @@ class TissueMasker(ABC):
         of :fun:`fit` followed by :func:`transform` can be overridden.
 
         Args:
-            image (:class:`numpy.ndarray`): Image to create mask from.
+            images (:class:`numpy.ndarray`): Image to create mask from.
             kwargs (dict): Other key word arguments passed to fit.
         """
         self.fit(images, **kwargs)
@@ -99,6 +102,7 @@ class OtsuTissueMasker(TissueMasker):
         >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
         >>> masker = OtsuTissueMasker()
         >>> masks = masker.fit_transform([thumbnail])
+
     """
 
     def __init__(self) -> None:
@@ -113,6 +117,7 @@ class OtsuTissueMasker(TissueMasker):
                 length 4 shape (N, height, width, channels).
             masks (:class:`numpy.ndarray`): Unused here, for API
                 consistency.
+
         """
         images_shape = np.shape(images)
         if len(images_shape) != 4:
@@ -146,6 +151,7 @@ class OtsuTissueMasker(TissueMasker):
         Returns:
             :class:`numpy.ndarray`: List of images with a length 4
                 shape (N, height, width, channels).
+
         """
         super().transform(images)
 
@@ -214,6 +220,7 @@ class MorphologicalMasker(OtsuTissueMasker):
             min_region_size (int):
                 Minimum region size in pixels to consider as foreground.
                 Defaults to area of the kernel.
+
         """
         super().__init__()
 
@@ -265,6 +272,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         Returns:
             :class:`numpy.ndarray`: List of images with a length 4
                 shape (N, height, width, channels).
+
         """
         super().transform(images)
 

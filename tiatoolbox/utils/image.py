@@ -57,6 +57,7 @@ def normalise_padding_size(padding):
     Returns:
         :class:`numpy.ndarray`: Numpy array of length 4 with elements containing
             padding for left, top, right, bottom.
+
     """
     padding_shape = np.shape(padding)
     if len(padding_shape) > 1:
@@ -92,6 +93,7 @@ def make_bounds_size_positive(bounds):
             - :class:`numpy.ndarray` - Positive bounds
             - :py:obj:`bool` - Horizontal flip
             - :py:obj:`bool` - Vertical flip
+
     """
     hflip, vflip = False, False
     _, (width, height) = bounds2locsize(bounds)
@@ -144,6 +146,7 @@ def crop_and_pad_edges(
 
     Returns:
         :class:`numpy.ndarray`: The cropped and padded image.
+
     """
     left, top, right, bottom = bounds
     _, (bounds_width, bounds_height) = bounds2locsize(bounds)
@@ -429,6 +432,7 @@ def sub_pixel_read(
         ...     pil_img = image.read_region((left, top), level=0, size=size)
         ...     return np.array(pil_img.convert("RGB"))
         >>> sub_pixel_read(bounds, read_func=openslide_read)
+
     """
     if read_kwargs is None:
         read_kwargs = {}

@@ -194,6 +194,7 @@ def locsize2bounds(location, size):
           - :py:obj:`int` - top / start_y
           - :py:obj:`int` - right / end_x
           - :py:obj:`int` - bottom / end_y
+
     """
     return (
         location[0],
