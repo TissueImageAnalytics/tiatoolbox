@@ -1,7 +1,8 @@
-from tiatoolbox import utils
+from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox import TIATOOLBOX_HOME
+from tiatoolbox import rcParam
 
+import shutil
 import random
 from pathlib import Path
 from typing import Tuple
@@ -740,18 +741,17 @@ def test_grab_files_from_dir():
 def test_download_unzip_data():
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/utils/test_directory.zip"
-    save_dir_path = (os.path.join(TIATOOLBOX_HOME, "tmp/"),)
+    save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "tmp/")
     if os.path.exists(save_dir_path):
-        os.rmdir(save_dir_path)
+        shutil.rmtree(save_dir_path, ignore_errors=True)
     os.mkdir(save_dir_path)
-    save_zip_path = (os.path.join(save_dir_path, "test_directory.zip"),)
-    utils.download_data(url, save_zip_path)
-    utils.unzip_data(save_zip_path, save_dir_path)
+    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    misc.download_data(url, save_zip_path)
+    misc.unzip_data(save_zip_path, save_dir_path)
 
     assert os.listdir(save_dir_path) == ["dir1", "dir2", "dir3"]
 
-    os.rmdir(save_dir_path)
-
+    shutil.rmtree(save_dir_path, ignore_errors=True)
     
 def test_parse_cv2_interpolaton():
     """Test parsing interpolation modes for cv2."""

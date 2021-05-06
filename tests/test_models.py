@@ -1,7 +1,7 @@
 from tiatoolbox.models.classification import CNN_Patch_Model, CNN_Patch_Predictor
 from tiatoolbox.models.dataset import Patch_Dataset, Kather_Patch_Dataset
 from tiatoolbox.utils.misc import download_data
-from tiatoolbox import TIATOOLBOX_HOME, set_home_dir
+from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import grab_files_from_dir
 
 import pytest
@@ -12,20 +12,21 @@ import numpy as np
 import shutil
 
 def test_set_root_dir():
-    from tiatoolbox import TIATOOLBOX_HOME
-    old_root_dir = TIATOOLBOX_HOME
-    test_dir_path = '/home/tialab-dang/local/project/tiatoolbox/dataset/tmp/'
+    from tiatoolbox import rcParam
+    old_root_dir = rcParam['TIATOOLBOX_HOME']
+    print(os.getcwd())
+    test_dir_path = os.path.join(os.getcwd(), 'tmp_check/')
     # clean up prev test
     if os.path.exists(test_dir_path):
         os.rmdir(test_dir_path)
-    set_home_dir(test_dir_path)
+    rcParam['TIATOOLBOX_HOME'] = test_dir_path
     # reimport to see if its overwrite, it should be changed
-    from tiatoolbox import TIATOOLBOX_HOME
-    os.mkdir(TIATOOLBOX_HOME)
+    from tiatoolbox import rcParam
+    os.mkdir(rcParam['TIATOOLBOX_HOME'])
     if not os.path.exists(test_dir_path):
-        assert False, '`%s` != `%s`' % (TIATOOLBOX_HOME, test_dir_path)
-    os.rmdir(TIATOOLBOX_HOME)
-    set_home_dir(old_root_dir) # reassign for subsequent test
+        assert False, '`%s` != `%s`' % (rcParam['TIATOOLBOX_HOME'], test_dir_path)
+    shutil.rmtree(rcParam['TIATOOLBOX_HOME'], ignore_errors=True)
+    rcParam['TIATOOLBOX_HOME'] = old_root_dir # reassign for subsequent test
 
 
 def test_patch_dataset_path_imgs():
@@ -143,10 +144,10 @@ def test_kather_patch_dataset():
     """Test for kather patch dataset."""
     size = (224, 224, 3)
     # save to temporary location
-    save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
+    save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "tmp")
     # remove prev generated data - just a test!
     if os.path.exists(save_dir_path):
-        os.rmdir(save_dir_path)
+        shutil.rmtree(save_dir_path, ignore_errors=True)
     os.mkdir(save_dir_path)
     dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_labels=True)
 
@@ -199,13 +200,13 @@ def test_patch_predictor_kather_resnet18_api2():
         "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18_kather_pc.pth"
     )
 
-    save_dir_path = os.path.join(TIATOOLBOX_HOME, "tmp")
+    save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "tmp")
     # remove prev generated data - just a test!
     if os.path.exists(save_dir_path):
-        os.rmdir(save_dir_path)
+        shutil.rmtree(save_dir_path, ignore_errors=True)
     os.mkdir(save_dir_path)
 
-    pretrained_weight = os.path.join(TIATOOLBOX_HOME, "tmp", "resnet18_kather_pc.pth")
+    pretrained_weight = os.path.join(rcParam['TIATOOLBOX_HOME'], "tmp", "resnet18_kather_pc.pth")
     download_data(pretrained_weight_url, pretrained_weight)
 
     predictor = CNN_Patch_Predictor(

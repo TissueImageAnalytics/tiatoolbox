@@ -32,7 +32,7 @@ import torchvision.transforms as transforms
 import os
 import copy
 
-from tiatoolbox import TIATOOLBOX_HOME
+from tiatoolbox import rcParam
 from tiatoolbox.models.abc import Model_Base
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import Patch_Dataset, predefined_preproc_func
@@ -319,7 +319,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
         pretrained_weight_url = cfg["pretrained"]
         pretrained_weight_url_split = pretrained_weight_url.split("/")
         pretrained_weight = os.path.join(
-            TIATOOLBOX_HOME, "models/", pretrained_weight_url_split[-1]
+            rcParam['TIATOOLBOX_HOME'], "models/", pretrained_weight_url_split[-1]
         )
         if not os.path.exists(pretrained_weight):
             download_data(pretrained_weight_url, pretrained_weight)

@@ -28,7 +28,7 @@ import requests
 import torch
 import torchvision.transforms as transforms
 
-from tiatoolbox import TIATOOLBOX_HOME
+from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
 
@@ -263,7 +263,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
     def __init__(
         self,
         root_dir=None,
-        save_dir_path=os.path.join(TIATOOLBOX_HOME, "dataset/"),
+        save_dir_path=os.path.join(rcParam['TIATOOLBOX_HOME'], "dataset/"),
         return_labels=False,
         preproc_func=None,
     ):
@@ -292,7 +292,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             root_dir = os.path.join(
-                TIATOOLBOX_HOME, "dataset/Kather_texture_2016_image_tiles_5000/"
+                rcParam['TIATOOLBOX_HOME'], "dataset/Kather_texture_2016_image_tiles_5000/"
             )
 
         # what will happen if contents modified / corrupt ?
