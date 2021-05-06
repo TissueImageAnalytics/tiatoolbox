@@ -65,7 +65,8 @@ def predefined_preproc_func(dataset_name):
         ]
     }
     if dataset_name not in preproc_dict:
-        raise ValueError("Predefined preprocessing for dataset `%s` does not exist." % dataset_name)
+        raise ValueError("Predefined preprocessing for"
+                         "dataset `%s` does not exist." % dataset_name)
 
     preproc_list = preproc_dict[dataset_name]
     preproc_func = __Torch_Preproc_Caller(preproc_list)
@@ -93,7 +94,6 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         self.return_labels = return_labels
         self.img_list = None
         self.label_list = None
-
 
     @staticmethod
     def load_img(path):
@@ -271,8 +271,8 @@ class Kather_Patch_Dataset(__ABC_Dataset):
     ):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
-        save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "dataset/") \
-                        if save_dir_path is None else save_dir_path
+        if save_dir_path is None:
+            save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "dataset/")
 
         self.data_is_npy_alike = False
 

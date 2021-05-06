@@ -1,23 +1,20 @@
-from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox import rcParam
-
-import shutil
+import os
 import random
+import shutil
 from pathlib import Path
 from typing import Tuple
-from tiatoolbox.utils.transforms import locsize2bounds
 
-import pytest
-from pytest import approx
-import numpy as np
-import os
-import pandas as pd
-
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
-from PIL import Image
 import cv2
+import numpy as np
+import pandas as pd
+import pytest
+from PIL import Image
+from pytest import approx
+
+from tiatoolbox import rcParam, utils
+from tiatoolbox.utils import misc
+from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.transforms import locsize2bounds
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):

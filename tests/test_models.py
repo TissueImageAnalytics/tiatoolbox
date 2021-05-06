@@ -13,7 +13,6 @@ import shutil
 
 
 def test_set_root_dir():
-    from tiatoolbox import rcParam
 
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
     print(os.getcwd())
@@ -23,6 +22,7 @@ def test_set_root_dir():
         os.rmdir(test_dir_path)
     rcParam["TIATOOLBOX_HOME"] = test_dir_path
     # reimport to see if its overwrite, it should be changed
+    # skipcq
     from tiatoolbox import rcParam
 
     os.makedirs(rcParam["TIATOOLBOX_HOME"])
