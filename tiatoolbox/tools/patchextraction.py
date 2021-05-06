@@ -23,7 +23,7 @@ from abc import ABC
 import numpy as np
 import math
 
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils import misc
 
@@ -47,6 +47,11 @@ class PatchExtractor(ABC):
           Supported units are: microns per pixel (mpp), objective
           power (power), pyramid / resolution level (level),
           pixels per baseline pixel (baseline).
+        pad_mode (str): Method for padding at edges of the WSI. Default
+            to 'constant'. See :func:`numpy.pad` for more information.
+        pad_constant_values (int or tuple(int)): Values to use with
+            constant padding. Defaults to 0. See :func:`numpy.pad` for
+            more.
 
     Attributes:
         input_img(ndarray, WSIReader): input image for patch extraction.
@@ -60,15 +65,25 @@ class PatchExtractor(ABC):
 
     """
 
-    def __init__(self, input_img, patch_size, resolution=0, units="level"):
+    def __init__(
+        self,
+        input_img,
+        patch_size,
+        resolution=0,
+        units="level",
+        pad_mode="constant",
+        pad_constant_values=0,
+    ):
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
         else:
             self.patch_size = (int(patch_size), int(patch_size))
         self.resolution = resolution
         self.units = units
+        self.pad_mode = pad_mode
+        self.pad_constant_values = pad_constant_values
         self.n = 0
-        self.wsi = get_wsireader(input_img=input_img)
+        self.wsi = wsireader.get_wsireader(input_img=input_img)
         self.locations_df = None
         self.stride = None
 
@@ -99,6 +114,8 @@ class PatchExtractor(ABC):
             size=self.patch_size,
             resolution=self.resolution,
             units=self.units,
+            pad_mode=self.pad_mode,
+            pad_constant_values=self.pad_constant_values,
         )
 
         return data
@@ -165,12 +182,16 @@ class FixedWindowPatchExtractor(PatchExtractor):
         resolution=0,
         units="level",
         stride=None,
+        pad_mode="constant",
+        pad_constant_values=0,
     ):
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
             resolution=resolution,
             units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
         if stride is None:
             self.stride = self.patch_size
@@ -196,8 +217,6 @@ class VariableWindowPatchExtractor(PatchExtractor):
     Attributes:
         stride(tuple(int)): stride in (x, y) direction for patch extraction.
         label_patch_size(tuple(int)): network output label (width, height).
-        current_location(tuple(int)): current starting point location in
-         (x, y) direction.
 
     """
 
@@ -208,6 +227,8 @@ class VariableWindowPatchExtractor(PatchExtractor):
         resolution=0,
         units="level",
         stride=(1, 1),
+        pad_mode="constant",
+        pad_constant_values=0,
         label_patch_size=None,
     ):
         super().__init__(
@@ -215,10 +236,11 @@ class VariableWindowPatchExtractor(PatchExtractor):
             patch_size=patch_size,
             resolution=resolution,
             units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
         self.stride = stride
         self.label_patch_size = label_patch_size
-        self.current_location = (0, 0)
 
     def __next__(self):
         raise NotImplementedError
@@ -245,12 +267,16 @@ class PointsPatchExtractor(PatchExtractor):
         patch_size=(224, 224),
         resolution=0,
         units="level",
+        pad_mode="constant",
+        pad_constant_values=0,
     ):
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
             resolution=resolution,
             units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
         )
 
         self.locations_df = misc.read_locations(input_table=locations_list)
