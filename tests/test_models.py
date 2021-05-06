@@ -14,8 +14,9 @@ import shutil
 
 def test_set_root_dir():
     """Test for setting new root dir."""
+    # skipcq
+    from tiatoolbox import rcParam
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
-    print(os.getcwd())
     test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
     # clean up prev test
     if os.path.exists(test_dir_path):
