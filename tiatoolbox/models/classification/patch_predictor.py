@@ -135,7 +135,7 @@ class CNN_Patch_Predictor:
 
     Usage:
         >>> dataset = Kather_Patch_Dataset()
-        >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18_kather")
+        >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18-kather100K")
         >>> output = predictor.predict(dataset)
 
     """
@@ -287,8 +287,18 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
 
     Args:
         predefined_model (str): name of the existing models support by tiatoolbox
-            for processing the data. Currently support:
-            - resnet18_kather: resnet18 backbone trained on Kather dataset.
+            for processing the data. Currently supports:
+            - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
+            - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
+            - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
+            - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
+            - resnet101-kather100K: resnet101 backbone trained on Kather 100K dataset.
+            - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
+                100K dataset.
+            - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on Kather
+                100K dataset.
+            - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on Kather
+                100K dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the
@@ -307,25 +317,23 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     if predefined_model not in __pretrained_model:
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
     cfg = __pretrained_model[predefined_model]
-    backbone, dataset = predefined_model.split("_")
+    backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
-    model = CNN_Patch_Model(
-        backbone=backbone, nr_classes=cfg["nr_classes"]
-    )
+    model = CNN_Patch_Model(backbone=backbone, nr_classes=cfg["nr_classes"])
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
         pretrained_weight_url = cfg["pretrained"]
         pretrained_weight_url_split = pretrained_weight_url.split("/")
         pretrained_weight = os.path.join(
-            rcParam['TIATOOLBOX_HOME'], "models/", pretrained_weight_url_split[-1]
+            rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]
         )
         if not os.path.exists(pretrained_weight):
             download_data(pretrained_weight_url, pretrained_weight)
 
     # ! assume to be saved in single GPU mode
     # always load to CPU
-    saved_state_dict = torch.load(pretrained_weight, map_location='cpu')
+    saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
     return model

@@ -25,8 +25,36 @@ import os
 models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
 
 __pretrained_model = {
-    "resnet18_kather": {
-        "pretrained": os.path.join(models_root, "resnet18_kather_pc.pth"),
+    "alexnet-kather100K": {
+        "pretrained": os.path.join(models_root, "alexnet-kather100K-pc.pth"),
         "nr_classes": 9,
-    }
+    },
+    "resnet18-kather100K": {
+        "pretrained": os.path.join(models_root, "resnet18-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "resnet34-kather100K": {
+        "pretrained": os.path.join(models_root, "resnet34-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "resnet50-kather100K": {
+        "pretrained": os.path.join(models_root, "resnet50-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "resnet101-kather100K": {
+        "pretrained": os.path.join(models_root, "resnet101-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "resnext50_32x4d-kather100K": {
+        "pretrained": os.path.join(models_root, "resnext50_32x4d-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "resnext101_32x8d-kather100K": {
+        "pretrained": os.path.join(models_root, "resnext101_32x8d-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "wide_resnet50_2-kather100K": {
+        "pretrained": os.path.join(models_root, "wide_resnet50_2-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
 }

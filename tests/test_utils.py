@@ -741,7 +741,7 @@ def test_grab_files_from_dir():
 def test_download_unzip_data():
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "tmp/")
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     os.mkdir(save_dir_path)
@@ -752,7 +752,8 @@ def test_download_unzip_data():
     assert os.listdir(save_dir_path) == ["dir1", "dir2", "dir3"]
 
     shutil.rmtree(save_dir_path, ignore_errors=True)
-    
+
+
 def test_parse_cv2_interpolaton():
     """Test parsing interpolation modes for cv2."""
     cases = [str.upper, str.lower, str.capitalize]
