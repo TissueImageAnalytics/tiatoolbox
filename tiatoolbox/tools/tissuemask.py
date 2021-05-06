@@ -188,7 +188,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
         >>> from tiatoolbox.wsicore.wsireader import get_wsireader
         >>> wsi = get_wsireader("slide.svs")
-        >>> thumbnail = wsi.get_thumbnail(32, "mpp")
+        >>> thumbnail = wsi.slide_thumbnail(32, "mpp")
         >>> masker = MorphologicalMasker(mpp=32)
         >>> masks = masker.fit_transform([thumbnail])
 
