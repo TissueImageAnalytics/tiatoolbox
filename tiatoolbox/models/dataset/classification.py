@@ -59,13 +59,14 @@ def predefined_preproc_func(dataset_name):
 
     """
     preproc_dict = {
-        "kather": [
+        "kather100k": [
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     }
     if dataset_name not in preproc_dict:
-        raise ValueError("Predefined preprocessing for dataset `%s` does not exist.")
+        raise ValueError("Predefined preprocessing for"
+                         "dataset `%s` does not exist." % dataset_name)
 
     preproc_list = preproc_dict[dataset_name]
     preproc_func = __Torch_Preproc_Caller(preproc_list)
@@ -74,7 +75,6 @@ def predefined_preproc_func(dataset_name):
 
 class __ABC_Dataset(torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
-
 
     Attributes:
         return_labels (bool, False): __getitem__ will return both the img and its label.
@@ -92,6 +92,8 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         self.set_preproc_func(preproc_func)
         self.data_is_npy_alike = False
         self.return_labels = return_labels
+        self.img_list = None
+        self.label_list = None
 
     @staticmethod
     def load_img(path):
@@ -263,11 +265,14 @@ class Kather_Patch_Dataset(__ABC_Dataset):
     def __init__(
         self,
         root_dir=None,
-        save_dir_path=os.path.join(rcParam['TIATOOLBOX_HOME'], "dataset/"),
+        save_dir_path=None,
         return_labels=False,
         preproc_func=None,
     ):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
+
+        if save_dir_path is None:
+            save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "dataset/")
 
         self.data_is_npy_alike = False
 
@@ -292,7 +297,8 @@ class Kather_Patch_Dataset(__ABC_Dataset):
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             root_dir = os.path.join(
-                rcParam['TIATOOLBOX_HOME'], "dataset/Kather_texture_2016_image_tiles_5000/"
+                save_dir_path,
+                "Kather_texture_2016_image_tiles_5000/"
             )
 
         # what will happen if contents modified / corrupt ?

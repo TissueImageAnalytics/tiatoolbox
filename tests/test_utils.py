@@ -1,23 +1,20 @@
-from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox import rcParam
-
-import shutil
+import os
 import random
+import shutil
 from pathlib import Path
 from typing import Tuple
-from tiatoolbox.utils.transforms import locsize2bounds
 
-import pytest
-from pytest import approx
-import numpy as np
-import os
-import pandas as pd
-
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
-from PIL import Image
 import cv2
+import numpy as np
+import pandas as pd
+import pytest
+from PIL import Image
+from pytest import approx
+
+from tiatoolbox import rcParam, utils
+from tiatoolbox.utils import misc
+from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.transforms import locsize2bounds
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
@@ -744,7 +741,7 @@ def test_download_unzip_data():
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.mkdir(save_dir_path)
+    os.makedirs(save_dir_path)
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
     misc.download_data(url, save_zip_path)
     misc.unzip_data(save_zip_path, save_dir_path)
