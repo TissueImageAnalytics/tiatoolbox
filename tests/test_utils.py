@@ -746,7 +746,11 @@ def test_download_unzip_data():
     misc.download_data(url, save_zip_path)
     misc.unzip_data(save_zip_path, save_dir_path)
 
-    assert os.listdir(save_dir_path) == ["dir1", "dir2", "dir3"]
+    extracted_path = os.path.join(save_dir_path, 'test_directory')
+    # to avoid hidden files in case of MAC-OS or Windows (?)
+    extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith('.')]
+    extracted_dirs.sort() # ensure same ordering
+    assert extracted_dirs == ["dir1", "dir2", "dir3"]
 
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
