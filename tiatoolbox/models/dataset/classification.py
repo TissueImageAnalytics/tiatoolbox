@@ -24,7 +24,6 @@ import pathlib
 
 import numpy as np
 import PIL
-import requests
 import torch
 import torchvision.transforms as transforms
 
@@ -65,8 +64,9 @@ def predefined_preproc_func(dataset_name):
         ]
     }
     if dataset_name not in preproc_dict:
-        raise ValueError("Predefined preprocessing for"
-                         "dataset `%s` does not exist." % dataset_name)
+        raise ValueError(
+            "Predefined preprocessing for" "dataset `%s` does not exist." % dataset_name
+        )
 
     preproc_list = preproc_dict[dataset_name]
     preproc_func = __Torch_Preproc_Caller(preproc_list)
@@ -87,6 +87,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         https://pytorch.org/vision/stable/transforms.html.
 
     """
+
     def __init__(self, return_labels=False, preproc_func=None):
         super().__init__()
         self.set_preproc_func(preproc_func)
@@ -109,7 +110,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         elif path.suffix in (".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             patch = imread(path)
         else:
-            raise ValueError('Can not load data of `.%s`' % path.suffix)
+            raise ValueError("Can not load data of `.%s`" % path.suffix)
         return patch
 
     def set_preproc_func(self, func):
@@ -188,9 +189,7 @@ class Patch_Dataset(__ABC_Dataset):
 
         # if input is a list - can contain a list of images or a list of image paths
         if isinstance(img_list, list):
-            is_all_path_list = all(
-                isinstance(v, (pathlib.Path, str)) for v in img_list
-            )
+            is_all_path_list = all(isinstance(v, (pathlib.Path, str)) for v in img_list)
             is_all_npy_list = all(isinstance(v, np.ndarray) for v in img_list)
             if not (is_all_path_list or is_all_npy_list):
                 raise ValueError(
@@ -272,7 +271,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
         if save_dir_path is None:
-            save_dir_path = os.path.join(rcParam['TIATOOLBOX_HOME'], "dataset/")
+            save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "dataset/")
 
         self.data_is_npy_alike = False
 
@@ -297,8 +296,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             root_dir = os.path.join(
-                save_dir_path,
-                "Kather_texture_2016_image_tiles_5000/"
+                save_dir_path, "Kather_texture_2016_image_tiles_5000/"
             )
 
         # what will happen if contents modified / corrupt ?

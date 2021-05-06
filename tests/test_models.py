@@ -16,6 +16,7 @@ def test_set_root_dir():
     """Test for setting new root dir."""
     # skipcq
     from tiatoolbox import rcParam
+
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
     test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
     # clean up prev test
@@ -132,7 +133,8 @@ def test_patch_dataset_crash():
     img_list = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
-        match="Input must be either a list/array of images or a list of valid image paths.",
+        match="Input must be either a list/array of images or a list of "
+        "valid image paths.",
     ):
         _ = Patch_Dataset(img_list)
 
@@ -140,7 +142,8 @@ def test_patch_dataset_crash():
     img_list = ["you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
-        match="Input must be either a list/array of images or a list of valid image paths.",
+        match="Input must be either a list/array of images or a list of "
+        "valid image paths.",
     ):
         _ = Patch_Dataset(img_list)
 
