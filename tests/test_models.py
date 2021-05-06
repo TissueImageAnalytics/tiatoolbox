@@ -13,7 +13,7 @@ import shutil
 
 
 def test_set_root_dir():
-
+    """Test for setting new root dir."""
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
     print(os.getcwd())
     test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
@@ -22,6 +22,7 @@ def test_set_root_dir():
         os.rmdir(test_dir_path)
     rcParam["TIATOOLBOX_HOME"] = test_dir_path
     # reimport to see if its overwrite, it should be changed
+    # silence deep source becaus this is intentional check
     # skipcq
     from tiatoolbox import rcParam
 

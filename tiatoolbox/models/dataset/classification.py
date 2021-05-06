@@ -297,7 +297,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             root_dir = os.path.join(
-                save_dir_path, 
+                save_dir_path,
                 "Kather_texture_2016_image_tiles_5000/"
             )
 
