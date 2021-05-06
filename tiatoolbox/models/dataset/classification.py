@@ -65,7 +65,7 @@ def predefined_preproc_func(dataset_name):
         ]
     }
     if dataset_name not in preproc_dict:
-        raise ValueError("Predefined preprocessing for dataset `%s` does not exist.")
+        raise ValueError("Predefined preprocessing for dataset `%s` does not exist." % dataset_name)
 
     preproc_list = preproc_dict[dataset_name]
     preproc_func = __Torch_Preproc_Caller(preproc_list)

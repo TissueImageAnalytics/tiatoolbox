@@ -58,3 +58,6 @@ __pretrained_model = {
         "nr_classes": 9,
     },
 }
+
+# to ensure easy matching
+__pretrained_model = {k.lower() : v for k, v in __pretrained_model.items()}
