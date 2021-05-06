@@ -29,6 +29,8 @@ def read_points_patches(
         patch_size=patch_size,
         units=units,
         resolution=resolution,
+        pad_mode="constant",
+        pad_constant_values=255,
     )
 
     data = np.empty([3, patch_size[0], patch_size[1], 3])
