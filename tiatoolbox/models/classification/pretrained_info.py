@@ -24,6 +24,7 @@ import os
 
 models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
 
+# ! any additional dataset name should be also added to tiatoolbox.models.dataset
 __pretrained_model = {
     "alexnet-kather100K": {
         "pretrained": os.path.join(models_root, "alexnet-kather100K-pc.pth"),

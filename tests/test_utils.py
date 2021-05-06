@@ -744,7 +744,7 @@ def test_download_unzip_data():
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.mkdir(save_dir_path)
+    os.makedirs(save_dir_path)
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
     misc.download_data(url, save_zip_path)
     misc.unzip_data(save_zip_path, save_dir_path)

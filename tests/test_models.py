@@ -25,7 +25,7 @@ def test_set_root_dir():
     # reimport to see if its overwrite, it should be changed
     from tiatoolbox import rcParam
 
-    os.mkdir(rcParam["TIATOOLBOX_HOME"])
+    os.makedirs(rcParam["TIATOOLBOX_HOME"])
     if not os.path.exists(test_dir_path):
         assert False, "`%s` != `%s`" % (rcParam["TIATOOLBOX_HOME"], test_dir_path)
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
@@ -147,11 +147,11 @@ def test_kather_patch_dataset():
     """Test for kather patch dataset."""
     size = (224, 224, 3)
     # save to temporary location
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp")
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.mkdir(save_dir_path)
+    print(save_dir_path)
     dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_labels=True)
 
     dataloader = torch.utils.data.DataLoader(
@@ -211,10 +211,10 @@ def test_patch_predictor_kather_api2():
     # remove prev generated data - just a test!
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.mkdir(save_dir_path)
+    os.makedirs(save_dir_path)
 
     pretrained_weight = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], "tmp", "resnet18-kather100K_pc.pth"
+        rcParam["TIATOOLBOX_HOME"], "tmp", "resnet18-kather100K-pc.pth"
     )
     download_data(pretrained_weight_url, pretrained_weight)
 
@@ -393,7 +393,9 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
 
     # ensure that the raw output is correct
     # ! @SIMON how to assert check ^^^^ this ?
-
+    # placeholder
+    assert len(probs) == len(preds)
+    assert len(preds) == len(labels)
 
 def test_patch_predictor_resnext101_32x8d_kather100K():
     """Test for patch predictor with resnext101_32x8d on Kather 100K dataset."""
