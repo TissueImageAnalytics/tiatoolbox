@@ -127,7 +127,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region",
+    " default=wsi_input_dir/../im_region.jpg",
 )
 @click.option(
     "--region",
@@ -182,7 +182,7 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../",
+    " default=wsi_input_dir/../slide_thumb.jpg",
 )
 @click.option(
     "--mode",
@@ -327,6 +327,8 @@ def stainnorm(
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))
 
+    os.makedirs(output_path)
+
     for curr_file in files_all:
         basename = os.path.basename(curr_file)
         # transform source image
@@ -344,7 +346,8 @@ def stainnorm(
 )
 @click.option(
     "--method",
-    help="Tissue masking method to use. Choose from 'Otsu', 'Morphological'",
+    help="Tissue masking method to use. Choose from 'Otsu', 'Morphological',"
+    " default=Otsu",
     default="Otsu",
 )
 @click.option(
@@ -362,14 +365,14 @@ def stainnorm(
 @click.option(
     "--mode",
     default="show",
-    help="'show' to display image region or 'save' to save at the output path"
+    help="'show' to display tissue mask or 'save' to save at the output path"
     ", default=show",
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory"
-    "default='*.png', '*.jpg', '*.tif', '*.tiff'",
-    default="*.png, *.jpg, *.tif, *.tiff",
+    help="file types to capture from directory, "
+    "default='*.svs, *.ndpi, *.jp2, *.png', '*.jpg', '*.tif', '*.tiff'",
+    default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
 )
 def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_types):
     """Generate tissue mask for a WSI."""
@@ -386,9 +389,8 @@ def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_ty
     else:
         raise FileNotFoundError
 
-    if output_path is None and mode == "save":
-        input_dir = pathlib.Path(wsi_input).parent
-        output_path = str(input_dir.parent / "slide_thumb.jpg")
+    if mode == "save":
+        os.makedirs(output_path)
 
     if method == "Otsu":
         masker = tissuemask.OtsuTissueMasker()
