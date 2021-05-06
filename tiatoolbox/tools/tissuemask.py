@@ -192,8 +192,8 @@ class MorphologicalMasker(OtsuTissueMasker):
         >>> masker = MorphologicalMasker(mpp=32)
         >>> masks = masker.fit_transform([thumbnail])
 
-        An example reading a thumbnail from a file where the objective
-        power is known:
+    An example reading a thumbnail from a file where the objective power is known:
+
         >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
         >>> from tiatoolbox.utils.misc import imread
         >>> thumbnail = imread("thumbnail.png")
