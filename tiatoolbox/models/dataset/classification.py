@@ -206,15 +206,7 @@ class Patch_Dataset(__ABC_Dataset):
                         "or a list of valid image paths."
                     )
                 # preload test for sanity check
-                # try:
                 shape_list = [self.load_img(v).shape for v in img_list]
-                # except:
-                #     raise ValueError(
-                #         "At least one of the provided image paths is invalid. "
-                #         "Check to make sure the supplied paths correspond to image "
-                #         "files. Supported image formats include: `.npy`, `.jpg`, "
-                #         "`.jpeg`, `.tif`, `.tiff` or `.png`."
-                #     )
                 self.data_is_npy_alike = False
             else:
                 shape_list = [v.shape for v in img_list]
