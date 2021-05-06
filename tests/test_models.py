@@ -195,7 +195,7 @@ def test_patch_predictor_api1():
     assert len(probs) == len(labels)
 
 
-def test_patch_predictor_kather_api2():
+def test_patch_predictor_api2():
     """Test for patch predictor API 2. Test with resnet18 on Kather 100K dataset."""
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
@@ -214,7 +214,7 @@ def test_patch_predictor_kather_api2():
     os.mkdir(save_dir_path)
 
     pretrained_weight = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], "tmp", "resnet18-kather100K_pc.pth"
+        rcParam["TIATOOLBOX_HOME"], "tmp", "resnet18-kather100K-pc.pth"
     )
     download_data(pretrained_weight_url, pretrained_weight)
 
@@ -238,7 +238,7 @@ def test_patch_predictor_kather_api2():
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_patch_predictor_kather_api3():
+def test_patch_predictor_api3():
     """Test for patch predictor API 3. Test with resnet18 on Kather 100K dataset."""
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
