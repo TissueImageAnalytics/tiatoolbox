@@ -20,22 +20,17 @@
 
 """This module enables patch-level prediction."""
 
-import math
 import tqdm
 import numpy as np
-import PIL
-import requests
-import pathlib
 import torch
 import torch.nn as nn
-import torchvision.transforms as transforms
 import os
 import copy
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.abc import Model_Base
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.dataset import Patch_Dataset, predefined_preproc_func
+from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
 from tiatoolbox.models.classification.pretrained_info import __pretrained_model
 

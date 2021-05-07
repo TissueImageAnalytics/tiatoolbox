@@ -31,6 +31,7 @@ from tiatoolbox.models.dataset.classification import Patch_Dataset
 import sys
 import click
 import os
+import json
 import pathlib
 from PIL import Image
 
@@ -404,6 +405,11 @@ def patch_predictor(
     )
 
     output = predictor.predict(dataset, return_probs=return_probs)
+
+    # improve the way this is done!
+    output_file_path = os.path.join(output_dir, "results.json")
+    with open(output_file_path, "w") as handle:
+        json.dump(output, handle)
 
 
 if __name__ == "__main__":

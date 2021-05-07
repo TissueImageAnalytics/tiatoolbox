@@ -21,14 +21,13 @@
 
 import tiatoolbox.models.abc as tia_model_abc
 
-import torch
-import torch.nn as nn
-
 
 class Model_Base(tia_model_abc.Model_Base):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
         raise NotImplementedError
 
