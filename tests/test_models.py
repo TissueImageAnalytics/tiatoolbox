@@ -171,7 +171,7 @@ def test_patch_dataset_list_imgs():
         os.path.join(save_dir_path, "sample2.npy"),
     ]
     _ = Patch_Dataset(img_list)
-    img_list[0]
+    assert img_list[0] is not None
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
