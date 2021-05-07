@@ -16,7 +16,7 @@ from tiatoolbox.models.dataset import (
     Patch_Dataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, grab_files_from_dir
+from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 from tiatoolbox import cli
 
 
@@ -36,8 +36,8 @@ def test_create_backbone():
         "densenet161",
         "densenet169",
         "densenet201",
-        # "inception_v3",  # extremely slow, so just ignore it atm
-        # "googlenet",  # extremely slow, so just ignore it atm
+        "inception_v3",  # extremely slow, so just ignore it atm
+        "googlenet",  # extremely slow, so just ignore it atm
         "mobilenet_v2",
         "mobilenet_v3_large",
         "mobilenet_v3_small",
@@ -157,6 +157,22 @@ def test_patch_dataset_list_imgs():
             and sampled_img_shape[2] == size[1]
             and sampled_img_shape[3] == size[2]
         )
+
+    # test for loading npy
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
+    # remove prev generated data - just a test!
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    os.makedirs(save_dir_path)
+    np.save(
+        os.path.join(save_dir_path, "sample2.npy"), np.random.randint(0, 255, (4, 4, 3))
+    )
+    img_list = [
+        os.path.join(save_dir_path, "sample2.npy"),
+    ]
+    _ = Patch_Dataset(img_list)
+    img_list[0]
+    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
 def test_patch_dataset_array_imgs():
@@ -285,12 +301,31 @@ def test_kather_patch_dataset():
     size = (224, 224, 3)
     # test kather with default param
     dataset = Kather_Patch_Dataset()
+    # kather with default data path skip download
+    dataset = Kather_Patch_Dataset()
+    # pytest for not exist dir
+    with pytest.raises(
+        ValueError,
+        match=r".*not exist.*",
+    ):
+        _ = Kather_Patch_Dataset(save_dir_path='unknown_place')
+    
     # save to temporary location
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_labels=True)
+    url = (
+        "https://zenodo.org/record/53169/files/"
+        "Kather_texture_2016_image_tiles_5000.zip"
+    )
+    save_zip_path = os.path.join(save_dir_path, "Kather.zip")
+    download_data(url, save_zip_path)
+    unzip_data(save_zip_path, save_dir_path)
+    extracted_dir = os.path.join(
+        save_dir_path, "Kather_texture_2016_image_tiles_5000/"
+    )
+    dataset = Kather_Patch_Dataset(save_dir_path=extracted_dir, return_labels=True)
 
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=0
@@ -393,11 +428,12 @@ def test_patch_predictor_api3():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
+    dataset = Patch_Dataset(list_paths, return_labels=True)
 
     # API 3
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
-    predictor = CNN_Patch_Predictor(model=model, batch_size=1)
+    model.set_preproc_func(lambda x : x)  # do this for coverage
+    predictor = CNN_Patch_Predictor(model=model, batch_size=1, verbose=False)
     # don't run test on GPU
     output = predictor.predict(
         dataset, return_probs=True, return_labels=True, on_gpu=False
