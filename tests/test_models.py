@@ -436,7 +436,7 @@ def test_patch_predictor_api3():
 
     # API 3
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
-    
+
     # coverage setter check
     model.set_preproc_func(lambda x : x-1)  # do this for coverage
     assert model.get_preproc_func()(1) == 0
