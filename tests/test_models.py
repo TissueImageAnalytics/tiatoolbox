@@ -240,17 +240,25 @@ def test_patch_dataset_crash():
     ):
         _ = Patch_Dataset(["img.npy"])
 
-    # test different extenstion parser
+    # ** test different extenstion parser
+    # save dummy data to temporary location
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
+    # remove prev generated data - just a test!
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    os.makedirs(save_dir_path)
+    torch.save({'a':'a'}, os.path.join(save_dir_path, 'sample1.tar'))
+    np.save(os.path.join(save_dir_path, 'sample2.npy'), np.random.randint(0, 255, (4, 4, 3)))
     img_list = [ 
-        'data/sample_patch_extraction.npy',
-        'data/sample_patch_extraction.csv',
-        'data/norm_vahadane.png'
+        os.path.join(save_dir_path, 'sample1.tar'),
+        os.path.join(save_dir_path, 'sample2.npy')
     ]
     with pytest.raises(
         ValueError,
         match=r"Can not load data of .*",
     ):
         _ = Patch_Dataset(img_list)
+    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
     # preproc func for not defined dataset
     with pytest.raises(
@@ -258,6 +266,7 @@ def test_patch_dataset_crash():
         match=r".* preprocessing .* does not exist.",
     ):
         predefined_preproc_func('secret_dataset')    
+    
 
 def test_kather_patch_dataset():
     """Test for kather patch dataset."""
@@ -269,7 +278,6 @@ def test_kather_patch_dataset():
     # remove prev generated data - just a test!
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    print(save_dir_path)
     dataset = Kather_Patch_Dataset(save_dir_path=save_dir_path, return_labels=True)
 
     dataloader = torch.utils.data.DataLoader(
@@ -290,7 +298,6 @@ def test_patch_predictor_api1():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -384,7 +391,6 @@ def test_patch_predictor_alexnet_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -410,7 +416,6 @@ def test_patch_predictor_resnet34_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -438,7 +443,6 @@ def test_patch_predictor_resnet50_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -466,7 +470,6 @@ def test_patch_predictor_resnet101_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -494,7 +497,6 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -521,7 +523,6 @@ def test_patch_predictor_resnext101_32x8d_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
@@ -549,7 +550,6 @@ def test_patch_predictor_wide_resnet50_2_kather100K():
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
     list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    print(list_paths)
     dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
