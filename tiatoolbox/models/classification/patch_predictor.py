@@ -157,16 +157,18 @@ class CNN_Patch_Predictor:
                 - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
                 - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
                 - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
-                - resnet101-kather100K: resnet101 backbone trained on Kather 100K dataset.
-                - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
+                - resnet101-kather100K: resnet101 backbone trained on Kather
                     100K dataset.
-                - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on Kather
-                    100K dataset.
-                - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on Kather
-                    100K dataset.
-                - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on Kather
-                    100K dataset.
-                - densenet121-kather100K: resnet101 backbone trained on Kather 100K dataset.
+                - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on
+                    Kather 100K dataset.
+                - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on
+                    Kather 100K dataset.
+                - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on
+                    Kather 100K dataset.
+                - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on
+                    Kather 100K dataset.
+                - densenet121-kather100K: resnet101 backbone trained on
+                    Kather 100K dataset.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
