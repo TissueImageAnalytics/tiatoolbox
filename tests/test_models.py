@@ -1,15 +1,83 @@
-from tiatoolbox.models.classification import CNN_Patch_Model, CNN_Patch_Predictor
-from tiatoolbox.models.dataset import Patch_Dataset, Kather_Patch_Dataset
-from tiatoolbox.utils.misc import download_data
-from tiatoolbox import rcParam
-from tiatoolbox.utils.misc import grab_files_from_dir
+import os
+import pathlib
+import shutil
 
+import numpy as np
 import pytest
 import torch
-import pathlib
-import os
-import numpy as np
-import shutil
+
+from tiatoolbox import rcParam
+from tiatoolbox.models.backbone import get_model
+from tiatoolbox.models.classification.abc import Model_Base
+from tiatoolbox.models.classification import (CNN_Patch_Model,
+                                              CNN_Patch_Predictor)
+from tiatoolbox.models.dataset import (Kather_Patch_Dataset, Patch_Dataset,
+                                       predefined_preproc_func)
+from tiatoolbox.utils.misc import download_data, grab_files_from_dir
+
+def test_create_backbone():
+    """Test for creating backbone"""
+    backbone_list = [
+        "alexnet",
+        "resnet18",
+        "resnet34",
+        "resnet50",
+        "resnet101",
+        "resnext50_32x4d",
+        "resnext101_32x8d",
+        "wide_resnet50_2",
+        "wide_resnet101_2",
+        "densenet121",
+        "densenet161",
+        "densenet169",
+        "densenet201",
+        # "inception_v3",  # extremely slow, so just ignore it atm 
+        # "googlenet",  # extremely slow, so just ignore it atm 
+        "mobilenet_v2",
+        "mobilenet_v3_large",
+        "mobilenet_v3_small"
+    ]
+    for backbone in backbone_list:
+        # check creation, so no downloading pretrain to save time
+        try:
+            get_model(backbone, pretrained=False)
+        except ValueError:
+            assert False, 'Model %s failed.' % backbone
+
+    # test for model not defined
+    with pytest.raises(ValueError, match=r".*not supported.*"):
+       get_model('secret_model', pretrained=False)
+
+
+def test_predictor_crash():
+    """Test for crash when making predictor."""
+    # test abc
+    with pytest.raises(NotImplementedError):
+        Model_Base()
+    with pytest.raises(NotImplementedError):
+        Model_Base.infer_batch(1, 2, 3)
+
+    # without providing any model
+    with pytest.raises(ValueError, match=r"Must provide.*"):
+       CNN_Patch_Predictor()
+
+    # provide wrong unknown predefined model
+    with pytest.raises(ValueError, match=r"Predefined .* does not exist"):
+       CNN_Patch_Predictor(predefined_model='secret_model')     
+
+    # provide wrong model of unknown type, deprecated later with type hint
+    with pytest.raises(ValueError, match=r".*must be a string.*"):
+       CNN_Patch_Predictor(predefined_model=123)     
+
+    # model and dummy input
+    model = CNN_Patch_Predictor(predefined_model='resnet34-kather100K')
+    img_list = [
+        np.random.randint(0, 255, (4, 4, 3)),
+        np.random.randint(0, 255, (4, 4, 3)),
+    ]
+    # only receive a dataset object
+    with pytest.raises(ValueError, match=r".*torch.utils.data.Dataset.*"):
+        model.predict(img_list)
 
 
 def test_set_root_dir():
@@ -115,9 +183,19 @@ def test_patch_dataset_crash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all examples below should fail when input to Patch_Dataset
 
+    # not supported input type
+    img_list = {'a' : np.random.randint(0, 255, (4, 4, 4))}
+    with pytest.raises(ValueError, match=r".*Input must be either a list/array of images.*"):
+        _ = Patch_Dataset(img_list)
+
     # ndarray of mixed dtype
     img_list = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
+        _ = Patch_Dataset(img_list)
+
+    # ndarrays of NHW images
+    img_list = np.random.randint(0, 255, (4, 4, 4))
+    with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
         _ = Patch_Dataset(img_list)
 
     # list of ndarrays with different sizes
@@ -126,6 +204,14 @@ def test_patch_dataset_crash():
         np.random.randint(0, 255, (4, 5, 3)),
     ]
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
+        _ = Patch_Dataset(img_list)
+
+    # list of ndarrays with HW and HWC mixed up
+    img_list = [
+        np.random.randint(0, 255, (4, 4, 3)),
+        np.random.randint(0, 255, (4, 4)),
+    ]
+    with pytest.raises(ValueError, match="Each sample must be an array of the form HWC."):
         _ = Patch_Dataset(img_list)
 
     # list of mixed dtype
@@ -144,10 +230,37 @@ def test_patch_dataset_crash():
     ):
         _ = Patch_Dataset(img_list)
 
+    # list not exist paths
+    with pytest.raises(
+        ValueError,
+        match=r".*valid image paths.*",
+    ):
+        _ = Patch_Dataset(["img.npy"])
+
+    # test different extenstion parser
+    img_list = [ 
+        'data/sample_patch_extraction.npy',
+        'data/sample_patch_extraction.csv',
+        'data/norm_vahadane.png'
+    ]
+    with pytest.raises(
+        ValueError,
+        match=r"Can not load data of .*",
+    ):
+        ds = Patch_Dataset(img_list)
+
+    # preproc func for not defined dataset
+    with pytest.raises(
+        ValueError,
+        match=r".* preprocessing .* does not exist.",
+    ):
+        predefined_preproc_func('secret_dataset')    
 
 def test_kather_patch_dataset():
     """Test for kather patch dataset."""
     size = (224, 224, 3)
+    # test kather with default param
+    dataset = Kather_Patch_Dataset()
     # save to temporary location
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
@@ -167,7 +280,7 @@ def test_kather_patch_dataset():
 
     # remove generated data - just a test!
     shutil.rmtree(save_dir_path, ignore_errors=True)
-
+    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 def test_patch_predictor_api1():
     """Test for patch predictor API 1. Test with resnet18 on Kather 100K dataset."""

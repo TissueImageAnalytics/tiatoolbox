@@ -24,7 +24,7 @@ import torchvision.models as torch_models
 import torch.nn as nn
 
 
-def get_model(backbone, **kwargs):
+def get_model(backbone, pretrained=True, **kwargs):
     """Get a model. Models are either already defined within torchvision
     or they can be custom-made within tiatoolbox.
 
@@ -60,7 +60,7 @@ def get_model(backbone, **kwargs):
         raise ValueError("Backbone `%s` is not supported." % backbone)
 
     creator = backbone_dict[backbone]
-    model = creator(**kwargs)  # ! abit too hacky
+    model = creator(pretrained=pretrained, **kwargs)  # ! abit too hacky
 
     # unroll all the definition and strip off the final GAP and FCN
     # different model will have diffent form, sample resnet and densenet atm
