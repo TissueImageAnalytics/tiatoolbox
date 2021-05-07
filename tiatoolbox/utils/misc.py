@@ -85,7 +85,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     files_grabbed = []
     for files in file_types:
         files_grabbed.extend(input_path.glob(files))
-    files_grabbed.sort() # ensure same ordering
+    files_grabbed.sort()  # ensure same ordering
     return list(files_grabbed)
 
 
