@@ -221,10 +221,10 @@ def test_command_line_stainnorm(_source_image):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_dir():
+def test_cli_stainnorm_dir(_source_image):
     """Test directory input for the stain normalisation CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
-    source_img = file_parent_dir.joinpath("data")
+    source_img = _source_image.dirname
     target_img = file_parent_dir.joinpath("../data/target_image.png")
     runner = CliRunner()
     stainnorm_result = runner.invoke(
