@@ -364,6 +364,12 @@ def stainnorm(
     help="resolution units, default=power",
 )
 @click.option(
+    "--kernel_size",
+    type=int,
+    nargs=2,
+    help="kernel size for morphological dilation, default=1, 1",
+)
+@click.option(
     "--mode",
     default="show",
     help="'show' to display tissue mask or 'save' to save at the output path"
@@ -375,7 +381,9 @@ def stainnorm(
     "default='*.svs, *.ndpi, *.jp2, *.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
 )
-def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_types):
+def tissue_mask(
+    wsi_input, output_path, method, resolution, units, kernel_size, mode, file_types
+):
     """Generate tissue mask for a WSI."""
 
     file_types = tuple(file_types.split(", "))
@@ -397,14 +405,17 @@ def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_ty
     if method == "Otsu":
         masker = tissuemask.OtsuTissueMasker()
     elif method == "Morphological":
-        if units == "mpp":
-            masker = tissuemask.MorphologicalMasker(mpp=resolution)
-        elif units == "power":
-            masker = tissuemask.MorphologicalMasker(power=resolution)
+        if not kernel_size:
+            if units == "mpp":
+                masker = tissuemask.MorphologicalMasker(mpp=resolution)
+            elif units == "power":
+                masker = tissuemask.MorphologicalMasker(power=resolution)
+            else:
+                raise MethodNotSupported(
+                    "Specified units not supported for tissue masking."
+                )
         else:
-            raise MethodNotSupported(
-                "Specified units not supported for tissue masking."
-            )
+            masker = tissuemask.MorphologicalMasker(kernel_size=kernel_size)
     else:
         raise MethodNotSupported
 
