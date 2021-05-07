@@ -697,16 +697,14 @@ def test_command_line_patch_predictor():
     """Test for the patch predictor CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
     dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    single_path = list_paths[0]
 
     runner = CliRunner()
     patch_predictor_dir = runner.invoke(
         cli.main,
         [
-            "patch_predictor",
+            "patch-predictor",
             "--predefined_model",
-            "resnet18_kather100K",
+            "resnet18-kather100K",
             "--img_input",
             dir_patches,
             "--batch_size",
@@ -718,12 +716,14 @@ def test_command_line_patch_predictor():
 
     assert patch_predictor_dir.exit_code == 0
 
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    single_path = list_paths[0]
     patch_predictor_single_path = runner.invoke(
         cli.main,
         [
-            "patch_predictor",
+            "patch-predictor",
             "--predefined_model",
-            "resnet18_kather100K",
+            "resnet18-kather100K",
             "--img_input",
             single_path,
             "--batch_size",
