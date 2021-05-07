@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 import pytest
 import torch
+from click.testing import CliRunner
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
@@ -16,6 +17,7 @@ from tiatoolbox.models.dataset import (
     predefined_preproc_func,
 )
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir
+from tiatoolbox import cli
 
 
 def test_create_backbone():

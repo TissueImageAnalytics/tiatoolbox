@@ -350,7 +350,8 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 )
 @click.option(
     "--img_input",
-    help="path to the input directory containing images to process or an individual file.",
+    help="path to the input directory containing images to process or an "
+    "individual file.",
 )
 @click.option(
     "--output_dir", help="output directory where model predictions will be saved."
@@ -376,7 +377,7 @@ def patch_predictor(
     pretrained_weight,
     data_type,
     img_input,
-    output_path,
+    output_dir,
     batch_size,
     file_types,
     return_probs,
