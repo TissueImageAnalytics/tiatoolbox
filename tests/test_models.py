@@ -46,7 +46,7 @@ def test_create_backbone():
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
-       get_model('secret_model', pretrained=False)
+        get_model('secret_model', pretrained=False)
 
 
 def test_predictor_crash():
@@ -59,15 +59,15 @@ def test_predictor_crash():
 
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
-       CNN_Patch_Predictor()
+        CNN_Patch_Predictor()
 
     # provide wrong unknown predefined model
     with pytest.raises(ValueError, match=r"Predefined .* does not exist"):
-       CNN_Patch_Predictor(predefined_model='secret_model')     
+        CNN_Patch_Predictor(predefined_model='secret_model')     
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
-       CNN_Patch_Predictor(predefined_model=123)     
+        CNN_Patch_Predictor(predefined_model=123)     
 
     # model and dummy input
     model = CNN_Patch_Predictor(predefined_model='resnet34-kather100K')
@@ -250,7 +250,7 @@ def test_patch_dataset_crash():
         ValueError,
         match=r"Can not load data of .*",
     ):
-        ds = Patch_Dataset(img_list)
+        _ = Patch_Dataset(img_list)
 
     # preproc func for not defined dataset
     with pytest.raises(
