@@ -701,14 +701,14 @@ def test_command_line_patch_predictor():
     single_path = list_paths[0]
 
     runner = CliRunner()
-    patch_predictor_list_paths = runner.invoke(
+    patch_predictor_dir = runner.invoke(
         cli.main,
         [
             "patch_predictor",
             "--predefined_model",
             "resnet18_kather100K",
             "--img_input",
-            list_paths,
+            dir_patches,
             "--batch_size",
             2,
             "--return_probs",
@@ -716,7 +716,7 @@ def test_command_line_patch_predictor():
         ],
     )
 
-    assert patch_predictor_list_paths.exit_code == 0
+    assert patch_predictor_dir.exit_code == 0
 
     patch_predictor_single_path = runner.invoke(
         cli.main,

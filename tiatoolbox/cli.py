@@ -338,12 +338,12 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 @click.option(
     "--predefined_model",
     help="predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18_kather` "
+    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
-    default="resnet18_kather",
+    default="resnet18-kather100K",
 )
 @click.option(
-    "--predefined_weight",
+    "--pretrained_weight",
     help="path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default=None,
@@ -368,22 +368,22 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory"
+    help="file types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
 def patch_predictor(
     predefined_model,
     pretrained_weight,
-    data_type,
     img_input,
     output_dir,
     batch_size,
-    file_types,
     return_probs,
+    file_types,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     file_types = tuple(file_types.split(", "))
+
     if os.path.isdir(img_input):
         img_files = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
@@ -411,7 +411,6 @@ def patch_predictor(
 
     output = predictor.predict(dataset, return_probs=return_probs)
 
-    # improve the way this is done!
     output_file_path = os.path.join(output_dir, "results.json")
     with open(output_file_path, "w") as handle:
         json.dump(output, handle)
