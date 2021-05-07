@@ -180,11 +180,16 @@ def test_patch_dataset_array_imgs():
     size = (5, 5, 3)
     img = np.random.randint(0, 255, size=size)
     list_imgs = [img, img, img]
+    label_list = [1, 2, 3]
     array_imgs = np.array(list_imgs)
+
+    # test different setter for label
+    dataset = Patch_Dataset(array_imgs, label_list=label_list, return_labels=True)
+    assert dataset[2][1] == 3
+    dataset = Patch_Dataset(array_imgs, label_list=None, return_labels=True)
+    assert np.isnan(dataset[2][1]), dataset[2][1]
+
     dataset = Patch_Dataset(array_imgs)
-
-    dataset.preproc_func = lambda x: x
-
     dataloader = torch.utils.data.DataLoader(
         dataset,
         num_workers=0,
@@ -431,7 +436,14 @@ def test_patch_predictor_api3():
 
     # API 3
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
-    model.set_preproc_func(lambda x : x)  # do this for coverage
+    
+    # coverage setter check
+    model.set_preproc_func(lambda x : x-1)  # do this for coverage
+    assert model.get_preproc_func()(1) == 0
+    # coverage setter check
+    model.set_preproc_func(None)  # do this for coverage
+    assert model.get_preproc_func()(1) == 1
+
     predictor = CNN_Patch_Predictor(model=model, batch_size=1, verbose=False)
     # don't run test on GPU
     output = predictor.predict(
