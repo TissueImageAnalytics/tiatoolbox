@@ -241,6 +241,7 @@ class CNN_Patch_Predictor:
             num_workers=self.nr_loader_worker,
             batch_size=self.batch_size,
             drop_last=False,
+            shuffle=False,
         )
 
         pbar = tqdm.tqdm(
