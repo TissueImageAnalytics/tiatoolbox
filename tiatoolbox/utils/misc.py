@@ -64,7 +64,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
         file_types (str or tuple(str)): File types (extensions) to be searched
 
     Returns:
-        list: File paths as a python list
+        list: File paths as a python list. It has been sorted to ensure
+            same ordering across platforms.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -84,7 +85,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     files_grabbed = []
     for files in file_types:
         files_grabbed.extend(input_path.glob(files))
-
+    files_grabbed.sort() # ensure same ordering
     return list(files_grabbed)
 
 
