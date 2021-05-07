@@ -331,8 +331,7 @@ def test_patch_predictor_api1():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -380,8 +379,7 @@ def test_patch_predictor_api2():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
     # remove generated data - just a test!
@@ -436,8 +434,7 @@ def test_patch_predictor_alexnet_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -468,8 +465,7 @@ def test_patch_predictor_resnet34_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -500,8 +496,7 @@ def test_patch_predictor_resnet50_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -532,8 +527,7 @@ def test_patch_predictor_resnet101_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -564,8 +558,7 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -596,8 +589,7 @@ def test_patch_predictor_resnext101_32x8d_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -628,8 +620,7 @@ def test_patch_predictor_wide_resnet50_2_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -660,8 +651,7 @@ def test_patch_predictor_wide_resnet101_2_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
 
 
@@ -692,6 +682,53 @@ def test_patch_predictor_densenet121_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8
-            and preds[idx] == pred_check[idx]
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
         )
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_command_line_patch_predictor():
+    """Test for the patch predictor CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    single_path = list_paths[0]
+
+    runner = CliRunner()
+    patch_predictor_list_paths = runner.invoke(
+        cli.main,
+        [
+            "patch_predictor",
+            "--predefined_model",
+            "resnet18_kather100K",
+            "--img_input",
+            list_paths,
+            "--batch_size",
+            2,
+            "--return_probs",
+            False,
+        ],
+    )
+
+    assert patch_predictor_list_paths.exit_code == 0
+
+    patch_predictor_single_path = runner.invoke(
+        cli.main,
+        [
+            "patch_predictor",
+            "--predefined_model",
+            "resnet18_kather100K",
+            "--img_input",
+            single_path,
+            "--batch_size",
+            2,
+            "--return_probs",
+            False,
+        ],
+    )
+
+    assert patch_predictor_single_path.exit_code == 0

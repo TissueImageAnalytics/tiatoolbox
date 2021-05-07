@@ -349,7 +349,8 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
     default=None,
 )
 @click.option(
-    "--input_dir", help="path to the input directory containing images to process"
+    "--img_input",
+    help="path to the input directory containing images to process or an individual file.",
 )
 @click.option(
     "--output_dir", help="output directory where model predictions will be saved."
@@ -374,27 +375,30 @@ def patch_predictor(
     predefined_model,
     pretrained_weight,
     data_type,
-    input_dir,
-    output_dir,
+    img_input,
+    output_path,
     batch_size,
     file_types,
     return_probs,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     file_types = tuple(file_types.split(", "))
-    if os.path.isdir(input_dir):
+    if os.path.isdir(img_input):
         img_files = utils.misc.grab_files_from_dir(
-            input_path=input_dir, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(input_dir):
+    elif os.path.isfile(img_input):
         img_files = [
-            input_dir,
+            img_input,
         ]
     else:
         raise FileNotFoundError
 
     if predefined_model not in __pretrained_model:
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+
+    if len(img_input) < batch_size:
+        batch_size = len(img_input)
 
     dataset = Patch_Dataset(img_files)
 
