@@ -735,6 +735,7 @@ def test_command_line_patch_predictor():
 
     assert patch_predictor_single_path.exit_code == 0
 
+
 def test_command_line_patch_predictor_crash():
     """Test for the patch predictor CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
