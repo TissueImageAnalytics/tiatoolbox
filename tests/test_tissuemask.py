@@ -1,9 +1,13 @@
 import numpy as np
 import pytest
 import cv2
+import pathlib
+from click.testing import CliRunner
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.tools import tissuemask
+from tiatoolbox import cli
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 
 # -------------------------------------------------------------------------------------
@@ -201,3 +205,43 @@ def test_morphological_min_region_size():
     expected[1:4, 1:4] = 1
 
     assert np.all(output[0] == expected)
+
+
+def test_cli_tissuemask_method_not_supported(_sample_svs):
+    """Test method not supported for the tissue masking CLI."""
+    source_img = pathlib.Path(_sample_svs)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Test",
+        ],
+    )
+
+    assert tissue_mask_result.output == ""
+    assert tissue_mask_result.exit_code == 1
+    assert isinstance(tissue_mask_result.exception, MethodNotSupported)
+
+
+def test_cli_tissue_mask_file_not_found_error(_source_image):
+    """Test file not found error for the tissue masking CLI."""
+    source_img = pathlib.Path(_source_image)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img)[:-1],
+            "--method",
+            "Otsu",
+        ],
+    )
+
+    assert tissue_mask_result.output == ""
+    assert tissue_mask_result.exit_code == 1
+    assert isinstance(tissue_mask_result.exception, FileNotFoundError)
