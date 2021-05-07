@@ -734,3 +734,36 @@ def test_command_line_patch_predictor():
     )
 
     assert patch_predictor_single_path.exit_code == 0
+
+def test_command_line_patch_predictor_crash():
+    """Test for the patch predictor CLI."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    img_path = file_parent_dir.joinpath('data/sample_patches/kather1_unknown.tif')
+
+    # test single image not exist
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--predefined_model",
+            "resnet18-kather100K",
+            "--img_input",
+            img_path,
+        ],
+    )
+    assert result.exit_code != 0
+
+    # test not predefined model
+    img_path = file_parent_dir.joinpath('data/sample_patches/kather1.tif')
+    result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--predefined_model",
+            "secret_model",
+            "--img_input",
+            img_path
+        ],
+    )
+    assert result.exit_code != 0
