@@ -326,14 +326,15 @@ def test_patch_predictor_api1():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9999717473983765]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
+
 
 def test_patch_predictor_api2():
     """Test for patch predictor API 2. Test with resnet18 on Kather 100K dataset."""
@@ -374,12 +375,12 @@ def test_patch_predictor_api2():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9999717473983765]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -430,12 +431,12 @@ def test_patch_predictor_alexnet_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9998185038566589]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -462,12 +463,12 @@ def test_patch_predictor_resnet34_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9991286396980286]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -494,12 +495,12 @@ def test_patch_predictor_resnet50_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9969022870063782]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -526,12 +527,12 @@ def test_patch_predictor_resnet101_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9999957084655762]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -558,12 +559,12 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
     assert len(probs) == len(preds)
     assert len(preds) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9999779462814331]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -590,12 +591,12 @@ def test_patch_predictor_resnext101_32x8d_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9999345541000366]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -622,12 +623,12 @@ def test_patch_predictor_wide_resnet50_2_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.9999997615814209]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -654,12 +655,12 @@ def test_patch_predictor_wide_resnet101_2_kather100K():
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9998136162757874]
+    prob_check = [1.0, 0.999420166015625]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
 
@@ -691,6 +692,6 @@ def test_patch_predictor_densenet121_kather100K():
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
         assert (
-            np.abs(prob_max - prob_check[idx]) <= 1e-8 
+            np.abs(prob_max - prob_check[idx]) <= 1e-8
             and preds[idx] == pred_check[idx]
         )
