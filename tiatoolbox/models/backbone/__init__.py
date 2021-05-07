@@ -60,10 +60,9 @@ def get_model(backbone, pretrained=True, **kwargs):
         raise ValueError("Backbone `%s` is not supported." % backbone)
 
     creator = backbone_dict[backbone]
-    model = creator(pretrained=pretrained, **kwargs)  # ! abit too hacky
+    model = creator(pretrained=pretrained, **kwargs)
 
     # unroll all the definition and strip off the final GAP and FCN
-    # different model will have diffent form, sample resnet and densenet atm
     if "resnet" in backbone or "resnext" in backbone:
         feat_extract = nn.Sequential(*list(model.children())[:-2])
     elif "densenet" in backbone:

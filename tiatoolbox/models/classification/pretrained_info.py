@@ -58,7 +58,15 @@ __pretrained_model = {
         "pretrained": os.path.join(models_root, "wide_resnet50_2-kather100K-pc.pth"),
         "nr_classes": 9,
     },
+    "wide_resnet101_2-kather100K": {
+        "pretrained": os.path.join(models_root, "wide_resnet101_2-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "densenet121-kather100K": {
+        "pretrained": os.path.join(models_root, "densenet121-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
 }
 
 # to ensure easy matching
-__pretrained_model = {k.lower() : v for k, v in __pretrained_model.items()}
+__pretrained_model = {k.lower(): v for k, v in __pretrained_model.items()}

@@ -9,10 +9,12 @@ import torch
 from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification.abc import Model_Base
-from tiatoolbox.models.classification import (CNN_Patch_Model,
-                                              CNN_Patch_Predictor)
-from tiatoolbox.models.dataset import (Kather_Patch_Dataset, Patch_Dataset,
-                                       predefined_preproc_func)
+from tiatoolbox.models.classification import CNN_Patch_Model, CNN_Patch_Predictor
+from tiatoolbox.models.dataset import (
+    Kather_Patch_Dataset,
+    Patch_Dataset,
+    predefined_preproc_func,
+)
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir
 
 
@@ -36,18 +38,18 @@ def test_create_backbone():
         # "googlenet",  # extremely slow, so just ignore it atm
         "mobilenet_v2",
         "mobilenet_v3_large",
-        "mobilenet_v3_small"
+        "mobilenet_v3_small",
     ]
     for backbone in backbone_list:
         # check creation, so no downloading pretrain to save time
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
-            assert False, 'Model %s failed.' % backbone
+            assert False, "Model %s failed." % backbone
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
-        get_model('secret_model', pretrained=False)
+        get_model("secret_model", pretrained=False)
 
 
 def test_predictor_crash():
@@ -64,14 +66,14 @@ def test_predictor_crash():
 
     # provide wrong unknown predefined model
     with pytest.raises(ValueError, match=r"Predefined .* does not exist"):
-        CNN_Patch_Predictor(predefined_model='secret_model')
+        CNN_Patch_Predictor(predefined_model="secret_model")
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
         CNN_Patch_Predictor(predefined_model=123)
 
     # model and dummy input
-    model = CNN_Patch_Predictor(predefined_model='resnet34-kather100K')
+    model = CNN_Patch_Predictor(predefined_model="resnet34-kather100K")
     img_list = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 4, 3)),
@@ -186,10 +188,9 @@ def test_patch_dataset_crash():
     # all examples below should fail when input to Patch_Dataset
 
     # not supported input type
-    img_list = {'a' : np.random.randint(0, 255, (4, 4, 4))}
+    img_list = {"a": np.random.randint(0, 255, (4, 4, 4))}
     with pytest.raises(
-        ValueError, 
-        match=r".*Input must be either a list/array of images.*"
+        ValueError, match=r".*Input must be either a list/array of images.*"
     ):
         _ = Patch_Dataset(img_list)
 
@@ -217,8 +218,7 @@ def test_patch_dataset_crash():
         np.random.randint(0, 255, (4, 4)),
     ]
     with pytest.raises(
-        ValueError, 
-        match="Each sample must be an array of the form HWC."
+        ValueError, match="Each sample must be an array of the form HWC."
     ):
         _ = Patch_Dataset(img_list)
 
@@ -254,13 +254,14 @@ def test_patch_dataset_crash():
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     os.makedirs(save_dir_path)
-    torch.save({'a' : 'a'}, os.path.join(save_dir_path, 'sample1.tar'))
-    np.save(os.path.join(save_dir_path, 'sample2.npy'), 
-            np.random.randint(0, 255, (4, 4, 3)))
+    torch.save({"a": "a"}, os.path.join(save_dir_path, "sample1.tar"))
+    np.save(
+        os.path.join(save_dir_path, "sample2.npy"), np.random.randint(0, 255, (4, 4, 3))
+    )
 
     img_list = [
-        os.path.join(save_dir_path, 'sample1.tar'),
-        os.path.join(save_dir_path, 'sample2.npy')
+        os.path.join(save_dir_path, "sample1.tar"),
+        os.path.join(save_dir_path, "sample2.npy"),
     ]
     with pytest.raises(
         ValueError,
@@ -274,7 +275,7 @@ def test_patch_dataset_crash():
         ValueError,
         match=r".* preprocessing .* does not exist.",
     ):
-        predefined_preproc_func('secret_dataset')
+        predefined_preproc_func("secret_dataset")
 
 
 def test_kather_patch_dataset():
@@ -322,12 +323,18 @@ def test_patch_predictor_api1():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9999717473983765, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543198108123
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_api2():
@@ -359,15 +366,24 @@ def test_patch_predictor_api2():
         batch_size=1,
     )
     # don't run test on GPU
-    output = predictor.predict(dataset, return_probs=True, on_gpu=False)
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
     probs = output["probs"]
     preds = output["preds"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [0.9999717473983765, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543198108123
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
     # remove generated data - just a test!
     shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -384,16 +400,25 @@ def test_patch_predictor_api3():
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
     predictor = CNN_Patch_Predictor(model=model, batch_size=1)
     # don't run test on GPU
-    output = predictor.predict(dataset, return_probs=True, on_gpu=False)
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
 
     probs = output["probs"]
     preds = output["preds"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [0.9999717473983765, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543198108123
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_alexnet_kather100K():
@@ -413,12 +438,18 @@ def test_patch_predictor_alexnet_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9998185038566589, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543209876543
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_resnet34_kather100K():
@@ -440,12 +471,18 @@ def test_patch_predictor_resnet34_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9991286396980286, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543209876543
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_resnet50_kather100K():
@@ -467,12 +504,18 @@ def test_patch_predictor_resnet50_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9969022870063782, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543209875475
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_resnet101_kather100K():
@@ -494,12 +537,18 @@ def test_patch_predictor_resnet101_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9999957084655762, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543207437691
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_resnext50_32x4d_kather100K():
@@ -521,11 +570,18 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-    # placeholder
     assert len(probs) == len(preds)
     assert len(preds) == len(labels)
+
+    prob_check = [0.9999779462814331, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543203987488
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_resnext101_32x8d_kather100K():
@@ -547,12 +603,18 @@ def test_patch_predictor_resnext101_32x8d_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9999345541000366, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543146884276
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
 
 
 def test_patch_predictor_wide_resnet50_2_kather100K():
@@ -574,9 +636,81 @@ def test_patch_predictor_wide_resnet50_2_kather100K():
     preds = output["preds"]
     labels = output["labels"]
 
-    # ensure that the raw output is correct
-    # ! @SIMON how to assert check ^^^^ this ?
-
-    # placeholder
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
+
+    prob_check = [0.9999997615814209, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.0987654320987634
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
+
+
+def test_patch_predictor_wide_resnet101_2_kather100K():
+    """Test for patch predictor with wide_resnet101_2 on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="wide_resnet101_2-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [0.999420166015625, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543102693902
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8
+
+
+def test_patch_predictor_densenet121_kather100K():
+    """Test for patch predictor with densenet121 on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="densenet121-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [0.9998136162757874, 1.0]
+    pred_check = [8, 5]
+    var_check = 0.09876543157105172
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+    assert np.var(probs_) - var_check <= 1e-8

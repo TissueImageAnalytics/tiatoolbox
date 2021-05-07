@@ -152,8 +152,21 @@ class CNN_Patch_Predictor:
                 Default is `None`. If provided, `pretrained_model` argument is ignored.
 
             predefined_model (str): name of the existing models support by tiatoolbox
-                for processing the data. Currently support:
-                - resnet18_kather : resnet18 backbone trained on Kather dataset.
+                for processing the data. Currently supports:
+                - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
+                - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
+                - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
+                - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
+                - resnet101-kather100K: resnet101 backbone trained on Kather 100K dataset.
+                - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
+                    100K dataset.
+                - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on Kather
+                    100K dataset.
+                - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on Kather
+                    100K dataset.
+                - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on Kather
+                    100K dataset.
+                - densenet121-kather100K: resnet101 backbone trained on Kather 100K dataset.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
@@ -175,6 +188,10 @@ class CNN_Patch_Predictor:
 
         if model is not None:
             self.model = model
+            if pretrained_weight is not None:
+                # always load to CPU
+                saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
+                self.model.load_state_dict(saved_state_dict, strict=True)
         else:
             self.model = get_predefined_model(predefined_model, pretrained_weight)
 
@@ -294,6 +311,9 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
                 100K dataset.
             - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on Kather
                 100K dataset.
+            - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on Kather
+                100K dataset.
+            - densenet121-kather100K: resnet101 backbone trained on Kather 100K dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the
