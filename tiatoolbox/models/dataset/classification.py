@@ -109,7 +109,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         elif path.suffix in (".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             patch = imread(path)
         else:
-            raise ValueError('Can not load data of `.%s`' % path.suffix)
+            raise ValueError('Can not load data of `%s`' % path.suffix)
         return patch
 
     def set_preproc_func(self, func):
@@ -213,6 +213,11 @@ class Patch_Dataset(__ABC_Dataset):
             else:
                 shape_list = [v.shape for v in img_list]
                 self.data_is_npy_alike = True
+
+            if any(len(v) != 3 for v in shape_list):
+                raise ValueError(
+                    "Each sample must be an array of the form HWC."
+                )
 
             max_shape = np.max(shape_list, axis=0)
             # how will this behave for mixed channel ?
