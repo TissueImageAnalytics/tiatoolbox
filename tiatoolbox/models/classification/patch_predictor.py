@@ -129,7 +129,7 @@ class CNN_Patch_Predictor:
         verbose (bool): whether to output logging information.
 
     Usage:
-        >>> dataset = Kather_Patch_Dataset()
+        >>> dataset = Patch_Dataset()
         >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18-kather100K")
         >>> output = predictor.predict(dataset)
 
@@ -148,8 +148,9 @@ class CNN_Patch_Predictor:
         arguments, it will override the backbone.
 
         Args:
-            model (nn.Module): use externally defined PyTorch model for prediction.
-                Default is `None`. If provided, `pretrained_model` argument is ignored.
+            model (nn.Module): use externally defined PyTorch model for prediction with.
+                weights already loaded. Default is `None`. If provided,
+                `pretrained_model` argument is ignored.
 
             predefined_model (str): name of the existing models support by tiatoolbox
                 for processing the data. Currently supports:
@@ -190,10 +191,6 @@ class CNN_Patch_Predictor:
 
         if model is not None:
             self.model = model
-            if pretrained_weight is not None:
-                # always load to CPU
-                saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
-                self.model.load_state_dict(saved_state_dict, strict=True)
         else:
             self.model = get_predefined_model(predefined_model, pretrained_weight)
 
