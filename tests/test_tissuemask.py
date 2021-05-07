@@ -207,6 +207,43 @@ def test_morphological_min_region_size():
     assert np.all(output[0] == expected)
 
 
+def test_cli_tissuemask_Otsu(_sample_svs):
+    """Test Otsu tissue masking with default input CLI."""
+    source_img = pathlib.Path(_sample_svs)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Otsu",
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+
+    output_path = str(pathlib.Path(_sample_svs.dirname).joinpath("tissue_mask"))
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Otsu",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+
+
 def test_cli_tissuemask_method_not_supported(_sample_svs):
     """Test method not supported for the tissue masking CLI."""
     source_img = pathlib.Path(_sample_svs)

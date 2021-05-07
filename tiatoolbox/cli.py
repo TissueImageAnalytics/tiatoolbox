@@ -379,6 +379,7 @@ def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_ty
     """Generate tissue mask for a WSI."""
 
     file_types = tuple(file_types.split(", "))
+    output_path = pathlib.Path(output_path)
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=wsi_input, file_types=file_types
@@ -390,7 +391,7 @@ def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_ty
     else:
         raise FileNotFoundError
 
-    if mode == "save":
+    if mode == "save" and not output_path.is_dir():
         os.makedirs(output_path)
 
     if method == "Otsu":
@@ -417,7 +418,10 @@ def tissue_mask(wsi_input, output_path, method, resolution, units, mode, file_ty
             im_region.show()
 
         if mode == "save":
-            utils.misc.imwrite(output_path, mask)
+            utils.misc.imwrite(
+                output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
+                mask[0].astype(np.uint8) * 255,
+            )
 
 
 if __name__ == "__main__":
