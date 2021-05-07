@@ -360,7 +360,6 @@ def stainnorm(
 @click.option(
     "--units",
     default="power",
-    type=click.Choice(["mpp", "power"], case_sensitive=False),
     help="resolution units, default=power",
 )
 @click.option(

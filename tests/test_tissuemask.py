@@ -244,6 +244,30 @@ def test_cli_tissue_mask_Otsu(_sample_svs):
     assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
 
 
+def test_cli_tissue_mask_Otsu_dir(_sample_all_wsis):
+    """Test Otsu tissue masking for multiple files with default input CLI."""
+    source_img = pathlib.Path(_sample_all_wsis)
+    runner = CliRunner()
+    output_path = str(pathlib.Path(source_img).joinpath("tissue_mask"))
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Otsu",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath("test1.png").is_file()
+
+
 def test_cli_tissue_mask_Morphological(_sample_svs):
     """Test Morphological tissue masking with default input CLI."""
     source_img = pathlib.Path(_sample_svs)
@@ -357,6 +381,25 @@ def test_cli_tissue_mask_method_not_supported(_sample_svs):
             "--wsi_input",
             str(source_img),
             "--method",
+            "Test",
+        ],
+    )
+
+    assert tissue_mask_result.output == ""
+    assert tissue_mask_result.exit_code == 1
+    assert isinstance(tissue_mask_result.exception, MethodNotSupported)
+
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+            "--resolution",
+            32,
+            "--units",
             "Test",
         ],
     )
