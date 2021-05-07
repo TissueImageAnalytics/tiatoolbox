@@ -327,7 +327,8 @@ def stainnorm(
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))
 
-    os.makedirs(output_path)
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
 
     for curr_file in files_all:
         basename = os.path.basename(curr_file)
