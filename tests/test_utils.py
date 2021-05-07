@@ -758,6 +758,19 @@ def test_download_unzip_data():
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
+def test_download_data():
+    """Test download and unzip data from utils.misc."""
+    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
+    misc.download_data(url, save_zip_path)  # to test skip download
+
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+
+
 def test_parse_cv2_interpolaton():
     """Test parsing interpolation modes for cv2."""
     cases = [str.upper, str.lower, str.capitalize]
