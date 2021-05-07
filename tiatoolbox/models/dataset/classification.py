@@ -303,7 +303,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
 
         # what will happen if contents modified / corrupt ?
         if not os.path.exists(save_dir_path):
-            print("Dataset does not exists at %s" % save_dir_path)
+            raise ValueError("Dataset does not exists at %s" % save_dir_path)
 
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):
