@@ -309,7 +309,6 @@ def test_kather_patch_dataset():
         match=r".*not exist.*",
     ):
         _ = Kather_Patch_Dataset(save_dir_path='unknown_place')
-    
     # save to temporary location
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
