@@ -313,7 +313,7 @@ def test_kather_patch_dataset():
         ValueError,
         match=r".*not exist.*",
     ):
-        _ = Kather_Patch_Dataset(save_dir_path='unknown_place')
+        _ = Kather_Patch_Dataset(save_dir_path="unknown_place")
     # save to temporary location
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
@@ -326,9 +326,7 @@ def test_kather_patch_dataset():
     save_zip_path = os.path.join(save_dir_path, "Kather.zip")
     download_data(url, save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
-    extracted_dir = os.path.join(
-        save_dir_path, "Kather_texture_2016_image_tiles_5000/"
-    )
+    extracted_dir = os.path.join(save_dir_path, "Kather_texture_2016_image_tiles_5000/")
     dataset = Kather_Patch_Dataset(save_dir_path=extracted_dir, return_labels=True)
 
     dataloader = torch.utils.data.DataLoader(
@@ -438,7 +436,7 @@ def test_patch_predictor_api3():
     model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
 
     # coverage setter check
-    model.set_preproc_func(lambda x : x-1)  # do this for coverage
+    model.set_preproc_func(lambda x: x - 1)  # do this for coverage
     assert model.get_preproc_func()(1) == 0
     # coverage setter check
     model.set_preproc_func(None)  # do this for coverage
@@ -735,6 +733,192 @@ def test_patch_predictor_densenet121_kather100K():
         )
 
 
+def test_patch_predictor_densenet161_kather100K():
+    """Test for patch predictor with densenet161 on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="densenet161-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.9999997615814209]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
+def test_patch_predictor_densenet169_kather100K():
+    """Test for patch predictor with densenet169 on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="densenet169-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.9999773502349854]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
+def test_patch_predictor_densenet201_kather100K():
+    """Test for patch predictor with densenet201 on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="densenet201-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.9999812841415405]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
+def test_patch_predictor_mobilenet_v2_kather100K():
+    """Test for patch predictor with mobilenet_v2 on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="mobilenet_v2-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.9998366832733154]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
+def test_patch_predictor_mobilenet_v3_large_kather100K():
+    """Test for patch predictor with mobilenet_v3_large on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="mobilenet_v3_large-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.9999945163726807]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
+def test_patch_predictor_mobilenet_v3_small_kather100K():
+    """Test for patch predictor with mobilenet_v3_small on Kather 100K dataset."""
+    file_parent_dir = pathlib.Path(__file__).parent
+    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
+    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
+    dataset = Patch_Dataset(list_paths)
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(
+        predefined_model="mobilenet_v3_small-kather100K", batch_size=1
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.9999963045120239]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
@@ -786,7 +970,7 @@ def test_command_line_patch_predictor():
 def test_command_line_patch_predictor_crash():
     """Test for the patch predictor CLI."""
     file_parent_dir = pathlib.Path(__file__).parent
-    img_path = file_parent_dir.joinpath('data/sample_patches/kather1_unknown.tif')
+    img_path = file_parent_dir.joinpath("data/sample_patches/kather1_unknown.tif")
 
     # test single image not exist
     runner = CliRunner()
@@ -803,7 +987,7 @@ def test_command_line_patch_predictor_crash():
     assert result.exit_code != 0
 
     # test not predefined model
-    img_path = file_parent_dir.joinpath('data/sample_patches/kather1.tif')
+    img_path = file_parent_dir.joinpath("data/sample_patches/kather1.tif")
     result = runner.invoke(
         cli.main,
         [
@@ -811,7 +995,7 @@ def test_command_line_patch_predictor_crash():
             "--predefined_model",
             "secret_model",
             "--img_input",
-            img_path
+            img_path,
         ],
     )
     assert result.exit_code != 0

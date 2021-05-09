@@ -66,6 +66,30 @@ __pretrained_model = {
         "pretrained": os.path.join(models_root, "densenet121-kather100K-pc.pth"),
         "nr_classes": 9,
     },
+    "densenet161-kather100K": {
+        "pretrained": os.path.join(models_root, "densenet161-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "densenet169-kather100K": {
+        "pretrained": os.path.join(models_root, "densenet169-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "densenet201-kather100K": {
+        "pretrained": os.path.join(models_root, "densenet201-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "mobilenet_v2-kather100K": {
+        "pretrained": os.path.join(models_root, "mobilenet_v2-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "mobilenet_v3_large-kather100K": {
+        "pretrained": os.path.join(models_root, "mobilenet_v3_large-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
+    "mobilenet_v3_small-kather100K": {
+        "pretrained": os.path.join(models_root, "mobilenet_v3_small-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
 }
 
 # to ensure easy matching
