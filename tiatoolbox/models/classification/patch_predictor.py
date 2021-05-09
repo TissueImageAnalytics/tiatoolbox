@@ -158,7 +158,7 @@ class CNN_Patch_Predictor:
                 - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
                 - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
                 - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
-                - resnet101-kather100K: resnet101 backbone trained on 
+                - resnet101-kather100K: resnet101 backbone trained on
                     Kather 100K dataset.
                 - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on
                     Kather 100K dataset.
@@ -172,13 +172,13 @@ class CNN_Patch_Predictor:
                     Kather 100K dataset.
                 - densenet161-kather100K: densenet161 backbone trained on Kather
                     100K dataset.
-                - densenet169-kather100K: densenet169 backbone trained on 
+                - densenet169-kather100K: densenet169 backbone trained on
                     Kather 100K dataset.
-                - densenet201-kather100K: densenet201 backbone trained on 
+                - densenet201-kather100K: densenet201 backbone trained on
                     Kather 100K dataset.
                 - mobilenet_v2-kather100K: mobilenet_v2 backbone trained on
                     Kather 100K dataset.
-                - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on 
+                - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on
                     Kather 100K dataset.
                 - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
                     Kather 100K dataset.
