@@ -31,7 +31,8 @@ from tiatoolbox.models.dataset.classification import Patch_Dataset
 import sys
 import click
 import os
-import json
+
+# import json
 import pathlib
 from PIL import Image
 
@@ -338,21 +339,25 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 @click.option(
     "--predefined_model",
     help="predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18_kather` "
+    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
-    default="resnet18_kather",
+    default="resnet18-kather100K",
 )
 @click.option(
-    "--predefined_weight",
+    "--pretrained_weight",
     help="path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default=None,
 )
 @click.option(
-    "--input_dir", help="path to the input directory containing images to process"
+    "--img_input",
+    help="path to the input directory containing images to process or an "
+    "individual file.",
 )
 @click.option(
-    "--output_dir", help="output directory where model predictions will be saved."
+    "--output_path",
+    help="output directory where model predictions will be saved.",
+    default="patch_prediction",
 )
 @click.option(
     "--batch_size",
@@ -366,35 +371,39 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory"
+    help="file types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
 def patch_predictor(
     predefined_model,
     pretrained_weight,
-    data_type,
-    input_dir,
-    output_dir,
+    img_input,
+    output_path,
     batch_size,
-    file_types,
     return_probs,
+    file_types,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     file_types = tuple(file_types.split(", "))
-    if os.path.isdir(input_dir):
+    output_path = pathlib.Path(output_path)
+
+    if os.path.isdir(img_input):
         img_files = utils.misc.grab_files_from_dir(
-            input_path=input_dir, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(input_dir):
+    elif os.path.isfile(img_input):
         img_files = [
-            input_dir,
+            img_input,
         ]
     else:
         raise FileNotFoundError
 
-    if predefined_model not in __pretrained_model:
+    if predefined_model.lower() not in __pretrained_model:
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+
+    if len(img_files) < batch_size:
+        batch_size = len(img_files)
 
     dataset = Patch_Dataset(img_files)
 
@@ -404,12 +413,15 @@ def patch_predictor(
         batch_size=batch_size,
     )
 
-    output = predictor.predict(dataset, return_probs=return_probs)
+    output = predictor.predict(dataset, return_probs=return_probs, on_gpu=False)
 
-    # improve the way this is done!
-    output_file_path = os.path.join(output_dir, "results.json")
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
+    output_file_path = os.path.join(output_path, "results.json")
+    if not output_path.is_dir():
+        os.makedirs(output_path)
+    print(output)
+    print(output_file_path)
+    # with open(output_file_path, "w") as handle:
+    #     json.dump(output, handle)
 
 
 if __name__ == "__main__":

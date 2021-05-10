@@ -744,6 +744,9 @@ def test_download_unzip_data():
     os.makedirs(save_dir_path)
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
     misc.download_data(url, save_zip_path)
+    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
+    misc.unzip_data(save_zip_path, save_dir_path, remove_zip=False)  # not remove
+    assert os.path.exists(save_zip_path)
     misc.unzip_data(save_zip_path, save_dir_path)
 
     extracted_path = os.path.join(save_dir_path, "test_directory")
@@ -751,6 +754,19 @@ def test_download_unzip_data():
     extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
     extracted_dirs.sort()  # ensure same ordering
     assert extracted_dirs == ["dir1", "dir2", "dir3"]
+
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+
+
+def test_download_data():
+    """Test download and unzip data from utils.misc."""
+    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
+    misc.download_data(url, save_zip_path)  # to test skip download
 
     shutil.rmtree(save_dir_path, ignore_errors=True)
 

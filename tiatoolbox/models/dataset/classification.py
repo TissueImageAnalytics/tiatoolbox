@@ -253,7 +253,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
     """Define a dataset class specifically for the Kather dataset, obtain from [URL].
 
     Attributes:
-        root_dir (str or None): path to directory containing the Kather dataset,
+        save_dir_path (str or None): path to directory containing the Kather dataset,
                  assumed to be as is after extracted. If the argument is `None`,
                  the dataset will be downloaded and extracted into the
                  'run_dir/download/Kather'.
@@ -265,15 +265,11 @@ class Kather_Patch_Dataset(__ABC_Dataset):
 
     def __init__(
         self,
-        root_dir=None,
         save_dir_path=None,
         return_labels=False,
         preproc_func=None,
     ):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
-
-        if save_dir_path is None:
-            save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "dataset/")
 
         self.data_is_npy_alike = False
 
@@ -288,7 +284,8 @@ class Kather_Patch_Dataset(__ABC_Dataset):
             "08_EMPTY",
         ]
 
-        if root_dir is None:
+        if save_dir_path is None:
+            save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "dataset/")
             if not os.path.exists(save_dir_path):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
                 url = (
@@ -297,18 +294,17 @@ class Kather_Patch_Dataset(__ABC_Dataset):
                 )
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
-            root_dir = os.path.join(
+            save_dir_path = os.path.join(
                 save_dir_path, "Kather_texture_2016_image_tiles_5000/"
             )
+        elif not os.path.exists(save_dir_path):
+            raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
 
-        # what will happen if contents modified / corrupt ?
-        if not os.path.exists(save_dir_path):
-            print("Dataset does not exists at %s" % save_dir_path)
-
+        # what will happen if downloaded data get corrupted?
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):
             path_list = grab_files_from_dir(
-                "%s/%s/" % (root_dir, label_code), file_types="*.tif"
+                "%s/%s/" % (save_dir_path, label_code), file_types="*.tif"
             )
             path_list = [[v, label_id] for v in path_list]
             path_list.sort()
