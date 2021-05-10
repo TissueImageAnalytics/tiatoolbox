@@ -1,6 +1,29 @@
 History
 =======
 
+0.6.0 (2021-05-10)
+------------------
+### Major and Feature Improvements
+- Add `TissueMasker` class to allow tissue masking using `Otsu` and `Morphological` processing.
+- Add helper / convenience method to WSIReader(s) to produce a mask. Add readre object to allow reading a mask conveniently as if it were a WSI i.e., use same location and resolution to read tissue area and mask area.
+- Add `PointsPatchExtractor` returns patches which can be used by classification models. Takes `csv`, `json` or `pd.DataFrame` and returns patches corresponding to each pixel location.
+- Add feature `FixedWindowPatchExtractor` to run sliding window deep learning algorithms.
+- Add example notebooks for patch extraction and tissue masking.
+- Update readme with improved instructions to use the toolbox. Make the README file somewhat more comprehensible to beginners, particularly those with not much background or experience.
+
+### Changes to API
+- `tiatoolbox.dataloader` replaced by `tiatoolbox.wsicore`
+
+### Bug Fixes and Other Changes
+- Minor bug fixes
+
+### Development related changes
+- Improve unit test coverage.
+- Move test data to tiatoolbox server.
+
+
+------------------
+
 0.5.2 (2021-03-12)
 ------------------
 ### Bug Fixes and Other Changes
