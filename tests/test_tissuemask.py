@@ -1,9 +1,13 @@
 import numpy as np
 import pytest
 import cv2
+import pathlib
+from click.testing import CliRunner
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.tools import tissuemask
+from tiatoolbox import cli
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 
 # -------------------------------------------------------------------------------------
@@ -201,3 +205,225 @@ def test_morphological_min_region_size():
     expected[1:4, 1:4] = 1
 
     assert np.all(output[0] == expected)
+
+
+def test_cli_tissue_mask_Otsu(_sample_svs):
+    """Test Otsu tissue masking with default input CLI."""
+    source_img = pathlib.Path(_sample_svs)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Otsu",
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+
+    output_path = str(pathlib.Path(_sample_svs.dirname).joinpath("tissue_mask"))
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Otsu",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+
+
+def test_cli_tissue_mask_Otsu_dir(_sample_all_wsis):
+    """Test Otsu tissue masking for multiple files with default input CLI."""
+    source_img = pathlib.Path(_sample_all_wsis)
+    runner = CliRunner()
+    output_path = str(pathlib.Path(source_img).joinpath("tissue_mask"))
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Otsu",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath("test1.png").is_file()
+
+
+def test_cli_tissue_mask_Morphological(_sample_svs):
+    """Test Morphological tissue masking with default input CLI."""
+    source_img = pathlib.Path(_sample_svs)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+
+    output_path = str(pathlib.Path(_sample_svs.dirname).joinpath("tissue_mask"))
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+            "--resolution",
+            1.25,
+            "--units",
+            "power",
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+            "--resolution",
+            32,
+            "--units",
+            "mpp",
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+            "--mode",
+            "save",
+            "--output_path",
+            output_path,
+            "--kernel_size",
+            "1",
+            "1",
+        ],
+    )
+
+    assert tissue_mask_result.exit_code == 0
+    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+
+
+def test_cli_tissue_mask_method_not_supported(_sample_svs):
+    """Test method not supported for the tissue masking CLI."""
+    source_img = pathlib.Path(_sample_svs)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Test",
+        ],
+    )
+
+    assert tissue_mask_result.output == ""
+    assert tissue_mask_result.exit_code == 1
+    assert isinstance(tissue_mask_result.exception, MethodNotSupported)
+
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img),
+            "--method",
+            "Morphological",
+            "--resolution",
+            32,
+            "--units",
+            "Test",
+        ],
+    )
+
+    assert tissue_mask_result.output == ""
+    assert tissue_mask_result.exit_code == 1
+    assert isinstance(tissue_mask_result.exception, MethodNotSupported)
+
+
+def test_cli_tissue_mask_file_not_found_error(_source_image):
+    """Test file not found error for the tissue masking CLI."""
+    source_img = pathlib.Path(_source_image)
+    runner = CliRunner()
+    tissue_mask_result = runner.invoke(
+        cli.main,
+        [
+            "tissue-mask",
+            "--wsi_input",
+            str(source_img)[:-1],
+            "--method",
+            "Otsu",
+        ],
+    )
+
+    assert tissue_mask_result.output == ""
+    assert tissue_mask_result.exit_code == 1
+    assert isinstance(tissue_mask_result.exception, FileNotFoundError)

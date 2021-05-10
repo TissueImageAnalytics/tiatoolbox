@@ -78,7 +78,7 @@ class TissueMasker(ABC):
 
         Sometimes it can be more optimal to perform both at the same
         time for a single sample. In this case the base implementation
-        of :fun:`fit` followed by :func:`transform` can be overridden.
+        of :func:`fit` followed by :func:`transform` can be overridden.
 
         Args:
             images (:class:`numpy.ndarray`): Image to create mask from.
@@ -188,12 +188,12 @@ class MorphologicalMasker(OtsuTissueMasker):
         >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
         >>> from tiatoolbox.wsicore.wsireader import get_wsireader
         >>> wsi = get_wsireader("slide.svs")
-        >>> thumbnail = wsi.get_thumbnail(32, "mpp")
+        >>> thumbnail = wsi.slide_thumbnail(32, "mpp")
         >>> masker = MorphologicalMasker(mpp=32)
         >>> masks = masker.fit_transform([thumbnail])
 
-        An example reading a thumbnail from a file where the objective
-        power is known:
+    An example reading a thumbnail from a file where the objective power is known:
+
         >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
         >>> from tiatoolbox.utils.misc import imread
         >>> thumbnail = imread("thumbnail.png")
