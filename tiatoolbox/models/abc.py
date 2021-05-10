@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-
+"""Defines Abstract Base Class for Models defined in tiatoolbox."""
 import torch.nn as nn
 
 
