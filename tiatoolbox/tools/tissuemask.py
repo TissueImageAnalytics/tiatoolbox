@@ -78,7 +78,7 @@ class TissueMasker(ABC):
 
         Sometimes it can be more optimal to perform both at the same
         time for a single sample. In this case the base implementation
-        of :fun:`fit` followed by :func:`transform` can be overridden.
+        of :func:`fit` followed by :func:`transform` can be overridden.
 
         Args:
             images (:class:`numpy.ndarray`): Image to create mask from.
