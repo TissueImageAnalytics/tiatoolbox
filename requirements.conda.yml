@@ -17,14 +17,15 @@ dependencies:
   - pip
   - pyyaml
   - requests
-  - torchvision=0.9.1
-  - torch=1.8.1
+
   - pixman<0.38.0
   - openslide
   - pandas
   - glymur
   - scikit-learn==0.23.2
   - scikit-image
+  - torchvision=0.9.1
+  - pytorch=1.8.1
   - tqdm==4.60.0
   - jupyterlab
   - pip:
