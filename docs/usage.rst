@@ -98,6 +98,12 @@ Patch Extraction
 .. autoclass:: VariableWindowPatchExtractor
     :show-inheritance:
 
+^^^^^^
+Models
+^^^^^^
+
+.. automodule::tiatoolbox.models
+
 ^^^^^^^^^
 Utilities
 ^^^^^^^^^
