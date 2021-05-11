@@ -106,8 +106,9 @@ def test_get_patch_extractor(_source_image, _patch_extr_csv):
         patchextraction.get_patch_extractor("unknown")
 
 
-def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2,
-                                             _source_image, _patch_extr_csv):
+def test_points_patch_extractor_image_format(
+    _sample_svs, _sample_jp2, _source_image, _patch_extr_csv
+):
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
     locations_list = pathlib.Path(_patch_extr_csv)
@@ -152,16 +153,19 @@ def test_points_patch_extractor_image_format(_sample_svs, _sample_jp2,
         )
 
 
-def test_points_patch_extractor(_patch_extr_vf_image, _patch_extr_npy_read,
-                                _patch_extr_csv, _patch_extr_npy,
-                                _patch_extr_2col_npy, _patch_extr_json,
-                                _patch_extr_csv_noheader):
+def test_points_patch_extractor(
+    _patch_extr_vf_image,
+    _patch_extr_npy_read,
+    _patch_extr_csv,
+    _patch_extr_npy,
+    _patch_extr_2col_npy,
+    _patch_extr_json,
+    _patch_extr_csv_noheader,
+):
     """Test PointsPatchExtractor for VirtualWSIReader."""
     input_img = pathlib.Path(_patch_extr_vf_image)
 
-    saved_data = np.load(
-        str(pathlib.Path(_patch_extr_npy_read))
-    )
+    saved_data = np.load(str(pathlib.Path(_patch_extr_npy_read)))
 
     locations_list = pathlib.Path(_patch_extr_csv)
     data = read_points_patches(input_img, locations_list, item=23)
@@ -189,13 +193,12 @@ def test_points_patch_extractor(_patch_extr_vf_image, _patch_extr_npy_read,
     assert np.all(data == saved_data)
 
 
-def test_points_patch_extractor_svs(_sample_svs, _patch_extr_svs_csv,
-                                    _patch_extr_svs_npy_read):
+def test_points_patch_extractor_svs(
+    _sample_svs, _patch_extr_svs_csv, _patch_extr_svs_npy_read
+):
     """Test PointsPatchExtractor for svs image."""
     locations_list = pathlib.Path(_patch_extr_svs_csv)
-    saved_data = np.load(
-        str(pathlib.Path(_patch_extr_svs_npy_read))
-    )
+    saved_data = np.load(str(pathlib.Path(_patch_extr_svs_npy_read)))
 
     data = read_points_patches(
         pathlib.Path(_sample_svs),
@@ -209,13 +212,12 @@ def test_points_patch_extractor_svs(_sample_svs, _patch_extr_svs_csv,
     assert np.all(data == saved_data)
 
 
-def test_points_patch_extractor_jp2(_sample_jp2, _patch_extr_jp2_csv,
-                                    _patch_extr_jp2_read):
+def test_points_patch_extractor_jp2(
+    _sample_jp2, _patch_extr_jp2_csv, _patch_extr_jp2_read
+):
     """Test PointsPatchExtractor for jp2 image."""
     locations_list = pathlib.Path(_patch_extr_jp2_csv)
-    saved_data = np.load(
-        str(pathlib.Path(_patch_extr_jp2_read))
-    )
+    saved_data = np.load(str(pathlib.Path(_patch_extr_jp2_read)))
 
     data = read_points_patches(
         pathlib.Path(_sample_jp2),
@@ -323,7 +325,7 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
     )
 
     wsi = OpenSlideWSIReader(input_img=input_img)
-    x = 400
+    x = 800
     y = 0
     patch = wsi.read_rect(
         location=(int(x), int(y)),

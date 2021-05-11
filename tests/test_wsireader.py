@@ -376,7 +376,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     """
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     with pytest.warns(UserWarning):
-        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
+        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2):
@@ -387,7 +387,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2
     """
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     with pytest.warns(UserWarning):
-        _, _ = wsi.find_optimal_level_and_downsample(0.1, "mpp")
+        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
 
 
 def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
@@ -401,7 +401,7 @@ def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
     for mpp, expected_level, expected_scale in zip(
         mpps, expected_levels, expected_scales
     ):
-        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             mpp, "mpp"
         )
 
@@ -416,7 +416,7 @@ def test_find_optimal_level_and_downsample_power(_sample_ndpi):
     objective_powers = [20, 10, 5, 2.5, 1.25]
     expected_levels = [0, 1, 2, 3, 4]
     for objective_power, expected_level in zip(objective_powers, expected_levels):
-        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             objective_power, "power"
         )
 
@@ -433,7 +433,7 @@ def test_find_optimal_level_and_downsample_level(_sample_ndpi):
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
 
     for level in range(wsi.info.level_count):
-        read_level, post_read_scale_factor = wsi.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             level, "level"
         )
 
@@ -449,7 +449,7 @@ def test_find_read_rect_params_power(_sample_ndpi):
     size = NDPI_TEST_TISSUE_SIZE
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
-        (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
+        (level, _, read_size, post_read_scale, _) = wsi.find_read_rect_params(
             location=location,
             size=size,
             resolution=target_scale,
@@ -470,7 +470,7 @@ def test_find_read_rect_params_mpp(_sample_ndpi):
     size = NDPI_TEST_TISSUE_SIZE
     # Test a range of MPP
     for target_scale in range(1, 10):
-        (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
+        (level, _, read_size, post_read_scale, _) = wsi.find_read_rect_params(
             location=location,
             size=size,
             resolution=target_scale,
@@ -1271,6 +1271,11 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     img = utils.misc.imread(str(pathlib.Path(_source_image)))
     wsi = wsireader.get_wsireader(input_img=img)
     assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+    # test if get_wsireader can accept a wsireader instance
+    wsi_type = type(wsi)
+    wsi_out = wsireader.get_wsireader(input_img=wsi)
+    assert isinstance(wsi_out, wsi_type)
 
 
 def test_jp2_missing_cod(_sample_jp2):
