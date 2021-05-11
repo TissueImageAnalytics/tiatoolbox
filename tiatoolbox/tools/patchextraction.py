@@ -112,14 +112,14 @@ class PatchExtractor(ABC):
             resolution=self.resolution, units=self.units
         )
 
-        slide_dimension = self.wsi.info.level_dimensions[level]
+        slide_dimension = self.wsi.info.level_dimensions[0]
 
         img_w = slide_dimension[0]
         img_h = slide_dimension[1]
-        img_patch_w = self.patch_size[0]
-        img_patch_h = self.patch_size[1]
-        stride_w = self.stride[0]
-        stride_h = self.stride[1]
+        img_patch_w = self.patch_size[0] * (2 ** level)
+        img_patch_h = self.patch_size[1] * (2 ** level)
+        stride_w = self.stride[0] * (2 ** level)
+        stride_h = self.stride[1] * (2 ** level)
 
         data = []
 
