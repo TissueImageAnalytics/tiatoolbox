@@ -325,7 +325,7 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
     )
 
     wsi = OpenSlideWSIReader(input_img=input_img)
-    x = 400
+    x = 800
     y = 0
     patch = wsi.read_rect(
         location=(int(x), int(y)),

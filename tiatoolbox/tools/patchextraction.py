@@ -44,10 +44,10 @@ class PatchExtractor(ABC):
           resolution=3, units="level" will read at level at
           pyramid level / resolution layer 3.
         units (str): the units of resolution, default = "level".
-          Only pyramid / resolution level (level) is supported.
-          Other units are to be supported in the future are:
-          microns per pixel (mpp), objective power (power),
-          pixels per baseline pixel (baseline).
+          Supported units are: microns per pixel (mpp), objective
+          power (power), pyramid / resolution level (level),
+          Only pyramid / resolution levels (level) embedded in
+          the whole slide image are supported.
         pad_mode (str): Method for padding at edges of the WSI. Default
             to 'constant'. See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
