@@ -186,7 +186,7 @@ class WSIReader:
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
-    def find_optimal_level_and_downsample(self, resolution, units, precision=3):
+    def _find_optimal_level_and_downsample(self, resolution, units, precision=3):
         """Find the optimal level to read at for a desired resolution and units.
 
         The optimal level is the most downscaled level of the image
@@ -245,7 +245,7 @@ class WSIReader:
             )
         return level, scale
 
-    def _find_read_rect_params(self, location, size, resolution, units, precision=3):
+    def find_read_rect_params(self, location, size, resolution, units, precision=3):
         """Find optimal parameters for reading a rect at a given resolution.
 
         Args:
@@ -272,7 +272,7 @@ class WSIReader:
              frame.
 
         """
-        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
@@ -317,7 +317,7 @@ class WSIReader:
 
         """
         start_x, start_y, end_x, end_y = bounds
-        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
@@ -818,7 +818,7 @@ class OpenSlideWSIReader(WSIReader):
 
     def read_rect(self, location, size, resolution=0, units="level"):
         """Find parameters for optimal read."""
-        (read_level, _, read_size, post_read_scale, _) = self._find_read_rect_params(
+        (read_level, _, read_size, post_read_scale, _) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -965,7 +965,7 @@ class OmnyxJP2WSIReader(WSIReader):
             _,
             post_read_scale,
             baseline_read_size,
-        ) = self._find_read_rect_params(
+        ) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -1149,7 +1149,7 @@ class VirtualWSIReader(WSIReader):
             _,
             post_read_scale,
             baseline_read_size,
-        ) = self._find_read_rect_params(
+        ) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,

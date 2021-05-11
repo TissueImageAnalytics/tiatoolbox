@@ -108,18 +108,28 @@ class PatchExtractor(ABC):
         The slide dimension is calculated using units and resolution.
 
         """
-        level, _ = self.wsi.find_optimal_level_and_downsample(
-            resolution=self.resolution, units=self.units
+        (
+            read_level,
+            _,
+            level_read_size,
+            post_read_scale_factor,
+            baseline_read_size,
+        ) = self.wsi.find_read_rect_params(
+            location=(0, 0),
+            size=self.patch_size,
+            resolution=self.resolution,
+            units=self.units,
         )
 
         slide_dimension = self.wsi.info.level_dimensions[0]
+        level_downsample = self.wsi.info.level_downsamples[read_level]
 
         img_w = slide_dimension[0]
         img_h = slide_dimension[1]
-        img_patch_w = self.patch_size[0] * (2 ** level)
-        img_patch_h = self.patch_size[1] * (2 ** level)
-        stride_w = self.stride[0] * (2 ** level)
-        stride_h = self.stride[1] * (2 ** level)
+        img_patch_w = baseline_read_size[0]
+        img_patch_h = baseline_read_size[1]
+        stride_w = self.stride[0] * level_downsample
+        stride_h = self.stride[1] * level_downsample
 
         data = []
 
