@@ -1272,6 +1272,11 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     wsi = wsireader.get_wsireader(input_img=img)
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
+    # test if get_wsireader can accept a wsireader instance
+    wsi_type = type(wsi)
+    wsi_out = wsireader.get_wsireader(input_img=wsi)
+    assert isinstance(wsi_out, wsi_type)
+
 
 def test_jp2_missing_cod(_sample_jp2):
     """Test for warning if JP2 is missing COD segment."""
