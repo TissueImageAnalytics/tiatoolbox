@@ -23,12 +23,14 @@ import numpy as np
 from PIL import Image
 import cv2
 
+from tiatoolbox import utils
+
 
 def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
 
     Args:
-        image (ndarray, PIL.Image): input image
+        image (ndarray or PIL.Image): input image
         fill (int): fill value for the background, default=255
         alpha (bool): True if alpha channel is required
 
@@ -68,19 +70,20 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     """Resize input image.
 
     Args:
-        img (ndarray): input image
-        scale_factor (float): scaling factor to resize the input image
-        output_size (tuple of int): output image size, (width, height)
-        interpolation (int): interpolation method used to interpolate the image using
-         `opencv interpolation flags <https://docs.opencv.org/3.4/da/d54/group__imgproc
-         __transform.html>`__ default='optimise', uses cv2.INTER_AREA for scale_factor
+        img (:class:`numpy.ndarray`): input image
+        scale_factor (tuple(float)): scaling factor to resize the input image
+        output_size (tuple(int)): output image size, (width, height)
+        interpolation (str or int): interpolation method used to interpolate the image
+         using `opencv interpolation flags
+         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`
+         __ default='optimise', uses cv2.INTER_AREA for scale_factor
          <1.0 otherwise uses cv2.INTER_CUBIC
 
     Returns:
-        ndarray: resized image
+        :class:`numpy.ndarray`: resized image
 
     Examples:
-        >>> from tiatoolbox.dataloader import wsireader
+        >>> from tiatoolbox.wsicore import wsireader
         >>> from tiatoolbox.utils import transforms
         >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
         >>> slide_thumbnail = wsi.slide_thumbnail()
@@ -88,26 +91,29 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
-    # Estimate new dimension
+    # Handle None arguments
     if output_size is None:
         width = int(img.shape[1] * scale_factor)
         height = int(img.shape[0] * scale_factor)
         output_size = (width, height)
 
-    # Optimise interpolation
-    if np.any(scale_factor != 1.0):
-        if interpolation == "optimise":
-            if np.any(scale_factor > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            else:
-                interpolation = cv2.INTER_AREA
+    if scale_factor is None:
+        scale_factor = img.shape[:2][::-1] / np.array(output_size)
 
-        # Resize image
-        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
-    else:
-        resized_img = img
+    # Return original if scale factor is 1
+    if np.all(scale_factor == 1.0):
+        return img
 
-    return resized_img
+    # Get appropriate cv2 interpolation enum
+    if interpolation == "optimise":
+        if np.any(scale_factor > 1.0):
+            interpolation = "cubic"
+        else:
+            interpolation = "area"
+    interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
+
+    # Resize the image
+    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
 def convert_RGB2OD(img):
@@ -115,10 +121,10 @@ def convert_RGB2OD(img):
     RGB = 255 * exp(-1*OD_RGB).
 
     Args:
-        img (ndarray uint8): Image RGB
+        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Image RGB
 
     Returns:
-        ndarray: Optical denisty RGB image.
+        :class:`numpy.ndarray`: Optical denisty RGB image.
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -136,10 +142,10 @@ def convert_OD2RGB(OD):
     RGB = 255 * exp(-1*OD_RGB)
 
     Args:
-        OD (ndrray): Optical denisty RGB image
+        OD (:class:`numpy.ndarray`): Optical denisty RGB image
 
     Returns:
-        ndarray uint8: Image RGB
+        numpy.ndarray: Image RGB
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -149,3 +155,50 @@ def convert_OD2RGB(OD):
     """
     OD = np.maximum(OD, 1e-6)
     return (255 * np.exp(-1 * OD)).astype(np.uint8)
+
+
+def bounds2locsize(bounds, origin="upper"):
+    """Calculate the size of a tuple of bounds.
+
+    Bounds are expected to be in the (left, top, right, bottom) /
+    (start_x, start_y, end_x, end_y) format.
+
+    Args:
+        bounds (tuple(int)): A 4-tuple or length 4 array of bounds
+            values in (left, top, right, bottom) format.
+        origin (str): Upper (Top-left) or lower (bottom-left) origin.
+            Defaults to upper.
+
+    """
+    left, top, right, bottom = bounds
+    origin = origin.lower()
+    if origin == "upper":
+        return np.array([left, top]), np.array([right - left, bottom - top])
+    if origin == "lower":
+        return np.array([left, bottom]), np.array([right - left, top - bottom])
+    raise ValueError("Invalid origin. Only 'upper' or 'lower' are valid.")
+
+
+def locsize2bounds(location, size):
+    """Convert a location and size to bounds.
+
+    Args:
+        location (tuple(int)): A 2-tuple or length 2 array of x,y
+         coordinates.
+        size (tuple(int)): A 2-tuple or length 2 array of width and
+         height.
+
+    Returns:
+        tuple: A tuple of bounds:
+          - :py:obj:`int` - left / start_x
+          - :py:obj:`int` - top / start_y
+          - :py:obj:`int` - right / end_x
+          - :py:obj:`int` - bottom / end_y
+
+    """
+    return (
+        location[0],
+        location[1],
+        location[0] + size[0],
+        location[1] + size[1],
+    )

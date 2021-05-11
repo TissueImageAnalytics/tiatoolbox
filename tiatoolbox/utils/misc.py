@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from typing import Union
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 import cv2
@@ -36,8 +37,10 @@ def split_path_name_ext(full_path):
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
-        tuple: Three sections of the input file path
-        (input directory path, file name, file extension)
+        tuple: Three parts of the input file path:
+            - :py:obj:`pathlib.Path` - parent directory path
+            - :py:obj:`str` - file name
+            - :py:obj:`str` - file extension
 
     Examples:
         >>> from tiatoolbox import utils
@@ -53,9 +56,9 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str, pathlib.Path): Path to the directory where files
+        input_path (str or pathlib.Path): Path to the directory where files
             need to be searched
-        file_types (str, tuple): File types (extensions) to be searched
+        file_types (str or tuple(str)): File types (extensions) to be searched
 
     Returns:
         list: File paths as a python list
@@ -71,7 +74,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     if type(file_types) is str:
         if len(file_types.split(",")) > 1:
-            file_types = tuple(file_types.split(","))
+            file_types = tuple(file_types.replace(" ", "").split(","))
         else:
             file_types = (file_types,)
 
@@ -84,9 +87,10 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 def save_yaml(input_dict, output_path="output.yaml"):
     """Save dictionary as yaml.
+
     Args:
         input_dict (dict): A variable of type 'dict'
-        output_path (str, pathlib.Path): Path to save the output file
+        output_path (str or pathlib.Path): Path to save the output file
 
     Returns:
 
@@ -94,7 +98,6 @@ def save_yaml(input_dict, output_path="output.yaml"):
         >>> from tiatoolbox import utils
         >>> input_dict = {'hello': 'Hello World!'}
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
-
 
     """
     with open(str(pathlib.Path(output_path)), "w") as yaml_file:
@@ -105,9 +108,9 @@ def imwrite(image_path, img):
     """Write numpy array to an image.
 
     Args:
-        image_path (str, pathlib.Path): file path (including extension)
+        image_path (str or pathlib.Path): file path (including extension)
             to save image
-        img (ndarray): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
 
     Returns:
 
@@ -127,14 +130,14 @@ def imread(image_path):
     """Read an image as numpy array.
 
     Args:
-        image_path (str, pathlib.Path): file path (including extension) to read image
+        image_path (str or pathlib.Path): file path (including extension) to read image
 
     Returns:
-        img (ndarray): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> image = utils.misc.imread('ImagePath.jpg')
+        >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
     if isinstance(image_path, pathlib.Path):
@@ -152,7 +155,7 @@ def load_stain_matrix(stain_matrix_input):
             there should be no column headers provided
 
     Returns:
-        stain_matrix (ndarray): the loaded stain matrix
+        stain_matrix (:class:`numpy.ndarray`): the loaded stain matrix.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -184,11 +187,11 @@ def get_luminosity_tissue_mask(img, threshold):
     """Get tissue mask based on the luminosity of the input image.
 
     Args:
-        img (ndarray): input image used to obtain tissue mask.
+        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
         threshold (float): luminosity threshold used to determine tissue area.
 
     Returns:
-        tissue_mask (ndarray): binary tissue mask.
+        tissue_mask (:class:`numpy.ndarray`): binary tissue mask.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -217,7 +220,7 @@ def mpp2common_objective_power(
     nearest value in `common_powers`.
 
     Args:
-        mpp (float or tuple of float): Microns per-pixel.
+        mpp (float or tuple(float)): Microns per-pixel.
         common_powers (list of float): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
@@ -234,6 +237,7 @@ def mpp2common_objective_power(
         ...     common_powers=(10, 20, 40),
         ... )
         array([40, 20])
+
     """
     op = mpp2objective_power(mpp)
     distances = [np.abs(op - power) for power in common_powers]
@@ -248,19 +252,19 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(objective_power):
-    """Approximate mpp from objective power.
+    r"""Approximate mpp from objective power.
 
-    The formula used for estimation is :math:`power = \\frac{10}{mpp}`.
+    The formula used for estimation is :math:`power = \frac{10}{mpp}`.
     This is a self-inverse function and therefore
     :func:`mpp2objective_power` is simply an alias to this function.
 
     Note that this function is wrapped in :class:`numpy.vectorize`.
 
     Args:
-        objective_power (float or tuple of float): Objective power.
+        objective_power (float or tuple(float)): Objective power.
 
     Returns:
-        np.ndarray: Microns per-pixel (MPP) approximations.
+        numpy.ndarray: Microns per-pixel (MPP) approximations.
 
     Examples:
         >>> objective_power2mpp(40)
@@ -268,50 +272,54 @@ def objective_power2mpp(objective_power):
 
         >>> objective_power2mpp([40, 20, 10])
         array([0.25, 0.5, 1.])
+
     """
-    return 10 / np.float(objective_power)
+    return 10 / float(objective_power)
 
 
 @np.vectorize
 def mpp2objective_power(mpp):
-    """Approximate objective power from mpp.
+    """Approximate objective_power from mpp.
 
     Alias to :func:`objective_power2mpp` as it is a self-inverse
     function.
 
-
     Args:
-        objective_power (float or tuple of float): Microns per-pixel.
+        mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
-        np.ndarray: Objective power approximations.
+        :class:`numpy.ndarray`: Objective power approximations.
 
     Examples:
-        >>> objective_power2mpp(0.25)
+        >>> mpp2objective_power(0.25)
         array(40.)
 
-        >>> objective_power2mpp([0.25, 0.5, 1.0])
+        >>> mpp2objective_power([0.25, 0.5, 1.0])
         array([40., 20., 10.])
 
-        >>> objective_power2mpp(0.253)
+        >>> mpp2objective_power(0.253)
         array(39.5256917)
+
     """
     return objective_power2mpp(mpp)
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
-    """Enhancing contrast of the input RGB image using intensity adjustment.
+    """Enhancing contrast of the input image using intensity adjustment.
        This method uses both image low and high percentiles.
 
     Args:
-        img (ndarray): input image used to obtain tissue mask.
-            Image should be RGB uint8.
+        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
+            Image should be uint8.
         low_p (scalar): low percentile of image values to be saturated to 0.
         high_p (scalar): high percentile of image values to be saturated to 255.
             high_p should always be greater than low_p.
 
     Returns:
-        img (ndarray): Image uint8 RGB with contrast enhanced.
+        img (:class:`numpy.ndarray`): Image (uint8) with contrast enhanced.
+
+    Raises:
+        AssertionError: Internal errors due to invalid img type.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -320,7 +328,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     """
     # check if image is not uint8
     if not img.dtype == np.uint8:
-        raise Exception("Image should be RGB uint8.")
+        raise AssertionError("Image should be uint8.")
     img_out = img.copy()
     p_low, p_high = np.percentile(img_out, (low_p, high_p))
     if p_low >= p_high:
@@ -330,3 +338,176 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
         )
     return np.uint8(img_out)
+
+
+def read_locations(input_table):
+    """Read annotations as pandas DataFrame.
+
+    Args:
+        input_table (str or pathlib.Path or :class:`numpy.ndarray` or
+         :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+         :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+         First column in the table represents x position, second
+         column represents y position. The third column represents the class. If the
+         table has headers, the header should be x, y & class. Json should have `x`, `y`
+         and `class` fields.
+
+    Returns:
+        pd.DataFrame: DataFrame with x, y location and class type.
+
+    Examples:
+        >>> from tiatoolbox.utils.misc import read_locations
+        >>> labels = read_locations('./annotations.csv')
+
+    """
+    if isinstance(input_table, (str, pathlib.Path)):
+        _, _, suffix = split_path_name_ext(input_table)
+
+        if suffix == ".npy":
+            out_table = np.load(input_table)
+            if out_table.shape[1] == 2:
+                out_table = pd.DataFrame(out_table, columns=["x", "y"])
+                out_table["class"] = None
+            elif out_table.shape[1] == 3:
+                out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
+            else:
+                raise ValueError(
+                    "numpy table should be of format `x, y` or " "`x, y, class`"
+                )
+
+        elif suffix == ".csv":
+            out_table = pd.read_csv(input_table, sep=None, engine="python")
+            if "x" not in out_table.columns:
+                out_table = pd.read_csv(
+                    input_table,
+                    header=None,
+                    names=["x", "y", "class"],
+                    sep=None,
+                    engine="python",
+                )
+            if out_table.shape[1] == 2:
+                out_table["class"] = None
+
+        elif suffix == ".json":
+            out_table = pd.read_json(input_table)
+            if out_table.shape[1] == 2:
+                out_table["class"] = None
+
+        else:
+            raise FileNotSupported("Filetype not supported.")
+
+    elif isinstance(input_table, np.ndarray):
+        if input_table.shape[1] == 3:
+            out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
+        elif input_table.shape[1] == 2:
+            out_table = pd.DataFrame(input_table, columns=["x", "y"])
+            out_table["class"] = None
+        else:
+            raise ValueError("Input array must have 2 or 3 columns.")
+
+    elif isinstance(input_table, pd.DataFrame):
+        out_table = input_table
+        if out_table.shape[1] == 2:
+            out_table["class"] = None
+        elif out_table.shape[1] < 2:
+            raise ValueError("Input table must have 2 or 3 columns.")
+
+    else:
+        raise TypeError("Please input correct image path or an ndarray image.")
+
+    return out_table
+
+
+@np.vectorize
+def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
+    r"""Calculate convolution output size.
+
+    This is a numpy vectorised function.
+
+    .. math::
+        \begin{split}
+        n_{out} &= \bigg\lfloor {{\frac{n_{in} +2p - k}{s}}} \bigg\rfloor + 1 \\
+        n_{in} &: \text{Number of input features} \\
+        n_{out} &: \text{Number of output features} \\
+        p &: \text{Padding size} \\
+        k &: \text{Kernel size} \\
+        s &: \text{Stride size} \\
+        \end{split}
+
+    Args:
+        in_size (int): Input size / number of input features.
+        kernel_size (int): Kernel size.
+        padding (int): Kernel size.
+        stride (int): Stride size.
+
+    Returns:
+        int: Output size / number of features.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> utils.misc.conv_out_size(100, 3)
+        >>> array(98)
+        >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
+        >>> array(98)
+        >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
+        >>> array([49, 49])
+
+  """
+    return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
+
+
+def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
+    """Convert a string to a OpenCV (cv2) interpolation enum.
+
+    Interpolation modes:
+        - nearest
+        - linear
+        - area
+        - cubic
+        - lanczos
+
+    Valid integer values for cv2 interpolation enums are passed through.
+    See the `cv::InterpolationFlags`_ documentation for more
+    on cv2 (OpenCV) interpolation modes.
+
+    .. _cv::InterpolationFlags:
+        https://docs.opencv.org/4.0.0/da/d54/group__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121
+
+    Args:
+        interpolation (Union[str, int]): Interpolation mode string.
+            Possible values are: neares, linear, cubic, lanczos, area.
+
+    Raises:
+        ValueError: Invalid interpolation mode.
+
+    Returns:
+        int: OpenCV (cv2) interpolation enum.
+    """
+    if isinstance(interpolation, str):
+        interpolation = interpolation.lower()
+    if interpolation in ["nearest", cv2.INTER_NEAREST]:
+        return cv2.INTER_NEAREST
+    if interpolation in ["area", cv2.INTER_AREA]:
+        return cv2.INTER_AREA
+    if interpolation in ["linear", cv2.INTER_LINEAR]:
+        return cv2.INTER_LINEAR
+    if interpolation in ["cubic", cv2.INTER_CUBIC]:
+        return cv2.INTER_CUBIC
+    if interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
+        return cv2.INTER_LANCZOS4
+    raise ValueError("Invalid interpolation mode.")
+
+
+def assert_dtype_int(input_var, message="Input must be integer."):
+    """Generate error if dtype is not int.
+
+    Args:
+        input_var (ndarray): input variable to be tested.
+        message (str): Error message to be displayed.
+
+    Returns:
+        Generates an AssertionError message if input is not an int.
+
+    """
+    if not np.issubdtype(np.array(input_var).dtype, np.integer):
+        raise AssertionError(message)

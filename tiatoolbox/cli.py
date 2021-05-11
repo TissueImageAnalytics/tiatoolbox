@@ -19,11 +19,13 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
+import numpy as np
+
 from tiatoolbox import __version__
-from tiatoolbox import dataloader
-from tiatoolbox.tools import stainnorm as sn
+from tiatoolbox import wsicore
+from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 import sys
 import click
@@ -67,27 +69,33 @@ def main():
     "the meta information, default=show",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
+def slide_info(wsi_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
+
+    if isinstance(output_dir, str):
+        output_dir = pathlib.Path(output_dir)
 
     if os.path.isdir(wsi_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=wsi_input, file_types=file_types
         )
         if output_dir is None and mode == "save":
-            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("meta")
+            input_dir = pathlib.Path(wsi_input).parent
+            output_dir = input_dir / "meta"
 
     elif os.path.isfile(wsi_input):
         files_all = [
             wsi_input,
         ]
         if output_dir is None and mode == "save":
-            input_dir, _, _ = utils.misc.split_path_name_ext(wsi_input)
-            output_dir = pathlib.Path(input_dir).joinpath("..").joinpath("meta")
+            input_dir = pathlib.Path(wsi_input).parent
+            output_dir = input_dir.parent / "meta"
     else:
         raise FileNotFoundError
 
@@ -97,7 +105,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
         output_dir.mkdir(parents=True, exist_ok=True)
 
     for curr_file in files_all:
-        slide_param = dataloader.slide_info.slide_info(
+        slide_param = wsicore.slide_info.slide_info(
             input_path=curr_file, verbose=verbose
         )
         if mode == "show":
@@ -108,7 +116,8 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
                 output_dir, slide_param.file_path.with_suffix(".yaml").name
             )
             utils.misc.save_yaml(
-                slide_param.as_dict(), out_path,
+                slide_param.as_dict(),
+                out_path,
             )
             print("Meta files saved at " + str(output_dir))
 
@@ -118,7 +127,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose=True):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region",
+    " default=wsi_input_dir/../im_region.jpg",
 )
 @click.option(
     "--region",
@@ -149,29 +158,23 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
     if not region:
         region = [0, 0, 2000, 2000]
 
-    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
-        full_path=wsi_input
-    )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
+        input_dir = pathlib.Path(wsi_input).parent
+        output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = None
-    if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
 
-    elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_img=wsi_input)
+    im_region = wsi.read_bounds(
+        region,
+        resolution=resolution,
+        units=units,
+    )
+    if mode == "show":
+        im_region = Image.fromarray(im_region)
+        im_region.show()
 
-    if wsi is not None:
-        im_region = wsi.read_bounds(region, resolution=resolution, units=units,)
-        if mode == "show":
-            im_region = Image.fromarray(im_region)
-            im_region.show()
-
-        if mode == "save":
-            utils.misc.imwrite(output_path, im_region)
-    else:
-        raise FileNotSupported
+    if mode == "save":
+        utils.misc.imwrite(output_path, im_region)
 
 
 @main.command()
@@ -179,7 +182,7 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region",
+    " default=wsi_input_dir/../slide_thumb.jpg",
 )
 @click.option(
     "--mode",
@@ -189,28 +192,20 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 )
 def slide_thumbnail(wsi_input, output_path, mode):
     """Read whole slide image thumbnail."""
-    input_dir, file_name, file_type = utils.misc.split_path_name_ext(
-        full_path=wsi_input
-    )
     if output_path is None and mode == "save":
-        output_path = str(pathlib.Path(input_dir).joinpath("../im_region.jpg"))
-    wsi = None
-    if file_type in (".svs", ".ndpi", ".mrxs"):
-        wsi = dataloader.wsireader.OpenSlideWSIReader(input_img=wsi_input)
-    elif file_type in (".jp2",):
-        wsi = dataloader.wsireader.OmnyxJP2WSIReader(input_img=wsi_input)
+        input_dir = pathlib.Path(wsi_input).parent
+        output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    if wsi is not None:
-        slide_thumb = wsi.slide_thumbnail()
+    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
 
-        if mode == "show":
-            im_region = Image.fromarray(slide_thumb)
-            im_region.show()
+    slide_thumb = wsi.slide_thumbnail()
 
-        if mode == "save":
-            utils.misc.imwrite(output_path, slide_thumb)
-    else:
-        raise FileNotSupported
+    if mode == "show":
+        im_region = Image.fromarray(slide_thumb)
+        im_region.show()
+
+    if mode == "save":
+        utils.misc.imwrite(output_path, slide_thumb)
 
 
 @main.command()
@@ -239,7 +234,10 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="tile width, height default=5000 5000",
 )
 @click.option(
-    "--verbose", type=bool, default=True, help="Print output, default=True",
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def save_tiles(
     wsi_input,
@@ -265,7 +263,7 @@ def save_tiles(
     print(files_all)
 
     for curr_file in files_all:
-        dataloader.save_tiles.save_tiles(
+        wsicore.save_tiles.save_tiles(
             input_path=curr_file,
             output_dir=output_dir,
             tile_objective_value=tile_objective_value,
@@ -294,7 +292,7 @@ def save_tiles(
     default=None,
 )
 @click.option(
-    "--output_dir",
+    "--output_path",
     help="Output directory for stain normalisation",
     default="stainorm_output",
 )
@@ -304,7 +302,9 @@ def save_tiles(
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.tif, *.tiff",
 )
-def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
+def stainnorm(
+    source_input, target_input, method, stain_matrix, output_path, file_types
+):
     """Stain normalise an input image/directory of input images."""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(source_input):
@@ -318,8 +318,6 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
     else:
         raise FileNotFoundError
 
-    print(files_all)
-
     if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise MethodNotSupported
 
@@ -329,11 +327,111 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))
 
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+
     for curr_file in files_all:
         basename = os.path.basename(curr_file)
         # transform source image
         transform = norm.transform(utils.misc.imread(curr_file))
-        utils.misc.imwrite(os.path.join(output_dir, basename), transform)
+        utils.misc.imwrite(os.path.join(output_path, basename), transform)
+
+
+@main.command()
+@click.option("--wsi_input", help="Path to WSI file")
+@click.option(
+    "--output_path",
+    help="Path to output file to save the image region in save mode,"
+    " default=tissue_mask",
+    default="tissue_mask",
+)
+@click.option(
+    "--method",
+    help="Tissue masking method to use. Choose from 'Otsu', 'Morphological',"
+    " default=Otsu",
+    default="Otsu",
+)
+@click.option(
+    "--resolution",
+    type=float,
+    default=1.25,
+    help="resolution to read the image at, default=1.25",
+)
+@click.option(
+    "--units",
+    default="power",
+    help="resolution units, default=power",
+)
+@click.option(
+    "--kernel_size",
+    type=int,
+    nargs=2,
+    help="kernel size for morphological dilation, default=1, 1",
+)
+@click.option(
+    "--mode",
+    default="show",
+    help="'show' to display tissue mask or 'save' to save at the output path"
+    ", default=show",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory, "
+    "default='*.svs, *.ndpi, *.jp2, *.png', '*.jpg', '*.tif', '*.tiff'",
+    default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
+)
+def tissue_mask(
+    wsi_input, output_path, method, resolution, units, kernel_size, mode, file_types
+):
+    """Generate tissue mask for a WSI."""
+
+    file_types = tuple(file_types.split(", "))
+    output_path = pathlib.Path(output_path)
+    if os.path.isdir(wsi_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=wsi_input, file_types=file_types
+        )
+    elif os.path.isfile(wsi_input):
+        files_all = [
+            wsi_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    if mode == "save" and not output_path.is_dir():
+        os.makedirs(output_path)
+
+    if method == "Otsu":
+        masker = tissuemask.OtsuTissueMasker()
+    elif method == "Morphological":
+        if not kernel_size:
+            if units == "mpp":
+                masker = tissuemask.MorphologicalMasker(mpp=resolution)
+            elif units == "power":
+                masker = tissuemask.MorphologicalMasker(power=resolution)
+            else:
+                raise MethodNotSupported(
+                    "Specified units not supported for tissue masking."
+                )
+        else:
+            masker = tissuemask.MorphologicalMasker(kernel_size=kernel_size)
+    else:
+        raise MethodNotSupported
+
+    for curr_file in files_all:
+        wsi = wsicore.wsireader.get_wsireader(input_img=curr_file)
+        wsi_thumb = wsi.slide_thumbnail(resolution=1.25, units="power")
+        mask = masker.fit_transform(wsi_thumb[np.newaxis, :])
+
+        if mode == "show":
+            im_region = Image.fromarray(mask[0])
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(
+                output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
+                mask[0].astype(np.uint8) * 255,
+            )
 
 
 if __name__ == "__main__":

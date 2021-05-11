@@ -1,11 +1,36 @@
 History
 =======
 
+0.6.0 (2021-05-11)
+------------------
+### Major and Feature Improvements
+- Add `TissueMasker` class to allow tissue masking using `Otsu` and `Morphological` processing.
+- Add helper/convenience method to WSIReader(s) to produce a mask. Add reader object to allow reading a mask conveniently as if it were a WSI i.e., use same location and resolution to read tissue area and mask area.
+- Add `PointsPatchExtractor` returns patches that can be used by classification models. Takes `csv`, `json` or `pd.DataFrame` and returns patches corresponding to each pixel location.
+- Add feature `FixedWindowPatchExtractor` to run sliding window deep learning algorithms.
+- Add example notebooks for patch extraction and tissue masking.
+- Update readme with improved instructions to use the toolbox. Make the README file somewhat more comprehensible to beginners, particularly those with not much background or experience.
+
+### Changes to API
+- `tiatoolbox.dataloader` replaced by `tiatoolbox.wsicore`
+
+### Bug Fixes and Other Changes
+- Minor bug fixes
+
+### Development-related changes
+- Improve unit test coverage.
+- Move test data to tiatoolbox server.
+
+
+------------------
+
 0.5.2 (2021-03-12)
 ------------------
 ### Bug Fixes and Other Changes
 - Fix URL for downloading test JP2 image.
 - Update readme with new logo.
+
+------------------
 
 0.5.1 (2020-12-31)
 ------------------
@@ -87,7 +112,7 @@ History
 -  Restructures `WSIReader` as parent class to allow support to read whole slide images in other formats.
 - Adds `slide_info` as a property of `WSIReader`
 - Updates `slide_info` type to `WSIMeta` from `dict`
-- Depericiates support for multiprocessing from within the toolbox. The toolbox is focussed on processing single whole slide and standard images. External libraries can be used to run using multi processing on multiple files.
+- Depreciates support for multiprocessing from within the toolbox. The toolbox is focused on processing single whole slide and standard images. External libraries can be used to run using multiprocessing on multiple files.
 
 ### Bug Fixes and Other Changes
 

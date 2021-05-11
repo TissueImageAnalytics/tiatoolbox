@@ -10,8 +10,9 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.dataloader.wsireader
+.. automodule:: tiatoolbox.wsicore.wsireader
     :members: WSIReader, get_wsireader
+    :private-members:
 
 .. autoclass:: OpenSlideWSIReader
     :show-inheritance:
@@ -26,20 +27,20 @@ Reading WSI Image Data
 Accessing Metadata
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.dataloader.wsimeta
+.. automodule:: tiatoolbox.wsicore.wsimeta
     :members: WSIMeta
 
 ^^^^^^^^^^
 Functional
 ^^^^^^^^^^
 
-The dataloader module also includes some functional syntax for quickly
+The wsicore module also includes some functional syntax for quickly
 obtaining information about a slide or generating tiles.
 
-.. automodule:: tiatoolbox.dataloader.slide_info
+.. automodule:: tiatoolbox.wsicore.slide_info
     :members: slide_info
 
-.. automodule:: tiatoolbox.dataloader.save_tiles
+.. automodule:: tiatoolbox.wsicore.save_tiles
     :members: save_tiles
 
 
@@ -65,18 +66,50 @@ Stain Normalisation
 .. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
+
+^^^^^^^^^^^^^^^
+Tissue Masking
+^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.tissuemask
+    :members:
+
+
 ^^^^^^^^^^^^^^^^^^
 Stain Extraction
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainextract
-    :members: CustomExtractor, RuifrokExtractor, MacenkoExtractor, VahadaneExtractor
+    :members:
+
+^^^^^^^^^^^^^^^^^^
+Patch Extraction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.patchextraction
+    :members: PatchExtractor, get_patch_extractor, convert_input_image_for_patch_extraction
+
+.. autoclass:: PointsPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: FixedWindowPatchExtractor
+    :show-inheritance:
+
+.. autoclass:: VariableWindowPatchExtractor
+    :show-inheritance:
 
 ^^^^^^^^^
 Utilities
 ^^^^^^^^^
 
 .. automodule:: tiatoolbox.utils
+
+-----
+Image
+-----
+
+.. automodule:: tiatoolbox.utils.image
+    :members:
 
 -------------
 Miscellaneous
@@ -88,13 +121,21 @@ Miscellaneous
     .. autofunction:: mpp2objective_power(mpp)
     .. autofunction:: objective_power2mpp(objective_power)
     .. autofunction:: mpp2common_objective_power(mpp, common_powers)
+    .. autofunction:: conv_out_size(in_size, kernel_size=1, padding=0, stride=1)
 
 ----------
 Transforms
 ----------
 
 .. automodule:: tiatoolbox.utils.transforms
-    :members: background_composite, imresize
+    :members:
+
+    .. autofunction:: background_composite
+    .. autofunction:: imresize
+    .. autofunction:: convert_RGB2OD
+    .. autofunction:: convert_OD2RGB
+    .. autofunction:: bounds2locsize
+    .. autofunction:: locsize2bounds
 
 ----------
 Exceptions
