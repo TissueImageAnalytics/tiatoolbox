@@ -33,7 +33,8 @@ class PatchExtractor(ABC):
     Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, pathlib.Path, ndarray): input image for patch extraction.
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
+          patch extraction.
         patch_size(int or tuple(int)): patch size tuple (width, height).
         resolution (int or float or tuple of float): resolution at
           which to read the image, default = 0. Either a single
@@ -49,20 +50,25 @@ class PatchExtractor(ABC):
           Only pyramid / resolution levels (level) embedded in
           the whole slide image are supported.
         pad_mode (str): Method for padding at edges of the WSI. Default
-            to 'constant'. See :func:`numpy.pad` for more information.
+          to 'constant'. See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
-            constant padding. Defaults to 0. See :func:`numpy.pad` for
-            more.
+          constant padding. Defaults to 0. See :func:`numpy.pad` for
+          more.
 
     Attributes:
-        input_img(ndarray, WSIReader): input image for patch extraction.
-          input_image type is ndarray for an image tile whereas :obj:`WSIReader`
-          for an WSI.
+        wsi(WSIReader): input image for patch extraction of type :obj:`WSIReader`.
         patch_size(tuple(int)): patch size tuple (width, height).
         resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
         locations_df(pd.DataFrame): A table containing location and/or type of patch.
+        pad_mode (str): Method for padding at edges of the WSI.
+          See :func:`numpy.pad` for more information.
+        pad_constant_values (int or tuple(int)): Values to use with
+          constant padding. Defaults to 0. See :func:`numpy.pad` for
+          more.
+        stride (tuple(int)): stride in (x, y) direction for patch extraction. Not used
+         for :obj:`PointsPatchExtractor`
 
     """
 
