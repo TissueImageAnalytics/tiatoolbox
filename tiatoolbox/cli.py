@@ -19,9 +19,11 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
+import numpy as np
+
 from tiatoolbox import __version__
 from tiatoolbox import wsicore
-from tiatoolbox.tools import stainnorm as sn
+from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
 
@@ -125,7 +127,7 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region",
+    " default=wsi_input_dir/../im_region.jpg",
 )
 @click.option(
     "--region",
@@ -180,7 +182,7 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region",
+    " default=wsi_input_dir/../slide_thumb.jpg",
 )
 @click.option(
     "--mode",
@@ -290,7 +292,7 @@ def save_tiles(
     default=None,
 )
 @click.option(
-    "--output_dir",
+    "--output_path",
     help="Output directory for stain normalisation",
     default="stainorm_output",
 )
@@ -300,7 +302,9 @@ def save_tiles(
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.tif, *.tiff",
 )
-def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file_types):
+def stainnorm(
+    source_input, target_input, method, stain_matrix, output_path, file_types
+):
     """Stain normalise an input image/directory of input images."""
     file_types = tuple(file_types.split(", "))
     if os.path.isdir(source_input):
@@ -323,11 +327,111 @@ def stainnorm(source_input, target_input, method, stain_matrix, output_dir, file
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))
 
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+
     for curr_file in files_all:
         basename = os.path.basename(curr_file)
         # transform source image
         transform = norm.transform(utils.misc.imread(curr_file))
-        utils.misc.imwrite(os.path.join(output_dir, basename), transform)
+        utils.misc.imwrite(os.path.join(output_path, basename), transform)
+
+
+@main.command()
+@click.option("--wsi_input", help="Path to WSI file")
+@click.option(
+    "--output_path",
+    help="Path to output file to save the image region in save mode,"
+    " default=tissue_mask",
+    default="tissue_mask",
+)
+@click.option(
+    "--method",
+    help="Tissue masking method to use. Choose from 'Otsu', 'Morphological',"
+    " default=Otsu",
+    default="Otsu",
+)
+@click.option(
+    "--resolution",
+    type=float,
+    default=1.25,
+    help="resolution to read the image at, default=1.25",
+)
+@click.option(
+    "--units",
+    default="power",
+    help="resolution units, default=power",
+)
+@click.option(
+    "--kernel_size",
+    type=int,
+    nargs=2,
+    help="kernel size for morphological dilation, default=1, 1",
+)
+@click.option(
+    "--mode",
+    default="show",
+    help="'show' to display tissue mask or 'save' to save at the output path"
+    ", default=show",
+)
+@click.option(
+    "--file_types",
+    help="file types to capture from directory, "
+    "default='*.svs, *.ndpi, *.jp2, *.png', '*.jpg', '*.tif', '*.tiff'",
+    default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
+)
+def tissue_mask(
+    wsi_input, output_path, method, resolution, units, kernel_size, mode, file_types
+):
+    """Generate tissue mask for a WSI."""
+
+    file_types = tuple(file_types.split(", "))
+    output_path = pathlib.Path(output_path)
+    if os.path.isdir(wsi_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=wsi_input, file_types=file_types
+        )
+    elif os.path.isfile(wsi_input):
+        files_all = [
+            wsi_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    if mode == "save" and not output_path.is_dir():
+        os.makedirs(output_path)
+
+    if method == "Otsu":
+        masker = tissuemask.OtsuTissueMasker()
+    elif method == "Morphological":
+        if not kernel_size:
+            if units == "mpp":
+                masker = tissuemask.MorphologicalMasker(mpp=resolution)
+            elif units == "power":
+                masker = tissuemask.MorphologicalMasker(power=resolution)
+            else:
+                raise MethodNotSupported(
+                    "Specified units not supported for tissue masking."
+                )
+        else:
+            masker = tissuemask.MorphologicalMasker(kernel_size=kernel_size)
+    else:
+        raise MethodNotSupported
+
+    for curr_file in files_all:
+        wsi = wsicore.wsireader.get_wsireader(input_img=curr_file)
+        wsi_thumb = wsi.slide_thumbnail(resolution=1.25, units="power")
+        mask = masker.fit_transform(wsi_thumb[np.newaxis, :])
+
+        if mode == "show":
+            im_region = Image.fromarray(mask[0])
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(
+                output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
+                mask[0].astype(np.uint8) * 255,
+            )
 
 
 if __name__ == "__main__":
