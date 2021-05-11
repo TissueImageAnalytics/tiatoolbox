@@ -449,7 +449,7 @@ def test_find_read_rect_params_power(_sample_ndpi):
     size = NDPI_TEST_TISSUE_SIZE
     # Test a range of objective powers
     for target_scale in [1.25, 2.5, 5, 10, 20]:
-        (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
+        (level, _, read_size, post_read_scale, _) = wsi.find_read_rect_params(
             location=location,
             size=size,
             resolution=target_scale,
@@ -470,7 +470,7 @@ def test_find_read_rect_params_mpp(_sample_ndpi):
     size = NDPI_TEST_TISSUE_SIZE
     # Test a range of MPP
     for target_scale in range(1, 10):
-        (level, _, read_size, post_read_scale, _) = wsi._find_read_rect_params(
+        (level, _, read_size, post_read_scale, _) = wsi.find_read_rect_params(
             location=location,
             size=size,
             resolution=target_scale,
