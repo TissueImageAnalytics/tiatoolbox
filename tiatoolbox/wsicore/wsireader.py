@@ -242,7 +242,7 @@ class WSIReader:
             )
         return level, scale
 
-    def find_read_rect_params(self, location, size, resolution, units, precision=3):
+    def _find_read_rect_params(self, location, size, resolution, units, precision=3):
         """Find optimal parameters for reading a rect at a given resolution.
 
         Reading the image at full baseline resolution and re-sampling to
@@ -1133,7 +1133,7 @@ class OmnyxJP2WSIReader(WSIReader):
             _,
             post_read_scale,
             baseline_read_size,
-        ) = self.find_read_rect_params(
+        ) = self._find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
