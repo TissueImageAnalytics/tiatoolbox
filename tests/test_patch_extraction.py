@@ -320,7 +320,7 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
         input_img=input_img,
         method_name="fixedwindow",
         patch_size=patch_size,
-        resolution=1,
+        resolution=0,
         units="level",
         stride=stride,
     )
@@ -331,7 +331,7 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
     patch = wsi.read_rect(
         location=(int(x), int(y)),
         size=patch_size,
-        resolution=1,
+        resolution=0,
         units="level",
     )
 
