@@ -1,7 +1,7 @@
 History
 =======
 
-0.6.0 (2021-05-10)
+0.6.0 (2021-05-11)
 ------------------
 ### Major and Feature Improvements
 - Add `TissueMasker` class to allow tissue masking using `Otsu` and `Morphological` processing.
