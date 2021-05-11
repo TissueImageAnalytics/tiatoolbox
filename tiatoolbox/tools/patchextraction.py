@@ -44,8 +44,9 @@ class PatchExtractor(ABC):
           resolution=3, units="level" will read at level at
           pyramid level / resolution layer 3.
         units (str): the units of resolution, default = "level".
-          Supported units are: microns per pixel (mpp), objective
-          power (power), pyramid / resolution level (level),
+          Only pyramid / resolution level (level) is supported.
+          Other units are to be supported in the future are:
+          microns per pixel (mpp), objective power (power),
           pixels per baseline pixel (baseline).
 
     Attributes:
