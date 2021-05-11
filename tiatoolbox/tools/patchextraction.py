@@ -126,13 +126,7 @@ class PatchExtractor(ABC):
         The slide dimension is calculated using units and resolution.
 
         """
-        (
-            read_level,
-            _,
-            level_read_size,
-            post_read_scale_factor,
-            baseline_read_size,
-        ) = self.wsi.find_read_rect_params(
+        (read_level, _, _, _, baseline_read_size,) = self.wsi.find_read_rect_params(
             location=(0, 0),
             size=self.patch_size,
             resolution=self.resolution,
