@@ -66,6 +66,15 @@ Stain Normalisation
 .. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
+
+^^^^^^^^^^^^^^^
+Tissue Masking
+^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.tissuemask
+    :members:
+
+
 ^^^^^^^^^^^^^^^^^^
 Stain Extraction
 ^^^^^^^^^^^^^^^^^^
