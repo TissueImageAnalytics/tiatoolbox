@@ -1452,7 +1452,7 @@ def get_wsireader(input_img):
     """Return an appropriate :class:`.WSIReader` object.
 
     Args:
-        input_img (str or pathlib.Path): input path to WSI.
+        input_img (str, pathlib.Path, :class:`numpy.ndarray`): input path to WSI.
 
     Returns:
         WSIReader: an object with base :class:`.WSIReader` as base class.
@@ -1478,6 +1478,11 @@ def get_wsireader(input_img):
             raise FileNotSupported("Filetype not supported.")
     elif isinstance(input_img, np.ndarray):
         wsi = VirtualWSIReader(input_img)
+    elif isinstance(
+        input_img, (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader)
+    ):
+        # input is already a tiatoolbox wsi handler
+        wsi = input_img
     else:
         raise TypeError("Please input correct image path or an ndarray image.")
 
