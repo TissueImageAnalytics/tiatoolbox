@@ -28,7 +28,7 @@ from tiatoolbox import tools
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.5.2"
+__version__ = "0.6.0"
 
 # will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
@@ -41,4 +41,4 @@ rcParam = {
 }
 
 if __name__ == "__main__":
-    pass
+    print("tiatoolbox version:" + str(__version__))
