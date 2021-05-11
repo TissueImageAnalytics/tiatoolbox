@@ -30,4 +30,4 @@ __email__ = "tialab@dcs.warwick.ac.uk"
 __version__ = "0.6.0"
 
 if __name__ == "__main__":
-    pass
+    print("tiatoolbox version:" + str(__version__))
