@@ -523,6 +523,8 @@ def patch_predictor(
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
         os.makedirs(output_path)
+    # Do conversion else cant dump via json
+    output = {k: v.tolist() for k, v in output.items()}
     with open(output_file_path, "w") as handle:
         json.dump(output, handle)
 
