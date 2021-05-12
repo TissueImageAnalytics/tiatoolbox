@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -23,17 +23,20 @@
 import torchvision.models as torch_models
 import torch.nn as nn
 
-__all__ = ['get_model']
+__all__ = ["get_model"]
+
 
 def get_model(backbone, pretrained=True, **kwargs):
-    """Get a model. Models are either already defined within torchvision
+    """Get a model.
+
+    Models are either already defined within torchvision
     or they can be custom-made within tiatoolbox.
 
     Args:
-        backbone (str): model name.
+        backbone (str): Model name.
 
     Returns:
-        list of PyTorch network layers wrapped with nn.Sequential.
+        List of PyTorch network layers wrapped with nn.Sequential.
         https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html
 
     """
@@ -63,7 +66,7 @@ def get_model(backbone, pretrained=True, **kwargs):
     creator = backbone_dict[backbone]
     model = creator(pretrained=pretrained, **kwargs)
 
-    # unroll all the definition and strip off the final GAP and FCN
+    # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in backbone or "resnext" in backbone:
         feat_extract = nn.Sequential(*list(model.children())[:-2])
     elif "densenet" in backbone:

@@ -1,3 +1,5 @@
+"""Tests for code related to patch extraction."""
+
 from tiatoolbox.tools import patchextraction
 from tiatoolbox.utils.exceptions import MethodNotSupported, FileNotSupported
 from tiatoolbox.utils import misc

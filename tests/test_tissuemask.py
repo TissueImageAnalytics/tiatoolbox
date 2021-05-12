@@ -1,3 +1,5 @@
+"""Tests for code related to tissue mask generation."""
+
 import numpy as np
 import pytest
 import cv2

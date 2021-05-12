@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -27,9 +27,10 @@ from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.models.classification.pretrained_info import __pretrained_model
-from tiatoolbox.models.classification.patch_predictor import CNN_Patch_Predictor
-from tiatoolbox.models.dataset.classification import Patch_Dataset
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.dataset.classification import PatchDataset
 
+import json
 import sys
 import click
 import os
@@ -442,40 +443,40 @@ def tissue_mask(
 @main.command()
 @click.option(
     "--predefined_model",
-    help="predefined model used to process the data. the format is "
+    help="Predefined model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
     default="resnet18-kather100K",
 )
 @click.option(
     "--pretrained_weight",
-    help="path to the model weight file. If not supplied, the default "
+    help="Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default=None,
 )
 @click.option(
     "--img_input",
-    help="path to the input directory containing images to process or an "
+    help="Path to the input directory containing images to process or an "
     "individual file.",
 )
 @click.option(
     "--output_path",
-    help="output directory where model predictions will be saved.",
+    help="Output directory where model predictions will be saved.",
     default="patch_prediction",
 )
 @click.option(
     "--batch_size",
-    help="number of images to feed into the model each time.",
+    help="Number of images to feed into the model each time.",
     default=16,
 )
 @click.option(
     "--return_probs",
-    help="whether to return raw model probabilities.",
+    help="Whether to return raw model probabilities.",
     default=False,
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory. "
+    help="File types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
@@ -509,9 +510,9 @@ def patch_predictor(
     if len(img_files) < batch_size:
         batch_size = len(img_files)
 
-    dataset = Patch_Dataset(img_files)
+    dataset = PatchDataset(img_files)
 
-    predictor = CNN_Patch_Predictor(
+    predictor = CNNPatchPredictor(
         predefined_model=predefined_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
@@ -522,10 +523,10 @@ def patch_predictor(
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
         os.makedirs(output_path)
-    print(output)
-    print(output_file_path)
-    # with open(output_file_path, "w") as handle:
-    #     json.dump(output, handle)
+    # convert output, otherwise can't dump via json
+    output = {k: v.tolist() for k, v in output.items()}
+    with open(output_file_path, "w") as handle:
+        json.dump(output, handle)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -31,11 +31,11 @@ from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
 
-class __Torch_Preproc_Caller:
+class __TorchPreprocCaller:
     """Wrapper for applying PyTorch transforms.
 
     Args:
-        preproc_list (list): list of torchvision transforms for preprocessing the image.
+        preproc_list (list): List of torchvision transforms for preprocessing the image.
             The transforms will be applied in the order that they are
             given in the list. https://pytorch.org/vision/stable/transforms.html.
     """
@@ -54,7 +54,7 @@ def predefined_preproc_func(dataset_name):
     """Get the preprocessing information used for the pretrained model.
 
     Args:
-        dataset_name (str): dataset name used to determine what preprocessing was used.
+        dataset_name (str): Dataset name used to determine what preprocessing was used.
 
     """
     preproc_dict = {
@@ -68,7 +68,7 @@ def predefined_preproc_func(dataset_name):
         )
 
     preproc_list = preproc_dict[dataset_name]
-    preproc_func = __Torch_Preproc_Caller(preproc_list)
+    preproc_func = __TorchPreprocCaller(preproc_list)
     return preproc_func
 
 
@@ -79,7 +79,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         return_labels (bool, False): __getitem__ will return both the img and its label.
                 If `label_list` is `None`, `None` is returned
 
-        preproc_func: preprocessing function used to transform the input data. If
+        preproc_func: Preprocessing function used to transform the input data. If
         supplied, then torch.Compose will be used on the input preproc_list.
         preproc_list is a list of torchvision transforms for preprocessing the image.
         The transforms will be applied in the order that they are given in the list.
@@ -100,7 +100,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         """Load an image from a provided path.
 
         Args:
-            path (str): path to an image file.
+            path (str): Path to an image file.
 
         """
         path = pathlib.Path(path)
@@ -128,11 +128,11 @@ class __ABC_Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         patch = self.img_list[idx]
-        # mode 0 is list of paths
+        # Mode 0 is list of paths
         if not self.data_is_npy_alike:
             patch = self.load_img(patch)
 
-        # apply preprocessing to selected patch
+        # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
         if self.return_labels:
@@ -141,7 +141,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         return patch
 
 
-class Patch_Dataset(__ABC_Dataset):
+class PatchDataset(__ABC_Dataset):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
 
@@ -156,7 +156,7 @@ class Patch_Dataset(__ABC_Dataset):
         return_labels (bool, False): __getitem__ will return both the img and its label.
          If `label_list` is `None`, `None` is returned
 
-        preproc_func: preprocessing function used to transform the input data. If
+        preproc_func: Preprocessing function used to transform the input data. If
          supplied, then torch.Compose will be used on the input preproc_list.
          preproc_list is a list of torchvision transforms for preprocessing the image.
          The transforms will be applied in the order that they are given in the list.
@@ -183,10 +183,10 @@ class Patch_Dataset(__ABC_Dataset):
 
         self.data_is_npy_alike = False
 
-        # perform check on the input
+        # Perform check on the input
         # ? move to ABC ?
 
-        # if input is a list - can contain a list of images or a list of image paths
+        # If input is a list - can contain a list of images or a list of image paths
         if isinstance(img_list, list):
             is_all_path_list = all(isinstance(v, (pathlib.Path, str)) for v in img_list)
             is_all_npy_list = all(isinstance(v, np.ndarray) for v in img_list)
@@ -197,7 +197,7 @@ class Patch_Dataset(__ABC_Dataset):
                 )
 
             shape_list = []
-            # when a list of paths is provided
+            # When a list of paths is provided
             if is_all_path_list:
                 if any(not os.path.exists(v) for v in img_list):
                     # at least one of the paths are invalid
@@ -205,7 +205,7 @@ class Patch_Dataset(__ABC_Dataset):
                         "Input must be either a list/array of images "
                         "or a list of valid image paths."
                     )
-                # preload test for sanity check
+                # Preload test for sanity check
                 shape_list = [self.load_img(v).shape for v in img_list]
                 self.data_is_npy_alike = False
             else:
@@ -216,13 +216,13 @@ class Patch_Dataset(__ABC_Dataset):
                 raise ValueError("Each sample must be an array of the form HWC.")
 
             max_shape = np.max(shape_list, axis=0)
-            # how will this behave for mixed channel ?
+            # How will this behave for mixed channel ?
             if (shape_list - max_shape[None]).sum() != 0:
                 raise ValueError("Images must have the same dimensions.")
 
-        # if input is a numpy array
+        # If input is a numpy array
         elif isinstance(img_list, np.ndarray):
-            # check that input array is numerical
+            # Check that input array is numerical
             if not np.issubdtype(img_list.dtype, np.number):
                 # ndarray of mixed data types
                 raise ValueError("Provided input array is non-numerical.")
@@ -249,16 +249,16 @@ class Patch_Dataset(__ABC_Dataset):
         self.return_labels = return_labels
 
 
-class Kather_Patch_Dataset(__ABC_Dataset):
+class KatherPatchDataset(__ABC_Dataset):
     """Define a dataset class specifically for the Kather dataset, obtain from [URL].
 
     Attributes:
-        save_dir_path (str or None): path to directory containing the Kather dataset,
+        save_dir_path (str or None): Path to directory containing the Kather dataset,
                  assumed to be as is after extracted. If the argument is `None`,
                  the dataset will be downloaded and extracted into the
                  'run_dir/download/Kather'.
 
-        preproc_list: list of preprocessing to be applied. If not provided, by default
+        preproc_list: List of preprocessing to be applied. If not provided, by default
                       the following are applied in sequential order.
 
     """
@@ -300,7 +300,7 @@ class Kather_Patch_Dataset(__ABC_Dataset):
         elif not os.path.exists(save_dir_path):
             raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
 
-        # what will happen if downloaded data get corrupted?
+        # What will happen if downloaded data get corrupted?
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):
             path_list = grab_files_from_dir(
