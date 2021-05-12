@@ -187,9 +187,7 @@ def test_PatchDataset_path_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
-    )
+    dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
 
     dataset.preproc_func = lambda x: x
 
