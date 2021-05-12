@@ -25,6 +25,7 @@ from tiatoolbox import tiatoolbox
 from tiatoolbox import wsicore
 from tiatoolbox import utils
 from tiatoolbox import tools
+from tiatoolbox import models
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
@@ -36,9 +37,7 @@ __version__ = "0.6.0"
 # /home/USER/.tiatoolbox
 
 # runtime context parameters
-rcParam = {
-    'TIATOOLBOX_HOME' : os.path.join(os.path.expanduser("~"), ".tiatoolbox")
-}
+rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))
