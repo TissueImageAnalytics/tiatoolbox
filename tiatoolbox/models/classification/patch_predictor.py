@@ -28,14 +28,14 @@ import os
 import copy
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.abc import Model_Base
+from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
 from tiatoolbox.models.classification.pretrained_info import __pretrained_model
 
 
-class CNN_Patch_Model(Model_Base):
+class CNNPatchModel(ModelBase):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
     Attributes:
@@ -119,7 +119,7 @@ class CNN_Patch_Model(Model_Base):
         return output.cpu().numpy()
 
 
-class CNN_Patch_Predictor:
+class CNNPatchPredictor:
     """Patch-level predictor.
 
     Attributes:
@@ -129,8 +129,8 @@ class CNN_Patch_Predictor:
         verbose (bool): Whether to output logging information.
 
     Usage:
-        >>> dataset = Patch_Dataset()
-        >>> predictor = CNN_Patch_Predictor(predefined_model="resnet18-kather100K")
+        >>> dataset = PatchDataset()
+        >>> predictor = CNNPatchPredictor(predefined_model="resnet18-kather100K")
         >>> output = predictor.predict(dataset)
 
     """
@@ -363,7 +363,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
-    model = CNN_Patch_Model(backbone=backbone, nr_classes=cfg["nr_classes"])
+    model = CNNPatchModel(backbone=backbone, nr_classes=cfg["nr_classes"])
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:

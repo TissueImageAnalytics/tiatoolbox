@@ -31,7 +31,7 @@ from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
 
-class __Torch_Preproc_Caller:
+class __TorchPreprocCaller:
     """Wrapper for applying PyTorch transforms.
 
     Args:
@@ -68,7 +68,7 @@ def predefined_preproc_func(dataset_name):
         )
 
     preproc_list = preproc_dict[dataset_name]
-    preproc_func = __Torch_Preproc_Caller(preproc_list)
+    preproc_func = __TorchPreprocCaller(preproc_list)
     return preproc_func
 
 
@@ -141,7 +141,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         return patch
 
 
-class Patch_Dataset(__ABC_Dataset):
+class PatchDataset(__ABC_Dataset):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
 
@@ -249,7 +249,7 @@ class Patch_Dataset(__ABC_Dataset):
         self.return_labels = return_labels
 
 
-class Kather_Patch_Dataset(__ABC_Dataset):
+class KatherPatchDataset(__ABC_Dataset):
     """Define a dataset class specifically for the Kather dataset, obtain from [URL].
 
     Attributes:

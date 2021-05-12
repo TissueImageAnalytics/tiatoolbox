@@ -22,7 +22,7 @@
 import tiatoolbox.models.abc as tia_model_abc
 
 
-class Model_Base(tia_model_abc.Model_Base):
+class ModelBase(tia_model_abc.ModelBase):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(

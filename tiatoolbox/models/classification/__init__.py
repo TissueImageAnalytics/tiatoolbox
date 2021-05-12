@@ -22,7 +22,7 @@
 """Package where patch-level classification models are stored."""
 
 from tiatoolbox.models.classification.patch_predictor import (
-    CNN_Patch_Predictor,
-    CNN_Patch_Model,
+    CNNPatchPredictor,
+    CNNPatchModel,
 )
 from tiatoolbox.models.classification import patch_predictor, abc, pretrained_info

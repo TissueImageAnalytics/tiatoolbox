@@ -22,7 +22,7 @@
 import torch.nn as nn
 
 
-class Model_Base(nn.Module):
+class ModelBase(nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self, *args, **kwargs):

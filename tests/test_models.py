@@ -9,11 +9,11 @@ from click.testing import CliRunner
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.classification.abc import Model_Base
-from tiatoolbox.models.classification import CNN_Patch_Model, CNN_Patch_Predictor
+from tiatoolbox.models.classification.abc import ModelBase
+from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.dataset import (
-    Kather_Patch_Dataset,
-    Patch_Dataset,
+    KatherPatchDataset,
+    PatchDataset,
     predefined_preproc_func,
 )
 from tiatoolbox.utils.misc import download_data, unzip_data
@@ -24,7 +24,7 @@ def _get_outputs_api1(dataset, predefined_model):
     """Helper function to get the model output using API 1."""
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(predefined_model=predefined_model, batch_size=1)
+    predictor = CNNPatchPredictor(predefined_model=predefined_model, batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
         dataset, return_probs=True, return_labels=True, on_gpu=False
@@ -55,7 +55,7 @@ def _get_outputs_api2(dataset, predefined_model):
     )
     download_data(pretrained_weight_url, pretrained_weight)
 
-    predictor = CNN_Patch_Predictor(
+    predictor = CNNPatchPredictor(
         predefined_model=predefined_model,
         pretrained_weight=pretrained_weight,
         batch_size=1,
@@ -75,7 +75,7 @@ def _get_outputs_api3(dataset, backbone, nr_classes=9):
     """Helper function to get the model output using API 3."""
 
     # API 3
-    model = CNN_Patch_Model(backbone=backbone, nr_classes=nr_classes)
+    model = CNNPatchModel(backbone=backbone, nr_classes=nr_classes)
 
     # coverage setter check
     model.set_preproc_func(lambda x: x - 1)  # do this for coverage
@@ -84,7 +84,7 @@ def _get_outputs_api3(dataset, backbone, nr_classes=9):
     model.set_preproc_func(None)  # do this for coverage
     assert model.get_preproc_func()(1) == 1
 
-    predictor = CNN_Patch_Predictor(model=model, batch_size=1, verbose=False)
+    predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     # don't run test on GPU
     output = predictor.predict(
         dataset, return_probs=True, return_labels=True, on_gpu=False
@@ -133,24 +133,24 @@ def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
     with pytest.raises(NotImplementedError):
-        Model_Base()
+        ModelBase()
     with pytest.raises(NotImplementedError):
-        Model_Base.infer_batch(1, 2, 3)
+        ModelBase.infer_batch(1, 2, 3)
 
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
-        CNN_Patch_Predictor()
+        CNNPatchPredictor()
 
     # provide wrong unknown predefined model
     with pytest.raises(ValueError, match=r"Predefined .* does not exist"):
-        CNN_Patch_Predictor(predefined_model="secret_model")
+        CNNPatchPredictor(predefined_model="secret_model")
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
-        CNN_Patch_Predictor(predefined_model=123)
+        CNNPatchPredictor(predefined_model=123)
 
     # model and dummy input
-    model = CNN_Patch_Predictor(predefined_model="resnet34-kather100K")
+    model = CNNPatchPredictor(predefined_model="resnet34-kather100K")
     img_list = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 4, 3)),
@@ -183,11 +183,11 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-def test_patch_dataset_path_imgs(_sample_patch1, _sample_patch2):
+def test_PatchDataset_path_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     )
 
@@ -209,12 +209,12 @@ def test_patch_dataset_path_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-def test_patch_dataset_list_imgs():
+def test_PatchDataset_list_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
     img = np.random.randint(0, 255, size=size)
     list_imgs = [img, img, img]
-    dataset = Patch_Dataset(list_imgs)
+    dataset = PatchDataset(list_imgs)
 
     dataset.preproc_func = lambda x: x
 
@@ -245,12 +245,17 @@ def test_patch_dataset_list_imgs():
     img_list = [
         os.path.join(save_dir_path, "sample2.npy"),
     ]
-    _ = Patch_Dataset(img_list)
+    _ = PatchDataset(img_list)
     assert img_list[0] is not None
+    # test for path object
+    img_list = [
+        pathlib.Path(os.path.join(save_dir_path, "sample2.npy")),
+    ]
+    _ = PatchDataset(img_list)
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-def test_patch_dataset_array_imgs():
+def test_PatchDataset_array_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
     img = np.random.randint(0, 255, size=size)
@@ -259,12 +264,12 @@ def test_patch_dataset_array_imgs():
     array_imgs = np.array(list_imgs)
 
     # test different setter for label
-    dataset = Patch_Dataset(array_imgs, label_list=label_list, return_labels=True)
+    dataset = PatchDataset(array_imgs, label_list=label_list, return_labels=True)
     assert dataset[2][1] == 3
-    dataset = Patch_Dataset(array_imgs, label_list=None, return_labels=True)
+    dataset = PatchDataset(array_imgs, label_list=None, return_labels=True)
     assert np.isnan(dataset[2][1]), dataset[2][1]
 
-    dataset = Patch_Dataset(array_imgs)
+    dataset = PatchDataset(array_imgs)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         num_workers=0,
@@ -281,26 +286,26 @@ def test_patch_dataset_array_imgs():
         )
 
 
-def test_patch_dataset_crash():
+def test_PatchDataset_crash():
     """Test to make sure patch dataset crashes with incorrect input."""
-    # all examples below should fail when input to Patch_Dataset
+    # all examples below should fail when input to PatchDataset
 
     # not supported input type
     img_list = {"a": np.random.randint(0, 255, (4, 4, 4))}
     with pytest.raises(
         ValueError, match=r".*Input must be either a list/array of images.*"
     ):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # ndarray of mixed dtype
     img_list = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # ndarrays of NHW images
     img_list = np.random.randint(0, 255, (4, 4, 4))
     with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # list of ndarrays with different sizes
     img_list = [
@@ -308,7 +313,7 @@ def test_patch_dataset_crash():
         np.random.randint(0, 255, (4, 5, 3)),
     ]
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # list of ndarrays with HW and HWC mixed up
     img_list = [
@@ -318,7 +323,7 @@ def test_patch_dataset_crash():
     with pytest.raises(
         ValueError, match="Each sample must be an array of the form HWC."
     ):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # list of mixed dtype
     img_list = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
@@ -327,7 +332,7 @@ def test_patch_dataset_crash():
         match="Input must be either a list/array of images or a list of "
         "valid image paths.",
     ):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # list of mixed dtype
     img_list = ["you_should_crash_here", 123, 456]
@@ -336,14 +341,14 @@ def test_patch_dataset_crash():
         match="Input must be either a list/array of images or a list of "
         "valid image paths.",
     ):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
 
     # list not exist paths
     with pytest.raises(
         ValueError,
         match=r".*valid image paths.*",
     ):
-        _ = Patch_Dataset(["img.npy"])
+        _ = PatchDataset(["img.npy"])
 
     # ** test different extenstion parser
     # save dummy data to temporary location
@@ -365,7 +370,7 @@ def test_patch_dataset_crash():
         ValueError,
         match=r"Can not load data of .*",
     ):
-        _ = Patch_Dataset(img_list)
+        _ = PatchDataset(img_list)
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
     # preproc func for not defined dataset
@@ -376,19 +381,19 @@ def test_patch_dataset_crash():
         predefined_preproc_func("secret_dataset")
 
 
-def test_kather_patch_dataset():
+def test_KatherPatchDataset():
     """Test for kather patch dataset."""
     size = (224, 224, 3)
     # test kather with default param
-    dataset = Kather_Patch_Dataset()
+    dataset = KatherPatchDataset()
     # kather with default data path skip download
-    dataset = Kather_Patch_Dataset()
+    dataset = KatherPatchDataset()
     # pytest for not exist dir
     with pytest.raises(
         ValueError,
         match=r".*not exist.*",
     ):
-        _ = Kather_Patch_Dataset(save_dir_path="unknown_place")
+        _ = KatherPatchDataset(save_dir_path="unknown_place")
     # save to temporary location
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
@@ -402,7 +407,7 @@ def test_kather_patch_dataset():
     download_data(url, save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
     extracted_dir = os.path.join(save_dir_path, "Kather_texture_2016_image_tiles_5000/")
-    dataset = Kather_Patch_Dataset(save_dir_path=extracted_dir, return_labels=True)
+    dataset = KatherPatchDataset(save_dir_path=extracted_dir, return_labels=True)
 
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=0
@@ -421,7 +426,7 @@ def test_kather_patch_dataset():
 def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 1. Test with resnet18 on Kather 100K dataset."""
 
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "resnet18-kather100K")
@@ -441,7 +446,7 @@ def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
 def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 2. Test with resnet18 on Kather 100K dataset."""
 
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels, save_dir_path = _get_outputs_api2(
@@ -466,7 +471,7 @@ def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
 def test_patch_predictor_api3(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 3. Test with resnet18 on Kather 100K dataset."""
 
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api3(dataset, "resnet18")
@@ -479,7 +484,7 @@ def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with alexnet on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "alexnet-kather100K")
@@ -500,7 +505,7 @@ def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet34 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "resnet34-kather100K")
@@ -521,7 +526,7 @@ def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet50 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "resnet50-kather100K")
@@ -542,7 +547,7 @@ def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet101 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "resnet101-kather100K")
@@ -563,7 +568,7 @@ def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patc
     """Test for patch predictor with resnext50_32x4d on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "resnext50_32x4d-kather100K")
@@ -584,7 +589,7 @@ def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_pat
     """Test for patch predictor with resnext101_32x8d on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "resnext101_32x8d-kather100K")
@@ -605,7 +610,7 @@ def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patc
     """Test for patch predictor with wide_resnet50_2 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "wide_resnet50_2-kather100K")
@@ -626,7 +631,7 @@ def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_pat
     """Test for patch predictor with wide_resnet101_2 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "wide_resnet101_2-kather100K")
@@ -647,7 +652,7 @@ def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet121 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "densenet121-kather100K")
@@ -668,7 +673,7 @@ def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet161 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "densenet161-kather100K")
@@ -689,7 +694,7 @@ def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet169 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "densenet169-kather100K")
@@ -710,7 +715,7 @@ def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet201 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "densenet201-kather100K")
@@ -731,7 +736,7 @@ def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2)
     """Test for patch predictor with mobilenet_v2 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v2-kather100K")
@@ -752,7 +757,7 @@ def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_p
     """Test for patch predictor with mobilenet_v3_large on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v3_large-kather100K")
@@ -773,7 +778,7 @@ def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_p
     """Test for patch predictor with mobilenet_v3_small on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v3_small-kather100K")
@@ -794,7 +799,7 @@ def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
     """Test for patch predictor with googlenet on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset(
+    dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
     probs, preds, labels = _get_outputs_api1(dataset, "googlenet-kather100K")

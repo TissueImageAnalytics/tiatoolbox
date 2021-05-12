@@ -21,8 +21,8 @@
 """Contains dataset functionality for use with models in tiatoolbox."""
 
 from tiatoolbox.models.dataset.classification import (
-    Patch_Dataset,
-    Kather_Patch_Dataset,
+    PatchDataset,
+    KatherPatchDataset,
     predefined_preproc_func,
 )
 
