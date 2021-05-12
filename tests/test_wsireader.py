@@ -1,3 +1,5 @@
+"""Tests for reading whole-slide images."""
+
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli

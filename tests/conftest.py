@@ -1,11 +1,9 @@
+"""pytest fixtures."""
+
 import pytest
 import requests
 import shutil
 import pathlib
-
-# -------------------------------------------------------------------------------------
-# Pytest Fixtures
-# -------------------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="session")

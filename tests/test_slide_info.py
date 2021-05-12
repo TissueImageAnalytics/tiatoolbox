@@ -1,3 +1,5 @@
+"""Tests for code related to obtaining slide information."""
+
 from tiatoolbox.wsicore.slide_info import slide_info
 from tiatoolbox import utils
 from tiatoolbox import cli

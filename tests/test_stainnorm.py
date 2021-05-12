@@ -1,3 +1,5 @@
+"""Tests for stain normalisation code."""
+
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox.tools import stainextract

@@ -24,6 +24,7 @@ With this class, metadata is in a normalised consistent format
 which is quite useful when working with many different WSI formats.
 The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.
+
 """
 import warnings
 from pathlib import Path
