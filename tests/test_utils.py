@@ -759,7 +759,7 @@ def test_download_unzip_data():
 
 
 def test_download_data():
-    """Test download and unzip data from utils.misc."""
+    """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
     if os.path.exists(save_dir_path):
