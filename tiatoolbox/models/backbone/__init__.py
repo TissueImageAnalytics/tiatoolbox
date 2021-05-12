@@ -23,6 +23,7 @@
 import torchvision.models as torch_models
 import torch.nn as nn
 
+__all__ = ['get_model']
 
 def get_model(backbone, pretrained=True, **kwargs):
     """Get a model. Models are either already defined within torchvision
