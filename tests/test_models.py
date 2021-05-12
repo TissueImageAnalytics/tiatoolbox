@@ -20,13 +20,8 @@ from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 from tiatoolbox import cli
 
 
-def _get_outputs_api1(predefined_model):
+def _get_outputs_api1(dataset, predefined_model):
     """Helper function to get the model output using API 1."""
-
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
     predictor = CNN_Patch_Predictor(predefined_model=predefined_model, batch_size=1)
@@ -41,13 +36,8 @@ def _get_outputs_api1(predefined_model):
     return probs, preds, labels
 
 
-def _get_outputs_api2(predefined_model):
+def _get_outputs_api2(dataset, predefined_model):
     """Helper function to get the model output using API 2."""
-
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 2
     pretrained_weight_url = (
@@ -66,7 +56,7 @@ def _get_outputs_api2(predefined_model):
     download_data(pretrained_weight_url, pretrained_weight)
 
     predictor = CNN_Patch_Predictor(
-        predefined_model="resnet18-kather100K",
+        predefined_model=predefined_model,
         pretrained_weight=pretrained_weight,
         batch_size=1,
     )
@@ -81,16 +71,11 @@ def _get_outputs_api2(predefined_model):
     return probs, preds, labels, save_dir_path
 
 
-def _get_outputs_api3(backbone):
+def _get_outputs_api3(dataset, backbone, nr_classes=9):
     """Helper function to get the model output using API 3."""
 
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths, return_labels=True)
-
     # API 3
-    model = CNN_Patch_Model(backbone=backbone, nr_classes=9)
+    model = CNN_Patch_Model(backbone=backbone, nr_classes=nr_classes)
 
     # coverage setter check
     model.set_preproc_func(lambda x: x - 1)  # do this for coverage
@@ -433,10 +418,11 @@ def test_kather_patch_dataset():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-def test_patch_predictor_api1():
+def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 1. Test with resnet18 on Kather 100K dataset."""
 
-    probs, preds, labels = _get_outputs_api1(predefined_model="resnet18-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet18-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -450,11 +436,12 @@ def test_patch_predictor_api1():
         )
 
 
-def test_patch_predictor_api2():
+def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 2. Test with resnet18 on Kather 100K dataset."""
 
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
     probs, preds, labels, save_dir_path = _get_outputs_api2(
-        predefined_model="resnet18-kather100K"
+        dataset, "resnet18-kather100K"
     )
 
     assert len(probs) == len(preds)
@@ -472,20 +459,22 @@ def test_patch_predictor_api2():
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_patch_predictor_api3():
+def test_patch_predictor_api3(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 3. Test with resnet18 on Kather 100K dataset."""
 
-    probs, preds, labels = _get_outputs_api3(backbone="resnet18")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api3(dataset, "resnet18")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
 
-def test_patch_predictor_alexnet_kather100K():
+def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with alexnet on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="alexnet-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "alexnet-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -499,11 +488,12 @@ def test_patch_predictor_alexnet_kather100K():
         )
 
 
-def test_patch_predictor_resnet34_kather100K():
+def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet34 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="resnet34-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet34-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -517,11 +507,12 @@ def test_patch_predictor_resnet34_kather100K():
         )
 
 
-def test_patch_predictor_resnet50_kather100K():
+def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet50 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="resnet50-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet50-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -535,11 +526,12 @@ def test_patch_predictor_resnet50_kather100K():
         )
 
 
-def test_patch_predictor_resnet101_kather100K():
+def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet101 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="resnet101-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet101-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -553,13 +545,12 @@ def test_patch_predictor_resnet101_kather100K():
         )
 
 
-def test_patch_predictor_resnext50_32x4d_kather100K():
+def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnext50_32x4d on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(
-        predefined_model="resnext50_32x4d-kather100K"
-    )
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "resnext50_32x4d-kather100K")
 
     assert len(probs) == len(preds)
     assert len(preds) == len(labels)
@@ -573,13 +564,12 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
         )
 
 
-def test_patch_predictor_resnext101_32x8d_kather100K():
+def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnext101_32x8d on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(
-        predefined_model="resnext101_32x8d-kather100K"
-    )
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "resnext101_32x8d-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -593,13 +583,12 @@ def test_patch_predictor_resnext101_32x8d_kather100K():
         )
 
 
-def test_patch_predictor_wide_resnet50_2_kather100K():
+def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with wide_resnet50_2 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(
-        predefined_model="wide_resnet50_2-kather100K"
-    )
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "wide_resnet50_2-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -613,13 +602,12 @@ def test_patch_predictor_wide_resnet50_2_kather100K():
         )
 
 
-def test_patch_predictor_wide_resnet101_2_kather100K():
+def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with wide_resnet101_2 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(
-        predefined_model="wide_resnet101_2-kather100K"
-    )
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "wide_resnet101_2-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -633,11 +621,12 @@ def test_patch_predictor_wide_resnet101_2_kather100K():
         )
 
 
-def test_patch_predictor_densenet121_kather100K():
+def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet121 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="densenet121-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet121-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -651,11 +640,12 @@ def test_patch_predictor_densenet121_kather100K():
         )
 
 
-def test_patch_predictor_densenet161_kather100K():
+def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet161 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="densenet161-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet161-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -669,11 +659,12 @@ def test_patch_predictor_densenet161_kather100K():
         )
 
 
-def test_patch_predictor_densenet169_kather100K():
+def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet169 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="densenet169-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet169-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -687,11 +678,12 @@ def test_patch_predictor_densenet169_kather100K():
         )
 
 
-def test_patch_predictor_densenet201_kather100K():
+def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet201 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="densenet201-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet201-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -705,11 +697,12 @@ def test_patch_predictor_densenet201_kather100K():
         )
 
 
-def test_patch_predictor_mobilenet_v2_kather100K():
+def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v2 on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(predefined_model="mobilenet_v2-kather100K")
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v2-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -723,13 +716,12 @@ def test_patch_predictor_mobilenet_v2_kather100K():
         )
 
 
-def test_patch_predictor_mobilenet_v3_large_kather100K():
+def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v3_large on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(
-        predefined_model="mobilenet_v3_large-kather100K"
-    )
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v3_large-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -743,13 +735,12 @@ def test_patch_predictor_mobilenet_v3_large_kather100K():
         )
 
 
-def test_patch_predictor_mobilenet_v3_small_kather100K():
+def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v3_small on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    probs, preds, labels = _get_outputs_api1(
-        predefined_model="mobilenet_v3_small-kather100K"
-    )
+    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v3_small-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
