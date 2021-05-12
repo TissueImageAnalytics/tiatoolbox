@@ -90,6 +90,10 @@ __pretrained_model = {
         "pretrained": os.path.join(models_root, "mobilenet_v3_small-kather100K-pc.pth"),
         "nr_classes": 9,
     },
+    "googlenet-kather100K": {
+        "pretrained": os.path.join(models_root, "googlenet-kather100K-pc.pth"),
+        "nr_classes": 9,
+    },
 }
 
 # to ensure easy matching
