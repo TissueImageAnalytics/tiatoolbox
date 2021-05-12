@@ -65,7 +65,7 @@ def get_model(backbone, pretrained=True, **kwargs):
     creator = backbone_dict[backbone]
     model = creator(pretrained=pretrained, **kwargs)
 
-    # unroll all the definition and strip off the final GAP and FCN
+    # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in backbone or "resnext" in backbone:
         feat_extract = nn.Sequential(*list(model.children())[:-2])
     elif "densenet" in backbone:
