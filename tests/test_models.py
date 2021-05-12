@@ -16,7 +16,7 @@ from tiatoolbox.models.dataset import (
     Patch_Dataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
+from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox import cli
 
 
