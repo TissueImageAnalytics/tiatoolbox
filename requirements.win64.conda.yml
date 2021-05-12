@@ -2,6 +2,7 @@ name: tiatoolbox
 channels:
   - conda
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
   - python=3.7
@@ -20,6 +21,9 @@ dependencies:
   - glymur
   - scikit-learn==0.23.2
   - scikit-image
+  - torchvision
+  - pytorch
+  - tqdm
   - jupyterlab
   - pip:
     - openslide-python

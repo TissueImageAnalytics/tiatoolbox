@@ -182,6 +182,8 @@ class CNN_Patch_Predictor:
                     Kather 100K dataset.
                 - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
                     Kather 100K dataset.
+                - googlenet-kather100K: googlenet backbone trained on
+                    Kather 100K dataset.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
@@ -339,6 +341,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
                 Kather 100K dataset.
             - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
                 Kather 100K dataset.
+            - googlenet-kather100K: googlenet backbone trained on Kather 100K dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the

@@ -2,6 +2,7 @@ name: tiatoolbox
 channels:
   - conda
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
   - python=3.7
@@ -21,9 +22,9 @@ dependencies:
   - pandas
   - glymur
   - scikit-learn==0.23.2
-  - torchvision==0.9.1
-  - torch==1.8.1
-  - tqdm==4.60.0
+  - torchvision
+  - pytorch
+  - tqdm
   - pytest==5.4.2
   - pytest-runner==5.2
   - scikit-image

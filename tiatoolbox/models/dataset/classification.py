@@ -147,20 +147,20 @@ class Patch_Dataset(__ABC_Dataset):
 
     Attributes:
         img_list: Either a list of patches, where each patch is a ndarray or a list of
-            valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
-            pointing to an image.
+         valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
+         pointing to an image.
 
         label_list: List of label for sample at the same index in `img_list` .
-                 Default is `None`
+         Default is `None`
 
         return_labels (bool, False): __getitem__ will return both the img and its label.
-                If `label_list` is `None`, `None` is returned
+         If `label_list` is `None`, `None` is returned
 
         preproc_func: preprocessing function used to transform the input data. If
-        supplied, then torch.Compose will be used on the input preproc_list.
-        preproc_list is a list of torchvision transforms for preprocessing the image.
-        The transforms will be applied in the order that they are given in the list.
-        https://pytorch.org/vision/stable/transforms.html.
+         supplied, then torch.Compose will be used on the input preproc_list.
+         preproc_list is a list of torchvision transforms for preprocessing the image.
+         The transforms will be applied in the order that they are given in the list.
+         https://pytorch.org/vision/stable/transforms.html.
 
     Examples:
         >>> from tiatoolbox.models.data import Patch_Dataset

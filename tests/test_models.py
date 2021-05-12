@@ -20,8 +20,85 @@ from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 from tiatoolbox import cli
 
 
+def _get_outputs_api1(dataset, predefined_model):
+    """Helper function to get the model output using API 1."""
+
+    # API 1, also test with return_labels
+    predictor = CNN_Patch_Predictor(predefined_model=predefined_model, batch_size=1)
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    return probs, preds, labels
+
+
+def _get_outputs_api2(dataset, predefined_model):
+    """Helper function to get the model output using API 2."""
+
+    # API 2
+    pretrained_weight_url = (
+        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100K-pc.pth"
+    )
+
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_api2")
+    # remove prev generated data - just a test!
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    os.makedirs(save_dir_path)
+
+    pretrained_weight = os.path.join(
+        rcParam["TIATOOLBOX_HOME"], "tmp_api2", "resnet18-kather100K-pc.pth"
+    )
+    download_data(pretrained_weight_url, pretrained_weight)
+
+    predictor = CNN_Patch_Predictor(
+        predefined_model=predefined_model,
+        pretrained_weight=pretrained_weight,
+        batch_size=1,
+    )
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    return probs, preds, labels, save_dir_path
+
+
+def _get_outputs_api3(dataset, backbone, nr_classes=9):
+    """Helper function to get the model output using API 3."""
+
+    # API 3
+    model = CNN_Patch_Model(backbone=backbone, nr_classes=nr_classes)
+
+    # coverage setter check
+    model.set_preproc_func(lambda x: x - 1)  # do this for coverage
+    assert model.get_preproc_func()(1) == 0
+    # coverage setter check
+    model.set_preproc_func(None)  # do this for coverage
+    assert model.get_preproc_func()(1) == 1
+
+    predictor = CNN_Patch_Predictor(model=model, batch_size=1, verbose=False)
+    # don't run test on GPU
+    output = predictor.predict(
+        dataset, return_probs=True, return_labels=True, on_gpu=False
+    )
+
+    probs = output["probs"]
+    preds = output["preds"]
+    labels = output["labels"]
+
+    return probs, preds, labels
+
+
 def test_create_backbone():
-    """Test for creating backbone"""
+    """Test for creating backbone."""
     backbone_list = [
         "alexnet",
         "resnet18",
@@ -36,14 +113,12 @@ def test_create_backbone():
         "densenet161",
         "densenet169",
         "densenet201",
-        "inception_v3",  # extremely slow, so just ignore it atm
-        "googlenet",  # extremely slow, so just ignore it atm
+        "googlenet",
         "mobilenet_v2",
         "mobilenet_v3_large",
         "mobilenet_v3_small",
     ]
     for backbone in backbone_list:
-        # check creation, so no downloading pretrain to save time
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
@@ -96,8 +171,8 @@ def test_set_root_dir():
     if os.path.exists(test_dir_path):
         os.rmdir(test_dir_path)
     rcParam["TIATOOLBOX_HOME"] = test_dir_path
-    # reimport to see if its overwrite, it should be changed
-    # silence deep source becaus this is intentional check
+    # reimport to see if it overwrites
+    # silence Deep Source because this is intentional check
     # skipcq
     from tiatoolbox import rcParam
 
@@ -108,13 +183,13 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-def test_patch_dataset_path_imgs():
+def test_patch_dataset_path_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
+
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+    )
 
     dataset.preproc_func = lambda x: x
 
@@ -343,24 +418,13 @@ def test_kather_patch_dataset():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-def test_patch_predictor_api1():
+def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 1. Test with resnet18 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
-    # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnet18-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet18-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -374,41 +438,15 @@ def test_patch_predictor_api1():
         )
 
 
-def test_patch_predictor_api2():
+def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 2. Test with resnet18 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
-    # API 2
-    pretrained_weight_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100K-pc.pth"
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_api2")
-    # remove prev generated data - just a test!
-    if os.path.exists(save_dir_path):
-        shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.makedirs(save_dir_path)
-
-    pretrained_weight = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], "tmp_api2", "resnet18-kather100K-pc.pth"
+    probs, preds, labels, save_dir_path = _get_outputs_api2(
+        dataset, "resnet18-kather100K"
     )
-    download_data(pretrained_weight_url, pretrained_weight)
-
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnet18-kather100K",
-        pretrained_weight=pretrained_weight,
-        batch_size=1,
-    )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -425,53 +463,26 @@ def test_patch_predictor_api2():
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_patch_predictor_api3():
+def test_patch_predictor_api3(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 3. Test with resnet18 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths, return_labels=True)
 
-    # API 3
-    model = CNN_Patch_Model(backbone="resnet18", nr_classes=9)
-
-    # coverage setter check
-    model.set_preproc_func(lambda x: x - 1)  # do this for coverage
-    assert model.get_preproc_func()(1) == 0
-    # coverage setter check
-    model.set_preproc_func(None)  # do this for coverage
-    assert model.get_preproc_func()(1) == 1
-
-    predictor = CNN_Patch_Predictor(model=model, batch_size=1, verbose=False)
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api3(dataset, "resnet18")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
 
-def test_patch_predictor_alexnet_kather100K():
+def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with alexnet on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(predefined_model="alexnet-kather100K", batch_size=1)
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "alexnet-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -485,24 +496,14 @@ def test_patch_predictor_alexnet_kather100K():
         )
 
 
-def test_patch_predictor_resnet34_kather100K():
+def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet34 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnet34-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet34-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -516,24 +517,14 @@ def test_patch_predictor_resnet34_kather100K():
         )
 
 
-def test_patch_predictor_resnet50_kather100K():
+def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet50 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnet50-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet50-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -547,24 +538,14 @@ def test_patch_predictor_resnet50_kather100K():
         )
 
 
-def test_patch_predictor_resnet101_kather100K():
+def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet101 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnet101-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "resnet101-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -578,24 +559,14 @@ def test_patch_predictor_resnet101_kather100K():
         )
 
 
-def test_patch_predictor_resnext50_32x4d_kather100K():
+def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnext50_32x4d on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnext50_32x4d-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "resnext50_32x4d-kather100K")
 
     assert len(probs) == len(preds)
     assert len(preds) == len(labels)
@@ -609,24 +580,14 @@ def test_patch_predictor_resnext50_32x4d_kather100K():
         )
 
 
-def test_patch_predictor_resnext101_32x8d_kather100K():
+def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnext101_32x8d on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="resnext101_32x8d-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "resnext101_32x8d-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -640,24 +601,14 @@ def test_patch_predictor_resnext101_32x8d_kather100K():
         )
 
 
-def test_patch_predictor_wide_resnet50_2_kather100K():
+def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with wide_resnet50_2 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="wide_resnet50_2-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "wide_resnet50_2-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -671,24 +622,14 @@ def test_patch_predictor_wide_resnet50_2_kather100K():
         )
 
 
-def test_patch_predictor_wide_resnet101_2_kather100K():
+def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with wide_resnet101_2 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="wide_resnet101_2-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "wide_resnet101_2-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -702,24 +643,14 @@ def test_patch_predictor_wide_resnet101_2_kather100K():
         )
 
 
-def test_patch_predictor_densenet121_kather100K():
+def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet121 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="densenet121-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet121-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -733,24 +664,14 @@ def test_patch_predictor_densenet121_kather100K():
         )
 
 
-def test_patch_predictor_densenet161_kather100K():
+def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet161 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="densenet161-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet161-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -764,24 +685,14 @@ def test_patch_predictor_densenet161_kather100K():
         )
 
 
-def test_patch_predictor_densenet169_kather100K():
+def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet169 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="densenet169-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet169-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -795,24 +706,14 @@ def test_patch_predictor_densenet169_kather100K():
         )
 
 
-def test_patch_predictor_densenet201_kather100K():
+def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet201 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="densenet201-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "densenet201-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -826,24 +727,14 @@ def test_patch_predictor_densenet201_kather100K():
         )
 
 
-def test_patch_predictor_mobilenet_v2_kather100K():
+def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v2 on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="mobilenet_v2-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v2-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -857,24 +748,14 @@ def test_patch_predictor_mobilenet_v2_kather100K():
         )
 
 
-def test_patch_predictor_mobilenet_v3_large_kather100K():
+def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v3_large on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="mobilenet_v3_large-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v3_large-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -888,24 +769,14 @@ def test_patch_predictor_mobilenet_v3_large_kather100K():
         )
 
 
-def test_patch_predictor_mobilenet_v3_small_kather100K():
+def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v3_small on Kather 100K dataset."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    dataset = Patch_Dataset(list_paths)
 
     # API 1, also test with return_labels
-    predictor = CNN_Patch_Predictor(
-        predefined_model="mobilenet_v3_small-kather100K", batch_size=1
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    # don't run test on GPU
-    output = predictor.predict(
-        dataset, return_probs=True, return_labels=True, on_gpu=False
-    )
-    probs = output["probs"]
-    preds = output["preds"]
-    labels = output["labels"]
+    probs, preds, labels = _get_outputs_api1(dataset, "mobilenet_v3_small-kather100K")
 
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
@@ -919,15 +790,34 @@ def test_patch_predictor_mobilenet_v3_small_kather100K():
         )
 
 
+def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
+    """Test for patch predictor with googlenet on Kather 100K dataset."""
+
+    # API 1, also test with return_labels
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
+    )
+    probs, preds, labels = _get_outputs_api1(dataset, "googlenet-kather100K")
+
+    assert len(probs) == len(preds)
+    assert len(probs) == len(labels)
+
+    prob_check = [1.0, 0.998254120349884]
+    pred_check = [5, 8]
+    for idx, probs_ in enumerate(probs):
+        prob_max = max(probs_)
+        assert (
+            np.abs(prob_max - prob_check[idx]) <= 1e-8 and preds[idx] == pred_check[idx]
+        )
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_patch_predictor():
+def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
     """Test for the patch predictor CLI."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
 
     runner = CliRunner()
     patch_predictor_dir = runner.invoke(
@@ -937,7 +827,7 @@ def test_command_line_patch_predictor():
             "--predefined_model",
             "resnet18-kather100K",
             "--img_input",
-            dir_patches,
+            str(pathlib.Path(_dir_sample_patches)),
             "--batch_size",
             2,
             "--return_probs",
@@ -947,8 +837,6 @@ def test_command_line_patch_predictor():
 
     assert patch_predictor_dir.exit_code == 0
 
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    single_path = list_paths[0]
     patch_predictor_single_path = runner.invoke(
         cli.main,
         [
@@ -956,7 +844,7 @@ def test_command_line_patch_predictor():
             "--predefined_model",
             "resnet18-kather100K",
             "--img_input",
-            single_path,
+            pathlib.Path(_sample_patch1),
             "--batch_size",
             2,
             "--return_probs",
@@ -967,10 +855,8 @@ def test_command_line_patch_predictor():
     assert patch_predictor_single_path.exit_code == 0
 
 
-def test_command_line_patch_predictor_crash():
+def test_command_line_patch_predictor_crash(_sample_patch1):
     """Test for the patch predictor CLI."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    img_path = file_parent_dir.joinpath("data/sample_patches/kather1_unknown.tif")
 
     # test single image not exist
     runner = CliRunner()
@@ -981,13 +867,12 @@ def test_command_line_patch_predictor_crash():
             "--predefined_model",
             "resnet18-kather100K",
             "--img_input",
-            img_path,
+            "imaginary_img.tif",
         ],
     )
     assert result.exit_code != 0
 
     # test not predefined model
-    img_path = file_parent_dir.joinpath("data/sample_patches/kather1.tif")
     result = runner.invoke(
         cli.main,
         [
@@ -995,7 +880,7 @@ def test_command_line_patch_predictor_crash():
             "--predefined_model",
             "secret_model",
             "--img_input",
-            img_path,
+            pathlib.Path(_sample_patch1),
         ],
     )
     assert result.exit_code != 0

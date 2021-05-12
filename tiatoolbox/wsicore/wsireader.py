@@ -186,7 +186,7 @@ class WSIReader:
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
-    def find_optimal_level_and_downsample(
+    def _find_optimal_level_and_downsample(
         self, resolution, units, precision=3
     ) -> Tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
@@ -242,7 +242,7 @@ class WSIReader:
             )
         return level, scale
 
-    def _find_read_rect_params(self, location, size, resolution, units, precision=3):
+    def find_read_rect_params(self, location, size, resolution, units, precision=3):
         """Find optimal parameters for reading a rect at a given resolution.
 
         Reading the image at full baseline resolution and re-sampling to
@@ -291,7 +291,7 @@ class WSIReader:
                 - :py:obj:`int` - Height
 
         """
-        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
@@ -340,7 +340,7 @@ class WSIReader:
 
         """
         start_x, start_y, end_x, end_y = bounds
-        read_level, post_read_scale_factor = self.find_optimal_level_and_downsample(
+        read_level, post_read_scale_factor = self._find_optimal_level_and_downsample(
             resolution, units, precision
         )
         info = self.info
@@ -943,7 +943,7 @@ class OpenSlideWSIReader(WSIReader):
             level_size,
             post_read_scale,
             _,
-        ) = self._find_read_rect_params(
+        ) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -1133,7 +1133,7 @@ class OmnyxJP2WSIReader(WSIReader):
             _,
             post_read_scale,
             baseline_read_size,
-        ) = self._find_read_rect_params(
+        ) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -1374,7 +1374,7 @@ class VirtualWSIReader(WSIReader):
         **kwargs,
     ):
         # Find parameters for optimal read
-        (_, _, _, _, baseline_read_size,) = self._find_read_rect_params(
+        (_, _, _, _, baseline_read_size,) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -1452,7 +1452,14 @@ def get_wsireader(input_img):
     """Return an appropriate :class:`.WSIReader` object.
 
     Args:
-        input_img (str or pathlib.Path): input path to WSI.
+        input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+          Input to create a WSI object from.
+          Supported types of input are: `str` and `pathlib.Path` which point to
+          the location on the disk where image is stored, :class:`numpy.ndarray`
+          in which the input image in the form of numpy array (HxWxC) is stored,
+          or :obj:WSIReader which is an already created tiatoolbox WSI handler.
+          In the latter case, the function directly passes the input_imge to the
+          output.
 
     Returns:
         WSIReader: an object with base :class:`.WSIReader` as base class.
@@ -1478,6 +1485,11 @@ def get_wsireader(input_img):
             raise FileNotSupported("Filetype not supported.")
     elif isinstance(input_img, np.ndarray):
         wsi = VirtualWSIReader(input_img)
+    elif isinstance(
+        input_img, (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader)
+    ):
+        # input is already a tiatoolbox wsi handler
+        wsi = input_img
     else:
         raise TypeError("Please input correct image path or an ndarray image.")
 

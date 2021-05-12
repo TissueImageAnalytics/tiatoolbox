@@ -524,6 +524,7 @@ def download_data(url, save_path, overwrite=False):
     Args:
         url (path): URL from where to download the data.
         unzip_dir (str): location to unzip the data.
+
     """
     print("Download from %s" % url)
     print("Save to %s" % save_path)
@@ -539,18 +540,18 @@ def download_data(url, save_path, overwrite=False):
         f.write(r.content)
 
 
-def unzip_data(zip_path, save_path, remove_zip=True):
+def unzip_data(zip_path, save_path, del_zip=True):
     """Extract data from zip file.
 
     Args:
         zip_path (str): path where the zip file is located.
         save_path (str): path where to save extracted files.
-        remove_zip (bool): whether to remove initial zip file after extraction.
+        del_zip (bool): whether to delete initial zip file after extraction.
 
     """
     # extract data from zip file
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
-    if remove_zip:
+    if del_zip:
         # remove zip file
         os.remove(zip_path)
