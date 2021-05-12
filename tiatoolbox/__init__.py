@@ -21,11 +21,6 @@
 """Top-level package for TIA Toolbox."""
 
 import os
-from tiatoolbox import tiatoolbox
-from tiatoolbox import wsicore
-from tiatoolbox import utils
-from tiatoolbox import tools
-from tiatoolbox import models
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
@@ -38,6 +33,12 @@ __version__ = "0.6.0"
 
 # runtime context parameters
 rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
+
+from tiatoolbox import tiatoolbox
+from tiatoolbox import wsicore
+from tiatoolbox import utils
+from tiatoolbox import tools
+from tiatoolbox import models
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))
