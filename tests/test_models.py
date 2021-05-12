@@ -479,7 +479,9 @@ def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with alexnet on Kather 100K dataset."""
 
     # API 1, also test with return_labels
-    dataset = Patch_Dataset([_sample_patch1, _sample_patch2], return_labels=True)
+    dataset = Patch_Dataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
+    )
     probs, preds, labels = _get_outputs_api1(dataset, "alexnet-kather100K")
 
     assert len(probs) == len(preds)
@@ -800,7 +802,7 @@ def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
     assert len(probs) == len(preds)
     assert len(probs) == len(labels)
 
-    prob_check = [1.0, 0.9999963045120239]
+    prob_check = [1.0, 0.998254120349884]
     pred_check = [5, 8]
     for idx, probs_ in enumerate(probs):
         prob_max = max(probs_)
@@ -814,10 +816,8 @@ def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_patch_predictor():
+def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
     """Test for the patch predictor CLI."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    dir_patches = file_parent_dir.joinpath("data/sample_patches/")
 
     runner = CliRunner()
     patch_predictor_dir = runner.invoke(
@@ -827,7 +827,7 @@ def test_command_line_patch_predictor():
             "--predefined_model",
             "resnet18-kather100K",
             "--img_input",
-            dir_patches,
+            str(pathlib.Path(_dir_sample_patches)),
             "--batch_size",
             2,
             "--return_probs",
@@ -837,8 +837,6 @@ def test_command_line_patch_predictor():
 
     assert patch_predictor_dir.exit_code == 0
 
-    list_paths = grab_files_from_dir(dir_patches, file_types="*.tif")
-    single_path = list_paths[0]
     patch_predictor_single_path = runner.invoke(
         cli.main,
         [
@@ -846,7 +844,7 @@ def test_command_line_patch_predictor():
             "--predefined_model",
             "resnet18-kather100K",
             "--img_input",
-            single_path,
+            pathlib.Path(_sample_patch1),
             "--batch_size",
             2,
             "--return_probs",
@@ -857,10 +855,8 @@ def test_command_line_patch_predictor():
     assert patch_predictor_single_path.exit_code == 0
 
 
-def test_command_line_patch_predictor_crash():
+def test_command_line_patch_predictor_crash(_sample_patch1):
     """Test for the patch predictor CLI."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    img_path = file_parent_dir.joinpath("data/sample_patches/kather1_unknown.tif")
 
     # test single image not exist
     runner = CliRunner()
@@ -871,13 +867,12 @@ def test_command_line_patch_predictor_crash():
             "--predefined_model",
             "resnet18-kather100K",
             "--img_input",
-            img_path,
+            "imaginary_img.tif",
         ],
     )
     assert result.exit_code != 0
 
     # test not predefined model
-    img_path = file_parent_dir.joinpath("data/sample_patches/kather1.tif")
     result = runner.invoke(
         cli.main,
         [
@@ -885,7 +880,7 @@ def test_command_line_patch_predictor_crash():
             "--predefined_model",
             "secret_model",
             "--img_input",
-            img_path,
+            pathlib.Path(_sample_patch1),
         ],
     )
     assert result.exit_code != 0

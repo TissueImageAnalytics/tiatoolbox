@@ -561,3 +561,19 @@ def _sample_patch2(tmpdir_factory):
         print("\nSkipping Source Image")
 
     return patch_file_path
+
+
+@pytest.fixture(scope="session")
+def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
+    """Sample image patches for testing."""
+
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(_sample_patch1.basename).symlink_to(_sample_patch2)
+        dir_path.joinpath(_sample_patch2.basename).symlink_to(_sample_patch2)
+    except OSError:
+        shutil.copy(_sample_patch1, dir_path.joinpath(_sample_patch1.basename))
+        shutil.copy(_sample_patch2, dir_path.joinpath(_sample_patch2.basename))
+
+    return dir_path
