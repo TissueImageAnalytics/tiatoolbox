@@ -299,11 +299,12 @@ class CNNPatchPredictor:
             pbar.close()
 
         preds_output = np.array(preds_output)
-
         all_output = {"preds": preds_output}
         if return_probs:
+            probs_output = np.array(probs_output)
             all_output["probs"] = probs_output
         if return_labels:
+            labels_output = np.array(labels_output)
             all_output["labels"] = labels_output
         return all_output
 
