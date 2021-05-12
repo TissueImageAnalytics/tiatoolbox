@@ -26,14 +26,16 @@ import torch.nn as nn
 __all__ = ['get_model']
 
 def get_model(backbone, pretrained=True, **kwargs):
-    """Get a model. Models are either already defined within torchvision
+    """Get a model. 
+    
+    Models are either already defined within torchvision
     or they can be custom-made within tiatoolbox.
 
     Args:
-        backbone (str): model name.
+        backbone (str): Model name.
 
     Returns:
-        list of PyTorch network layers wrapped with nn.Sequential.
+        List of PyTorch network layers wrapped with nn.Sequential.
         https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html
 
     """

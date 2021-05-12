@@ -35,7 +35,7 @@ class __Torch_Preproc_Caller:
     """Wrapper for applying PyTorch transforms.
 
     Args:
-        preproc_list (list): list of torchvision transforms for preprocessing the image.
+        preproc_list (list): List of torchvision transforms for preprocessing the image.
             The transforms will be applied in the order that they are
             given in the list. https://pytorch.org/vision/stable/transforms.html.
     """
@@ -54,7 +54,7 @@ def predefined_preproc_func(dataset_name):
     """Get the preprocessing information used for the pretrained model.
 
     Args:
-        dataset_name (str): dataset name used to determine what preprocessing was used.
+        dataset_name (str): Dataset name used to determine what preprocessing was used.
 
     """
     preproc_dict = {
@@ -79,7 +79,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         return_labels (bool, False): __getitem__ will return both the img and its label.
                 If `label_list` is `None`, `None` is returned
 
-        preproc_func: preprocessing function used to transform the input data. If
+        preproc_func: Preprocessing function used to transform the input data. If
         supplied, then torch.Compose will be used on the input preproc_list.
         preproc_list is a list of torchvision transforms for preprocessing the image.
         The transforms will be applied in the order that they are given in the list.
@@ -100,7 +100,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
         """Load an image from a provided path.
 
         Args:
-            path (str): path to an image file.
+            path (str): Path to an image file.
 
         """
         path = pathlib.Path(path)
@@ -156,7 +156,7 @@ class Patch_Dataset(__ABC_Dataset):
         return_labels (bool, False): __getitem__ will return both the img and its label.
          If `label_list` is `None`, `None` is returned
 
-        preproc_func: preprocessing function used to transform the input data. If
+        preproc_func: Preprocessing function used to transform the input data. If
          supplied, then torch.Compose will be used on the input preproc_list.
          preproc_list is a list of torchvision transforms for preprocessing the image.
          The transforms will be applied in the order that they are given in the list.
@@ -253,12 +253,12 @@ class Kather_Patch_Dataset(__ABC_Dataset):
     """Define a dataset class specifically for the Kather dataset, obtain from [URL].
 
     Attributes:
-        save_dir_path (str or None): path to directory containing the Kather dataset,
+        save_dir_path (str or None): Path to directory containing the Kather dataset,
                  assumed to be as is after extracted. If the argument is `None`,
                  the dataset will be downloaded and extracted into the
                  'run_dir/download/Kather'.
 
-        preproc_list: list of preprocessing to be applied. If not provided, by default
+        preproc_list: List of preprocessing to be applied. If not provided, by default
                       the following are applied in sequential order.
 
     """
