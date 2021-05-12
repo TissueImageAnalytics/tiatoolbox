@@ -98,7 +98,7 @@ def _source_image(tmpdir_factory):
     if not pathlib.Path(src_image_file_path).is_file():
         print("\nDownloading Source Image")
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata" "/common/source_image.png"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/common/source_image.png"
         )
         with open(src_image_file_path, "wb") as f:
             f.write(r.content)
@@ -120,8 +120,7 @@ def _norm_macenko(tmpdir_factory):
     if not pathlib.Path(norm_macenko_file_path).is_file():
         print("\nDownloading Norm_macenko image")
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/"
-            "stainnorm/norm_macenko.png"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm/norm_macenko.png"
         )
         with open(norm_macenko_file_path, "wb") as f:
             f.write(r.content)
@@ -143,8 +142,7 @@ def _norm_reinhard(tmpdir_factory):
     if not pathlib.Path(norm_reinhard_file_path).is_file():
         print("\nDownloading norm_reinhard image")
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/"
-            "stainnorm/norm_reinhard.png"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm/norm_reinhard.png"
         )
         with open(norm_reinhard_file_path, "wb") as f:
             f.write(r.content)
@@ -166,8 +164,7 @@ def _norm_ruifrok(tmpdir_factory):
     if not pathlib.Path(norm_ruifrok_file_path).is_file():
         print("\nDownloading norm_ruifrok image")
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/"
-            "stainnorm/norm_ruifrok.png"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm/norm_ruifrok.png"
         )
         with open(norm_ruifrok_file_path, "wb") as f:
             f.write(r.content)
@@ -189,8 +186,7 @@ def _norm_vahadane(tmpdir_factory):
     if not pathlib.Path(norm_vahadane_file_path).is_file():
         print("\nDownloading norm_vahadane image")
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/"
-            "stainnorm/norm_vahadane.png"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm/norm_vahadane.png"
         )
         with open(norm_vahadane_file_path, "wb") as f:
             f.write(r.content)
