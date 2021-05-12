@@ -54,7 +54,7 @@ class CNN_Patch_Model(Model_Base):
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # best way to retrieve channel dynamically is passing a small forward pass
+        # Best way to retrieve channel dynamically is passing a small forward pass
         prev_nr_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_nr_ch, nr_classes)
 
@@ -110,12 +110,12 @@ class CNN_Patch_Model(Model_Base):
         img_patches_device = img_patches.to(device).type(torch.float32)  # to NCHW
         img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 
-        # inference mode
+        # Inference mode
         model.eval()
-        # dont compute the gradient (not training)
+        # Dont compute the gradient (not training)
         with torch.no_grad():
             output = model(img_patches_device)
-        # output should be a single tensor or scalar
+        # Output should be a single tensor or scalar
         return output.cpu().numpy()
 
 

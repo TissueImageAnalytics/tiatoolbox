@@ -60,8 +60,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     Args:
         input_path (str or pathlib.Path): Path to the directory where files
-            need to be searched
-        file_types (str or tuple(str)): File types (extensions) to be searched
+            need to be searched.
+        file_types (str or tuple(str)): File types (extensions) to be searched.
 
     Returns:
         list: File paths as a python list. It has been sorted to ensure
@@ -524,7 +524,7 @@ def download_data(url, save_path, overwrite=False):
 
     Args:
         url (path): URL from where to download the data.
-        unzip_dir (str): location to unzip the data.
+        unzip_dir (str): Location to unzip the data.
 
     """
     print("Download from %s" % url)
@@ -545,14 +545,14 @@ def unzip_data(zip_path, save_path, del_zip=True):
     """Extract data from zip file.
 
     Args:
-        zip_path (str): path where the zip file is located.
-        save_path (str): path where to save extracted files.
-        del_zip (bool): whether to delete initial zip file after extraction.
+        zip_path (str): Path where the zip file is located.
+        save_path (str): Path where to save extracted files.
+        del_zip (bool): Whether to delete initial zip file after extraction.
 
     """
-    # extract data from zip file
+    # Extract data from zip file
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
     if del_zip:
-        # remove zip file
+        # Remove zip file
         os.remove(zip_path)

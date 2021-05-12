@@ -96,5 +96,5 @@ __pretrained_model = {
     },
 }
 
-# to ensure easy matching
+# To ensure easy matching
 __pretrained_model = {k.lower(): v for k, v in __pretrained_model.items()}
