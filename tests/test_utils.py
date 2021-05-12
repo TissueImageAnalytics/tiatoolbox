@@ -745,7 +745,7 @@ def test_download_unzip_data():
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
     misc.download_data(url, save_zip_path)
     misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
-    misc.unzip_data(save_zip_path, save_dir_path, remove_zip=False)  # not remove
+    misc.unzip_data(save_zip_path, save_dir_path, del_zip=False)  # not remove
     assert os.path.exists(save_zip_path)
     misc.unzip_data(save_zip_path, save_dir_path)
 
