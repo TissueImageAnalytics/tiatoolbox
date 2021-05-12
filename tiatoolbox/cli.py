@@ -30,6 +30,7 @@ from tiatoolbox.models.classification.pretrained_info import __pretrained_model
 from tiatoolbox.models.classification.patch_predictor import CNN_Patch_Predictor
 from tiatoolbox.models.dataset.classification import Patch_Dataset
 
+import json
 import sys
 import click
 import os
@@ -455,27 +456,27 @@ def tissue_mask(
 )
 @click.option(
     "--img_input",
-    help="path to the input directory containing images to process or an "
+    help="Path to the input directory containing images to process or an "
     "individual file.",
 )
 @click.option(
     "--output_path",
-    help="output directory where model predictions will be saved.",
+    help="Output directory where model predictions will be saved.",
     default="patch_prediction",
 )
 @click.option(
     "--batch_size",
-    help="number of images to feed into the model each time.",
+    help="Number of images to feed into the model each time.",
     default=16,
 )
 @click.option(
     "--return_probs",
-    help="whether to return raw model probabilities.",
+    help="Whether to return raw model probabilities.",
     default=False,
 )
 @click.option(
     "--file_types",
-    help="file types to capture from directory. "
+    help="File types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
@@ -522,10 +523,8 @@ def patch_predictor(
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
         os.makedirs(output_path)
-    print(output)
-    print(output_file_path)
-    # with open(output_file_path, "w") as handle:
-    #     json.dump(output, handle)
+    with open(output_file_path, "w") as handle:
+        json.dump(output, handle)
 
 
 if __name__ == "__main__":

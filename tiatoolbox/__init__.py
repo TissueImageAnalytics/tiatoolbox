@@ -26,7 +26,7 @@ __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
 __version__ = "0.6.0"
 
-# will set the tiatoolbox external data
+# This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
