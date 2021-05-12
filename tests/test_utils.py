@@ -765,9 +765,12 @@ def test_download_data():
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
-    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
-    misc.download_data(url, save_zip_path)  # to test skip download
 
+    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
+    assert os.path.exists(save_zip_path)
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+    misc.download_data(url, save_zip_path)  # to test skip download
+    assert os.path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
