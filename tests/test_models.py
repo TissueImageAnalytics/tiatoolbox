@@ -833,6 +833,8 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             "resnet18-kather100K",
             "--img_input",
             str(pathlib.Path(_dir_sample_patches)),
+            "--output_path",
+            "tmp_output",
             "--batch_size",
             2,
             "--return_probs",
@@ -841,6 +843,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
     )
 
     assert patch_predictor_dir.exit_code == 0
+    shutil.rmtree("tmp_output", ignore_errors=True)
 
     patch_predictor_single_path = runner.invoke(
         cli.main,
@@ -850,6 +853,8 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             "resnet18-kather100K",
             "--img_input",
             pathlib.Path(_sample_patch1),
+            "--output_path",
+            "tmp_output",
             "--batch_size",
             2,
             "--return_probs",
@@ -858,6 +863,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
     )
 
     assert patch_predictor_single_path.exit_code == 0
+    shutil.rmtree("tmp_output", ignore_errors=True)
 
 
 def test_command_line_patch_predictor_crash(_sample_patch1):
