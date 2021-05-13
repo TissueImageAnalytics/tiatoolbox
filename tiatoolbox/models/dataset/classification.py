@@ -21,6 +21,7 @@
 
 import os
 import pathlib
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 import numpy as np
 import PIL
@@ -30,7 +31,7 @@ import torchvision.transforms as transforms
 from tiatoolbox import rcParam
 
 from tiatoolbox.models.dataset import abc
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 from tiatoolbox.utils.transforms import imresize
 
@@ -156,6 +157,8 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         wsi_file,
         objective_value=20,
         read_size=(224, 224),
+        mode="wsi",
+        level_count=5,
         label_list=None,
         return_labels=False,
         preproc_func=None,
@@ -168,7 +171,21 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         self.objective_value = objective_value
         self.read_size = read_size
 
-        self.wsi_reader = get_wsireader(pathlib.Path(wsi_file))
+        if mode == "wsi":
+            self.wsi_reader = get_wsireader(pathlib.Path(wsi_file))
+        else:
+            img = imread(wsi_file)
+            base_shape = (img.shape[1], img.shape[0])
+            metadata = WSIMeta(
+                slide_dimensions=base_shape,
+                level_dimensions=[
+                    (base_shape[0] / n, base_shape[1] / n)
+                    for n in range(1, level_count + 1)
+                ],
+                objective_power=20,
+            )
+            self.wsi_reader = VirtualWSIReader(pathlib.Path(wsi_file), metadata)
+
         self.input_list, self.level = self.wsi_reader.get_tile_coordinates(
             self.objective_value, self.read_size
         )

@@ -230,6 +230,7 @@ class CNNPatchPredictor:
         """
 
         # may be expensive
+        #! TODO commenting out deepcopy is a temporary workaround
         # dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
         dataset.return_labels = return_labels  # HACK
@@ -272,7 +273,7 @@ class CNNPatchPredictor:
             cum_output["predictions"].extend(batch_output_predictions.tolist())
             if return_coordinates:
                 cum_output["coordinates"].extend(batch_data["coords"].tolist())
-            if return_labels:  # becareful of `s`
+            if return_labels:  # be careful of `s`
                 cum_output["labels"].extend(batch_data["label"].tolist())
 
             # may be a with block + flag would be nicer
@@ -348,7 +349,10 @@ class CNNPatchPredictor:
                 )
 
             dataset = WSIPatchDataset(
-                data, objective_value=self.objective_value, read_size=self.patch_size
+                data,
+                objective_value=self.objective_value,
+                read_size=self.patch_size,
+                mode=mode,
             )
 
         else:
