@@ -140,10 +140,10 @@ class PatchDataset(abc.__ABCPatchDataset):
         patch = self.preproc_func(patch)
 
         data = {
-            'image'  : patch,
+            "image": patch,
         }
         if self.return_labels:
-            data['label'] = self.label_list[idx]
+            data["label"] = self.label_list[idx]
             return data
         return data
 
@@ -196,10 +196,7 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
-        data = {
-            'image'  : patch,
-            'coords' : np.array(coords)
-        }
+        data = {"image": patch, "coords": np.array(coords)}
         # ! @simon atm, dont return label for WSI as it doesnt make sense
         # if self.return_labels:
         #     data['label'] = self.label_list[idx]
@@ -284,9 +281,9 @@ class KatherPatchDataset(abc.__ABCPatchDataset):
         patch = self.preproc_func(patch)
 
         data = {
-            'image'  : patch,
+            "image": patch,
         }
         if self.return_labels:
-            data['label'] = self.label_list[idx]
+            data["label"] = self.label_list[idx]
             return data
         return data

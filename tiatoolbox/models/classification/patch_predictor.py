@@ -133,9 +133,13 @@ class CNNPatchPredictor:
         verbose (bool): Whether to output logging information.
 
     Usage:
-        >>> dataset = PatchDataset()
-        >>> predictor = CNNPatchPredictor(predefined_model="resnet18-kather100K")
-        >>> output = predictor.predict(dataset)
+        >>> data = np.array([img1, img2])
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
+        >>> output = predictor.predict(data, mode='patch')
+
+        >>> wsi_file = 'path/wsi.svs'
+        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100K")
+        >>> output = predictor.predict(wsi_file, mode='wsi')
 
     """
 
@@ -144,7 +148,7 @@ class CNNPatchPredictor:
         batch_size=8,
         num_loader_worker=0,
         model=None,
-        predefined_model=None,
+        pretrained_model=None,
         pretrained_weight=None,
         verbose=True,
     ):
@@ -157,16 +161,16 @@ class CNNPatchPredictor:
                 weights already loaded. Default is `None`. If provided,
                 `pretrained_model` argument is ignored.
 
-            predefined_model (str): Name of the existing models support by tiatoolbox
+            pretrained_model (str): Name of the existing models support by tiatoolbox
                 for processing the data. Refer to
-                `tiatoolbox.models.classification.get_predefined_model` for detail.
+                `tiatoolbox.models.classification.get_pretrained_model` for detail.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
                 via the `pretrained_weight` argument. Argument is case insensitive.
 
             pretrained_weight (str): Path to the weight of the corresponding
-                `predefined_model`.
+                `pretrained_model`.
 
             batch_size (int) : Number of images fed into the model each time.
             num_loader_worker (int) : Number of workers to load the data.
@@ -176,14 +180,14 @@ class CNNPatchPredictor:
         """
         super().__init__()
 
-        if model is None and predefined_model is None:
-            raise ValueError("Must provide either of `model` or `predefined_model`")
+        if model is None and pretrained_model is None:
+            raise ValueError("Must provide either of `model` or `pretrained_model`")
 
         if model is not None:
             self.model = model
         else:
-            self.model, self.patch_size, self.objective_value = get_predefined_model(
-                predefined_model, pretrained_weight
+            self.model, self.patch_size, self.objective_value = get_pretrained_model(
+                pretrained_model, pretrained_weight
             )
 
         self.batch_size = batch_size
@@ -251,25 +255,25 @@ class CNNPatchPredictor:
             model = self.model.to("cpu")
 
         cum_output = {
-            'probabilities' : [],
-            'predictions' : [],
-            'coordinates' : [],
-            'labels' : [],
+            "probabilities": [],
+            "predictions": [],
+            "coordinates": [],
+            "labels": [],
         }
         for _, batch_data in enumerate(dataloader):
 
             batch_output_probabilities = self.model.infer_batch(
-                model, batch_data['image'], on_gpu
+                model, batch_data["image"], on_gpu
             )
             # get the index of the class with the maximum probability
             batch_output_predictions = self.__postprocess(batch_output_probabilities)
             # tolist may be very expensive
-            cum_output['probabilities'].extend(batch_output_probabilities.tolist())
-            cum_output['predictions'].extend(batch_output_predictions.tolist())
+            cum_output["probabilities"].extend(batch_output_probabilities.tolist())
+            cum_output["predictions"].extend(batch_output_predictions.tolist())
             if return_coordinates:
-                cum_output['coordinates'].extend(batch_data['coords'].tolist())
+                cum_output["coordinates"].extend(batch_data["coords"].tolist())
             if return_labels:  # becareful of `s`
-                cum_output['labels'].extend(batch_data['label'].tolist())
+                cum_output["labels"].extend(batch_data["label"].tolist())
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -326,7 +330,7 @@ class CNNPatchPredictor:
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
             return_labels = False
-            # ! @simon hard coded enforcing, 
+            # ! @simon hard coded enforcing,
             # ! change if we switch API after discussion
 
             # change to read objective level and make it in line
@@ -357,11 +361,11 @@ class CNNPatchPredictor:
         return output
 
 
-def get_predefined_model(predefined_model=None, pretrained_weight=None):
+def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
-        predefined_model (str): Name of the existing models support by tiatoolbox
+        pretrained_model (str): Name of the existing models support by tiatoolbox
             for processing the data. Currently supports:
 
             - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
@@ -398,21 +402,21 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
             `pretrained_weight` argument. Argument is case insensitive.
 
         pretrained_weight (str): Path to the weight of the
-            corresponding `predefined_model`.
+            corresponding `pretrained_model`.
 
     """
-    if not isinstance(predefined_model, str):
-        raise ValueError("predefined_model must be a string.")
+    if not isinstance(pretrained_model, str):
+        raise ValueError("pretrained_model must be a string.")
 
     # parsing protocol
-    predefined_model = predefined_model.lower()
+    pretrained_model = pretrained_model.lower()
 
-    if predefined_model not in _pretrained_model:
-        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
-    cfg = _pretrained_model[predefined_model]
+    if pretrained_model not in _pretrained_model:
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
+    cfg = _pretrained_model[pretrained_model]
     patch_size = cfg["patch_size"]
     objective_power = cfg["objective_power"]
-    backbone, dataset = predefined_model.split("-")
+    backbone, dataset = pretrained_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
     model = CNNPatchModel(backbone=backbone, num_classes=cfg["num_classes"])

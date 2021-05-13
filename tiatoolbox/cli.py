@@ -442,8 +442,8 @@ def tissue_mask(
 
 @main.command()
 @click.option(
-    "--predefined_model",
-    help="Predefined model used to process the data. the format is "
+    "--pretrained_model",
+    help="Pretrained model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
     default="resnet18-kather100K",
@@ -486,7 +486,7 @@ def tissue_mask(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
 def patch_predictor(
-    predefined_model,
+    pretrained_model,
     pretrained_weight,
     img_input,
     output_path,
@@ -510,14 +510,14 @@ def patch_predictor(
     else:
         raise FileNotFoundError
 
-    if predefined_model.lower() not in _pretrained_model:
-        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+    if pretrained_model.lower() not in _pretrained_model:
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
 
     if len(img_files) < batch_size:
         batch_size = len(img_files)
 
     predictor = CNNPatchPredictor(
-        predefined_model=predefined_model,
+        pretrained_model=pretrained_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
     )

@@ -26,18 +26,16 @@ from tiatoolbox import cli
 def test_wsi_patch_predictor():
     """Test for patch predictor with resnet50 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    sample_pyramid = 'CMU-1_mini.svs'
+    sample_pyramid = "CMU-1_mini.svs"
     # dataset = WSIPatchDataset(sample_pyramid)
-    results = _get_outputs_api1(
-        sample_pyramid, "resnet18-kather100K", mode="wsi"
-    )
+    results = _get_outputs_api1(sample_pyramid, "resnet18-kather100K", mode="wsi")
     # probabilities, predictions, labels
 
 
-def _get_outputs_api1(data, predefined_model, mode):
+def _get_outputs_api1(data, pretrained_model, mode):
     """Helper function to get the model output using API 1."""
     # API 1, also test with return_labels
-    predictor = CNNPatchPredictor(predefined_model=predefined_model, batch_size=2)
+    predictor = CNNPatchPredictor(pretrained_model=pretrained_model, batch_size=2)
     # don't run test on GPU
     output = predictor.predict(
         data,
@@ -57,7 +55,7 @@ def _get_outputs_api1(data, predefined_model, mode):
         return probabilities, predictions, labels
 
 
-def _get_outputs_api2(data, predefined_model, mode):
+def _get_outputs_api2(data, pretrained_model, mode):
     """Helper function to get the model output using API 2."""
     # API 2
     pretrained_weight_url = (
@@ -76,7 +74,7 @@ def _get_outputs_api2(data, predefined_model, mode):
     download_data(pretrained_weight_url, pretrained_weight)
 
     predictor = CNNPatchPredictor(
-        predefined_model=predefined_model,
+        pretrained_model=pretrained_model,
         pretrained_weight=pretrained_weight,
         batch_size=1,
     )
@@ -176,13 +174,13 @@ def test_predictor_crash():
     with pytest.raises(ValueError, match=r"Must provide.*"):
         CNNPatchPredictor()
 
-    # provide wrong unknown predefined model
-    with pytest.raises(ValueError, match=r"Predefined .* does not exist"):
-        CNNPatchPredictor(predefined_model="secret_model")
+    # provide wrong unknown pretrained model
+    with pytest.raises(ValueError, match=r"Pretrained .* does not exist"):
+        CNNPatchPredictor(pretrained_model="secret_model")
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
-        CNNPatchPredictor(predefined_model=123)
+        CNNPatchPredictor(pretrained_model=123)
 
 
 def test_set_root_dir():
@@ -867,7 +865,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         cli.main,
         [
             "patch-predictor",
-            "--predefined_model",
+            "--pretrained_model",
             "resnet18-kather100K",
             "--img_input",
             str(pathlib.Path(_dir_sample_patches)),
@@ -889,7 +887,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         cli.main,
         [
             "patch-predictor",
-            "--predefined_model",
+            "--pretrained_model",
             "resnet18-kather100K",
             "--img_input",
             pathlib.Path(_sample_patch1),
@@ -916,7 +914,7 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
         cli.main,
         [
             "patch-predictor",
-            "--predefined_model",
+            "--pretrained_model",
             "resnet18-kather100K",
             "--img_input",
             "imaginary_img.tif",
@@ -926,12 +924,12 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
     )
     assert result.exit_code != 0
 
-    # test not predefined model
+    # test not pretrained model
     result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
-            "--predefined_model",
+            "--pretrained_model",
             "secret_model",
             "--img_input",
             pathlib.Path(_sample_patch1),
