@@ -236,7 +236,7 @@ class CNNPatchPredictor:
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
                 tiatoolbox.models.data.classification.Patch_Dataset.
-            return_probabilities (bool): Whether to return per-class model probabilities.
+            return_probabilities (bool): Whether to return per-class probabilities.
             return_labels (bool): Whether to return labels.
             on_gpu (bool): whether to run model on the GPU.
 
