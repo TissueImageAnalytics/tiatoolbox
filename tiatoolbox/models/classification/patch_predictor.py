@@ -81,9 +81,10 @@ class CNNPatchModel(ModelBase):
         Set the `preproc_func` to this `func` if it is not None.
         Else the `preproc_func` is reset to return source image.
 
-        `func` must behave in the following manner
+        `func` must behave in the following manner:
 
         >>> transformed_img = func(img)
+
         """
         self.preproc_func = func if func is not None else lambda x: x
 

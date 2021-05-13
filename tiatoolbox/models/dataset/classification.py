@@ -42,6 +42,7 @@ class _TorchPreprocCaller:
         preproc_list (list): List of torchvision transforms for preprocessing the image.
             The transforms will be applied in the order that they are
             given in the list. https://pytorch.org/vision/stable/transforms.html.
+
     """
 
     def __init__(self, preproc_list):
