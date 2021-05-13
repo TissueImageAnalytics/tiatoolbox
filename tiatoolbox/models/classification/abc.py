@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
-import tiatoolbox.models.abc as tia_model_abc
+from tiatoolbox.models import abc as tia_model_abc
 
 
 class ModelBase(tia_model_abc.ModelBase):
