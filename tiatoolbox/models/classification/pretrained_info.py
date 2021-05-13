@@ -35,6 +35,8 @@ _pretrained_model = {
     "resnet18-kather100K": {
         "pretrained": os.path.join(models_root, "resnet18-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "resnet34-kather100K": {
         "pretrained": os.path.join(models_root, "resnet34-kather100K-pc.pth"),

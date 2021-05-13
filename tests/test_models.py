@@ -22,22 +22,39 @@ from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox import cli
 
 
-def _get_outputs_api1(dataset, predefined_model):
+# def test_wsi_patch_predictor_mobilenet_v2_kather100K(_sample_ndpi):
+#     """Test for patch predictor with resnet50 on Kather 100K dataset."""
+#     # API 1, also test with return_labels
+#     data = _sample_ndpi
+#     probabilities, predictions, labels = _get_outputs_api1(
+#         data, "mobilenet_v2-kather100K", mode="wsi"
+#     )
+
+
+def _get_outputs_api1(data, predefined_model, mode):
     """Helper function to get the model output using API 1."""
     # API 1, also test with return_labels
     predictor = CNNPatchPredictor(predefined_model=predefined_model, batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
-        dataset, return_probabilities=True, return_labels=True, on_gpu=False
+        data,
+        mode=mode,
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=True,
     )
     probabilities = output["probabilities"]
     predictions = output["predictions"]
     labels = output["labels"]
 
-    return probabilities, predictions, labels
+    if mode == "wsi" or mode == "tile":
+        coordinates = output["coordinates"]
+        return probabilities, predictions, labels, coordinates
+    else:
+        return probabilities, predictions, labels
 
 
-def _get_outputs_api2(dataset, predefined_model):
+def _get_outputs_api2(data, predefined_model, mode):
     """Helper function to get the model output using API 2."""
     # API 2
     pretrained_weight_url = (
@@ -62,16 +79,24 @@ def _get_outputs_api2(dataset, predefined_model):
     )
     # don't run test on GPU
     output = predictor.predict(
-        dataset, return_probabilities=True, return_labels=True, on_gpu=False
+        data,
+        mode=mode,
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
     )
     probabilities = output["probabilities"]
     predictions = output["predictions"]
     labels = output["labels"]
 
-    return probabilities, predictions, labels, save_dir_path
+    if mode == "wsi" or mode == "tile":
+        coordinates = output["coordinates"]
+        return probabilities, predictions, labels, coordinates
+    else:
+        return probabilities, predictions, labels
 
 
-def _get_outputs_api3(dataset, backbone, num_classes=9):
+def _get_outputs_api3(data, backbone, mode, num_classes=9):
     """Helper function to get the model output using API 3."""
     # API 3
     model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
@@ -86,14 +111,22 @@ def _get_outputs_api3(dataset, backbone, num_classes=9):
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     # don't run test on GPU
     output = predictor.predict(
-        dataset, return_probabilities=True, return_labels=True, on_gpu=False
+        data,
+        mode=mode,
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
     )
 
     probabilities = output["probabilities"]
     predictions = output["predictions"]
     labels = output["labels"]
 
-    return probabilities, predictions, labels
+    if mode == "wsi" or mode == "tile":
+        coordinates = output["coordinates"]
+        return probabilities, predictions, labels, coordinates
+    else:
+        return probabilities, predictions, labels
 
 
 def test_create_backbone():
@@ -147,16 +180,6 @@ def test_predictor_crash():
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
         CNNPatchPredictor(predefined_model=123)
-
-    # model and dummy input
-    model = CNNPatchPredictor(predefined_model="resnet34-kather100K")
-    img_list = [
-        np.random.randint(0, 255, (4, 4, 3)),
-        np.random.randint(0, 255, (4, 4, 3)),
-    ]
-    # only receive a dataset object
-    with pytest.raises(ValueError, match=r".*torch.utils.data.Dataset.*"):
-        model.predict(img_list)
 
 
 def test_set_root_dir():
@@ -422,11 +445,10 @@ def test_KatherPatchDataset():
 
 def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 1. Test with resnet18 on Kather 100K dataset."""
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet18-kather100K"
+        data, "resnet18-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -444,11 +466,10 @@ def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
 
 def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 2. Test with resnet18 on Kather 100K dataset."""
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels, save_dir_path = _get_outputs_api2(
-        dataset, "resnet18-kather100K"
+        data, "resnet18-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -469,10 +490,11 @@ def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
 
 def test_patch_predictor_api3(_sample_patch1, _sample_patch2):
     """Test for patch predictor API 3. Test with resnet18 on Kather 100K dataset."""
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
+    probabilities, predictions, labels = _get_outputs_api3(
+        data, "resnet18", mode="patch"
     )
-    probabilities, predictions, labels = _get_outputs_api3(dataset, "resnet18")
 
     assert len(probabilities) == len(predictions)
     assert len(probabilities) == len(labels)
@@ -481,11 +503,10 @@ def test_patch_predictor_api3(_sample_patch1, _sample_patch2):
 def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with alexnet on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "alexnet-kather100K"
+        data, "alexnet-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -504,11 +525,10 @@ def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet34 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet34-kather100K"
+        data, "resnet34-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -527,11 +547,10 @@ def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet50 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet50-kather100K"
+        data, "resnet50-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -550,11 +569,10 @@ def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnet101 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet101-kather100K"
+        data, "resnet101-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -573,11 +591,10 @@ def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnext50_32x4d on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnext50_32x4d-kather100K"
+        data, "resnext50_32x4d-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -596,11 +613,10 @@ def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patc
 def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with resnext101_32x8d on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnext101_32x8d-kather100K"
+        data, "resnext101_32x8d-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -619,11 +635,10 @@ def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_pat
 def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with wide_resnet50_2 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "wide_resnet50_2-kather100K"
+        data, "wide_resnet50_2-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -642,11 +657,10 @@ def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patc
 def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with wide_resnet101_2 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "wide_resnet101_2-kather100K"
+        data, "wide_resnet101_2-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -665,11 +679,10 @@ def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_pat
 def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet121 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet121-kather100K"
+        data, "densenet121-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -688,11 +701,10 @@ def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet161 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet161-kather100K"
+        data, "densenet161-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -711,11 +723,10 @@ def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet169 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet169-kather100K"
+        data, "densenet169-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -734,11 +745,10 @@ def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with densenet201 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet201-kather100K"
+        data, "densenet201-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -757,11 +767,10 @@ def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
 def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v2 on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "mobilenet_v2-kather100K"
+        data, "mobilenet_v2-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -780,11 +789,10 @@ def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2)
 def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v3_large on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "mobilenet_v3_large-kather100K"
+        data, "mobilenet_v3_large-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -803,11 +811,10 @@ def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_p
 def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with mobilenet_v3_small on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "mobilenet_v3_small-kather100K"
+        data, "mobilenet_v3_small-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -826,11 +833,10 @@ def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_p
 def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
     """Test for patch predictor with googlenet on Kather 100K dataset."""
     # API 1, also test with return_labels
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
+    data = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+
     probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "googlenet-kather100K"
+        data, "googlenet-kather100K", mode="patch"
     )
 
     assert len(probabilities) == len(predictions)
@@ -866,6 +872,8 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             "tmp_output",
             "--batch_size",
             2,
+            "--mode",
+            "patch",
             "--return_probabilities",
             False,
         ],
@@ -886,6 +894,8 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             "tmp_output",
             "--batch_size",
             2,
+            "--mode",
+            "patch",
             "--return_probabilities",
             False,
         ],
@@ -907,6 +917,8 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
             "resnet18-kather100K",
             "--img_input",
             "imaginary_img.tif",
+            "--mode",
+            "patch",
         ],
     )
     assert result.exit_code != 0
@@ -920,6 +932,8 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
             "secret_model",
             "--img_input",
             pathlib.Path(_sample_patch1),
+            "--mode",
+            "patch",
         ],
     )
     assert result.exit_code != 0

@@ -470,6 +470,11 @@ def tissue_mask(
     default=16,
 )
 @click.option(
+    "--mode",
+    help="Whether to use `patch`, `tile` or `wsi` mode.",
+    default="wsi",
+)
+@click.option(
     "--return_probabilities",
     help="Whether to return raw model probabilities.",
     default=False,
@@ -486,6 +491,7 @@ def patch_predictor(
     img_input,
     output_path,
     batch_size,
+    mode,
     return_probabilities,
     file_types,
 ):
@@ -510,8 +516,6 @@ def patch_predictor(
     if len(img_files) < batch_size:
         batch_size = len(img_files)
 
-    dataset = PatchDataset(img_files)
-
     predictor = CNNPatchPredictor(
         predefined_model=predefined_model,
         pretrained_weight=pretrained_weight,
@@ -519,7 +523,7 @@ def patch_predictor(
     )
 
     output = predictor.predict(
-        dataset, return_probabilities=return_probabilities, on_gpu=False
+        img_files, mode, return_probabilities=return_probabilities, on_gpu=False
     )
 
     output_file_path = os.path.join(output_path, "results.json")

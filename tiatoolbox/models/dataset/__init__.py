@@ -25,5 +25,3 @@ from tiatoolbox.models.dataset.classification import (
     KatherPatchDataset,
     predefined_preproc_func,
 )
-
-

@@ -961,17 +961,17 @@ class WSIReader:
                 bounds = start_w, start_h, end_w, end_h
                 baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
 
-                start_w_base = baseline_bounds[1]
+                start_w_base = baseline_bounds[0]
+                start_h_base = baseline_bounds[1]
                 end_w_base = baseline_bounds[2]
-                start_h_base = baseline_bounds[3]
-                end_h_base = baseline_bounds[4]
+                end_h_base = baseline_bounds[3]
 
                 data.append(
                     [
                         iter_tot,
                         start_w_base,
-                        end_w_base,
                         start_h_base,
+                        end_w_base,
                         end_h_base,
                     ]
                 )

@@ -28,6 +28,7 @@ import torch
 import torchvision.transforms as transforms
 
 from tiatoolbox import rcParam
+
 from tiatoolbox.models.dataset import abc
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
@@ -80,7 +81,7 @@ class PatchDataset(abc.__ABCPatchDataset):
     from the torch.utils.data.Dataset class.
 
     Attributes:
-        input_list: Either a list of patches, where each patch is a ndarray or a list of
+         input_list: Either a list of patches, where each patch is a ndarray or a list of
          valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
          pointing to an image.
 
@@ -115,17 +116,21 @@ class PatchDataset(abc.__ABCPatchDataset):
     ):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
-        # perform check on the input
-        self.data_check(input_list, label_list, mode="patch")
-
         self.data_is_npy_alike = False
 
         self.input_list = input_list
         self.label_list = label_list
         self.return_labels = return_labels
 
+        # perform check on the input
+        self.data_check(mode="patch")
+
+        if self.label_list is None:
+            self.label_list = [np.nan for i in range(len(self.input_list))]
+
     def __getitem__(self, idx):
         patch = self.input_list[idx]
+
         # Mode 0 is list of paths
         if not self.data_is_npy_alike:
             patch = self.load_img(patch)
@@ -153,16 +158,22 @@ class WsiPatchDataset(abc.__ABCPatchDataset):
     ):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
+        if not os.path.isfile(wsi_file):
+            raise ValueError("Input must be a valid file path.")
+
         self.objective_value = objective_value
         self.read_size = read_size
 
-        self.wsi_reader = get_wsireader(wsi_file)
+        self.wsi_reader = get_wsireader(pathlib.Path(wsi_file))
         self.input_list, self.level = self.wsi_reader.get_tile_coordinates(
             self.objective_value, self.read_size
         )
 
         # Perform check on the input
-        self.data_check(self.input_list, label_list, mode="wsi")
+        self.data_check(mode="wsi")
+
+        if self.label_list is None:
+            self.label_list = [np.nan for i in range(len(self.input_list))]
 
     def __getitem__(self, idx):
         coords = self.input_list[idx]
@@ -252,3 +263,18 @@ class KatherPatchDataset(abc.__ABCPatchDataset):
         self.input_list = input_list
         self.label_list = label_list
         self.classes = label_code_list
+
+    def __getitem__(self, idx):
+        patch = self.input_list[idx]
+
+        # Mode 0 is list of paths
+        if not self.data_is_npy_alike:
+            patch = self.load_img(patch)
+
+        # Apply preprocessing to selected patch
+        patch = self.preproc_func(patch)
+
+        if self.return_labels:
+            return patch, self.label_list[idx]
+
+        return patch

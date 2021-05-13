@@ -255,7 +255,7 @@ class CNNPatchPredictor:
         """
 
         # may be expensive
-        dataset = copy.deepcopy(dataset)  # make a deep copy of this
+        # dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
         dataset.return_labels = return_labels  # HACK
 
@@ -309,7 +309,7 @@ class CNNPatchPredictor:
                 labels_output.extend(batch_labels.tolist())
             if return_coordinates:
                 # return coordinates of processed patches
-                coordinates_output.extend(batch_coordinates.tolist())
+                coordinates_output.extend(batch_coordinates)
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -364,19 +364,28 @@ class CNNPatchPredictor:
             # don't return coordinates if patches are already extracted
             return_coordinates = False
             dataset = PatchDataset(data)
+            output = self._predict_engine(
+                dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+            )
 
         elif mode == "tile" or mode == "wsi":
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
 
             if objective_value is not None:
-                objective_value = self.objective_value
+                self.objective_value = objective_value
             if patch_size is not None:
-                patch_size = self.patch_size
+                self.patch_size = patch_size
+
+            if not os.path.isfile(data):
+                raise ValueError(
+                    "A single whole-slide image should be input to predict."
+                )
 
             dataset = WsiPatchDataset(
-                data, objective_value=objective_value, read_size=patch_size
+                data, objective_value=self.objective_value, read_size=self.patch_size
             )
+
         else:
             raise ValueError("%s is not a valid mode." % mode)
 
@@ -441,7 +450,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
     cfg = _pretrained_model[predefined_model]
     patch_size = cfg["patch_size"]
-    resolution = cfg["resolution"]
+    objective_power = cfg["objective_power"]
     backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
@@ -462,4 +471,4 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
-    return model, patch_size, resolution
+    return model, patch_size, objective_power
