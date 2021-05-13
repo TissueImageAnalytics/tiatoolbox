@@ -32,14 +32,14 @@ from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
-from tiatoolbox.models.classification.pretrained_info import __pretrained_model
+from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 
 
 class CNNPatchModel(ModelBase):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
     Attributes:
-        nr_classes (int): Number of classes output by the model.
+        num_classes (int): Number of classes output by the model.
         feat_extract (nn.Module): Backbone CNN model.
         pool (nn.Module): Type of pooling applied after feature extraction.
         classifier (nn.Module): Linear classifier module used to map the features
@@ -47,16 +47,16 @@ class CNNPatchModel(ModelBase):
 
     """
 
-    def __init__(self, backbone, nr_classes=1):
+    def __init__(self, backbone, num_classes=1):
         super().__init__()
-        self.nr_classes = nr_classes
+        self.num_classes = num_classes
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
         # Best way to retrieve channel dynamically is passing a small forward pass
-        prev_nr_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
-        self.classifer = nn.Linear(prev_nr_ch, nr_classes)
+        prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
+        self.classifer = nn.Linear(prev_num_ch, num_classes)
 
         self.preproc_func = None
 
@@ -75,7 +75,8 @@ class CNNPatchModel(ModelBase):
         return prob
 
     def set_preproc_func(self, func):
-        """
+        """To set function for preprocessing.
+
         Set the `preproc_func` to this `func` if it is not None.
         Else the `preproc_func` is reset to return source image.
 
@@ -91,8 +92,9 @@ class CNNPatchModel(ModelBase):
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
-        """Run inference on an input batch. Contains logic for
-        forward operation as well as i/o aggregation.
+        """Run inference on an input batch.
+
+        Contains logic for forward operation as well as i/o aggregation.
 
         Args:
             model (nn.Module): PyTorch defined model.
@@ -124,7 +126,7 @@ class CNNPatchPredictor:
 
     Attributes:
         batch_size (int): Number of images fed into the model each time.
-        nr_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
+        num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
         model (nn.Module): Defined PyTorch model.
         verbose (bool): Whether to output logging information.
 
@@ -138,14 +140,15 @@ class CNNPatchPredictor:
     def __init__(
         self,
         batch_size=8,
-        nr_loader_worker=0,
+        num_loader_worker=0,
         model=None,
         predefined_model=None,
         pretrained_weight=None,
         verbose=True,
     ):
-        """Initialise the Patch Predictor. Note, if model is supplied in the
-        arguments, it will override the backbone.
+        """Initialise the Patch Predictor.
+
+        Note, if model is supplied in the arguments, it will override the backbone.
 
         Args:
             model (nn.Module): Use externally defined PyTorch model for prediction with.
@@ -154,36 +157,37 @@ class CNNPatchPredictor:
 
             predefined_model (str): Name of the existing models support by tiatoolbox
                 for processing the data. Currently supports:
+
                 - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
                 - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
                 - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
                 - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
                 - resnet101-kather100K: resnet101 backbone trained on
-                    Kather 100K dataset.
-                - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
+                - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
+                  100K dataset.
                 - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on
-                    Kather 100K dataset.
-                - densenet121-kather100K: resnet101 backbone trained on
-                    Kather 100K dataset.
-                - densenet161-kather100K: densenet161 backbone trained on Kather
-                    100K dataset.
+                  Kather 100K dataset.
+                - densenet121-kather100K: densenet121 backbone trained on
+                  Kather 100K dataset.
+                - densenet161-kather100K: densenet161 backbone trained on
+                  Kather 100K dataset.
                 - densenet169-kather100K: densenet169 backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - densenet201-kather100K: densenet201 backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - mobilenet_v2-kather100K: mobilenet_v2 backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
                 - googlenet-kather100K: googlenet backbone trained on
-                    Kather 100K dataset.
+                  Kather 100K dataset.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
@@ -193,7 +197,7 @@ class CNNPatchPredictor:
                 `predefined_model`.
 
             batch_size (int) : Number of images fed into the model each time.
-            nr_loader_worker (int) : Number of workers to load the data.
+            num_loader_worker (int) : Number of workers to load the data.
                 Take note that they will also perform preprocessing.
             verbose (bool): Whether to output logging information.
 
@@ -209,7 +213,7 @@ class CNNPatchPredictor:
             self.model = get_predefined_model(predefined_model, pretrained_weight)
 
         self.batch_size = batch_size
-        self.nr_loader_worker = nr_loader_worker
+        self.num_loader_worker = num_loader_worker
         self.verbose = verbose
 
     @staticmethod
@@ -252,7 +256,7 @@ class CNNPatchPredictor:
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.nr_loader_worker,
+            num_workers=self.num_loader_worker,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
@@ -299,11 +303,12 @@ class CNNPatchPredictor:
             pbar.close()
 
         preds_output = np.array(preds_output)
-
         all_output = {"preds": preds_output}
         if return_probs:
+            probs_output = np.array(probs_output)
             all_output["probs"] = probs_output
         if return_labels:
+            labels_output = np.array(labels_output)
             all_output["labels"] = labels_output
         return all_output
 
@@ -314,33 +319,34 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     Args:
         predefined_model (str): Name of the existing models support by tiatoolbox
             for processing the data. Currently supports:
+
             - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
             - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
             - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
             - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
             - resnet101-kather100K: resnet101 backbone trained on Kather 100K dataset.
             - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
-                100K dataset.
+              100K dataset.
             - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - densenet121-kather100K: densenet121 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - densenet161-kather100K: densenet161 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - densenet169-kather100K: densenet169 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - densenet201-kather100K: densenet201 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - mobilenet_v2-kather100K: mobilenet_v2 backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
-                Kather 100K dataset.
+              Kather 100K dataset.
             - googlenet-kather100K: googlenet backbone trained on Kather 100K dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
@@ -357,13 +363,13 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     # parsing protocol
     predefined_model = predefined_model.lower()
 
-    if predefined_model not in __pretrained_model:
+    if predefined_model not in _pretrained_model:
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
-    cfg = __pretrained_model[predefined_model]
+    cfg = _pretrained_model[predefined_model]
     backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
-    model = CNNPatchModel(backbone=backbone, nr_classes=cfg["nr_classes"])
+    model = CNNPatchModel(backbone=backbone, num_classes=cfg["num_classes"])
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
