@@ -546,3 +546,21 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
         shutil.copy(_sample_patch2, dir_path.joinpath(_sample_patch2.basename))
 
     return dir_path
+
+
+@pytest.fixture(scope="session")
+def _sample_crc_tile(tmpdir_factory):
+    """Docstring."""
+    patch_file_path = tmpdir_factory.mktemp("data").join("crc_tile.tif")
+
+    if not pathlib.Path(patch_file_path).is_file():
+        print("\nDownloading sample patch 2")
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CRC-Prim-HE-07_APPLICATION.tif"
+        )
+        with open(patch_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping Source Image")
+
+    return patch_file_path
