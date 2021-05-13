@@ -16,25 +16,28 @@ from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.dataset import (
     KatherPatchDataset,
     PatchDataset,
+    WSIPatchDataset,
     predefined_preproc_func,
 )
 from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox import cli
 
 
-# def test_wsi_patch_predictor_mobilenet_v2_kather100K(_sample_ndpi):
-#     """Test for patch predictor with resnet50 on Kather 100K dataset."""
-#     # API 1, also test with return_labels
-#     data = _sample_ndpi
-#     probabilities, predictions, labels = _get_outputs_api1(
-#         data, "mobilenet_v2-kather100K", mode="wsi"
-#     )
+def test_wsi_patch_predictor():
+    """Test for patch predictor with resnet50 on Kather 100K dataset."""
+    # API 1, also test with return_labels
+    sample_pyramid = 'CMU-1_mini.svs'
+    # dataset = WSIPatchDataset(sample_pyramid)
+    results = _get_outputs_api1(
+        sample_pyramid, "resnet18-kather100K", mode="wsi"
+    )
+    # probabilities, predictions, labels
 
 
 def _get_outputs_api1(data, predefined_model, mode):
     """Helper function to get the model output using API 1."""
     # API 1, also test with return_labels
-    predictor = CNNPatchPredictor(predefined_model=predefined_model, batch_size=1)
+    predictor = CNNPatchPredictor(predefined_model=predefined_model, batch_size=2)
     # don't run test on GPU
     output = predictor.predict(
         data,
@@ -45,12 +48,12 @@ def _get_outputs_api1(data, predefined_model, mode):
     )
     probabilities = output["probabilities"]
     predictions = output["predictions"]
-    labels = output["labels"]
 
     if mode == "wsi" or mode == "tile":
         coordinates = output["coordinates"]
-        return probabilities, predictions, labels, coordinates
+        return probabilities, predictions, coordinates
     else:
+        labels = output["labels"]
         return probabilities, predictions, labels
 
 

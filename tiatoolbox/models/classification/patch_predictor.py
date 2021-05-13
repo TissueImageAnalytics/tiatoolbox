@@ -20,7 +20,6 @@
 
 """This module enables patch-level prediction."""
 
-from tiatoolbox.models.dataset.classification import PatchDataset, WsiPatchDataset
 import tqdm
 import numpy as np
 import torch
@@ -34,6 +33,7 @@ from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
+from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
 
 class CNNPatchModel(ModelBase):
@@ -158,38 +158,8 @@ class CNNPatchPredictor:
                 `pretrained_model` argument is ignored.
 
             predefined_model (str): Name of the existing models support by tiatoolbox
-                for processing the data. Currently supports:
-
-                - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
-                - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
-                - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
-                - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
-                - resnet101-kather100K: resnet101 backbone trained on
-                  Kather 100K dataset.
-                - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
-                  100K dataset.
-                - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on
-                  Kather 100K dataset.
-                - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on
-                  Kather 100K dataset.
-                - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on
-                  Kather 100K dataset.
-                - densenet121-kather100K: densenet121 backbone trained on
-                  Kather 100K dataset.
-                - densenet161-kather100K: densenet161 backbone trained on
-                  Kather 100K dataset.
-                - densenet169-kather100K: densenet169 backbone trained on
-                  Kather 100K dataset.
-                - densenet201-kather100K: densenet201 backbone trained on
-                  Kather 100K dataset.
-                - mobilenet_v2-kather100K: mobilenet_v2 backbone trained on
-                  Kather 100K dataset.
-                - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on
-                  Kather 100K dataset.
-                - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
-                  Kather 100K dataset.
-                - googlenet-kather100K: googlenet backbone trained on
-                  Kather 100K dataset.
+                for processing the data. Refer to
+                `tiatoolbox.models.classification.get_predefined_model` for detail.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
@@ -280,37 +250,26 @@ class CNNPatchPredictor:
         else:
             model = self.model.to("cpu")
 
-        all_output = {}
-        predictions_output = []
-        probabilities_output = []
-        coordinates_output = []
-        labels_output = []
+        cum_output = {
+            'probabilities' : [],
+            'predictions' : [],
+            'coordinates' : [],
+            'labels' : [],
+        }
         for _, batch_data in enumerate(dataloader):
 
-            if return_labels and return_coordinates:
-                batch_input, batch_labels, batch_coordinates = batch_data
-            elif return_labels and not return_coordinates:
-                batch_input, batch_labels = batch_data
-            elif not return_labels and return_coordinates:
-                batch_input, batch_coordinates = batch_data
-            else:
-                batch_input = batch_data
-
             batch_output_probabilities = self.model.infer_batch(
-                model, batch_input, on_gpu
+                model, batch_data['image'], on_gpu
             )
             # get the index of the class with the maximum probability
-            batch_output = self.__postprocess(batch_output_probabilities)
-            predictions_output.extend(batch_output.tolist())
-            if return_probabilities:
-                # return raw output
-                probabilities_output.extend(batch_output_probabilities.tolist())
-            if return_labels:
-                # return label per patch
-                labels_output.extend(batch_labels.tolist())
+            batch_output_predictions = self.__postprocess(batch_output_probabilities)
+            # tolist may be very expensive
+            cum_output['probabilities'].extend(batch_output_probabilities.tolist())
+            cum_output['predictions'].extend(batch_output_predictions.tolist())
             if return_coordinates:
-                # return coordinates of processed patches
-                coordinates_output.extend(batch_coordinates)
+                cum_output['coordinates'].extend(batch_data['coords'].tolist())
+            if return_labels:  # becareful of `s`
+                cum_output['labels'].extend(batch_data['label'].tolist())
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -318,19 +277,13 @@ class CNNPatchPredictor:
         if self.verbose:
             pbar.close()
 
-        predictions_output = np.array(predictions_output)
-        all_output = {"predictions": predictions_output}
-        if return_probabilities:
-            probabilities_output = np.array(probabilities_output)
-            all_output["probabilities"] = probabilities_output
-        if return_labels:
-            labels_output = np.array(labels_output)
-            all_output["labels"] = labels_output
-        if return_coordinates:
-            coordinates_output = np.array(coordinates_output)
-            all_output["coordinates"] = coordinates_output
-
-        return all_output
+        if not return_probabilities:
+            cum_output.pop("probabilities")
+        if not return_labels:
+            cum_output.pop("labels")
+        if not return_coordinates:
+            cum_output.pop("coordinates")
+        return cum_output
 
     def predict(
         self,
@@ -372,18 +325,25 @@ class CNNPatchPredictor:
         elif mode == "tile" or mode == "wsi":
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
+            return_labels = False
+            # ! @simon hard coded enforcing, 
+            # ! change if we switch API after discussion
 
+            # change to read objective level and make it in line
+            # with wsi read arg, expose it out
             if objective_value is not None:
                 self.objective_value = objective_value
             if patch_size is not None:
                 self.patch_size = patch_size
 
+            # unintuitive error messages, need to provide `mode`
+            # likely will be changed later with the API
             if not os.path.isfile(data):
                 raise ValueError(
                     "A single whole-slide image should be input to predict."
                 )
 
-            dataset = WsiPatchDataset(
+            dataset = WSIPatchDataset(
                 data, objective_value=self.objective_value, read_size=self.patch_size
             )
 

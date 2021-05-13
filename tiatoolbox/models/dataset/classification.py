@@ -139,13 +139,16 @@ class PatchDataset(abc.__ABCPatchDataset):
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
+        data = {
+            'image'  : patch,
+        }
         if self.return_labels:
-            return patch, self.label_list[idx]
+            data['label'] = self.label_list[idx]
+            return data
+        return data
 
-        return patch
 
-
-class WsiPatchDataset(abc.__ABCPatchDataset):
+class WSIPatchDataset(abc.__ABCPatchDataset):
     """Defines a WSI-level patch dataset."""
 
     def __init__(
@@ -173,8 +176,9 @@ class WsiPatchDataset(abc.__ABCPatchDataset):
         # Perform check on the input
         self.data_check(mode="wsi")
 
-        if self.label_list is None:
-            self.label_list = [np.nan for i in range(len(self.input_list))]
+        # !
+        # if self.label_list is None:
+        #     self.label_list = [np.nan for i in range(len(self.input_list))]
 
     def __getitem__(self, idx):
         coords = self.input_list[idx]
@@ -192,11 +196,15 @@ class WsiPatchDataset(abc.__ABCPatchDataset):
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
-        if self.return_labels:
-            return patch, self.label_list[idx], coords
-
-        else:
-            return patch, coords
+        data = {
+            'image'  : patch,
+            'coords' : np.array(coords)
+        }
+        # ! @simon atm, dont return label for WSI as it doesnt make sense
+        # if self.return_labels:
+        #     data['label'] = self.label_list[idx]
+        #     return data
+        return data
 
 
 class KatherPatchDataset(abc.__ABCPatchDataset):
@@ -275,7 +283,10 @@ class KatherPatchDataset(abc.__ABCPatchDataset):
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
+        data = {
+            'image'  : patch,
+        }
         if self.return_labels:
-            return patch, self.label_list[idx]
-
-        return patch
+            data['label'] = self.label_list[idx]
+            return data
+        return data
