@@ -23,9 +23,12 @@ from abc import ABC
 import numpy as np
 import math
 
+from scipy.ndimage.measurements import label
+
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils import misc
+from skimage.measure import regionprops
 
 
 class PatchExtractor(ABC):
@@ -161,6 +164,75 @@ class PatchExtractor(ABC):
 
         return self
 
+    def _generate_mask_location_df(self):
+        """Generate location list based on slide dimension.
+        The slide dimension is calculated using units and resolution.
+
+        """
+        mask_pow = 1.25  # objective power to extract mask from
+        # creating a virtualWSIReader based on mask to make it similar to the wsi
+        mask_wsi = wsireader.VirtualWSIReader(
+            self.input_mask, info=self.wsi.info, mode="bool"
+        )
+        # extract the mask thumbnail at a reasonable level
+        mask_thumb = mask_wsi.slide_thumbnail(
+            resolution=mask_pow, units="power", interpolation="nearest"
+        )
+        mask_thumb_label, _ = label(mask_thumb > 0.5)
+
+        # extract only mask regions from mask_thumb
+        regions = regionprops(mask_thumb_label)
+        bounding_boxes = [region.bbox for region in regions]
+
+        (read_level, _, _, _, baseline_read_size,) = self.wsi.find_read_rect_params(
+            location=(0, 0),
+            size=self.patch_size,
+            resolution=self.resolution,
+            units=self.units,
+        )
+
+        (read_level_mask, _, _, _, _,) = mask_wsi.find_read_rect_params(
+            location=(0, 0),
+            size=self.patch_size,
+            resolution=mask_pow,
+            units="power",
+        )
+
+        level_downsample = self.wsi.info.level_downsamples[read_level]
+        level_downsample_mask = self.wsi.info.level_downsamples[read_level_mask]
+
+        img_patch_w = baseline_read_size[0]
+        img_patch_h = baseline_read_size[1]
+        stride_w = self.stride[0] * level_downsample
+        stride_h = self.stride[1] * level_downsample
+
+        data = []
+        for bbox in bounding_boxes:
+            # correcting the bbox location from mask_pow to wsi_power (baseline)
+            min_h = int(bbox[0] * level_downsample_mask)
+            min_w = int(bbox[1] * level_downsample_mask)
+            max_h = int(bbox[2] * level_downsample_mask)
+            max_w = int(bbox[3] * level_downsample_mask)
+
+            # start patch position calculation inside bbox
+            end_h = -1
+            h = 0
+            while end_h < max_h:
+                start_h = int(h * stride_h + min_h)
+                end_w = -1
+                w = 0
+                while end_w < max_w:
+                    start_w = int(w * stride_w + min_w)
+                    data.append([start_w, start_h, None])
+                    end_w = start_w + img_patch_w
+                    w += 1
+                end_h = start_h + img_patch_h
+                h += 1
+
+        self.locations_df = misc.read_locations(input_table=np.array(data))
+
+        return self
+
     def merge_patches(self, patches):
         """Merge the patch-level results to get the overall image-level prediction.
 
@@ -213,6 +285,55 @@ class FixedWindowPatchExtractor(PatchExtractor):
                 self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
+
+    def merge_patches(self, patches):
+        raise NotImplementedError
+
+
+class MaskFixedWindowPatchExtractor(PatchExtractor):
+    """Extract and merge patches using fixed sized windows for images from mask.
+
+    Args:
+        input_mask (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+          Input to create the mask :obj:`WSIReader` from.
+          This mask is used to find the regions to extract patches from them.
+        stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
+         default = patch_size
+
+    Attributes:
+        stride(tuple(int)): stride in (x, y) direction for patch extraction.
+
+    """
+
+    def __init__(
+        self,
+        input_img,
+        input_mask,
+        patch_size,
+        resolution=0,
+        units="level",
+        stride=None,
+        pad_mode="constant",
+        pad_constant_values=0,
+    ):
+        super().__init__(
+            input_img=input_img,
+            patch_size=patch_size,
+            resolution=resolution,
+            units=units,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+        if stride is None:
+            self.stride = self.patch_size
+        else:
+            if isinstance(stride, (tuple, list)):
+                self.stride = (int(stride[0]), int(stride[1]))
+            else:
+                self.stride = (int(stride), int(stride))
+        self.input_mask = input_mask
+
+        self._generate_mask_location_df()
 
     def merge_patches(self, patches):
         raise NotImplementedError
@@ -333,6 +454,8 @@ def get_patch_extractor(method_name, **kwargs):
         patch_extractor = FixedWindowPatchExtractor(**kwargs)
     elif method_name.lower() == "variablewindow":
         patch_extractor = VariableWindowPatchExtractor(**kwargs)
+    elif method_name.lower() == "mask":
+        patch_extractor = MaskFixedWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported
 

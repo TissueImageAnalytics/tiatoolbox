@@ -397,7 +397,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
             interpolation (str): Method to use when resampling the output
                 image. Possible values are "linear", "cubic", "lanczos",
-                "area", and "optimse". Defaults to 'optimise' which
+                "area", "nearest", and "optimse". Defaults to 'optimise' which
                 will use cubic interpolation for upscaling and area
                 interpolation for downscaling to avoid moiré patterns.
             pad_mode (str): Method to use when padding at the edges of the
@@ -575,7 +575,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
             interpolation (str): Method to use when resampling the output
                 image. Possible values are "linear", "cubic", "lanczos",
-                "area", and "optimse". Defaults to 'optimise' which
+                "area", "nearest",  and "optimse". Defaults to 'optimise' which
                 will use cubic interpolation for upscaling and area
                 interpolation for downscaling to avoid moiré patterns.
             pad_mode (str): Method to use when padding at the edges of the
@@ -658,7 +658,7 @@ class WSIReader:
             location=location, size=size, resolution=level, units="level"
         )
 
-    def slide_thumbnail(self, resolution=1.25, units="power"):
+    def slide_thumbnail(self, resolution=1.25, units="power", interpolation="optimise"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see :func:`read_rect`
@@ -667,6 +667,11 @@ class WSIReader:
             resolution (int or float or tuple(float)): resolution to
                 read thumbnail at, default = 1.25 (objective power)
             units (str): resolution units, default = "power"
+            interpolation (str): Method to use when resampling the output
+                image. Possible values are "linear", "cubic", "lanczos",
+                "area", "nearest", and "optimse". Defaults to 'optimise' which
+                will use cubic interpolation for upscaling and area
+                interpolation for downscaling to avoid moiré patterns.
 
         Returns:
             :class:`numpy.ndarray`: thumbnail image
@@ -679,7 +684,9 @@ class WSIReader:
         """
         slide_dimensions = self.info.slide_dimensions
         bounds = (0, 0, *slide_dimensions)
-        thumb = self.read_bounds(bounds, resolution=resolution, units=units)
+        thumb = self.read_bounds(
+            bounds, resolution=resolution, units=units, interpolation=interpolation
+        )
         return thumb
 
     def tissue_mask(
