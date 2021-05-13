@@ -470,7 +470,7 @@ def tissue_mask(
     default=16,
 )
 @click.option(
-    "--return_probs",
+    "--return_probabilities",
     help="Whether to return raw model probabilities.",
     default=False,
 )
@@ -486,7 +486,7 @@ def patch_predictor(
     img_input,
     output_path,
     batch_size,
-    return_probs,
+    return_probabilities,
     file_types,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
@@ -518,7 +518,9 @@ def patch_predictor(
         batch_size=batch_size,
     )
 
-    output = predictor.predict(dataset, return_probs=return_probs, on_gpu=False)
+    output = predictor.predict(
+        dataset, return_probabilities=return_probabilities, on_gpu=False
+    )
 
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
