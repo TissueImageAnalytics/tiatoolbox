@@ -73,11 +73,11 @@ def _get_outputs_api2(dataset, predefined_model):
     return probs, preds, labels, save_dir_path
 
 
-def _get_outputs_api3(dataset, backbone, nr_classes=9):
+def _get_outputs_api3(dataset, backbone, num_classes=9):
     """Helper function to get the model output using API 3."""
 
     # API 3
-    model = CNNPatchModel(backbone=backbone, nr_classes=nr_classes)
+    model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
 
     # coverage setter check
     model.set_preproc_func(lambda x: x - 1)  # do this for coverage

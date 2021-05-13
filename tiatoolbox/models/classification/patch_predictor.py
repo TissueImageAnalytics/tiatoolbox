@@ -39,7 +39,7 @@ class CNNPatchModel(ModelBase):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
     Attributes:
-        nr_classes (int): Number of classes output by the model.
+        num_classes (int): Number of classes output by the model.
         feat_extract (nn.Module): Backbone CNN model.
         pool (nn.Module): Type of pooling applied after feature extraction.
         classifier (nn.Module): Linear classifier module used to map the features
@@ -47,16 +47,16 @@ class CNNPatchModel(ModelBase):
 
     """
 
-    def __init__(self, backbone, nr_classes=1):
+    def __init__(self, backbone, num_classes=1):
         super().__init__()
-        self.nr_classes = nr_classes
+        self.num_classes = num_classes
 
         self.feat_extract = get_model(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
         # Best way to retrieve channel dynamically is passing a small forward pass
-        prev_nr_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
-        self.classifer = nn.Linear(prev_nr_ch, nr_classes)
+        prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
+        self.classifer = nn.Linear(prev_num_ch, num_classes)
 
         self.preproc_func = None
 
@@ -124,7 +124,7 @@ class CNNPatchPredictor:
 
     Attributes:
         batch_size (int): Number of images fed into the model each time.
-        nr_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
+        num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
         model (nn.Module): Defined PyTorch model.
         verbose (bool): Whether to output logging information.
 
@@ -138,7 +138,7 @@ class CNNPatchPredictor:
     def __init__(
         self,
         batch_size=8,
-        nr_loader_worker=0,
+        num_loader_worker=0,
         model=None,
         predefined_model=None,
         pretrained_weight=None,
@@ -193,7 +193,7 @@ class CNNPatchPredictor:
                 `predefined_model`.
 
             batch_size (int) : Number of images fed into the model each time.
-            nr_loader_worker (int) : Number of workers to load the data.
+            num_loader_worker (int) : Number of workers to load the data.
                 Take note that they will also perform preprocessing.
             verbose (bool): Whether to output logging information.
 
@@ -209,7 +209,7 @@ class CNNPatchPredictor:
             self.model = get_predefined_model(predefined_model, pretrained_weight)
 
         self.batch_size = batch_size
-        self.nr_loader_worker = nr_loader_worker
+        self.num_loader_worker = num_loader_worker
         self.verbose = verbose
 
     @staticmethod
@@ -252,7 +252,7 @@ class CNNPatchPredictor:
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.nr_loader_worker,
+            num_workers=self.num_loader_worker,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
@@ -364,7 +364,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
-    model = CNNPatchModel(backbone=backbone, nr_classes=cfg["nr_classes"])
+    model = CNNPatchModel(backbone=backbone, num_classes=cfg["num_classes"])
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
