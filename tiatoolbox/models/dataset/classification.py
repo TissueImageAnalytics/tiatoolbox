@@ -76,7 +76,7 @@ class __ABC_Dataset(torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
 
     Attributes:
-        return_labels (bool, False): __getitem__ will return both the img and its label.
+        return_labels (bool, False): `__getitem__` will return both the img and its label.
                 If `label_list` is `None`, `None` is returned
 
         preproc_func: Preprocessing function used to transform the input data. If
@@ -153,7 +153,7 @@ class PatchDataset(__ABC_Dataset):
         label_list: List of label for sample at the same index in `img_list` .
          Default is `None`
 
-        return_labels (bool, False): __getitem__ will return both the img and its label.
+        return_labels (bool, False): `__getitem__` will return both the img and its label.
          If `label_list` is `None`, `None` is returned
 
         preproc_func: Preprocessing function used to transform the input data. If
