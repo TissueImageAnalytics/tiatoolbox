@@ -217,24 +217,26 @@ class CNNPatchPredictor:
         self.verbose = verbose
 
     @staticmethod
-    def __postprocess(probs):
+    def __postprocess(probabilities):
         """Apply post processing to output probablities. For classification, we apply
         a simple method and simply take the class with the highest probability.
 
         Args:
-            probs (ndarray): Model output probabilities.
+            probabilities (ndarray): Model output probabilities.
 
         """
-        return np.argmax(probs, axis=-1)
+        return np.argmax(probabilities, axis=-1)
 
-    def predict(self, dataset, return_probs=False, return_labels=False, on_gpu=True):
+    def predict(
+        self, dataset, return_probabilities=False, return_labels=False, on_gpu=True
+    ):
         """Make a prediction on a dataset. Internally will make a deep copy
         of the provided dataset to ensure user provided dataset is unchanged.
 
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
                 tiatoolbox.models.data.classification.Patch_Dataset.
-            return_probs (bool): Whether to return per-class model probabilities.
+            return_probabilities (bool): Whether to return per-class model probabilities.
             return_labels (bool): Whether to return labels.
             on_gpu (bool): whether to run model on the GPU.
 
@@ -274,8 +276,8 @@ class CNNPatchPredictor:
             model = self.model.to("cpu")
 
         all_output = {}
-        preds_output = []
-        probs_output = []
+        predictions_output = []
+        probabilities_output = []
         labels_output = []
         for _, batch_data in enumerate(dataloader):
             # calling the static method of that specific ModelDesc
@@ -286,13 +288,15 @@ class CNNPatchPredictor:
             else:
                 batch_input = batch_data
 
-            batch_output_probs = self.model.infer_batch(model, batch_input, on_gpu)
+            batch_output_probabilities = self.model.infer_batch(
+                model, batch_input, on_gpu
+            )
             # get the index of the class with the maximum probability
-            batch_output = self.__postprocess(batch_output_probs)
-            preds_output.extend(batch_output.tolist())
-            if return_probs:
+            batch_output = self.__postprocess(batch_output_probabilities)
+            predictions_output.extend(batch_output.tolist())
+            if return_probabilities:
                 # return raw output
-                probs_output.extend(batch_output_probs.tolist())
+                probabilities_output.extend(batch_output_probabilities.tolist())
             if return_labels:
                 labels_output.extend(batch_labels.tolist())
 
@@ -302,11 +306,11 @@ class CNNPatchPredictor:
         if self.verbose:
             pbar.close()
 
-        preds_output = np.array(preds_output)
-        all_output = {"preds": preds_output}
-        if return_probs:
-            probs_output = np.array(probs_output)
-            all_output["probs"] = probs_output
+        predictions_output = np.array(predictions_output)
+        all_output = {"predictions": predictions_output}
+        if return_probabilities:
+            probabilities_output = np.array(probabilities_output)
+            all_output["probabilities"] = probabilities_output
         if return_labels:
             labels_output = np.array(labels_output)
             all_output["labels"] = labels_output
