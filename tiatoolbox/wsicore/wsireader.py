@@ -353,6 +353,50 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return read_level, level_bounds, output_size, post_read_scale_factor
 
+    def _find_tile_params(
+        self,
+        tile_objective_value: int,
+        tile_read_size: Tuple[int, int],
+    ):
+        """Find the params for save tiles."""
+        rescale = self.info.objective_power / tile_objective_value
+        if rescale.is_integer():
+            try:
+                level = np.log2(rescale)
+                if level.is_integer():
+                    level = np.int(level)
+                    slide_dimension = self.info.level_dimensions[level]
+                    rescale = 1
+                else:
+                    raise ValueError
+            # Raise index error if desired pyramid level not embedded
+            # in level_dimensions
+            except IndexError:
+                level = 0
+                slide_dimension = self.info.level_dimensions[level]
+                rescale = np.int(rescale)
+                warnings.warn(
+                    "Reading WSI at level 0. Desired tile_objective_value"
+                    + str(tile_objective_value)
+                    + "not available.",
+                    UserWarning,
+                )
+            except ValueError:
+                level = 0
+                slide_dimension = self.info.level_dimensions[level]
+                rescale = 1
+                warnings.warn(
+                    "Reading WSI at level 0. Reading at tile_objective_value"
+                    + str(tile_objective_value)
+                    + "not allowed.",
+                    UserWarning,
+                )
+                tile_objective_value = self.info.objective_power
+        else:
+            raise ValueError("rescaling factor must be an integer.")
+
+        return level, slide_dimension, rescale, tile_objective_value
+
     def read_rect(
         self,
         location,
@@ -758,41 +802,10 @@ class WSIReader:
 
         """
         output_dir = pathlib.Path(output_dir, self.input_path.name)
-        rescale = self.info.objective_power / tile_objective_value
-        if rescale.is_integer():
-            try:
-                level = np.log2(rescale)
-                if level.is_integer():
-                    level = np.int(level)
-                    slide_dimension = self.info.level_dimensions[level]
-                    rescale = 1
-                else:
-                    raise ValueError
-            # Raise index error if desired pyramid level not embedded
-            # in level_dimensions
-            except IndexError:
-                level = 0
-                slide_dimension = self.info.level_dimensions[level]
-                rescale = np.int(rescale)
-                warnings.warn(
-                    "Reading WSI at level 0. Desired tile_objective_value"
-                    + str(tile_objective_value)
-                    + "not available.",
-                    UserWarning,
-                )
-            except ValueError:
-                level = 0
-                slide_dimension = self.info.level_dimensions[level]
-                rescale = 1
-                warnings.warn(
-                    "Reading WSI at level 0. Reading at tile_objective_value"
-                    + str(tile_objective_value)
-                    + "not allowed.",
-                    UserWarning,
-                )
-                tile_objective_value = self.info.objective_power
-        else:
-            raise ValueError("rescaling factor must be an integer.")
+
+        level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
+            tile_objective_value, tile_read_size
+        )
 
         tile_read_size = np.multiply(tile_read_size, rescale)
         slide_h = slide_dimension[1]
@@ -897,6 +910,74 @@ class WSIReader:
         utils.misc.imwrite(
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
+
+    def get_tile_coordinates(
+        self,
+        tile_objective_value: int,
+        tile_read_size: Tuple[int, int],
+        verbose=True,
+    ):
+        """Generate coordinates of image tiles from whole slide images.
+
+        Args:
+            tile_objective_value (int): Objective value at which tile is generated.
+            tile_read_size (tuple(int)): Tile (width, height).
+
+        Returns:
+            data (list): List of tile coordiantes.
+
+        Examples:
+            >>> from tiatoolbox.wsicore import wsireader
+            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> data = wsi.get_tile_coordinates(output_dir='./dev_test',
+            ...             tile_objective_value=10,
+            ...             tile_read_size=(2000, 2000))
+
+        """
+
+        level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
+            tile_objective_value, tile_read_size
+        )
+
+        tile_read_size = np.multiply(tile_read_size, rescale)
+        slide_h = slide_dimension[1]
+        slide_w = slide_dimension[0]
+        tile_h = tile_read_size[1]
+        tile_w = tile_read_size[0]
+
+        iter_tot = 0
+        data = []
+        for h in range(int(math.ceil((slide_h - tile_h) / tile_h + 1))):
+            for w in range(int(math.ceil((slide_w - tile_w) / tile_w + 1))):
+                start_h = h * tile_h
+                end_h = (h * tile_h) + tile_h
+                start_w = w * tile_w
+                end_w = (w * tile_w) + tile_w
+
+                end_h = min(end_h, slide_h)
+                end_w = min(end_w, slide_w)
+
+                # convert to baseline reference frame
+                bounds = start_w, start_h, end_w, end_h
+                baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
+
+                start_w_base = baseline_bounds[1]
+                end_w_base = baseline_bounds[2]
+                start_h_base = baseline_bounds[3]
+                end_h_base = baseline_bounds[4]
+
+                data.append(
+                    [
+                        iter_tot,
+                        start_w_base,
+                        end_w_base,
+                        start_h_base,
+                        end_h_base,
+                    ]
+                )
+                iter_tot += 1
+
+        return data, level
 
 
 class OpenSlideWSIReader(WSIReader):

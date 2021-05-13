@@ -29,6 +29,8 @@ _pretrained_model = {
     "alexnet-kather100K": {
         "pretrained": os.path.join(models_root, "alexnet-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "resnet18-kather100K": {
         "pretrained": os.path.join(models_root, "resnet18-kather100K-pc.pth"),
@@ -37,62 +39,92 @@ _pretrained_model = {
     "resnet34-kather100K": {
         "pretrained": os.path.join(models_root, "resnet34-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "resnet50-kather100K": {
         "pretrained": os.path.join(models_root, "resnet50-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "resnet101-kather100K": {
         "pretrained": os.path.join(models_root, "resnet101-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "resnext50_32x4d-kather100K": {
         "pretrained": os.path.join(models_root, "resnext50_32x4d-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "resnext101_32x8d-kather100K": {
         "pretrained": os.path.join(models_root, "resnext101_32x8d-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "wide_resnet50_2-kather100K": {
         "pretrained": os.path.join(models_root, "wide_resnet50_2-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "wide_resnet101_2-kather100K": {
         "pretrained": os.path.join(models_root, "wide_resnet101_2-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "densenet121-kather100K": {
         "pretrained": os.path.join(models_root, "densenet121-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "densenet161-kather100K": {
         "pretrained": os.path.join(models_root, "densenet161-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "densenet169-kather100K": {
         "pretrained": os.path.join(models_root, "densenet169-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "densenet201-kather100K": {
         "pretrained": os.path.join(models_root, "densenet201-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "mobilenet_v2-kather100K": {
         "pretrained": os.path.join(models_root, "mobilenet_v2-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "mobilenet_v3_large-kather100K": {
         "pretrained": os.path.join(models_root, "mobilenet_v3_large-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "mobilenet_v3_small-kather100K": {
         "pretrained": os.path.join(models_root, "mobilenet_v3_small-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
     "googlenet-kather100K": {
         "pretrained": os.path.join(models_root, "googlenet-kather100K-pc.pth"),
         "num_classes": 9,
+        "patch_size": (224, 224),
+        "objective_power": 20,
     },
 }
 

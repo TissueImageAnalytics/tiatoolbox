@@ -34,11 +34,7 @@ __version__ = "0.6.0"
 # runtime context parameters
 rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
 
-from tiatoolbox import tiatoolbox
-from tiatoolbox import wsicore
-from tiatoolbox import utils
-from tiatoolbox import tools
-from tiatoolbox import models
+from tiatoolbox import tiatoolbox, wsicore, utils, tools, models
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))

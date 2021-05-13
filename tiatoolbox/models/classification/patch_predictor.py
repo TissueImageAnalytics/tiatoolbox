@@ -20,6 +20,7 @@
 
 """This module enables patch-level prediction."""
 
+from tiatoolbox.models.dataset.classification import PatchDataset, WsiPatchDataset
 import tqdm
 import numpy as np
 import torch
@@ -210,7 +211,9 @@ class CNNPatchPredictor:
         if model is not None:
             self.model = model
         else:
-            self.model = get_predefined_model(predefined_model, pretrained_weight)
+            self.model, self.patch_size, self.objective_value = get_predefined_model(
+                predefined_model, pretrained_weight
+            )
 
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
@@ -227,8 +230,13 @@ class CNNPatchPredictor:
         """
         return np.argmax(probabilities, axis=-1)
 
-    def predict(
-        self, dataset, return_probabilities=False, return_labels=False, on_gpu=True
+    def _predict_engine(
+        self,
+        dataset,
+        return_probabilities=False,
+        return_labels=False,
+        return_coordinates=False,
+        on_gpu=True,
     ):
         """Make a prediction on a dataset. Internally will make a deep copy
         of the provided dataset to ensure user provided dataset is unchanged.
@@ -238,17 +246,13 @@ class CNNPatchPredictor:
                 tiatoolbox.models.data.classification.Patch_Dataset.
             return_probabilities (bool): Whether to return per-class probabilities.
             return_labels (bool): Whether to return labels.
+            return_coordinates (bool): Whether to return patch coordinates.
             on_gpu (bool): whether to run model on the GPU.
 
         Returns:
             output (ndarray): Model predictions of the input dataset
 
         """
-        if not isinstance(dataset, torch.utils.data.Dataset):
-            raise ValueError(
-                "Dataset supplied to predict() must be a PyTorch map style "
-                "dataset (torch.utils.data.Dataset)."
-            )
 
         # may be expensive
         dataset = copy.deepcopy(dataset)  # make a deep copy of this
@@ -268,8 +272,8 @@ class CNNPatchPredictor:
             total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
         )
 
-        # ! may need to take into account CPU/GPU mode
-        if on_gpu:  # DataParallel work only for cuda
+        if on_gpu:
+            # DataParallel works only for cuda
             model = torch.nn.DataParallel(self.model)
             model = model.to("cuda")
         else:
@@ -278,13 +282,16 @@ class CNNPatchPredictor:
         all_output = {}
         predictions_output = []
         probabilities_output = []
+        coordinates_output = []
         labels_output = []
         for _, batch_data in enumerate(dataloader):
-            # calling the static method of that specific ModelDesc
-            # on the an instance of ModelDesc, maybe there is a better way
-            # to go about this
-            if return_labels:
+
+            if return_labels and return_coordinates:
+                batch_input, batch_labels, batch_coordinates = batch_data
+            elif return_labels and not return_coordinates:
                 batch_input, batch_labels = batch_data
+            elif not return_labels and return_coordinates:
+                batch_input, batch_coordinates = batch_data
             else:
                 batch_input = batch_data
 
@@ -298,7 +305,11 @@ class CNNPatchPredictor:
                 # return raw output
                 probabilities_output.extend(batch_output_probabilities.tolist())
             if return_labels:
+                # return label per patch
                 labels_output.extend(batch_labels.tolist())
+            if return_coordinates:
+                # return coordinates of processed patches
+                coordinates_output.extend(batch_coordinates.tolist())
 
             # may be a with block + flag would be nicer
             if self.verbose:
@@ -314,7 +325,66 @@ class CNNPatchPredictor:
         if return_labels:
             labels_output = np.array(labels_output)
             all_output["labels"] = labels_output
+        if return_coordinates:
+            coordinates_output = np.array(coordinates_output)
+            all_output["coordinates"] = coordinates_output
+
         return all_output
+
+    def predict(
+        self,
+        data,
+        mode,
+        return_probabilities=False,
+        return_labels=False,
+        objective_value=None,
+        patch_size=None,
+        on_gpu=True,
+    ):
+        """Make a prediction on a dataset. Internally will make a deep copy
+        of the provided dataset to ensure user provided dataset is unchanged.
+
+        Args:
+            dataset (torch.utils.data.Dataset): PyTorch dataset object created using
+                tiatoolbox.models.data.classification.Patch_Dataset.
+            return_probabilities (bool): Whether to return per-class probabilities.
+            return_labels (bool): Whether to return labels.
+            objective_value (float): Objective power used for reading patches. Note,
+                this is only utilised in `tile` and `wsi` modes.
+            patch_size (tuple): Size of image to read when using `tile` and `wsi`
+                mode (width, height).
+            on_gpu (bool): whether to run model on the GPU.
+
+        Returns:
+            output (ndarray): Model predictions of the input dataset
+
+        """
+
+        if mode == "patch":
+            # don't return coordinates if patches are already extracted
+            return_coordinates = False
+            dataset = PatchDataset(data)
+
+        elif mode == "tile" or mode == "wsi":
+            # return coordinates of patches processed within a tile / whole-slide image
+            return_coordinates = True
+
+            if objective_value is not None:
+                objective_value = self.objective_value
+            if patch_size is not None:
+                patch_size = self.patch_size
+
+            dataset = WsiPatchDataset(
+                data, objective_value=objective_value, read_size=patch_size
+            )
+        else:
+            raise ValueError("%s is not a valid mode." % mode)
+
+        output = self._predict_engine(
+            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+        )
+
+        return output
 
 
 def get_predefined_model(predefined_model=None, pretrained_weight=None):
@@ -370,6 +440,8 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     if predefined_model not in _pretrained_model:
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
     cfg = _pretrained_model[predefined_model]
+    patch_size = cfg["patch_size"]
+    resolution = cfg["resolution"]
     backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
@@ -389,4 +461,5 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     # always load to CPU
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
-    return model
+
+    return model, patch_size, resolution
