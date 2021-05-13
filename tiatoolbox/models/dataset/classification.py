@@ -31,7 +31,7 @@ from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
 
 
-class __TorchPreprocCaller:
+class _TorchPreprocCaller:
     """Wrapper for applying PyTorch transforms.
 
     Args:
@@ -68,7 +68,7 @@ def predefined_preproc_func(dataset_name):
         )
 
     preproc_list = preproc_dict[dataset_name]
-    preproc_func = __TorchPreprocCaller(preproc_list)
+    preproc_func = _TorchPreprocCaller(preproc_list)
     return preproc_func
 
 

@@ -25,7 +25,7 @@ import os
 models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
 
 # ! any additional dataset name should be also added to tiatoolbox.models.dataset
-__pretrained_model = {
+_pretrained_model = {
     "alexnet-kather100K": {
         "pretrained": os.path.join(models_root, "alexnet-kather100K-pc.pth"),
         "num_classes": 9,
@@ -97,4 +97,4 @@ __pretrained_model = {
 }
 
 # To ensure easy matching
-__pretrained_model = {k.lower(): v for k, v in __pretrained_model.items()}
+_pretrained_model = {k.lower(): v for k, v in _pretrained_model.items()}

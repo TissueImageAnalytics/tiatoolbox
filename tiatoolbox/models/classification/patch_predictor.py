@@ -32,7 +32,7 @@ from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
-from tiatoolbox.models.classification.pretrained_info import __pretrained_model
+from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 
 
 class CNNPatchModel(ModelBase):
@@ -75,7 +75,8 @@ class CNNPatchModel(ModelBase):
         return prob
 
     def set_preproc_func(self, func):
-        """
+        """To set function for preprocessing.
+
         Set the `preproc_func` to this `func` if it is not None.
         Else the `preproc_func` is reset to return source image.
 
@@ -91,8 +92,9 @@ class CNNPatchModel(ModelBase):
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
-        """Run inference on an input batch. Contains logic for
-        forward operation as well as i/o aggregation.
+        """Run inference on an input batch.
+
+        Contains logic for forward operation as well as i/o aggregation.
 
         Args:
             model (nn.Module): PyTorch defined model.
@@ -144,8 +146,9 @@ class CNNPatchPredictor:
         pretrained_weight=None,
         verbose=True,
     ):
-        """Initialise the Patch Predictor. Note, if model is supplied in the
-        arguments, it will override the backbone.
+        """Initialise the Patch Predictor.
+
+        Note, if model is supplied in the arguments, it will override the backbone.
 
         Args:
             model (nn.Module): Use externally defined PyTorch model for prediction with.
@@ -358,9 +361,9 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
     # parsing protocol
     predefined_model = predefined_model.lower()
 
-    if predefined_model not in __pretrained_model:
+    if predefined_model not in _pretrained_model:
         raise ValueError("Predefined model `%s` does not exist." % predefined_model)
-    cfg = __pretrained_model[predefined_model]
+    cfg = _pretrained_model[predefined_model]
     backbone, dataset = predefined_model.split("-")
 
     preproc_func = predefined_preproc_func(dataset)
