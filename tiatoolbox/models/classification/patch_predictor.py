@@ -31,7 +31,7 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data
+from tiatoolbox.utils import misc
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 
 
@@ -104,10 +104,7 @@ class CNNPatchModel(ModelBase):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        if on_gpu:
-            device = "cuda"
-        else:
-            device = "cpu"
+        device = misc.select_device(on_gpu=on_gpu)
 
         img_patches = batch_data
         img_patches_device = img_patches.to(device).type(torch.float32)  # to NCHW
@@ -274,11 +271,7 @@ class CNNPatchPredictor:
         )
 
         # ! may need to take into account CPU/GPU mode
-        if on_gpu:  # DataParallel work only for cuda
-            model = torch.nn.DataParallel(self.model)
-            model = model.to("cuda")
-        else:
-            model = self.model.to("cpu")
+        model = misc.model_to(on_gpu=on_gpu, model=self.model)
 
         all_output = {}
         predictions_output = []
@@ -392,7 +385,7 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
             rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]
         )
         if not os.path.exists(pretrained_weight):
-            download_data(pretrained_weight_url, pretrained_weight)
+            misc.download_data(pretrained_weight_url, pretrained_weight)
 
     # ! assume to be saved in single GPU mode
     # always load to CPU

@@ -31,6 +31,7 @@ import os
 import zipfile
 import requests
 from skimage import exposure
+import torch
 
 
 def split_path_name_ext(full_path):
@@ -524,7 +525,8 @@ def download_data(url, save_path, overwrite=False):
 
     Args:
         url (path): URL from where to download the data.
-        unzip_dir (str): Location to unzip the data.
+        save_path (str): Location to unzip the data.
+        overwrite (bool): True to force overwriting of existing data, default=False
 
     """
     print("Download from %s" % url)
@@ -556,3 +558,42 @@ def unzip_data(zip_path, save_path, del_zip=True):
     if del_zip:
         # Remove zip file
         os.remove(zip_path)
+
+
+def select_device(on_gpu):
+    """Selects the appropriate device as requested.
+
+    Args:
+        on_gpu (bool): Selects gpu if True.
+
+    Returns:
+        device (str): "gpu" if on_gpu is True otherwise returns "cpu"
+
+    """
+
+    if on_gpu:
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    return device
+
+
+def model_to(on_gpu, model):
+    """Transfers model to cpu/gpu.
+
+    Args:
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu
+        model (torch.nn.Module): PyTorch defined model.
+
+    Returns:
+        model (torch.nn.Module):
+
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        model = model.to("cuda")
+    else:
+        model = model.to("cpu")
+
+    return model
