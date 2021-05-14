@@ -190,6 +190,10 @@ class CNNPatchPredictor:
                 - googlenet-kather100K: googlenet backbone trained on
                   Kather 100K dataset.
 
+                - Kather 100K dataset: Kather, Jakob Nikolas, et al.
+                  "Predicting survival from colorectal cancer histology slides using
+                  deep learning: A retrospective multicenter study." PLoS medicine.
+
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
                 via the `pretrained_weight` argument. Argument is case insensitive.
@@ -353,6 +357,10 @@ def get_predefined_model(predefined_model=None, pretrained_weight=None):
             - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
               Kather 100K dataset.
             - googlenet-kather100K: googlenet backbone trained on Kather 100K dataset.
+
+            - Kather 100K dataset: Kather, Jakob Nikolas, et al.
+            "Predicting survival from colorectal cancer histology slides using
+            deep learning: A retrospective multicenter study." PLoS medicine.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the
