@@ -546,27 +546,6 @@ def test_patch_predictor_api1_no_probs_and_labels(_sample_patch1, _sample_patch2
     )
 
 
-def test_patch_predictor_api1_on_gpu(_sample_patch1, _sample_patch2):
-    """Test for patch predictor API 1 that doesn't return probabilities or labels.
-    Test with resnet18 on Kather 100K dataset.
-
-    """
-    dataset = PatchDataset(
-        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
-    )
-    probabilities_check = [1.0, 0.9999717473983765]
-    predictions_check = [5, 8]
-    _test_outputs_api1(
-        dataset,
-        "resnet18-kather100K",
-        return_probabilities=False,
-        return_labels=False,
-        probabilities_check=probabilities_check,
-        predictions_check=predictions_check,
-        on_gpu=True,
-    )
-
-
 def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     """Test for patch predictor with alexnet on Kather 100K dataset."""
     # API 1, also test with return_labels
