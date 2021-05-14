@@ -113,16 +113,13 @@ class PatchDataset(abc.__ABCPatchDataset):
 
     """
 
-    def __init__(
-        self, input_list, label_list=None, return_labels=False, preproc_func=None
-    ):
-        super().__init__(return_labels=return_labels, preproc_func=preproc_func)
+    def __init__(self, input_list, label_list=None, preproc_func=None):
+        super().__init__(preproc_func=preproc_func)
 
         self.data_is_npy_alike = False
 
         self.input_list = input_list
         self.label_list = label_list
-        self.return_labels = return_labels
 
         # perform check on the input
         self.data_check(mode="patch")
@@ -143,7 +140,7 @@ class PatchDataset(abc.__ABCPatchDataset):
         data = {
             "image": patch,
         }
-        if self.return_labels:
+        if self.label_list is not None:
             data["label"] = self.label_list[idx]
             return data
         return data
@@ -192,6 +189,7 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
     def __init__(
         self,
         wsi_file,
+        label,
         mode="wsi",
         return_labels=False,
         preproc_func=None,
@@ -206,6 +204,7 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         if not os.path.isfile(wsi_file):
             raise ValueError("Input must be a valid file path.")
 
+        self.label = label  # assume a single label for the whole-slide image
         if mode == "wsi":
             self.wsi_reader = get_wsireader(wsi_file)
         else:
@@ -264,10 +263,10 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         patch = self.preproc_func(patch)
 
         data = {"image": patch, "coords": np.array(lv0_coords)}
-        # ! @simon atm, dont return label for WSI as it doesnt make sense
-        # if self.return_labels:
-        #     data['label'] = self.label_list[idx]
-        #     return data
+        if self.label is not None:
+            data["label"] = self.label  # assume same label per WSI
+            return data
+
         return data
 
 

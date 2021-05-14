@@ -234,7 +234,6 @@ class CNNPatchPredictor:
         #! TODO commenting out deepcopy is a temporary workaround
         # dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
-        dataset.return_labels = return_labels  # HACK
 
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -293,8 +292,9 @@ class CNNPatchPredictor:
 
     def predict(
         self,
-        data,
-        mode,
+        img_list,
+        label_list=None,
+        mode="patch",
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
@@ -308,9 +308,9 @@ class CNNPatchPredictor:
         of the provided dataset to ensure user provided dataset is unchanged.
 
         Args:
-            data: INCLUDE DESCRIPTION #TODO.
+            img_list: INCLUDE DESCRIPTION #TODO.
+            label_list: INCLUDE DESCRIPTION #TODO.
             return_probabilities (bool): Whether to return per-class probabilities.
-            return_labels (bool): Whether to return labels.
             objective_value (float): Objective power used for reading patches. Note,
                 this is only utilised in `tile` and `wsi` modes.
             patch_size (tuple): Size of image to read when using `tile` and `wsi`
@@ -322,22 +322,28 @@ class CNNPatchPredictor:
 
         """
 
+        # if a label_list is provided, then return with the prediction
+        if label_list is not None:
+            return_labels = True
+        else:
+            return_labels = False
+
         if mode == "patch":
             # don't return coordinates if patches are already extracted
             return_coordinates = False
-            dataset = PatchDataset(data)
+            dataset = PatchDataset(img_list, label_list)
             output = self._predict_engine(
                 dataset, return_probabilities, return_labels, return_coordinates, on_gpu
             )
 
         elif mode == "tile" or mode == "wsi":
-            output_files = []
-            if len(data) > 1:
+            output_files = []  # generate a list of output file paths
+            if len(img_list) > 1:
                 print(
                     "WARNING: When providing multiple whole-slide images / tiles, "
                     "we save the outputs and return the locations to the corresponding files."
                 )
-            if len(data) > 1 and output_path == None:
+            if len(img_list) > 1 and output_path == None:
                 raise ValueError(
                     "If multiple whole-slide images / tiles are provided, "
                     "then an output_path for saving results must be provided."
@@ -351,7 +357,7 @@ class CNNPatchPredictor:
             # ! @simon hard coded enforcing,
             # ! change if we switch API after discussion
 
-            if not isinstance(data, list):
+            if not isinstance(img_list, list):
                 raise ValueError(
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
@@ -360,9 +366,14 @@ class CNNPatchPredictor:
                 resolution = 0
                 units = "level"
 
-            for wsi_file in data:
+            for idx, wsi_file in enumerate(img_list):
+                if label_list is not None:
+                    wsi_label = label_list[idx]
+                else:
+                    wsi_label = None
                 dataset = WSIPatchDataset(
                     pathlib.Path(wsi_file),
+                    label=wsi_label,
                     mode=mode,
                     patch_shape=patch_shape,  # at requested read resolution, not wrt to lv0
                     stride_shape=stride_shape,  # at requested read resolution, not wrt to lv0

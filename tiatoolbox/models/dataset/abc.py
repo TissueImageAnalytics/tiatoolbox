@@ -43,11 +43,10 @@ class __ABCPatchDataset(torch.utils.data.Dataset):
 
     """
 
-    def __init__(self, return_labels=False, preproc_func=None):
+    def __init__(self, preproc_func=None):
         super().__init__()
         self.set_preproc_func(preproc_func)
         self.data_is_npy_alike = False
-        self.return_labels = return_labels
         self.input_list = None
         self.label_list = None
 
