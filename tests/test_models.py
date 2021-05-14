@@ -9,6 +9,9 @@ import pytest
 import torch
 from click.testing import CliRunner
 
+import sys
+sys.path.append('..')
+
 from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification.abc import ModelBase
@@ -32,37 +35,108 @@ from tiatoolbox import cli
 #     # probabilities, predictions, labels
 
 
-def test_wsi_patch_predictor(_sample_crc_tile):
-    """Test for patch predictor with resnet50 on Kather 100K dataset."""
-    # API 1, also test with return_labels
-    results = _get_outputs_api1(
-        pathlib.Path(_sample_crc_tile), "resnet18-kather100K", mode="wsi"
-    )
-    # probabilities, predictions, labels
+# def test_wsi_patch_predictor(_sample_crc_tile):
+#     """Test for patch predictor with resnet50 on Kather 100K dataset."""
+#     # API 1, also test with return_labels
+#     results = _get_outputs_api1(
+#         pathlib.Path(_sample_crc_tile), "resnet18-kather100K", mode="wsi"
+#     )
+#     # probabilities, predictions, labels
 
 
-def _get_outputs_api1(data, pretrained_model, mode):
-    """Helper function to get the model output using API 1."""
-    # API 1, also test with return_labels
-    predictor = CNNPatchPredictor(pretrained_model=pretrained_model, batch_size=2)
+# def _get_outputs_api1(data, pretrained_model, mode):
+#     """Helper function to get the model output using API 1."""
+#     # API 1, also test with return_labels
+#     predictor = CNNPatchPredictor(pretrained_model=pretrained_model, batch_size=2)
+#     # don't run test on GPU
+#     output = predictor.predict(
+#         data,
+#         mode=mode,
+#         return_probabilities=True,
+#         return_labels=True,
+#         on_gpu=True,
+
+#         patch_shape=np.array([224, 224])
+#     )
+#     probabilities = output["probabilities"]
+#     predictions = output["predictions"]
+
+#     if mode == "wsi" or mode == "tile":
+#         coordinates = output["coordinates"]
+#         return probabilities, predictions, coordinates
+#     else:
+#         labels = output["labels"]
+#         return probabilities, predictions, labels
+
+
+def test_tile(_sample_crc_tile):
+    __sample = _sample_crc_tile
+    predictor = CNNPatchPredictor(
+                    pretrained_model="resnet18-kather100K",
+                    batch_size=2)
     # don't run test on GPU
     output = predictor.predict(
-        data,
-        mode=mode,
+        __sample,
+        mode='tile',
         return_probabilities=True,
         return_labels=True,
-        on_gpu=True,
+        on_gpu=False,
+
+        patch_shape=np.array([224, 224])
     )
-    probabilities = output["probabilities"]
-    predictions = output["predictions"]
 
-    if mode == "wsi" or mode == "tile":
-        coordinates = output["coordinates"]
-        return probabilities, predictions, coordinates
-    else:
-        labels = output["labels"]
-        return probabilities, predictions, labels
+    # don't run test on GPU
+    output = predictor.predict(
+        __sample,
+        mode='tile',
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
 
+        patch_shape=np.array([224, 224]),
+        stride_shape=np.array([112, 112])
+    )
+
+
+def test_wsi(_sample_svs):
+    # __sample = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs')
+    __sample = _sample_svs
+    predictor = CNNPatchPredictor(
+                    pretrained_model="resnet18-kather100K", 
+                    batch_size=2)
+    # don't run test on GPU
+    output = predictor.predict(
+        __sample,
+        mode='wsi',
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+
+        patch_shape=np.array([224, 224]),
+        resolution=1.0,
+        units='mpp'
+    )
+
+    # # don't run test on GPU
+    # output = predictor.predict(
+    #     __sample,
+    #     mode='wsi',
+    #     return_probabilities=True,
+    #     return_labels=True,
+    #     on_gpu=False,
+
+    #     patch_shape=np.array([224, 224]),
+    #     resolution=2.0,
+    #     units='mpp'
+    # )
+
+# dummy_test_wsi()
+
+
+# results = _get_outputs_api1(
+#     pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1.ndpi'), 
+#     "resnet18-kather100K", mode="wsi"
+# )
 
 # def _get_outputs_api2(data, pretrained_model, mode):
 #     """Helper function to get the model output using API 2."""

@@ -296,9 +296,12 @@ class CNNPatchPredictor:
         mode,
         return_probabilities=False,
         return_labels=False,
-        objective_value=None,
-        patch_size=None,
         on_gpu=True,
+
+        patch_shape=[224, 224],  # at requested read resolution, not wrt to lv0
+        stride_shape=None,  # at requested read resolution, not wrt to lv0
+        resolution=1.0,
+        units='mpp',
     ):
         """Make a prediction on a dataset. Internally will make a deep copy
         of the provided dataset to ensure user provided dataset is unchanged.
@@ -334,12 +337,10 @@ class CNNPatchPredictor:
             # ! @simon hard coded enforcing,
             # ! change if we switch API after discussion
 
-            # change to read objective level and make it in line
-            # with wsi read arg, expose it out
-            if objective_value is not None:
-                self.objective_value = objective_value
-            if patch_size is not None:
-                self.patch_size = patch_size
+            if mode == 'tile':
+                # ! hard coded, check how to auto pass by default
+                resolution = 0
+                units = 'level'
 
             # unintuitive error messages, need to provide `mode`
             # likely will be changed later with the API
@@ -350,9 +351,11 @@ class CNNPatchPredictor:
 
             dataset = WSIPatchDataset(
                 data,
-                objective_value=self.objective_value,
-                read_size=self.patch_size,
                 mode=mode,
+                patch_shape=patch_shape,  # at requested read resolution, not wrt to lv0
+                stride_shape=stride_shape,  # at requested read resolution, not wrt to lv0
+                resolution=resolution,
+                units=units,
             )
 
         else:
