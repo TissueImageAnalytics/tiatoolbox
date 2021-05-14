@@ -175,16 +175,17 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
             self.wsi_reader = get_wsireader(pathlib.Path(wsi_file))
         else:
             img = imread(wsi_file)
-            base_shape = (img.shape[1], img.shape[0])
-            metadata = WSIMeta(
-                slide_dimensions=base_shape,
-                level_dimensions=[
-                    (base_shape[0] / n, base_shape[1] / n)
-                    for n in range(1, level_count + 1)
-                ],
-                objective_power=20,
-            )
-            self.wsi_reader = VirtualWSIReader(pathlib.Path(wsi_file), metadata)
+            # base_shape = (img.shape[1], img.shape[0])
+            # metadata = WSIMeta(
+            #     slide_dimensions=base_shape,
+            #     level_dimensions=[
+            #         (base_shape[0] / n, base_shape[1] / n)
+            #         for n in range(1, level_count + 1)
+            #     ],
+            #     objective_power=20,
+            # )
+            # self.wsi_reader = VirtualWSIReader(pathlib.Path(wsi_file), metadata)
+            self.wsi_reader = get_wsireader(img)
 
         self.input_list, self.level = self.wsi_reader.get_tile_coordinates(
             self.objective_value, self.read_size
