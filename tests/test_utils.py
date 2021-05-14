@@ -935,3 +935,18 @@ def test_normalise_padding_input_dims():
     """Test that normalise padding error with input dimensions > 1."""
     with pytest.raises(ValueError):
         utils.image.normalise_padding_size(((0, 0), (0, 0)))
+
+
+def test_select_device():
+    """Test if correct device is selected for models."""
+    device = misc.select_device(on_gpu=True)
+    assert device == "cuda"
+
+    device = misc.select_device(on_gpu=False)
+    assert device == "cpu"
+
+
+# def test_model_to():
+#    """Test if model is transferred to correct device."""
+# Define a torch model and check if it is on cpu
+# probably use next(model.parameters()).is_cuda
