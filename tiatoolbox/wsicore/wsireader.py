@@ -1553,7 +1553,7 @@ def get_wsireader(input_img):
     if isinstance(input_img, (str, pathlib.Path)):
         _, _, suffix = utils.misc.split_path_name_ext(input_img)
 
-        if suffix in (".jpg", ".png"):
+        if suffix in (".jpg", ".png", ".tif"):
             wsi = VirtualWSIReader(input_img)
 
         elif suffix in (".svs", ".ndpi", ".mrxs"):

@@ -149,72 +149,121 @@ class PatchDataset(abc.__ABCPatchDataset):
         return data
 
 
+# ! @Simon
+# ! HACK: helper function to generate tile coordinate and etc.
+# ! w/o doing the actual extraction. This will be deprecated after an update to
+# ! PatchExtractor, such that PatchExtractor are split into CoordinateGenerator
+# ! (i.e `_generate_location_df`) and the Extractor portion
+# ! Functionality may also merge with get_tile_coordinate to make it become a generic
+# ! patch/tile/chunk coordinate getter because get_tile_coordinate wont work with
+# ! VirtualReaders (????)
+# patch or tile or whatever is just the name
+def get_patch_coords_info(img_shape, stride_shape):
+    """Get top left coordinate information of patches from original image.
+
+    Patch valid as long as the coord lie within the image, if the actual shape
+    cross the image bound, it should be padded (handled) by VirtualReader.
+
+    Args:
+        img_shape: input image shape
+        stride_shape: shape of stride wrt to each axis
+    Return:
+        List of top left and bot right for input and output placement
+        of each patch in y, x
+        Nx2x2x2, [0] is input  [0][0] is top left, [0][1] is bot right
+                 [1] is output [1][0] is top left, [1][1] is bot right
+    """
+    # ! data integrity
+    assert len(stride_shape) == 2
+
+    def flat_mesh_grid_coord(x, y):
+        x, y = np.meshgrid(x, y)
+        return np.stack([y.flatten(), x.flatten()], axis=-1)
+
+    x_list = np.arange(0, img_shape[0], stride_shape[0])
+    y_list = np.arange(1, img_shape[1], stride_shape[1])
+    top_left_list = flat_mesh_grid_coord(x_list, y_list)
+    return top_left_list
+
+
 class WSIPatchDataset(abc.__ABCPatchDataset):
     """Defines a WSI-level patch dataset."""
 
     def __init__(
         self,
         wsi_file,
-        objective_value=20,
-        read_size=(224, 224),
         mode="wsi",
-        level_count=5,
-        label_list=None,
         return_labels=False,
         preproc_func=None,
+        # may want a set or sthg
+        patch_shape=None,  # at requested read resolution, not wrt to lv0
+        stride_shape=None,  # at requested read resolution, not wrt to lv0
+        resolution=None,
+        units=None,
     ):
         super().__init__(return_labels=return_labels, preproc_func=preproc_func)
 
         if not os.path.isfile(wsi_file):
             raise ValueError("Input must be a valid file path.")
 
-        self.objective_value = objective_value
-        self.read_size = read_size
-
         if mode == "wsi":
             self.wsi_reader = get_wsireader(pathlib.Path(wsi_file))
         else:
-            img = imread(wsi_file)
-            # base_shape = (img.shape[1], img.shape[0])
-            # metadata = WSIMeta(
-            #     slide_dimensions=base_shape,
-            #     level_dimensions=[
-            #         (base_shape[0] / n, base_shape[1] / n)
-            #         for n in range(1, level_count + 1)
-            #     ],
-            #     objective_power=20,
-            # )
-            # self.wsi_reader = VirtualWSIReader(pathlib.Path(wsi_file), metadata)
-            self.wsi_reader = get_wsireader(img)
+            self.wsi_reader = VirtualWSIReader(pathlib.Path(wsi_file))
 
-        self.input_list, self.level = self.wsi_reader.get_tile_coordinates(
-            self.objective_value, self.read_size
+        # ! this is level 0 HW, currently dont have any method to querry
+        # ! max HW at request read resolution
+        # may need to ask John if this does what I think it is
+        # dummy read to retrieve scaling factor for lv0
+
+        # !!! this entire portion should be done outside of this,
+        # !!! may be in predict_engine just as hovernet
+        # the scaling factor will scale base level to requested read resolution/units
+        _, _, _, _, lv0_patch_shape = self.wsi_reader.find_read_rect_params(
+            location=(0, 0),
+            size=patch_shape,
+            resolution=resolution,
+            units=units,
+        )
+        scale = lv0_patch_shape / patch_shape
+        stride_shape = patch_shape if stride_shape is None else stride_shape
+        lv0_pyramid_shape = self.wsi_reader.info.slide_dimensions
+        lv0_stride_shape = (stride_shape * scale).astype(np.int32)
+        # lv0 topleft coordinates
+        self.input_list = get_patch_coords_info(lv0_pyramid_shape, lv0_stride_shape)
+        # ! TODO: apply filtering basing on masks
+        self.patch_shape = patch_shape
+        self.lv0_patch_shape = lv0_patch_shape
+        self.read_kwargs = dict(
+            resolution=resolution,
+            units=units,
         )
 
         # Perform check on the input
-        self.data_check(mode="wsi")
+        self.check_input_integrity(mode="wsi")
 
         # !
         # if self.label_list is None:
         #     self.label_list = [np.nan for i in range(len(self.input_list))]
 
     def __getitem__(self, idx):
-        coords = self.input_list[idx]
-        bounds = (coords[1], coords[2], coords[3], coords[4])
-
+        lv0_top_left = self.input_list[idx]
+        lv0_bot_right = lv0_top_left + self.lv0_patch_shape
+        lv0_coords = lv0_top_left.tolist() + lv0_bot_right.tolist()
         # Read image patch from the whole-slide image
         patch = self.wsi_reader.read_bounds(
-            bounds,
-            self.level,
+            lv0_coords,
+            **self.read_kwargs,
         )
-        # Resize image patch if required
-        if (patch.shape[1], patch.shape[0]) != self.read_size:
-            patch = imresize(img=patch, output_size=self.read_size)
+        # ! due to internal scaling, there will be rounding error and wont match
+        # ! the requested size at requested read resolution
+        # ! hence must apply rescale again
+        patch = imresize(img=patch, output_size=self.patch_shape)
 
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
-        data = {"image": patch, "coords": np.array(coords)}
+        data = {"image": patch, "coords": np.array(lv0_coords)}
         # ! @simon atm, dont return label for WSI as it doesnt make sense
         # if self.return_labels:
         #     data['label'] = self.label_list[idx]

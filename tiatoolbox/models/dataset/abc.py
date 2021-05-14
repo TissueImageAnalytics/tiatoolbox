@@ -51,7 +51,7 @@ class __ABCPatchDataset(torch.utils.data.Dataset):
         self.input_list = None
         self.label_list = None
 
-    def data_check(self, mode):
+    def check_input_integrity(self, mode):
         """Perform check on the input to make sure it is valid."""
         if mode == "patch":
             self.data_is_npy_alike = False
@@ -116,7 +116,7 @@ class __ABCPatchDataset(torch.utils.data.Dataset):
                 )
 
         else:
-            if not isinstance(self.input_list, list):
+            if not isinstance(self.input_list, (list, np.ndarray)):
                 raise ValueError("input_list should be a list of patch coordinates")
 
     @staticmethod
