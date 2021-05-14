@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
+from tiatoolbox.utils.misc import dump_json
 import numpy as np
 
 from tiatoolbox import __version__
@@ -29,6 +30,7 @@ from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.models.dataset.classification import PatchDataset
+from tiatoolbox.utils.misc import dump_json
 
 import json
 import sys
@@ -529,10 +531,8 @@ def patch_predictor(
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
         os.makedirs(output_path)
-    # convert output, otherwise can't dump via json
-    output = {k: v.tolist() for k, v in output.items()}
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
+
+    save_json(output, output_file_path)
 
 
 if __name__ == "__main__":

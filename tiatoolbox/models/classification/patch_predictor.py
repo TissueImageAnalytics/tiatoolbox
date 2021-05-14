@@ -25,13 +25,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import os
+import pathlib
 import copy
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data
+from tiatoolbox.utils.misc import download_data, save_json
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
@@ -292,7 +293,7 @@ class CNNPatchPredictor:
 
     def predict(
         self,
-        dataset,
+        data,
         mode,
         return_probabilities=False,
         return_labels=False,
@@ -301,13 +302,13 @@ class CNNPatchPredictor:
         stride_shape=None,  # at requested read resolution, not wrt to lv0
         resolution=1.0,
         units="mpp",
+        output_path=None,
     ):
         """Make a prediction on a dataset. Internally will make a deep copy
         of the provided dataset to ensure user provided dataset is unchanged.
 
         Args:
-            dataset (torch.utils.data.Dataset): PyTorch dataset object created using
-                tiatoolbox.models.data.classification.Patch_Dataset.
+            data: INCLUDE DESCRIPTION #TODO.
             return_probabilities (bool): Whether to return per-class probabilities.
             return_labels (bool): Whether to return labels.
             objective_value (float): Objective power used for reading patches. Note,
@@ -330,39 +331,64 @@ class CNNPatchPredictor:
             )
 
         elif mode == "tile" or mode == "wsi":
+            output_files = []
+            if len(data) > 1:
+                print(
+                    "WARNING: When providing multiple whole-slide images / tiles, "
+                    "we save the outputs and return the locations to the corresponding files."
+                )
+            if len(data) > 1 and output_path == None:
+                raise ValueError(
+                    "If multiple whole-slide images / tiles are provided, "
+                    "then an output_path for saving results must be provided."
+                )
+            if not output_path.is_dir():
+                os.makedirs(output_path)
+
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
             return_labels = False
             # ! @simon hard coded enforcing,
             # ! change if we switch API after discussion
 
+            if not isinstance(data, list):
+                raise ValueError(
+                    "Input to `tile` and `wsi` mode must be a list of file paths."
+                )
             if mode == "tile":
                 # ! hard coded, check how to auto pass by default
                 resolution = 0
                 units = "level"
 
-            # unintuitive error messages, need to provide `mode`
-            # likely will be changed later with the API
-            if not os.path.isfile(data):
-                raise ValueError(
-                    "A single whole-slide image should be input to predict."
+            for wsi_file in data:
+                dataset = WSIPatchDataset(
+                    pathlib.Path(wsi_file),
+                    mode=mode,
+                    patch_shape=patch_shape,  # at requested read resolution, not wrt to lv0
+                    stride_shape=stride_shape,  # at requested read resolution, not wrt to lv0
+                    resolution=resolution,
+                    units=units,
                 )
-
-            dataset = WSIPatchDataset(
-                data,
-                mode=mode,
-                patch_shape=patch_shape,  # at requested read resolution, not wrt to lv0
-                stride_shape=stride_shape,  # at requested read resolution, not wrt to lv0
-                resolution=resolution,
-                units=units,
-            )
+                output_model = self._predict_engine(
+                    dataset,
+                    return_probabilities,
+                    return_labels,
+                    return_coordinates,
+                    on_gpu,
+                )
+                if len(wsi_file) > 1:
+                    basename = os.path.basename(wsi_file)
+                    output_file_path = os.path.join(output_path, basename)
+                    output_files.append(output_file_path)
+                    save_json(output, output_file_path)
+                    output = output_files
+                else:
+                    output = output_model
 
         else:
-            raise ValueError("%s is not a valid mode." % mode)
-
-        output = self._predict_engine(
-            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
-        )
+            raise ValueError(
+                "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
+            )
 
         return output
 

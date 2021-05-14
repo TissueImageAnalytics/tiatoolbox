@@ -207,9 +207,9 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
             raise ValueError("Input must be a valid file path.")
 
         if mode == "wsi":
-            self.wsi_reader = get_wsireader(pathlib.Path(wsi_file))
+            self.wsi_reader = get_wsireader(wsi_file)
         else:
-            self.wsi_reader = VirtualWSIReader(pathlib.Path(wsi_file))
+            self.wsi_reader = VirtualWSIReader(wsi_file)
 
         # ! this is level 0 HW, currently dont have any method to querry
         # ! max HW at request read resolution

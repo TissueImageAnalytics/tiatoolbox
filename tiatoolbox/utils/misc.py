@@ -30,6 +30,7 @@ import numpy as np
 import os
 import zipfile
 import requests
+import json
 from skimage import exposure
 
 
@@ -556,3 +557,16 @@ def unzip_data(zip_path, save_path, del_zip=True):
     if del_zip:
         # Remove zip file
         os.remove(zip_path)
+
+
+def save_json(output, output_path):
+    """Convert output to a format supported by json.dumps.
+
+    Args:
+        output (dict): Output dictionary to save.
+        output_path (str): Output path for dictionary.
+
+    """
+    output = {k: v.tolist() for k, v in output.items()}
+    with open(output_path, "w") as handle:
+        json.dump(output, handle)
