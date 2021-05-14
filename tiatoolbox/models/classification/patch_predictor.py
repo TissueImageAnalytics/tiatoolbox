@@ -28,7 +28,7 @@ import os
 import pathlib
 import copy
 
-from tiatoolbox import rcParam
+from tiatoolbox import rcParam, logger
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
@@ -293,8 +293,8 @@ class CNNPatchPredictor:
     def predict(
         self,
         img_list,
-        label_list=None,
         mask_list=None,
+        label_list=None,
         mode="patch",
         return_probabilities=False,
         return_labels=False,
@@ -303,25 +303,24 @@ class CNNPatchPredictor:
         stride_shape=None,  # at requested read resolution, not wrt to lv0
         resolution=1.0,
         units="mpp",
-        output_path=None,
+        save_dir=None,
     ):
-        """Make a prediction on a dataset. Internally will make a deep copy
-        of the provided dataset to ensure user provided dataset is unchanged.
+        """Predict something.
 
         Args:
             img_list: INCLUDE DESCRIPTION #TODO.
             label_list: INCLUDE DESCRIPTION #TODO.
             return_probabilities (bool): Whether to return per-class probabilities.
-            objective_value (float): Objective power used for reading patches. Note,
-                this is only utilised in `tile` and `wsi` modes.
-            patch_size (tuple): Size of image to read when using `tile` and `wsi`
-                mode (width, height).
             on_gpu (bool): whether to run model on the GPU.
 
         Returns:
             output (ndarray): Model predictions of the input dataset
 
         """
+        if mode not in ['patch', 'wsi', 'tile']:
+            raise ValueError(
+                "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
+            )
 
         # if a label_list is provided, then return with the prediction
         if label_list is not None:
@@ -337,77 +336,65 @@ class CNNPatchPredictor:
                 dataset, return_probabilities, return_labels, return_coordinates, on_gpu
             )
 
-        elif mode == "tile" or mode == "wsi":
+        else:
             output_files = []  # generate a list of output file paths
             if len(img_list) > 1:
-                print(
-                    "WARNING: When providing multiple whole-slide images / tiles, "
-                    "we save the outputs and return the locations to the corresponding files."
+                logger.warning(
+                    "When providing multiple whole-slide images / tiles, "
+                    "we save the outputs and return the locations "
+                    "to the corresponding files."
                 )
-            if len(img_list) > 1 and output_path == None:
-                raise ValueError(
-                    "If multiple whole-slide images / tiles are provided, "
-                    "then an output_path for saving results must be provided."
+            if len(img_list) > 1 and save_dir is None:
+                logger.warning(
+                    "> 1 WSIs detected but there is no save directory set."
+                    "All subsequent output will be save to current runtime"
+                    "location under folder 'output'. Overwriting may happen!"
                 )
-            if not output_path.is_dir():
-                os.makedirs(output_path)
+                save_dir = os.path.join(os.getcwd(), 'output')
+
+            if save_dir is not None:
+                save_dir = pathlib.Path(save_dir)
+                if not save_dir.is_dir():
+                    os.makedirs(save_dir)
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
-            return_labels = False
-            # ! @simon hard coded enforcing,
-            # ! change if we switch API after discussion
-
             if not isinstance(img_list, list):
                 raise ValueError(
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
-            if mode == "tile":
-                # ! hard coded, check how to auto pass by default
-                resolution = 0
-                units = "level"
 
-            for idx, wsi_file in enumerate(img_list):
-
-                if label_list is not None:
-                    wsi_label = label_list[idx]
-                else:
-                    wsi_label = None
-                if mask_list is not None:
-                    wsi_mask = mask_list[idx]
-                else:
-                    wsi_mask = None
+            for idx, wsi_path in enumerate(img_list):
+                wsi_path = pathlib.Path(wsi_path)
+                wsi_label = None if label_list is None else label_list[idx]
+                wsi_mask = None if mask_list is None else mask_list[idx]
 
                 dataset = WSIPatchDataset(
-                    pathlib.Path(wsi_file),
-                    label=wsi_label,
-                    mask=wsi_mask,
                     mode=mode,
-                    patch_shape=patch_shape,  # at requested read resolution, not wrt to lv0
-                    stride_shape=stride_shape,  # at requested read resolution, not wrt to lv0
+                    wsi_path=wsi_path,
+                    mask_path=wsi_mask,
+                    patch_shape=patch_shape,
+                    stride_shape=stride_shape,
                     resolution=resolution,
                     units=units,
                 )
                 output_model = self._predict_engine(
                     dataset,
-                    return_probabilities,
-                    return_labels,
-                    return_coordinates,
-                    on_gpu,
+                    return_labels=False,
+                    return_probabilities=return_probabilities,
+                    return_coordinates=return_coordinates,
+                    on_gpu=on_gpu,
                 )
-                if len(wsi_file) > 1:
-                    basename = os.path.basename(wsi_file)
-                    output_file_path = os.path.join(output_path, basename)
+                output_model['label'] = wsi_label
+
+                if len(img_list) > 1:
+                    basename = wsi_path.stem
+                    output_file_path = os.path.join(save_dir, basename)
                     output_files.append(output_file_path)
                     save_json(output, output_file_path)
                     output = output_files
                 else:
                     output = output_model
-
-        else:
-            raise ValueError(
-                "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
-            )
 
         return output
 

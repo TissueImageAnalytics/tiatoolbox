@@ -152,11 +152,9 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
 
     def __init__(
         self,
-        wsi_file,
-        label,
-        mask,
         mode="wsi",
-        return_labels=False,
+        wsi_path=None,
+        mask_path=None,
         preproc_func=None,
         # may want a set or sthg
         patch_shape=None,  # at requested read resolution, not wrt to lv0
@@ -164,42 +162,68 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         resolution=None,
         units=None,
     ):
-        super().__init__(return_labels=return_labels, preproc_func=preproc_func)
+        super().__init__(preproc_func=preproc_func)
+        assert wsi_path is not None
+        assert mode in ['wsi', 'tile'], '`%s` is not supported.' % mode
 
-        if not os.path.isfile(wsi_file):
+        if not os.path.isfile(wsi_path):
             raise ValueError("Input must be a valid file path.")
 
-        self.label = label  # assume a single label for the whole-slide image
         if mode == "wsi":
-            self.wsi_reader = get_wsireader(wsi_file)
+            self.reader = get_wsireader(wsi_path)
         else:
-            self.wsi_reader = VirtualWSIReader(wsi_file)
+            # overwriting for later read
+            units = 'mpp'
+            resolution = 1.0
+            img = imread(wsi_path)
+            self.reader = VirtualWSIReader(
+                img,
+                # any value for mpp is fine, but the read
+                # resolution for mask later must match
+                WSIMeta(
+                    mpp=np.array([0.25, 0.25]),
+                    slide_dimensions=np.array(img.shape[:2][::-1]),
+                    level_downsamples=[1.0],
+                    level_dimensions=[np.array(img.shape[:2][::-1])]
+                )
+            )
 
-        # ! this is level 0 HW, currently dont have any method to querry
-        # ! max HW at request read resolution
-        # may need to ask John if this does what I think it is
-        # dummy read to retrieve scaling factor for lv0
-
-        # !!! this entire portion should be done outside of this,
-        # !!! may be in predict_engine just as hovernet
+        # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
-        _, _, _, _, lv0_patch_shape = self.wsi_reader.find_read_rect_params(
+        _, _, _, _, lv0_patch_shape = self.reader.find_read_rect_params(
             location=(0, 0),
             size=patch_shape,
             resolution=resolution,
             units=units,
         )
+        wsi_metadata = self.reader.info
         scale = lv0_patch_shape / patch_shape
         stride_shape = patch_shape if stride_shape is None else stride_shape
-        lv0_pyramid_shape = self.wsi_reader.info.slide_dimensions
+        lv0_pyramid_shape = wsi_metadata.slide_dimensions
         lv0_stride_shape = (stride_shape * scale).astype(np.int32)
+
         # lv0 topleft coordinates
         # self.input_list = get_patch_coords_info(lv0_pyramid_shape, lv0_stride_shape)
         self.input_list = PatchExtractor.get_coordinates(
             lv0_pyramid_shape, lv0_patch_shape, lv0_stride_shape
         )
-        self.input_list = PatchExtractor.mask_coordinates(self.input_list, mask=mask)
-        # ! TODO: apply filtering basing on masks
+
+        if mask_path is not None:
+            mask = imread(mask_path)
+            mask_reader = VirtualWSIReader(mask)
+            mask_reader.attach_to_reader(self.reader.info)
+            # * now filter coordinate basing on the mask
+            # scaling factor between mask lv0 and source reader lv0
+            scale = mask_reader.info.level_downsamples[0]
+            scaled_input_list = self.input_list / scale
+            sel = PatchExtractor.filter_coordinates(
+                        mask_reader,  # must be on the same resolution
+                        scaled_input_list,  # must be on the same resolution
+                        resolution=resolution,
+                        units=units,
+                )
+            self.input_list = self.input_list[sel]
+
         self.patch_shape = patch_shape
         self.lv0_patch_shape = lv0_patch_shape
         self.read_kwargs = dict(
@@ -210,16 +234,10 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         # Perform check on the input
         self.check_input_integrity(mode="wsi")
 
-        # !
-        # if self.label_list is None:
-        #     self.label_list = [np.nan for i in range(len(self.input_list))]
-
     def __getitem__(self, idx):
-        lv0_top_left = self.input_list[idx]
-        lv0_bot_right = lv0_top_left + self.lv0_patch_shape
-        lv0_coords = lv0_top_left.tolist() + lv0_bot_right.tolist()
+        lv0_coords = self.input_list[idx]
         # Read image patch from the whole-slide image
-        patch = self.wsi_reader.read_bounds(
+        patch = self.reader.read_bounds(
             lv0_coords,
             **self.read_kwargs,
         )
@@ -232,10 +250,6 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         patch = self.preproc_func(patch)
 
         data = {"image": patch, "coords": np.array(lv0_coords)}
-        if self.label is not None:
-            data["label"] = self.label  # assume same label per WSI
-            return data
-
         return data
 
 

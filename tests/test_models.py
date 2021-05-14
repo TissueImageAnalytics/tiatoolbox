@@ -1,5 +1,6 @@
 """Tests for code related to model usage."""
 
+# %%
 import os
 import pathlib
 import shutil
@@ -10,6 +11,7 @@ import torch
 from click.testing import CliRunner
 
 import sys
+# sys.path.append('.')
 sys.path.append('..')
 
 from tiatoolbox import rcParam
@@ -22,9 +24,67 @@ from tiatoolbox.models.dataset import (
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, unzip_data
+from tiatoolbox.utils.misc import download_data, unzip_data, imread
 from tiatoolbox import cli
 
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+
+# def test_sync_read():
+    # wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs'
+    # wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
+    # mask = imread(wsi_mask_path)
+    # wsi_reader = get_wsireader(wsi_path)
+    # wsi_metadata = wsi_reader.info
+    # mask_reader = VirtualWSIReader(mask)
+    # mask_reader.attach_to_reader(wsi_reader.info)
+    # #
+    # wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
+    # roi_img = wsi_reader.read_bounds(
+    #             wsi_lv0_coords,
+    #             resolution=1.0,
+    #             units='mpp'
+    #         )
+    # roi_msk = mask_reader.read_bounds(
+    #             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
+    #             resolution=1.0,
+    #             units='mpp'
+    #         )
+
+    # wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.jpg'
+    # wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
+    # wsi = imread(wsi_path)
+    # wsi_reader = VirtualWSIReader(wsi_path, WSIMeta(
+    #     mpp=np.array([0.25, 0.25]),
+    #     slide_dimensions=np.array(wsi.shape[:2][::-1]),
+    #     level_downsamples=[1.0],
+    #     level_dimensions=[np.array(wsi.shape[:2][::-1])]
+    # ))
+
+    # mask = imread(wsi_mask_path)
+    # mask_reader = VirtualWSIReader(mask)
+    # mask_reader.attach_to_reader(wsi_reader.info)
+    # #
+    # wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
+    # roi_img = wsi_reader.read_bounds(
+    #             wsi_lv0_coords,
+    #             resolution=1.0,
+    #             units='mpp'
+    #         )
+    # roi_msk = mask_reader.read_bounds(
+    #             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
+    #             resolution=1.0,
+    #             units='mpp'
+    #         )
+
+    # import matplotlib.pyplot as plt
+    # plt.subplot(1,2,1)
+    # plt.imshow(roi_img)
+    # plt.subplot(1,2,2)
+    # plt.imshow(roi_msk)
+    # plt.savefig('dump.png')
+
+# %%
 
 # def test_wsi_patch_predictor():
 #     """Test for patch predictor with resnet50 on Kather 100K dataset."""
@@ -69,69 +129,74 @@ from tiatoolbox import cli
 #         return probabilities, predictions, labels
 
 
-def test_tile(_sample_crc_tile):
-    __sample = _sample_crc_tile
-    predictor = CNNPatchPredictor(
-                    pretrained_model="resnet18-kather100K",
-                    batch_size=2)
-    # don't run test on GPU
-    output = predictor.predict(
-        __sample,
-        mode='tile',
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=False,
+# def test_tile(_sample_crc_tile):
+    # __sample = _sample_crc_tile
+# __sample = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/mini_tile.tif')
+# predictor = CNNPatchPredictor(
+#                 pretrained_model="resnet18-kather100K",
+#                 batch_size=2)
+# # don't run test on GPU
+# output = predictor.predict(
+#     [__sample],
+#     mode='tile',
+#     return_probabilities=True,
+#     return_labels=True,
+#     on_gpu=False,
 
-        patch_shape=np.array([224, 224])
-    )
+#     patch_shape=np.array([224, 224])
+# )
 
-    # don't run test on GPU
-    output = predictor.predict(
-        __sample,
-        mode='tile',
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=False,
+#     # don't run test on GPU
+#     output = predictor.predict(
+#         __sample,
+#         mode='tile',
+#         return_probabilities=True,
+#         return_labels=True,
+#         on_gpu=False,
 
-        patch_shape=np.array([224, 224]),
-        stride_shape=np.array([112, 112])
-    )
+#         patch_shape=np.array([224, 224]),
+#         stride_shape=np.array([112, 112])
+#     )
 
 
-def test_wsi(_sample_svs):
-    # __sample = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs')
-    __sample = _sample_svs
-    predictor = CNNPatchPredictor(
-                    pretrained_model="resnet18-kather100K", 
-                    batch_size=2)
-    # don't run test on GPU
-    output = predictor.predict(
-        __sample,
-        mode='wsi',
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=False,
+# def test_wsi(_sample_svs):
+__sample_wsi = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs')
+__sample_msk = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png')
 
-        patch_shape=np.array([224, 224]),
-        resolution=1.0,
-        units='mpp'
-    )
+# __sample = _sample_svs
+predictor = CNNPatchPredictor(
+                pretrained_model="resnet18-kather100K", 
+                batch_size=2)
+# don't run test on GPU
+output = predictor.predict(
+    [__sample_wsi],
+    mask_list=[__sample_msk],
+    mode='wsi',
+    return_probabilities=True,
+    return_labels=True,
+    on_gpu=False,
 
-    # # don't run test on GPU
-    # output = predictor.predict(
-    #     __sample,
-    #     mode='wsi',
-    #     return_probabilities=True,
-    #     return_labels=True,
-    #     on_gpu=False,
+    patch_shape=np.array([224, 224]),
+    resolution=1.0,
+    units='mpp'
+)
 
-    #     patch_shape=np.array([224, 224]),
-    #     resolution=2.0,
-    #     units='mpp'
-    # )
+#     # # don't run test on GPU
+#     # output = predictor.predict(
+#     #     __sample,
+#     #     mode='wsi',
+#     #     return_probabilities=True,
+#     #     return_labels=True,
+#     #     on_gpu=False,
+
+#     #     patch_shape=np.array([224, 224]),
+#     #     resolution=2.0,
+#     #     units='mpp'
+#     # )
 
 # dummy_test_wsi()
 
+# %%
 
 # results = _get_outputs_api1(
 #     pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1.ndpi'), 

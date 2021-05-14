@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
-from tiatoolbox.utils.misc import dump_json
 import numpy as np
 
 from tiatoolbox import __version__
@@ -30,7 +29,7 @@ from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.models.dataset.classification import PatchDataset
-from tiatoolbox.utils.misc import dump_json
+from tiatoolbox.utils.misc import save_json
 
 import json
 import sys

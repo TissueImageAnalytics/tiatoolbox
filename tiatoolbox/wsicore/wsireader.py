@@ -1528,6 +1528,31 @@ class VirtualWSIReader(WSIReader):
             im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
+    def attach_to_reader(self, reader_info):
+        """Change self metadata to synchronize read with `reader_info`.
+
+        To allow synchronize reading between virtual reader and another reader.
+        We modified the metadata to allow correct scaling with respect to the
+        resolution units from the source `reader_info`.
+        """
+        # to WH to match with WSI
+        mask_shape = np.array(self.img.shape[:2])[::-1]
+        mask_scale = reader_info.slide_dimensions / mask_shape
+        mask_mpp = reader_info.mpp * mask_scale
+        self.info = WSIMeta(
+            file_path=self.info.file_path,
+            slide_dimensions=mask_shape,
+            level_count=1,
+            level_dimensions=(mask_shape,),
+            level_downsamples=[mask_scale[0]],
+            vendor=None,
+            # TODO: expose attaching to this ?
+            # objective_power=reader_info.objective_power,
+            mpp=mask_mpp,
+            raw=None,
+        )
+        return
+
 
 def get_wsireader(input_img):
     """Return an appropriate :class:`.WSIReader` object.
