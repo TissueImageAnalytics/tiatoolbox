@@ -58,10 +58,10 @@ def main():
 
 
 @main.command()
-@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
-    help="Path to output directory to save the output, default=wsi_input/../meta",
+    help="Path to output directory to save the output, default=img_input/../meta",
 )
 @click.option(
     "--file_types",
@@ -80,27 +80,27 @@ def main():
     default=True,
     help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, verbose):
+def slide_info(img_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
 
     if isinstance(output_dir, str):
         output_dir = pathlib.Path(output_dir)
 
-    if os.path.isdir(wsi_input):
+    if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
-            input_path=wsi_input, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
         if output_dir is None and mode == "save":
-            input_dir = pathlib.Path(wsi_input).parent
+            input_dir = pathlib.Path(img_input).parent
             output_dir = input_dir / "meta"
 
-    elif os.path.isfile(wsi_input):
+    elif os.path.isfile(img_input):
         files_all = [
-            wsi_input,
+            img_input,
         ]
         if output_dir is None and mode == "save":
-            input_dir = pathlib.Path(wsi_input).parent
+            input_dir = pathlib.Path(img_input).parent
             output_dir = input_dir.parent / "meta"
     else:
         raise FileNotFoundError
@@ -129,11 +129,11 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
 
 
 @main.command()
-@click.option("--wsi_input", help="Path to WSI file")
+@click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region.jpg",
+    " default=img_input_dir/../im_region.jpg",
 )
 @click.option(
     "--region",
@@ -159,16 +159,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def read_bounds(wsi_input, region, resolution, units, output_path, mode):
+def read_bounds(img_input, region, resolution, units, output_path, mode):
     """Read a region in an whole slide image as specified."""
     if not region:
         region = [0, 0, 2000, 2000]
 
     if output_path is None and mode == "save":
-        input_dir = pathlib.Path(wsi_input).parent
+        input_dir = pathlib.Path(img_input).parent
         output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
 
     im_region = wsi.read_bounds(
         region,
@@ -184,11 +184,11 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 
 
 @main.command()
-@click.option("--wsi_input", help="Path to WSI file")
+@click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../slide_thumb.jpg",
+    " default=img_input_dir/../slide_thumb.jpg",
 )
 @click.option(
     "--mode",
@@ -196,13 +196,13 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def slide_thumbnail(wsi_input, output_path, mode):
+def slide_thumbnail(img_input, output_path, mode):
     """Read whole slide image thumbnail."""
     if output_path is None and mode == "save":
-        input_dir = pathlib.Path(wsi_input).parent
+        input_dir = pathlib.Path(img_input).parent
         output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
 
     slide_thumb = wsi.slide_thumbnail()
 
@@ -215,7 +215,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
 
 
 @main.command()
-@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
     default="tiles",
@@ -246,7 +246,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="Print output, default=True",
 )
 def save_tiles(
-    wsi_input,
+    img_input,
     output_dir,
     file_types,
     tile_objective_value,
@@ -255,13 +255,13 @@ def save_tiles(
 ):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
-    if os.path.isdir(wsi_input):
+    if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
-            input_path=wsi_input, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(wsi_input):
+    elif os.path.isfile(img_input):
         files_all = [
-            wsi_input,
+            img_input,
         ]
     else:
         raise FileNotFoundError
@@ -344,7 +344,7 @@ def stainnorm(
 
 
 @main.command()
-@click.option("--wsi_input", help="Path to WSI file")
+@click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
@@ -387,19 +387,19 @@ def stainnorm(
     default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
 )
 def tissue_mask(
-    wsi_input, output_path, method, resolution, units, kernel_size, mode, file_types
+    img_input, output_path, method, resolution, units, kernel_size, mode, file_types
 ):
     """Generate tissue mask for a WSI."""
 
     file_types = tuple(file_types.split(", "))
     output_path = pathlib.Path(output_path)
-    if os.path.isdir(wsi_input):
+    if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
-            input_path=wsi_input, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(wsi_input):
+    elif os.path.isfile(img_input):
         files_all = [
-            wsi_input,
+            img_input,
         ]
     else:
         raise FileNotFoundError
