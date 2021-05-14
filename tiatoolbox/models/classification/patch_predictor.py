@@ -294,6 +294,7 @@ class CNNPatchPredictor:
         self,
         img_list,
         label_list=None,
+        mask_list=None,
         mode="patch",
         return_probabilities=False,
         return_labels=False,
@@ -367,13 +368,20 @@ class CNNPatchPredictor:
                 units = "level"
 
             for idx, wsi_file in enumerate(img_list):
+
                 if label_list is not None:
                     wsi_label = label_list[idx]
                 else:
                     wsi_label = None
+                if mask_list is not None:
+                    wsi_mask = mask_list[idx]
+                else:
+                    wsi_mask = None
+
                 dataset = WSIPatchDataset(
                     pathlib.Path(wsi_file),
                     label=wsi_label,
+                    mask=wsi_mask,
                     mode=mode,
                     patch_shape=patch_shape,  # at requested read resolution, not wrt to lv0
                     stride_shape=stride_shape,  # at requested read resolution, not wrt to lv0

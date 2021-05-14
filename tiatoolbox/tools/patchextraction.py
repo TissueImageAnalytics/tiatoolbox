@@ -127,6 +127,37 @@ class PatchExtractor(ABC):
 
         return data
 
+    @staticmethod
+    def mask_coordinates(mask, coordinates_list, func):
+        """Something."""
+        masked_coordinates = []
+        for coordinates in coordinates_list:
+            if mask[coordinates] > 0:
+                masked_coordinates.append(coordinates)
+
+        return masked_coordinates
+
+    @staticmethod
+    def get_coordinates(
+        image_shape=None,
+        patch_shape=None,
+        stride=None,
+    ):
+        """Get the coordinates."""
+        # TODO Perform check on input (tuple)
+        img_h, img_w = image_shape
+        img_patch_h, img_patch_w = patch_shape
+        stride_h, stride_w = stride
+
+        data = []
+        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+                start_h = h * stride_h
+                start_w = w * stride_w
+                data.append([start_w, start_h, None])
+
+        return data
+
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
         The slide dimension is calculated using units and resolution.
@@ -149,13 +180,17 @@ class PatchExtractor(ABC):
         stride_w = self.stride[0] * level_downsample
         stride_h = self.stride[1] * level_downsample
 
-        data = []
+        data = self.get_coordinates(
+            img_h, img_w, img_patch_h, img_patch_w, stride_h, stride_w
+        )
 
-        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-                start_h = h * stride_h
-                start_w = w * stride_w
-                data.append([start_w, start_h, None])
+        # data = []
+
+        # for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+        #     for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+        #         start_h = h * stride_h
+        #         start_w = w * stride_w
+        #         data.append([start_w, start_h, None])
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 

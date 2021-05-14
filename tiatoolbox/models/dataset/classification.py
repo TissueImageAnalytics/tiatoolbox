@@ -21,6 +21,7 @@
 
 import os
 import pathlib
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 import numpy as np
@@ -146,43 +147,6 @@ class PatchDataset(abc.__ABCPatchDataset):
         return data
 
 
-# ! @Simon
-# ! HACK: helper function to generate tile coordinate and etc.
-# ! w/o doing the actual extraction. This will be deprecated after an update to
-# ! PatchExtractor, such that PatchExtractor are split into CoordinateGenerator
-# ! (i.e `_generate_location_df`) and the Extractor portion
-# ! Functionality may also merge with get_tile_coordinate to make it become a generic
-# ! patch/tile/chunk coordinate getter because get_tile_coordinate wont work with
-# ! VirtualReaders (????)
-# patch or tile or whatever is just the name
-def get_patch_coords_info(img_shape, stride_shape):
-    """Get top left coordinate information of patches from original image.
-
-    Patch valid as long as the coord lie within the image, if the actual shape
-    cross the image bound, it should be padded (handled) by VirtualReader.
-
-    Args:
-        img_shape: input image shape
-        stride_shape: shape of stride wrt to each axis
-    Return:
-        List of top left and bot right for input and output placement
-        of each patch in y, x
-        Nx2x2x2, [0] is input  [0][0] is top left, [0][1] is bot right
-                 [1] is output [1][0] is top left, [1][1] is bot right
-    """
-    # ! data integrity
-    assert len(stride_shape) == 2
-
-    def flat_mesh_grid_coord(x, y):
-        x, y = np.meshgrid(x, y)
-        return np.stack([y.flatten(), x.flatten()], axis=-1)
-
-    x_list = np.arange(0, img_shape[0], stride_shape[0])
-    y_list = np.arange(1, img_shape[1], stride_shape[1])
-    top_left_list = flat_mesh_grid_coord(x_list, y_list)
-    return top_left_list
-
-
 class WSIPatchDataset(abc.__ABCPatchDataset):
     """Defines a WSI-level patch dataset."""
 
@@ -190,6 +154,7 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         self,
         wsi_file,
         label,
+        mask,
         mode="wsi",
         return_labels=False,
         preproc_func=None,
@@ -229,7 +194,11 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         lv0_pyramid_shape = self.wsi_reader.info.slide_dimensions
         lv0_stride_shape = (stride_shape * scale).astype(np.int32)
         # lv0 topleft coordinates
-        self.input_list = get_patch_coords_info(lv0_pyramid_shape, lv0_stride_shape)
+        # self.input_list = get_patch_coords_info(lv0_pyramid_shape, lv0_stride_shape)
+        self.input_list = PatchExtractor.get_coordinates(
+            lv0_pyramid_shape, lv0_patch_shape, lv0_stride_shape
+        )
+        self.input_list = PatchExtractor.mask_coordinates(self.input_list, mask=mask)
         # ! TODO: apply filtering basing on masks
         self.patch_shape = patch_shape
         self.lv0_patch_shape = lv0_patch_shape
