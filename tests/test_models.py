@@ -22,22 +22,51 @@ from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox import cli
 
 
-def _get_outputs_api1(dataset, predefined_model):
+def _test_outputs_api1(
+    dataset,
+    predefined_model,
+    return_probabilities=True,
+    return_labels=True,
+    probabilities_check=None,
+    predictions_check=None,
+    on_gpu=False,
+):
     """Helper function to get the model output using API 1."""
     # API 1, also test with return_labels
     predictor = CNNPatchPredictor(predefined_model=predefined_model, batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
-        dataset, return_probabilities=True, return_labels=True, on_gpu=False
+        dataset,
+        return_probabilities=return_probabilities,
+        return_labels=return_labels,
+        on_gpu=on_gpu,
     )
-    probabilities = output["probabilities"]
     predictions = output["predictions"]
-    labels = output["labels"]
+    if return_probabilities:
+        probabilities = output["probabilities"]
+        assert len(probabilities) == len(predictions)
+    if return_labels:
+        labels = output["labels"]
+        assert len(labels) == len(predictions)
 
-    return probabilities, predictions, labels
+    if return_probabilities:
+        for idx, probabilities_ in enumerate(probabilities):
+            probabilities_max = max(probabilities_)
+            assert (
+                np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
+                and predictions[idx] == predictions_check[idx]
+            )
 
 
-def _get_outputs_api2(dataset, predefined_model):
+def _test_outputs_api2(
+    dataset,
+    predefined_model,
+    return_probabilities=True,
+    return_labels=True,
+    probabilities_check=None,
+    predictions_check=None,
+    on_gpu=False,
+):
     """Helper function to get the model output using API 2."""
     # API 2
     pretrained_weight_url = (
@@ -62,16 +91,40 @@ def _get_outputs_api2(dataset, predefined_model):
     )
     # don't run test on GPU
     output = predictor.predict(
-        dataset, return_probabilities=True, return_labels=True, on_gpu=False
+        dataset,
+        return_probabilities=return_probabilities,
+        return_labels=return_labels,
+        on_gpu=on_gpu,
     )
-    probabilities = output["probabilities"]
     predictions = output["predictions"]
-    labels = output["labels"]
+    if return_probabilities:
+        probabilities = output["probabilities"]
+        assert len(probabilities) == len(predictions)
+    if return_labels:
+        labels = output["labels"]
+        assert len(labels) == len(predictions)
 
-    return probabilities, predictions, labels, save_dir_path
+    if return_probabilities:
+        for idx, probabilities_ in enumerate(probabilities):
+            probabilities_max = max(probabilities_)
+            assert (
+                np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
+                and predictions[idx] == predictions_check[idx]
+            )
+
+    return save_dir_path
 
 
-def _get_outputs_api3(dataset, backbone, num_classes=9):
+def _test_outputs_api3(
+    dataset,
+    backbone,
+    return_probabilities=True,
+    return_labels=True,
+    probabilities_check=None,
+    predictions_check=None,
+    num_classes=9,
+    on_gpu=False,
+):
     """Helper function to get the model output using API 3."""
     # API 3
     model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
@@ -86,14 +139,18 @@ def _get_outputs_api3(dataset, backbone, num_classes=9):
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     # don't run test on GPU
     output = predictor.predict(
-        dataset, return_probabilities=True, return_labels=True, on_gpu=False
+        dataset,
+        return_probabilities=return_probabilities,
+        return_labels=return_labels,
+        on_gpu=on_gpu,
     )
-
-    probabilities = output["probabilities"]
     predictions = output["predictions"]
-    labels = output["labels"]
-
-    return probabilities, predictions, labels
+    if return_probabilities:
+        probabilities = output["probabilities"]
+        assert len(probabilities) == len(predictions)
+    if return_labels:
+        labels = output["labels"]
+        assert len(labels) == len(predictions)
 
 
 def test_create_backbone():
@@ -425,21 +482,16 @@ def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet18-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999717473983765]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "resnet18-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
@@ -447,22 +499,16 @@ def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels, save_dir_path = _get_outputs_api2(
-        dataset, "resnet18-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999717473983765]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
-
+    save_dir_path = _test_outputs_api2(
+        dataset,
+        "resnet18-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
     # remove generated data - just a test!
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
@@ -472,10 +518,53 @@ def test_patch_predictor_api3(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api3(dataset, "resnet18")
+    _test_outputs_api3(
+        dataset,
+        "resnet18",
+        return_probabilities=False,
+        return_labels=True,
+    )
 
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
+
+def test_patch_predictor_api1_no_probs_and_labels(_sample_patch1, _sample_patch2):
+    """Test for patch predictor API 1 that doesn't return probabilities or labels.
+    Test with resnet18 on Kather 100K dataset.
+
+    """
+    dataset = PatchDataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
+    )
+    probabilities_check = [1.0, 0.9999717473983765]
+    predictions_check = [5, 8]
+    _test_outputs_api1(
+        dataset,
+        "resnet18-kather100K",
+        return_probabilities=False,
+        return_labels=False,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
+
+
+def test_patch_predictor_api1_on_gpu(_sample_patch1, _sample_patch2):
+    """Test for patch predictor API 1 that doesn't return probabilities or labels.
+    Test with resnet18 on Kather 100K dataset.
+
+    """
+    dataset = PatchDataset(
+        [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
+    )
+    probabilities_check = [1.0, 0.9999717473983765]
+    predictions_check = [5, 8]
+    _test_outputs_api1(
+        dataset,
+        "resnet18-kather100K",
+        return_probabilities=False,
+        return_labels=False,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+        on_gpu=True,
+    )
 
 
 def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
@@ -484,21 +573,16 @@ def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "alexnet-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9998185038566589]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "alexnet-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
@@ -507,21 +591,16 @@ def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet34-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9991286396980286]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "resnet34-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
@@ -530,21 +609,16 @@ def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet50-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9969022870063782]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "resnet50-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
@@ -553,21 +627,16 @@ def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnet101-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999957084655762]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "resnet101-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patch2):
@@ -576,21 +645,16 @@ def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patc
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnext50_32x4d-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999779462814331]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "resnext50_32x4d-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_patch2):
@@ -599,21 +663,16 @@ def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_pat
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "resnext101_32x8d-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999345541000366]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "resnext101_32x8d-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patch2):
@@ -622,21 +681,16 @@ def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patc
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "wide_resnet50_2-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999997615814209]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "wide_resnet50_2-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_patch2):
@@ -645,21 +699,16 @@ def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_pat
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "wide_resnet101_2-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.999420166015625]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "wide_resnet101_2-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
@@ -668,21 +717,16 @@ def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet121-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9998136162757874]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "densenet121-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
@@ -691,21 +735,16 @@ def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet161-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999997615814209]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "densenet161-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
@@ -714,21 +753,16 @@ def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet169-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999773502349854]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "densenet169-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
@@ -737,21 +771,16 @@ def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "densenet201-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999812841415405]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "densenet201-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2):
@@ -760,21 +789,16 @@ def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2)
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "mobilenet_v2-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9998366832733154]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "mobilenet_v2-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_patch2):
@@ -783,21 +807,16 @@ def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_p
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "mobilenet_v3_large-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999945163726807]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "mobilenet_v3_large-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_patch2):
@@ -806,21 +825,16 @@ def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_p
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "mobilenet_v3_small-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.9999963045120239]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "mobilenet_v3_small-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
@@ -829,21 +843,16 @@ def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities, predictions, labels = _get_outputs_api1(
-        dataset, "googlenet-kather100K"
-    )
-
-    assert len(probabilities) == len(predictions)
-    assert len(probabilities) == len(labels)
-
     probabilities_check = [1.0, 0.998254120349884]
     predictions_check = [5, 8]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
-            and predictions[idx] == predictions_check[idx]
-        )
+    _test_outputs_api1(
+        dataset,
+        "googlenet-kather100K",
+        return_probabilities=True,
+        return_labels=True,
+        probabilities_check=probabilities_check,
+        predictions_check=predictions_check,
+    )
 
 
 # -------------------------------------------------------------------------------------
