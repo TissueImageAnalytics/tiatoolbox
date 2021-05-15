@@ -377,7 +377,7 @@ def test_maskfixedwindow_patch_extractor_ndpi(_sample_ndpi):
     assert patches[0].shape == (patch_size[0], patch_size[1], 3)
 
     with pytest.raises(MethodNotSupported):
-        patches.merge_patches()
+        patches.merge_patches(patches=None)
 
     # test for empty mask
     with pytest.raises(ValueError):
