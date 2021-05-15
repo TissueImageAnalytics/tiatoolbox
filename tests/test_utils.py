@@ -768,9 +768,9 @@ def test_download_data():
         shutil.rmtree(save_dir_path, ignore_errors=True)
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
 
-    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
-    assert os.path.exists(save_zip_path)
-    shutil.rmtree(save_dir_path, ignore_errors=True)
+    misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
+    misc.download_data(url, save_zip_path, overwrite=True)  # data already exists
+    shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
     assert os.path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -939,14 +939,13 @@ def test_normalise_padding_input_dims():
 
 def test_select_device():
     """Test if correct device is selected for models."""
+
+    import torchvision.models as torch_models
+
+    model = torch_models.resnet18()
+
     device = misc.select_device(on_gpu=True)
     assert device == "cuda"
 
     device = misc.select_device(on_gpu=False)
     assert device == "cpu"
-
-
-# def test_model_to():
-#    """Test if model is transferred to correct device."""
-# Define a torch model and check if it is on cpu
-# probably use next(model.parameters()).is_cuda

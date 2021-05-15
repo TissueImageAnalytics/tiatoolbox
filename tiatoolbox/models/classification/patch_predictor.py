@@ -270,7 +270,6 @@ class CNNPatchPredictor:
             total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
         )
 
-        # ! may need to take into account CPU/GPU mode
         model = misc.model_to(on_gpu=on_gpu, model=self.model)
 
         all_output = {}
