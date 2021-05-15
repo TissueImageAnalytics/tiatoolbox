@@ -939,13 +939,24 @@ def test_normalise_padding_input_dims():
 
 def test_select_device():
     """Test if correct device is selected for models."""
-
-    import torchvision.models as torch_models
-
-    model = torch_models.resnet18()
-
     device = misc.select_device(on_gpu=True)
     assert device == "cuda"
 
     device = misc.select_device(on_gpu=False)
     assert device == "cpu"
+
+
+def test_model_to():
+    """Test for placing model on device."""
+    import torch.nn as nn
+    import torchvision.models as torch_models
+
+    # test on GPU
+    model = torch_models.resnet18()
+    model = misc.model_to(on_gpu=True, model=model)
+    assert isinstance(model, nn.Module)
+
+    # test on CPU
+    model = torch_models.resnet18()
+    model = misc.model_to(on_gpu=False, model=model)
+    assert isinstance(model, nn.Module)

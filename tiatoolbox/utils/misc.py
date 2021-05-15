@@ -570,7 +570,6 @@ def select_device(on_gpu):
         device (str): "gpu" if on_gpu is True otherwise returns "cpu"
 
     """
-
     if on_gpu:
         device = "cuda"
     else:
