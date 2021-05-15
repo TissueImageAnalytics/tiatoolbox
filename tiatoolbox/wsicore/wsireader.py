@@ -1414,6 +1414,7 @@ class VirtualWSIReader(WSIReader):
         param = WSIMeta(
             file_path=self.input_path,
             objective_power=None,
+            # ask john, wont this need to flip x,y ?
             slide_dimensions=self.img.shape[:-1],
             level_count=1,
             level_dimensions=(self.img.shape[:-1],),
@@ -1422,9 +1423,9 @@ class VirtualWSIReader(WSIReader):
             mpp=None,
             raw=None,
         )
-        self._m_info = param
-
-        return param
+        if self._m_info is None:
+            self._m_info = param
+        return self._m_info
 
     def _find_params_from_baseline(self, location, baseline_read_size):
         """Convert read parameters from (virtual) baseline coordinates.

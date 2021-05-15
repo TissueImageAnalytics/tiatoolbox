@@ -564,3 +564,63 @@ def _sample_crc_tile(tmpdir_factory):
         print("\nSkipping Source Image")
 
     return patch_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_svs(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-mini.svs")
+    if not pathlib.Path(svs_file_path).is_file():
+        print("\nDownloading %s" % svs_file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.svs"
+        )
+        with open(svs_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % svs_file_path)
+
+    return svs_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_jpg(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-mini.jpg")
+    if not pathlib.Path(svs_file_path).is_file():
+        print("\nDownloading %s" % svs_file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.jpg"
+        )
+        with open(svs_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % svs_file_path)
+
+    return svs_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_mask(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    file_path = tmpdir_factory.mktemp("data").join("CMU-mini.svs")
+    if not pathlib.Path(file_path).is_file():
+        print("\nDownloading %s" % file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.svs"
+        )
+        with open(file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % file_path)
+
+    return file_path
