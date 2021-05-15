@@ -952,9 +952,10 @@ def test_model_to():
     import torchvision.models as torch_models
 
     # test on GPU
-    model = torch_models.resnet18()
-    model = misc.model_to(on_gpu=True, model=model)
-    assert isinstance(model, nn.Module)
+    # no GPU on Travis so this will crash
+    with pytest.raises(RuntimeError):
+        model = torch_models.resnet18()
+        model = misc.model_to(on_gpu=True, model=model)
 
     # test on CPU
     model = torch_models.resnet18()
