@@ -90,7 +90,7 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
     # plt.imshow(roi_msk)
     # plt.savefig('dump.png')
 
-
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test normal run of wsi predictor.
 
@@ -516,7 +516,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret_dataset")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():  # Working
     """Test for kather patch dataset."""
     # test defining a subclas of dataset info but not defining
@@ -537,6 +537,7 @@ def test_DatasetInfo():  # Working
         match=r".*not exist.*",
     ):
         _ = KatherPatchDataset(save_dir_path="unknown_place")
+
     # save to temporary location
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
     # remove prev generated data - just a test!
@@ -555,6 +556,12 @@ def test_DatasetInfo():  # Working
     assert dataset.label_list is not None
     assert dataset.label_name is not None
     assert len(dataset.input_list) == len(dataset.label_list)
+
+    # to actually get the image, we feed it to a PatchDataset
+    actual_ds = PatchDataset(dataset.input_list, dataset.label_list)
+    sample_patch = actual_ds[100]
+    assert isinstance(sample_patch['image'], np.ndarray)
+    assert sample_patch['label'] is not None
 
     # remove generated data - just a test!
     shutil.rmtree(save_dir_path, ignore_errors=True)

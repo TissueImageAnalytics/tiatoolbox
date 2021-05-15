@@ -122,9 +122,9 @@ class KatherPatchDataset(ABCDatasetInfo):
             path_list = [[v, label_id] for v in path_list]
             path_list.sort()
             all_path_list.extend(path_list)
-            label_name = {label_id : label_code}
+            label_name[label_id] = label_code
         input_list, label_list = list(zip(*all_path_list))
 
         self.label_name = label_name
-        self.input_list = input_list
-        self.label_list = label_list
+        self.input_list = list(input_list)  # type casting to list
+        self.label_list = list(label_list)  # type casting to list
