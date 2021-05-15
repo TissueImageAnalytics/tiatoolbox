@@ -109,3 +109,5 @@ ENV/
 examples/*.py
 # Mac generated
 .DS_Store
+
+dataset

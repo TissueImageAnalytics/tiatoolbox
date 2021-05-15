@@ -1,3 +1,5 @@
+"""Tests for code related to obtaining slide information."""
+
 from tiatoolbox.wsicore.slide_info import slide_info
 from tiatoolbox import utils
 from tiatoolbox import cli
@@ -32,7 +34,7 @@ def test_command_line_slide_info(_sample_all_wsis, tmp_path):
         cli.main,
         [
             "slide-info",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_all_wsis)),
             "--mode",
             "save",
@@ -56,7 +58,7 @@ def test_command_line_slide_info_jp2(_sample_all_wsis, tmp_path):
         cli.main,
         [
             "slide-info",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_all_wsis)),
             "--mode",
             "save",
@@ -77,7 +79,7 @@ def test_command_line_slide_info_svs(_sample_svs):
         cli.main,
         [
             "slide-info",
-            "--wsi_input",
+            "--img_input",
             _sample_svs,
             "--file_types",
             "*.ndpi, *.svs",
@@ -98,7 +100,7 @@ def test_command_line_slide_info_file_not_found(_sample_svs):
         cli.main,
         [
             "slide-info",
-            "--wsi_input",
+            "--img_input",
             str(_sample_svs)[:-1],
             "--file_types",
             "*.ndpi, *.svs",
@@ -119,7 +121,7 @@ def test_command_line_slide_info_output_none_mode_save(_sample_svs):
         cli.main,
         [
             "slide-info",
-            "--wsi_input",
+            "--img_input",
             str(_sample_svs),
             "--file_types",
             "*.ndpi, *.svs",

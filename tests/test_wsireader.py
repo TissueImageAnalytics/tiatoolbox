@@ -1,3 +1,5 @@
+"""Tests for reading whole-slide images."""
+
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox import utils
 from tiatoolbox import cli
@@ -138,7 +140,7 @@ def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
         cli.main,
         [
             "slide-thumbnail",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(sample)),
             "--mode",
             mode,
@@ -1298,7 +1300,7 @@ def test_command_line_read_bounds(_sample_ndpi, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_ndpi)),
             "--resolution",
             "0",
@@ -1323,7 +1325,7 @@ def test_command_line_read_bounds(_sample_ndpi, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_ndpi)),
             "--resolution",
             "0",
@@ -1347,7 +1349,7 @@ def test_command_line_jp2_read_bounds(_sample_jp2, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_jp2)),
             "--resolution",
             "0",
@@ -1369,7 +1371,7 @@ def test_command_line_jp2_read_bounds_show(_sample_jp2, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_jp2)),
             "--resolution",
             "0",
@@ -1390,7 +1392,7 @@ def test_command_line_unsupported_file_read_bounds(_sample_svs, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_svs))[:-1],
             "--resolution",
             "0",
@@ -1420,7 +1422,7 @@ def test_command_line_slide_thumbnail_output_none(_sample_svs, tmp_path):
         cli.main,
         [
             "slide-thumbnail",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_svs)),
             "--mode",
             "save",
@@ -1455,7 +1457,7 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(_sample_jp2, tmp_pa
         cli.main,
         [
             "slide-thumbnail",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_jp2))[:-1],
             "--mode",
             "save",
