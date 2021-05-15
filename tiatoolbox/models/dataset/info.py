@@ -23,8 +23,7 @@ import os
 from abc import ABC, abstractmethod
 
 from tiatoolbox import rcParam
-from tiatoolbox.utils.misc import (download_data, grab_files_from_dir,
-                                   unzip_data)
+from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 
 
 class ABCDatasetInfo(ABC):
@@ -40,6 +39,7 @@ class ABCDatasetInfo(ABC):
             value.
 
     """
+
     @property
     @classmethod
     @abstractmethod
@@ -76,6 +76,7 @@ class KatherPatchDataset(ABCDatasetInfo):
             value.
 
     """
+
     # We predefine to follow enforcement, actual initialization in innit
     input_list = None
     label_list = None

@@ -934,7 +934,6 @@ class WSIReader:
             ...             tile_read_size=(2000, 2000))
 
         """
-
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
             tile_objective_value, tile_read_size
         )
@@ -1556,7 +1555,6 @@ class VirtualWSIReader(WSIReader):
             mpp=mask_mpp,
             raw=None,
         )
-        return
 
 
 def get_wsireader(input_img):

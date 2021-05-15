@@ -132,11 +132,8 @@ class PatchExtractor(ABC):
 
     @staticmethod
     def filter_coordinates(
-            mask_reader,
-            coordinates_list,
-            func=None,
-            resolution=None,
-            units=None):
+        mask_reader, coordinates_list, func=None, resolution=None, units=None
+    ):
         """Return list of flags to indicate which coordinate is valid.
 
         Args:
@@ -157,31 +154,31 @@ class PatchExtractor(ABC):
             ndarray: list of flags to indicate which coordinate is valid.
 
         """
-        def default_sel_func(
-                reader: wsireader.VirtualWSIReader,
-                coord: np.ndarray):
+
+        def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
             """
             Accept coord as long as its box contains bits of mask.
             """
             roi = reader.read_bounds(
                 coord,
                 resolution=reader.info.mpp if resolution is None else resolution,
-                units='mpp' if units is None else units,
+                units="mpp" if units is None else units,
             )
             return np.sum(roi > 0) > 0
+
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError('`mask_reader` should be wsireader.VirtualWSIReader.')
-        if not isinstance(coordinates_list, np.ndarray) \
-                and np.issubdtype(coordinates_list.dtype, np.integer):
-            raise ValueError('`coordinates_list` should be ndarray.')
+            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
+        if not isinstance(coordinates_list, np.ndarray) and np.issubdtype(
+            coordinates_list.dtype, np.integer
+        ):
+            raise ValueError("`coordinates_list` should be ndarray.")
         if func is None and coordinates_list.shape[-1] != 4:
             raise ValueError(
-                '`func=None` does not support'
-                '`coordinates_list` of shape %s.' % coordinates_list.shape)
+                "`func=None` does not support"
+                "`coordinates_list` of shape %s." % coordinates_list.shape
+            )
         func = default_sel_func if func is None else func
-        flag_list = [
-            func(mask_reader, coord) for coord in coordinates_list
-        ]
+        flag_list = [func(mask_reader, coord) for coord in coordinates_list]
         return np.array(flag_list)
 
     @staticmethod
@@ -223,8 +220,10 @@ class PatchExtractor(ABC):
             raise ValueError('`stride_shape` value %s must > 1.' % stride_shape)
 
         def flat_mesh_grid_coord(x, y):
+            """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
             return np.stack([y.flatten(), x.flatten()], axis=-1)
+
         patch_shape = np.array(patch_shape)
         y_list = np.arange(0, image_shape[0], stride_shape[0])
         x_list = np.arange(0, image_shape[1], stride_shape[1])

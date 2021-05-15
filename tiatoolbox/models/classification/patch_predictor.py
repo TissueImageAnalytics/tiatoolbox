@@ -133,6 +133,10 @@ class CNNPatchPredictor:
         verbose (bool): Whether to output logging information.
 
     Usage:
+        >>> data = [img1, img2]
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
+        >>> output = predictor.predict(data, mode='patch')
+
         >>> data = np.array([img1, img2])
         >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
         >>> output = predictor.predict(data, mode='patch')
@@ -227,7 +231,6 @@ class CNNPatchPredictor:
             output (ndarray): Model predictions of the input dataset
 
         """
-
         dataset.set_preproc_func(self.model.get_preproc_func())
 
         # preprocessing must be defined with the dataset
@@ -300,28 +303,46 @@ class CNNPatchPredictor:
         units="mpp",
         save_dir=None,
     ):
-        """Predict something.
+        """Make a prediction for a list of input data.
 
         Args:
-            img_list: INCLUDE DESCRIPTION #TODO.
-            label_list: INCLUDE DESCRIPTION #TODO.
+            img_list (list, ndarray): List of inputs to process. When using`patch` mode,
+                the input must be either a list of images, a list of image file paths
+                or a numpy array of an image list. When using `tile` or `wsi` mode, the
+                input must be a list of file paths.
+            mask_list (list): List of masks. Patches are only processed if they are witin a
+                masked area. If not provided, then the entire image is processed.
+            label_list: List of labels. If using `tile` or `wsi` mode, then only a single
+                label per image tile or whole-slide image is supported.
+            mode (str): Type of input to process. Choose from either `patch`, `tile` or
+                `wsi`.
             return_probabilities (bool): Whether to return per-class probabilities.
-            on_gpu (bool): whether to run model on the GPU.
+            return_labels (bool): Whether to return the labels with the predictions.
+            on_gpu (bool): Whether to run model on the GPU.
+            patch_shape (tuple): Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to to level 0.
+            stride_shape (tuple): Stride using during tile and WSI processing. Stride
+                is at requested read resolution, not with respect to to level 0.
+            resolution (float): Resolution used for reading the image.
+            units (str): Units of resolution used for reading the image. Choose from
+                either `level` or `power` or `mpp`.
+            save_dir (str): Output directory when processing multiple tiles and
+                whole-slide images.
 
         Returns:
-            output (ndarray): Model predictions of the input dataset
+            output (ndarray, pathlib.Path): Model predictions of the input dataset.
+                If multiple image tiles or whole-slide images are provided as input,
+                then results are saved and the resulting file paths are returned.
+
 
         """
-        if mode not in ['patch', 'wsi', 'tile']:
+        if mode not in ["patch", "wsi", "tile"]:
             raise ValueError(
                 "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
             )
 
         # if a label_list is provided, then return with the prediction
-        if label_list is not None:
-            return_labels = True
-        else:
-            return_labels = False
+        return_labels = bool(label_list)
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
@@ -345,7 +366,7 @@ class CNNPatchPredictor:
                     "All subsequent output will be save to current runtime"
                     "location under folder 'output'. Overwriting may happen!"
                 )
-                save_dir = os.path.join(os.getcwd(), 'output')
+                save_dir = os.path.join(os.getcwd(), "output")
 
             if save_dir is not None:
                 save_dir = pathlib.Path(save_dir)
@@ -380,7 +401,7 @@ class CNNPatchPredictor:
                     return_coordinates=return_coordinates,
                     on_gpu=on_gpu,
                 )
-                output_model['label'] = wsi_label
+                output_model["label"] = wsi_label
 
                 if len(img_list) > 1:
                     basename = wsi_path.stem
@@ -465,7 +486,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
             download_data(pretrained_weight_url, pretrained_weight)
 
     # ! assume to be saved in single GPU mode
-    # always load to CPU
+    # always load on to the CPU
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 

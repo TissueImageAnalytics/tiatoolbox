@@ -556,7 +556,8 @@ def _sample_crc_tile(tmpdir_factory):
     if not pathlib.Path(patch_file_path).is_file():
         print("\nDownloading sample patch 2")
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CRC-Prim-HE-07_APPLICATION.tif"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/"
+            "CRC-Prim-HE-07_APPLICATION.tif"
         )
         with open(patch_file_path, "wb") as f:
             f.write(r.content)
