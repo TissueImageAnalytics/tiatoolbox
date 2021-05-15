@@ -137,15 +137,26 @@ class PatchExtractor(ABC):
             func=None,
             resolution=None,
             units=None):
-        """Return flag indicate which coordinate is valid.
+        """Return list of flags to indicate which coordinate is valid.
 
         Args:
-            mask_reader (VirtualReader): a reader.
-            coordinates_list: Coordinates to be checked via the `func`.
-                They must be in the same resolution as `mask_reader`
-                level 0.
+            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader.
+
+            coordinates_list (ndarray and np.int32): Coordinates to be checked
+            via the `func`. They must be in the same resolution as requested
+            `resolution` and `units`. Must be of shape (N,K) with N is the
+            number of coordinate sets while K varies depending on information form.
+            Such as centroid is K=2 while bounding box is K=4. When using with default
+            `func=None`, `K` is expected to be bounding box of form
+            [start_x, start_y, end_x, end_y].
+
+            func: A function which taking `reader` and `coordinate` as arguments
+                and return True or False to indicate if the coordinate is valid.
+
+        Returns:
+            ndarray: list of flags to indicate which coordinate is valid.
+
         """
-        # ! TODO: default to mask baseline 0, or expose scaling ? (fidelity)
         def default_sel_func(
                 reader: wsireader.VirtualWSIReader,
                 coord: np.ndarray):
@@ -158,6 +169,15 @@ class PatchExtractor(ABC):
                 units='mpp' if units is None else units,
             )
             return np.sum(roi > 0) > 0
+        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
+            raise ValueError('`mask_reader` should be wsireader.VirtualWSIReader.')
+        if not isinstance(coordinates_list, np.ndarray) \
+                and np.issubdtype(coordinates_list.dtype, np.integer):
+            raise ValueError('`coordinates_list` should be ndarray.')
+        if func is None and coordinates_list.shape[-1] != 4:
+            raise ValueError(
+                '`func=None` does not support'
+                '`coordinates_list` of shape %s.' % coordinates_list.shape)
         func = default_sel_func if func is None else func
         flag_list = [
             func(mask_reader, coord) for coord in coordinates_list

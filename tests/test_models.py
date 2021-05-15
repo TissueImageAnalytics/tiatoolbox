@@ -337,35 +337,36 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 #         CNNPatchPredictor(pretrained_model=123)
 
 
-# def test_set_root_dir():
-#     """Test for setting new root dir."""
-#     # skipcq
-#     from tiatoolbox import rcParam
+@pytest.mark.skip(reason="working, skip to run other test")
+def test_set_root_dir():
+    """Test for setting new root dir."""
+    # skipcq
+    from tiatoolbox import rcParam
 
-#     old_root_dir = rcParam["TIATOOLBOX_HOME"]
-#     test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
-#     # clean up prev test
-#     if os.path.exists(test_dir_path):
-#         os.rmdir(test_dir_path)
-#     rcParam["TIATOOLBOX_HOME"] = test_dir_path
-#     # reimport to see if it overwrites
-#     # silence Deep Source because this is intentional check
-#     # skipcq
-#     from tiatoolbox import rcParam
+    old_root_dir = rcParam["TIATOOLBOX_HOME"]
+    test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
+    # clean up prev test
+    if os.path.exists(test_dir_path):
+        os.rmdir(test_dir_path)
+    rcParam["TIATOOLBOX_HOME"] = test_dir_path
+    # reimport to see if it overwrites
+    # silence Deep Source because this is intentional check
+    # skipcq
+    from tiatoolbox import rcParam
 
-#     os.makedirs(rcParam["TIATOOLBOX_HOME"])
-#     if not os.path.exists(test_dir_path):
-#         assert False, "`%s` != `%s`" % (rcParam["TIATOOLBOX_HOME"], test_dir_path)
-#     shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
-#     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
+    os.makedirs(rcParam["TIATOOLBOX_HOME"])
+    if not os.path.exists(test_dir_path):
+        assert False, "`%s` != `%s`" % (rcParam["TIATOOLBOX_HOME"], test_dir_path)
+    shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
+    rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
+
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
-    _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs'
-    _mini_wsi1_jpg = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.jpg'
-
+    """A test for creation and bare output."""
     # to prevent wsireader complaint
-    # _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
-    # _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
+    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
 
     def reuse_init(**kwargs):
         return WSIPatchDataset(
