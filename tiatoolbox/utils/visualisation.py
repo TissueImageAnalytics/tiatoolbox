@@ -18,5 +18,6 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Utils package for toolbox utilities."""
-from tiatoolbox.utils import misc, transforms, exceptions, image, visualisation
+"""Visualisation and overlay functions used in tiatoolbox."""
+
+import numpy as np
