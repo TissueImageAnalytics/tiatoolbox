@@ -879,6 +879,28 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         ],
     )
 
+    # remove dir and re-create to test coverage
+    shutil.rmtree("tmp_output", ignore_errors=True)
+    os.makedirs("tmp_output")
+    patch_predictor_single_path = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--predefined_model",
+            "resnet18-kather100K",
+            "--img_input",
+            pathlib.Path(_sample_patch1),
+            "--output_path",
+            "tmp_output",
+            "--batch_size",
+            2,
+            "--return_probabilities",
+            False,
+        ],
+    )
+    output_list = os.listdir('tmp_output')
+    assert len(output_list) > 0
+
     assert patch_predictor_single_path.exit_code == 0
     shutil.rmtree("tmp_output", ignore_errors=True)
 
