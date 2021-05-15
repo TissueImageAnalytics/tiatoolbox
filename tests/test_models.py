@@ -13,6 +13,7 @@ import torch
 from click.testing import CliRunner
 
 import sys
+
 # sys.path.append('.')
 # sys.path.append('..')
 
@@ -24,7 +25,6 @@ from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.dataset import (
     ABCDatasetInfo,
     KatherPatchDataset,
-
     PatchDataset,
     WSIPatchDataset,
     predefined_preproc_func,
@@ -33,62 +33,62 @@ from tiatoolbox.utils.misc import download_data, unzip_data, imread
 from tiatoolbox import cli
 from tiatoolbox.wsicore import wsireader
 
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
 
 # def test_sync_read():
-    # wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs'
-    # wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
-    # mask = imread(wsi_mask_path)
-    # wsi_reader = get_wsireader(wsi_path)
-    # wsi_metadata = wsi_reader.info
-    # mask_reader = VirtualWSIReader(mask)
-    # mask_reader.attach_to_reader(wsi_reader.info)
-    # #
-    # wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
-    # roi_img = wsi_reader.read_bounds(
-    #             wsi_lv0_coords,
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
-    # roi_msk = mask_reader.read_bounds(
-    #             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
+# wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs'
+# wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
+# mask = imread(wsi_mask_path)
+# wsi_reader = get_wsireader(wsi_path)
+# wsi_metadata = wsi_reader.info
+# mask_reader = VirtualWSIReader(mask)
+# mask_reader.attach_to_reader(wsi_reader.info)
+# #
+# wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
+# roi_img = wsi_reader.read_bounds(
+#             wsi_lv0_coords,
+#             resolution=1.0,
+#             units='mpp'
+#         )
+# roi_msk = mask_reader.read_bounds(
+#             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
+#             resolution=1.0,
+#             units='mpp'
+#         )
 
-    # wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.jpg'
-    # wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
-    # wsi = imread(wsi_path)
-    # wsi_reader = VirtualWSIReader(wsi_path, WSIMeta(
-    #     mpp=np.array([0.25, 0.25]),
-    #     slide_dimensions=np.array(wsi.shape[:2][::-1]),
-    #     level_downsamples=[1.0],
-    #     level_dimensions=[np.array(wsi.shape[:2][::-1])]
-    # ))
+# wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.jpg'
+# wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
+# wsi = imread(wsi_path)
+# wsi_reader = VirtualWSIReader(wsi_path, WSIMeta(
+#     mpp=np.array([0.25, 0.25]),
+#     slide_dimensions=np.array(wsi.shape[:2][::-1]),
+#     level_downsamples=[1.0],
+#     level_dimensions=[np.array(wsi.shape[:2][::-1])]
+# ))
 
-    # mask = imread(wsi_mask_path)
-    # mask_reader = VirtualWSIReader(mask)
-    # mask_reader.attach_to_reader(wsi_reader.info)
-    # #
-    # wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
-    # roi_img = wsi_reader.read_bounds(
-    #             wsi_lv0_coords,
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
-    # roi_msk = mask_reader.read_bounds(
-    #             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
+# mask = imread(wsi_mask_path)
+# mask_reader = VirtualWSIReader(mask)
+# mask_reader.attach_to_reader(wsi_reader.info)
+# #
+# wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
+# roi_img = wsi_reader.read_bounds(
+#             wsi_lv0_coords,
+#             resolution=1.0,
+#             units='mpp'
+#         )
+# roi_msk = mask_reader.read_bounds(
+#             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
+#             resolution=1.0,
+#             units='mpp'
+#         )
 
-    # import matplotlib.pyplot as plt
-    # plt.subplot(1,2,1)
-    # plt.imshow(roi_img)
-    # plt.subplot(1,2,2)
-    # plt.imshow(roi_msk)
-    # plt.savefig('dump.png')
+# import matplotlib.pyplot as plt
+# plt.subplot(1,2,1)
+# plt.imshow(roi_img)
+# plt.subplot(1,2,2)
+# plt.imshow(roi_msk)
+# plt.savefig('dump.png')
+
 
 @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
@@ -107,40 +107,36 @@ def test_wsi_predictor(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
 
-    predictor = CNNPatchPredictor(
-                    pretrained_model="resnet18-kather100K",
-                    batch_size=2)
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K", batch_size=2)
 
     # * sanity check, both output should be the same with same resolution read args
     patch_shape = np.array([1024, 1024])
     wsi_output = predictor.predict(
         [_mini_wsi1_svs],
         mask_list=[_mini_wsi1_msk],
-        mode='wsi',
+        mode="wsi",
         return_probabilities=True,
         return_labels=True,
         on_gpu=False,
-
         patch_shape=patch_shape,
         stride_shape=patch_shape,
         resolution=1.0,
-        units='baseline'
+        units="baseline",
     )[0]
     tile_output = predictor.predict(
         [_mini_wsi1_svs],
         mask_list=[_mini_wsi1_msk],
-        mode='wsi',
+        mode="wsi",
         return_probabilities=True,
         return_labels=True,
         on_gpu=False,
-
         patch_shape=patch_shape,
         stride_shape=patch_shape,
         resolution=1.0,
-        units='baseline'
+        units="baseline",
     )[0]
-    tpred = np.array(tile_output['predictions'])
-    wpred = np.array(wsi_output['predictions'])
+    tpred = np.array(tile_output["predictions"])
+    wpred = np.array(wsi_output["predictions"])
     assert np.sum(tpred != wpred) == 0
 
 
@@ -230,15 +226,14 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
 
     def reuse_init(**kwargs):
-        return WSIPatchDataset(
-                    wsi_path=_mini_wsi1_svs,
-                    **kwargs)
+        return WSIPatchDataset(wsi_path=_mini_wsi1_svs, **kwargs)
 
     def reuse_init_wsi(**kwargs):
-        return reuse_init(mode='wsi', **kwargs)
+        return reuse_init(mode="wsi", **kwargs)
+
     # invalid mode
     with pytest.raises(ValueError):
-        reuse_init(mode='X')
+        reuse_init(mode="X")
 
     # invalid patch
     with pytest.raises(ValueError):
@@ -246,18 +241,14 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     with pytest.raises(ValueError):
         reuse_init_wsi(patch_shape=[512, 512, 512])
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_shape=[512, 'a'])
+        reuse_init_wsi(patch_shape=[512, "a"])
     with pytest.raises(ValueError):
         reuse_init_wsi(patch_shape=512)
     # invalid stride
     with pytest.raises(ValueError):
-        reuse_init_wsi(
-            patch_shape=[512, 512],
-            stride_shape=[512, 'a'])
+        reuse_init_wsi(patch_shape=[512, 512], stride_shape=[512, "a"])
     with pytest.raises(ValueError):
-        reuse_init_wsi(
-            patch_shape=[512, 512],
-            stride_shape=[512, 512, 512])
+        reuse_init_wsi(patch_shape=[512, 512], stride_shape=[512, 512, 512])
 
     # * dummy test for output correctness
     # * striding and patch should be as expected
@@ -266,24 +257,22 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     patch_shape = [4096, 4096]
     stride_shape = [2048, 2048]
     ds = reuse_init_wsi(
-            patch_shape=patch_shape,
-            stride_shape=stride_shape,
-            resolution=1.0,
-            units='baseline')
+        patch_shape=patch_shape,
+        stride_shape=stride_shape,
+        resolution=1.0,
+        units="baseline",
+    )
     # tiling top to bottom, left to right
-    ds_roi = ds[2]['image']
+    ds_roi = ds[2]["image"]
     step_idx = 2  # manual calibrate
     reader = get_wsireader(_mini_wsi1_svs)
     start = (0, step_idx * stride_shape[1])
-    end = (start[0]+patch_shape[0], start[1]+patch_shape[1])
-    rd_roi = reader.read_bounds(
-        start + end,
-        resolution=1.0,
-        units='baseline'
-    )
+    end = (start[0] + patch_shape[0], start[1] + patch_shape[1])
+    rd_roi = reader.read_bounds(start + end, resolution=1.0, units="baseline")
     correlation = np.corrcoef(
         cv2.cvtColor(ds_roi, cv2.COLOR_RGB2GRAY).flatten(),
-        cv2.cvtColor(rd_roi, cv2.COLOR_RGB2GRAY).flatten())
+        cv2.cvtColor(rd_roi, cv2.COLOR_RGB2GRAY).flatten(),
+    )
 
     assert ds_roi.shape[0] == rd_roi.shape[0]
     assert ds_roi.shape[1] == rd_roi.shape[1]
@@ -299,25 +288,28 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     # ** repeated above test for tile at the same resolution as baseline
     # ** but is not pyramidal
     wsi_ds = WSIPatchDataset(
-            wsi_path=_mini_wsi1_svs,
-            mode='wsi',
-            patch_shape=patch_shape,
-            stride_shape=stride_shape,
-            resolution=1.0,
-            units='baseline')
+        wsi_path=_mini_wsi1_svs,
+        mode="wsi",
+        patch_shape=patch_shape,
+        stride_shape=stride_shape,
+        resolution=1.0,
+        units="baseline",
+    )
     tile_ds = WSIPatchDataset(
-            wsi_path=_mini_wsi1_jpg,
-            mode='tile',
-            patch_shape=patch_shape,
-            stride_shape=stride_shape,
-            resolution=1.0,
-            units='baseline')
-    assert len(tile_ds) == len(wsi_ds), '%s vs %s' % (len(tile_ds), len(wsi_ds))
-    roi1 = wsi_ds[3]['image']
-    roi2 = tile_ds[3]['image']
+        wsi_path=_mini_wsi1_jpg,
+        mode="tile",
+        patch_shape=patch_shape,
+        stride_shape=stride_shape,
+        resolution=1.0,
+        units="baseline",
+    )
+    assert len(tile_ds) == len(wsi_ds), "%s vs %s" % (len(tile_ds), len(wsi_ds))
+    roi1 = wsi_ds[3]["image"]
+    roi2 = tile_ds[3]["image"]
     correlation = np.corrcoef(
         cv2.cvtColor(roi1, cv2.COLOR_RGB2GRAY).flatten(),
-        cv2.cvtColor(roi2, cv2.COLOR_RGB2GRAY).flatten())
+        cv2.cvtColor(roi2, cv2.COLOR_RGB2GRAY).flatten(),
+    )
     assert roi1.shape[0] == roi2.shape[0]
     assert roi1.shape[1] == roi2.shape[1]
     assert np.min(correlation) > 0.9, correlation
@@ -340,7 +332,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     dataset.preproc_func = lambda x: x
 
     for _, sample_data in enumerate(dataset):
-        sampled_img_shape = sample_data['image'].shape
+        sampled_img_shape = sample_data["image"].shape
         assert (
             sampled_img_shape[0] == size[0]
             and sampled_img_shape[1] == size[1]
@@ -359,7 +351,7 @@ def test_PatchDatasetlist_imgs():
     dataset.preproc_func = lambda x: x
 
     for _, sample_data in enumerate(dataset):
-        sampled_img_shape = sample_data['image'].shape
+        sampled_img_shape = sample_data["image"].shape
         assert (
             sampled_img_shape[0] == size[0]
             and sampled_img_shape[1] == size[1]
@@ -367,9 +359,9 @@ def test_PatchDatasetlist_imgs():
         )
 
     # test for changing to another preproc
-    dataset.preproc_func = lambda x : x - 10
+    dataset.preproc_func = lambda x: x - 10
     item = dataset[0]
-    assert np.sum(item['image'] - (list_imgs[0] - 10)) == 0
+    assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
     # test for loading npy
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
@@ -405,14 +397,14 @@ def test_PatchDatasetarray_imgs():
     # test different setter for label
     dataset = PatchDataset(array_imgs, label_list=label_list)
     an_item = dataset[2]
-    assert an_item['label'] == 3
+    assert an_item["label"] == 3
     dataset = PatchDataset(array_imgs, label_list=None)
     an_item = dataset[2]
-    assert 'label' not in an_item
+    assert "label" not in an_item
 
     dataset = PatchDataset(array_imgs)
     for _, sample_data in enumerate(dataset):
-        sampled_img_shape = sample_data['image'].shape
+        sampled_img_shape = sample_data["image"].shape
         assert (
             sampled_img_shape[0] == size[0]
             and sampled_img_shape[1] == size[1]
@@ -522,9 +514,11 @@ def test_DatasetInfo():  # Working
     # test defining a subclas of dataset info but not defining
     # enforcing attributes, should crash
     with pytest.raises(TypeError):
+
         class Proto(ABCDatasetInfo):
             def __init__(self):
-                self.a = 'a'
+                self.a = "a"
+
         Proto()
 
     # test kather with default init
@@ -560,8 +554,8 @@ def test_DatasetInfo():  # Working
     # to actually get the image, we feed it to a PatchDataset
     actual_ds = PatchDataset(dataset.input_list, dataset.label_list)
     sample_patch = actual_ds[100]
-    assert isinstance(sample_patch['image'], np.ndarray)
-    assert sample_patch['label'] is not None
+    assert isinstance(sample_patch["image"], np.ndarray)
+    assert sample_patch["label"] is not None
 
     # remove generated data - just a test!
     shutil.rmtree(save_dir_path, ignore_errors=True)
