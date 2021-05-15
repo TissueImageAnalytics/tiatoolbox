@@ -179,6 +179,9 @@ class PatchExtractor(ABC):
             resolution=mask_pow, units="power", interpolation="nearest"
         )
         mask_thumb_label, _ = label(mask_thumb > 0.5)
+        # check if mask contain any objects
+        if np.max(mask_thumb_label) == 0:
+            raise ValueError("input_mask must contain at least one component.")
 
         # extract only mask regions from mask_thumb
         regions = regionprops(mask_thumb_label)
@@ -296,7 +299,7 @@ class MaskFixedWindowPatchExtractor(PatchExtractor):
     Args:
         input_mask (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
           Input to create the mask :obj:`WSIReader` from.
-          This mask is used to find the regions to extract patches from them.
+          This mask is used to find the regions to extract the patches.
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
          default = patch_size
 
