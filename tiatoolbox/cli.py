@@ -26,9 +26,10 @@ from tiatoolbox import wsicore
 from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.models.classification.pretrained_info import __pretrained_model
+from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.models.dataset.classification import PatchDataset
+from tiatoolbox.utils.misc import save_json
 
 import json
 import sys
@@ -442,8 +443,8 @@ def tissue_mask(
 
 @main.command()
 @click.option(
-    "--predefined_model",
-    help="Predefined model used to process the data. the format is "
+    "--pretrained_model",
+    help="Pretrained model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
     default="resnet18-kather100K",
@@ -470,7 +471,12 @@ def tissue_mask(
     default=16,
 )
 @click.option(
-    "--return_probs",
+    "--mode",
+    help="Whether to use `patch`, `tile` or `wsi` mode.",
+    default="wsi",
+)
+@click.option(
+    "--return_probabilities",
     help="Whether to return raw model probabilities.",
     default=False,
 )
@@ -481,12 +487,13 @@ def tissue_mask(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
 def patch_predictor(
-    predefined_model,
+    pretrained_model,
     pretrained_weight,
     img_input,
     output_path,
     batch_size,
-    return_probs,
+    mode,
+    return_probabilities,
     file_types,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
@@ -504,29 +511,27 @@ def patch_predictor(
     else:
         raise FileNotFoundError
 
-    if predefined_model.lower() not in __pretrained_model:
-        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+    if pretrained_model.lower() not in _pretrained_model:
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
 
     if len(img_files) < batch_size:
         batch_size = len(img_files)
 
-    dataset = PatchDataset(img_files)
-
     predictor = CNNPatchPredictor(
-        predefined_model=predefined_model,
+        pretrained_model=pretrained_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
     )
 
-    output = predictor.predict(dataset, return_probs=return_probs, on_gpu=False)
+    output = predictor.predict(
+        img_files, mode, return_probabilities=return_probabilities, on_gpu=False
+    )
 
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
         os.makedirs(output_path)
-    # convert output, otherwise can't dump via json
-    output = {k: v.tolist() for k, v in output.items()}
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
+
+    save_json(output, output_file_path)
 
 
 if __name__ == "__main__":
