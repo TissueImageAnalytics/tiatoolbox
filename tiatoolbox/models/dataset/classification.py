@@ -28,6 +28,7 @@ import numpy as np
 import PIL
 import torch
 import torchvision.transforms as transforms
+from abc import ABC, abstractmethod
 
 from tiatoolbox import rcParam
 
@@ -84,9 +85,9 @@ class PatchDataset(abc.__ABCPatchDataset):
     from the torch.utils.data.Dataset class.
 
     Attributes:
-         input_list: Either a list of patches, where each patch is a ndarray or a list of
-         valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
-         pointing to an image.
+        input_list: Either a list of patches, where each patch is a ndarray or a list of
+        valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
+        pointing to an image.
 
         label_list: List of label for sample at the same index in `input_list` .
         Default is `None`.
@@ -95,10 +96,10 @@ class PatchDataset(abc.__ABCPatchDataset):
         and its label. If `label_list` is `None`, `None` is returned
 
         preproc_func: Preprocessing function used to transform the input data. If
-         supplied, then torch.Compose will be used on the input preproc_list.
-         preproc_list is a list of torchvision transforms for preprocessing the image.
-         The transforms will be applied in the order that they are given in the list.
-         https://pytorch.org/vision/stable/transforms.html.
+        supplied, then torch.Compose will be used on the input preproc_list.
+        preproc_list is a list of torchvision transforms for preprocessing the image.
+        The transforms will be applied in the order that they are given in the list.
+        https://pytorch.org/vision/stable/transforms.html.
 
     Examples:
         >>> from tiatoolbox.models.data import Patch_Dataset
@@ -123,10 +124,7 @@ class PatchDataset(abc.__ABCPatchDataset):
         self.label_list = label_list
 
         # perform check on the input
-        self.data_check(mode="patch")
-
-        if self.label_list is None:
-            self.label_list = [np.nan for i in range(len(self.input_list))]
+        self.check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
         patch = self.input_list[idx]
@@ -148,12 +146,38 @@ class PatchDataset(abc.__ABCPatchDataset):
 
 
 class WSIPatchDataset(abc.__ABCPatchDataset):
-    """Defines a WSI-level patch dataset."""
+    """Defines a WSI-level patch dataset.
+
+    Attributes:
+        reader (:class:`.WSIReader`): an WSI Reader or Virtual Reader
+        for reading pyramidal image or large tile in pyramidal way.
+
+        input_list: List of coordinates to read from the `reader`,
+        each coordinate is of the form [start_x, start_y, end_x, end_y].
+
+        patch_shape: a tuple(int, int) or ndarray of shape (2,).
+        Expected shape to read from `reader` at requested `resolution` and `units`.
+        Expected to be (height, width).
+
+        lv0_patch_shape: a tuple(int, int) or ndarray of shape (2,).
+        Shape of `patch_shape` at level 0 in `reader` at requested
+        `resolution` and `units`. Expected to be (height, width).
+
+        resolution: check (:class:`.WSIReader`) for details.
+        units: check (:class:`.WSIReader`) for details.
+
+        preproc_func: Preprocessing function used to transform the input data. If
+        supplied, then torch.Compose will be used on the input preproc_list.
+        preproc_list is a list of torchvision transforms for preprocessing the image.
+        The transforms will be applied in the order that they are given in the list.
+        https://pytorch.org/vision/stable/transforms.html.
+
+    """
 
     def __init__(
         self,
+        wsi_path,
         mode="wsi",
-        wsi_path=None,
         mask_path=None,
         preproc_func=None,
         # may want a set or sthg
@@ -162,30 +186,75 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         resolution=None,
         units=None,
     ):
+        """Create a WSI-level patch dataset.
+
+        Args:
+            mode (str): can be either `wsi` or `tile` to denote the image to read is
+            pyramidal or a large tile.
+
+            wsi_path (:obj:`str` or :obj:`pathlib.Path`): valid to pyramidal image
+            or large tile to read.
+
+            mask_path (:obj:`str` or :obj:`pathlib.Path`): valid mask image.
+
+            patch_shape: a tuple(int, int) or ndarray of shape (2,).
+            Expected shape to read from `reader` at requested `resolution` and `units`.
+            Expected to be (height, width).
+
+            stride_shape: a tuple(int, int) or ndarray of shape (2,).
+            Expected stride shape to read at requested `resolution` and `units`.
+            Expected to be (height, width).
+
+            resolution: check (:class:`.WSIReader`) for details. When `mode='tile'`,
+            value is fixed to be `resolution=1.0` and `units='baseline'`
+            units: check (:class:`.WSIReader`) for details.
+
+            preproc_func: Preprocessing function used to transform the input data. If
+            supplied, then torch.Compose will be used on the input preproc_list.
+            preproc_list is a list of torchvision transforms for preprocessing the image.
+            The transforms will be applied in the order that they are given in the list.
+            https://pytorch.org/vision/stable/transforms.html.
+
+        """
         super().__init__(preproc_func=preproc_func)
-        assert wsi_path is not None
-        assert mode in ['wsi', 'tile'], '`%s` is not supported.' % mode
-
+        # Is there a generic func to spit out path test in toolbox?
         if not os.path.isfile(wsi_path):
-            raise ValueError("Input must be a valid file path.")
+            raise ValueError("`wsi_path` must be a valid file path.")
+        if mode not in ['wsi', 'tile']:
+            raise ValueError('`%s` is not supported.' % mode)
+        patch_shape = np.array(patch_shape)
+        stride_shape = np.array(stride_shape)
+        if len(patch_shape.shape) > 2 and \
+                not np.issubdtype(patch_shape.dtype, np.number):
+            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
+        if len(stride_shape.shape) > 2 and \
+                not np.issubdtype(stride_shape.dtype, np.number):
+            raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
 
+        # ! We must do conversion else wsireader will error out
+        wsi_path = pathlib.Path(wsi_path)
         if mode == "wsi":
             self.reader = get_wsireader(wsi_path)
         else:
             # overwriting for later read
-            units = 'mpp'
+            # units = 'mpp'
+            # resolution = 1.0
+            units = 'baseline'
             resolution = 1.0
             img = imread(wsi_path)
+            metadata = WSIMeta(
+                mpp=np.array([0.25, 0.25]),
+                slide_dimensions=np.array(img.shape[:2][::-1]),
+                level_downsamples=[1.0],
+                level_dimensions=[np.array(img.shape[:2][::-1])]
+            )
             self.reader = VirtualWSIReader(
                 img,
                 # any value for mpp is fine, but the read
                 # resolution for mask later must match
-                WSIMeta(
-                    mpp=np.array([0.25, 0.25]),
-                    slide_dimensions=np.array(img.shape[:2][::-1]),
-                    level_downsamples=[1.0],
-                    level_dimensions=[np.array(img.shape[:2][::-1])]
-                )
+                # ? alignement, XY or YX ? Default to XY
+                # ? to match OpenSlide for now
+                metadata
             )
 
         # may decouple into misc ?
@@ -201,14 +270,16 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         stride_shape = patch_shape if stride_shape is None else stride_shape
         lv0_pyramid_shape = wsi_metadata.slide_dimensions
         lv0_stride_shape = (stride_shape * scale).astype(np.int32)
-
         # lv0 topleft coordinates
-        # self.input_list = get_patch_coords_info(lv0_pyramid_shape, lv0_stride_shape)
         self.input_list = PatchExtractor.get_coordinates(
-            lv0_pyramid_shape, lv0_patch_shape, lv0_stride_shape
+            lv0_pyramid_shape[::-1], lv0_patch_shape, lv0_stride_shape
         )
 
         if mask_path is not None:
+            # ? extension checking
+            if not os.path.isfile(wsi_path):
+                raise ValueError("`mask_path` must be a valid file path.")
+
             mask = imread(mask_path)
             mask_reader = VirtualWSIReader(mask)
             mask_reader.attach_to_reader(self.reader.info)
@@ -226,10 +297,8 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
 
         self.patch_shape = patch_shape
         self.lv0_patch_shape = lv0_patch_shape
-        self.read_kwargs = dict(
-            resolution=resolution,
-            units=units,
-        )
+        self.resolution = resolution
+        self.units = units
 
         # Perform check on the input
         self.check_input_integrity(mode="wsi")
@@ -239,7 +308,8 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
             lv0_coords,
-            **self.read_kwargs,
+            resolution=self.resolution,
+            units=self.units
         )
         # ! due to internal scaling, there will be rounding error and wont match
         # ! the requested size at requested read resolution
@@ -249,90 +319,6 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
+        # ? how to enforce return check?
         data = {"image": patch, "coords": np.array(lv0_coords)}
-        return data
-
-
-class KatherPatchDataset(abc.__ABCPatchDataset):
-    """Define a dataset class specifically for the Kather dataset, obtain from [URL].
-
-    Attributes:
-        save_dir_path (str or None): Path to directory containing the Kather dataset,
-                 assumed to be as is after extracted. If the argument is `None`,
-                 the dataset will be downloaded and extracted into the
-                 'run_dir/download/Kather'.
-
-        preproc_list: List of preprocessing to be applied. If not provided, by default
-                      the following are applied in sequential order.
-
-    """
-
-    def __init__(
-        self,
-        save_dir_path=None,
-        return_labels=False,
-        preproc_func=None,
-    ):
-        super().__init__(return_labels=return_labels, preproc_func=preproc_func)
-
-        self.data_is_npy_alike = False
-
-        label_code_list = [
-            "01_TUMOR",
-            "02_STROMA",
-            "03_COMPLEX",
-            "04_LYMPHO",
-            "05_DEBRIS",
-            "06_MUCOSA",
-            "07_ADIPOSE",
-            "08_EMPTY",
-        ]
-
-        if save_dir_path is None:
-            save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "dataset/")
-            if not os.path.exists(save_dir_path):
-                save_zip_path = os.path.join(save_dir_path, "Kather.zip")
-                url = (
-                    "https://zenodo.org/record/53169/files/"
-                    "Kather_texture_2016_image_tiles_5000.zip"
-                )
-                download_data(url, save_zip_path)
-                unzip_data(save_zip_path, save_dir_path)
-            save_dir_path = os.path.join(
-                save_dir_path, "Kather_texture_2016_image_tiles_5000/"
-            )
-        elif not os.path.exists(save_dir_path):
-            raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
-
-        # What will happen if downloaded data get corrupted?
-        all_path_list = []
-        for label_id, label_code in enumerate(label_code_list):
-            path_list = grab_files_from_dir(
-                "%s/%s/" % (save_dir_path, label_code), file_types="*.tif"
-            )
-            path_list = [[v, label_id] for v in path_list]
-            path_list.sort()
-            all_path_list.extend(path_list)
-        input_list, label_list = list(zip(*all_path_list))
-
-        self.input_list = input_list
-        self.label_list = label_list
-        self.classes = label_code_list
-
-    def __getitem__(self, idx):
-        patch = self.input_list[idx]
-
-        # Mode 0 is list of paths
-        if not self.data_is_npy_alike:
-            patch = self.load_img(patch)
-
-        # Apply preprocessing to selected patch
-        patch = self.preproc_func(patch)
-
-        data = {
-            "image": patch,
-        }
-        if self.return_labels:
-            data["label"] = self.label_list[idx]
-            return data
         return data

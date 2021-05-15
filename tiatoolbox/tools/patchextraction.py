@@ -171,21 +171,41 @@ class PatchExtractor(ABC):
         stride_shape=None,
         within_bound=True,
     ):
-        """Get the coordinates."""
-        # TODO Perform check on input (tuple)
-        assert len(image_shape) == 2, \
-            'Must be tuple(height,width) or ndarray of [height, width].'
-        assert len(patch_shape) == 2, \
-            'Must be tuple(height,width) or ndarray of [height, width].'
-        assert len(stride_shape) == 2, \
-            'Must be tuple(height,width) or ndarray of [height, width].'
+        """Calculate patch tiling coordinates.
+
+        Args:
+            image_shape: a tuple(int, int) or ndarray of shape (2,).
+            Expected image shape at requested `resolution` and `units`.
+            Expected to be (height, width).
+
+            patch_shape: a tuple(int, int) or ndarray of shape (2,).
+            Expected shape to read from `reader` at requested `resolution` and `units`.
+            Expected to be (height, width).
+
+            stride_shape: a tuple(int, int) or ndarray of shape (2,).
+            Expected stride shape to read at requested `resolution` and `units`.
+            Expected to be (height, width).
+
+        """
+        image_shape = np.array(image_shape)
+        patch_shape = np.array(patch_shape)
+        stride_shape = np.array(stride_shape)
+        if len(image_shape.shape) > 2 and \
+                not np.issubdtype(image_shape.dtype, np.number):
+            raise ValueError('Invalid `image_shape` value %s.' % image_shape)
+        if len(patch_shape.shape) > 2 and \
+                not np.issubdtype(patch_shape.dtype, np.number):
+            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
+        if len(stride_shape.shape) > 2 and \
+                not np.issubdtype(stride_shape.dtype, np.number):
+            raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
 
         def flat_mesh_grid_coord(x, y):
             x, y = np.meshgrid(x, y)
             return np.stack([y.flatten(), x.flatten()], axis=-1)
         patch_shape = np.array(patch_shape)
         y_list = np.arange(0, image_shape[0], stride_shape[0])
-        x_list = np.arange(1, image_shape[1], stride_shape[1])
+        x_list = np.arange(0, image_shape[1], stride_shape[1])
         if within_bound:  # to check compatible with shan portion
             sel = y_list + patch_shape[0] <= image_shape[0]
             y_list = y_list[sel]

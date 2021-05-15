@@ -23,6 +23,10 @@
 from tiatoolbox.models.dataset.classification import (
     PatchDataset,
     WSIPatchDataset,
-    KatherPatchDataset,
     predefined_preproc_func,
+)
+
+from tiatoolbox.models.dataset.info import (
+    ABCDatasetInfo,
+    KatherPatchDataset
 )
