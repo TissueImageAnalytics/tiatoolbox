@@ -90,198 +90,58 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
     # plt.imshow(roi_msk)
     # plt.savefig('dump.png')
 
-# %%
 
-# def test_wsi_patch_predictor():
-#     """Test for patch predictor with resnet50 on Kather 100K dataset."""
-#     # API 1, also test with return_labels
-#     sample_pyramid = "CMU-1_mini.svs"
-#     # dataset = WSIPatchDataset(sample_pyramid)
-#     results = _get_outputs_api1(sample_pyramid, "resnet18-kather100K", mode="wsi")
-#     # probabilities, predictions, labels
+def test_wsi_predictor(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
+    """Test normal run of wsi predictor.
 
+    This is not prediction correctness test. Correctness test need to check
+    - correct patch read at varying resolution args (more about dataset test,
+    such as the sync test and varying resolution tiling test).
+    - expected prediction at simple patch.
+    """
+    # _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.svs'
+    # _mini_wsi1_jpg = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.jpg'
+    # _mini_wsi1_msk = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mask.png'
+    # to prevent wsireader complaint
+    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
+    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
 
-# def test_wsi_patch_predictor(_sample_crc_tile):
-#     """Test for patch predictor with resnet50 on Kather 100K dataset."""
-#     # API 1, also test with return_labels
-#     results = _get_outputs_api1(
-#         pathlib.Path(_sample_crc_tile), "resnet18-kather100K", mode="wsi"
-#     )
-#     # probabilities, predictions, labels
+    predictor = CNNPatchPredictor(
+                    pretrained_model="resnet18-kather100K",
+                    batch_size=2)
 
+    # * sanity check, both output should be the same with same resolution read args
+    patch_shape = np.array([1024, 1024])
+    wsi_output = predictor.predict(
+        [_mini_wsi1_svs],
+        mask_list=[_mini_wsi1_msk],
+        mode='wsi',
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
 
-# def _get_outputs_api1(data, pretrained_model, mode):
-#     """Helper function to get the model output using API 1."""
-#     # API 1, also test with return_labels
-#     predictor = CNNPatchPredictor(pretrained_model=pretrained_model, batch_size=2)
-#     # don't run test on GPU
-#     output = predictor.predict(
-#         data,
-#         mode=mode,
-#         return_probabilities=True,
-#         return_labels=True,
-#         on_gpu=True,
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1.0,
+        units='baseline'
+    )[0]
+    tile_output = predictor.predict(
+        [_mini_wsi1_svs],
+        mask_list=[_mini_wsi1_msk],
+        mode='wsi',
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
 
-#         patch_shape=np.array([224, 224])
-#     )
-#     probabilities = output["probabilities"]
-#     predictions = output["predictions"]
-
-#     if mode == "wsi" or mode == "tile":
-#         coordinates = output["coordinates"]
-#         return probabilities, predictions, coordinates
-#     else:
-#         labels = output["labels"]
-#         return probabilities, predictions, labels
-
-
-# def test_tile(_sample_crc_tile):
-    # __sample = _sample_crc_tile
-# __sample = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/mini_tile.tif')
-# predictor = CNNPatchPredictor(
-#                 pretrained_model="resnet18-kather100K",
-#                 batch_size=2)
-# # don't run test on GPU
-# output = predictor.predict(
-#     [__sample],
-#     mode='tile',
-#     return_probabilities=True,
-#     return_labels=True,
-#     on_gpu=False,
-
-#     patch_shape=np.array([224, 224])
-# )
-
-#     # don't run test on GPU
-#     output = predictor.predict(
-#         __sample,
-#         mode='tile',
-#         return_probabilities=True,
-#         return_labels=True,
-#         on_gpu=False,
-
-#         patch_shape=np.array([224, 224]),
-#         stride_shape=np.array([112, 112])
-#     )
-
-
-# def test_wsi(_sample_svs):
-# __sample_wsi = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs')
-# __sample_msk = pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png')
-
-# # __sample = _sample_svs
-# predictor = CNNPatchPredictor(
-#                 pretrained_model="resnet18-kather100K", 
-#                 batch_size=2)
-# # don't run test on GPU
-# output = predictor.predict(
-#     [__sample_wsi],
-#     mask_list=[__sample_msk],
-#     mode='wsi',
-#     return_probabilities=True,
-#     return_labels=True,
-#     on_gpu=False,
-
-#     patch_shape=np.array([224, 224]),
-#     resolution=1.0,
-#     units='mpp'
-# )
-
-#     # # don't run test on GPU
-#     # output = predictor.predict(
-#     #     __sample,
-#     #     mode='wsi',
-#     #     return_probabilities=True,
-#     #     return_labels=True,
-#     #     on_gpu=False,
-
-#     #     patch_shape=np.array([224, 224]),
-#     #     resolution=2.0,
-#     #     units='mpp'
-#     # )
-
-# dummy_test_wsi()
-
-# %%
-
-# results = _get_outputs_api1(
-#     pathlib.Path('/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1.ndpi'), 
-#     "resnet18-kather100K", mode="wsi"
-# )
-
-# def _get_outputs_api2(data, pretrained_model, mode):
-#     """Helper function to get the model output using API 2."""
-#     # API 2
-#     pretrained_weight_url = (
-#         "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100K-pc.pth"
-#     )
-
-#     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_api2")
-#     # remove prev generated data - just a test!
-#     if os.path.exists(save_dir_path):
-#         shutil.rmtree(save_dir_path, ignore_errors=True)
-#     os.makedirs(save_dir_path)
-
-#     pretrained_weight = os.path.join(
-#         rcParam["TIATOOLBOX_HOME"], "tmp_api2", "resnet18-kather100K-pc.pth"
-#     )
-#     download_data(pretrained_weight_url, pretrained_weight)
-
-#     predictor = CNNPatchPredictor(
-#         pretrained_model=pretrained_model,
-#         pretrained_weight=pretrained_weight,
-#         batch_size=1,
-#     )
-#     # don't run test on GPU
-#     output = predictor.predict(
-#         data,
-#         mode=mode,
-#         return_probabilities=True,
-#         return_labels=True,
-#         on_gpu=False,
-#     )
-#     probabilities = output["probabilities"]
-#     predictions = output["predictions"]
-#     labels = output["labels"]
-
-#     if mode == "wsi" or mode == "tile":
-#         coordinates = output["coordinates"]
-#         return probabilities, predictions, labels, coordinates
-#     else:
-#         return probabilities, predictions, labels
-
-
-# def _get_outputs_api3(data, backbone, mode, num_classes=9):
-#     """Helper function to get the model output using API 3."""
-#     # API 3
-#     model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
-
-#     # coverage setter check
-#     model.set_preproc_func(lambda x: x - 1)  # do this for coverage
-#     assert model.get_preproc_func()(1) == 0
-#     # coverage setter check
-#     model.set_preproc_func(None)  # do this for coverage
-#     assert model.get_preproc_func()(1) == 1
-
-#     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
-#     # don't run test on GPU
-#     output = predictor.predict(
-#         data,
-#         mode=mode,
-#         return_probabilities=True,
-#         return_labels=True,
-#         on_gpu=False,
-#     )
-
-#     probabilities = output["probabilities"]
-#     predictions = output["predictions"]
-#     labels = output["labels"]
-
-#     if mode == "wsi" or mode == "tile":
-#         coordinates = output["coordinates"]
-#         return probabilities, predictions, labels, coordinates
-#     else:
-#         return probabilities, predictions, labels
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1.0,
+        units='baseline'
+    )[0]
+    tpred = np.array(tile_output['predictions'])
+    wpred = np.array(wsi_output['predictions'])
+    assert np.sum(tpred != wpred) == 0
 
 
 # def test_create_backbone():
@@ -316,25 +176,26 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 #         get_model("secret_model", pretrained=False)
 
 
-# def test_predictor_crash():
-#     """Test for crash when making predictor."""
-#     # test abc
-#     with pytest.raises(NotImplementedError):
-#         ModelBase()
-#     with pytest.raises(NotImplementedError):
-#         ModelBase.infer_batch(1, 2, 3)
+@pytest.mark.skip(reason="working, skip to run other test")
+def test_predictor_crash():
+    """Test for crash when making predictor."""
+    # test abc
+    with pytest.raises(NotImplementedError):
+        ModelBase()
+    with pytest.raises(NotImplementedError):
+        ModelBase.infer_batch(1, 2, 3)
 
-#     # without providing any model
-#     with pytest.raises(ValueError, match=r"Must provide.*"):
-#         CNNPatchPredictor()
+    # without providing any model
+    with pytest.raises(ValueError, match=r"Must provide.*"):
+        CNNPatchPredictor()
 
-#     # provide wrong unknown pretrained model
-#     with pytest.raises(ValueError, match=r"Pretrained .* does not exist"):
-#         CNNPatchPredictor(pretrained_model="secret_model")
+    # provide wrong unknown pretrained model
+    with pytest.raises(ValueError, match=r"Pretrained .* does not exist"):
+        CNNPatchPredictor(pretrained_model="secret_model")
 
-#     # provide wrong model of unknown type, deprecated later with type hint
-#     with pytest.raises(ValueError, match=r".*must be a string.*"):
-#         CNNPatchPredictor(pretrained_model=123)
+    # provide wrong model of unknown type, deprecated later with type hint
+    with pytest.raises(ValueError, match=r".*must be a string.*"):
+        CNNPatchPredictor(pretrained_model=123)
 
 
 @pytest.mark.skip(reason="working, skip to run other test")

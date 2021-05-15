@@ -26,7 +26,6 @@ import torch
 import torch.nn as nn
 import os
 import pathlib
-import copy
 
 from tiatoolbox import rcParam, logger
 from tiatoolbox.models.abc import ModelBase
@@ -214,8 +213,7 @@ class CNNPatchPredictor:
         return_coordinates=False,
         on_gpu=True,
     ):
-        """Make a prediction on a dataset. Internally will make a deep copy
-        of the provided dataset to ensure user provided dataset is unchanged.
+        """Make a prediction on a dataset. The dataset can be mutated.
 
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
@@ -230,9 +228,6 @@ class CNNPatchPredictor:
 
         """
 
-        # may be expensive
-        #! TODO commenting out deepcopy is a temporary workaround
-        # dataset = copy.deepcopy(dataset)  # make a deep copy of this
         dataset.set_preproc_func(self.model.get_preproc_func())
 
         # preprocessing must be defined with the dataset
@@ -394,7 +389,7 @@ class CNNPatchPredictor:
                     save_json(output, output_file_path)
                     output = output_files
                 else:
-                    output = output_model
+                    output = [output_model]
 
         return output
 

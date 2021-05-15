@@ -607,7 +607,7 @@ def _mini_wsi1_jpg(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _mini_wsi1_mask(tmpdir_factory):
+def _mini_wsi1_msk(tmpdir_factory):
     """Sample pytest fixture for torch wsi dataset.
     Download svs image for pytest.
 
