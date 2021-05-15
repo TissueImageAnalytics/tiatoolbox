@@ -14,7 +14,7 @@ from click.testing import CliRunner
 
 import sys
 # sys.path.append('.')
-# sys.path.append('..')
+sys.path.append('..')
 
 from sklearn import metrics
 from tiatoolbox import rcParam
@@ -29,66 +29,322 @@ from tiatoolbox.models.dataset import (
     WSIPatchDataset,
     predefined_preproc_func,
 )
+
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import download_data, unzip_data, imread
 from tiatoolbox import cli
 from tiatoolbox.wsicore import wsireader
 
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
 
-# def test_sync_read():
-    # wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.svs'
-    # wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
-    # mask = imread(wsi_mask_path)
-    # wsi_reader = get_wsireader(wsi_path)
-    # wsi_metadata = wsi_reader.info
-    # mask_reader = VirtualWSIReader(mask)
-    # mask_reader.attach_to_reader(wsi_reader.info)
-    # #
-    # wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
-    # roi_img = wsi_reader.read_bounds(
-    #             wsi_lv0_coords,
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
-    # roi_msk = mask_reader.read_bounds(
-    #             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
 
-    # wsi_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini.jpg'
-    # wsi_mask_path = '/home/tialab-dang/local/project/tiatoolbox/tests/CMU-1_mini_thumb_mask.png'
-    # wsi = imread(wsi_path)
-    # wsi_reader = VirtualWSIReader(wsi_path, WSIMeta(
-    #     mpp=np.array([0.25, 0.25]),
-    #     slide_dimensions=np.array(wsi.shape[:2][::-1]),
-    #     level_downsamples=[1.0],
-    #     level_dimensions=[np.array(wsi.shape[:2][::-1])]
-    # ))
+def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_msk):
+    # """Test synchronize read for VirtualReader"""
+    _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.svs'
+    _mini_wsi1_msk = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mask.png'
 
-    # mask = imread(wsi_mask_path)
-    # mask_reader = VirtualWSIReader(mask)
-    # mask_reader.attach_to_reader(wsi_reader.info)
-    # #
-    # wsi_lv0_coords = np.array([4500, 9500, 6500, 11500])
-    # roi_img = wsi_reader.read_bounds(
-    #             wsi_lv0_coords,
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
-    # roi_msk = mask_reader.read_bounds(
-    #             wsi_lv0_coords / mask_reader.info.level_downsamples[0],
-    #             resolution=1.0,
-    #             units='mpp'
-    #         )
+    wsi_reader = get_wsireader(_mini_wsi1_svs)
 
+    msk = imread(_mini_wsi1_msk)
+    msk_reader = VirtualWSIReader(msk)
+    old_metadata = msk_reader.info
+    msk_reader.attach_to_reader(wsi_reader.info)
+    # check that attach altered vreader metadata
+    assert np.any(old_metadata.mpp != msk_reader.info.mpp)
+
+    # now check sync read by comparing the RoI with different base
+    # the output should be at same resolution even if source is of different base
+    bigger_msk = cv2.resize(msk, (0, 0), fx=4.0, fy=4.0, interpolation=cv2.INTER_NEAREST)
+    bigger_msk_reader = VirtualWSIReader(bigger_msk)
+    # * must set mpp metadata to not None else wont work
+    # error checking first
+    ref_metadata = bigger_msk_reader.info
+    ref_metadata.mpp = 1.0
+    ref_metadata.objective_power = None
+    with pytest.raises(ValueError, match=r".*objective.*None.*"):
+        msk_reader.attach_to_reader(ref_metadata)
+    ref_metadata.mpp = None
+    ref_metadata.objective_power = 1.0
+    with pytest.raises(ValueError, match=r".*mpp.*None.*"):
+        msk_reader.attach_to_reader(ref_metadata)
+
+    # must set mpp metadata to not None else wont
+    # !?! why do this doesn modify ?, but modify
+    # !!! reference above seem to work? @John
+    ref_metadata.mpp = 1.0
+    ref_metadata.objective_power = 1.0
+    msk_reader.attach_to_reader(ref_metadata)
+
+    # ! box should be within image
+    lv0_coords = np.array([0, 1000, 2000, 3000])
+    # with mpp
+    roi1 = bigger_msk_reader.read_bounds(
+                lv0_coords,
+                resolution=0.25,
+                units='mpp'
+            )
+    scale_wrt_ref = msk_reader.info.level_downsamples[0]
+    roi2 = msk_reader.read_bounds(
+                lv0_coords / scale_wrt_ref,
+                resolution=0.25,
+                units='mpp'
+            )
+    cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
+    assert np.min(cc) > 0.95, cc
+    # with objective
+    roi1 = bigger_msk_reader.read_bounds(
+                lv0_coords,
+                resolution=0.25,
+                units='power'
+            )
+    scale_wrt_ref = msk_reader.info.level_downsamples[0]
+    roi2 = msk_reader.read_bounds(
+                lv0_coords / scale_wrt_ref,
+                resolution=0.25,
+                units='power'
+            )
+    cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
+    assert np.min(cc) > 0.95, cc
     # import matplotlib.pyplot as plt
-    # plt.subplot(1,2,1)
-    # plt.imshow(roi_img)
-    # plt.subplot(1,2,2)
-    # plt.imshow(roi_msk)
+    # plt.subplot(1, 2, 1)
+    # plt.imshow(roi1)
+    # plt.subplot(1, 2, 2)
+    # plt.imshow(roi2)
+    # plt.show()
     # plt.savefig('dump.png')
+
+    # * now check attaching and read to WSIReader and varying resolution
+    # need to think how to check correctness
+    lv0_coords = np.array([4500, 9500, 6500, 11500])
+    msk_reader.attach_to_reader(wsi_reader.info)
+    msk_reader.read_bounds(
+            lv0_coords / scale_wrt_ref,
+            resolution=15.0,
+            units='power'
+        )
+    msk_reader.read_bounds(
+            lv0_coords / scale_wrt_ref,
+            resolution=1.0,
+            units='mpp'
+        )
+    msk_reader.read_bounds(
+            lv0_coords / scale_wrt_ref,
+            resolution=1.0,
+            units='baseline'
+        )
+
+    patch_shape = [512, 512]
+    # now check normal reading for dataset with mask
+    ds = WSIPatchDataset(
+        _mini_wsi1_svs,
+        mode='wsi',
+        mask_path=_mini_wsi1_msk,
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1.0,
+        units='mpp')
+    ds[10]
+    ds = WSIPatchDataset(
+        _mini_wsi1_svs,
+        mode='wsi',
+        mask_path=_mini_wsi1_msk,
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1.0,
+        units='baseline')
+    ds[10]
+    ds = WSIPatchDataset(
+        _mini_wsi1_svs,
+        mode='wsi',
+        mask_path=_mini_wsi1_msk,
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=15.0,
+        units='power')
+    ds[10]
+
+
+@pytest.mark.skip(reason="working, skip to run other test")
+def test_get_coordinates():
+    """Test tiling coordinate getter."""
+    expected_output = np.array([
+        [0, 0, 4, 4],
+        [4, 0, 8, 4],
+    ])
+    output = PatchExtractor.get_coordinates(
+                [9, 6], [4, 4], [4, 4],
+                within_bound=True)
+    assert np.sum(expected_output - output) == 0
+
+    expected_output = np.array([
+        [0, 0, 4, 4],
+        [0, 4, 4, 8],
+        [4, 0, 8, 4],
+        [4, 4, 8, 8],
+        [8, 0, 12, 4],
+        [8, 4, 12, 8],
+    ])
+    output = PatchExtractor.get_coordinates(
+                [9, 6], [4, 4], [4, 4],
+                within_bound=False)
+    assert np.sum(expected_output - output) == 0
+    # test patch shape larger than image
+    output = PatchExtractor.get_coordinates(
+                [9, 6], [9, 9], [9, 9],
+                within_bound=False)
+    assert len(output) == 1
+    # test patch shape larger than image
+    output = PatchExtractor.get_coordinates(
+                [9, 6], [9, 9], [9, 9],
+                within_bound=True)
+    assert len(output) == 0
+
+    # test error input form
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9j, 6], [4, 4], [4, 4],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6], [4, 4], [4, 4j],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6], [4j, 4], [4, 4],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6], [4, -1], [4, 4],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, -6], [4, -1], [4, 4],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6, 3], [4, 4], [4, 4],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6], [4, 4, 3], [4, 4],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6], [4, 4], [4, 4, 3],
+            within_bound=False)
+    with pytest.raises(ValueError, match=r"stride.*> 1.*"):
+        PatchExtractor.get_coordinates(
+            [9, 6], [4, 4], [0, 0],
+            within_bound=False)
+
+    # * test filtering
+    bbox_list = np.array([
+        [0, 0, 4, 4],
+        [0, 4, 4, 8],
+        [4, 0, 8, 4],
+        [4, 4, 8, 8],
+        [8, 0, 12, 4],
+        [8, 4, 12, 8],
+    ])
+    mask = np.zeros([9, 6])
+    mask[0:4, 3:8] = 1  # will flag first 2
+    mask_reader = VirtualWSIReader(mask)
+    flag_list = PatchExtractor.filter_coordinates(
+                    mask_reader, bbox_list,
+                    resolution=1.0, units='baseline')
+    assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
+
+
+@pytest.mark.skip(reason="working, skip to run other test")
+def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg):
+    """Test if different resolution read is as expected."""
+    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
+    idx = 3
+    patch_shape = np.array([1024, 1024])
+    mpp_10 = WSIPatchDataset(
+            wsi_path=_mini_wsi1_svs,
+            mode='wsi',
+            patch_shape=patch_shape,
+            stride_shape=patch_shape,
+            resolution=1.0,
+            units='mpp')[idx]['image']
+    mpp_20 = WSIPatchDataset(
+            wsi_path=_mini_wsi1_svs,
+            mode='wsi',
+            patch_shape=(patch_shape / 2).astype(np.int32),
+            stride_shape=(patch_shape / 2).astype(np.int32),
+            resolution=2.0,
+            units='mpp')[idx]['image']
+    mpp_05 = WSIPatchDataset(
+            wsi_path=_mini_wsi1_svs,
+            mode='wsi',
+            patch_shape=(patch_shape * 2).astype(np.int32),
+            stride_shape=(patch_shape * 2).astype(np.int32),
+            resolution=0.5,
+            units='mpp')[idx]['image']
+    # resizing then do correlation check
+    mpp_20 = cv2.resize(mpp_20, (1024, 1024))
+    mpp_05 = cv2.resize(mpp_05, (1024, 1024))
+    cc = np.corrcoef(
+        cv2.cvtColor(mpp_05, cv2.COLOR_RGB2GRAY).flatten(),
+        cv2.cvtColor(mpp_10, cv2.COLOR_RGB2GRAY).flatten()
+    )
+    assert np.min(cc) > 0.9, cc
+    cc = np.corrcoef(
+        cv2.cvtColor(mpp_20, cv2.COLOR_RGB2GRAY).flatten(),
+        cv2.cvtColor(mpp_10, cv2.COLOR_RGB2GRAY).flatten()
+    )
+    assert np.min(cc) > 0.9, cc
+    cc = np.corrcoef(
+        cv2.cvtColor(mpp_20, cv2.COLOR_RGB2GRAY).flatten(),
+        cv2.cvtColor(mpp_05, cv2.COLOR_RGB2GRAY).flatten()
+    )
+    assert np.min(cc) > 0.9, cc
+
+    # test run time only for different resolution units
+    WSIPatchDataset(
+        wsi_path=_mini_wsi1_svs,
+        mode='wsi',
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=10.0,
+        units='power')[idx]['image']
+
+    WSIPatchDataset(
+        wsi_path=_mini_wsi1_svs,
+        mode='wsi',
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=4.0,
+        units='baseline')[idx]['image']
+
+    WSIPatchDataset(
+        wsi_path=_mini_wsi1_svs,
+        mode='wsi',
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1,
+        units='level')[idx]['image']
+
+    # test tile metadata enforcement
+    # * only read at 1 resolution for tile, so resolution
+    # * and units should have no effect
+    roi1 = WSIPatchDataset(
+        wsi_path=_mini_wsi1_jpg,
+        mode='tile',
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1,
+        units='mpp')[idx]['image']
+    roi2 = WSIPatchDataset(
+        wsi_path=_mini_wsi1_jpg,
+        mode='tile',
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=4.0,
+        units='power')[idx]['image']
+    assert (roi1 - roi2).sum() == 0
+
 
 @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
@@ -258,6 +514,15 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
         reuse_init_wsi(
             patch_shape=[512, 512],
             stride_shape=[512, 512, 512])
+    # negative
+    with pytest.raises(ValueError):
+        reuse_init_wsi(
+            patch_shape=[512, -512],
+            stride_shape=[512, 512])
+    with pytest.raises(ValueError):
+        reuse_init_wsi(
+            patch_shape=[512, 512],
+            stride_shape=[512, -512])
 
     # * dummy test for output correctness
     # * striding and patch should be as expected
@@ -516,7 +781,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret_dataset")
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():  # Working
     """Test for kather patch dataset."""
     # test defining a subclas of dataset info but not defining

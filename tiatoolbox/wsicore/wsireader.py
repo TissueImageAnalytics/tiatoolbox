@@ -1414,10 +1414,10 @@ class VirtualWSIReader(WSIReader):
         param = WSIMeta(
             file_path=self.input_path,
             objective_power=None,
-            # ask john, wont this need to flip x,y ?
-            slide_dimensions=self.img.shape[:-1],
+            # align to XY to match with OpenSlide
+            slide_dimensions=self.img.shape[:2][::-1],
             level_count=1,
-            level_dimensions=(self.img.shape[:-1],),
+            level_dimensions=(self.img.shape[:2][::-1],),
             level_downsamples=[1.0],
             vendor=None,
             mpp=None,
@@ -1537,9 +1537,14 @@ class VirtualWSIReader(WSIReader):
         resolution units from the source `reader_info`.
         """
         # to WH to match with WSI
+        if reader_info.mpp is None:
+            raise ValueError('Reference `mpp` must not be None.')
+        if reader_info.objective_power is None:
+            raise ValueError('Reference `objective_power` must not be None.')
         mask_shape = np.array(self.img.shape[:2])[::-1]
         mask_scale = reader_info.slide_dimensions / mask_shape
         mask_mpp = reader_info.mpp * mask_scale
+        mask_obj = reader_info.objective_power / mask_scale[0]
         self.info = WSIMeta(
             file_path=self.info.file_path,
             slide_dimensions=mask_shape,
@@ -1547,8 +1552,7 @@ class VirtualWSIReader(WSIReader):
             level_dimensions=(mask_shape,),
             level_downsamples=[mask_scale[0]],
             vendor=None,
-            # TODO: expose attaching to this ?
-            # objective_power=reader_info.objective_power,
+            objective_power=mask_obj,
             mpp=mask_mpp,
             raw=None,
         )

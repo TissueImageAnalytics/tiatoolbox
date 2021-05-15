@@ -210,15 +210,17 @@ class PatchExtractor(ABC):
         image_shape = np.array(image_shape)
         patch_shape = np.array(patch_shape)
         stride_shape = np.array(stride_shape)
-        if len(image_shape.shape) > 2 and \
-                not np.issubdtype(image_shape.dtype, np.number):
-            raise ValueError('Invalid `image_shape` value %s.' % image_shape)
-        if len(patch_shape.shape) > 2 and \
-                not np.issubdtype(patch_shape.dtype, np.number):
+        if not np.issubdtype(image_shape.dtype, np.integer) or \
+                np.size(image_shape) > 2 or np.any(image_shape < 0):
             raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if len(stride_shape.shape) > 2 and \
-                not np.issubdtype(stride_shape.dtype, np.number):
+        if not np.issubdtype(patch_shape.dtype, np.integer) or \
+                np.size(patch_shape) > 2 or np.any(patch_shape < 0):
+            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
+        if not np.issubdtype(stride_shape.dtype, np.integer) or \
+                np.size(stride_shape) > 2 or np.any(stride_shape < 0):
             raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
+        if np.any(stride_shape < 1):
+            raise ValueError('`stride_shape` value %s must > 1.' % stride_shape)
 
         def flat_mesh_grid_coord(x, y):
             x, y = np.meshgrid(x, y)

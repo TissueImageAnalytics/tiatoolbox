@@ -21,6 +21,7 @@
 
 import os
 import pathlib
+import warnings
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
@@ -224,18 +225,27 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
             raise ValueError('`%s` is not supported.' % mode)
         patch_shape = np.array(patch_shape)
         stride_shape = np.array(stride_shape)
-        if len(patch_shape.shape) > 2 and \
-                not np.issubdtype(patch_shape.dtype, np.number):
+        # ! dont do the checking for patch at this stage and let
+        # ! get coordinates deal with it? EXTRREMELY UGLY
+        # print(patch_shape)
+        if not np.issubdtype(patch_shape.dtype, np.integer) or \
+                np.size(patch_shape) > 2 or np.any(patch_shape < 0):
             raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if len(stride_shape.shape) > 2 and \
-                not np.issubdtype(stride_shape.dtype, np.number):
+        if not np.issubdtype(stride_shape.dtype, np.integer) or \
+                np.size(stride_shape) > 2 or np.any(stride_shape < 0):
             raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
+        if np.any(stride_shape < 1):
+            raise ValueError('`stride_shape` value %s must > 1.' % stride_shape)
 
         # ! We must do conversion else wsireader will error out
         wsi_path = pathlib.Path(wsi_path)
         if mode == "wsi":
             self.reader = get_wsireader(wsi_path)
         else:
+            warnings.warn((
+                "WSIPatchDataset only read tile at "
+                '`units="baseline"` and `resolution=1.0`.'
+            ))
             # overwriting for later read
             # units = 'mpp'
             # resolution = 1.0
@@ -275,6 +285,9 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
             lv0_pyramid_shape[::-1], lv0_patch_shape, lv0_stride_shape
         )
 
+        if len(self.input_list) == 0:
+            raise ValueError('No coordinate remain after tiling!')
+
         if mask_path is not None:
             # ? extension checking
             if not os.path.isfile(wsi_path):
@@ -294,6 +307,9 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
                         units=units,
                 )
             self.input_list = self.input_list[sel]
+
+        if len(self.input_list) == 0:
+            raise ValueError('No coordinate remain after tiling!')
 
         self.patch_shape = patch_shape
         self.lv0_patch_shape = lv0_patch_shape
