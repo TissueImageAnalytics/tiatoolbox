@@ -379,6 +379,32 @@ def test_maskfixedwindow_patch_extractor_ndpi(_sample_ndpi):
     with pytest.raises(NotImplementedError):
         patches.merge_patches(patches=None)
 
+    # test for sing stride
+    with pytest.raises(ValueError):
+        wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+        patches = patchextraction.get_patch_extractor(
+            input_img=input_img,
+            input_mask=wsi_mask,
+            method_name="mask",
+            patch_size=patch_size,
+            resolution=res,
+            units="level",
+            stride=stride[0],
+        )
+
+    # test for none stride
+    with pytest.raises(ValueError):
+        wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+        patches = patchextraction.get_patch_extractor(
+            input_img=input_img,
+            input_mask=wsi_mask,
+            method_name="mask",
+            patch_size=patch_size,
+            resolution=res,
+            units="level",
+            stride=None,
+        )
+
     # test for empty mask
     with pytest.raises(ValueError):
         wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
