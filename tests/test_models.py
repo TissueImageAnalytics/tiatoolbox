@@ -4,15 +4,16 @@
 import os
 import pathlib
 import shutil
-import sys
+# import sys
 
 import cv2
 import numpy as np
 import pytest
 import torch
-from click.testing import CliRunner
+# from click.testing import CliRunner
 
-from tiatoolbox import cli, rcParam
+# from tiatoolbox import cli,
+from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.classification.abc import ModelBase
@@ -21,9 +22,7 @@ from tiatoolbox.models.dataset import (ABCDatasetInfo, KatherPatchDataset,
                                        predefined_preproc_func)
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import download_data, imread, unzip_data
-from tiatoolbox.wsicore import wsireader
-from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
-                                          get_wsireader)
+from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, get_wsireader)
 
 # sys.path.append('.')
 # sys.path.append('..')
@@ -662,9 +661,6 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
 # @pytest.mark.skip(reason="working, skip to run other test")
 def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test synchronize read for VirtualReader"""
-    # _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.svs'
-    # _mini_wsi1_jpg = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.jpg'
-    # _mini_wsi1_msk = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mask.png'
 
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
@@ -681,7 +677,8 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
 
     # now check sync read by comparing the RoI with different base
     # the output should be at same resolution even if source is of different base
-    bigger_msk = cv2.resize(msk, (0, 0), fx=4.0, fy=4.0, interpolation=cv2.INTER_NEAREST)
+    bigger_msk = cv2.resize(msk, (0, 0), fx=4.0, fy=4.0,
+                            interpolation=cv2.INTER_NEAREST)
     bigger_msk_reader = VirtualWSIReader(bigger_msk)
     # * must set mpp metadata to not None else wont work
     # error checking first
@@ -948,9 +945,7 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     such as the sync test and varying resolution tiling test).
     - expected prediction at simple patch.
     """
-    # _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.svs'
-    # _mini_wsi1_jpg = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.jpg'
-    # _mini_wsi1_msk = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mask.png'
+
     # to prevent wsireader complaint
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
@@ -1088,9 +1083,9 @@ def test_patch_predictor_correctness(_sample_patch1, _sample_patch2):
             predictions_check=[5, 8])
 
 
-# # -------------------------------------------------------------------------------------
+# # ----------------------------------------------------------------------------------
 # # Command Line Interface
-# # -------------------------------------------------------------------------------------
+# # ----------------------------------------------------------------------------------
 
 
 # def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):

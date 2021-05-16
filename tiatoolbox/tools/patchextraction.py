@@ -20,11 +20,11 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
-from matplotlib.pyplot import flag
+# from matplotlib.pyplot import flag
 import numpy as np
 import math
 
-from numpy.lib.arraysetops import isin
+# from numpy.lib.arraysetops import isin
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
