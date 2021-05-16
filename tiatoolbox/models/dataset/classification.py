@@ -84,7 +84,7 @@ def predefined_preproc_func(dataset_name):
     return preproc_func
 
 
-class PatchDataset(abc.__ABCPatchDataset):
+class PatchDataset(abc.ABCPatchDataset):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
 
@@ -149,7 +149,7 @@ class PatchDataset(abc.__ABCPatchDataset):
         return data
 
 
-class WSIPatchDataset(abc.__ABCPatchDataset):
+class WSIPatchDataset(abc.ABCPatchDataset):
     """Defines a WSI-level patch dataset.
 
     Attributes:

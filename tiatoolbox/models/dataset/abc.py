@@ -27,7 +27,7 @@ import os
 from tiatoolbox.utils.misc import imread
 
 
-class __ABCPatchDataset(torch.utils.data.Dataset):
+class ABCPatchDataset(torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
 
     Attributes:

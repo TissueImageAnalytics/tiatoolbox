@@ -185,7 +185,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():  # Working
     """Test for kather patch dataset."""
     # test defining a subclas of dataset info but not defining
@@ -808,13 +808,9 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
         units="baseline",
     )
     assert len(wds) == len(tds)
-    predictor = CNNPatchPredictor(
-        pretrained_model='resnet18-kather100K',
-        batch_size=1,
-        verbose=False
-    )
     # now loop over each read and ensure they look similar
-    for idx in range(len(wds)):
+    num_sample = len(wds)
+    for idx in rane(num_sample):
         cc = np.corrcoef(
                 cv2.cvtColor(wds[idx]['image'], cv2.COLOR_RGB2GRAY).flatten(),
                 cv2.cvtColor(tds[idx]['image'], cv2.COLOR_RGB2GRAY).flatten())

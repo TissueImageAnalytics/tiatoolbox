@@ -312,25 +312,33 @@ class CNNPatchPredictor:
 
         Args:
             img_list (list, ndarray): List of inputs to process. When using`patch` mode,
-                the input must be either a list of images, a list of image file paths
-                or a numpy array of an image list. When using `tile` or `wsi` mode, the
-                input must be a list of file paths.
-            mask_list (list): List of masks. Patches are only processed if they are witin a
-                masked area. If not provided, then the entire image is processed.
-            label_list: List of labels. If using `tile` or `wsi` mode, then only a single
-                label per image tile or whole-slide image is supported.
+            the input must be either a list of images, a list of image file paths
+            or a numpy array of an image list. When using `tile` or `wsi` mode, the
+            input must be a list of file paths.
+
+            mask_list (list): List of masks. Patches are only processed if they are
+            witin a masked area. If not provided, then the entire image is processed.
+
+            label_list: List of labels. If using `tile` or `wsi` mode, then only a
+            single label per image tile or whole-slide image is supported.
             mode (str): Type of input to process. Choose from either `patch`, `tile` or
                 `wsi`.
+
             return_probabilities (bool): Whether to return per-class probabilities.
+
             return_labels (bool): Whether to return the labels with the predictions.
             on_gpu (bool): Whether to run model on the GPU.
+
             patch_shape (tuple): Size of patches input to the model. Patches are at
                 requested read resolution, not with respect to to level 0.
+
             stride_shape (tuple): Stride using during tile and WSI processing. Stride
                 is at requested read resolution, not with respect to to level 0.
             resolution (float): Resolution used for reading the image.
+
             units (str): Units of resolution used for reading the image. Choose from
                 either `level` or `power` or `mpp`.
+
             save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images.
 
