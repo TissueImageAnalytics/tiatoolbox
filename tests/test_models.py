@@ -661,7 +661,6 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
 # @pytest.mark.skip(reason="working, skip to run other test")
 def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test synchronize read for VirtualReader"""
-
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
@@ -938,13 +937,11 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 
 # @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
-    """Test normal run of wsi predictor.
-
-    This is not prediction correctness test. Correctness test need to check
-    - correct patch read at varying resolution args (more about dataset test,
-    such as the sync test and varying resolution tiling test).
-    - expected prediction at simple patch.
-    """
+    """Test normal run of wsi predictor."""
+    # This is not prediction correctness test. Correctness test need to check
+    # - correct patch read at varying resolution args (more about dataset test,
+    # such as the sync test and varying resolution tiling test).
+    # - expected prediction at simple patch.
 
     # to prevent wsireader complaint
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
