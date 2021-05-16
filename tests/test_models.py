@@ -185,7 +185,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():  # Working
     """Test for kather patch dataset."""
     # test defining a subclas of dataset info but not defining
@@ -195,9 +195,34 @@ def test_DatasetInfo():  # Working
         class Proto(ABCDatasetInfo):
             def __init__(self):
                 self.a = "a"
-
+        # intentionally create to check error
+        # skipcq
         Proto()
+    with pytest.raises(TypeError):
 
+        class Proto(ABCDatasetInfo):
+            def __init__(self):
+                self.input_list = "a"
+        # intentionally create to check error
+        # skipcq
+        Proto()
+    with pytest.raises(TypeError):
+        class Proto(ABCDatasetInfo):
+            def __init__(self):
+                self.input_list = "a"
+                self.label_list = 'a'
+        # intentionally create to check error
+        # skipcq
+        Proto()
+    with pytest.raises(TypeError):
+
+        class Proto(ABCDatasetInfo):
+            def __init__(self):
+                self.input_list = "a"
+                self.label_name = 'a'
+        # intentionally create to check error
+        # skipcq
+        Proto()
     # test kather with default init
     dataset = KatherPatchDataset()
     # kather with default data path skip download
@@ -1011,7 +1036,7 @@ def _test_predictor_correctness(
         ), pretrained_model
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_correctness(_sample_patch1, _sample_patch2):
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     pretrained_info = {
