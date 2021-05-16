@@ -255,7 +255,10 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
             resolution = 1.0
             img = imread(wsi_path)
             metadata = WSIMeta(
-                mpp=np.array([0.25, 0.25]),
+                # Assign blind default value as it has no impact later
+                # but is required for sync mask read
+                mpp=np.array([1.0, 1.0]),
+                objective_power=10,
                 slide_dimensions=np.array(img.shape[:2][::-1]),
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
@@ -325,7 +328,10 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         lv0_coords = self.input_list[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
-            lv0_coords, resolution=self.resolution, units=self.units
+            lv0_coords, resolution=self.resolution, units=self.units,
+            # ! enforce this becaue of different behavior
+            # ! between openslide and may be other reader?
+            pad_constant_values=255
         )
         # ! due to internal scaling, there will be rounding error and wont match
         # ! the requested size at requested read resolution
