@@ -148,3 +148,6 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.input_list)
+
+    def __getitem__(self, idx):
+        raise NotImplementedError

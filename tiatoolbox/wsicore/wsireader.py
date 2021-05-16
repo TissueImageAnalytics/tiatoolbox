@@ -356,7 +356,7 @@ class WSIReader:
     def _find_tile_params(
         self,
         tile_objective_value: int,
-        tile_read_size: Tuple[int, int],
+        # tile_read_size: Tuple[int, int],  # get unused import notice, why?
     ):
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
