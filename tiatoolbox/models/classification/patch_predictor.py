@@ -242,9 +242,10 @@ class CNNPatchPredictor:
             shuffle=False,
         )
 
-        pbar = tqdm.tqdm(
-            total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
-        )
+        if self.verbose:
+            pbar = tqdm.tqdm(
+                total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
+            )
 
         if on_gpu:
             # DataParallel works only for cuda
@@ -264,7 +265,7 @@ class CNNPatchPredictor:
             batch_output_probabilities = self.model.infer_batch(
                 model, batch_data["image"], on_gpu
             )
-            # get the index of the class with the maximum probability
+            # We get the index of the class with the maximum probability
             batch_output_predictions = self.__postprocess(batch_output_probabilities)
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
@@ -272,9 +273,11 @@ class CNNPatchPredictor:
             if return_coordinates:
                 cum_output["coordinates"].extend(batch_data["coords"].tolist())
             if return_labels:  # be careful of `s`
-                cum_output["labels"].extend(batch_data["label"].tolist())
+                # We dont use tolist here because label may be of mixed types
+                # and hence collated as list by torch
+                cum_output["labels"].extend(list(batch_data["label"]))
 
-            # may be a with block + flag would be nicer
+            # May be a with block + flag would be nicer
             if self.verbose:
                 pbar.update()
         if self.verbose:
@@ -386,8 +389,8 @@ class CNNPatchPredictor:
                 wsi_mask = None if mask_list is None else mask_list[idx]
 
                 dataset = WSIPatchDataset(
+                    wsi_path,
                     mode=mode,
-                    wsi_path=wsi_path,
                     mask_path=wsi_mask,
                     patch_shape=patch_shape,
                     stride_shape=stride_shape,

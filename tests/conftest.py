@@ -613,11 +613,11 @@ def _mini_wsi1_msk(tmpdir_factory):
     Download svs image for pytest.
 
     """
-    file_path = tmpdir_factory.mktemp("data").join("CMU-mini.svs")
+    file_path = tmpdir_factory.mktemp("data").join("CMU-mask.png")
     if not pathlib.Path(file_path).is_file():
         print("\nDownloading %s" % file_path)
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.svs"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mask.png"
         )
         with open(file_path, "wb") as f:
             f.write(r.content)
