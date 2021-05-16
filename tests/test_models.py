@@ -184,6 +184,8 @@ def test_DatasetInfo():  # Working
     # enforcing attributes, should crash
     with pytest.raises(TypeError):
 
+        # intentionally create to check error
+        # skipcq
         class Proto(ABCDatasetInfo):
             def __init__(self):
                 self.a = "a"
@@ -192,6 +194,8 @@ def test_DatasetInfo():  # Working
         Proto()
     with pytest.raises(TypeError):
 
+        # intentionally create to check error
+        # skipcq
         class Proto(ABCDatasetInfo):
             def __init__(self):
                 self.input_list = "a"
@@ -199,6 +203,8 @@ def test_DatasetInfo():  # Working
         # skipcq
         Proto()
     with pytest.raises(TypeError):
+        # intentionally create to check error
+        # skipcq
         class Proto(ABCDatasetInfo):
             def __init__(self):
                 self.input_list = "a"
@@ -208,6 +214,8 @@ def test_DatasetInfo():  # Working
         Proto()
     with pytest.raises(TypeError):
 
+        # intentionally create to check error
+        # skipcq
         class Proto(ABCDatasetInfo):
             def __init__(self):
                 self.input_list = "a"
@@ -606,29 +614,30 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
     assert np.min(cc) > 0.9, cc
 
     # test run time only for different resolution units
-    WSIPatchDataset(
+    ds = WSIPatchDataset(
         wsi_path=_mini_wsi1_svs,
         mode='wsi',
         patch_shape=patch_shape,
         stride_shape=patch_shape,
         resolution=10.0,
         units='power')[idx]['image']
-
-    WSIPatchDataset(
+    assert ds is not None
+    ds = WSIPatchDataset(
         wsi_path=_mini_wsi1_svs,
         mode='wsi',
         patch_shape=patch_shape,
         stride_shape=patch_shape,
         resolution=4.0,
         units='baseline')[idx]['image']
-
-    WSIPatchDataset(
+    assert ds is not None
+    ds = WSIPatchDataset(
         wsi_path=_mini_wsi1_svs,
         mode='wsi',
         patch_shape=patch_shape,
         stride_shape=patch_shape,
         resolution=1,
         units='level')[idx]['image']
+    assert ds is not None
 
     # test tile metadata enforcement
     # * only read at 1 resolution for tile, so resolution
@@ -753,6 +762,7 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
 
     patch_shape = [512, 512]
     # now check normal reading for dataset with mask
+    item_list = []
     ds = WSIPatchDataset(
         _mini_wsi1_svs,
         mode='wsi',
@@ -761,7 +771,7 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
         stride_shape=patch_shape,
         resolution=1.0,
         units='mpp')
-    ds[10]
+    item_list.append(ds[10])
     ds = WSIPatchDataset(
         _mini_wsi1_svs,
         mode='wsi',
@@ -770,7 +780,7 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
         stride_shape=patch_shape,
         resolution=1.0,
         units='baseline')
-    ds[10]
+    item_list.append(ds[10])
     ds = WSIPatchDataset(
         _mini_wsi1_svs,
         mode='wsi',
@@ -779,7 +789,7 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
         stride_shape=patch_shape,
         resolution=15.0,
         units='power')
-    ds[10]
+    item_list.append(ds[10])
 
     # * now check sync read for tile ans wsi
     patch_shape = np.array([2048, 2048])

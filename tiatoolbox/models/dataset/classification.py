@@ -22,17 +22,17 @@
 import os
 import pathlib
 import warnings
-from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 import numpy as np
 import PIL
 import torchvision.transforms as transforms
 
 from tiatoolbox.models.dataset import abc
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.wsicore.wsimeta import WSIMeta
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
 class _TorchPreprocCaller:
