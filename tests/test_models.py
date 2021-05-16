@@ -37,7 +37,7 @@ from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_get_coordinates():
     """Test tiling coordinate getter."""
     expected_output = np.array([
@@ -128,7 +128,7 @@ def test_get_coordinates():
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -161,7 +161,7 @@ def test_create_backbone():
         get_model("secret_model", pretrained=False)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_set_root_dir():
     """Test for setting new root dir."""
     # skipcq
@@ -185,7 +185,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():  # Working
     """Test for kather patch dataset."""
     # test defining a subclas of dataset info but not defining
@@ -239,7 +239,7 @@ def test_DatasetInfo():  # Working
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -257,7 +257,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -302,7 +302,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -329,7 +329,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all examples below should fail when input to PatchDataset
@@ -425,7 +425,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret_dataset")
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     """A test for creation and bare output."""
     # to prevent wsireader complaint
@@ -540,7 +540,7 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     # plt.savefig('dump.png')
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg):
     """Test if different resolution read is as expected."""
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
@@ -631,7 +631,7 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
     assert (roi1 - roi2).sum() == 0
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test synchronize read for VirtualReader"""
     # _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.svs'
@@ -796,7 +796,7 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
         assert np.min(cc) > 0.95, (cc, idx)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -818,7 +818,7 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -914,7 +914,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output['predictions']) == len(output['probabilities'])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test normal run of wsi predictor.
 
@@ -931,10 +931,10 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
 
+    patch_shape = np.array([224, 224])
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K", batch_size=1)
 
     # * sanity check, both output should be the same with same resolution read args
-    patch_shape = np.array([224, 224])
     wsi_output = predictor.predict(
         [_mini_wsi1_svs],
         mask_list=[_mini_wsi1_msk],
@@ -966,6 +966,20 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     # ! cant do exact test because different base seem to
     # ! mess up some patch
     assert accuracy > 0.9, np.nonzero(~diff)
+
+    # * test read multiple
+    predictor.predict(
+        [_mini_wsi1_svs, _mini_wsi1_svs, _mini_wsi1_svs],
+        mask_list=[_mini_wsi1_msk, _mini_wsi1_msk, _mini_wsi1_msk],
+        mode="wsi",
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+        patch_shape=patch_shape,
+        stride_shape=patch_shape,
+        resolution=1.0,
+        units="baseline",
+    )
 
 
 def _test_predictor_correctness(

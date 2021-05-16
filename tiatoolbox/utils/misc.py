@@ -567,6 +567,11 @@ def save_json(output, output_path):
         output_path (str): Output path for dictionary.
 
     """
-    output = {k: v.tolist() for k, v in output.items()}
+    new_output = {}
+    for k, v in output.items():
+        if isinstance(v, np.ndarray):
+            new_output[k] = v.tolist()
+        else:
+            new_output[k] = v
     with open(output_path, "w") as handle:
         json.dump(output, handle)

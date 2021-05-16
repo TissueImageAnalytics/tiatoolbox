@@ -20,12 +20,14 @@
 
 """This module enables patch-level prediction."""
 
+from logging import raiseExceptions
 import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
 import os
 import pathlib
+import warnings
 
 from tiatoolbox import rcParam, logger
 from tiatoolbox.models.abc import ModelBase
@@ -343,9 +345,12 @@ class CNNPatchPredictor:
             raise ValueError(
                 "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
             )
-
-        # if a label_list is provided, then return with the prediction
-        return_labels = bool(label_list)
+        if label_list is not None:
+            # if a label_list is provided, then return with the prediction
+            return_labels = bool(label_list)
+            if len(label_list) != len(img_list):
+                raise ValueError('len(label_list) != len(img_list) : %d != %d' %
+                                 (len(label_list), len(img_list)))
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
@@ -358,13 +363,13 @@ class CNNPatchPredictor:
         else:
             output_files = []  # generate a list of output file paths
             if len(img_list) > 1:
-                logger.warning(
+                warnings.warn(
                     "When providing multiple whole-slide images / tiles, "
                     "we save the outputs and return the locations "
                     "to the corresponding files."
                 )
             if len(img_list) > 1 and save_dir is None:
-                logger.warning(
+                warnings.warn(
                     "> 1 WSIs detected but there is no save directory set."
                     "All subsequent output will be save to current runtime"
                     "location under folder 'output'. Overwriting may happen!"
@@ -375,6 +380,8 @@ class CNNPatchPredictor:
                 save_dir = pathlib.Path(save_dir)
                 if not save_dir.is_dir():
                     os.makedirs(save_dir)
+                else:
+                    raise ValueError('`save_dir` exist!')
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
@@ -383,6 +390,7 @@ class CNNPatchPredictor:
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
 
+            output = []
             for idx, wsi_path in enumerate(img_list):
                 wsi_path = pathlib.Path(wsi_path)
                 wsi_label = None if label_list is None else label_list[idx]
@@ -410,10 +418,10 @@ class CNNPatchPredictor:
                     basename = wsi_path.stem
                     output_file_path = os.path.join(save_dir, basename)
                     output_files.append(output_file_path)
-                    save_json(output, output_file_path)
-                    output = output_files
+                    save_json(output_model, output_file_path)
+                    output = None
                 else:
-                    output = [output_model]
+                    output.append[output_model]
 
         return output
 
