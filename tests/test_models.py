@@ -4,40 +4,32 @@
 import os
 import pathlib
 import shutil
-import cv2
-from cv2 import data
+import sys
 
+import cv2
 import numpy as np
 import pytest
 import torch
 from click.testing import CliRunner
 
-import sys
+from tiatoolbox import cli, rcParam
+from tiatoolbox.models.backbone import get_model
+from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
+from tiatoolbox.models.classification.abc import ModelBase
+from tiatoolbox.models.dataset import (ABCDatasetInfo, KatherPatchDataset,
+                                       PatchDataset, WSIPatchDataset,
+                                       predefined_preproc_func)
+from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.utils.misc import download_data, imread, unzip_data
+from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
+                                          get_wsireader)
+
 # sys.path.append('.')
 # sys.path.append('..')
 
-from sklearn import metrics
-from tiatoolbox import rcParam
-from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.classification.abc import ModelBase
-from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
-from tiatoolbox.models.dataset import (
-    ABCDatasetInfo,
-    KatherPatchDataset,
-    PatchDataset,
-    WSIPatchDataset,
-    predefined_preproc_func,
-)
 
-from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import download_data, unzip_data, imread
-from tiatoolbox import cli
-from tiatoolbox.wsicore import wsireader
-
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
-
-
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_get_coordinates():
     """Test tiling coordinate getter."""
     expected_output = np.array([
@@ -128,7 +120,7 @@ def test_get_coordinates():
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -161,7 +153,7 @@ def test_create_backbone():
         get_model("secret_model", pretrained=False)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_set_root_dir():
     """Test for setting new root dir."""
     # skipcq
@@ -185,7 +177,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():  # Working
     """Test for kather patch dataset."""
     # test defining a subclas of dataset info but not defining
@@ -264,7 +256,7 @@ def test_DatasetInfo():  # Working
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -282,7 +274,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -327,7 +319,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -354,7 +346,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all examples below should fail when input to PatchDataset
@@ -450,7 +442,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret_dataset")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     """A test for creation and bare output."""
     # to prevent wsireader complaint
@@ -458,9 +450,11 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
 
     def reuse_init(**kwargs):
+        """A func."""
         return WSIPatchDataset(wsi_path=_mini_wsi1_svs, **kwargs)
 
     def reuse_init_wsi(**kwargs):
+        """A func."""
         return reuse_init(mode="wsi", **kwargs)
 
     # invalid mode
@@ -565,7 +559,7 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     # plt.savefig('dump.png')
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg):
     """Test if different resolution read is as expected."""
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
@@ -656,7 +650,7 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
     assert (roi1 - roi2).sum() == 0
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test synchronize read for VirtualReader"""
     # _mini_wsi1_svs = '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini.svs'
@@ -810,14 +804,14 @@ def test_sync_VirtualReader_read(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk)
     assert len(wds) == len(tds)
     # now loop over each read and ensure they look similar
     num_sample = len(wds)
-    for idx in rane(num_sample):
+    for idx in range(num_sample):
         cc = np.corrcoef(
                 cv2.cvtColor(wds[idx]['image'], cv2.COLOR_RGB2GRAY).flatten(),
                 cv2.cvtColor(tds[idx]['image'], cv2.COLOR_RGB2GRAY).flatten())
         assert np.min(cc) > 0.95, (cc, idx)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -839,7 +833,7 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -935,7 +929,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output['predictions']) == len(output['probabilities'])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test normal run of wsi predictor.
 
@@ -988,6 +982,11 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     # ! mess up some patch
     assert accuracy > 0.9, np.nonzero(~diff)
 
+    # remove prev generated data - just a test!
+    save_dir = 'model_wsi_output'
+    if os.path.exists(save_dir):
+        shutil.rmtree(save_dir, ignore_errors=True)
+
     # * test read multiple
     predictor.predict(
         [_mini_wsi1_svs, _mini_wsi1_svs, _mini_wsi1_svs],
@@ -1000,7 +999,22 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
         stride_shape=patch_shape,
         resolution=1.0,
         units="baseline",
+        save_dir=save_dir
     )
+    with pytest.raises(ValueError, match=r'.*save_dir.*exist.*'):
+        predictor.predict(
+            [_mini_wsi1_svs, _mini_wsi1_svs, _mini_wsi1_svs],
+            mask_list=[_mini_wsi1_msk, _mini_wsi1_msk, _mini_wsi1_msk],
+            mode="wsi",
+            return_probabilities=True,
+            return_labels=True,
+            on_gpu=False,
+            patch_shape=patch_shape,
+            stride_shape=patch_shape,
+            resolution=1.0,
+            units="baseline",
+            save_dir=save_dir
+        )
 
 
 def _test_predictor_correctness(
@@ -1010,6 +1024,7 @@ def _test_predictor_correctness(
     predictions_check=None,
     on_gpu=False,
 ):
+    """A func."""
     predictor = CNNPatchPredictor(
         pretrained_model=pretrained_model,
         batch_size=1,
@@ -1032,8 +1047,9 @@ def _test_predictor_correctness(
         ), pretrained_model
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_correctness(_sample_patch1, _sample_patch2):
+    """A func."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     pretrained_info = {
         'resnet18-kather100K'           : [1.0, 0.9999717473983765],

@@ -156,9 +156,7 @@ class PatchExtractor(ABC):
         """
 
         def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
-            """
-            Accept coord as long as its box contains bits of mask.
-            """
+            """Accept coord as long as its box contains bits of mask."""
             roi = reader.read_bounds(
                 coord,
                 resolution=reader.info.mpp if resolution is None else resolution,

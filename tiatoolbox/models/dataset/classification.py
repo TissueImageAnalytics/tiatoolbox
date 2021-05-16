@@ -27,14 +27,11 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 import numpy as np
 import PIL
-import torch
 import torchvision.transforms as transforms
-from abc import ABC, abstractmethod
 
-from tiatoolbox import rcParam
 from tiatoolbox.models.dataset import abc
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
-from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
+from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
 
 

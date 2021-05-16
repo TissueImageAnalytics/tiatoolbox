@@ -20,7 +20,6 @@
 
 """This module enables patch-level prediction."""
 
-from logging import raiseExceptions
 import tqdm
 import numpy as np
 import torch
@@ -29,7 +28,7 @@ import os
 import pathlib
 import warnings
 
-from tiatoolbox import rcParam, logger
+from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
@@ -302,7 +301,7 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_shape=[224, 224],  # at requested read resolution, not wrt to lv0
+        patch_shape=(224, 224),  # at requested read resolution, not wrt to lv0
         stride_shape=None,  # at requested read resolution, not wrt to lv0
         resolution=1.0,
         units="mpp",
@@ -429,7 +428,7 @@ class CNNPatchPredictor:
                     save_json(output_model, output_file_path)
                     output = None
                 else:
-                    output.append[output_model]
+                    output.append(output_model)
 
         return output
 
