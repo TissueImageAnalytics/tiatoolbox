@@ -81,7 +81,7 @@ def test_command_line_save_tiles(_sample_all_wsis, tmp_path):
         cli.main,
         [
             "save-tiles",
-            "--wsi_input",
+            "--img_input",
             str(pathlib.Path(_sample_all_wsis)),
             "--file_types",
             '"*.ndpi, *.svs"',
@@ -102,7 +102,7 @@ def test_command_line_save_tiles_single_file(_sample_svs, tmp_path):
         cli.main,
         [
             "save-tiles",
-            "--wsi_input",
+            "--img_input",
             str(_sample_svs),
             "--file_types",
             '"*.ndpi, *.svs"',
@@ -125,7 +125,7 @@ def test_command_line_save_tiles_file_not_found(_sample_svs, tmp_path):
         cli.main,
         [
             "save-tiles",
-            "--wsi_input",
+            "--img_input",
             str(_sample_svs)[:-1],
             "--file_types",
             '"*.ndpi, *.svs"',
