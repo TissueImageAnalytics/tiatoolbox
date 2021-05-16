@@ -259,17 +259,12 @@ class PatchExtractor(ABC):
         stride_w = self.stride[0] * level_downsample
         stride_h = self.stride[1] * level_downsample
 
-        data = self.get_coordinates(
-            img_h, img_w, img_patch_h, img_patch_w, stride_h, stride_w
-        )
-
-        # data = []
-
-        # for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-        #     for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-        #         start_h = h * stride_h
-        #         start_w = w * stride_w
-        #         data.append([start_w, start_h, None])
+        data = []
+        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+                start_h = h * stride_h
+                start_w = w * stride_w
+                data.append([start_w, start_h, None])
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
