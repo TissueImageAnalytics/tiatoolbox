@@ -227,24 +227,32 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         # ! dont do the checking for patch at this stage and let
         # ! get coordinates deal with it? EXTRREMELY UGLY
         # print(patch_shape)
-        if not np.issubdtype(patch_shape.dtype, np.integer) or \
-                np.size(patch_shape) > 2 or np.any(patch_shape < 0):
-            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if not np.issubdtype(stride_shape.dtype, np.integer) or \
-                np.size(stride_shape) > 2 or np.any(stride_shape < 0):
-            raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
+        if (
+            not np.issubdtype(patch_shape.dtype, np.integer)
+            or np.size(patch_shape) > 2
+            or np.any(patch_shape < 0)
+        ):
+            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
+        if (
+            not np.issubdtype(stride_shape.dtype, np.integer)
+            or np.size(stride_shape) > 2
+            or np.any(stride_shape < 0)
+        ):
+            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
         if np.any(stride_shape < 1):
-            raise ValueError('`stride_shape` value %s must > 1.' % stride_shape)
+            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
 
         # ! We must do conversion else wsireader will error out
         wsi_path = pathlib.Path(wsi_path)
         if mode == "wsi":
             self.reader = get_wsireader(wsi_path)
         else:
-            warnings.warn((
-                "WSIPatchDataset only read tile at "
-                '`units="baseline"` and `resolution=1.0`.'
-            ))
+            warnings.warn(
+                (
+                    "WSIPatchDataset only read tile at "
+                    '`units="baseline"` and `resolution=1.0`.'
+                )
+            )
             # overwriting for later read
             # units = 'mpp'
             # resolution = 1.0
@@ -288,7 +296,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         )
 
         if len(self.input_list) == 0:
-            raise ValueError('No coordinate remain after tiling!')
+            raise ValueError("No coordinate remain after tiling!")
 
         if mask_path is not None:
             # ? extension checking
@@ -311,7 +319,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             self.input_list = self.input_list[sel]
 
         if len(self.input_list) == 0:
-            raise ValueError('No coordinate remain after tiling!')
+            raise ValueError("No coordinate remain after tiling!")
 
         self.patch_shape = patch_shape
         self.lv0_patch_shape = lv0_patch_shape
@@ -325,10 +333,12 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         lv0_coords = self.input_list[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
-            lv0_coords, resolution=self.resolution, units=self.units,
+            lv0_coords,
+            resolution=self.resolution,
+            units=self.units,
             # ! enforce this becaue of different behavior
             # ! between openslide and may be other reader?
-            pad_constant_values=255
+            pad_constant_values=255,
         )
         # ! due to internal scaling, there will be rounding error and wont match
         # ! the requested size at requested read resolution

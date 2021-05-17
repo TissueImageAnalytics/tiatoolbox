@@ -34,14 +34,16 @@ __version__ = "0.6.0"
 # Initialize internal logging facilities, such that models and etc.
 # can have reporting mechanism, may need to change protocol
 import logging
+
 # We only create a logger if root has no handler to prevent overwriting use existing
 # logging
 logging.captureWarnings(True)
 if not logging.getLogger().hasHandlers():
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-                    '|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s',
-                    datefmt='%Y-%m-%d|%H:%M:%S')
+        "|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d|%H:%M:%S",
+    )
     handler.setFormatter(formatter)
     logger = logging.getLogger()  # get root logger
     logger.setLevel(logging.INFO)

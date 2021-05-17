@@ -354,9 +354,7 @@ class WSIReader:
         return read_level, level_bounds, output_size, post_read_scale_factor
 
     def _find_tile_params(
-        self,
-        tile_objective_value: int,
-        tile_read_size: Tuple[int, int]
+        self, tile_objective_value: int, tile_read_size: Tuple[int, int]
     ):
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
@@ -1470,9 +1468,9 @@ class VirtualWSIReader(WSIReader):
         """
         # to WH to match with WSI
         if reader_info.mpp is None:
-            raise ValueError('Reference `mpp` must not be None.')
+            raise ValueError("Reference `mpp` must not be None.")
         if reader_info.objective_power is None:
-            raise ValueError('Reference `objective_power` must not be None.')
+            raise ValueError("Reference `objective_power` must not be None.")
         mask_shape = np.array(self.img.shape[:2])[::-1]
         mask_scale = reader_info.slide_dimensions / mask_shape
         mask_mpp = reader_info.mpp * mask_scale

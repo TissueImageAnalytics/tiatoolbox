@@ -32,9 +32,11 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data, save_json
+from tiatoolbox.utils.misc import download_data, save_json, imread, imresize
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.wsicore.wsireader import get_wsireader, VirtualWSIReader
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 
 class CNNPatchModel(ModelBase):
@@ -301,8 +303,8 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_shape=(224, 224),  # at requested read resolution, not wrt to lv0
-        stride_shape=None,  # at requested read resolution, not wrt to lv0
+        patch_shape=(224, 224),
+        stride_shape=None,
         resolution=1.0,
         units="mpp",
         save_dir=None,
@@ -329,14 +331,14 @@ class CNNPatchPredictor:
             on_gpu (bool): Whether to run model on the GPU.
 
             patch_shape (tuple): Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to to level 0.
+                requested read resolution, not with respect to level 0.
 
             stride_shape (tuple): Stride using during tile and WSI processing. Stride
                 is at requested read resolution, not with respect to to level 0.
             resolution (float): Resolution used for reading the image.
 
             units (str): Units of resolution used for reading the image. Choose from
-                either `level` or `power` or `mpp`.
+                either `level`, `power` or `mpp`.
 
             save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images.
@@ -356,8 +358,10 @@ class CNNPatchPredictor:
             # if a label_list is provided, then return with the prediction
             return_labels = bool(label_list)
             if len(label_list) != len(img_list):
-                raise ValueError('len(label_list) != len(img_list) : %d != %d' %
-                                 (len(label_list), len(img_list)))
+                raise ValueError(
+                    "len(label_list) != len(img_list) : %d != %d"
+                    % (len(label_list), len(img_list))
+                )
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
@@ -388,7 +392,7 @@ class CNNPatchPredictor:
                 if not save_dir.is_dir():
                     os.makedirs(save_dir)
                 else:
-                    raise ValueError('`save_dir` exist!')
+                    raise ValueError("`save_dir` already exists!")
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
@@ -397,16 +401,15 @@ class CNNPatchPredictor:
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
 
-            output = []
-            for idx, wsi_path in enumerate(img_list):
-                wsi_path = pathlib.Path(wsi_path)
-                wsi_label = None if label_list is None else label_list[idx]
-                wsi_mask = None if mask_list is None else mask_list[idx]
+            for idx, img_path in enumerate(img_list):
+                img_path = pathlib.Path(img_path)
+                img_label = None if label_list is None else label_list[idx]
+                img_mask = None if mask_list is None else mask_list[idx]
 
                 dataset = WSIPatchDataset(
-                    wsi_path,
+                    img_path,
                     mode=mode,
-                    mask_path=wsi_mask,
+                    mask_path=img_mask,
                     patch_shape=patch_shape,
                     stride_shape=stride_shape,
                     resolution=resolution,
@@ -419,16 +422,18 @@ class CNNPatchPredictor:
                     return_coordinates=return_coordinates,
                     on_gpu=on_gpu,
                 )
-                output_model["label"] = wsi_label
+                output_model["label"] = img_label
 
                 if len(img_list) > 1:
-                    basename = wsi_path.stem
+                    basename = img_path.stem
                     output_file_path = os.path.join(save_dir, basename)
                     output_files.append(output_file_path)
                     save_json(output_model, output_file_path)
-                    output = None
+
+                    # set output to return locations of saved files
+                    output = output_files
                 else:
-                    output.append(output_model)
+                    output = output_model
 
         return output
 
