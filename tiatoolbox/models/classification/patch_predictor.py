@@ -25,6 +25,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import os
+import inspect
 import yaml
 import pathlib
 import warnings
@@ -34,6 +35,7 @@ from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data, save_json
+import tiatoolbox.models.classification
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
 
@@ -487,7 +489,8 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     pretrained_model = pretrained_model.lower()
     backbone, dataset = pretrained_model.split("-")
 
-    with open("../tiatoolbox/models/classification/pretrained_info.yml") as fptr:
+    root_path = os.path.dirname(inspect.getfile(tiatoolbox))
+    with open("%s/models/classification/pretrained_info.yml" % root_path) as fptr:
         pretrained_yml = yaml.full_load(fptr)
     pretrained_info = pretrained_yml[dataset]
     pretrained_models_dict = pretrained_info["models"]
@@ -504,7 +507,6 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
-        # pretrained_weight_url = cfg["pretrained"]
         pretrained_weight_url = pretrained_models_dict[backbone]
         print(pretrained_weight_url)
         pretrained_weight_url_split = pretrained_weight_url.split("/")
