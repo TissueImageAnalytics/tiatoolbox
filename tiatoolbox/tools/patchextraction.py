@@ -20,6 +20,7 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
+
 # from matplotlib.pyplot import flag
 import numpy as np
 import math
@@ -161,7 +162,7 @@ class PatchExtractor(ABC):
                 coord,
                 resolution=reader.info.mpp if resolution is None else resolution,
                 units="mpp" if units is None else units,
-                interpolation='nearest'
+                interpolation="nearest",
             )
             return np.sum(roi > 0) > 0
 
@@ -190,33 +191,42 @@ class PatchExtractor(ABC):
         """Calculate patch tiling coordinates.
 
         Args:
-            image_shape: a tuple(int, int) or ndarray of shape (2,).
+            image_shape: a tuple (int, int) or ndarray of shape (2,).
             Expected image shape at requested `resolution` and `units`.
-            Expected to be (height, width).
+            Expected to be (width, height).
 
-            patch_shape: a tuple(int, int) or ndarray of shape (2,).
+            patch_shape: a tuple (int, int) or ndarray of shape (2,).
             Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be (height, width).
+            Expected to be (width, height).
 
             stride_shape: a tuple(int, int) or ndarray of shape (2,).
             Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be (height, width).
+            Expected to be (width, height).
 
         """
         image_shape = np.array(image_shape)
         patch_shape = np.array(patch_shape)
         stride_shape = np.array(stride_shape)
-        if not np.issubdtype(image_shape.dtype, np.integer) or \
-                np.size(image_shape) > 2 or np.any(image_shape < 0):
-            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if not np.issubdtype(patch_shape.dtype, np.integer) or \
-                np.size(patch_shape) > 2 or np.any(patch_shape < 0):
-            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if not np.issubdtype(stride_shape.dtype, np.integer) or \
-                np.size(stride_shape) > 2 or np.any(stride_shape < 0):
-            raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
+        if (
+            not np.issubdtype(image_shape.dtype, np.integer)
+            or np.size(image_shape) > 2
+            or np.any(image_shape < 0)
+        ):
+            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
+        if (
+            not np.issubdtype(patch_shape.dtype, np.integer)
+            or np.size(patch_shape) > 2
+            or np.any(patch_shape < 0)
+        ):
+            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
+        if (
+            not np.issubdtype(stride_shape.dtype, np.integer)
+            or np.size(stride_shape) > 2
+            or np.any(stride_shape < 0)
+        ):
+            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
         if np.any(stride_shape < 1):
-            raise ValueError('`stride_shape` value %s must > 1.' % stride_shape)
+            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
 
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""

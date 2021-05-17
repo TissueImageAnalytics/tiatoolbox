@@ -32,11 +32,9 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data, save_json, imread, imresize
+from tiatoolbox.utils.misc import download_data, save_json
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.wsicore.wsireader import get_wsireader, VirtualWSIReader
-from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 
 class CNNPatchModel(ModelBase):
@@ -202,7 +200,7 @@ class CNNPatchPredictor:
         self.verbose = verbose
 
     @staticmethod
-    def __postprocess(probabilities):
+    def _postprocess(probabilities):
         """Apply post processing to output probablities. For classification, we apply
         a simple method and simply take the class with the highest probability.
 
@@ -269,7 +267,7 @@ class CNNPatchPredictor:
                 model, batch_data["image"], on_gpu
             )
             # We get the index of the class with the maximum probability
-            batch_output_predictions = self.__postprocess(batch_output_probabilities)
+            batch_output_predictions = self._postprocess(batch_output_probabilities)
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
@@ -303,8 +301,8 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_shape=(224, 224),
-        stride_shape=None,
+        patch_size=(224, 224),
+        stride_size=None,
         resolution=1.0,
         units="mpp",
         save_dir=None,
@@ -330,10 +328,10 @@ class CNNPatchPredictor:
             return_labels (bool): Whether to return the labels with the predictions.
             on_gpu (bool): Whether to run model on the GPU.
 
-            patch_shape (tuple): Size of patches input to the model. Patches are at
+            patch_size (tuple): Size of patches input to the model. Patches are at
                 requested read resolution, not with respect to level 0.
 
-            stride_shape (tuple): Stride using during tile and WSI processing. Stride
+            stride_size (tuple): Stride using during tile and WSI processing. Stride
                 is at requested read resolution, not with respect to to level 0.
             resolution (float): Resolution used for reading the image.
 
@@ -410,8 +408,8 @@ class CNNPatchPredictor:
                     img_path,
                     mode=mode,
                     mask_path=img_mask,
-                    patch_shape=patch_shape,
-                    stride_shape=stride_shape,
+                    patch_size=patch_size,
+                    stride_size=stride_size,
                     resolution=resolution,
                     units=units,
                 )
@@ -433,7 +431,7 @@ class CNNPatchPredictor:
                     # set output to return locations of saved files
                     output = output_files
                 else:
-                    output = output_model
+                    output = [output_model]
 
         return output
 
