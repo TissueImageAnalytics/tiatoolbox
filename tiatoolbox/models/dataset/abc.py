@@ -27,7 +27,7 @@ import os
 from tiatoolbox.utils.misc import imread
 
 
-class __ABCPatchDataset(torch.utils.data.Dataset):
+class ABCPatchDataset(torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
 
     Attributes:
@@ -47,8 +47,8 @@ class __ABCPatchDataset(torch.utils.data.Dataset):
         super().__init__()
         self.set_preproc_func(preproc_func)
         self.data_is_npy_alike = False
-        self.input_list = None
-        self.label_list = None
+        self.input_list = []
+        self.label_list = []
 
     def check_input_integrity(self, mode):
         """Perform check on the input to make sure it is valid."""
@@ -148,3 +148,6 @@ class __ABCPatchDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.input_list)
+
+    def __getitem__(self, idx):
+        raise NotImplementedError

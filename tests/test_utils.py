@@ -5,6 +5,7 @@ import random
 import shutil
 from pathlib import Path
 from typing import Tuple
+import hashlib
 
 import cv2
 import numpy as np
@@ -768,9 +769,28 @@ def test_download_data():
         shutil.rmtree(save_dir_path, ignore_errors=True)
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
 
-    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
-    assert os.path.exists(save_zip_path)
-    shutil.rmtree(save_dir_path, ignore_errors=True)
+    misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
+    old_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    # modify the content
+    with open(save_zip_path, 'wb') as fptr:
+        fptr.write('dataXXX'.encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    assert old_hash != bad_hash
+    misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
+    new_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    assert new_hash == old_hash
+
+    # test not overiting
+    # modify the content
+    with open(save_zip_path, 'wb') as fptr:
+        fptr.write('dataXXX'.encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    assert old_hash != bad_hash
+    misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
+    new_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    assert new_hash == bad_hash
+
+    shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
     assert os.path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -935,3 +955,29 @@ def test_normalise_padding_input_dims():
     """Test that normalise padding error with input dimensions > 1."""
     with pytest.raises(ValueError):
         utils.image.normalise_padding_size(((0, 0), (0, 0)))
+
+
+def test_select_device():
+    """Test if correct device is selected for models."""
+    device = misc.select_device(on_gpu=True)
+    assert device == "cuda"
+
+    device = misc.select_device(on_gpu=False)
+    assert device == "cpu"
+
+
+def test_model_to():
+    """Test for placing model on device."""
+    import torch.nn as nn
+    import torchvision.models as torch_models
+
+    # test on GPU
+    # no GPU on Travis so this will crash
+    with pytest.raises(RuntimeError):
+        model = torch_models.resnet18()
+        model = misc.model_to(on_gpu=True, model=model)
+
+    # test on CPU
+    model = torch_models.resnet18()
+    model = misc.model_to(on_gpu=False, model=model)
+    assert isinstance(model, nn.Module)

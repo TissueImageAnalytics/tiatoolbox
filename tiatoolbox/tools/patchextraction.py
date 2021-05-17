@@ -20,11 +20,12 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
-from matplotlib.pyplot import flag
+
+# from matplotlib.pyplot import flag
 import numpy as np
 import math
 
-from numpy.lib.arraysetops import isin
+# from numpy.lib.arraysetops import isin
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -156,13 +157,12 @@ class PatchExtractor(ABC):
         """
 
         def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
-            """
-            Accept coord as long as its box contains bits of mask.
-            """
+            """Accept coord as long as its box contains bits of mask."""
             roi = reader.read_bounds(
                 coord,
                 resolution=reader.info.mpp if resolution is None else resolution,
                 units="mpp" if units is None else units,
+                interpolation="nearest",
             )
             return np.sum(roi > 0) > 0
 
@@ -191,34 +191,42 @@ class PatchExtractor(ABC):
         """Calculate patch tiling coordinates.
 
         Args:
-            image_shape: a tuple(int, int) or ndarray of shape (2,).
+            image_shape: a tuple (int, int) or ndarray of shape (2,).
             Expected image shape at requested `resolution` and `units`.
-            Expected to be (height, width).
+            Expected to be (width, height).
 
-            patch_shape: a tuple(int, int) or ndarray of shape (2,).
+            patch_shape: a tuple (int, int) or ndarray of shape (2,).
             Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be (height, width).
+            Expected to be (width, height).
 
             stride_shape: a tuple(int, int) or ndarray of shape (2,).
             Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be (height, width).
+            Expected to be (width, height).
 
         """
         image_shape = np.array(image_shape)
         patch_shape = np.array(patch_shape)
         stride_shape = np.array(stride_shape)
-        if len(image_shape.shape) > 2 and not np.issubdtype(
-            image_shape.dtype, np.number
-        ):
-            raise ValueError("Invalid `image_shape` value %s." % image_shape)
-        if len(patch_shape.shape) > 2 and not np.issubdtype(
-            patch_shape.dtype, np.number
+        if (
+            not np.issubdtype(image_shape.dtype, np.integer)
+            or np.size(image_shape) > 2
+            or np.any(image_shape < 0)
         ):
             raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if len(stride_shape.shape) > 2 and not np.issubdtype(
-            stride_shape.dtype, np.number
+        if (
+            not np.issubdtype(patch_shape.dtype, np.integer)
+            or np.size(patch_shape) > 2
+            or np.any(patch_shape < 0)
+        ):
+            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
+        if (
+            not np.issubdtype(stride_shape.dtype, np.integer)
+            or np.size(stride_shape) > 2
+            or np.any(stride_shape < 0)
         ):
             raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
+        if np.any(stride_shape < 1):
+            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
 
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""
@@ -260,17 +268,12 @@ class PatchExtractor(ABC):
         stride_w = self.stride[0] * level_downsample
         stride_h = self.stride[1] * level_downsample
 
-        data = self.get_coordinates(
-            img_h, img_w, img_patch_h, img_patch_w, stride_h, stride_w
-        )
-
-        # data = []
-
-        # for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-        #     for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-        #         start_h = h * stride_h
-        #         start_w = w * stride_w
-        #         data.append([start_w, start_h, None])
+        data = []
+        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+                start_h = h * stride_h
+                start_w = w * stride_w
+                data.append([start_w, start_h, None])
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 

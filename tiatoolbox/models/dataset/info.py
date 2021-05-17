@@ -41,19 +41,16 @@ class ABCDatasetInfo(ABC):
     """
 
     @property
-    @classmethod
     @abstractmethod
     def input_list(self):
         raise NotImplementedError
 
     @property
-    # @classmethod
     @abstractmethod
     def label_list(self):
         raise NotImplementedError
 
     @property
-    @classmethod
     @abstractmethod
     def label_name(self):
         raise NotImplementedError

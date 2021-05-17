@@ -217,7 +217,7 @@ def test_cli_tissue_mask_Otsu(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Otsu",
@@ -231,7 +231,7 @@ def test_cli_tissue_mask_Otsu(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Otsu",
@@ -255,7 +255,7 @@ def test_cli_tissue_mask_Otsu_dir(_sample_all_wsis):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Otsu",
@@ -278,7 +278,7 @@ def test_cli_tissue_mask_Morphological(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Morphological",
@@ -292,7 +292,7 @@ def test_cli_tissue_mask_Morphological(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Morphological",
@@ -310,7 +310,7 @@ def test_cli_tissue_mask_Morphological(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Morphological",
@@ -332,7 +332,7 @@ def test_cli_tissue_mask_Morphological(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Morphological",
@@ -354,7 +354,7 @@ def test_cli_tissue_mask_Morphological(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Morphological",
@@ -380,7 +380,7 @@ def test_cli_tissue_mask_method_not_supported(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Test",
@@ -395,7 +395,7 @@ def test_cli_tissue_mask_method_not_supported(_sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img),
             "--method",
             "Morphological",
@@ -419,7 +419,7 @@ def test_cli_tissue_mask_file_not_found_error(_source_image):
         cli.main,
         [
             "tissue-mask",
-            "--wsi_input",
+            "--img_input",
             str(source_img)[:-1],
             "--method",
             "Otsu",

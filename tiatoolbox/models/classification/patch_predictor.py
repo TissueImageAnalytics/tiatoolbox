@@ -25,14 +25,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import os
+import inspect
+import yaml
 import pathlib
+import warnings
 
-from tiatoolbox import rcParam, logger
+from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data, save_json
-from tiatoolbox.models.classification.pretrained_info import _pretrained_model
+import tiatoolbox.models.classification
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
 
@@ -134,15 +137,15 @@ class CNNPatchPredictor:
 
     Usage:
         >>> data = [img1, img2]
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> data = np.array([img1, img2])
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> wsi_file = 'path/wsi.svs'
-        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100K")
+        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(wsi_file, mode='wsi')
 
     """
@@ -167,7 +170,7 @@ class CNNPatchPredictor:
 
             pretrained_model (str): Name of the existing models support by tiatoolbox
                 for processing the data. Refer to
-                `tiatoolbox.models.classification.get_pretrained_model` for detail.
+                `tiatoolbox.models.classification.get_pretrained_model` for details.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
@@ -199,7 +202,7 @@ class CNNPatchPredictor:
         self.verbose = verbose
 
     @staticmethod
-    def __postprocess(probabilities):
+    def _postprocess(probabilities):
         """Apply post processing to output probablities. For classification, we apply
         a simple method and simply take the class with the highest probability.
 
@@ -242,9 +245,10 @@ class CNNPatchPredictor:
             shuffle=False,
         )
 
-        pbar = tqdm.tqdm(
-            total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
-        )
+        if self.verbose:
+            pbar = tqdm.tqdm(
+                total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
+            )
 
         if on_gpu:
             # DataParallel works only for cuda
@@ -264,17 +268,19 @@ class CNNPatchPredictor:
             batch_output_probabilities = self.model.infer_batch(
                 model, batch_data["image"], on_gpu
             )
-            # get the index of the class with the maximum probability
-            batch_output_predictions = self.__postprocess(batch_output_probabilities)
+            # We get the index of the class with the maximum probability
+            batch_output_predictions = self._postprocess(batch_output_probabilities)
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
             if return_coordinates:
                 cum_output["coordinates"].extend(batch_data["coords"].tolist())
             if return_labels:  # be careful of `s`
-                cum_output["labels"].extend(batch_data["label"].tolist())
+                # We dont use tolist here because label may be of mixed types
+                # and hence collated as list by torch
+                cum_output["labels"].extend(list(batch_data["label"]))
 
-            # may be a with block + flag would be nicer
+            # May be a with block + flag would be nicer
             if self.verbose:
                 pbar.update()
         if self.verbose:
@@ -297,8 +303,8 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_shape=[224, 224],  # at requested read resolution, not wrt to lv0
-        stride_shape=None,  # at requested read resolution, not wrt to lv0
+        patch_size=(224, 224),
+        stride_size=None,
         resolution=1.0,
         units="mpp",
         save_dir=None,
@@ -307,25 +313,33 @@ class CNNPatchPredictor:
 
         Args:
             img_list (list, ndarray): List of inputs to process. When using`patch` mode,
-                the input must be either a list of images, a list of image file paths
-                or a numpy array of an image list. When using `tile` or `wsi` mode, the
-                input must be a list of file paths.
-            mask_list (list): List of masks. Patches are only processed if they are witin a
-                masked area. If not provided, then the entire image is processed.
-            label_list: List of labels. If using `tile` or `wsi` mode, then only a single
-                label per image tile or whole-slide image is supported.
+            the input must be either a list of images, a list of image file paths
+            or a numpy array of an image list. When using `tile` or `wsi` mode, the
+            input must be a list of file paths.
+
+            mask_list (list): List of masks. Patches are only processed if they are
+            witin a masked area. If not provided, then the entire image is processed.
+
+            label_list: List of labels. If using `tile` or `wsi` mode, then only a
+            single label per image tile or whole-slide image is supported.
             mode (str): Type of input to process. Choose from either `patch`, `tile` or
                 `wsi`.
+
             return_probabilities (bool): Whether to return per-class probabilities.
+
             return_labels (bool): Whether to return the labels with the predictions.
             on_gpu (bool): Whether to run model on the GPU.
-            patch_shape (tuple): Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to to level 0.
-            stride_shape (tuple): Stride using during tile and WSI processing. Stride
+
+            patch_size (tuple): Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0.
+
+            stride_size (tuple): Stride using during tile and WSI processing. Stride
                 is at requested read resolution, not with respect to to level 0.
             resolution (float): Resolution used for reading the image.
+
             units (str): Units of resolution used for reading the image. Choose from
-                either `level` or `power` or `mpp`.
+                either `level`, `power` or `mpp`.
+
             save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images.
 
@@ -340,9 +354,14 @@ class CNNPatchPredictor:
             raise ValueError(
                 "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
             )
-
-        # if a label_list is provided, then return with the prediction
-        return_labels = bool(label_list)
+        if label_list is not None:
+            # if a label_list is provided, then return with the prediction
+            return_labels = bool(label_list)
+            if len(label_list) != len(img_list):
+                raise ValueError(
+                    "len(label_list) != len(img_list) : %d != %d"
+                    % (len(label_list), len(img_list))
+                )
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
@@ -355,13 +374,13 @@ class CNNPatchPredictor:
         else:
             output_files = []  # generate a list of output file paths
             if len(img_list) > 1:
-                logger.warning(
+                warnings.warn(
                     "When providing multiple whole-slide images / tiles, "
                     "we save the outputs and return the locations "
                     "to the corresponding files."
                 )
             if len(img_list) > 1 and save_dir is None:
-                logger.warning(
+                warnings.warn(
                     "> 1 WSIs detected but there is no save directory set."
                     "All subsequent output will be save to current runtime"
                     "location under folder 'output'. Overwriting may happen!"
@@ -372,6 +391,8 @@ class CNNPatchPredictor:
                 save_dir = pathlib.Path(save_dir)
                 if not save_dir.is_dir():
                     os.makedirs(save_dir)
+                else:
+                    raise ValueError("`save_dir` already exists!")
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
@@ -380,17 +401,17 @@ class CNNPatchPredictor:
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
 
-            for idx, wsi_path in enumerate(img_list):
-                wsi_path = pathlib.Path(wsi_path)
-                wsi_label = None if label_list is None else label_list[idx]
-                wsi_mask = None if mask_list is None else mask_list[idx]
+            for idx, img_path in enumerate(img_list):
+                img_path = pathlib.Path(img_path)
+                img_label = None if label_list is None else label_list[idx]
+                img_mask = None if mask_list is None else mask_list[idx]
 
                 dataset = WSIPatchDataset(
+                    img_path,
                     mode=mode,
-                    wsi_path=wsi_path,
-                    mask_path=wsi_mask,
-                    patch_shape=patch_shape,
-                    stride_shape=stride_shape,
+                    mask_path=img_mask,
+                    patch_size=patch_size,
+                    stride_size=stride_size,
                     resolution=resolution,
                     units=units,
                 )
@@ -401,13 +422,15 @@ class CNNPatchPredictor:
                     return_coordinates=return_coordinates,
                     on_gpu=on_gpu,
                 )
-                output_model["label"] = wsi_label
+                output_model["label"] = img_label
 
                 if len(img_list) > 1:
-                    basename = wsi_path.stem
+                    basename = img_path.stem
                     output_file_path = os.path.join(save_dir, basename)
                     output_files.append(output_file_path)
-                    save_json(output, output_file_path)
+                    save_json(output_model, output_file_path)
+
+                    # set output to return locations of saved files
                     output = output_files
                 else:
                     output = [output_model]
@@ -422,34 +445,34 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
         pretrained_model (str): Name of the existing models support by tiatoolbox
             for processing the data. Currently supports:
 
-            - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
-            - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
-            - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
-            - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
-            - resnet101-kather100K: resnet101 backbone trained on Kather 100K dataset.
-            - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
-              100K dataset.
-            - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on
-              Kather 100K dataset.
-            - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on
-              Kather 100K dataset.
-            - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on
-              Kather 100K dataset.
-            - densenet121-kather100K: densenet121 backbone trained on
-              Kather 100K dataset.
-            - densenet161-kather100K: densenet161 backbone trained on
-              Kather 100K dataset.
-            - densenet169-kather100K: densenet169 backbone trained on
-              Kather 100K dataset.
-            - densenet201-kather100K: densenet201 backbone trained on
-              Kather 100K dataset.
-            - mobilenet_v2-kather100K: mobilenet_v2 backbone trained on
-              Kather 100K dataset.
-            - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on
-              Kather 100K dataset.
-            - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
-              Kather 100K dataset.
-            - googlenet-kather100K: googlenet backbone trained on Kather 100K dataset.
+            - alexnet-kather100k: alexnet backbone trained on Kather 100k dataset.
+            - resnet18-kather100k: resnet18 backbone trained on Kather 100k dataset.
+            - resnet34-kather100k: resnet34 backbone trained on Kather 100k dataset.
+            - resnet50-kather100k: resnet50 backbone trained on Kather 100k dataset.
+            - resnet101-kather100k: resnet101 backbone trained on Kather 100k dataset.
+            - resnext5032x4d-kather100k: resnext50_32x4d backbone trained on Kather
+              100k dataset.
+            - resnext101_32x8d-kather100k: resnext101_32x8d backbone trained on
+              Kather 100k dataset.
+            - wide_resnet50_2-kather100k: wide_resnet50_2 backbone trained on
+              Kather 100k dataset.
+            - wide_resnet101_2-kather100k: wide_resnet101_2 backbone trained on
+              Kather 100k dataset.
+            - densenet121-kather100k: densenet121 backbone trained on
+              Kather 100k dataset.
+            - densenet161-kather100k: densenet161 backbone trained on
+              Kather 100k dataset.
+            - densenet169-kather100k: densenet169 backbone trained on
+              Kather 100k dataset.
+            - densenet201-kather100k: densenet201 backbone trained on
+              Kather 100k dataset.
+            - mobilenet_v2-kather100k: mobilenet_v2 backbone trained on
+              Kather 100k dataset.
+            - mobilenet_v3_large-kather100k: mobilenet_v3_large backbone trained on
+              Kather 100k dataset.
+            - mobilenet_v3_small-kather100k: mobilenet_v3_small backbone trained on
+              Kather 100k dataset.
+            - googlenet-kather100k: googlenet backbone trained on Kather 100k dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the
@@ -464,20 +487,28 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
     # parsing protocol
     pretrained_model = pretrained_model.lower()
-
-    if pretrained_model not in _pretrained_model:
-        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
-    cfg = _pretrained_model[pretrained_model]
-    patch_size = cfg["patch_size"]
-    objective_power = cfg["objective_power"]
     backbone, dataset = pretrained_model.split("-")
 
+    root_path = os.path.dirname(inspect.getfile(tiatoolbox))
+    with open("%s/models/classification/pretrained_info.yml" % root_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+    pretrained_info = pretrained_yml[dataset]
+    pretrained_models_dict = pretrained_info["models"]
+
+    if backbone not in pretrained_models_dict.keys():
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
+
+    patch_size = (pretrained_info["patch_size_w"], pretrained_info["patch_size_h"])
+    objective_power = pretrained_info["objective_power"]
+    num_classes = pretrained_info["num_classes"]
+
     preproc_func = predefined_preproc_func(dataset)
-    model = CNNPatchModel(backbone=backbone, num_classes=cfg["num_classes"])
+    model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
-        pretrained_weight_url = cfg["pretrained"]
+        pretrained_weight_url = pretrained_models_dict[backbone]
+        print(pretrained_weight_url)
         pretrained_weight_url_split = pretrained_weight_url.split("/")
         pretrained_weight = os.path.join(
             rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]

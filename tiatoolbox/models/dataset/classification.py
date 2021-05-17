@@ -21,20 +21,18 @@
 
 import os
 import pathlib
-from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.wsicore.wsimeta import WSIMeta
+import warnings
 
 import numpy as np
 import PIL
-import torch
 import torchvision.transforms as transforms
-from abc import ABC, abstractmethod
 
-from tiatoolbox import rcParam
 from tiatoolbox.models.dataset import abc
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
-from tiatoolbox.utils.misc import download_data, grab_files_from_dir, imread, unzip_data
+from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.wsicore.wsimeta import WSIMeta
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
 class _TorchPreprocCaller:
@@ -83,7 +81,7 @@ def predefined_preproc_func(dataset_name):
     return preproc_func
 
 
-class PatchDataset(abc.__ABCPatchDataset):
+class PatchDataset(abc.ABCPatchDataset):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
 
@@ -94,9 +92,6 @@ class PatchDataset(abc.__ABCPatchDataset):
 
         label_list: List of label for sample at the same index in `input_list` .
         Default is `None`.
-
-        return_labels (bool, False): `__getitem__` will return both the img
-        and its label. If `label_list` is `None`, `None` is returned.
 
         preproc_func: Preprocessing function used to transform the input data. If
         supplied, then torch.Compose will be used on the input preproc_list.
@@ -145,10 +140,11 @@ class PatchDataset(abc.__ABCPatchDataset):
         if self.label_list is not None:
             data["label"] = self.label_list[idx]
             return data
+
         return data
 
 
-class WSIPatchDataset(abc.__ABCPatchDataset):
+class WSIPatchDataset(abc.ABCPatchDataset):
     """Defines a WSI-level patch dataset.
 
     Attributes:
@@ -158,13 +154,13 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         input_list: List of coordinates to read from the `reader`,
         each coordinate is of the form [start_x, start_y, end_x, end_y].
 
-        patch_shape: a tuple(int, int) or ndarray of shape (2,).
-        Expected shape to read from `reader` at requested `resolution` and `units`.
+        patch_size: a tuple(int, int) or ndarray of shape (2,).
+        Expected size to read from `reader` at requested `resolution` and `units`.
         Expected to be (height, width).
 
-        lv0_patch_shape: a tuple(int, int) or ndarray of shape (2,).
-        Shape of `patch_shape` at level 0 in `reader` at requested
-        `resolution` and `units`. Expected to be (height, width).
+        lv0_patch_size: a tuple (int, int) or ndarray of shape (2,).
+        `patch_size` at level 0 in `reader` at requested `resolution`
+        and `units`. Expected to be (height, width).
 
         resolution: check (:class:`.WSIReader`) for details.
         units: check (:class:`.WSIReader`) for details.
@@ -179,12 +175,12 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
 
     def __init__(
         self,
-        wsi_path,
+        img_path,
         mode="wsi",
         mask_path=None,
         preproc_func=None,
-        patch_shape=None,
-        stride_shape=None,
+        patch_size=None,
+        stride_size=None,
         resolution=None,
         units=None,
     ):
@@ -192,18 +188,18 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
 
         Args:
             mode (str): can be either `wsi` or `tile` to denote the image to read is
-            pyramidal or a large tile.
+            either a whole-slide image or a large image tile.
 
-            wsi_path (:obj:`str` or :obj:`pathlib.Path`): valid to pyramidal image
-            or large tile to read.
+            img_path (:obj:`str` or :obj:`pathlib.Path`): valid to pyramidal
+            whole-slide image or large tile to read.
 
             mask_path (:obj:`str` or :obj:`pathlib.Path`): valid mask image.
 
-            patch_shape: a tuple (int, int) or ndarray of shape (2,).
+            patch_size: a tuple (int, int) or ndarray of shape (2,).
             Expected shape to read from `reader` at requested `resolution` and `units`.
             Expected to be (height, width). Note, this is not at level 0.
 
-            stride_shape: a tuple (int, int) or ndarray of shape (2,).
+            stride_size: a tuple (int, int) or ndarray of shape (2,).
             Expected stride shape to read at requested `resolution` and `units`.
             Expected to be (height, width). Note, this is not at level 0.
 
@@ -220,42 +216,50 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         """
         super().__init__(preproc_func=preproc_func)
         # Is there a generic func for path test in toolbox?
-        if not os.path.isfile(wsi_path):
-            raise ValueError("`wsi_path` must be a valid file path.")
+        if not os.path.isfile(img_path):
+            raise ValueError("`img_path` must be a valid file path.")
         if mode not in ["wsi", "tile"]:
             raise ValueError("`%s` is not supported." % mode)
-        patch_shape = np.array(patch_shape)
-        stride_shape = np.array(stride_shape)
-        if len(patch_shape.shape) > 2 and not np.issubdtype(
-            patch_shape.dtype, np.number
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if len(stride_shape.shape) > 2 and not np.issubdtype(
-            stride_shape.dtype, np.number
-        ):
-            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
+        patch_size = np.array(patch_size)
+        stride_size = np.array(stride_size)
 
-        # ! We must do conversion else wsireader will give an error
-        wsi_path = pathlib.Path(wsi_path)
+        if (
+            not np.issubdtype(patch_size.dtype, np.integer)
+            or np.size(patch_size) > 2
+            or np.any(patch_size < 0)
+        ):
+            raise ValueError("Invalid `patch_size` value %s." % patch_size)
+        if (
+            not np.issubdtype(stride_size.dtype, np.integer)
+            or np.size(stride_size) > 2
+            or np.any(stride_size < 0)
+        ):
+            raise ValueError("Invalid `stride_size` value %s." % stride_size)
+        if np.any(stride_size < 1):
+            raise ValueError("`stride_size` value %s must be > 1." % stride_size)
+
+        img_path = pathlib.Path(img_path)
         if mode == "wsi":
-            self.reader = get_wsireader(wsi_path)
+            self.reader = get_wsireader(img_path)
         else:
-            # overwriting for later read
-            # units = 'mpp'
-            # resolution = 1.0
+            warnings.warn(
+                (
+                    "WSIPatchDataset only read tile at "
+                    '`units="baseline"` and `resolution=1.0`.'
+                )
+            )
             units = "baseline"
             resolution = 1.0
-            img = imread(wsi_path)
+            img = imread(img_path)
+            # initialise metadata for VirtualWSIReader.
+            # here, we simulate a whole-slide image, but with a single level.
             metadata = WSIMeta(
-                mpp=np.array([0.25, 0.25]),
+                mpp=np.array([1.0, 1.0]),
+                objective_power=10,
                 slide_dimensions=np.array(img.shape[:2][::-1]),
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
-            # any value for mpp is fine, but the read
-            # resolution for mask later must match
-            # ? alignement, XY or YX ? Default to XY
-            # ? to match OpenSlide for now
             self.reader = VirtualWSIReader(
                 img,
                 metadata,
@@ -263,44 +267,50 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
 
         # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
-        _, _, _, _, lv0_patch_shape = self.reader.find_read_rect_params(
+        _, _, _, _, lv0_patch_size = self.reader.find_read_rect_params(
             location=(0, 0),
-            size=patch_shape,
+            size=patch_size,
             resolution=resolution,
             units=units,
         )
         wsi_metadata = self.reader.info
-        scale = lv0_patch_shape / patch_shape
-        stride_shape = patch_shape if stride_shape is None else stride_shape
-        lv0_pyramid_shape = wsi_metadata.slide_dimensions
-        lv0_stride_shape = (stride_shape * scale).astype(np.int32)
+        scale = lv0_patch_size / patch_size
+        stride_size = patch_size if stride_size is None else stride_size
+        lv0_pyramid_size = wsi_metadata.slide_dimensions
+        lv0_stride_size = (stride_size * scale).astype(np.int32)
         # lv0 topleft coordinates
         self.input_list = PatchExtractor.get_coordinates(
-            lv0_pyramid_shape[::-1], lv0_patch_shape, lv0_stride_shape
+            lv0_pyramid_size, lv0_patch_size, lv0_stride_size
         )
 
+        if len(self.input_list) == 0:
+            raise ValueError("No coordinate remain after tiling!")
+
         if mask_path is not None:
-            # ? extension checking
-            if not os.path.isfile(wsi_path):
+            if not os.path.isfile(mask_path):
                 raise ValueError("`mask_path` must be a valid file path.")
 
             mask = imread(mask_path)
             mask_reader = VirtualWSIReader(mask)
             mask_reader.attach_to_reader(self.reader.info)
-            # * now filter coordinate basing on the mask
+
             # scaling factor between mask lv0 and source reader lv0
             scale = mask_reader.info.level_downsamples[0]
             scaled_input_list = self.input_list / scale
-            sel = PatchExtractor.filter_coordinates(
+            # only use coordinates located within the mask.
+            selected = PatchExtractor.filter_coordinates(
                 mask_reader,  # must be at the same resolution
                 scaled_input_list,  # must be at the same resolution
                 resolution=resolution,
                 units=units,
             )
-            self.input_list = self.input_list[sel]
+            self.input_list = self.input_list[selected]
 
-        self.patch_shape = patch_shape
-        self.lv0_patch_shape = lv0_patch_shape
+        if len(self.input_list) == 0:
+            raise ValueError("No coordinate remain after tiling!")
+
+        self.patch_size = patch_size
+        self.lv0_patch_size = lv0_patch_size
         self.resolution = resolution
         self.units = units
 
@@ -311,12 +321,14 @@ class WSIPatchDataset(abc.__ABCPatchDataset):
         lv0_coords = self.input_list[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
-            lv0_coords, resolution=self.resolution, units=self.units
+            lv0_coords,
+            resolution=self.resolution,
+            units=self.units,
+            pad_constant_values=255,
         )
-        # ! due to internal scaling, there will be rounding error and wont match
-        # ! the requested size at requested read resolution
-        # ! hence must apply rescale again
-        patch = imresize(img=patch, output_size=self.patch_shape)
+        # there may be slight rounding errors when scaling. Therefore, enforce
+        # that the returned patch is at the requested size.
+        patch = imresize(img=patch, output_size=self.patch_size)
 
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)

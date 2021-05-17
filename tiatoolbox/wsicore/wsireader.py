@@ -354,9 +354,7 @@ class WSIReader:
         return read_level, level_bounds, output_size, post_read_scale_factor
 
     def _find_tile_params(
-        self,
-        tile_objective_value: int,
-        tile_read_size: Tuple[int, int],
+        self, tile_objective_value: int, tile_read_size: Tuple[int, int]
     ):
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
@@ -911,73 +909,6 @@ class WSIReader:
             output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
         )
 
-    def get_tile_coordinates(
-        self,
-        tile_objective_value: int,
-        tile_read_size: Tuple[int, int],
-        verbose=True,
-    ):
-        """Generate coordinates of image tiles from whole slide images.
-
-        Args:
-            tile_objective_value (int): Objective value at which tile is generated.
-            tile_read_size (tuple(int)): Tile (width, height).
-
-        Returns:
-            data (list): List of tile coordiantes.
-
-        Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
-            >>> data = wsi.get_tile_coordinates(output_dir='./dev_test',
-            ...             tile_objective_value=10,
-            ...             tile_read_size=(2000, 2000))
-
-        """
-        level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
-            tile_objective_value, tile_read_size
-        )
-
-        tile_read_size = np.multiply(tile_read_size, rescale)
-        slide_h = slide_dimension[1]
-        slide_w = slide_dimension[0]
-        tile_h = tile_read_size[1]
-        tile_w = tile_read_size[0]
-
-        iter_tot = 0
-        data = []
-        for h in range(int(math.ceil((slide_h - tile_h) / tile_h + 1))):
-            for w in range(int(math.ceil((slide_w - tile_w) / tile_w + 1))):
-                start_h = h * tile_h
-                end_h = (h * tile_h) + tile_h
-                start_w = w * tile_w
-                end_w = (w * tile_w) + tile_w
-
-                end_h = min(end_h, slide_h)
-                end_w = min(end_w, slide_w)
-
-                # convert to baseline reference frame
-                bounds = start_w, start_h, end_w, end_h
-                baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
-
-                start_w_base = baseline_bounds[0]
-                start_h_base = baseline_bounds[1]
-                end_w_base = baseline_bounds[2]
-                end_h_base = baseline_bounds[3]
-
-                data.append(
-                    [
-                        iter_tot,
-                        start_w_base,
-                        start_h_base,
-                        end_w_base,
-                        end_h_base,
-                    ]
-                )
-                iter_tot += 1
-
-        return data, level
-
 
 class OpenSlideWSIReader(WSIReader):
     """Reader for OpenSlide supported whole-slide images.
@@ -1413,10 +1344,10 @@ class VirtualWSIReader(WSIReader):
         param = WSIMeta(
             file_path=self.input_path,
             objective_power=None,
-            # ask john, wont this need to flip x,y ?
-            slide_dimensions=self.img.shape[:-1],
+            # align to XY to match with OpenSlide
+            slide_dimensions=self.img.shape[:2][::-1],
             level_count=1,
-            level_dimensions=(self.img.shape[:-1],),
+            level_dimensions=(self.img.shape[:2][::-1],),
             level_downsamples=[1.0],
             vendor=None,
             mpp=None,
@@ -1536,9 +1467,14 @@ class VirtualWSIReader(WSIReader):
         resolution units from the source `reader_info`.
         """
         # to WH to match with WSI
+        if reader_info.mpp is None:
+            raise ValueError("Reference `mpp` must not be None.")
+        if reader_info.objective_power is None:
+            raise ValueError("Reference `objective_power` must not be None.")
         mask_shape = np.array(self.img.shape[:2])[::-1]
         mask_scale = reader_info.slide_dimensions / mask_shape
         mask_mpp = reader_info.mpp * mask_scale
+        mask_obj = reader_info.objective_power / mask_scale[0]
         self.info = WSIMeta(
             file_path=self.info.file_path,
             slide_dimensions=mask_shape,
@@ -1546,8 +1482,7 @@ class VirtualWSIReader(WSIReader):
             level_dimensions=(mask_shape,),
             level_downsamples=[mask_scale[0]],
             vendor=None,
-            # TODO: expose attaching to this ?
-            # objective_power=reader_info.objective_power,
+            objective_power=mask_obj,
             mpp=mask_mpp,
             raw=None,
         )

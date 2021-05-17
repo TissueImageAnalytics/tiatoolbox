@@ -19,19 +19,22 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+import json
+import os
+import pathlib
+import zipfile
 from typing import Union
-from tiatoolbox.utils.exceptions import FileNotSupported
 
 import cv2
-import pathlib
-import yaml
-import pandas as pd
 import numpy as np
-import os
-import zipfile
+import pandas as pd
 import requests
-import json
+import torch
+from torch._C import Value
+import yaml
 from skimage import exposure
+
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
@@ -136,10 +139,10 @@ def imread(image_path):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension) to read image
+        image_path (str or pathlib.Path): File path (including extension) to read image.
 
     Returns:
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -149,6 +152,71 @@ def imread(image_path):
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
     image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+    return image.astype("uint8")
+
+
+def imsave(output_path, image):
+    """Saves a numpy array.
+
+    Args:
+        image (ndarray): Image to save.
+        output_path (str or pathlib.Path): File path (including extension) to save image.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> img = utils.misc.imread('ImagePath.jpg')
+        >>> utils.misc.imsave(img, 'OutputPath.jpg')
+
+    """
+    if isinstance(output_path, pathlib.Path):
+        output_path = str(output_path)
+
+    if image.ndim == 3 and image.shape[-1] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(output_path, image)
+
+
+def imresize(image, shape=None, scale=None, interpolation="linear"):
+    """Resizes a numpy array.
+
+    Args:
+        image (ndarray): Image to save.
+        interpolation (str): Interpolation method to apply when resizing. Choose from
+            either `nearest`, `linear`, `cubic`, `area` or `cubic`.
+
+    Examples:
+        >>> from tiatoolbox import utils
+        >>> img = utils.misc.imread('ImagePath.jpg')
+        >>> img_resize = utils.misc.imresize(img, (x_dim, y_dim),
+                interpolation='nearest')
+
+    """
+    interpolation_dict = {
+        "nearest": cv2.INTER_NEAREST,
+        "linear": cv2.INTER_LINEAR,
+        "area": cv2.INTER_AREA,
+        "cubic": cv2.INTER_CUBIC,
+    }
+
+    if interpolation not in ["nearest", "linear", "cubic", "area", "cubic"]:
+        raise ValueError(
+            "interplation method is not valid. Choose from either `nearest`, "
+            "`linear`, `cubic`, `area` or `cubic`."
+        )
+    if shape is None and scale is None:
+        raise ValueError("Either a `shape` (x,y) or a `scale` must be provided.")
+    if shape is not None and scale is not None:
+        raise ValueError(
+            "Either a `shape` (x,y) or a `scale` must be provided - not both!."
+        )
+    if shape is not None:
+        if not isinstance(shape, tuple):
+            raise ValueError("`shape` must be a tuple of the form (x_dim, y_dim).")
+    if scale:
+        shape = np.round(image.shape * scale)
+        shape = shape[::-1]
+
+    image = cv2.resize(image, shape, interpolation=interpolation_dict[interpolation])
     return image.astype("uint8")
 
 
@@ -525,7 +593,8 @@ def download_data(url, save_path, overwrite=False):
 
     Args:
         url (path): URL from where to download the data.
-        unzip_dir (str): Location to unzip the data.
+        save_path (str): Location to unzip the data.
+        overwrite (bool): True to force overwriting of existing data, default=False
 
     """
     print("Download from %s" % url)
@@ -567,6 +636,49 @@ def save_json(output, output_path):
         output_path (str): Output path for dictionary.
 
     """
-    output = {k: v.tolist() for k, v in output.items()}
+    new_output = {}
+    for k, v in output.items():
+        if isinstance(v, np.ndarray):
+            new_output[k] = v.tolist()
+        else:
+            new_output[k] = v
     with open(output_path, "w") as handle:
         json.dump(output, handle)
+
+
+def select_device(on_gpu):
+    """Selects the appropriate device as requested.
+
+    Args:
+        on_gpu (bool): Selects gpu if True.
+
+    Returns:
+        device (str): "gpu" if on_gpu is True otherwise returns "cpu"
+
+    """
+    if on_gpu:
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    return device
+
+
+def model_to(on_gpu, model):
+    """Transfers model to cpu/gpu.
+
+    Args:
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu
+        model (torch.nn.Module): PyTorch defined model.
+
+    Returns:
+        model (torch.nn.Module):
+
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        model = model.to("cuda")
+    else:
+        model = model.to("cpu")
+
+    return model
