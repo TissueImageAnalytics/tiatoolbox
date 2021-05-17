@@ -1,0 +1,44 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
+
+kather100k:
+    num_classes: 9
+    patch_size_h: 20
+    patch_size_w: 20
+    objective_power: 20
+    models:
+        alexnet: https://tiatoolbox.dcs.warwick.ac.uk/models/alexnet-kather100k-pc.pth
+        resnet18: https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100k-pc.pth
+        resnet34: https://tiatoolbox.dcs.warwick.ac.uk/models/resnet34-kather100k-pc.pth
+        resnet50: https://tiatoolbox.dcs.warwick.ac.uk/models/resnet50-kather100k-pc.pth
+        resnet101: https://tiatoolbox.dcs.warwick.ac.uk/models/resnet101-kather100k-pc.pth
+        resnext50_32x4d: https://tiatoolbox.dcs.warwick.ac.uk/models/resnext50_32x4d-kather100k-pc.pth
+        resnext101_32x8d: https://tiatoolbox.dcs.warwick.ac.uk/models/resnext101_32x8d-kather100k-pc.pth
+        wide_resnet50_2: https://tiatoolbox.dcs.warwick.ac.uk/models/wide_resnet50_2-kather100k-pc.pth
+        wide_resnet101_2: https://tiatoolbox.dcs.warwick.ac.uk/models/wide_resnet101_2-kather100k-pc.pth
+        densenet121: https://tiatoolbox.dcs.warwick.ac.uk/models/densenet121-kather100k-pc.pth
+        densenet161: https://tiatoolbox.dcs.warwick.ac.uk/models/densenet161-kather100k-pc.pth
+        densenet169: https://tiatoolbox.dcs.warwick.ac.uk/models/densenet169-kather100k-pc.pth
+        densenet201: https://tiatoolbox.dcs.warwick.ac.uk/models/densenet201-kather100k-pc.pth
+        mobilenet_v2: https://tiatoolbox.dcs.warwick.ac.uk/models/mobilenet_v2-kather100k-pc.pth
+        mobilenet_v3_large: https://tiatoolbox.dcs.warwick.ac.uk/models/mobilenet_v3_large-kather100k-pc.pth
+        mobilenet_v3_small: https://tiatoolbox.dcs.warwick.ac.uk/models/mobilenet_v3_small-kather100k-pc.pth
+        googlenet: https://tiatoolbox.dcs.warwick.ac.uk/models/googlenet-kather100k-pc.pth

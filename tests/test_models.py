@@ -798,7 +798,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K", batch_size=1)
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
         input_list,
@@ -848,7 +848,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 
     # test loading user weight
     pretrained_weight_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100K-pc.pth"
+        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100k-pc.pth"
     )
 
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_pretrained_weigths")
@@ -859,12 +859,12 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     pretrained_weight = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
         "tmp_pretrained_weigths",
-        "resnet18-kather100K-pc.pth",
+        "resnet18-kather100k-pc.pth",
     )
     download_data(pretrained_weight_url, pretrained_weight)
 
     predictor = CNNPatchPredictor(
-        pretrained_model="resnet18-kather100K",
+        pretrained_model="resnet18-kather100k",
         pretrained_weight=pretrained_weight,
         batch_size=1,
     )
@@ -906,7 +906,7 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
 
     patch_size = np.array([224, 224])
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K", batch_size=1)
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
     # * sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
@@ -1009,23 +1009,23 @@ def test_patch_predictor_correctness(_sample_patch1, _sample_patch2):
     """A func."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     pretrained_info = {
-        "resnet18-kather100K": [1.0, 0.9999717473983765],
-        "alexnet-kather100K": [1.0, 0.9998185038566589],
-        "resnet50-kather100K": [1.0, 0.9969022870063782],
-        "resnet34-kather100K": [1.0, 0.9991286396980286],
-        "resnet101-kather100K": [1.0, 0.9999957084655762],
-        "resnext50_32x4d-kather100K": [1.0, 0.9999779462814331],
-        "resnext101_32x8d-kather100K": [1.0, 0.9999345541000366],
-        "wide_resnet50_2-kather100K": [1.0, 0.9999997615814209],
-        "wide_resnet101_2-kather100K": [1.0, 0.999420166015625],
-        "densenet121-kather100K": [1.0, 0.9998136162757874],
-        "densenet161-kather100K": [1.0, 0.9999997615814209],
-        "densenet169-kather100K": [1.0, 0.9999773502349854],
-        "densenet201-kather100K": [1.0, 0.9999812841415405],
-        "mobilenet_v2-kather100K": [1.0, 0.9998366832733154],
-        "mobilenet_v3_large-kather100K": [1.0, 0.9999945163726807],
-        "mobilenet_v3_small-kather100K": [1.0, 0.9999963045120239],
-        "googlenet-kather100K": [1.0, 0.998254120349884],
+        "resnet18-Kather100k": [1.0, 0.9999717473983765],
+        "alexnet-kather100k": [1.0, 0.9998185038566589],
+        "resnet50-kather100k": [1.0, 0.9969022870063782],
+        "resnet34-kather100k": [1.0, 0.9991286396980286],
+        "resnet101-kather100k": [1.0, 0.9999957084655762],
+        "resnext50_32x4d-kather100k": [1.0, 0.9999779462814331],
+        "resnext101_32x8d-kather100k": [1.0, 0.9999345541000366],
+        "wide_resnet50_2-kather100k": [1.0, 0.9999997615814209],
+        "wide_resnet101_2-kather100k": [1.0, 0.999420166015625],
+        "densenet121-kather100k": [1.0, 0.9998136162757874],
+        "densenet161-kather100k": [1.0, 0.9999997615814209],
+        "densenet169-kather100k": [1.0, 0.9999773502349854],
+        "densenet201-kather100k": [1.0, 0.9999812841415405],
+        "mobilenet_v2-kather100k": [1.0, 0.9998366832733154],
+        "mobilenet_v3_large-kather100k": [1.0, 0.9999945163726807],
+        "mobilenet_v3_small-kather100k": [1.0, 0.9999963045120239],
+        "googlenet-kather100k": [1.0, 0.998254120349884],
     }
     for pretrained_model, expected_prob in pretrained_info.items():
         _test_predictor_correctness(
@@ -1049,7 +1049,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         [
             "patch-predictor",
             "--pretrained_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             str(pathlib.Path(_dir_sample_patches)),
             "--output_path",
@@ -1071,7 +1071,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         [
             "patch-predictor",
             "--pretrained_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             pathlib.Path(_sample_patch1),
             "--output_path",
@@ -1098,7 +1098,7 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
         [
             "patch-predictor",
             "--pretrained_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             "imaginary_img.tif",
             "--mode",
