@@ -35,7 +35,7 @@ from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data, save_json
-import tiatoolbox.models.classification
+import tiatoolbox.models.classification as classif
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
 
@@ -489,8 +489,9 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     pretrained_model = pretrained_model.lower()
     backbone, dataset = pretrained_model.split("-")
 
-    root_path = os.path.dirname(inspect.getfile(tiatoolbox))
-    with open("%s/models/classification/pretrained_info.yml" % root_path) as fptr:
+    # root_path = os.path.dirname(inspect.getfile(tiatoolbox))
+    root_path = os.path.abspath(classif.__file__)
+    with open("%s/pretrained_info.yml" % root_path) as fptr:
         pretrained_yml = yaml.full_load(fptr)
     pretrained_info = pretrained_yml[dataset]
     pretrained_models_dict = pretrained_info["models"]
