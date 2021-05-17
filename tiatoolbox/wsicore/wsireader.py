@@ -309,6 +309,9 @@ class WSIReader:
             baseline_read_size,
         )
 
+    def find_read_bounds_params(self, bounds, resolution, units, precision=3):
+        return self._find_read_bounds_params(bounds, resolution, units, precision)
+
     def _find_read_bounds_params(self, bounds, resolution, units, precision=3):
         """Find optimal parameters for reading bounds at a given resolution.
 
