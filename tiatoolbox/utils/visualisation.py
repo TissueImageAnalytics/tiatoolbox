@@ -26,6 +26,7 @@ from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 import numpy as np
+import json
 import cv2
 import warnings
 
@@ -60,7 +61,7 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
         )
 
     if stride_shape == patch_shape or "probabilities" not in model_output.keys():
-        output = np.zeros(np.array(output_shape))
+        output = np.full(output_shape, -1)
         for idx, coords in enumerate(coordinates):
             prediction = predictions[idx]
             coords = np.round(np.array(coords) / scale).astype("int")
@@ -68,7 +69,7 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
     else:
         probabilities = model_output["probabilities"]
         num_classes = len(model_output["probabilities"][0])
-        output = np.zeros([output_shape[0], output_shape[1], num_classes])
+        output = np.full([output_shape[0], output_shape[1], num_classes], -1.0)
         # used to merge overlapping patches
         denominator = np.ones(np.array(output_shape))
         for idx, coords in enumerate(coordinates):
@@ -78,8 +79,10 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
             denominator[coords[1] : coords[3], coords[0] : coords[2]] += 1
         # deal with overlapping regions
         output = output / np.expand_dims(denominator, -1)
+        selection = denominator >= 2
         # convert raw probabilities to preditions
         output = CNNPatchPredictor._postprocess(output)
+        output[~selection] = -1
 
     return output
 
@@ -168,7 +171,7 @@ def visualise_patch_prediction(
 
     if len(img_list) > 1:
         warnings.warn(
-            "When providing multiple whole-slide images / tiles, "
+            "When providing multiple whole-slide images / tiles "
             "we save the overlays and return the locations "
             "to the corresponding files."
         )
@@ -201,7 +204,12 @@ def visualise_patch_prediction(
         read_img = reader.slide_thumbnail(resolution=resolution, units=units)
         scale = reader.info.objective_power / resolution
 
-        model_output = model_output_list[idx]
+        if len(img_list) > 1:
+            with open(model_output_list[idx]) as json_file:
+                model_output = json.load(json_file)
+        else:
+            model_output = model_output_list[idx]
+
         pretrained_model = model_output["pretrained_model"]
         merged_predictions = _merge_patch_predictions(
             model_output, read_img.shape[:2], scale

@@ -388,12 +388,13 @@ class CNNPatchPredictor:
                 )
                 save_dir = os.path.join(os.getcwd(), "output")
 
-            if save_dir is not None:
-                save_dir = pathlib.Path(save_dir)
-                if not save_dir.is_dir():
-                    os.makedirs(save_dir)
-                else:
-                    raise ValueError("`save_dir` already exists!")
+            if len(img_list) > 1:
+                if save_dir is not None:
+                    save_dir = pathlib.Path(save_dir)
+                    if not save_dir.is_dir():
+                        os.makedirs(save_dir)
+                    else:
+                        raise ValueError("`save_dir` already exists!")
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
@@ -427,7 +428,7 @@ class CNNPatchPredictor:
 
                 if len(img_list) > 1:
                     basename = img_path.stem
-                    output_file_path = os.path.join(save_dir, basename)
+                    output_file_path = os.path.join(save_dir, basename + ".json")
                     output_files.append(output_file_path)
                     save_json(output_model, output_file_path)
 
