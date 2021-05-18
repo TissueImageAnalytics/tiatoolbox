@@ -19,18 +19,21 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
+from tiatoolbox.utils.misc import save_json
 import numpy as np
 
 from tiatoolbox import __version__
+from tiatoolbox import rcParam
 from tiatoolbox import wsicore
 from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.models.classification.pretrained_info import _pretrained_model
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.models.dataset.classification import PatchDataset
 
 import json
+import yaml
+import inspect
 import sys
 import click
 import os
@@ -442,8 +445,8 @@ def tissue_mask(
 
 @main.command()
 @click.option(
-    "--predefined_model",
-    help="Predefined model used to process the data. the format is "
+    "--pretrained_model",
+    help="Pretrained model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
     default="resnet18-kather100K",
@@ -481,7 +484,7 @@ def tissue_mask(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
 def patch_predictor(
-    predefined_model,
+    pretrained_model,
     pretrained_weight,
     img_input,
     output_path,
@@ -504,8 +507,27 @@ def patch_predictor(
     else:
         raise FileNotFoundError
 
-    if predefined_model.lower() not in _pretrained_model:
-        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+    pretrained_model = pretrained_model.lower()
+    backbone, dataset = pretrained_model.split("-")
+
+    # get the pretrained model information from yml file
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        utils.misc.download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+
+    pretrained_info = pretrained_yml[dataset]
+    pretrained_models_dict = pretrained_info["models"]
+
+    if backbone not in pretrained_models_dict.keys():
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
 
     if len(img_files) < batch_size:
         batch_size = len(img_files)
@@ -513,7 +535,7 @@ def patch_predictor(
     dataset = PatchDataset(img_files)
 
     predictor = CNNPatchPredictor(
-        predefined_model=predefined_model,
+        pretrained_model=pretrained_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
     )
@@ -525,10 +547,8 @@ def patch_predictor(
     output_file_path = os.path.join(output_path, "results.json")
     if not output_path.is_dir():
         os.makedirs(output_path)
-    # convert output, otherwise can't dump via json
-    output = {k: v.tolist() for k, v in output.items()}
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
+
+    save_json(output, output_file_path)
 
 
 if __name__ == "__main__":

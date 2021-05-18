@@ -35,7 +35,6 @@ from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data, save_json
-import tiatoolbox.models.classification as classif
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
 
@@ -489,9 +488,17 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     pretrained_model = pretrained_model.lower()
     backbone, dataset = pretrained_model.split("-")
 
-    # root_path = os.path.dirname(inspect.getfile(tiatoolbox))
-    root_path = os.path.abspath(classif.__file__)
-    with open("%s/pretrained_info.yml" % root_path) as fptr:
+    # get the pretrained model information from yml file
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
         pretrained_yml = yaml.full_load(fptr)
     pretrained_info = pretrained_yml[dataset]
     pretrained_models_dict = pretrained_info["models"]
@@ -509,7 +516,6 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
     if pretrained_weight is None:
         pretrained_weight_url = pretrained_models_dict[backbone]
-        print(pretrained_weight_url)
         pretrained_weight_url_split = pretrained_weight_url.split("/")
         pretrained_weight = os.path.join(
             rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]
