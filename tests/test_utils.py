@@ -12,12 +12,15 @@ import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
+import pathlib
 from pytest import approx
 
 from tiatoolbox import rcParam, utils
 from tiatoolbox.utils import misc
+from tiatoolbox.utils.visualisation import visualise_patch_prediction
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.transforms import locsize2bounds
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
@@ -770,24 +773,24 @@ def test_download_data():
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    old_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    old_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     # modify the content
-    with open(save_zip_path, 'wb') as fptr:
-        fptr.write('dataXXX'.encode())  # random data
-    bad_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    with open(save_zip_path, "wb") as fptr:
+        fptr.write("dataXXX".encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    new_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert new_hash == old_hash
 
     # test not overiting
     # modify the content
-    with open(save_zip_path, 'wb') as fptr:
-        fptr.write('dataXXX'.encode())  # random data
-    bad_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    with open(save_zip_path, "wb") as fptr:
+        fptr.write("dataXXX".encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
-    new_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
@@ -981,3 +984,92 @@ def test_model_to():
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
+
+
+def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
+    from tiatoolbox.utils.visualisation import visualise_patch_prediction
+
+    # to prevent wsireader complaint
+    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
+    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
+
+    patch_size = np.array([224, 224])
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+
+    # * sanity check, both output should be the same with same resolution read args
+    wsi_output = predictor.predict(
+        [_mini_wsi1_svs],
+        mode="wsi",
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+        patch_size=patch_size,
+        stride_size=patch_size,
+        resolution=1.0,
+        units="baseline",
+    )
+    tile_output = predictor.predict(
+        [_mini_wsi1_jpg],
+        mode="tile",
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+        patch_size=patch_size,
+        stride_size=patch_size,
+        resolution=1.0,
+        units="baseline",
+    )
+
+    # generate the visualisation for a single input
+    overlay_wsi_single, pred_map_wsi_single = visualise_patch_prediction(
+        [_mini_wsi1_svs],
+        wsi_output,
+        mode="wsi",
+        resolution=1.25,
+        units="power",
+    )
+    overlay_tile_single, pred_map_tile_single = visualise_patch_prediction(
+        [_mini_wsi1_jpg],
+        tile_output,
+        mode="tile",
+        tile_resolution=20.0,
+        resolution=1.25,
+        units="power",
+    )
+
+    # generate the visualisation for a multiple inputs
+    save_path1 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp1/")
+    save_path2 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp2/")
+
+    overlay_wsi_multi, pred_map_wsi_multi = visualise_patch_prediction(
+        [_mini_wsi1_svs, _mini_wsi1_svs],
+        wsi_output,
+        mode="wsi",
+        resolution=1.25,
+        units="power",
+        save_dir=save_path1,
+    )
+    overlay_tile_multi, pred_map_tile_multi = visualise_patch_prediction(
+        [_mini_wsi1_jpg, _mini_wsi1_jpg],
+        tile_output,
+        mode="tile",
+        resolution=1.25,
+        units="power",
+        save_dir=save_path2,
+    )
+
+    assert overlay_wsi_single.shape == pred_map_wsi_single.shape
+    assert overlay_tile_single.shape == pred_map_tile_single.shape
+    assert overlay_wsi_single.shape == overlay_tile_single.shape
+    assert pred_map_wsi_single.shape == pred_map_tile_single.shape
+
+    overlay_wsi_multi = utils.misc.imread(overlay_wsi_multi[0])
+    pred_map_wsi_multi = utils.misc.imread(pred_map_wsi_multi[0])
+    overlay_tile_multi = utils.misc.imread(overlay_tile_multi[0])
+    pred_map_tile_multi = utils.misc.imread(pred_map_tile_multi[0])
+
+    assert overlay_wsi_multi.shape == pred_map_wsi_multi.shape
+    assert overlay_tile_multi.shape == pred_map_tile_multi.shape
+    assert overlay_wsi_multi.shape == overlay_tile_multi.shape
+    assert pred_map_wsi_multi.shape == pred_map_tile_multi.shape

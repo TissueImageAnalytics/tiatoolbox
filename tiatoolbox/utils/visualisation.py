@@ -20,15 +20,17 @@
 
 """Visualisation and overlay functions used in tiatoolbox."""
 
-
-from tiatoolbox.utils.misc import imread, get_pretrained_model_info
-from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
-from tiatoolbox.wsicore.wsimeta import WSIMeta
 import numpy as np
+import os
+import pathlib
 import json
 import cv2
 import warnings
+
+from tiatoolbox.utils.misc import imread, imwrite, get_pretrained_model_info
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 
 def _merge_patch_predictions(model_output, output_shape, scale=1):
@@ -152,15 +154,27 @@ def visualise_patch_prediction(
     resolution=1.25,
     units="power",
     alpha=0.5,
+    save_dir=None,
 ):
     """Generate patch-level overlay.
 
     Args:
-        img: input image
-        predictions: output of the model
+        img_list (list): List of input image paths.
+        model_output_list (list): List of dictionaries output by the model.
+        mode (str): Determines the format of the input images. Choose either `patch`,
+            `tile` or `wsi`.
+        resolution (float): Resolution of generated output.
+        units (str): Units that the resolution argument corresponds to. Choose from
+            either `level`, `power` or `mpp`.
+        alpha (float): Used to determine how the transparent the overlay is. Must be
+            between 0 and 1.
+        save_dir (str): Output directory when processing multiple tiles and
+                whole-slide images.
 
     Returns:
-        overlay: overlaid output.
+        overlay (ndarray): overlaid output.
+        rgb_array (ndarray): segmentation prediction map, where different colours
+            denote different class predictions.
 
     """
     if mode not in ["tile", "wsi"]:
@@ -170,6 +184,7 @@ def visualise_patch_prediction(
         raise ValueError("If using `tile` mode, `tile_resolution` must be provided.")
 
     if len(img_list) > 1:
+        output_files = []  # generate a list of output file paths
         warnings.warn(
             "When providing multiple whole-slide images / tiles "
             "we save the overlays and return the locations "
@@ -177,6 +192,8 @@ def visualise_patch_prediction(
         )
 
     for idx, img_file in enumerate(img_list):
+        img_file = pathlib.Path(img_file)
+        basename = img_file.stem
         if mode == "wsi":
             reader = get_wsireader(img_file)
         else:
@@ -215,8 +232,24 @@ def visualise_patch_prediction(
             model_output, read_img.shape[:2], scale
         )
 
-        overlay, rgb_pred = _get_patch_prediction_overlay(
+        overlay, rgb_array = _get_patch_prediction_overlay(
             read_img, merged_predictions, alpha, pretrained_model
         )
 
-    return overlay, rgb_pred
+        if len(img_list) > 1:
+            save_dir_ = os.path.join(save_dir, basename)
+            os.makedirs(save_dir_)
+
+            # save overlay and prediction map
+            imwrite(save_dir_ + "overlay.png", overlay)
+            imwrite(save_dir_ + "rgb_prediction.png", rgb_array)
+            output_files.append(
+                [save_dir_ + "overlay.png", save_dir_ + "rgb_prediction.png"]
+            )
+
+            # set output to return locations of saved files
+            output = output_files
+        else:
+            output = [overlay, rgb_array]
+
+    return output
