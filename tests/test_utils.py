@@ -1044,7 +1044,7 @@ def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk
 
     overlay_wsi_multi, pred_map_wsi_multi = visualise_patch_prediction(
         [_mini_wsi1_svs, _mini_wsi1_svs],
-        wsi_output,
+        [wsi_output, wsi_output],
         mode="wsi",
         resolution=1.25,
         units="power",
@@ -1052,7 +1052,7 @@ def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk
     )
     overlay_tile_multi, pred_map_tile_multi = visualise_patch_prediction(
         [_mini_wsi1_jpg, _mini_wsi1_jpg],
-        tile_output,
+        [tile_output, tile_output],
         mode="tile",
         resolution=1.25,
         units="power",
