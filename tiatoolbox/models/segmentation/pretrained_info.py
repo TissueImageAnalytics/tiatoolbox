@@ -28,6 +28,7 @@ from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data
 
 from .hovernet import HoVerNet
+from .generic import FCN_Model
 
 
 models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
@@ -40,9 +41,9 @@ _pretrained_model = {
         "num_types" : 6,
         "mode" : 'fast',
     },
-    "fnc-tissue_mask": {
+    "fcn-tissue_mask": {
         "pretrained" : '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth',
-        "num_types" : 6,
+        "nr_output_ch" : 3,
     }
 }
 
@@ -72,6 +73,10 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     if 'hovernet' in backbone:
         pretrained_weight_url = cfg.pop('pretrained')
         model = HoVerNet(**cfg)
+    elif 'fcn' in backbone:
+        print(cfg)
+        pretrained_weight_url = cfg.pop('pretrained')
+        model = FCN_Model(**cfg)
 
     if pretrained_weight is None:
         pretrained_weight_url = cfg["pretrained"]

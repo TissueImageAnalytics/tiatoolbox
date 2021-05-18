@@ -29,7 +29,8 @@ import torch.utils.data as torch_data
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-from tiatoolbox.models.segmentation.predictor import Predictor, colorize, visualize_instances_dict
+from tiatoolbox.models.segmentation.predictor import Predictor
+from tiatoolbox.utils.visualisation import visualize_instances_dict
 from tiatoolbox.models.segmentation.hovernet import HoVerNet
 
 import time
@@ -165,27 +166,27 @@ if __name__ == '__main__':
     # hovernet.load_state_dict(pretrained)
     # predictor = Predictor(model=hovernet, num_loader_worker=4, num_postproc_worker=0)
 
-    pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth'
-    predictor = Predictor(
-                    pretrained_model='hovernet-pannuke',
-                    pretrained_weight=pretrained,
-                    num_loader_worker=4,
-                    num_postproc_worker=0)
-    # predictor.predict(wsi_path_list, mask_path_list, mode='wsi', resolution=0.25, units='mpp')
+    # pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth'
+    # predictor = Predictor(
+    #                 pretrained_model='hovernet-pannuke',
+    #                 pretrained_weight=pretrained,
+    #                 num_loader_worker=4,
+    #                 num_postproc_worker=0)
+    # # predictor.predict(wsi_path_list, mask_path_list, mode='wsi', resolution=0.25, units='mpp')
 
-    idx = 2
-    output_dict = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
-                    mode='tile', resolution=2.0, units='baseline', on_gpu=True)
+    # idx = 2
+    # output_dict = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
+    #                 mode='tile', resolution=2.0, units='baseline', on_gpu=True)
 
-    reader = get_wsireader(wsi_path_list[idx])
-    thumb = reader.slide_thumbnail(resolution=2.0, units='baseline')
-    overlay = visualize_instances_dict(thumb, output_dict, line_thickness=2)
-    imwrite('dump.png', overlay)
+    # reader = get_wsireader(wsi_path_list[idx])
+    # thumb = reader.slide_thumbnail(resolution=2.0, units='baseline')
+    # overlay = visualize_instances_dict(thumb, output_dict, line_thickness=2)
+    # imwrite('dump.png', overlay)
 
-    # idx = -1
-    # from tiatoolbox.models.segmentation.semantic import Predictor as SemanticSegmentor
-    # from tiatoolbox.models.segmentation.generic import FCN_Model
-    # pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/fcn-tissue_mask.tar'
+    idx = -1
+    from tiatoolbox.models.segmentation.semantic import Predictor as SemanticSegmentor
+    from tiatoolbox.models.segmentation.generic import FCN_Model
+    pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/fcn-tissue_mask.pth'
     # model = FCN_Model(nr_output_ch=3)
     # pretrained = torch.load(pretrained)#['desc']
     # # pretrained = convert_pytorch_checkpoint(pretrained)
@@ -198,16 +199,24 @@ if __name__ == '__main__':
     # output = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
     #                  mode='wsi', resolution=1.0, units='mpp')
 
-    # reader = get_wsireader(wsi_path_list[idx])
-    # thumb = reader.slide_thumbnail(resolution=1.0, units='mpp')
-    # output, thumb = align_shape([output, thumb])
-    # import matplotlib.pyplot as plt
-    # sel = output > 0
-    # alpha = 0.25
-    # colorize_output = (output * 255)[...,None]
-    # overlay = thumb.copy()
-    # overlay[sel] = thumb[sel] * alpha + (1-alpha) * colorize_output[sel]
-    # imwrite('dump.png', overlay)
+    predictor = SemanticSegmentor(
+                    pretrained_model='fcn-tissue_mask',
+                    pretrained_weight=pretrained,
+                    num_loader_worker=4, 
+                    num_postproc_worker=0,)
+    output = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
+                     mode='wsi', resolution=1.0, units='mpp')
+
+    reader = get_wsireader(wsi_path_list[idx])
+    thumb = reader.slide_thumbnail(resolution=1.0, units='mpp')
+    output, thumb = align_shape([output, thumb])
+    import matplotlib.pyplot as plt
+    sel = output > 0
+    alpha = 0.25
+    colorize_output = (output * 255)[...,None]
+    overlay = thumb.copy()
+    overlay[sel] = thumb[sel] * alpha + (1-alpha) * colorize_output[sel]
+    imwrite('dump.png', overlay)
     # exit()
 
 # TODO: cpu mode
