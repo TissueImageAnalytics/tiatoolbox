@@ -20,43 +20,40 @@
 
 """This module enables patch-level prediction."""
 
-import copy
-import time
-import tqdm
-import numpy as np
-import os
-import pathlib
-import warnings
 import collections
+import colorsys
+import copy
+import itertools
 import logging
-
-from tiatoolbox import rcParam
-from tiatoolbox.utils.misc import imwrite, save_json, imread
-from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import get_wsireader, VirtualWSIReader, WSIMeta
-
-import torch
-import torch.multiprocessing as torch_mp
-import torch.utils.data as torch_data
-
 ####
 import math
+import os
+import pathlib
+import random
+import time
+import warnings
 from collections import OrderedDict
 
+import cv2
 import numpy as np
 import torch
+import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.data as torch_data
+import tqdm
 
-
-import cv2
-import math
-import random
-import colorsys
-import numpy as np
-import itertools
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
+from tiatoolbox import rcParam
+from tiatoolbox.utils.misc import imread, imwrite, save_json
+from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
+                                          get_wsireader)
+
+from .pretrained_info import get_pretrained_model
+
 
 def get_bounding_box(img):
     """Get bounding box coordinate information."""
@@ -273,7 +270,7 @@ class SerializeReader(torch_data.Dataset):
         return patch_data, patch_info
 
 
-def pbar_creator(x, y, pos=0, leave=False):
+def pbar_creator(x, y, pos=0, leave=True):
     return tqdm.tqdm(
         desc=x, leave=leave, total=y, ncols=80, ascii=True, position=pos
     )
@@ -898,10 +895,9 @@ class Predictor:
         if model is not None:
             self._model = copy.deepcopy(model)
         else:
-            raise NotImplementedError
-            # self.model, self.patch_size, self.objective_value = get_pretrained_model(
-            #     pretrained_model, pretrained_weight
-            # )
+            self._model = get_pretrained_model(
+                pretrained_model, pretrained_weight
+            )
 
         # to keepsake in case of being nested in DataParallel
         self.model = None # this is for runtime
@@ -976,12 +972,13 @@ class Predictor:
             all_time += (end - start)
 
 
-            pbar_b = pbar_creator('Fwrd-Btch', patch_info_list.shape[0], pos=0)
+            pbar_b = pbar_creator('Fwrd-Btch', len(loader), pos=0)
             cum_output = []
             for batch_idx, batch_data in enumerate(loader):
                 sample_data_list, sample_info_list = batch_data
                 sample_output_list = self._model.infer_batch(
-                                self.model, sample_data_list, 'cuda'
+                                self.model, sample_data_list, 
+                                self.on_gpu,
                             )
                 sample_info_list = sample_info_list.numpy()
                 cum_output.append([sample_info_list, sample_output_list])
@@ -1126,8 +1123,13 @@ class Predictor:
     ):
         """Make a prediction for a list of input data."""
 
-        self.model = torch.nn.DataParallel(self._model)
-        self.model = self.model.to('cuda')
+        self.on_gpu = on_gpu
+        if on_gpu:
+            self.model = torch.nn.DataParallel(self._model)
+            self.model = self.model.to('cuda')
+        else:
+            self.model = copy.deepcopy(self._model)
+            self.model = self.model.to('cpu')
 
         mp_manager = torch_mp.Manager()
         mp_shared_space = mp_manager.Namespace()

@@ -20,11 +20,14 @@
 
 """This module enables patch-level prediction."""
 
+import os
+
+import torch
+
 from tiatoolbox.models import abc as tia_model_abc
 
-
 class ModelBase(tia_model_abc.ModelBase):
-    """Retrieve the model backbone and attach an extra FCN to perform classification.
+    """ABC.
 
     Attributes:
         num_classes (int): Number of classes output by the model.

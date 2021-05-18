@@ -122,23 +122,33 @@ if __name__ == '__main__':
         None,
     ]
 
-    pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pecan-hover-net-pytorch.tar'
-    hovernet = HoVerNet(mode='fast', num_types=6)
-    pretrained = torch.load(pretrained)['desc']
-    hovernet.load_state_dict(pretrained)
-    predictor = Predictor(model=hovernet, num_loader_worker=4, num_postproc_worker=0)
+    # pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pecan-hover-net-pytorch.tar'
+    # hovernet = HoVerNet(mode='fast', num_types=6)
+    # pretrained = torch.load(pretrained)['desc']
+    # hovernet.load_state_dict(pretrained)
+    # predictor = Predictor(model=hovernet, num_loader_worker=4, num_postproc_worker=0)
+
+    pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth'
+    predictor = Predictor(
+                    pretrained_model='hovernet-pannuke',
+                    pretrained_weight=pretrained,
+                    num_loader_worker=4,
+                    num_postproc_worker=0)
     # predictor.predict(wsi_path_list, mask_path_list, mode='wsi', resolution=0.25, units='mpp')
 
-    idx = -1
-    output_dict = predictor.predict(wsi_path_list[idx:], mask_path_list[idx:],
-                    mode='tile', resolution=1.0, units='baseline')
+    # idx = -1
+    # output_dict = predictor.predict(wsi_path_list[idx:], mask_path_list[idx:],
+    #                 mode='tile', resolution=2.0, units='baseline', on_gpu=False)
 
-    reader = get_wsireader(wsi_path_list[-1:][0])
-    thumb = reader.slide_thumbnail(resolution=1.0, units='baseline')
-    overlay = visualize_instances_dict(thumb, output_dict, line_thickness=1)
-    imwrite('dump.png', overlay)
-    exit()
+    # reader = get_wsireader(wsi_path_list[-1:][0])
+    # thumb = reader.slide_thumbnail(resolution=2.0, units='baseline')
+    # overlay = visualize_instances_dict(thumb, output_dict, line_thickness=1)
+    # imwrite('dump.png', overlay)
+    # exit()
 
+# TODO: cpu mode
+# TODO: pretrained model
+# TODO: Tumor Seg
 # reader = get_wsireader('/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs')
 # roi = reader.read_bounds((-150, -150, 150, 151), pad_mode='reflect')
 # imwrite('dump.png', roi)

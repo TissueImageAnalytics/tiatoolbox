@@ -33,7 +33,7 @@ from skimage.segmentation import watershed
 
 from tiatoolbox import rcParam
 
-from .abc import ModelBase
+from tiatoolbox.models.segmentation.abc import ModelBase
 
 
 def get_bounding_box(img):
@@ -701,7 +701,8 @@ class HoVerNet(ModelBase):
         ####
         patch_imgs = batch_data
 
-        patch_imgs_gpu = patch_imgs.to("cuda").type(torch.float32)  # to NCHW
+        device = 'cuda' if on_gpu else 'cpu'
+        patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 
         ####
