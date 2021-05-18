@@ -34,6 +34,7 @@ from torch._C import Value
 import yaml
 from skimage import exposure
 
+from tiatoolbox import rcParam
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
@@ -682,3 +683,21 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def get_pretrained_model_info():
+    """get the pretrained model information from yml file."""
+
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+
+    return pretrained_yml

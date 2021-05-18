@@ -21,7 +21,7 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 
 
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.misc import imread, get_pretrained_model_info
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -84,7 +84,7 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
     return output
 
 
-def _get_patch_prediction_overlay(img, prediction, alpha, seed=456):
+def _get_patch_prediction_overlay(img, prediction, alpha, pretrained_model, seed=123):
     """Generate an overlay, given a 2D prediction map.
 
     Args:
@@ -92,6 +92,8 @@ def _get_patch_prediction_overlay(img, prediction, alpha, seed=456):
         prediction (ndarray): 2D prediction map. Multi-class prediction should have
             values ranging from 0 to N-1, where N is the number of classes.
         alpha (float): Opacity value used for the overlay.
+        pretrained_model (str): Pretrained model used for generating the predictions.
+            This is used to determine predefined RGB overlay colours.
         seed (int): Random number seed used to determine random colours for overlay.
 
     Returns:
@@ -102,31 +104,43 @@ def _get_patch_prediction_overlay(img, prediction, alpha, seed=456):
 
     img = img.astype("uint8")
     overlay = img.copy()
-    predicted_classes = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    # predicted_classes = sorted(np.unique(prediction).tolist())
+
+    label_dict = {}
+    if pretrained_model is not None:
+        pretrained_model = pretrained_model.lower()
+        _, dataset = pretrained_model.split("-")
+        pretrained_yml = get_pretrained_model_info()
+        pretrained_info = pretrained_yml[dataset]
+        label_info = pretrained_info["label_info"]
+        for labels, label_info in label_info.items():
+            label_dict[labels] = label_info["rgb"]
+    else:
+        predicted_classes = sorted(np.unique(prediction).tolist())
+        for label in predicted_classes:
+            label_dict[label] = (np.random.choice(range(256), size=3)).astype("uint8")
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
     )
-    for predicted_class in predicted_classes:
+    for label, overlay_rgb in label_dict.items():
         prediction_ = prediction.copy()
-        prediction_single_class = prediction_ == predicted_class
+        prediction_single_class = prediction_ == label
         prediction_single_class = np.dstack(
             [prediction_single_class, prediction_single_class, prediction_single_class]
         )
         prediction_single_class = prediction_single_class.astype("uint8")
-        random_colour = (np.random.choice(range(256), size=3)).astype("uint8")
-        prediction_single_class *= random_colour
+        prediction_single_class *= np.array(overlay_rgb).astype("uint8")
         rgb_prediction += prediction_single_class
 
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
+    overlay = overlay.astype("uint8")
 
-    return overlay.astype("uint8"), rgb_prediction
+    return overlay, rgb_prediction
 
 
 def visualise_patch_prediction(
     img_list,
-    predictions_list,
+    model_output_list,
     mode="tile",
     tile_resolution=None,
     resolution=1.25,
@@ -184,13 +198,14 @@ def visualise_patch_prediction(
         read_img = reader.slide_thumbnail(resolution=resolution, units=units)
         scale = reader.info.objective_power / resolution
 
-        predictions = predictions_list[idx]
+        model_output = model_output_list[idx]
+        pretrained_model = model_output["pretrained_model"]
         merged_predictions = _merge_patch_predictions(
-            predictions, read_img.shape[:2], scale
+            model_output, read_img.shape[:2], scale
         )
 
         overlay, rgb_pred = _get_patch_prediction_overlay(
-            read_img, merged_predictions, alpha=alpha
+            read_img, merged_predictions, alpha, pretrained_model
         )
 
     return overlay, rgb_pred
