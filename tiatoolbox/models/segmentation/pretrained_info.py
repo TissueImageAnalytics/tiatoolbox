@@ -40,6 +40,10 @@ _pretrained_model = {
         "num_types" : 6,
         "mode" : 'fast',
     },
+    "fnc-tissue_mask": {
+        "pretrained" : '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth',
+        "num_types" : 6,
+    }
 }
 
 # To ensure easy matching

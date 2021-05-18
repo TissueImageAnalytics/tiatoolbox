@@ -541,8 +541,6 @@ def _get_io_info(
             resolution=resolution,
             units=units,
         )
-        # ! output is in 
-        print(lv0_shape, read_shape)
         return np.array(read_shape)
 
     wsi_reader = get_wsireader(wsi_path)
@@ -565,9 +563,6 @@ def _get_io_info(
     patch_info_list = _get_patch_info(
         wsi_proc_shape, patch_input_shape, patch_output_shape,
     )
-    # print(patch_input_shape)
-    # print(patch_info_list)
-    # exit()
     patch_diff_shape = patch_input_shape - patch_output_shape
     # derive tile output placement as consecutive tiling with step size of 0
     # and tile output will have shape being of multiple of patch_output_shape
@@ -749,7 +744,7 @@ def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
     # recalibrate the tile actual shape incase they crossing the boundary
     crop_tl = np.zeros_like(tile_output_tl)
     crop_tl[tile_output_tl < 0] = np.abs(tile_output_tl[tile_output_tl < 0])
-    sel = tile_output_br > wsi_proc_shape
+    sel = tile_output_br < wsi_proc_shape
     crop_br= tile_output_br.copy()
     crop_br[sel] = wsi_proc_shape[sel]
     crop_br = crop_br - tile_output_tl # shift back to tile coordinate
@@ -1044,7 +1039,6 @@ class Predictor:
         #                       \ postproc (loop)/
         # ? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        print(mask_path)
         (wsi_mask, wsi_proc_shape, all_tile_info, 
             patch_info_list, scale_to_lv0) = _get_io_info(
                                                 wsi_path, 
@@ -1056,7 +1050,6 @@ class Predictor:
                                                 self.resolution,
                                                 self.units)
         self.scale_to_lv0 = scale_to_lv0
-        print(scale_to_lv0)
 
         ## ** process full grid and vert/horiz fixing at the same time
         start = time.perf_counter()
@@ -1162,6 +1155,6 @@ class Predictor:
             self.resolution = resolution
             self.units = units
             output = self._predict_one_wsi(img_list[wsi_idx], mask_list[wsi_idx], loader)
-            return output
+            break # sanity atm
         return output
 
