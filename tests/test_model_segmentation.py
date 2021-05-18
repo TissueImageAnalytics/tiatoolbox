@@ -28,7 +28,7 @@ import torch.utils.data as torch_data
 
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
-from tiatoolbox.models.segmentation.predictor import Predictor
+from tiatoolbox.models.segmentation.predictor import Predictor, visualize_instances_dict
 from tiatoolbox.models.segmentation.hovernet import HoVerNet
 
 import time
@@ -113,19 +113,31 @@ if __name__ == '__main__':
     wsi_path_list = [
         '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs',
         '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_001.svs',
+        '/home/tialab-dang/local/project/tiatoolbox/tests/data/TCGA-HE-7130-01Z-00-DX1.png',
     ]
 
     mask_path_list = [
         '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002-mask.png',
-        None
+        None,
+        None,
     ]
 
     pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pecan-hover-net-pytorch.tar'
     hovernet = HoVerNet(mode='fast', num_types=6)
     pretrained = torch.load(pretrained)['desc']
     hovernet.load_state_dict(pretrained)
-    predictor = Predictor(model=hovernet, num_loader_worker=0, num_postproc_worker=0)
-    predictor.predict(wsi_path_list, mask_path_list)
+    predictor = Predictor(model=hovernet, num_loader_worker=4, num_postproc_worker=0)
+    # predictor.predict(wsi_path_list, mask_path_list, mode='wsi', resolution=0.25, units='mpp')
+
+    idx = -1
+    output_dict = predictor.predict(wsi_path_list[idx:], mask_path_list[idx:],
+                    mode='tile', resolution=1.0, units='baseline')
+
+    reader = get_wsireader(wsi_path_list[-1:][0])
+    thumb = reader.slide_thumbnail(resolution=1.0, units='baseline')
+    overlay = visualize_instances_dict(thumb, output_dict, line_thickness=1)
+    imwrite('dump.png', overlay)
+    exit()
 
 # reader = get_wsireader('/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs')
 # roi = reader.read_bounds((-150, -150, 150, 151), pad_mode='reflect')

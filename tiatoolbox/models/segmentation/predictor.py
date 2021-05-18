@@ -33,8 +33,7 @@ import logging
 from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import imwrite, save_json, imread
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import get_wsireader, VirtualWSIReader, WSIMeta
 
 import torch
 import torch.multiprocessing as torch_mp
@@ -192,11 +191,17 @@ class SerializeReader(torch_data.Dataset):
     mp_shared_space = mp_manager.Namespace()
     mp_shared_space.image = torch.from_numpy(image)
     """
-    def __init__(self, 
-            wsi_path_list, 
-            mp_shared_space, preproc=None, scale_to_lv0=1.0, 
-            resolution=None, units=None):
+    def __init__(
+            self,
+            wsi_path_list,
+            mp_shared_space,
+            preproc=None,
+            mode='wsi',
+            scale_to_lv0=1.0,
+            resolution=None,
+            units=None):
         super().__init__()
+        self.mode = mode
         self.mp_shared_space = mp_shared_space
         self.preproc = preproc
         self.wsi_path_list = wsi_path_list
@@ -205,6 +210,36 @@ class SerializeReader(torch_data.Dataset):
         self.resolution = resolution
         self.units = units
         return
+
+    def _get_reader(self, wsi_path):
+        wsi_path = pathlib.Path(wsi_path)
+        if self.mode == "wsi":
+            reader = get_wsireader(wsi_path)
+        else:
+            # overwriting for later read
+            # units = 'mpp'
+            # resolution = 1.0
+            # units = "baseline"
+            # resolution = 1.0
+            img = imread(wsi_path)
+            metadata = WSIMeta(
+                # Assign blind default value as it has no impact later
+                # but is required for sync mask read
+                mpp=np.array([1.0, 1.0]),
+                objective_power=10,
+                slide_dimensions=np.array(img.shape[:2][::-1]),
+                level_downsamples=[1.0],
+                level_dimensions=[np.array(img.shape[:2][::-1])],
+            )
+            # any value for mpp is fine, but the read
+            # resolution for mask later must match
+            # ? alignement, XY or YX ? Default to XY
+            # ? to match OpenSlide for now
+            reader = VirtualWSIReader(
+                img,
+                metadata,
+            )
+        return reader
 
     def __len__(self):
         return len(self.mp_shared_space.patch_info_list)
@@ -215,7 +250,7 @@ class SerializeReader(torch_data.Dataset):
             # TODO: enforcing strict typing
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
             self.scale_to_lv0 = self.mp_shared_space.scale_to_lv0.item()
-            self.reader = get_wsireader(self.wsi_path_list[self.wsi_idx])
+            self.reader = self._get_reader(self.wsi_path_list[self.wsi_idx])
 
         # this is in YX and at requested resolution not lv0
         patch_info = self.mp_shared_space.patch_info_list[idx]
@@ -519,11 +554,13 @@ def _get_io_info(
     scale_to_lv0 = scale_to_lv0[0]
     wsi_proc_shape = wsi_proc_shape[::-1]  # in YX
 
-    if os.path.exists(mask_path):
+    if mask_path is not None and os.path.exists(mask_path):
         wsi_mask = imread(mask_path)
         wsi_mask = cv2.cvtColor(wsi_mask, cv2.COLOR_RGB2GRAY)
     else:  # process everything if no mask is provided
-        thumb_shape = get_wsi_proc_shape(wsi_reader, 8.0, units='mpp')
+        # ! HACK: inconsistent behavior between VirtualReader and WSI
+        # ! how to reliably retrieve the shape of downscale version ?
+        thumb_shape = get_wsi_proc_shape(1.0, units='baseline')
         wsi_mask = np.ones(thumb_shape[::-1], dtype=np.uint8)
     wsi_mask[wsi_mask > 0] = 1
 
@@ -1010,6 +1047,7 @@ class Predictor:
         #                       \ postproc (loop)/
         # ? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+        print(mask_path)
         (wsi_mask, wsi_proc_shape, all_tile_info, 
             patch_info_list, scale_to_lv0) = _get_io_info(
                                                 wsi_path, 
@@ -1071,12 +1109,7 @@ class Predictor:
                             wsi_inst_info)        
         end = time.perf_counter()
         logging.info("Proc XSect: {0}".format(end - start))
-
-        reader = get_wsireader(wsi_path)
-        thumb = reader.slide_thumbnail(resolution=self.resolution, units='mpp')
-        overlay = visualize_instances_dict(thumb, wsi_inst_info)
-        imwrite('dump.png', overlay)
-        exit()
+        return wsi_inst_info
 
     def predict(
         self,
@@ -1104,7 +1137,7 @@ class Predictor:
         # ! by default, torch will split idxing across worker
         # ! hence, for each batch, they coming entirely from different worker id
         ds = SerializeReader(img_list, mp_shared_space, 
-                resolution=resolution, units=units)
+                resolution=resolution, units=units, mode=mode)
         loader = torch_data.DataLoader(ds,
                                 batch_size=8,
                                 drop_last=False,
@@ -1122,10 +1155,11 @@ class Predictor:
             self.patch_output_shape = np.array([164, 164])
             self.tile_shape = 1000
             self.ambiguous_size = np.array([328, 328])
-            self.resolution = 0.25
-            self.units = 'mpp'
-            self._predict_one_wsi(img_list[wsi_idx], mask_list[wsi_idx], loader)
-            break
-
+            # self.resolution = 0.25
+            # self.units = 'mpp'
+            self.resolution = resolution
+            self.units = units
+            output = self._predict_one_wsi(img_list[wsi_idx], mask_list[wsi_idx], loader)
+            return output
         return output
 
