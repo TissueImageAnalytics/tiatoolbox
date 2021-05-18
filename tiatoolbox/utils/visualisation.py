@@ -177,6 +177,10 @@ def visualise_patch_prediction(
             denote different class predictions.
 
     """
+    if len(img_list) != len(model_output_list):
+        raise ValueError(
+            "The lengths of `img_list` and `model_output_list` must be the same."
+        )
     if mode not in ["tile", "wsi"]:
         raise ValueError("`mode` must be either `tile` or `wsi`.")
 
