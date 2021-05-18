@@ -262,11 +262,17 @@ def _get_patch_info(img_shape, input_size, output_size):
     nr_step = np.floor((img_shape - in_out_diff) / output_size) + 1
     last_output_coord = (in_out_diff // 2) + (nr_step) * output_size
     # generating subpatches index from orginal
+    step = output_size[0]
+    start = in_out_diff[0] // 2 - step
+    end = last_output_coord[0] + step
     output_tl_y_list = np.arange(
-        in_out_diff[0] // 2, last_output_coord[0], output_size[0], dtype=np.int32
+        start, end, step, dtype=np.int32
     )
+    step = output_size[1]
+    start = in_out_diff[1] // 2 - step
+    end = last_output_coord[1] + step
     output_tl_x_list = np.arange(
-        in_out_diff[1] // 2, last_output_coord[1], output_size[1], dtype=np.int32
+        start, end, step, dtype=np.int32,
     )
     output_tl = flat_mesh_grid_coord(output_tl_y_list, output_tl_x_list)
     output_br = output_tl + output_size
@@ -275,7 +281,8 @@ def _get_patch_info(img_shape, input_size, output_size):
     input_br = input_tl + input_size
     # exclude any patch where the input exceed the range of image,
     # can comment this out if do padding in reading
-    sel = np.any(input_br > img_shape, axis=-1)
+    # sel = np.any(input_br > img_shape, axis=-1)
+    sel = np.zeros(input_br.shape[0], dtype=np.bool)
 
     info_list = np.stack(
         [
@@ -311,13 +318,14 @@ def _get_tile_info(img_shape, input_size, output_size, margin_size, unit_size):
 
     # generating subpatches index from orginal
     def get_top_left_1d(axis):
+        step = output_size[axis]
+        start = in_out_diff[axis] // 2 - unit_size[axis]
+        end = last_output_coord[axis] + unit_size[axis]
         o_tl_list = np.arange(
-                        in_out_diff[axis] // 2, 
-                        last_output_coord[axis], 
-                        output_size[axis], dtype=np.int32
+                        start, end, step, dtype=np.int32
                     )
         o_br_list = o_tl_list + output_size[axis]
-        o_br_list[-1] = last_unit_output_coord[axis]
+        o_br_list[-1] = last_unit_output_coord[axis] + step
         # in default behavior, last pos >= last multiple of unit
         # hence may cause duplication, do a check and remove if necessary
         if o_br_list[-1] == o_br_list[-2]:
@@ -453,9 +461,15 @@ def _get_valid_patch_idx(wsi_proc_shape, wsi_mask, patch_info_list):
     """
     def check_valid(info, wsi_mask):
         output_bbox = np.rint(info[1]).astype(np.int64)
+        # contain negatice indexing and out of bound index
+        # just treat them as within read only
+        mask_shape = wsi_mask.shape[:2]
+        tl, br = output_bbox
+        tl[tl < 0] = 0
+        br[br > mask_shape] = br[br > mask_shape]
         output_roi = wsi_mask[
-            output_bbox[0][0] : output_bbox[1][0],
-            output_bbox[0][1] : output_bbox[1][1],
+            tl[0] : br[0],
+            tl[1] : br[1],
         ]
         return (np.sum(output_roi) > 0)
 
@@ -507,6 +521,7 @@ def _get_io_info(
 
     if os.path.exists(mask_path):
         wsi_mask = imread(mask_path)
+        wsi_mask = cv2.cvtColor(wsi_mask, cv2.COLOR_RGB2GRAY)
     else:  # process everything if no mask is provided
         thumb_shape = get_wsi_proc_shape(wsi_reader, 8.0, units='mpp')
         wsi_mask = np.ones(thumb_shape[::-1], dtype=np.uint8)
@@ -664,7 +679,8 @@ def get_inst_on_edge(arr, tile_pp_info):
 ####
 
 def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
-                margin_size, patch_info_list, postproc_func,
+                margin_size, patch_info_list, postproc_func, 
+                wsi_proc_shape,
                 prev_wsi_inst_dict=None):
     # output pos of the tile within the source wsi
     tile_input_tl, tile_output_br = tile_io_info[0]
@@ -696,20 +712,20 @@ def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
         ] = patch_feat_list[idx][0]
     del patch_pos_list, patch_feat_list
 
+    # recalibrate the tile actual shape incase they crossing the boundary
+    crop_tl = np.zeros_like(tile_output_tl)
+    crop_tl[tile_output_tl < 0] = np.abs(tile_output_tl[tile_output_tl < 0])
+    sel = tile_output_br < wsi_proc_shape
+    crop_br= tile_output_br.copy()
+    crop_br[sel] = wsi_proc_shape[sel]
+    crop_br = crop_br - tile_output_tl # shift back to tile coordinate
+    # now crop
+    pred_map = pred_map[crop_tl[0]:crop_br[0], crop_tl[1]:crop_br[1]]
+    tile_output_tl[tile_output_tl < 0] = 0 # fixing the position
+
     # * retrieve actual output
     pred_inst, inst_info_dict = postproc_func(pred_map)
     del pred_map
-
-    # scale = 0.5478260869565217
-    # reader = get_wsireader('/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs')
-    # output_bound = tile_output_tl.tolist()[::-1] + tile_output_br.tolist()[::-1]
-    # output_bound = (np.array(output_bound) * scale).astype(np.int32)
-    # print(output_bound)
-    # thumb = reader.read_bounds(output_bound, resolution=0.25, units='mpp')
-    # thumb = imresize(thumb, output_size=tile_shape[::-1])
-    # overlay = visualize_instances_dict(thumb, inst_info_dict)
-    # imwrite('dump.png', overlay)
-    # exit()
 
     # * perform removal for ambiguous region
 
@@ -865,6 +881,7 @@ class Predictor:
             tile_io_info_list,
             tile_pp_info_list,
             tile_mode_list,
+            wsi_proc_shape,
             prev_wsi_inst_dict=None):
 
         offset_id = 0 # offset id to increment overall saving dict
@@ -941,6 +958,7 @@ class Predictor:
             args = [tile_io_info, tile_pp_info, tile_mode, 
                     self.ambiguous_size[0], cum_output, 
                     self._model.postproc_func,
+                    wsi_proc_shape,
                     prev_wsi_inst_dict]
 
             # launch separate thread to deal with postproc
@@ -1022,7 +1040,8 @@ class Predictor:
                             patch_info_list,
                             tile_io_info_list, 
                             tile_pp_info_list, 
-                            tile_mode_list)
+                            tile_mode_list,
+                            wsi_proc_shape)
         end = time.perf_counter()
         logging.info("Proc Grid: {0}".format(end - start))
         
@@ -1048,6 +1067,7 @@ class Predictor:
                             tile_io_info_list, 
                             tile_pp_info_list, 
                             tile_mode_list,
+                            wsi_proc_shape,
                             wsi_inst_info)        
         end = time.perf_counter()
         logging.info("Proc XSect: {0}".format(end - start))

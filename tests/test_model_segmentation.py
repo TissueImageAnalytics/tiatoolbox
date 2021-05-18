@@ -9,7 +9,7 @@ import pytest
 import torch
 
 
-# sys.path.append('.')
+sys.path.append('.')
 sys.path.append('..')
 
 # need to persist through 3 level
@@ -26,6 +26,7 @@ mp.set_start_method("spawn", True)  # ! must be at top for VScode debugging
 import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 
+from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.models.segmentation.predictor import Predictor
 from tiatoolbox.models.segmentation.hovernet import HoVerNet
@@ -107,6 +108,7 @@ import time
 #         raise ValueError(f'Forward process exited with code {forward_process.exitcode}')
 #     forward_process.join()
 
+###
 if __name__ == '__main__':
     wsi_path_list = [
         '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs',
@@ -124,3 +126,7 @@ if __name__ == '__main__':
     hovernet.load_state_dict(pretrained)
     predictor = Predictor(model=hovernet, num_loader_worker=0, num_postproc_worker=0)
     predictor.predict(wsi_path_list, mask_path_list)
+
+# reader = get_wsireader('/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs')
+# roi = reader.read_bounds((-150, -150, 150, 151), pad_mode='reflect')
+# imwrite('dump.png', roi)
