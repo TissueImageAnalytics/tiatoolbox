@@ -749,7 +749,7 @@ def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
     # recalibrate the tile actual shape incase they crossing the boundary
     crop_tl = np.zeros_like(tile_output_tl)
     crop_tl[tile_output_tl < 0] = np.abs(tile_output_tl[tile_output_tl < 0])
-    sel = tile_output_br < wsi_proc_shape
+    sel = tile_output_br > wsi_proc_shape
     crop_br= tile_output_br.copy()
     crop_br[sel] = wsi_proc_shape[sel]
     crop_br = crop_br - tile_output_tl # shift back to tile coordinate
