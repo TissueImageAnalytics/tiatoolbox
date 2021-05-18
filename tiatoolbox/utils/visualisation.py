@@ -105,17 +105,19 @@ def _get_patch_prediction_overlay(img, prediction, alpha, pretrained_model, seed
     img = img.astype("uint8")
     overlay = img.copy()
 
-    label_dict = {}
     if pretrained_model is not None:
         pretrained_model = pretrained_model.lower()
         _, dataset = pretrained_model.split("-")
+        # get label/model information
         pretrained_yml = get_pretrained_model_info()
+        # focus on specific dataset
         pretrained_info = pretrained_yml[dataset]
-        label_info = pretrained_info["label_info"]
-        for labels, label_info in label_info.items():
-            label_dict[labels] = label_info["rgb"]
+        # get a dictionary of label ID and overlay colour
+        label_dict = pretrained_info["overlay_info"]
     else:
+        # if pretrained_model is not provided, generate random colours
         predicted_classes = sorted(np.unique(prediction).tolist())
+        label_dict = {}
         for label in predicted_classes:
             label_dict[label] = (np.random.choice(range(256), size=3)).astype("uint8")
 
@@ -132,6 +134,7 @@ def _get_patch_prediction_overlay(img, prediction, alpha, pretrained_model, seed
         prediction_single_class *= np.array(overlay_rgb).astype("uint8")
         rgb_prediction += prediction_single_class
 
+    # add the overlay
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype("uint8")
 
