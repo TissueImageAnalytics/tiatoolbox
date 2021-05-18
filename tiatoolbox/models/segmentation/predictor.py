@@ -1029,10 +1029,10 @@ class Predictor:
                                 remove_uid_list, 
                                 wsi_inst_info,
                                 offset_id)            
-            pbar_b.update()
+            pbar_p.update()
         if proc_pool is not None:
             proc_pool.shutdown()
-        pbar_b.close()
+        pbar_p.close()
         return wsi_inst_info
                 
     def _predict_one_wsi(self, wsi_path, mask_path, loader):
@@ -1153,7 +1153,7 @@ class Predictor:
             self.wsi_idx = wsi_idx
             self.patch_input_shape  = np.array([256, 256])
             self.patch_output_shape = np.array([164, 164])
-            self.tile_shape = 1000
+            self.tile_shape = 3000
             self.ambiguous_size = np.array([328, 328])
             # self.resolution = 0.25
             # self.units = 'mpp'
