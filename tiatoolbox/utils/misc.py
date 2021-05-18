@@ -41,7 +41,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extension.
 
-    Args:
+    Args:x
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
@@ -153,71 +153,6 @@ def imread(image_path):
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
     image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-    return image.astype("uint8")
-
-
-def imsave(output_path, image):
-    """Saves a numpy array.
-
-    Args:
-        image (ndarray): Image to save.
-        output_path (str or pathlib.Path): File path (including extension) to save image.
-
-    Examples:
-        >>> from tiatoolbox import utils
-        >>> img = utils.misc.imread('ImagePath.jpg')
-        >>> utils.misc.imsave(img, 'OutputPath.jpg')
-
-    """
-    if isinstance(output_path, pathlib.Path):
-        output_path = str(output_path)
-
-    if image.ndim == 3 and image.shape[-1] == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(output_path, image)
-
-
-def imresize(image, shape=None, scale=None, interpolation="linear"):
-    """Resizes a numpy array.
-
-    Args:
-        image (ndarray): Image to save.
-        interpolation (str): Interpolation method to apply when resizing. Choose from
-            either `nearest`, `linear`, `cubic`, `area` or `cubic`.
-
-    Examples:
-        >>> from tiatoolbox import utils
-        >>> img = utils.misc.imread('ImagePath.jpg')
-        >>> img_resize = utils.misc.imresize(img, (x_dim, y_dim),
-                interpolation='nearest')
-
-    """
-    interpolation_dict = {
-        "nearest": cv2.INTER_NEAREST,
-        "linear": cv2.INTER_LINEAR,
-        "area": cv2.INTER_AREA,
-        "cubic": cv2.INTER_CUBIC,
-    }
-
-    if interpolation not in ["nearest", "linear", "cubic", "area", "cubic"]:
-        raise ValueError(
-            "interplation method is not valid. Choose from either `nearest`, "
-            "`linear`, `cubic`, `area` or `cubic`."
-        )
-    if shape is None and scale is None:
-        raise ValueError("Either a `shape` (x,y) or a `scale` must be provided.")
-    if shape is not None and scale is not None:
-        raise ValueError(
-            "Either a `shape` (x,y) or a `scale` must be provided - not both!."
-        )
-    if shape is not None:
-        if not isinstance(shape, tuple):
-            raise ValueError("`shape` must be a tuple of the form (x_dim, y_dim).")
-    if scale:
-        shape = np.round(image.shape * scale)
-        shape = shape[::-1]
-
-    image = cv2.resize(image, shape, interpolation=interpolation_dict[interpolation])
     return image.astype("uint8")
 
 
@@ -686,8 +621,7 @@ def model_to(on_gpu, model):
 
 
 def get_pretrained_model_info():
-    """get the pretrained model information from yml file."""
-
+    """Get the pretrained model information from yml file."""
     pretrained_yml_path = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
         "models/pretrained.yml",

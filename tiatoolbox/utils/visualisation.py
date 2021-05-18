@@ -20,14 +20,17 @@
 
 """Visualisation and overlay functions used in tiatoolbox."""
 
+import numpy as np
+import os
+import pathlib
+import json
+import cv2
+import warnings
 
-from tiatoolbox.utils.misc import imread, get_pretrained_model_info
+from tiatoolbox.utils.misc import imread, imwrite, get_pretrained_model_info
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from tiatoolbox.wsicore.wsimeta import WSIMeta
-import numpy as np
-import cv2
-import warnings
 
 
 def _merge_patch_predictions(model_output, output_shape, scale=1):
@@ -55,12 +58,12 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
         stride_shape[0] < patch_shape[0] or stride_shape[1] < patch_shape[1]
     ) and "probabilities" not in model_output.keys():
         warnings.warn(
-            "For a better result when using stride size < patch size, consider returning "
-            "the probabilities. This will result in a smoother output."
+            "For a better result when using stride size < patch size, consider "
+            "returning the probabilities. This will result in a smoother output."
         )
 
     if stride_shape == patch_shape or "probabilities" not in model_output.keys():
-        output = np.zeros(np.array(output_shape))
+        output = np.full(output_shape, -1)
         for idx, coords in enumerate(coordinates):
             prediction = predictions[idx]
             coords = np.round(np.array(coords) / scale).astype("int")
@@ -68,7 +71,7 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
     else:
         probabilities = model_output["probabilities"]
         num_classes = len(model_output["probabilities"][0])
-        output = np.zeros([output_shape[0], output_shape[1], num_classes])
+        output = np.full([output_shape[0], output_shape[1], num_classes], -1.0)
         # used to merge overlapping patches
         denominator = np.ones(np.array(output_shape))
         for idx, coords in enumerate(coordinates):
@@ -78,8 +81,10 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
             denominator[coords[1] : coords[3], coords[0] : coords[2]] += 1
         # deal with overlapping regions
         output = output / np.expand_dims(denominator, -1)
+        selection = denominator >= 2
         # convert raw probabilities to preditions
         output = CNNPatchPredictor._postprocess(output)
+        output[~selection] = -1
 
     return output
 
@@ -149,17 +154,33 @@ def visualise_patch_prediction(
     resolution=1.25,
     units="power",
     alpha=0.5,
+    save_dir=None,
 ):
     """Generate patch-level overlay.
 
     Args:
-        img: input image
-        predictions: output of the model
+        img_list (list): List of input image paths.
+        model_output_list (list): List of dictionaries output by the model.
+        mode (str): Determines the format of the input images. Choose either `patch`,
+            `tile` or `wsi`.
+        resolution (float): Resolution of generated output.
+        units (str): Units that the resolution argument corresponds to. Choose from
+            either `level`, `power` or `mpp`.
+        alpha (float): Used to determine how the transparent the overlay is. Must be
+            between 0 and 1.
+        save_dir (str): Output directory when processing multiple tiles and
+                whole-slide images.
 
     Returns:
-        overlay: overlaid output.
+        overlay (ndarray): overlaid output.
+        rgb_array (ndarray): segmentation prediction map, where different colours
+            denote different class predictions.
 
     """
+    if len(img_list) != len(model_output_list):
+        raise ValueError(
+            "The lengths of `img_list` and `model_output_list` must be the same."
+        )
     if mode not in ["tile", "wsi"]:
         raise ValueError("`mode` must be either `tile` or `wsi`.")
 
@@ -167,13 +188,16 @@ def visualise_patch_prediction(
         raise ValueError("If using `tile` mode, `tile_resolution` must be provided.")
 
     if len(img_list) > 1:
+        output_files = []  # generate a list of output file paths
         warnings.warn(
-            "When providing multiple whole-slide images / tiles, "
+            "When providing multiple whole-slide images / tiles "
             "we save the overlays and return the locations "
             "to the corresponding files."
         )
 
     for idx, img_file in enumerate(img_list):
+        img_file = pathlib.Path(img_file)
+        basename = img_file.stem
         if mode == "wsi":
             reader = get_wsireader(img_file)
         else:
@@ -201,14 +225,35 @@ def visualise_patch_prediction(
         read_img = reader.slide_thumbnail(resolution=resolution, units=units)
         scale = reader.info.objective_power / resolution
 
-        model_output = model_output_list[idx]
+        if len(img_list) > 1:
+            with open(model_output_list[idx]) as json_file:
+                model_output = json.load(json_file)
+        else:
+            model_output = model_output_list[idx]
+
         pretrained_model = model_output["pretrained_model"]
         merged_predictions = _merge_patch_predictions(
             model_output, read_img.shape[:2], scale
         )
 
-        overlay, rgb_pred = _get_patch_prediction_overlay(
+        overlay, rgb_array = _get_patch_prediction_overlay(
             read_img, merged_predictions, alpha, pretrained_model
         )
 
-    return overlay, rgb_pred
+        if len(img_list) > 1:
+            save_dir_ = os.path.join(save_dir, basename)
+            os.makedirs(save_dir_)
+
+            # save overlay and prediction map
+            imwrite(save_dir_ + "overlay.png", overlay)
+            imwrite(save_dir_ + "rgb_prediction.png", rgb_array)
+            output_files.append(
+                [save_dir_ + "overlay.png", save_dir_ + "rgb_prediction.png"]
+            )
+
+            # set output to return locations of saved files
+            output = output_files
+        else:
+            output = [overlay, rgb_array]
+
+    return output

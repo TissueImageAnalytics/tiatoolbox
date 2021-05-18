@@ -17,7 +17,7 @@ requirements = [
     "matplotlib",
     "opencv-python>=4.0",
     "openslide-python==1.1.2",
-    "pyyaml",
+    "pyyaml>=5.1",
     "pandas",
     "glymur",
     "scikit-learn==0.23.2",

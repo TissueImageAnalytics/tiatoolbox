@@ -244,7 +244,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         else:
             warnings.warn(
                 (
-                    "WSIPatchDataset only read tile at "
+                    "WSIPatchDataset only reads image tile at "
                     '`units="baseline"` and `resolution=1.0`.'
                 )
             )
@@ -289,11 +289,16 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         if mask_path is not None:
             if not os.path.isfile(mask_path):
                 raise ValueError("`mask_path` must be a valid file path.")
-
             mask = imread(mask_path)
             mask_reader = VirtualWSIReader(mask)
             mask_reader.attach_to_reader(self.reader.info)
+            mask_present = True
+        elif mode == "wsi" and mask_path is None:
+            # if no mask provided and `wsi` mode, generate basic tissue
+            # mask on the fly
+            mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
 
+        if mode == "wsi" or mask_path is not None:
             # scaling factor between mask lv0 and source reader lv0
             scale = mask_reader.info.level_downsamples[0]
             scaled_input_list = self.input_list / scale
