@@ -34,7 +34,7 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data, save_json
+from tiatoolbox.utils.misc import download_data, save_json, get_pretrained_model_info
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 
 
@@ -196,6 +196,7 @@ class CNNPatchPredictor:
                 pretrained_model, pretrained_weight
             )
 
+        self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
         self.verbose = verbose
@@ -278,6 +279,7 @@ class CNNPatchPredictor:
                 # We dont use tolist here because label may be of mixed types
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
+            cum_output["pretrained_model"] = self.pretrained_model
 
             # May be a with block + flag would be nicer
             if self.verbose:
@@ -488,18 +490,8 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     pretrained_model = pretrained_model.lower()
     backbone, dataset = pretrained_model.split("-")
 
-    # get the pretrained model information from yml file
-    pretrained_yml_path = os.path.join(
-        rcParam["TIATOOLBOX_HOME"],
-        "models/pretrained.yml",
-    )
-    if not os.path.exists(pretrained_yml_path):
-        download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
-            pretrained_yml_path,
-        )
-    with open(pretrained_yml_path) as fptr:
-        pretrained_yml = yaml.full_load(fptr)
+    pretrained_yml = get_pretrained_model_info()
+
     pretrained_info = pretrained_yml[dataset]
     pretrained_models_dict = pretrained_info["models"]
 
