@@ -161,7 +161,8 @@ def imsave(output_path, image):
 
     Args:
         image (ndarray): Image to save.
-        output_path (str or pathlib.Path): File path (including extension) to save image.
+        output_path (str or pathlib.Path): File path (including extension)
+            to save image.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -210,9 +211,8 @@ def imresize(image, shape=None, scale=None, interpolation="linear"):
         raise ValueError(
             "Either a `shape` (x,y) or a `scale` must be provided - not both!."
         )
-    if shape is not None:
-        if not isinstance(shape, tuple):
-            raise ValueError("`shape` must be a tuple of the form (x_dim, y_dim).")
+    if shape is not None and not isinstance(shape, tuple):
+        raise ValueError("`shape` must be a tuple of the form (x_dim, y_dim).")
     if scale:
         shape = np.round(image.shape * scale)
         shape = shape[::-1]
@@ -686,8 +686,7 @@ def model_to(on_gpu, model):
 
 
 def get_pretrained_model_info():
-    """get the pretrained model information from yml file."""
-
+    """Get the pretrained model information from yml file."""
     pretrained_yml_path = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
         "models/pretrained.yml",

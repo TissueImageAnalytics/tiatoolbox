@@ -56,8 +56,8 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
         stride_shape[0] < patch_shape[0] or stride_shape[1] < patch_shape[1]
     ) and "probabilities" not in model_output.keys():
         warnings.warn(
-            "For a better result when using stride size < patch size, consider returning "
-            "the probabilities. This will result in a smoother output."
+            "For a better result when using stride size < patch size, consider "
+            "returning the probabilities. This will result in a smoother output."
         )
 
     if stride_shape == patch_shape or "probabilities" not in model_output.keys():

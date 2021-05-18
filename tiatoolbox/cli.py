@@ -19,28 +19,26 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
-from tiatoolbox.utils.misc import save_json
+
 import numpy as np
-
-from tiatoolbox import __version__
-from tiatoolbox import rcParam
-from tiatoolbox import wsicore
-from tiatoolbox.tools import stainnorm as sn, tissuemask
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
-from tiatoolbox.models.dataset.classification import PatchDataset
-
 import json
 import yaml
 import inspect
 import sys
 import click
 import os
-
-# import json
 import pathlib
 from PIL import Image
+
+from tiatoolbox import __version__
+from tiatoolbox import rcParam
+from tiatoolbox import wsicore
+from tiatoolbox.tools import stainnorm as sn, tissuemask
+from tiatoolbox import utils
+from tiatoolbox.utils.misc import save_json
+from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.dataset.classification import PatchDataset
 
 
 def version_msg():
