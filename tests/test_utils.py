@@ -20,7 +20,6 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.visualisation import visualise_patch_prediction
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.transforms import locsize2bounds
-from tiatoolbox.utils.visualisation import visualise_patch_prediction
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 
 

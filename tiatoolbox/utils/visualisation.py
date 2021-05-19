@@ -104,7 +104,8 @@ def _get_patch_prediction_overlay(
             This is used to determine predefined RGB overlay colours.
         random_colours (bool): Whether to use random colours for the overlay. If set
             to False, then the predefined colours will be used.
-        random_seed (int): Random number seed used to determine random colours for overlay.
+        random_seed (int): Random number seed used to determine random colours
+            for overlay.
 
     Returns:
         overlay (ndarray): Overlaid result on top of the original image.
