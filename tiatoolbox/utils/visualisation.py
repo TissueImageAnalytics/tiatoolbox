@@ -237,7 +237,7 @@ def visualise_patch_prediction(
             mpp = None
         elif process_units == "mpp":
             objective_power = None
-            mpp = np.array([resolution, resolution])
+            mpp = np.array([process_resolution, process_resolution])
 
         if mode == "wsi":
             reader = get_wsireader(img_file)
@@ -264,7 +264,7 @@ def visualise_patch_prediction(
             )
 
         read_img = reader.slide_thumbnail(resolution=resolution, units=units)
-        scale = reader.info.objective_power / resolution
+        scale = process_resolution / resolution
 
         merged_predictions = _merge_patch_predictions(
             model_output, read_img.shape[:2], scale
