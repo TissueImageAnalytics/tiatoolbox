@@ -157,7 +157,7 @@ def _get_patch_prediction_overlay(
     colorbar_params = {
         "mappable": mpl.cm.ScalarMappable(cmap=cmap),
         "boundaries": bounds + [bounds[-1] + 1],
-        "ticks": bounds,
+        "ticks": [b + 0.5 for b in bounds],
         "spacing": "proportional",
         "orientation": "vertical",
     }
