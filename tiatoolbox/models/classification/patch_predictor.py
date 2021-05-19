@@ -202,7 +202,7 @@ class CNNPatchPredictor:
         self.verbose = verbose
 
     @staticmethod
-    def _postprocess(probabilities):
+    def postprocess(probabilities):
         """Apply post processing to output probablities. For classification, we apply
         a simple method and simply take the class with the highest probability.
 
@@ -269,7 +269,7 @@ class CNNPatchPredictor:
                 model, batch_data["image"], on_gpu
             )
             # We get the index of the class with the maximum probability
-            batch_output_predictions = self._postprocess(batch_output_probabilities)
+            batch_output_predictions = self.postprocess(batch_output_probabilities)
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
@@ -279,7 +279,6 @@ class CNNPatchPredictor:
                 # We dont use tolist here because label may be of mixed types
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
-            cum_output["pretrained_model"] = self.pretrained_model
 
             # May be a with block + flag would be nicer
             if self.verbose:
@@ -293,6 +292,7 @@ class CNNPatchPredictor:
             cum_output.pop("labels")
         if not return_coordinates:
             cum_output.pop("coordinates")
+
         return cum_output
 
     def predict(
@@ -336,6 +336,7 @@ class CNNPatchPredictor:
 
             stride_size (tuple): Stride using during tile and WSI processing. Stride
                 is at requested read resolution, not with respect to to level 0.
+
             resolution (float): Resolution used for reading the image.
 
             units (str): Units of resolution used for reading the image. Choose from
@@ -424,6 +425,9 @@ class CNNPatchPredictor:
                     on_gpu=on_gpu,
                 )
                 output_model["label"] = img_label
+                # add extra information useful for downstream analysis
+                output_model["pretrained_model"] = self.pretrained_model
+                output_model["objective_power"] = self.objective_value
 
                 if len(img_list) > 1:
                     basename = img_path.stem

@@ -83,13 +83,16 @@ def _merge_patch_predictions(model_output, output_shape, scale=1):
         output = output / np.expand_dims(denominator, -1)
         selection = denominator >= 2
         # convert raw probabilities to preditions
-        output = CNNPatchPredictor._postprocess(output)
+        output = CNNPatchPredictor.postprocess(output)
+        # set the background to -1
         output[~selection] = -1
 
     return output
 
 
-def _get_patch_prediction_overlay(img, prediction, alpha, pretrained_model, seed=123):
+def _get_patch_prediction_overlay(
+    img, prediction, alpha, pretrained_model, random_colours, random_seed
+):
     """Generate an overlay, given a 2D prediction map.
 
     Args:
@@ -99,18 +102,26 @@ def _get_patch_prediction_overlay(img, prediction, alpha, pretrained_model, seed
         alpha (float): Opacity value used for the overlay.
         pretrained_model (str): Pretrained model used for generating the predictions.
             This is used to determine predefined RGB overlay colours.
-        seed (int): Random number seed used to determine random colours for overlay.
+        random_colours (bool): Whether to use random colours for the overlay. If set
+            to False, then the predefined colours will be used.
+        random_seed (int): Random number seed used to determine random colours for overlay.
 
     Returns:
         overlay (ndarray): Overlaid result on top of the original image.
+        rgb_prediction (ndarray): RGB prediction map.
 
     """
-    np.random.seed(seed)
-
     img = img.astype("uint8")
     overlay = img.copy()
 
-    if pretrained_model is not None:
+    if random_colours:
+        np.random.seed(random_seed)
+        # if pretrained_model is not provided, generate random colours
+        predicted_classes = sorted(np.unique(prediction).tolist())
+        label_dict = {}
+        for label in predicted_classes:
+            label_dict[label] = (np.random.choice(range(256), size=3)).astype("uint8")
+    else:
         pretrained_model = pretrained_model.lower()
         _, dataset = pretrained_model.split("-")
         # get label/model information
@@ -119,12 +130,6 @@ def _get_patch_prediction_overlay(img, prediction, alpha, pretrained_model, seed
         pretrained_info = pretrained_yml[dataset]
         # get a dictionary of label ID and overlay colour
         label_dict = pretrained_info["overlay_info"]
-    else:
-        # if pretrained_model is not provided, generate random colours
-        predicted_classes = sorted(np.unique(prediction).tolist())
-        label_dict = {}
-        for label in predicted_classes:
-            label_dict[label] = (np.random.choice(range(256), size=3)).astype("uint8")
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
@@ -150,10 +155,11 @@ def visualise_patch_prediction(
     img_list,
     model_output_list,
     mode="tile",
-    tile_resolution=None,
     resolution=1.25,
     units="power",
     alpha=0.5,
+    random_colours=False,
+    random_seed=123,
     save_dir=None,
 ):
     """Generate patch-level overlay.
@@ -168,6 +174,8 @@ def visualise_patch_prediction(
             either `level`, `power` or `mpp`.
         alpha (float): Used to determine how the transparent the overlay is. Must be
             between 0 and 1.
+        random_colours (bool): Whether to use random colours for the overlay. If set
+            to False, then the predefined colours will be used.
         save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images.
 
@@ -184,9 +192,6 @@ def visualise_patch_prediction(
     if mode not in ["tile", "wsi"]:
         raise ValueError("`mode` must be either `tile` or `wsi`.")
 
-    if mode == "tile" and tile_resolution is None:
-        raise ValueError("If using `tile` mode, `tile_resolution` must be provided.")
-
     if len(img_list) > 1:
         output_files = []  # generate a list of output file paths
         warnings.warn(
@@ -198,6 +203,17 @@ def visualise_patch_prediction(
     for idx, img_file in enumerate(img_list):
         img_file = pathlib.Path(img_file)
         basename = img_file.stem
+
+        if len(img_list) > 1:
+            with open(model_output_list[idx]) as json_file:
+                model_output = json.load(json_file)
+        else:
+            model_output = model_output_list[idx]
+
+        # get the resolution and pretrained model used during duing training
+        process_objective_power = model_output["objective_power"]
+        pretrained_model = model_output["pretrained_model"]
+
         if mode == "wsi":
             reader = get_wsireader(img_file)
         else:
@@ -205,7 +221,7 @@ def visualise_patch_prediction(
             slide_dims = np.array(img.shape[:2][::-1])
             metadata = WSIMeta(
                 mpp=np.array([1.0, 1.0]),
-                objective_power=tile_resolution,
+                objective_power=process_objective_power,
                 slide_dimensions=slide_dims,
                 level_downsamples=[1.0, 2.0, 4.0, 8.0, 16.0, 32.0],
                 level_dimensions=[
@@ -225,24 +241,23 @@ def visualise_patch_prediction(
         read_img = reader.slide_thumbnail(resolution=resolution, units=units)
         scale = reader.info.objective_power / resolution
 
-        if len(img_list) > 1:
-            with open(model_output_list[idx]) as json_file:
-                model_output = json.load(json_file)
-        else:
-            model_output = model_output_list[idx]
-
-        pretrained_model = model_output["pretrained_model"]
         merged_predictions = _merge_patch_predictions(
             model_output, read_img.shape[:2], scale
         )
 
         overlay, rgb_array = _get_patch_prediction_overlay(
-            read_img, merged_predictions, alpha, pretrained_model
+            read_img,
+            merged_predictions,
+            alpha,
+            pretrained_model,
+            random_colours,
+            random_seed,
         )
 
         if len(img_list) > 1:
             save_dir_ = os.path.join(save_dir, basename)
-            os.makedirs(save_dir_)
+            if not os.path.exists(save_dir_):
+                os.makedirs(save_dir_)
 
             # save overlay and prediction map
             imwrite(save_dir_ + "overlay.png", overlay)
