@@ -150,6 +150,7 @@ def _get_patch_prediction_overlay(
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype("uint8")
 
+    # create colorbar parameters
     colors_list = np.array(list(label_dict.values()), dtype=np.float) / 255
     bounds = list(label_dict.keys())
     cmap = mpl.colors.ListedColormap(colors_list)

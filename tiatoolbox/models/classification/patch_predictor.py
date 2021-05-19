@@ -372,9 +372,8 @@ class CNNPatchPredictor:
         # if not defined in arguments, pull parameters from dataset definition
         if patch_size is None:
             patch_size = self.patch_size
-        if resolution_mpp is None:
+        if resolution is None:
             resolution_mpp = self.resolution_mpp
-        if resolution_power is None:
             resolution_power = self.resolution_power
 
         if mode == "patch":
