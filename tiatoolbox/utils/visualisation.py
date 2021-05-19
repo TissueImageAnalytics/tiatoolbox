@@ -26,6 +26,7 @@ import pathlib
 import json
 import cv2
 import warnings
+import matplotlib as mpl
 
 from tiatoolbox.utils.misc import imread, imwrite, get_pretrained_model_info
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
@@ -149,7 +150,18 @@ def _get_patch_prediction_overlay(
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype("uint8")
 
-    return overlay, rgb_prediction
+    colors_list = np.array(list(label_dict.values()), dtype=np.float) / 255
+    bounds = list(label_dict.keys())
+    cmap = mpl.colors.ListedColormap(colors_list)
+    colorbar_params = {
+        "mappable": mpl.cm.ScalarMappable(cmap=cmap),
+        "boundaries": bounds + [bounds[-1] + 1],
+        "ticks": bounds,
+        "spacing": "proportional",
+        "orientation": "vertical",
+    }
+
+    return overlay, rgb_prediction, colorbar_params
 
 
 def visualise_patch_prediction(
@@ -162,6 +174,7 @@ def visualise_patch_prediction(
     random_colours=False,
     random_seed=123,
     save_dir=None,
+    return_colorbar=False,
 ):
     """Generate patch-level overlay.
 
@@ -179,11 +192,14 @@ def visualise_patch_prediction(
             to False, then the predefined colours will be used.
         save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images.
+        return_colorbar (bool): whether to return the arguments to be used for colorbar.
 
     Returns:
         overlay (ndarray): overlaid output.
         rgb_array (ndarray): segmentation prediction map, where different colours
             denote different class predictions.
+        colorbar_params (dictionary): [optional] The dictionary defining the parameters
+            related to the colobar of the prediction map.
 
     """
     if len(img_list) != len(model_output_list):
@@ -253,7 +269,7 @@ def visualise_patch_prediction(
             model_output, read_img.shape[:2], scale
         )
 
-        overlay, rgb_array = _get_patch_prediction_overlay(
+        overlay, rgb_array, colorbar_params = _get_patch_prediction_overlay(
             read_img,
             merged_predictions,
             alpha,
@@ -277,6 +293,9 @@ def visualise_patch_prediction(
             # set output to return locations of saved files
             output = output_files
         else:
-            output = [overlay, rgb_array]
+            if return_colorbar:
+                output = [overlay, rgb_array, colorbar_params]
+            else:
+                output = [overlay, rgb_array]
 
     return output
