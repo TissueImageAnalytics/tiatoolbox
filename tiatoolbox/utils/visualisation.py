@@ -261,7 +261,7 @@ def visualise_patch_prediction(
         if units == "power":
             scale = reader.info.objective_power / resolution
         elif units == "mpp":
-            scale = (reader.info.mpp / resolution)[0]
+            scale = (reader.info.mpp * resolution)[0]
 
         merged_predictions = _merge_patch_predictions(
             model_output, read_img.shape[:2], scale
