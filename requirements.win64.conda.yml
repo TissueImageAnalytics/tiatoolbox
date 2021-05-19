@@ -25,5 +25,8 @@ dependencies:
   - pytorch
   - tqdm
   - jupyterlab
+  - tifffile
+  - imagecodecs
+  - zarr
   - pip:
     - openslide-python
