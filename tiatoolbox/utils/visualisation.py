@@ -228,15 +228,9 @@ def visualise_patch_prediction(
             model_output = model_output_list[idx]
 
         # get the resolution and pretrained model used during duing training
-        process_resolution = model_output["resolution"]
-        process_units = model_output["units"]
+        process_resolution_mpp = model_output["resolution_mpp"]
+        process_resolution_power = model_output["resolution_power"]
         pretrained_model = model_output["pretrained_model"]
-        if process_units == "power":
-            objective_power = process_resolution
-            mpp = None
-        elif process_units == "mpp":
-            objective_power = None
-            mpp = np.array([resolution, resolution])
 
         if mode == "wsi":
             reader = get_wsireader(img_file)
@@ -244,8 +238,8 @@ def visualise_patch_prediction(
             img = imread(img_file)
             slide_dims = np.array(img.shape[:2][::-1])
             metadata = WSIMeta(
-                mpp=mpp,
-                objective_power=objective_power,
+                mpp=np.array([process_resolution_mpp, process_resolution_mpp]),
+                objective_power=process_resolution_power,
                 slide_dimensions=slide_dims,
                 level_downsamples=[1.0, 2.0, 4.0, 8.0, 16.0, 32.0],
                 level_dimensions=[
@@ -263,7 +257,10 @@ def visualise_patch_prediction(
             )
 
         read_img = reader.slide_thumbnail(resolution=resolution, units=units)
-        scale = reader.info.objective_power / resolution
+        if units == "power":
+            scale = reader.info.objective_power / resolution
+        elif units == "mpp":
+            scale = reader.info.mpp / resolution
 
         merged_predictions = _merge_patch_predictions(
             model_output, read_img.shape[:2], scale

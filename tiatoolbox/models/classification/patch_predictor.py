@@ -192,14 +192,14 @@ class CNNPatchPredictor:
         if model is not None:
             self.model = model
         else:
-            model, patch_size, resolution, units = get_pretrained_model(
+            model, patch_size, resolution_mpp, resolution_power = get_pretrained_model(
                 pretrained_model, pretrained_weight
             )
 
         self.model = model
         self.patch_size = patch_size
-        self.resolution = resolution
-        self.units = units
+        self.resolution_mpp = resolution_mpp
+        self.resolution_power = resolution_power
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
@@ -372,10 +372,10 @@ class CNNPatchPredictor:
         # if not defined in arguments, pull parameters from dataset definition
         if patch_size is None:
             patch_size = self.patch_size
-        if resolution is None:
-            resolution = self.resolution
-        if units is None:
-            units = self.units
+        if resolution_mpp is None:
+            resolution_mpp = self.resolution_mpp
+        if resolution_power is None:
+            resolution_power = self.resolution_power
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
@@ -442,8 +442,8 @@ class CNNPatchPredictor:
                 output_model["label"] = img_label
                 # add extra information useful for downstream analysis
                 output_model["pretrained_model"] = self.pretrained_model
-                output_model["resolution"] = resolution
-                output_model["units"] = units
+                output_model["resolution_mpp"] = resolution_mpp
+                output_model["resolution_power"] = resolution_power
 
                 if len(img_list) > 1:
                     basename = img_path.stem
@@ -519,8 +519,8 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
         raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
 
     patch_size = pretrained_info["patch_size"]
-    resolution = pretrained_info["resolution"]
-    units = pretrained_info["units"]
+    resolution_mpp = pretrained_info["resolution_mpp"]
+    resolution_power = pretrained_info["resolution_power"]
     num_classes = pretrained_info["num_classes"]
 
     preproc_func = predefined_preproc_func(dataset)
@@ -541,4 +541,4 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
-    return model, patch_size, resolution, units
+    return model, patch_size, resolution_mpp, resolution_power
