@@ -29,9 +29,7 @@ import torch.utils.data as torch_data
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-from tiatoolbox.models.segmentation.predictor import Predictor
 from tiatoolbox.utils.visualisation import visualize_instances_dict
-from tiatoolbox.models.segmentation.hovernet import HoVerNet
 
 import time
 
@@ -159,6 +157,7 @@ if __name__ == '__main__':
         None,
         None
     ]
+    from tiatoolbox.models.segmentation import SemanticSegmentor, NucleusInstanceSegmentor
 
     # pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pecan-hover-net-pytorch.tar'
     # hovernet = HoVerNet(mode='fast', num_types=6)
@@ -174,6 +173,10 @@ if __name__ == '__main__':
     #                 num_postproc_worker=0)
     # # predictor.predict(wsi_path_list, mask_path_list, mode='wsi', resolution=0.25, units='mpp')
 
+    # predictor = NucleusInstanceSegmentor(
+    #                 pretrained_model='hovernet-pannuke',
+    #                 num_loader_worker=4,
+    #                 num_postproc_worker=0)
     # idx = 2
     # output_dict = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
     #                 mode='tile', resolution=2.0, units='baseline', on_gpu=True)
@@ -184,27 +187,12 @@ if __name__ == '__main__':
     # imwrite('dump.png', overlay)
 
     idx = -1
-    from tiatoolbox.models.segmentation.semantic import Predictor as SemanticSegmentor
     from tiatoolbox.models.segmentation.generic import FCN_Model
-    pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/fcn-tissue_mask.pth'
-    # model = FCN_Model(nr_output_ch=3)
-    # pretrained = torch.load(pretrained)#['desc']
-    # # pretrained = convert_pytorch_checkpoint(pretrained)
-    # # torch.save(pretrained, '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/fcn-tissue_mask.tar')
-    # model.load_state_dict(pretrained)
-    # predictor = SemanticSegmentor(
-    #                 model=model, 
-    #                 num_loader_worker=4, 
-    #                 num_postproc_worker=0,)
-    # output = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
-    #                  mode='wsi', resolution=1.0, units='mpp')
-
     predictor = SemanticSegmentor(
                     pretrained_model='fcn-tissue_mask',
-                    pretrained_weight=pretrained,
                     num_loader_worker=4, 
                     num_postproc_worker=0,)
-    output = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
+    output = predictor.predict([wsi_path_list[idx]],
                      mode='wsi', resolution=1.0, units='mpp')
 
     reader = get_wsireader(wsi_path_list[idx])
@@ -217,7 +205,7 @@ if __name__ == '__main__':
     overlay = thumb.copy()
     overlay[sel] = thumb[sel] * alpha + (1-alpha) * colorize_output[sel]
     imwrite('dump.png', overlay)
-    # exit()
+    exit()
 
 # TODO: cpu mode
 # TODO: pretrained model

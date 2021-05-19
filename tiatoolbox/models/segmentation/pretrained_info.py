@@ -31,18 +31,17 @@ from .hovernet import HoVerNet
 from .generic import FCN_Model
 
 
-models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
+models_root = "https://tiatoolbox.dcs.warwick.ac.uk/models/seg"
 
 # ! any additional dataset name should be also added to tiatoolbox.models.dataset
 _pretrained_model = {
     "hovernet-pannuke": {
-        # "pretrained": os.path.join(models_root, "alexnet-kather100K-pc.pth"), # @simon to upload ?
-        "pretrained" : '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth',
+        "pretrained" : os.path.join(models_root, "hovernet-pannuke.pth"),
         "num_types" : 6,
         "mode" : 'fast',
     },
     "fcn-tissue_mask": {
-        "pretrained" : '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth',
+        "pretrained" : os.path.join(models_root, "fcn-tissue_mask.pth"),
         "nr_output_ch" : 3,
     }
 }
@@ -74,12 +73,10 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
         pretrained_weight_url = cfg.pop('pretrained')
         model = HoVerNet(**cfg)
     elif 'fcn' in backbone:
-        print(cfg)
         pretrained_weight_url = cfg.pop('pretrained')
         model = FCN_Model(**cfg)
 
     if pretrained_weight is None:
-        pretrained_weight_url = cfg["pretrained"]
         pretrained_weight_url_split = pretrained_weight_url.split("/")
         pretrained_weight = os.path.join(
             rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]
