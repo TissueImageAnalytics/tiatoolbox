@@ -381,5 +381,5 @@ class Segmentor:
         wsi_mask = morphology.remove_small_holes(wsi_mask, area_threshold=256*256)
         wsi_mask = morphology.remove_small_objects(wsi_mask, min_size=32*32, connectivity=2)
 
-        return wsi_mask
+        return [wsi_mask]
 

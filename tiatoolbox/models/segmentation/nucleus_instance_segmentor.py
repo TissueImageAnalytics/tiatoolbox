@@ -1025,5 +1025,5 @@ class Segmentor:
             mask_path = mask_list[wsi_idx] if mask_list is not None else None
             output = self._predict_one_wsi(img_list[wsi_idx], mask_path, loader)
             break # sanity atm
-        return output
+        return [output]
 
