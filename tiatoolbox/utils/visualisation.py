@@ -217,10 +217,10 @@ def visualise_patch_prediction(
         pretrained_model = model_output["pretrained_model"]
         if process_units == "power":
             objective_power = process_resolution
-            mpp = NoneType
+            mpp = None
         elif process_units == "mpp":
             objective_power = None
-            mpp = resolution
+            mpp = np.array([resolution, resolution])
 
         if mode == "wsi":
             reader = get_wsireader(img_file)
