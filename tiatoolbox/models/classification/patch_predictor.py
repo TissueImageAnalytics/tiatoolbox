@@ -375,6 +375,9 @@ class CNNPatchPredictor:
         if resolution is None:
             resolution_mpp = self.resolution_mpp
             resolution_power = self.resolution_power
+            # if both present, set default as objective power
+            resolution = resolution_power
+            units = "power"
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
