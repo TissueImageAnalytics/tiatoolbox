@@ -21,6 +21,7 @@
 """Module that defines the pretrained patch classification models available."""
 
 import os
+import copy
 
 import torch
 
@@ -66,7 +67,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
     if pretrained_model not in _pretrained_model:
         raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
-    cfg = _pretrained_model[pretrained_model]
+    cfg = copy.deepcopy(_pretrained_model[pretrained_model])
     backbone, dataset = pretrained_model.split("-")
 
     if 'hovernet' in backbone:
