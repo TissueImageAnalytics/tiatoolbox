@@ -212,8 +212,15 @@ def visualise_patch_prediction(
             model_output = model_output_list[idx]
 
         # get the resolution and pretrained model used during duing training
-        process_objective_power = model_output["objective_power"]
+        process_resolution = model_output["resolution"]
+        process_units = model_output["units"]
         pretrained_model = model_output["pretrained_model"]
+        if process_units == "power":
+            objective_power = process_resolution
+            mpp = NoneType
+        elif process_units == "mpp":
+            objective_power = None
+            mpp = resolution
 
         if mode == "wsi":
             reader = get_wsireader(img_file)
@@ -221,8 +228,8 @@ def visualise_patch_prediction(
             img = imread(img_file)
             slide_dims = np.array(img.shape[:2][::-1])
             metadata = WSIMeta(
-                mpp=np.array([1.0, 1.0]),
-                objective_power=process_objective_power,
+                mpp=mpp,
+                objective_power=objective_power,
                 slide_dimensions=slide_dims,
                 level_downsamples=[1.0, 2.0, 4.0, 8.0, 16.0, 32.0],
                 level_dimensions=[

@@ -192,10 +192,14 @@ class CNNPatchPredictor:
         if model is not None:
             self.model = model
         else:
-            self.model, self.patch_size, self.objective_value = get_pretrained_model(
+            model, patch_size, resolution, units = get_pretrained_model(
                 pretrained_model, pretrained_weight
             )
 
+        self.model = model
+        self.patch_size = patch_size
+        self.resolution = resolution
+        self.units = units
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
@@ -304,10 +308,10 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_size=(224, 224),
+        patch_size=None,
         stride_size=None,
-        resolution=1.0,
-        units="mpp",
+        resolution=None,
+        units=None,
         save_dir=None,
     ):
         """Make a prediction for a list of input data.
@@ -365,6 +369,14 @@ class CNNPatchPredictor:
                     % (len(label_list), len(img_list))
                 )
 
+        # if not defined in arguments, pull parameters from dataset definition
+        if patch_size is None:
+            patch_size = self.patch_size
+        if resolution is None:
+            resolution = self.resolution
+        if units is None:
+            units = self.units
+
         if mode == "patch":
             # don't return coordinates if patches are already extracted
             return_coordinates = False
@@ -374,6 +386,9 @@ class CNNPatchPredictor:
             )
 
         else:
+            if stride_size is None:
+                raise ValueError("`stride_size` must be provided.")
+
             output_files = []  # generate a list of output file paths
             if len(img_list) > 1:
                 warnings.warn(
@@ -427,7 +442,8 @@ class CNNPatchPredictor:
                 output_model["label"] = img_label
                 # add extra information useful for downstream analysis
                 output_model["pretrained_model"] = self.pretrained_model
-                output_model["objective_power"] = self.objective_value
+                output_model["resolution"] = resolution
+                output_model["units"] = units
 
                 if len(img_list) > 1:
                     basename = img_path.stem
@@ -502,8 +518,9 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     if backbone not in pretrained_models_dict.keys():
         raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
 
-    patch_size = (pretrained_info["patch_size_w"], pretrained_info["patch_size_h"])
-    objective_power = pretrained_info["objective_power"]
+    patch_size = pretrained_info["patch_size"]
+    resolution = pretrained_info["resolution"]
+    units = pretrained_info["units"]
     num_classes = pretrained_info["num_classes"]
 
     preproc_func = predefined_preproc_func(dataset)
@@ -524,4 +541,4 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
-    return model, patch_size, objective_power
+    return model, patch_size, resolution, units
