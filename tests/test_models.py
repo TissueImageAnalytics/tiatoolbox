@@ -1,10 +1,8 @@
 """Tests for code related to model usage."""
 
-# %%
 import os
 import pathlib
 import shutil
-
 import cv2
 import numpy as np
 import pytest
@@ -130,7 +128,7 @@ def test_create_backbone():
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
-        get_model("secret_model", pretrained=False)
+        get_model("secret_model-kather100k", pretrained=False)
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
@@ -431,7 +429,7 @@ def test_PatchDatasetcrash():
         ValueError,
         match=r".* preprocessing .* does not exist.",
     ):
-        predefined_preproc_func("secret_dataset")
+        predefined_preproc_func("secret-dataset")
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
@@ -786,7 +784,7 @@ def test_predictor_crash():
 
     # provide wrong unknown pretrained model
     with pytest.raises(ValueError, match=r"Pretrained .* does not exist"):
-        CNNPatchPredictor(pretrained_model="secret_model")
+        CNNPatchPredictor(pretrained_model="secret_model-kather100k")
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
@@ -848,7 +846,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 
     # test loading user weight
     pretrained_weight_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100k-pc.pth"
+        "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
 
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_pretrained_weigths")
@@ -859,7 +857,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     pretrained_weight = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
         "tmp_pretrained_weigths",
-        "resnet18-kather100k-pc.pth",
+        "resnet18-kather100k.pth",
     )
     download_data(pretrained_weight_url, pretrained_weight)
 
@@ -1036,13 +1034,13 @@ def test_patch_predictor_correctness(_sample_patch1, _sample_patch2):
         )
 
 
-# # ----------------------------------------------------------------------------------
-# # Command Line Interface
-# # ----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
+# Command Line Interface
+# ----------------------------------------------------------------------------------
 
 
-def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
-    """Test for the patch predictor CLI."""
+def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch1):
+    """Test for the patch predictor CLI using patches as input."""
     runner = CliRunner()
     patch_predictor_dir = runner.invoke(
         cli.main,
@@ -1060,11 +1058,13 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             "patch",
             "--return_probabilities",
             False,
+            "--on_gpu",
+            False,
         ],
     )
 
-    assert patch_predictor_dir.exit_code == 0
     shutil.rmtree("tmp_output", ignore_errors=True)
+    assert patch_predictor_dir.exit_code == 0
 
     patch_predictor_single_path = runner.invoke(
         cli.main,
@@ -1082,11 +1082,72 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             "patch",
             "--return_probabilities",
             False,
+            "--on_gpu",
+            False,
         ],
     )
 
-    assert patch_predictor_single_path.exit_code == 0
     shutil.rmtree("tmp_output", ignore_errors=True)
+    assert patch_predictor_single_path.exit_code == 0
+
+
+def test_command_line_patch_predictor_wsi(
+    _dir_sample_tile, _dir_sample_msk, _mini_wsi1_jpg, _mini_wsi1_msk
+):
+    """Test for the patch predictor CLI using tiles/wsi as input."""
+    runner = CliRunner()
+
+    patch_predictor_tile_dir = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--pretrained_model",
+            "resnet18-kather100k",
+            "--img_input",
+            pathlib.Path(_dir_sample_tile),
+            "--mask_input",
+            pathlib.Path(_dir_sample_msk),
+            "--output_path",
+            "tmp_output",
+            "--batch_size",
+            2,
+            "--mode",
+            "tile",
+            "--return_probabilities",
+            False,
+            "--on_gpu",
+            False,
+        ],
+    )
+
+    shutil.rmtree("tmp_output", ignore_errors=True)
+    assert patch_predictor_tile_dir.exit_code == 0
+
+    patch_predictor_tile_single_path = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--pretrained_model",
+            "resnet18-kather100k",
+            "--img_input",
+            pathlib.Path(_mini_wsi1_jpg),
+            "--mask_input",
+            pathlib.Path(_mini_wsi1_msk),
+            "--output_path",
+            "tmp_output",
+            "--batch_size",
+            2,
+            "--mode",
+            "tile",
+            "--return_probabilities",
+            False,
+            "--on_gpu",
+            False,
+        ],
+    )
+
+    shutil.rmtree("tmp_output", ignore_errors=True)
+    assert patch_predictor_tile_single_path.exit_code == 0
 
 
 def test_command_line_patch_predictor_crash(_sample_patch1):
@@ -1103,6 +1164,8 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
             "imaginary_img.tif",
             "--mode",
             "patch",
+            "--on_gpu",
+            False,
         ],
     )
     assert result.exit_code != 0
@@ -1113,11 +1176,13 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
         [
             "patch-predictor",
             "--pretrained_model",
-            "secret_model",
+            "secret_model-kather100k",
             "--img_input",
             pathlib.Path(_sample_patch1),
             "--mode",
             "patch",
+            "--on_gpu",
+            False,
         ],
     )
     assert result.exit_code != 0

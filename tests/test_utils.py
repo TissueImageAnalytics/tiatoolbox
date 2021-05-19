@@ -986,9 +986,8 @@ def test_model_to():
     assert isinstance(model, nn.Module)
 
 
-def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
-    from tiatoolbox.utils.visualisation import visualise_patch_prediction
-
+def test_visualise_single_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
+    """Test for visualisation with one image as input."""
     # to prevent wsireader complaint
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
@@ -1000,6 +999,7 @@ def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk
     # * sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
         [_mini_wsi1_svs],
+        mask_list=[_mini_wsi1_msk],
         mode="wsi",
         return_probabilities=True,
         return_labels=True,
@@ -1011,6 +1011,7 @@ def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk
     )
     tile_output = predictor.predict(
         [_mini_wsi1_jpg],
+        mask_list=[_mini_wsi1_msk],
         mode="tile",
         return_probabilities=True,
         return_labels=True,
@@ -1022,54 +1023,174 @@ def test_visualise_wsi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk
     )
 
     # generate the visualisation for a single input
-    overlay_wsi_single, pred_map_wsi_single = visualise_patch_prediction(
+    output_viz_wsi = visualise_patch_prediction(
         [_mini_wsi1_svs],
         wsi_output,
         mode="wsi",
         resolution=1.25,
         units="power",
     )
-    overlay_tile_single, pred_map_tile_single = visualise_patch_prediction(
+    output_viz_tile = visualise_patch_prediction(
         [_mini_wsi1_jpg],
         tile_output,
         mode="tile",
-        tile_resolution=20.0,
         resolution=1.25,
         units="power",
     )
 
-    # generate the visualisation for a multiple inputs
-    save_path1 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp1/")
-    save_path2 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp2/")
-
-    overlay_wsi_multi, pred_map_wsi_multi = visualise_patch_prediction(
-        [_mini_wsi1_svs, _mini_wsi1_svs],
-        [wsi_output, wsi_output],
-        mode="wsi",
-        resolution=1.25,
-        units="power",
-        save_dir=save_path1,
-    )
-    overlay_tile_multi, pred_map_tile_multi = visualise_patch_prediction(
-        [_mini_wsi1_jpg, _mini_wsi1_jpg],
-        [tile_output, tile_output],
-        mode="tile",
-        resolution=1.25,
-        units="power",
-        save_dir=save_path2,
-    )
+    overlay_wsi_single = output_viz_wsi[0]
+    pred_map_wsi_single = output_viz_wsi[1]
+    overlay_tile_single = output_viz_tile[0]
+    pred_map_tile_single = output_viz_tile[1]
 
     assert overlay_wsi_single.shape == pred_map_wsi_single.shape
     assert overlay_tile_single.shape == pred_map_tile_single.shape
     assert overlay_wsi_single.shape == overlay_tile_single.shape
     assert pred_map_wsi_single.shape == pred_map_tile_single.shape
 
-    overlay_wsi_multi = utils.misc.imread(overlay_wsi_multi[0])
-    pred_map_wsi_multi = utils.misc.imread(pred_map_wsi_multi[0])
-    overlay_tile_multi = utils.misc.imread(overlay_tile_multi[0])
-    pred_map_tile_multi = utils.misc.imread(pred_map_tile_multi[0])
+    # test different input size
+    with pytest.raises(ValueError):
+        output_viz_tile = visualise_patch_prediction(
+            [_mini_wsi1_jpg, _mini_wsi1_jpg],
+            tile_output,
+            mode="tile",
+            resolution=1.25,
+            units="power",
+        )
+
+    # test unrecognised mode
+    with pytest.raises(ValueError):
+        output_viz_tile = visualise_patch_prediction(
+            [_mini_wsi1_jpg],
+            tile_output,
+            mode="secret-mode",
+            resolution=1.25,
+            units="power",
+        )
+
+
+def test_visualise_multi_patch_pred(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
+    """Test for visualisation with multiple images as input."""
+    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
+    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
+
+    patch_size = np.array([224, 224])
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+
+    # generate the visualisation for a multiple inputs
+    save_path1 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp1/")
+    save_path2 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp2/")
+    save_path3 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp3/")
+    save_path4 = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp4/")
+
+    # ensure directories are not present
+    shutil.rmtree(save_path1, ignore_errors=True)
+    shutil.rmtree(save_path2, ignore_errors=True)
+    shutil.rmtree(save_path3, ignore_errors=True)
+    shutil.rmtree(save_path4, ignore_errors=True)
+
+    # * sanity check, both output should be the same with same resolution read args
+    wsi_output = predictor.predict(
+        [_mini_wsi1_svs, _mini_wsi1_svs],
+        mask_list=[_mini_wsi1_msk, _mini_wsi1_msk],
+        mode="wsi",
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+        patch_size=patch_size,
+        stride_size=patch_size,
+        resolution=1.0,
+        units="baseline",
+        save_dir=save_path1,
+    )
+    tile_output = predictor.predict(
+        [_mini_wsi1_jpg, _mini_wsi1_jpg],
+        mask_list=[_mini_wsi1_msk, _mini_wsi1_msk],
+        mode="tile",
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+        patch_size=patch_size,
+        stride_size=patch_size,
+        resolution=1.0,
+        units="baseline",
+        save_dir=save_path2,
+    )
+
+    output_viz_wsi = visualise_patch_prediction(
+        [_mini_wsi1_svs, _mini_wsi1_svs],
+        wsi_output,
+        mode="wsi",
+        resolution=1.25,
+        units="power",
+        save_dir=save_path3,
+    )
+    output_viz_tile = visualise_patch_prediction(
+        [_mini_wsi1_jpg, _mini_wsi1_jpg],
+        tile_output,
+        mode="tile",
+        resolution=1.25,
+        units="power",
+        save_dir=save_path4,
+    )
+
+    overlay_wsi_multi = output_viz_wsi[0][0]
+    pred_map_wsi_multi = output_viz_wsi[0][1]
+    overlay_tile_multi = output_viz_tile[0][0]
+    pred_map_tile_multi = output_viz_tile[0][1]
+
+    overlay_wsi_multi = utils.misc.imread(overlay_wsi_multi)
+    pred_map_wsi_multi = utils.misc.imread(pred_map_wsi_multi)
+    overlay_tile_multi = utils.misc.imread(overlay_tile_multi)
+    pred_map_tile_multi = utils.misc.imread(pred_map_tile_multi)
+
+    # remove temporary directories
+    shutil.rmtree(save_path1, ignore_errors=True)
+    shutil.rmtree(save_path2, ignore_errors=True)
+    shutil.rmtree(save_path3, ignore_errors=True)
+    shutil.rmtree(save_path4, ignore_errors=True)
 
     assert overlay_wsi_multi.shape == pred_map_wsi_multi.shape
     assert overlay_tile_multi.shape == pred_map_tile_multi.shape
     assert overlay_wsi_multi.shape == overlay_tile_multi.shape
     assert pred_map_wsi_multi.shape == pred_map_tile_multi.shape
+
+
+def test_visualise_overlapping_patch_pred(
+    _mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk
+):
+    """Test for visualisation with one image as input."""
+    # to prevent wsireader complaint
+    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
+
+    patch_size = np.array([224, 224])
+    stride_size = np.array([200, 200])
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+
+    tile_output = predictor.predict(
+        [_mini_wsi1_jpg],
+        mask_list=[_mini_wsi1_msk],
+        mode="tile",
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=False,
+        patch_size=patch_size,
+        stride_size=stride_size,
+        resolution=1.0,
+        units="baseline",
+    )
+
+    output_viz_tile = visualise_patch_prediction(
+        [_mini_wsi1_jpg],
+        tile_output,
+        mode="tile",
+        resolution=1.25,
+        units="power",
+    )
+
+    overlay_tile_single = output_viz_tile[0]
+    pred_map_tile_single = output_viz_tile[1]
+
+    assert overlay_tile_single.shape == pred_map_tile_single.shape

@@ -353,9 +353,7 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return read_level, level_bounds, output_size, post_read_scale_factor
 
-    def _find_tile_params(
-        self, tile_objective_value: int, tile_read_size: Tuple[int, int]
-    ):
+    def _find_tile_params(self, tile_objective_value: int):
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
         if rescale.is_integer():
@@ -802,7 +800,7 @@ class WSIReader:
         output_dir = pathlib.Path(output_dir, self.input_path.name)
 
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
-            tile_objective_value, tile_read_size
+            tile_objective_value
         )
 
         tile_read_size = np.multiply(tile_read_size, rescale)
