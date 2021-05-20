@@ -4,7 +4,7 @@ Credits
 Development Lead
 ----------------
 
-- TIA Lab <tia@warwick.ac.uk>
+- TIA Centre led by Nasir Rajpoot <tia@warwick.ac.uk>
 - Shan E Ahmed Raza  <shaneahmed>
 - John Pocock <John-P>
 - Simon Graham <simongraham>
