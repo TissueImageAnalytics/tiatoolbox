@@ -59,7 +59,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "TIA Toolbox"
-copyright = "2020, TIA Lab"
+copyright = "2021, TIA Lab"
 author = "TIA Lab"
 
 # The version info for the project you're documenting, acts as replacement

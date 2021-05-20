@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -26,7 +26,11 @@ from tiatoolbox import wsicore
 from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.models.classification.pretrained_info import _pretrained_model
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.dataset.classification import PatchDataset
 
+import json
 import sys
 import click
 import os
@@ -52,10 +56,10 @@ def main():
 
 
 @main.command()
-@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
-    help="Path to output directory to save the output, default=wsi_input/../meta",
+    help="Path to output directory to save the output, default=img_input/../meta",
 )
 @click.option(
     "--file_types",
@@ -74,27 +78,27 @@ def main():
     default=True,
     help="Print output, default=True",
 )
-def slide_info(wsi_input, output_dir, file_types, mode, verbose):
+def slide_info(img_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
 
     if isinstance(output_dir, str):
         output_dir = pathlib.Path(output_dir)
 
-    if os.path.isdir(wsi_input):
+    if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
-            input_path=wsi_input, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
         if output_dir is None and mode == "save":
-            input_dir = pathlib.Path(wsi_input).parent
+            input_dir = pathlib.Path(img_input).parent
             output_dir = input_dir / "meta"
 
-    elif os.path.isfile(wsi_input):
+    elif os.path.isfile(img_input):
         files_all = [
-            wsi_input,
+            img_input,
         ]
         if output_dir is None and mode == "save":
-            input_dir = pathlib.Path(wsi_input).parent
+            input_dir = pathlib.Path(img_input).parent
             output_dir = input_dir.parent / "meta"
     else:
         raise FileNotFoundError
@@ -123,11 +127,11 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
 
 
 @main.command()
-@click.option("--wsi_input", help="Path to WSI file")
+@click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../im_region.jpg",
+    " default=img_input_dir/../im_region.jpg",
 )
 @click.option(
     "--region",
@@ -153,16 +157,16 @@ def slide_info(wsi_input, output_dir, file_types, mode, verbose):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def read_bounds(wsi_input, region, resolution, units, output_path, mode):
+def read_bounds(img_input, region, resolution, units, output_path, mode):
     """Read a region in an whole slide image as specified."""
     if not region:
         region = [0, 0, 2000, 2000]
 
     if output_path is None and mode == "save":
-        input_dir = pathlib.Path(wsi_input).parent
+        input_dir = pathlib.Path(img_input).parent
         output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
 
     im_region = wsi.read_bounds(
         region,
@@ -178,11 +182,11 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
 
 
 @main.command()
-@click.option("--wsi_input", help="Path to WSI file")
+@click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
-    " default=wsi_input_dir/../slide_thumb.jpg",
+    " default=img_input_dir/../slide_thumb.jpg",
 )
 @click.option(
     "--mode",
@@ -190,13 +194,13 @@ def read_bounds(wsi_input, region, resolution, units, output_path, mode):
     help="'show' to display image region or 'save' to save at the output path"
     ", default=show",
 )
-def slide_thumbnail(wsi_input, output_path, mode):
+def slide_thumbnail(img_input, output_path, mode):
     """Read whole slide image thumbnail."""
     if output_path is None and mode == "save":
-        input_dir = pathlib.Path(wsi_input).parent
+        input_dir = pathlib.Path(img_input).parent
         output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=wsi_input)
+    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
 
     slide_thumb = wsi.slide_thumbnail()
 
@@ -209,7 +213,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
 
 
 @main.command()
-@click.option("--wsi_input", help="input path to WSI file or directory path")
+@click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
     default="tiles",
@@ -240,7 +244,7 @@ def slide_thumbnail(wsi_input, output_path, mode):
     help="Print output, default=True",
 )
 def save_tiles(
-    wsi_input,
+    img_input,
     output_dir,
     file_types,
     tile_objective_value,
@@ -249,13 +253,13 @@ def save_tiles(
 ):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
-    if os.path.isdir(wsi_input):
+    if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
-            input_path=wsi_input, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(wsi_input):
+    elif os.path.isfile(img_input):
         files_all = [
-            wsi_input,
+            img_input,
         ]
     else:
         raise FileNotFoundError
@@ -338,7 +342,7 @@ def stainnorm(
 
 
 @main.command()
-@click.option("--wsi_input", help="Path to WSI file")
+@click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
     help="Path to output file to save the image region in save mode,"
@@ -381,19 +385,19 @@ def stainnorm(
     default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
 )
 def tissue_mask(
-    wsi_input, output_path, method, resolution, units, kernel_size, mode, file_types
+    img_input, output_path, method, resolution, units, kernel_size, mode, file_types
 ):
     """Generate tissue mask for a WSI."""
 
     file_types = tuple(file_types.split(", "))
     output_path = pathlib.Path(output_path)
-    if os.path.isdir(wsi_input):
+    if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
-            input_path=wsi_input, file_types=file_types
+            input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(wsi_input):
+    elif os.path.isfile(img_input):
         files_all = [
-            wsi_input,
+            img_input,
         ]
     else:
         raise FileNotFoundError
@@ -432,6 +436,97 @@ def tissue_mask(
                 output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
                 mask[0].astype(np.uint8) * 255,
             )
+
+
+@main.command()
+@click.option(
+    "--predefined_model",
+    help="Predefined model used to process the data. the format is "
+    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
+    "is a resnet18 model trained on the kather dataset.",
+    default="resnet18-kather100K",
+)
+@click.option(
+    "--pretrained_weight",
+    help="Path to the model weight file. If not supplied, the default "
+    "pretrained weight will be used.",
+    default=None,
+)
+@click.option(
+    "--img_input",
+    help="Path to the input directory containing images to process or an "
+    "individual file.",
+)
+@click.option(
+    "--output_path",
+    help="Output directory where model predictions will be saved.",
+    default="patch_prediction",
+)
+@click.option(
+    "--batch_size",
+    help="Number of images to feed into the model each time.",
+    default=16,
+)
+@click.option(
+    "--return_probabilities",
+    help="Whether to return raw model probabilities.",
+    default=False,
+)
+@click.option(
+    "--file_types",
+    help="File types to capture from directory. "
+    "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
+    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
+)
+def patch_predictor(
+    predefined_model,
+    pretrained_weight,
+    img_input,
+    output_path,
+    batch_size,
+    return_probabilities,
+    file_types,
+):
+    """Process an image/directory of input images with a patch classification CNN."""
+    file_types = tuple(file_types.split(", "))
+    output_path = pathlib.Path(output_path)
+
+    if os.path.isdir(img_input):
+        img_files = utils.misc.grab_files_from_dir(
+            input_path=img_input, file_types=file_types
+        )
+    elif os.path.isfile(img_input):
+        img_files = [
+            img_input,
+        ]
+    else:
+        raise FileNotFoundError
+
+    if predefined_model.lower() not in _pretrained_model:
+        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+
+    if len(img_files) < batch_size:
+        batch_size = len(img_files)
+
+    dataset = PatchDataset(img_files)
+
+    predictor = CNNPatchPredictor(
+        predefined_model=predefined_model,
+        pretrained_weight=pretrained_weight,
+        batch_size=batch_size,
+    )
+
+    output = predictor.predict(
+        dataset, return_probabilities=return_probabilities, on_gpu=False
+    )
+
+    output_file_path = os.path.join(output_path, "results.json")
+    if not output_path.is_dir():
+        os.makedirs(output_path)
+    # convert output, otherwise can't dump via json
+    output = {k: v.tolist() for k, v in output.items()}
+    with open(output_file_path, "w") as handle:
+        json.dump(output, handle)
 
 
 if __name__ == "__main__":
