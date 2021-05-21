@@ -36,8 +36,16 @@ import re
 import numbers
 import os
 from typing import Tuple, Union
+from numbers import Number
+from datetime import datetime
+import tifffile
+import zarr
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
+
+
+IntPair = Tuple[int, int]
+IntBounds = Tuple[int, int, int, int]
 
 
 class WSIReader:
@@ -1445,6 +1453,182 @@ class VirtualWSIReader(WSIReader):
 
         if self.mode == "rgb":
             im_region = utils.transforms.background_composite(image=im_region)
+        return im_region
+
+
+class TIFFWSIReader(WSIReader):
+    def __init__(self, input_img, series="auto", cache_size=2 ** 28):
+        super().__init__(input_img=input_img)
+        self.tiff = tifffile.TiffFile(input_img)
+        self.series_n = series
+        # Find the largest series if series="auto"
+        if self.series_n == "auto":
+            series_areas = [
+                np.prod(self._shape_channels_last(np.array(s.pages[0].shape))[:2])
+                for s in self.tiff.series
+            ]
+            self.series_n = np.argmax(series_areas)
+        self._tiff_series = self.tiff.series[self.series_n]
+        self._zarr_store = tifffile.imread(input_img, series=self.series_n, aszarr=True)
+        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
+        self.zarr_group = zarr.open(self._zarr_lru_cache)
+        if not isinstance(self.zarr_group, zarr.hierarchy.Group):
+            group = zarr.hierarchy.group()
+            group[0] = self.zarr_group
+            self.zarr_group = group
+
+    @property
+    def axes(self) -> str:
+        """Get the axes order for the TIFF."""
+        return self.tiff.pages[0].axes
+
+    def _shape_channels_last(self, x):
+        """Make a level shape tuple in YXS order."""
+        if self.axes == "YXS":
+            return x
+        if self.axes == "SYX":
+            return np.roll(x, -1)
+        raise Exception("Unsupported axes")
+
+    def _channels_last(self, x):
+        """Make channels the last axes (YXS) order."""
+        if self.axes == "YXS":
+            return x
+        if self.axes == "SYX":
+            return np.rollaxis(x, 0, 3)
+        raise Exception("Unsupported axes")
+
+    def _info(self):
+        """TIFF metadata constructor.
+
+        Returns:
+            WSIMeta: Containing metadata.
+
+        """
+
+        level_count = len(self.zarr_group)
+        level_dimensions = [
+            np.array(p.shape[:2][::-1]) for p in self.zarr_group.values()
+        ]
+        slide_dimensions = level_dimensions[0]
+        level_downsamples = [level_dimensions[0] / x for x in level_dimensions]
+        vendor = None
+        mpp = None
+        objective_power = None
+        raw = {}
+
+        if self.tiff.is_svs:
+            vendor = "Aperio"
+            description = self.tiff.pages[0].description
+            raw["Description"] = description
+            raw["TIFF Tags"] = self.tiff.pages[0].tags.items()
+            parts = description.split("|")
+            description_headers, key_value_pairs = parts[0], parts[1:]
+            description_headers = description_headers.split(";")
+
+            software, photometric_info = description_headers[0].splitlines()
+            raw["Software"] = software
+            raw["Photometric Info"] = photometric_info
+
+            def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
+                """Parse SVS key-value string.
+
+                Infers types of data by trial and error with a fallback to
+                the original string type.
+
+                Args:
+                    string (str): key-value string in SVS format: "key=value".
+
+                Returns:
+                    tuple: Key-value pair.
+                """
+                pair = string.split("=")
+                if len(pair) != 2:
+                    raise ValueError
+                key, value_string = pair
+
+                def us_date(string: str) -> datetime:
+                    return datetime.strptime(string, r"%m/%d/%y")
+
+                def time(string: str) -> datetime:
+                    return datetime.strptime(string, r"%H:%M:%S")
+
+                casting_prescedence = [us_date, time, int, float]
+                value = value_string
+                for cast in casting_prescedence:
+                    try:
+                        value = cast(value_string)
+                        return key, value
+                    except ValueError:
+                        continue
+
+                return key.strip(), str(value).strip()
+
+            svs_tags = dict(parse_svs_tag(string) for string in key_value_pairs)
+            raw["SVS Tags"] = svs_tags
+            mpp = [svs_tags.get("MPP")] * 2
+            objective_power = svs_tags.get("AppMag")
+
+        param = WSIMeta(
+            file_path=self.input_path,
+            objective_power=objective_power,
+            slide_dimensions=slide_dimensions,
+            level_count=level_count,
+            level_dimensions=level_dimensions,
+            level_downsamples=level_downsamples,
+            vendor=vendor,
+            mpp=mpp,
+            raw=raw,
+        )
+
+        return param
+
+    def read_region(
+        self, location: IntPair, size: IntPair, level: int = 0
+    ) -> np.ndarray:
+        """Read a region of the TIFF at a given location, size, and resolution level."""
+        x, y = location
+        w, h = size
+        region = self.zarr_group[level][y : y + h, x : x + w, :]
+        return self._channels_last(region)
+
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        **kwargs,
+    ):
+        # Find parameters for optimal read
+        (
+            read_level,
+            level_bounds,
+            output_size,
+            post_read_scale,
+        ) = self._find_read_bounds_params(
+            bounds,
+            resolution=resolution,
+            units=units,
+        )
+
+        im_region = utils.image.safe_padded_read(
+            image=self.zarr_group[read_level],
+            bounds=level_bounds,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=output_size,
+            interpolation=interpolation,
+        )
+
+        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
 
