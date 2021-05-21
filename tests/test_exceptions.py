@@ -3,7 +3,7 @@
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.wsicore.save_tiles import save_tiles
 from tiatoolbox.wsicore.slide_info import slide_info
-from tiatoolbox.tools.stainnorm import get_normaliser
+from tiatoolbox.tools.stain_norm import get_normaliser
 from tiatoolbox import utils
 
 
