@@ -23,7 +23,7 @@ import numpy as np
 
 from tiatoolbox import __version__
 from tiatoolbox import wsicore
-from tiatoolbox.tools import stainnorm as sn, tissuemask
+from tiatoolbox.tools import stain_norm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.models.classification.pretrained_info import _pretrained_model
