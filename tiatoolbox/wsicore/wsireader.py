@@ -1460,7 +1460,7 @@ class TIFFWSIReader(WSIReader):
     def __init__(self, input_img, series="auto", cache_size=2 ** 28):
         super().__init__(input_img=input_img)
         self.tiff = tifffile.TiffFile(input_img)
-        if not self.tiff.is_svs():
+        if not self.tiff.is_svs:
             raise ValueError("Unsupported TIFF WSI format.")
 
         self.series_n = series
