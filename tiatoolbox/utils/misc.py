@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -27,7 +27,11 @@ import pathlib
 import yaml
 import pandas as pd
 import numpy as np
+import os
+import zipfile
+import requests
 from skimage import exposure
+import torch
 
 
 def split_path_name_ext(full_path):
@@ -57,11 +61,12 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     Args:
         input_path (str or pathlib.Path): Path to the directory where files
-            need to be searched
-        file_types (str or tuple(str)): File types (extensions) to be searched
+            need to be searched.
+        file_types (str or tuple(str)): File types (extensions) to be searched.
 
     Returns:
-        list: File paths as a python list
+        list: File paths as a python list. It has been sorted to ensure
+            same ordering across platforms.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -81,7 +86,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     files_grabbed = []
     for files in file_types:
         files_grabbed.extend(input_path.glob(files))
-
+    # Ensure same ordering
+    files_grabbed.sort()
     return list(files_grabbed)
 
 
@@ -511,3 +517,89 @@ def assert_dtype_int(input_var, message="Input must be integer."):
     """
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
         raise AssertionError(message)
+
+
+def download_data(url, save_path, overwrite=False):
+    """Download data from a given URL to location. Can overwrite data if demanded
+    else no action is taken
+
+    Args:
+        url (path): URL from where to download the data.
+        save_path (str): Location to unzip the data.
+        overwrite (bool): True to force overwriting of existing data, default=False
+
+    """
+    print("Download from %s" % url)
+    print("Save to %s" % save_path)
+    save_dir = pathlib.Path(save_path).parent
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    if not overwrite and os.path.exists(save_path):
+        return
+
+    r = requests.get(url)
+    request_response = requests.head(url)
+    status_code = request_response.status_code
+    url_exists = status_code == 200
+
+    if not url_exists:
+        raise ConnectionError("Could not find URL at %s" % url)
+
+    with open(save_path, "wb") as f:
+        f.write(r.content)
+
+
+def unzip_data(zip_path, save_path, del_zip=True):
+    """Extract data from zip file.
+
+    Args:
+        zip_path (str): Path where the zip file is located.
+        save_path (str): Path where to save extracted files.
+        del_zip (bool): Whether to delete initial zip file after extraction.
+
+    """
+    # Extract data from zip file
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(save_path)
+    if del_zip:
+        # Remove zip file
+        os.remove(zip_path)
+
+
+def select_device(on_gpu):
+    """Selects the appropriate device as requested.
+
+    Args:
+        on_gpu (bool): Selects gpu if True.
+
+    Returns:
+        device (str): "gpu" if on_gpu is True otherwise returns "cpu"
+
+    """
+    if on_gpu:
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    return device
+
+
+def model_to(on_gpu, model):
+    """Transfers model to cpu/gpu.
+
+    Args:
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu
+        model (torch.nn.Module): PyTorch defined model.
+
+    Returns:
+        model (torch.nn.Module):
+
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        model = model.to("cuda")
+    else:
+        model = model.to("cpu")
+
+    return model

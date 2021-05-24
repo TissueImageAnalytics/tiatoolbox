@@ -98,6 +98,49 @@ Patch Extraction
 .. autoclass:: VariableWindowPatchExtractor
     :show-inheritance:
 
+^^^^^^^^^^^^^^^^^^^^
+Deep Learning Models
+^^^^^^^^^^^^^^^^^^^^
+
+.. automodule::tiatoolbox.models
+    :members:
+
+.. automodule:: tiatoolbox.models.abc
+    :members:
+
+--------
+Backbone
+--------
+
+.. automodule:: tiatoolbox.models.backbone
+    :members:
+
+--------------
+Classification
+--------------
+
+.. automodule:: tiatoolbox.models.classification
+    :members:
+
+.. automodule:: tiatoolbox.models.classification.abc
+    :members:
+
+.. automodule:: tiatoolbox.models.classification.patch_predictor
+    :members:
+
+.. automodule:: tiatoolbox.models.classification.pretrained_info
+    :members:
+
+-------
+DataSet
+-------
+
+.. automodule:: tiatoolbox.models.dataset
+    :members:
+
+.. automodule:: tiatoolbox.models.dataset.classification
+    :members:
+
 ^^^^^^^^^
 Utilities
 ^^^^^^^^^

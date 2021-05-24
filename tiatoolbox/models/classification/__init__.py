@@ -18,23 +18,11 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Top-level package for TIA Toolbox."""
 
-import os
+"""Package where patch-level classification models are stored."""
 
-__author__ = """TIA Lab"""
-__email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.6.0"
-
-# This will set the tiatoolbox external data
-# default to be the user home folder, should work on both Window and Unix/Linux
-# C:\Users\USER\.tiatoolbox
-# /home/USER/.tiatoolbox
-
-# runtime context parameters
-rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
-
-from tiatoolbox import tiatoolbox, wsicore, utils, tools, models
-
-if __name__ == "__main__":
-    print("tiatoolbox version:" + str(__version__))
+from tiatoolbox.models.classification.patch_predictor import (
+    CNNPatchPredictor,
+    CNNPatchModel,
+)
+from tiatoolbox.models.classification import patch_predictor, abc, pretrained_info

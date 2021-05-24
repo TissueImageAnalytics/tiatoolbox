@@ -1,3 +1,5 @@
+"""Tests for stain normalisation code."""
+
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox.tools import stainextract
@@ -163,7 +165,7 @@ def test_command_line_stainnorm(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             source_img,
             "--target_input",
@@ -178,7 +180,7 @@ def test_command_line_stainnorm(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             source_img,
             "--target_input",
@@ -193,7 +195,7 @@ def test_command_line_stainnorm(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             source_img,
             "--target_input",
@@ -208,7 +210,7 @@ def test_command_line_stainnorm(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             source_img,
             "--target_input",
@@ -230,7 +232,7 @@ def test_cli_stainnorm_dir(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             str(source_img),
             "--target_input",
@@ -252,7 +254,7 @@ def test_cli_stainnorm_file_not_found_error(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             str(source_img)[:-1],
             "--target_input",
@@ -276,7 +278,7 @@ def test_cli_stainnorm_method_not_supported(_source_image):
     stainnorm_result = runner.invoke(
         cli.main,
         [
-            "stainnorm",
+            "stain-norm",
             "--source_input",
             str(source_img),
             "--target_input",
