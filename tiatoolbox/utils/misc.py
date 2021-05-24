@@ -542,6 +542,13 @@ def download_data(url, save_path, overwrite=False):
         return
 
     r = requests.get(url)
+    request_response = requests.head(url)
+    status_code = request_response.status_code
+    url_exists = status_code == 200
+
+    if not url_exists:
+        raise ConnectionError("Could not find URL at %s" % url)
+
     with open(save_path, "wb") as f:
         f.write(r.content)
 

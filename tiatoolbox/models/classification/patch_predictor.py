@@ -248,9 +248,9 @@ class CNNPatchPredictor:
             # at the size of the image at the processed resolution.
             logging.warning(
                 "No resolution provided for saving the merged predictions. Default to "
-                "saving at the size at the processed resolution. Consider using a lower "
-                "resolution than that used for processing to reduce processing speed and "
-                "to reduce the memory of the generated map."
+                "saving at the size at the processed resolution. Consider using a "
+                "lower resolution than that used for processing to reduce processing "
+                "speed and to reduce the memory of the generated map."
             )
             resolution = process_resolution
             scale = 1
@@ -314,7 +314,7 @@ class CNNPatchPredictor:
         else:
             probabilities = output_model["probabilities"]
             num_classes = len(output_model["probabilities"][0])
-            output = np.full([output_shape[0], output_shape[1], num_classes], -1.0)
+            output = np.full([output_shape[0], output_shape[1], num_classes], 0.0)
             # used to merge overlapping patches
             denominator = np.ones(np.array(output_shape))
             for idx, coords in enumerate(coordinates):
@@ -403,12 +403,11 @@ class CNNPatchPredictor:
             else:
                 output_model = output_list[idx][0]
 
-            if resolution is not None:
-                if output_model["units"] != units:
-                    raise ValueError(
-                        "Defined `units` of resolution must be the same that were used "
-                        "when processing the data (%s)." % output_model["units"]
-                    )
+            if resolution is not None and output_model["units"] != units:
+                raise ValueError(
+                    "Defined `units` of resolution must be the same that were used "
+                    "when processing the data (%s)." % output_model["units"]
+                )
 
             # get the resolution and pretrained model used during duing training
             read_img, scale = CNNPatchPredictor._get_merge_info(
