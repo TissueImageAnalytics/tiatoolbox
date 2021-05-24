@@ -40,6 +40,7 @@ from numbers import Number
 from datetime import datetime
 import tifffile
 import zarr
+from xml.etree import ElementTree
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -1456,11 +1457,52 @@ class VirtualWSIReader(WSIReader):
         return im_region
 
 
+class ArrayView:
+    """An object for viewing a zarr array with a different index ordering.
+
+    Used to allow YXS index order reads for arrays with axes in other
+    orders such as SYX. Currently supported axes are:
+    - YXS
+    - SYX
+    """
+
+    def __init__(self, array: zarr.Array, axes: str):
+        """Inilialise the view object.
+
+        Args:
+            array (zarr.Array): Zarr Array to read from.
+            axes (str): Axes ordering string. Allowed values are YXS and SYX.
+        """
+        self.array = array
+        self.axes = axes
+        self._shape = dict((k, v) for k, v in zip(self.axes, self.array.shape))
+
+    @property
+    def shape(self):
+        return tuple(self._shape[c] for c in "YXS")
+
+    def __getitem__(self, index):
+        # Normalise to a tuple of length = len(self.axes)
+        if not isinstance(index, tuple):
+            index = (index,)
+        while len(index) < len(self.axes):
+            index = (*index, slice())
+
+        if self.axes == "YXS":
+            return self.array[index]
+        elif self.axes == "SYX":
+            S, Y, X = index
+            index = (Y, X, S)
+            return np.rollaxis(self.array[index], 0, 3)
+        else:
+            raise Exception("Unspported axes")
+
+
 class TIFFWSIReader(WSIReader):
     def __init__(self, input_img, series="auto", cache_size=2 ** 28):
         super().__init__(input_img=input_img)
         self.tiff = tifffile.TiffFile(input_img)
-        if not self.tiff.is_svs:
+        if not any([self.tiff.is_svs, self.tiff.is_ome]):
             raise ValueError("Unsupported TIFF WSI format.")
 
         self.series_n = series
@@ -1474,11 +1516,19 @@ class TIFFWSIReader(WSIReader):
         self._tiff_series = self.tiff.series[self.series_n]
         self._zarr_store = tifffile.imread(input_img, series=self.series_n, aszarr=True)
         self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
-        self.zarr_group = zarr.open(self._zarr_lru_cache)
-        if not isinstance(self.zarr_group, zarr.hierarchy.Group):
+        self._zarr_group = zarr.open(self._zarr_lru_cache)
+        if not isinstance(self._zarr_group, zarr.hierarchy.Group):
             group = zarr.hierarchy.group()
-            group[0] = self.zarr_group
-            self.zarr_group = group
+            group[0] = self._zarr_group
+            self._zarr_group = group
+        self.level_arrays = dict(
+            (int(key), ArrayView(array, axes=self.axes))
+            for key, array in self._zarr_group.items()
+        )
+        # Using the zarr array view method gives a ValueError
+        # self.zarr_views = zarr.hierarchy.group()
+        # for key, array in self.zarr_group.items():
+        #     self.zarr_views[key] = array.view(self._shape_channels_last(array.shape))
 
     @property
     def axes(self) -> str:
@@ -1493,13 +1543,132 @@ class TIFFWSIReader(WSIReader):
             return np.roll(x, -1)
         raise Exception("Unsupported axes")
 
-    def _channels_last(self, x):
-        """Make channels the last axes (YXS) order."""
-        if self.axes == "YXS":
-            return x
-        if self.axes == "SYX":
-            return np.rollaxis(x, 0, 3)
-        raise Exception("Unsupported axes")
+    def _parse_svs_metadata(self) -> dict:
+        """Extract SVS specific metadata.
+
+        Returns:
+            dict: Dictionary of kwargs for WSIMeta.
+        """
+        raw = {}
+        mpp = None
+        objective_power = None
+        vendor = "Aperio"
+
+        description = self.tiff.pages[0].description
+        raw["Description"] = description
+        raw["TIFF Tags"] = self.tiff.pages[0].tags.items()
+        parts = description.split("|")
+        description_headers, key_value_pairs = parts[0], parts[1:]
+        description_headers = description_headers.split(";")
+
+        software, photometric_info = description_headers[0].splitlines()
+        raw["Software"] = software
+        raw["Photometric Info"] = photometric_info
+
+        def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
+            """Parse SVS key-value string.
+
+            Infers types of data by trial and error with a fallback to
+            the original string type.
+
+            Args:
+                string (str): key-value string in SVS format: "key=value".
+
+            Returns:
+                tuple: Key-value pair.
+            """
+            pair = string.split("=")
+            if len(pair) != 2:
+                raise ValueError
+            key, value_string = pair
+            key = key.strip()
+            value = value_string.strip()
+
+            def us_date(string: str) -> datetime:
+                return datetime.strptime(string, r"%m/%d/%y")
+
+            def time(string: str) -> datetime:
+                return datetime.strptime(string, r"%H:%M:%S")
+
+            casting_prescedence = [us_date, time, int, float]
+            value = value_string
+            for cast in casting_prescedence:
+                try:
+                    value = cast(value_string)
+                    return key, value
+                except ValueError:
+                    continue
+
+            return key, value
+
+        svs_tags = dict(parse_svs_tag(string) for string in key_value_pairs)
+        raw["SVS Tags"] = svs_tags
+        mpp = svs_tags.get("MPP")
+        if mpp is not None:
+            mpp = [mpp] * 2
+        objective_power = svs_tags.get("AppMag")
+
+        kwargs = dict(
+            objective_power=objective_power,
+            vendor=vendor,
+            mpp=mpp,
+            raw=raw,
+        )
+
+        return kwargs
+
+    def _parse_ome_metadata(self) -> dict:
+        # The OME-XML should be in each IFD but is optional. It must be
+        # present in the first IFD. We simply get the description from
+        # the first IFD.
+        description = self.tiff.pages[0].description
+        xml = ElementTree.fromstring(description)
+        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+
+        raw = {
+            "Description": description,
+            "OME-XML": xml,
+        }
+
+        objective_power = None
+        mpp = None
+        vendor = None
+
+        xml_pixels = xml_series.find("ome:Pixels", namespaces)
+        mppx = xml_pixels.attrib.get("PhysicalSizeX")
+        mppy = xml_pixels.attrib.get("PhysicalSizeY")
+        if mppx is not None and mppy is not None:
+            mpp = [mppx, mppy]
+
+        instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
+        objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
+        instrument_ref_id = instrument_ref.attrib["ID"]
+        objective_settings_id = objective_settings.attrib["ID"]
+        instruments = dict(
+            (instrument.attrib["ID"], instrument)
+            for instrument in xml.findall("ome:Instrument", namespaces)
+        )
+        objectives = dict(
+            ((instrument_id, objective.attrib["ID"]), objective)
+            for instrument_id, instrument in instruments.items()
+            for objective in instrument.findall("ome:Objective", namespaces)
+        )
+
+        try:
+            objective = objectives[(instrument_ref_id, objective_settings_id)]
+            objective_power = float(objective.attrib.get("NominalMagnification"))
+        except IndexError:
+            pass
+
+        kwargs = dict(
+            objective_power=objective_power,
+            vendor=vendor,
+            mpp=mpp,
+            raw=raw,
+        )
+
+        return kwargs
 
     def _info(self):
         """TIFF metadata constructor.
@@ -1509,91 +1678,74 @@ class TIFFWSIReader(WSIReader):
 
         """
 
-        level_count = len(self.zarr_group)
+        level_count = len(self._zarr_group)
         level_dimensions = [
-            np.array(p.shape[:2][::-1]) for p in self.zarr_group.values()
+            np.array(self._shape_channels_last(p.shape)[:2][::-1])
+            for p in self._zarr_group.values()
         ]
         slide_dimensions = level_dimensions[0]
-        level_downsamples = [level_dimensions[0] / x for x in level_dimensions]
-        vendor = None
-        mpp = None
-        objective_power = None
-        raw = {}
+        level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
 
         if self.tiff.is_svs:
-            vendor = "Aperio"
-            description = self.tiff.pages[0].description
-            raw["Description"] = description
-            raw["TIFF Tags"] = self.tiff.pages[0].tags.items()
-            parts = description.split("|")
-            description_headers, key_value_pairs = parts[0], parts[1:]
-            description_headers = description_headers.split(";")
-
-            software, photometric_info = description_headers[0].splitlines()
-            raw["Software"] = software
-            raw["Photometric Info"] = photometric_info
-
-            def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
-                """Parse SVS key-value string.
-
-                Infers types of data by trial and error with a fallback to
-                the original string type.
-
-                Args:
-                    string (str): key-value string in SVS format: "key=value".
-
-                Returns:
-                    tuple: Key-value pair.
-                """
-                pair = string.split("=")
-                if len(pair) != 2:
-                    raise ValueError
-                key, value_string = pair
-
-                def us_date(string: str) -> datetime:
-                    return datetime.strptime(string, r"%m/%d/%y")
-
-                def time(string: str) -> datetime:
-                    return datetime.strptime(string, r"%H:%M:%S")
-
-                casting_prescedence = [us_date, time, int, float]
-                value = value_string
-                for cast in casting_prescedence:
-                    try:
-                        value = cast(value_string)
-                        return key, value
-                    except ValueError:
-                        continue
-
-                return key.strip(), str(value).strip()
-
-            svs_tags = dict(parse_svs_tag(string) for string in key_value_pairs)
-            raw["SVS Tags"] = svs_tags
-            mpp = [svs_tags.get("MPP")] * 2
-            objective_power = svs_tags.get("AppMag")
+            filetype_params = self._parse_svs_metadata()
+        if self.tiff.is_ome:
+            filetype_params = self._parse_ome_metadata()
 
         param = WSIMeta(
             file_path=self.input_path,
-            objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,
             level_dimensions=level_dimensions,
             level_downsamples=level_downsamples,
-            vendor=vendor,
-            mpp=mpp,
-            raw=raw,
+            **filetype_params,
         )
 
         return param
 
-    def read_region(
-        self, location: IntPair, size: IntPair, level: int = 0
-    ) -> np.ndarray:
-        """Read a region of the TIFF at a given location, size, and resolution level."""
-        x, y = location
-        w, h = size
-        region = self.zarr_group[level][y : y + h, x : x + w, :]
-        return self._channels_last(region)
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        **kwargs,
+    ):
+        # Find parameters for optimal read
+        (
+            read_level,
+            _,
+            _,
+            post_read_scale,
+            baseline_read_size,
+        ) = self.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
+
+        bounds = utils.transforms.locsize2bounds(
+            location=location, size=baseline_read_size
+        )
+        im_region = utils.image.safe_padded_read(
+            image=self.level_arrays[read_level],
+            bounds=bounds,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation=interpolation,
+        )
+
+        im_region = utils.transforms.background_composite(image=im_region)
+        return im_region
 
     def read_bounds(
         self,
@@ -1618,7 +1770,7 @@ class TIFFWSIReader(WSIReader):
         )
 
         im_region = utils.image.safe_padded_read(
-            image=self.zarr_group[read_level],
+            image=self.level_arrays[read_level],
             bounds=level_bounds,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
