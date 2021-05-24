@@ -52,6 +52,7 @@ def _test_outputs_api1(
     if return_probabilities:
         for idx, probabilities_ in enumerate(probabilities):
             probabilities_max = max(probabilities_)
+            print(probabilities_max, predictions[idx])
             assert (
                 np.abs(probabilities_max - probabilities_check[idx]) <= 1e-8
                 and predictions[idx] == predictions_check[idx]
@@ -70,7 +71,7 @@ def _test_outputs_api2(
     """Helper function to get the model output using API 2."""
     # API 2
     pretrained_weight_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/resnet18-kather100K-pc.pth"
+        "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
 
     save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_api2")
@@ -80,7 +81,7 @@ def _test_outputs_api2(
     os.makedirs(save_dir_path)
 
     pretrained_weight = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], "tmp_api2", "resnet18-kather100K-pc.pth"
+        rcParam["TIATOOLBOX_HOME"], "tmp_api2", "resnet18-kather100k.pth"
     )
     download_data(pretrained_weight_url, pretrained_weight)
 
@@ -206,7 +207,7 @@ def test_predictor_crash():
         CNNPatchPredictor(predefined_model=123)
 
     # model and dummy input
-    model = CNNPatchPredictor(predefined_model="resnet34-kather100K")
+    model = CNNPatchPredictor(predefined_model="resnet34-kather100k")
     img_list = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 4, 3)),
@@ -482,11 +483,11 @@ def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999717473983765]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999912977218628]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnet18-kather100K",
+        "resnet18-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -499,11 +500,11 @@ def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999717473983765]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999912977218628]
+    predictions_check = [6, 3]
     save_dir_path = _test_outputs_api2(
         dataset,
-        "resnet18-kather100K",
+        "resnet18-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -534,11 +535,11 @@ def test_patch_predictor_api1_no_probs_and_labels(_sample_patch1, _sample_patch2
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999717473983765]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999912977218628]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnet18-kather100K",
+        "resnet18-kather100k",
         return_probabilities=False,
         return_labels=False,
         probabilities_check=probabilities_check,
@@ -552,11 +553,11 @@ def test_patch_predictor_alexnet_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9998185038566589]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999735355377197]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "alexnet-kather100K",
+        "alexnet-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -570,11 +571,11 @@ def test_patch_predictor_resnet34_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9991286396980286]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9979840517044067]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnet34-kather100K",
+        "resnet34-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -588,11 +589,11 @@ def test_patch_predictor_resnet50_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9969022870063782]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999986886978149]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnet50-kather100K",
+        "resnet50-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -606,11 +607,11 @@ def test_patch_predictor_resnet101_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999957084655762]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999932050704956]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnet101-kather100K",
+        "resnet101-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -624,11 +625,11 @@ def test_patch_predictor_resnext50_32x4d_kather100K(_sample_patch1, _sample_patc
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999779462814331]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9910059571266174]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnext50_32x4d-kather100K",
+        "resnext50_32x4d-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -642,11 +643,11 @@ def test_patch_predictor_resnext101_32x8d_kather100K(_sample_patch1, _sample_pat
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999345541000366]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999971389770508]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "resnext101_32x8d-kather100K",
+        "resnext101_32x8d-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -660,11 +661,11 @@ def test_patch_predictor_wide_resnet50_2_kather100K(_sample_patch1, _sample_patc
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999997615814209]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9953408241271973]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "wide_resnet50_2-kather100K",
+        "wide_resnet50_2-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -678,11 +679,11 @@ def test_patch_predictor_wide_resnet101_2_kather100K(_sample_patch1, _sample_pat
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.999420166015625]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999831914901733]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "wide_resnet101_2-kather100K",
+        "wide_resnet101_2-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -696,11 +697,11 @@ def test_patch_predictor_densenet121_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9998136162757874]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 1.0]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "densenet121-kather100K",
+        "densenet121-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -714,11 +715,11 @@ def test_patch_predictor_densenet161_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999997615814209]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999959468841553]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "densenet161-kather100K",
+        "densenet161-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -732,11 +733,11 @@ def test_patch_predictor_densenet169_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999773502349854]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999934434890747]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "densenet169-kather100K",
+        "densenet169-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -750,11 +751,11 @@ def test_patch_predictor_densenet201_kather100K(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999812841415405]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999983310699463]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "densenet201-kather100K",
+        "densenet201-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -768,11 +769,11 @@ def test_patch_predictor_mobilenet_v2_kather100K(_sample_patch1, _sample_patch2)
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9998366832733154]
-    predictions_check = [5, 8]
+    probabilities_check = [0.9999998807907104, 0.9999126195907593]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "mobilenet_v2-kather100K",
+        "mobilenet_v2-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -786,11 +787,11 @@ def test_patch_predictor_mobilenet_v3_large_kather100K(_sample_patch1, _sample_p
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999945163726807]
-    predictions_check = [5, 8]
+    probabilities_check = [0.9999996423721313, 0.9999878406524658]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "mobilenet_v3_large-kather100K",
+        "mobilenet_v3_large-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -804,11 +805,11 @@ def test_patch_predictor_mobilenet_v3_small_kather100K(_sample_patch1, _sample_p
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999963045120239]
-    predictions_check = [5, 8]
+    probabilities_check = [0.9999998807907104, 0.9999997615814209]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "mobilenet_v3_small-kather100K",
+        "mobilenet_v3_small-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -822,11 +823,11 @@ def test_patch_predictor_googlenet(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.998254120349884]
-    predictions_check = [5, 8]
+    probabilities_check = [1.0, 0.9999639987945557]
+    predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
-        "googlenet-kather100K",
+        "googlenet-kather100k",
         return_probabilities=True,
         return_labels=True,
         probabilities_check=probabilities_check,
@@ -847,7 +848,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         [
             "patch-predictor",
             "--predefined_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             str(pathlib.Path(_dir_sample_patches)),
             "--output_path",
@@ -867,7 +868,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         [
             "patch-predictor",
             "--predefined_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             pathlib.Path(_sample_patch1),
             "--output_path",
@@ -887,7 +888,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
         [
             "patch-predictor",
             "--predefined_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             pathlib.Path(_sample_patch1),
             "--output_path",
@@ -898,7 +899,7 @@ def test_command_line_patch_predictor(_dir_sample_patches, _sample_patch1):
             False,
         ],
     )
-    output_list = os.listdir('tmp_output')
+    output_list = os.listdir("tmp_output")
     assert len(output_list) > 0
 
     assert patch_predictor_single_path.exit_code == 0
@@ -914,7 +915,7 @@ def test_command_line_patch_predictor_crash(_sample_patch1):
         [
             "patch-predictor",
             "--predefined_model",
-            "resnet18-kather100K",
+            "resnet18-kather100k",
             "--img_input",
             "imaginary_img.tif",
         ],
