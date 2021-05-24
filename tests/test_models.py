@@ -483,7 +483,7 @@ def test_patch_predictor_api1(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999912977218628]
+    probabilities_check = [1.0, 0.9999911785125732]
     predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
@@ -500,7 +500,7 @@ def test_patch_predictor_api2(_sample_patch1, _sample_patch2):
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999912977218628]
+    probabilities_check = [1.0, 0.9999911785125732]
     predictions_check = [6, 3]
     save_dir_path = _test_outputs_api2(
         dataset,
@@ -535,7 +535,7 @@ def test_patch_predictor_api1_no_probs_and_labels(_sample_patch1, _sample_patch2
     dataset = PatchDataset(
         [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)], return_labels=True
     )
-    probabilities_check = [1.0, 0.9999912977218628]
+    probabilities_check = [1.0, 0.9999911785125732]
     predictions_check = [6, 3]
     _test_outputs_api1(
         dataset,
