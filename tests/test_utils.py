@@ -798,6 +798,14 @@ def test_download_data():
     assert os.path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
+    # URL not valid
+    with pytest.raises(ConnectionError):
+        # shouldn't use save_path if test runs correctly
+        save_path = os.path.join(save_dir_path, "temp")
+        misc.download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
+        )
+
 
 def test_parse_cv2_interpolaton():
     """Test parsing interpolation modes for cv2."""
