@@ -21,15 +21,12 @@
 """Console script for tiatoolbox."""
 
 import numpy as np
-import json
 import yaml
-import inspect
 import sys
 import click
 import os
 import pathlib
 from PIL import Image
-import pandas as pd
 
 from tiatoolbox import __version__
 from tiatoolbox import rcParam
@@ -39,7 +36,6 @@ from tiatoolbox import utils
 from tiatoolbox.utils.misc import save_json
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
-from tiatoolbox.models.dataset.classification import PatchDataset
 
 
 def version_msg():
@@ -519,6 +515,23 @@ def tissue_mask(
     default="mpp",
 )
 @click.option(
+    "--merge_predictions",
+    help="Whether to merge the predictions to form a 2-dimensional map.",
+    default=False,
+)
+@click.option(
+    "--merge_resolution",
+    help="Resolution of the merged prediction map. If this is different to the "
+    "resolution used for processing the input, then the predictions will be rescaled.",
+    default=None,
+)
+@click.option(
+    "--return_overlay",
+    help="Whether to return an overlay of the merged prediction map on top "
+    "of the original image.",
+    default=False,
+)
+@click.option(
     "--on_gpu",
     help="Whether to process the data using the GPU.",
     default=True,
@@ -544,6 +557,9 @@ def patch_predictor(
     stride_size,
     resolution,
     units,
+    merge_predictions,
+    merge_resolution,
+    return_overlay,
     on_gpu,
     file_types,
 ):
@@ -619,12 +635,15 @@ def patch_predictor(
         stride_size,
         resolution,
         units,
+        merge_predictions,
+        merge_resolution,
+        return_overlay,
         output_path,
     )
 
     if mode == "patch" or len(img_files) == 1:
         if mode != "patch":
-            output = output[0]
+            output = output[0][0]
         output_file_path = os.path.join(output_path, "results.json")
         if not output_path.is_dir():
             os.makedirs(output_path)

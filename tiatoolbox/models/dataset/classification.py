@@ -292,7 +292,6 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             mask = imread(mask_path)
             mask_reader = VirtualWSIReader(mask)
             mask_reader.attach_to_reader(self.reader.info)
-            mask_present = True
         elif mode == "wsi" and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly

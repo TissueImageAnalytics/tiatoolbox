@@ -30,7 +30,6 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
-from torch._C import Value
 import yaml
 from skimage import exposure
 
