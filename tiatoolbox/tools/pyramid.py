@@ -22,7 +22,21 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 class TilePyramidGenerator:
-    """Generic tile pyramid generator with sensible defaults."""
+    r"""Generic tile pyramid generator with sensible defaults.
+
+    Args:
+        wsi (WSIReader): The WSI reader object. Must implement
+            `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
+        tile_size (int): The size of tiles to generate. Default is
+            256. Note that the output tile size will be
+            :math:`\text{tile size} + 2 \times\text{overlap}`.
+        downsample (int): The downsample factor between levels.
+            Default is 2.
+        tile_overlap (int): The number of extra pixel to add to each
+            edge of the tile. Default is 0.
+        cache_size (int): The maximum number of recent tiles to
+            cache. Default is 1024.
+    """
 
     def __init__(
         self,
@@ -32,20 +46,6 @@ class TilePyramidGenerator:
         overlap: int = 0,
         cache_size=1024,
     ):
-        """Initialise the tile generator.
-
-        Args:
-            wsi (WSIReader): The WSI reader object. Must implement
-                `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
-            tile_size (int): The size of tiles to generate. Default is
-                256.
-            downsample (int): The downsample factor between levels.
-                Default is 2.
-            tile_overlap (int): The number of extra pixel to add to each
-                edge of the tile. Default is 0.
-            cache_size (int): The maximum number of recent tiles to
-                cache. Default is 1024.
-        """
         self.wsi = wsi
         self.tile_size = tile_size
         self.overlap = overlap
@@ -66,8 +66,7 @@ class TilePyramidGenerator:
     def output_tile_size(self) -> int:
         r"""The size of the tile which will be returned.
 
-        This is eqivalent to:
-        .. math:: \text{tile size} + 2*\text{overlay}
+        This is eqivalent to :math:`\text{tile size} + 2*\text{overlay}`.
         """
         return self.tile_size + 2 * self.overlap
 
@@ -164,7 +163,21 @@ class TilePyramidGenerator:
 
 
 class DeepZoomGenerator(TilePyramidGenerator):
-    """Pyramid tile generator following the DeepZoom format."""
+    r"""Pyramid tile generator following the DeepZoom format.
+
+    Args:
+        wsi (WSIReader): The WSI reader object. Must implement
+            `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
+        tile_size (int): The size of tiles to generate. Default is
+            256. Note that the output tile size will be
+            :math:`\text{tile size} + 2 \times\text{overlap}`.
+        downsample (int): The downsample factor between levels.
+            Default is 2.
+        tile_overlap (int): The number of extra pixel to add to each
+            edge of the tile. Default is 0.
+        cache_size (int): The maximum number of recent tiles to
+            cache. Default is 1024.
+    """
 
     def __init__(
         self,
@@ -174,20 +187,6 @@ class DeepZoomGenerator(TilePyramidGenerator):
         overlap: int = 1,
         cache_size=1024,
     ):
-        """Initialise the DeepZoom tile generator.
-
-        Args:
-            wsi (WSIReader): The WSI reader object. Must implement
-                `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
-            tile_size (int): The size of tiles to generate. Default is
-                256.
-            downsample (int): The downsample factor between levels.
-                Default is 2.
-            tile_overlap (int): The number of extra pixel to add to each
-                edge of the tile. Default is 0.
-            cache_size (int): The maximum number of recent tiles to
-                cache. Default is 1024.
-        """
         super().__init__(wsi, tile_size, downsample, overlap, cache_size)
 
     def get_dzi(self) -> ElementTree:
@@ -216,7 +215,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
 
 
 class ZoomifyGenerator(TilePyramidGenerator):
-    """Pyramid tile generator with extra Zoomify specific methods.
+    r"""Pyramid tile generator with extra Zoomify specific methods.
 
     Zoomify splits tiles into groups of 256 (due to old file system
     limitations). The extra `tile_group` method here is for calculating
@@ -226,6 +225,19 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
     .. _here:
         https://ecommons.cornell.edu/bitstream/handle/1813/5410/Introducing_Zoomify_Image.pdf
+
+    Args:
+        wsi (WSIReader): The WSI reader object. Must implement
+            `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
+        tile_size (int): The size of tiles to generate. Default is
+            256. Note that the output tile size will be
+            :math:`\text{tile size} + 2 \times\text{overlap}`.
+        downsample (int): The downsample factor between levels.
+            Default is 2.
+        tile_overlap (int): The number of extra pixel to add to each
+            edge of the tile. Default is 0.
+        cache_size (int): The maximum number of recent tiles to
+            cache. Default is 1024.
     """
 
     @lru_cache(maxsize=None)
