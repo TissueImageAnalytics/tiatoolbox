@@ -34,8 +34,6 @@ import json
 import sys
 import click
 import os
-
-# import json
 import pathlib
 from PIL import Image
 
