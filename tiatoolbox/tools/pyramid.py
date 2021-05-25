@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image
 
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.utils.transforms import imresize
 
 
 class TilePyramidGenerator:
@@ -73,7 +74,7 @@ class TilePyramidGenerator:
     @lru_cache(maxsize=None)
     def level_downsample(self, level: int) -> float:
         """Find the downsample factor for a level."""
-        return 2 ** (self.level_count - level)
+        return 2 ** (self.level_count - level - 1)
 
     @lru_cache(maxsize=None)
     def level_dimensions(self, level: int) -> Tuple[int, int]:
@@ -95,9 +96,15 @@ class TilePyramidGenerator:
         Args:
             level (int): The level to calculate the grid size for.
         """
+        if level >= self.level_count:
+            raise IndexError
         return tuple(
             np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(int)
         )
+
+    @property
+    def sub_tile_level_count(self):
+        return 0
 
     @property
     def level_count(self) -> int:
@@ -110,7 +117,25 @@ class TilePyramidGenerator:
             np.ceil(
                 np.log2(np.divide(self.wsi.info.slide_dimensions, self.tile_size))
             ).max()
+            + self.sub_tile_level_count
+            + 1
         )
+
+    def get_tile_thumb(self) -> Image:
+        """Return a thumbnail which fits the whole slide in one tile.
+
+        The thumbnail output size has the longest edge equal to the
+        tile size. The other edge preserves the orignal aspect ratio.
+        """
+        slide_dims = np.array(self.wsi.info.slide_dimensions)
+        tile_dim = self.tile_size + self.overlap
+        out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
+        bounds = (0, 0, *slide_dims)
+        thumb = self.wsi.read_bounds(
+            bounds, resolution=self.wsi.info.level_count - 1, units="level"
+        )
+        thumb = imresize(thumb, output_size=out_dims)
+        return Image.fromarray(thumb)
 
     def get_tile(self, level: int, x: int, y: int) -> Image:
         """Get a tile at a given level and coordinate.
@@ -138,9 +163,13 @@ class TilePyramidGenerator:
         coord = [baseline_x, baseline_y]
         for n, value in enumerate(coord):
             if value < 0:
-                output_size[n] = output_size[n] - np.abs(value)
+                output_size[n] = output_size[n] - int(np.floor(np.abs(value / scale)))
                 coord[n] = 0
-
+        if level <= self.sub_tile_level_count:
+            output_size = [2 ** level] * 2
+            thumb = self.get_tile_thumb()
+            thumb.thumbnail(output_size)
+            return thumb
         slide_dimensions = np.array(self.wsi.info.slide_dimensions)
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
@@ -206,6 +235,16 @@ class DeepZoomGenerator(TilePyramidGenerator):
         """
         # TODO: Add DZI metadata generation
         raise NotImplementedError
+
+    @property
+    def sub_tile_level_count(self) -> int:
+        """The number of levels which are a downsample of the whole image tile 0-0-0.
+
+        Deepzoom levels start at 0 with a 1x1 pixel representing the
+        whole image. The levels double in size until the region size is
+        larger than a single tile.
+        """
+        return int(np.ceil(np.log2(self.output_tile_size))) - 1
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
         """Generate the DeepZoom path for a specified tile.
