@@ -1333,9 +1333,9 @@ class VirtualWSIReader(WSIReader):
         param = WSIMeta(
             file_path=self.input_path,
             objective_power=None,
-            slide_dimensions=self.img.shape[:-1],
+            slide_dimensions=self.img.shape[:2][::-1],
             level_count=1,
-            level_dimensions=(self.img.shape[:-1],),
+            level_dimensions=(self.img.shape[:2][::-1],),
             level_downsamples=[1.0],
             vendor=None,
             mpp=None,
