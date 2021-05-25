@@ -59,7 +59,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "TIA Toolbox"
-copyright = "2020, TIA Lab"
+copyright = "2021, TIA Lab"
 author = "TIA Lab"
 
 # The version info for the project you're documenting, acts as replacement
@@ -171,4 +171,5 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
     "matplotlib": ("https://matplotlib.org", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
 }

@@ -17,7 +17,7 @@
 # This file contains code inspired by StainTools
 # [https://github.com/Peter554/StainTools] written by Peter Byfield.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -43,10 +43,11 @@ class StainNormaliser:
 
     Attributes:
         extractor (CustomExtractor,RuifrokExtractor): method specific stain extractor.
-        stain_matrix_target (ndarray): stain matrix of target.
-        target_concentrations (ndarray): stain concetnration matrix of target.
-        maxC_target (ndarray): 99th percentile of each stain.
-        stain_matrix_target_RGB (ndarray): target stain matrix in RGB.
+        stain_matrix_target (:class:`numpy.ndarray`): stain matrix of target.
+        target_concentrations (:class:`numpy.ndarray`): stain concentration
+         matrix of target.
+        maxC_target (:class:`numpy.ndarray`): 99th percentile of each stain.
+        stain_matrix_target_RGB (:class:`numpy.ndarray`): target stain matrix in RGB.
 
     """
 
@@ -62,11 +63,12 @@ class StainNormaliser:
         """Estimate concentration matrix given an image and stain matrix.
 
         Args:
-            img (ndarray): input image.
-            stain_matrix (ndarray): stain matrix for haematoxylin and eosin stains.
+            img (:class:`numpy.ndarray`): input image.
+            stain_matrix (:class:`numpy.ndarray`): stain matrix for haematoxylin and
+             eosin stains.
 
         Returns:
-            ndarray: stain concentrations of input image.
+            numpy.ndarray: stain concentrations of input image.
 
         """
         OD = convert_RGB2OD(img).reshape((-1, 3))
@@ -77,7 +79,8 @@ class StainNormaliser:
         """Fit to a target image.
 
         Args:
-            target (ndarray uint8): target/reference image.
+            target (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
+             target/reference image.
 
         """
         self.stain_matrix_target = self.extractor.get_stain_matrix(target)
@@ -94,10 +97,11 @@ class StainNormaliser:
         """Transform an image.
 
         Args:
-            img (ndarray uint8): RGB input source image.
+            img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): RGB input source
+             image.
 
         Returns:
-            ndarray: RGB stain normalised image.
+            :class:`numpy.ndarray`: RGB stain normalised image.
 
         """
         stain_matrix_source = self.extractor.get_stain_matrix(img)
@@ -122,11 +126,11 @@ class CustomNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Args:
-        stain_matrix (ndarray): user-defined stain matrix. Must be
-                                either 2x3 or 3x3.
+        stain_matrix (:class:`numpy.ndarray`): user-defined stain matrix. Must be
+         either 2x3 or 3x3.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import CustomNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import CustomNormaliser
         >>> norm = CustomNormaliser(stain_matrix)
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -152,7 +156,7 @@ class RuifrokNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser
         >>> norm = RuifrokNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -177,7 +181,7 @@ class MacenkoNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser
         >>> norm = MacenkoNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -202,7 +206,7 @@ class VahadaneNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser
         >>> norm = VahadaneNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
@@ -230,7 +234,7 @@ class ReinhardNormaliser:
         target_stds (float) : standard deviation of each LAB channel.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import ReinhardNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import ReinhardNormaliser
         >>> norm = ReinhardNormaliser()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(src_img)
@@ -245,7 +249,7 @@ class ReinhardNormaliser:
         """Fit to a target image.
 
         Args:
-            target (RGB uint8): target image.
+            target (:class:`numpy.ndarray` of type :class:`numpy.uint8`): target image.
 
         """
         means, stds = self.get_mean_std(target)
@@ -256,10 +260,11 @@ class ReinhardNormaliser:
         """Transform an image.
 
         Args:
-            img (ndarray uint8): Input image.
+            img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Input image.
 
         Returns:
-            ndarray float: colour normalised RGB image.
+            :class:`numpy.ndarray` of type :class:`numpy.float`: colour normalised RGB
+             image.
 
         """
         chan1, chan2, chan3 = self.lab_split(img)
@@ -280,7 +285,7 @@ class ReinhardNormaliser:
         """Convert from RGB uint8 to LAB and split into channels.
 
         Args:
-            img (ndarray uint8): Input image.
+            img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Input image.
 
         Returns:
             chan1 (float): L.
@@ -320,7 +325,7 @@ class ReinhardNormaliser:
         """Get mean and standard deviation of each channel.
 
         Args:
-            img (ndarray uint8): Input image.
+            img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Input image.
 
         Returns:
             means (float): mean values for each RGB channel.
@@ -343,12 +348,12 @@ def get_normaliser(method_name, stain_matrix=None):
     Args:
         method_name (str) : name of stain norm method, must be one of "reinhard",
          "custom", "ruifrok", "macenko" or "vahadane".
-        stain_matrix (ndarray or str, pathlib.Path) : user-defined stain matrix.
-         This must either be a numpy array or a path to either a .csv or .npy file.
-         This is only utilised if using "custom" method name.
+        stain_matrix (:class:`numpy.ndarray` or str or pathlib.Path) : user-defined
+         stain matrix. This must either be a numpy array or a path to either a .csv or
+         .npy file. This is only utilised if using "custom" method name.
 
     Returns:
-        StainNormaliser : an object with base 'StainNormaliser' as base class.
+        StainNormaliser : an object with base :class:'.StainNormaliser' as base class.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import get_normaliser
@@ -357,9 +362,11 @@ def get_normaliser(method_name, stain_matrix=None):
         >>> norm_img = norm.transform(source_img)
 
     """
-    if method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]:
-        if stain_matrix is not None:
-            raise Exception("stain_matrix is only defined when using custom")
+    if (
+        method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]
+        and stain_matrix is not None
+    ):
+        raise ValueError("stain_matrix is only defined when using custom")
 
     if method_name.lower() == "reinhard":
         norm = ReinhardNormaliser()

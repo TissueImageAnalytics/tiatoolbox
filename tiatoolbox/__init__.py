@@ -14,20 +14,27 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Top-level package for TIA Toolbox."""
-from tiatoolbox import tiatoolbox
-from tiatoolbox import dataloader
-from tiatoolbox import utils
-from tiatoolbox import tools
 
+import os
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.5.2"
+__version__ = "0.6.0"
+
+# This will set the tiatoolbox external data
+# default to be the user home folder, should work on both Window and Unix/Linux
+# C:\Users\USER\.tiatoolbox
+# /home/USER/.tiatoolbox
+
+# runtime context parameters
+rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
+
+from tiatoolbox import tiatoolbox, wsicore, utils, tools, models
 
 if __name__ == "__main__":
-    pass
+    print("tiatoolbox version:" + str(__version__))

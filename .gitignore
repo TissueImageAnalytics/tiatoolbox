@@ -112,3 +112,5 @@ examples/*.py
 
 # vim/vi generated
 *.swp
+
+dataset
