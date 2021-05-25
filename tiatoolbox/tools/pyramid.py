@@ -128,20 +128,29 @@ class TilePyramidGenerator:
         """
         if level < 0:
             raise IndexError
-        if level >= self.levels:
+        if level > self.level_count:
             raise IndexError
+
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
         baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
+        output_size = [self.output_tile_size] * 2
+        coord = [baseline_x, baseline_y]
+        for n, value in enumerate(coord):
+            if value < 0:
+                output_size[n] = output_size[n] - np.abs(value)
+                coord[n] = 0
+
         slide_dimensions = np.array(self.wsi.info.slide_dimensions)
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
+
         # Don't print out any warnings about interpolation etc.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             rgb = self.wsi.read_rect(
-                (baseline_x, baseline_y),
-                size=[self.output_tile_size] * 2,
+                coord,
+                size=output_size,
                 resolution=1 / scale,
                 units="baseline",
             )
