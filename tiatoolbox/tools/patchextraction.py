@@ -161,18 +161,6 @@ class PatchExtractor(ABC):
 
         return self
 
-    def merge_patches(self, patches):
-        """Merge the patch-level results to get the overall image-level prediction.
-
-        Args:
-            patches: patch-level predictions
-
-        Returns:
-            image: merged prediction
-
-        """
-        raise NotImplementedError
-
 
 class SlidingWindowPatchExtractor(PatchExtractor):
     """Extract and merge patches using sliding fixed sized windows for images and labels.
