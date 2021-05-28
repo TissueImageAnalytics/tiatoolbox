@@ -96,14 +96,6 @@ def test_get_patch_extractor(_source_image, _patch_extr_csv):
 
     assert isinstance(sliding_window, patchextraction.SlidingWindowPatchExtractor)
 
-    variable_window = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="variablewindow",
-        patch_size=(200, 200),
-    )
-
-    assert isinstance(variable_window, patchextraction.VariableWindowPatchExtractor)
-
     with pytest.raises(MethodNotSupported):
         patchextraction.get_patch_extractor("unknown")
 

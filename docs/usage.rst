@@ -95,9 +95,6 @@ Patch Extraction
 .. autoclass:: SlidingWindowPatchExtractor
     :show-inheritance:
 
-.. autoclass:: VariableWindowPatchExtractor
-    :show-inheritance:
-
 ^^^^^^^^^^^^^^^^^^^^
 Deep Learning Models
 ^^^^^^^^^^^^^^^^^^^^

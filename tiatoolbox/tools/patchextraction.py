@@ -218,48 +218,6 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         raise NotImplementedError
 
 
-class VariableWindowPatchExtractor(PatchExtractor):
-    """Extract and merge patches using variable sized windows for images and labels.
-
-    Args:
-        stride(tuple(int)): stride in (x, y) direction for patch extraction.
-        label_patch_size(tuple(int)): network output label (width, height).
-
-    Attributes:
-        stride(tuple(int)): stride in (x, y) direction for patch extraction.
-        label_patch_size(tuple(int)): network output label (width, height).
-
-    """
-
-    def __init__(
-        self,
-        input_img,
-        patch_size,
-        resolution=0,
-        units="level",
-        stride=(1, 1),
-        pad_mode="constant",
-        pad_constant_values=0,
-        label_patch_size=None,
-    ):
-        super().__init__(
-            input_img=input_img,
-            patch_size=patch_size,
-            resolution=resolution,
-            units=units,
-            pad_mode=pad_mode,
-            pad_constant_values=pad_constant_values,
-        )
-        self.stride = stride
-        self.label_patch_size = label_patch_size
-
-    def __next__(self):
-        raise NotImplementedError
-
-    def merge_patches(self, patches):
-        raise NotImplementedError
-
-
 class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
 
@@ -313,8 +271,8 @@ def get_patch_extractor(method_name, **kwargs):
     """Return a patch extractor object as requested.
 
     Args:
-        method_name (str): name of patch extraction method, must be one of "point",
-          "sliding", "variablewindow".
+        method_name (str): name of patch extraction method, must be one of "point" or
+          "sliding".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
@@ -331,8 +289,6 @@ def get_patch_extractor(method_name, **kwargs):
         patch_extractor = PointsPatchExtractor(**kwargs)
     elif method_name.lower() == "sliding":
         patch_extractor = SlidingWindowPatchExtractor(**kwargs)
-    elif method_name.lower() == "variablewindow":
-        patch_extractor = VariableWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported
 
