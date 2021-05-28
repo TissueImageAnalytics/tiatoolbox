@@ -1467,7 +1467,7 @@ class ArrayView:
     """
 
     def __init__(self, array: zarr.Array, axes: str):
-        """Inilialise the view object.
+        """Initialise the view object.
 
         Args:
             array (zarr.Array): Zarr Array to read from.
@@ -1495,7 +1495,7 @@ class ArrayView:
             index = (Y, X, S)
             return np.rollaxis(self.array[index], 0, 3)
         else:
-            raise Exception("Unspported axes")
+            raise Exception("Unsupported axes")
 
 
 class TIFFWSIReader(WSIReader):
