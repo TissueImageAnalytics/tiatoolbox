@@ -85,9 +85,6 @@ def test_get_patch_extractor(_source_image, _patch_extr_csv):
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
 
-    with pytest.raises(MethodNotSupported):
-        points.merge_patches()
-
     sliding_window = patchextraction.get_patch_extractor(
         input_img=input_img,
         method_name="sliding",
@@ -115,9 +112,6 @@ def test_points_patch_extractor_image_format(
     )
 
     assert isinstance(points.wsi, VirtualWSIReader)
-
-    with pytest.raises(MethodNotSupported):
-        points.merge_patches(patches=None)
 
     points = patchextraction.get_patch_extractor(
         input_img=pathlib.Path(_sample_svs),

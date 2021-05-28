@@ -163,7 +163,7 @@ class PatchExtractor(ABC):
 
 
 class SlidingWindowPatchExtractor(PatchExtractor):
-    """Extract and merge patches using sliding fixed sized windows for images and labels.
+    """Extract patches using sliding fixed sized window for images and labels.
 
     Args:
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
@@ -202,9 +202,6 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
         self._generate_location_df()
 
-    def merge_patches(self, patches):
-        raise NotImplementedError
-
 
 class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
@@ -242,16 +239,6 @@ class PointsPatchExtractor(PatchExtractor):
         )
         self.locations_df["y"] = self.locations_df["y"] - int(
             (self.patch_size[1] - 1) / 2
-        )
-
-    def merge_patches(self, patches=None):
-        """Merge patch is not supported by :obj:`PointsPatchExtractor`.
-        Calling this function for :obj:`PointsPatchExtractor` will raise an error. This
-        overrides the merge_patches function in the base class :obj:`PatchExtractor`
-
-        """
-        raise MethodNotSupported(
-            message="Merge patches not supported for PointsPatchExtractor"
         )
 
 
