@@ -166,19 +166,23 @@ class PatchExtractor(ABC):
         mask_reader, coordinates_list, func=None, resolution=None, units=None
     ):
         """
-        Return list of flags to indicate which coordinate is valid for patch extraction.
+        Indicates which coordinate is valid for mask-based patch extraction.
         Locations are being validated by a custom or build-in `func`.
+
         Args:
-            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader.
+            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
+                mask related to the WSI from which we want to extract the patches.
             coordinates_list (ndarray and np.int32): Coordinates to be checked
-            via the `func`. They must be in the same resolution as requested
-            `resolution` and `units`. Must be of shape (N,K) with N is the
-            number of coordinate sets while K varies depending on information form.
-            Such as centroid is K=2 while bounding box is K=4. When using with default
-            `func=None`, `K` is expected to be bounding box of form
-            [start_x, start_y, end_x, end_y].
-            func: A function which taking `reader` and `coordinate` as arguments
-                and return True or False to indicate if the coordinate is valid.
+                via the `func`. They must be in the same resolution as requested
+                `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+                where N is the number of coordinate sets and K is either 2 for centroids
+                or 4 for bounding boxes. When using the default `func=None`, K should be
+                4, as we expect the `coordinates_list` to be refer to bounding boxes in
+                `[start_x, start_y, end_x, end_y]` format.
+            func: The coordinate validator function. A function that takes `reader` and
+                `coordinate` as arguments and return True or False as indication of
+                coordinate validity.
+
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
         """
@@ -216,16 +220,28 @@ class PatchExtractor(ABC):
         within_bound=True,
     ):
         """Calculate patch tiling coordinates.
+
         Args:
-            image_shape: a tuple (int, int) or ndarray of shape (2,).
-            Expected image shape at requested `resolution` and `units`.
-            Expected to be (width, height).
-            patch_shape: a tuple (int, int) or ndarray of shape (2,).
-            Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be (width, height).
-            stride_shape: a tuple(int, int) or ndarray of shape (2,).
-            Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be (width, height).
+            image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                This argument specifies the shape of mother image (the image we want to)
+                extract patches from) at requested `resolution` and `units` and it is
+                expected to be in (width, height) format.
+            patch_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                Specifies the shape of requested patches to be extracted from mother
+                image at desired `resolution` and `units`. This argument is also
+                expected to be in (width, height) format.
+            stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                The stride that is used to calcualte the patch location during the patch
+                extraction.
+            within_bound (bool): Whether to include the patches on the right and bottom
+                margins of mother image. If `True`, the patches that their location
+                exceeds the `image_shape` would be neglected. Otherwise, those patches
+                would be extracted with `Reader` function and appropriate padding.
+
+        Return:
+            coord_list: a list of corrdinates in `[start_x, start_y, end_x, end_y]`
+            format to be used for patch extraction.
+
         """
         image_shape = np.array(image_shape)
         patch_shape = np.array(patch_shape)
@@ -259,11 +275,13 @@ class PatchExtractor(ABC):
         patch_shape = np.array(patch_shape)
         y_list = np.arange(0, image_shape[0], stride_shape[0])
         x_list = np.arange(0, image_shape[1], stride_shape[1])
-        if within_bound:  # to check compatible with shan portion
+
+        if within_bound:
             sel = y_list + patch_shape[0] <= image_shape[0]
             y_list = y_list[sel]
             sel = x_list + patch_shape[1] <= image_shape[1]
             x_list = x_list[sel]
+
         top_left_list = flat_mesh_grid_coord(x_list, y_list)
         bot_right_list = top_left_list + patch_shape[None]
         coord_list = np.concatenate([top_left_list, bot_right_list], axis=-1)
