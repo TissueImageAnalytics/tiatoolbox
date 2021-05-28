@@ -92,7 +92,7 @@ Patch Extraction
 .. autoclass:: PointsPatchExtractor
     :show-inheritance:
 
-.. autoclass:: FixedWindowPatchExtractor
+.. autoclass:: SlidingWindowPatchExtractor
     :show-inheritance:
 
 .. autoclass:: VariableWindowPatchExtractor

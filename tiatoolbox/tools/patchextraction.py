@@ -174,8 +174,8 @@ class PatchExtractor(ABC):
         raise NotImplementedError
 
 
-class FixedWindowPatchExtractor(PatchExtractor):
-    """Extract and merge patches using fixed sized windows for images and labels.
+class SlidingWindowPatchExtractor(PatchExtractor):
+    """Extract and merge patches using sliding fixed sized windows for images and labels.
 
     Args:
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
@@ -314,7 +314,7 @@ def get_patch_extractor(method_name, **kwargs):
 
     Args:
         method_name (str): name of patch extraction method, must be one of "point",
-          "fixedwindow", "variablewindow".
+          "sliding", "variablewindow".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
@@ -329,8 +329,8 @@ def get_patch_extractor(method_name, **kwargs):
     """
     if method_name.lower() == "point":
         patch_extractor = PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "fixedwindow":
-        patch_extractor = FixedWindowPatchExtractor(**kwargs)
+    elif method_name.lower() == "sliding":
+        patch_extractor = SlidingWindowPatchExtractor(**kwargs)
     elif method_name.lower() == "variablewindow":
         patch_extractor = VariableWindowPatchExtractor(**kwargs)
     else:
