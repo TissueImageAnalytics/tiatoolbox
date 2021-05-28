@@ -1,6 +1,7 @@
 """Tests for code related to patch extraction."""
 
 from tiatoolbox.tools import patchextraction
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.exceptions import MethodNotSupported, FileNotSupported
 from tiatoolbox.utils import misc
 from tiatoolbox.wsicore.wsireader import (
@@ -324,3 +325,54 @@ def test_sliding_patch_extractor_ndpi(_sample_ndpi):
 
     assert np.all(patches[10] == patch)
     assert patches[0].shape == (200, 400, 3)
+
+
+def test_get_coordinates():
+    """Test get tile cooordinates functionality."""
+    expected_output = np.array(
+        [
+            [0, 0, 4, 4],
+            [4, 0, 8, 4],
+        ]
+    )
+    output = PatchExtractor.get_coordinates([9, 6], [4, 4], [4, 4], within_bound=True)
+    assert np.sum(expected_output - output) == 0
+
+    expected_output = np.array(
+        [
+            [0, 0, 4, 4],
+            [0, 4, 4, 8],
+            [4, 0, 8, 4],
+            [4, 4, 8, 8],
+            [8, 0, 12, 4],
+            [8, 4, 12, 8],
+        ]
+    )
+    output = PatchExtractor.get_coordinates([9, 6], [4, 4], [4, 4], within_bound=False)
+    assert np.sum(expected_output - output) == 0
+    # test when patch shape is larger than image
+    output = PatchExtractor.get_coordinates([9, 6], [9, 9], [9, 9], within_bound=False)
+    assert len(output) == 1
+    # test when patch shape is larger than image
+    output = PatchExtractor.get_coordinates([9, 6], [9, 9], [9, 9], within_bound=True)
+    assert len(output) == 0
+
+    # test error input form
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9j, 6], [4, 4], [4, 4], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, 6], [4, 4], [4, 4j], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, 6], [4j, 4], [4, 4], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, 6], [4, -1], [4, 4], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, -6], [4, -1], [4, 4], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, 6, 3], [4, 4], [4, 4], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, 6], [4, 4, 3], [4, 4], within_bound=False)
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates([9, 6], [4, 4], [4, 4, 3], within_bound=False)
+    with pytest.raises(ValueError, match=r"stride.*> 1.*"):
+        PatchExtractor.get_coordinates([9, 6], [4, 4], [0, 0], within_bound=False)
