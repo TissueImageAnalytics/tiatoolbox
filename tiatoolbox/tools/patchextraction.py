@@ -262,7 +262,7 @@ def get_patch_extractor(method_name, **kwargs):
     """
     if method_name.lower() == "point":
         patch_extractor = PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "sliding":
+    elif method_name.lower() == "slidingwindow":
         patch_extractor = SlidingWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported
