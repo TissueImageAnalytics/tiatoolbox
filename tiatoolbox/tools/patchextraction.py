@@ -236,21 +236,9 @@ class PatchExtractor(ABC):
 
         return self
 
-    def merge_patches(self, patches):
-        """Merge the patch-level results to get the overall image-level prediction.
 
-        Args:
-            patches: patch-level predictions
-
-        Returns:
-            image: merged prediction
-
-        """
-        raise NotImplementedError
-
-
-class FixedWindowPatchExtractor(PatchExtractor):
-    """Extract and merge patches using fixed sized windows for images and labels.
+class SlidingWindowPatchExtractor(PatchExtractor):
+    """Extract patches using sliding fixed sized window for images and labels.
 
     Args:
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
@@ -288,9 +276,6 @@ class FixedWindowPatchExtractor(PatchExtractor):
                 self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
-
-    def merge_patches(self, patches):
-        raise NotImplementedError
 
 
 class MaskFixedWindowPatchExtractor(PatchExtractor):
@@ -422,23 +407,13 @@ class PointsPatchExtractor(PatchExtractor):
             (self.patch_size[1] - 1) / 2
         )
 
-    def merge_patches(self, patches=None):
-        """Merge patch is not supported by :obj:`PointsPatchExtractor`.
-        Calling this function for :obj:`PointsPatchExtractor` will raise an error. This
-        overrides the merge_patches function in the base class :obj:`PatchExtractor`
-
-        """
-        raise MethodNotSupported(
-            message="Merge patches not supported for PointsPatchExtractor"
-        )
-
 
 def get_patch_extractor(method_name, **kwargs):
     """Return a patch extractor object as requested.
 
     Args:
-        method_name (str): name of patch extraction method, must be one of "point",
-          "fixedwindow", "variablewindow".
+        method_name (str): name of patch extraction method, must be one of "point" or
+          "slidingwindow".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
@@ -453,12 +428,10 @@ def get_patch_extractor(method_name, **kwargs):
     """
     if method_name.lower() == "point":
         patch_extractor = PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "fixedwindow":
-        patch_extractor = FixedWindowPatchExtractor(**kwargs)
-    elif method_name.lower() == "variablewindow":
-        patch_extractor = VariableWindowPatchExtractor(**kwargs)
     elif method_name.lower() == "mask":
         patch_extractor = MaskFixedWindowPatchExtractor(**kwargs)
+    elif method_name.lower() == "slidingwindow":
+        patch_extractor = SlidingWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported
 
