@@ -904,7 +904,7 @@ def test_fuzz_crop_and_pad_edges_output_size():
     for _ in range(1000):
         slide_dimensions = (random.randint(0, 50), random.randint(0, 50))
 
-        loc = (-5, -5)
+        loc = tuple(random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2))
         size = (10, 10)
         bounds = utils.transforms.locsize2bounds(loc, size)
         region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
