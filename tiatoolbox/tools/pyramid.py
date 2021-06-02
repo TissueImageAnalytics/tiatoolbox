@@ -37,6 +37,7 @@ class TilePyramidGenerator:
             edge of the tile. Default is 0.
         cache_size (int): The maximum number of recent tiles to
             cache. Default is 1024.
+
     """
 
     def __init__(
@@ -68,6 +69,7 @@ class TilePyramidGenerator:
         r"""The size of the tile which will be returned.
 
         This is eqivalent to :math:`\text{tile size} + 2*\text{overlay}`.
+
         """
         return self.tile_size + 2 * self.overlap
 
@@ -82,6 +84,7 @@ class TilePyramidGenerator:
 
         Args:
             level (int): The level to calculate the dimensions for.
+
         """
         baseline_dims = self.wsi.info.slide_dimensions
         level_dims = np.ceil(
@@ -91,10 +94,11 @@ class TilePyramidGenerator:
 
     @lru_cache(maxsize=None)
     def tile_grid_size(self, level: int) -> Tuple[int, int]:
-        """The width and height of the minimal grid of tiles to cover the slide.
+        """Width and height of the minimal grid of tiles to cover the slide.
 
         Args:
             level (int): The level to calculate the grid size for.
+
         """
         if level >= self.level_count:
             raise IndexError
@@ -112,6 +116,7 @@ class TilePyramidGenerator:
 
         The number of levels is such that level_count - 1 is a 1:1 of
         the slide baseline resolution (level 0 of the WSI).
+
         """
         return int(
             np.ceil(
@@ -126,6 +131,7 @@ class TilePyramidGenerator:
 
         The thumbnail output size has the longest edge equal to the
         tile size. The other edge preserves the orignal aspect ratio.
+
         """
         slide_dims = np.array(self.wsi.info.slide_dimensions)
         tile_dim = self.tile_size + self.overlap
@@ -162,8 +168,8 @@ class TilePyramidGenerator:
                 The tile index in the y direction.
             pad_mode (str):
                 Method for padding when reading areas outside of
-                the input image. Default is constant (0 padding). This is
-                passed to `read_func` which defaults to
+                the input image. Default is constant (0 padding). This
+                is passed to `read_func` which defaults to
                 :func:`safe_padded_read`. See :func:`safe_padded_read`
                 for supported pad modes. Setting to "none" or None will
                 result in no padding being applied.
@@ -173,6 +179,7 @@ class TilePyramidGenerator:
                 Possible values are: linear, cubic, lanczos, nearest,
                 area, optimise.
                 Linear most closely matches OpenSlide.
+
         """
         if level < 0:
             raise IndexError
@@ -214,13 +221,17 @@ class TilePyramidGenerator:
         """Generate the path for a specified tile.
 
         Args:
-            level (int): The pyramid level of the tile starting from 0
+            level (int):
+                The pyramid level of the tile starting from 0
                 (the whole slide in one tile, 0-0-0).
-            x (int): The tile index in the x direction.
-            y (int): The tile index in the y direction.
+            x (int):
+                The tile index in the x direction.
+            y (int):
+                The tile index in the y direction.
 
         Returns:
             Path: A pathlib path object with two parts.
+
         """
         raise NotImplementedError
 
@@ -229,17 +240,24 @@ class DeepZoomGenerator(TilePyramidGenerator):
     r"""Pyramid tile generator following the DeepZoom format.
 
     Args:
-        wsi (WSIReader): The WSI reader object. Must implement
+        wsi (WSIReader):
+            The WSI reader object. Must implement
             `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
-        tile_size (int): The size of tiles to generate. Default is
-            256. Note that the output tile size will be
+        tile_size (int):
+            The size of tiles to generate.
+            Default is 256.
+            Note that the output tile size will be
             :math:`\text{tile size} + 2 \times\text{overlap}`.
-        downsample (int): The downsample factor between levels.
+        downsample (int):
+            The downsample factor between levels.
             Default is 2.
-        tile_overlap (int): The number of extra pixel to add to each
-            edge of the tile. Default is 0.
-        cache_size (int): The maximum number of recent tiles to
+        tile_overlap (int):
+            The number of extra pixel to add to each edge of the tile.
+            Default is 0.
+        cache_size (int):
+            The maximum number of recent tiles to
             cache. Default is 1024.
+
     """
 
     def __init__(
@@ -257,6 +275,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
 
         Returns:
             ElementTree: XML DZI metadata.
+
         """
         # TODO: Add DZI metadata generation
         raise NotImplementedError
@@ -268,6 +287,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
         Deepzoom levels start at 0 with a 1x1 pixel representing the
         whole image. The levels double in size until the region size is
         larger than a single tile.
+
         """
         return int(np.ceil(np.log2(self.output_tile_size))) - 1
 
@@ -275,13 +295,17 @@ class DeepZoomGenerator(TilePyramidGenerator):
         """Generate the DeepZoom path for a specified tile.
 
         Args:
-            level (int): The pyramid level of the tile starting from 0
+            level (int):
+                The pyramid level of the tile starting from 0
                 (the whole slide in one tile, 0-0-0).
-            x (int): The tile index in the x direction.
-            y (int): The tile index in the y direction.
+            x (int):
+                The tile index in the x direction.
+            y (int):
+                The tile index in the y direction.
 
         Returns:
             Path: A pathlib path object with two parts.
+
         """
         # TODO: Add DeepZoom path generation
         raise NotImplementedError
@@ -312,17 +336,23 @@ class ZoomifyGenerator(TilePyramidGenerator):
         https://ecommons.cornell.edu/bitstream/handle/1813/5410/Introducing_Zoomify_Image.pdf
 
     Args:
-        wsi (WSIReader): The WSI reader object. Must implement
+        wsi (WSIReader):
+            The WSI reader object. Must implement
             `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
-        tile_size (int): The size of tiles to generate. Default is
+        tile_size (int):
+            The size of tiles to generate. Default is
             256. Note that the output tile size will be
             :math:`\text{tile size} + 2 \times\text{overlap}`.
-        downsample (int): The downsample factor between levels.
+        downsample (int):
+            The downsample factor between levels.
             Default is 2.
-        tile_overlap (int): The number of extra pixel to add to each
+        tile_overlap (int):
+            The number of extra pixel to add to each
             edge of the tile. Default is 0.
-        cache_size (int): The maximum number of recent tiles to
+        cache_size (int):
+            The maximum number of recent tiles to
             cache. Default is 1024.
+
     """
 
     @lru_cache(maxsize=None)
@@ -333,13 +363,17 @@ class ZoomifyGenerator(TilePyramidGenerator):
         every 256 tiles in ZXY axis order.
 
         Args:
-            level (int): The pyramid level of the tile starting from 0
+            level (int):
+                The pyramid level of the tile starting from 0
                 (the whole slide in one tile, 0-0-0).
-            x (int): The tile index in the x direction.
-            y (int): The tile index in the y direction.
+            x (int):
+                The tile index in the x direction.
+            y (int):
+                The tile index in the y direction.
 
         Returns:
             int: The tile group for the specified tile.
+
         """
         grid_size = np.array(self.tile_grid_size(level))
         if any(grid_size <= [x, y]):
@@ -362,6 +396,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
         Returns:
             Path: A pathlib path object with two parts.
+
         """
         g = self.tile_group(level, x, y)
         z = level
