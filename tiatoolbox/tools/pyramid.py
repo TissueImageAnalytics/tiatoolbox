@@ -54,15 +54,8 @@ class TilePyramidGenerator:
         self.cache_size = cache_size
         self.downsample = downsample
 
-        # Set up LRU cache for the tiles themselves
-        get_tile = self.get_tile
-
-        @lru_cache(maxsize=self.cache_size)
-        def _get_tile(*args, **kwargs):
-            """Thin chached wrapper around get_tile."""
-            return get_tile(*args, **kwargs)
-
-        self.get_tile = _get_tile
+        # Set up LRU cache for the tiles
+        self.get_tile = lru_cache(maxsize=self.cache_size)(self.get_tile)
 
     @property
     def output_tile_size(self) -> int:
