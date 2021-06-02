@@ -337,6 +337,5 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
-        # ? how to enforce return check?
         data = {"image": patch, "coords": np.array(lv0_coords)}
         return data
