@@ -140,7 +140,8 @@ def crop_and_pad_edges(
         region (:class:`numpy.ndarray`): The image region to be cropped
             and padded.
         pad_mode (str): The pad mode to use, see :func:`numpy.pad`
-            for valid pad modes. Defaults to 'constant'.
+            for valid pad modes. Defaults to 'constant'. If set to
+            "none" or None no padding is applied.
         pad_constant_values (int or tuple(int)): Constant value(s)
             to use when padding. Only used with pad_mode constant.
 
@@ -185,6 +186,10 @@ def crop_and_pad_edges(
 
     # Crop the region
     crop = region[y_before : y_end + 1, x_before : x_end + 1, ...]
+
+    # Return is pad_mode is None
+    if pad_mode in ["none", None]:
+        return crop
 
     # Pad the region and return
     if pad_mode == "constant":
@@ -309,6 +314,12 @@ def safe_padded_read(
         bounds = conv_out_size(np.array(bounds), stride=np.tile(stride, 2))
         padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
         img_size = conv_out_size(img_size, stride=stride)
+
+    # Return without padding if pad_mode is none
+    # TODO: Add test for this!
+    if pad_mode in ["none", None]:
+        return region
+
     # Find how much padding needs to be applied to fill the edge gaps
     # edge_padding = np.abs(padded_bounds - clamped_bounds)
     edge_padding = padded_bounds - np.array(
@@ -391,7 +402,8 @@ def sub_pixel_read(
             the input image. Default is constant (0 padding). This is
             passed to `read_func` which defaults to
             :func:`safe_padded_read`. See :func:`safe_padded_read`
-            for supported pad modes.
+            for supported pad modes. Setting to "none" or None will
+            result in no padding being applied.
         **read_kwargs (dict):
             Arbitrary keyword arguments passed through to `read_func`.
     Return:
@@ -500,7 +512,9 @@ def sub_pixel_read(
     if not np.all(region_size > 0):
         raise ValueError("Region returned from read_func is empty.")
 
-    if any(region_size != conv_out_size(pixel_aligned_size, stride=stride)):
+    if pad_mode not in ["none", None] and any(
+        region_size != conv_out_size(pixel_aligned_size, stride=stride)
+    ):
         raise ValueError("Read func returned region of incorrect size.")
 
     # Find the size which the region should be scaled to.
@@ -526,7 +540,7 @@ def sub_pixel_read(
     result_size = np.array(result.shape[:2][::-1])
 
     # Re-sample to fit in the requested output size (to fix 1px differences)
-    if not all(result_size == padded_output_size):
+    if not all(result_size == padded_output_size) and pad_mode not in ["none", None]:
         # raise Exception
         result = cv2.resize(
             result, tuple(padded_output_size), interpolation=cv2.INTER_LINEAR

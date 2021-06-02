@@ -137,7 +137,14 @@ class TilePyramidGenerator:
         thumb = imresize(thumb, output_size=out_dims)
         return Image.fromarray(thumb)
 
-    def get_tile(self, level: int, x: int, y: int) -> Image:
+    def get_tile(
+        self,
+        level: int,
+        x: int,
+        y: int,
+        pad_mode: str = "constant",
+        interpolation: str = "optimise",
+    ) -> Image:
         """Get a tile at a given level and coordinate.
 
         Note that levels are in the reverse order of those in WSIReader.
@@ -146,10 +153,26 @@ class TilePyramidGenerator:
         (baseline).
 
         Args:
-            level (int): The pyramid level of the tile starting from 0
+            level (int):
+                The pyramid level of the tile starting from 0
                 (the whole slide in one tile, 0-0-0).
-            x (int): The tile index in the x direction.
-            y (int): The tile index in the y direction.
+            x (int):
+                The tile index in the x direction.
+            y (int):
+                The tile index in the y direction.
+            pad_mode (str):
+                Method for padding when reading areas outside of
+                the input image. Default is constant (0 padding). This is
+                passed to `read_func` which defaults to
+                :func:`safe_padded_read`. See :func:`safe_padded_read`
+                for supported pad modes. Setting to "none" or None will
+                result in no padding being applied.
+            interpolation (str):
+                Interpolation mode to use.
+                Defaults to optimise.
+                Possible values are: linear, cubic, lanczos, nearest,
+                area, optimise.
+                Linear most closely matches OpenSlide.
         """
         if level < 0:
             raise IndexError
@@ -182,6 +205,8 @@ class TilePyramidGenerator:
                 size=output_size,
                 resolution=1 / scale,
                 units="baseline",
+                pad_mode=pad_mode,
+                interpolation=interpolation,
             )
         return Image.fromarray(rgb)
 
@@ -260,6 +285,18 @@ class DeepZoomGenerator(TilePyramidGenerator):
         """
         # TODO: Add DeepZoom path generation
         raise NotImplementedError
+
+    def get_tile(
+        self,
+        level: int,
+        x: int,
+        y: int,
+        pad_mode: str = "none",
+        interpolation: str = "optimise",
+    ) -> Image:
+        return super().get_tile(
+            level, x, y, pad_mode=pad_mode, interpolation=interpolation
+        )
 
 
 class ZoomifyGenerator(TilePyramidGenerator):
