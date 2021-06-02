@@ -27,5 +27,6 @@ dependencies:
   - pytorch
   - tqdm
   - jupyterlab
+  - defusedxml
   - pip:
     - openslide-python==1.1.2

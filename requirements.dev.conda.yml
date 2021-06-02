@@ -34,5 +34,6 @@ dependencies:
   - black
   - pytest-cov
   - jupyterlab
+  - defusedxml
   - pip:
       - openslide-python==1.1.2

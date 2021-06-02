@@ -11,7 +11,7 @@ directly to disk.
 
 import warnings
 from functools import lru_cache
-from xml.etree import ElementTree
+from defusedxml import ElementTree
 from pathlib import Path
 from typing import Tuple
 
