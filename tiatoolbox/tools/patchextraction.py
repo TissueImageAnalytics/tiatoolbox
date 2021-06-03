@@ -300,17 +300,17 @@ class PatchExtractor(ABC):
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
-            return np.stack([y.flatten(), x.flatten()], axis=-1)
+            return np.stack([x.flatten(), y.flatten()], axis=-1)
 
         patch_shape = np.array(patch_shape)
-        y_list = np.arange(0, image_shape[0], stride_shape[0])
-        x_list = np.arange(0, image_shape[1], stride_shape[1])
+        x_list = np.arange(0, image_shape[0], stride_shape[0])
+        y_list = np.arange(0, image_shape[1], stride_shape[1])
 
         if within_bound:
-            sel = y_list + patch_shape[0] <= image_shape[0]
-            y_list = y_list[sel]
-            sel = x_list + patch_shape[1] <= image_shape[1]
+            sel = x_list + patch_shape[0] <= image_shape[0]
             x_list = x_list[sel]
+            sel = y_list + patch_shape[1] <= image_shape[1]
+            y_list = y_list[sel]
 
         top_left_list = flat_mesh_grid_coord(x_list, y_list)
         bot_right_list = top_left_list + patch_shape[None]
