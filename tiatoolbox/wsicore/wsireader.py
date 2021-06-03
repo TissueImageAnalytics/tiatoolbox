@@ -301,16 +301,66 @@ class WSIReader:
         ).astype(int)
         level_read_size = np.round(np.array(size) / post_read_scale_factor).astype(int)
         level_location = np.round(np.array(location) / level_downsample).astype(int)
-        return (
+        output = (
             read_level,
             level_location,
             level_read_size,
             post_read_scale_factor,
             baseline_read_size,
         )
+        return output
 
-    def find_read_bounds_params(self, bounds, resolution, units, precision=3):
-        return self._find_read_bounds_params(bounds, resolution, units, precision)
+    def find_read_rect_params_requested(self,
+        location, size, resolution, units):
+        """Same as the other, but location is at requested resolution.
+        
+        This may deprecate `read_rect` role.
+        """
+        (
+            read_level, 
+            read_lv_to_requested_fx
+        ) = self._find_optimal_level_and_downsample(
+            resolution, units,
+        )
+        info = self.info
+
+        # Do we need sanity check for input form ?
+        requested_location = np.array(location)
+        requested_size = np.array(size)
+        lv0_to_read_lv_fx = 1 / info.level_downsamples[read_level]
+        lv0_to_requested_fx = lv0_to_read_lv_fx * read_lv_to_requested_fx
+        size_at_lv0 = requested_size / lv0_to_requested_fx
+        location_at_lv0 = requested_location / lv0_to_requested_fx
+        size_at_read_lv = requested_size / read_lv_to_requested_fx
+        location_at_read_lv = requested_location / read_lv_to_requested_fx
+        output = (
+            size_at_read_lv,
+            location_at_read_lv,
+            size_at_lv0,
+            location_at_lv0,
+        )
+        # rounding up
+        output = tuple([(v + 0.5).astype(np.int64) for v in output])
+        output = (            
+            read_level,
+            read_lv_to_requested_fx,
+        ) + output
+        return output
+
+    def slide_dimensions(self, resolution, units, precisions=3):
+        wsi_lv0_shape = self.info.slide_dimensions
+                # Find parameters for optimal read
+        (
+            read_level,
+            level_location,
+            level_size,
+            post_read_scale,
+            _,
+        ) = self.find_read_rect_params([0, 0], wsi_lv0_shape, 
+                resolution, units, precisions)
+        requested_shape = np.array(level_size) * post_read_scale
+        requested_shape =  np.round(requested_shape, decimals=precisions).tolist()
+        return tuple(requested_shape)
 
     def _find_read_bounds_params(self, bounds, resolution, units, precision=3):
         """Find optimal parameters for reading bounds at a given resolution.
@@ -354,7 +404,8 @@ class WSIReader:
         level_location = np.round(location / level_downsample).astype(int)
         level_bounds = (*level_location, *(level_location + level_size))
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
-        return read_level, level_bounds, output_size, post_read_scale_factor
+        output = (read_level, level_bounds, output_size, post_read_scale_factor)
+        return output
 
     def _find_tile_params(
         self,
@@ -1035,6 +1086,69 @@ class OpenSlideWSIReader(WSIReader):
             img=im_region,
             scale_factor=post_read_scale,
             output_size=output_size,
+            interpolation=interpolation,
+        )
+
+        im_region = utils.transforms.background_composite(image=im_region)
+        return im_region
+
+    def read_bounds_at_requested(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        **kwargs,
+    ):
+        # ! need to sane check that input is np.integer
+        bounds_at_requested = np.array(bounds)
+        tl_at_requested = bounds_at_requested[:2]  # is in XY
+        br_at_requested = bounds_at_requested[2:]
+        size_at_requested = br_at_requested - tl_at_requested
+
+        # Find parameters for optimal read
+        (
+            read_level,
+            read_lv_to_requested_fx,
+            size_at_read_lv,
+            location_at_read_lv,
+            size_at_lv0,
+            location_at_lv0,
+        ) = self.find_read_rect_params_requested( 
+                tl_at_requested, 
+                size_at_requested, 
+                resolution, units)
+        tl_at_read_lv = tl_at_requested / read_lv_to_requested_fx
+        br_at_read_lv = br_at_requested / read_lv_to_requested_fx
+        bounds_at_read_lv = np.concatenate([tl_at_read_lv, br_at_read_lv])
+        bounds_at_read_lv = (bounds_at_read_lv + 0.5).astype(np.int64)
+
+        wsi = self.openslide_wsi
+
+        # Read at optimal level and corrected read size
+        im_region = wsi.read_region(
+            location=location_at_lv0, 
+            level=read_level, 
+            size=size_at_read_lv
+        )
+        im_region = np.array(im_region)
+
+        # Apply padding outside of the slide area
+        wsi_shape_at_read_lv = self.info.level_dimensions[read_level]
+        im_region = utils.image.crop_and_pad_edges(
+            bounds=bounds_at_read_lv,
+            max_dimensions=wsi_shape_at_read_lv,
+            region=im_region,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        # Resize to the requested size
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            output_size=size_at_requested,
             interpolation=interpolation,
         )
 
