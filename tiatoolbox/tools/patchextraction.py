@@ -115,12 +115,12 @@ class PatchExtractor(ABC):
             self.mask = None
         elif input_mask == "auto":
             if isinstance(self.wsi, wsireader.VirtualWSIReader):
-                self.mask = None
+                self.mask = None  # in case the input vase a VF image
             else:
                 self.mask = self.wsi.tissue_mask(resolution=1.25, units="power")
         else:
             self.mask = wsireader.VirtualWSIReader(
-                self.input_mask, info=self.wsi.info, mode="bool"
+                input_mask, info=self.wsi.info, mode="bool"
             )
         self.within_bound = within_bound
 
@@ -195,9 +195,9 @@ class PatchExtractor(ABC):
             )
             self.coord_list = self.coord_list[selected_coord_idxs]
 
-            if len(self.input_list) == 0:
+            if len(self.coord_list) == 0:
                 raise ValueError(
-                    "No candidate coordinates left after"
+                    "No candidate coordinates left after "
                     "filtering by input_mask positions."
                 )
 
@@ -251,7 +251,7 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if func is None and coordinates_list.shape[-1] != 4:
             raise ValueError(
-                "Default `func` does not support"
+                "Default `func` does not support "
                 "`coordinates_list` of shape {}.".format(coordinates_list.shape)
             )
         func = default_sel_func if func is None else func

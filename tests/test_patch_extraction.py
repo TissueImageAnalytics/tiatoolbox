@@ -384,3 +384,87 @@ def test_get_coordinates():
         PatchExtractor.filter_coordinates(
             mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
         )
+
+
+def test_mask_based_patch_extractor_ndpi(_sample_ndpi):
+    """Test SlidingWindowPatchExtractor with mask for ndpi image."""
+    res = 0
+    patch_size = stride = (400, 400)
+    input_img = pathlib.Path(_sample_ndpi)
+    wsi = OpenSlideWSIReader(input_img=input_img)
+    slide_dimensions = wsi.info.slide_dimensions
+
+    # Generating a test mask to read patches from
+    mask_dim = (int(slide_dimensions[0] / 10), int(slide_dimensions[1] / 10))
+    wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+    # masking two column to extract patch from
+    wsi_mask[:, :2] = 255
+
+    # patch extraction based on the column mask
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=wsi_mask,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+
+    # read the patch from the second row (y) in the first column
+    patch = wsi.read_rect(
+        location=(0, int(patch_size[1])),
+        size=patch_size,
+        resolution=res,
+        units="level",
+    )
+
+    # because we are using column mask to extract patches, we can expect
+    # that the patches[1] is the from the second row (y) in the first column.
+    assert np.all(patches[1] == patch)
+    assert patches[0].shape == (patch_size[0], patch_size[1], 3)
+
+    # Test None option for mask
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=None,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+
+    # Test `auto` option for mask
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask="auto",
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+
+    patches = patchextraction.get_patch_extractor(
+        input_img=wsi_mask,  # a numpy array to build VirtualSlideReader
+        input_mask="auto",
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+
+    # Test passing an empty mask
+    with pytest.raises(ValueError):
+        wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+        patches = patchextraction.get_patch_extractor(
+            input_img=input_img,
+            input_mask=wsi_mask,
+            method_name="slidingwindow",
+            patch_size=patch_size,
+            resolution=res,
+            units="level",
+            stride=stride,
+        )
