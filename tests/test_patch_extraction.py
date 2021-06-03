@@ -376,3 +376,40 @@ def test_get_coordinates():
         PatchExtractor.get_coordinates([9, 6], [4, 4], [4, 4, 3], within_bound=False)
     with pytest.raises(ValueError, match=r"stride.*> 1.*"):
         PatchExtractor.get_coordinates([9, 6], [4, 4], [0, 0], within_bound=False)
+
+    # test filter_coordinates method
+    bbox_list = np.array(
+        [
+            [0, 0, 4, 4],
+            [0, 4, 4, 8],
+            [4, 0, 8, 4],
+            [4, 4, 8, 8],
+            [8, 0, 12, 4],
+            [8, 4, 12, 8],
+        ]
+    )
+    mask = np.zeros([9, 6])
+    mask[0:4, 3:8] = 1  # will flag first 2
+    mask_reader = VirtualWSIReader(mask)
+    flag_list = PatchExtractor.filter_coordinates(
+        mask_reader, bbox_list, resolution=1.0, units="baseline"
+    )
+    assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
+
+    # Test for bad mask input
+    with pytest.raises(ValueError):
+        PatchExtractor.filter_coordinates(
+            mask, bbox_list, resolution=1.0, units="baseline"
+        )
+
+    # Test for bad bbox coordinate list in the input
+    with pytest.raises(ValueError):
+        PatchExtractor.filter_coordinates(
+            mask_reader, bbox_list.tolist(), resolution=1.0, units="baseline"
+        )
+
+    # Test for incomplete coordinate list
+    with pytest.raises(ValueError):
+        PatchExtractor.filter_coordinates(
+            mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
+        )

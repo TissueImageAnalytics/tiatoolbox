@@ -199,10 +199,10 @@ class PatchExtractor(ABC):
 
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
-        if not isinstance(coordinates_list, np.ndarray) and np.issubdtype(
+        if not isinstance(coordinates_list, np.ndarray) or np.issubdtype(
             coordinates_list.dtype, np.integer
         ):
-            raise ValueError("`coordinates_list` should be ndarray.")
+            raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if func is None and coordinates_list.shape[-1] != 4:
             raise ValueError(
                 "`func=None` does not support"
