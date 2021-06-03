@@ -377,7 +377,7 @@ def test_get_coordinates():
     with pytest.raises(ValueError, match=r"stride.*> 1.*"):
         PatchExtractor.get_coordinates([9, 6], [4, 4], [0, 0], within_bound=False)
 
-    # test filter_coordinates method
+    # Tests for filter_coordinates method
     bbox_list = np.array(
         [
             [0, 0, 4, 4],
