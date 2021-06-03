@@ -110,6 +110,7 @@ class PatchExtractor(ABC):
         self.n = 0
         self.wsi = wsireader.get_wsireader(input_img=input_img)
         self.locations_df = None
+        self.coord_list = None
         self.stride = None
         if input_mask is None:
             self.mask = None
