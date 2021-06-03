@@ -110,4 +110,4 @@ examples/*.py
 # Mac generated
 .DS_Store
 
-dataset
+tests/local_samples/
