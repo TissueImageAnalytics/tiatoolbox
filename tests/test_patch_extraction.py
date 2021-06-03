@@ -13,7 +13,6 @@ from tiatoolbox.wsicore.wsireader import (
 import pytest
 import pathlib
 import numpy as np
-import math
 
 
 def read_points_patches(
@@ -228,35 +227,27 @@ def test_sliding_window_patch_extractor(_patch_extr_vf_image):
     patch_size = (200, 200)
     img = misc.imread(input_img)
 
-    img_h = img.shape[1]
-    img_w = img.shape[0]
+    img_h = img.shape[0]
+    img_w = img.shape[1]
 
-    num_patches_img_h = int(math.ceil((img_h - patch_size[1]) / stride[1] + 1))
-    num_patches_img_w = int(math.ceil(((img_w - patch_size[0]) / stride[0] + 1)))
-    num_patches_img = num_patches_img_h * num_patches_img_w
+    coord_list = PatchExtractor.get_coordinates(
+        image_shape=(img_w, img_h),
+        patch_shape=patch_size,
+        stride_shape=stride,
+        within_bound=True,
+    )
+
+    num_patches_img = len(coord_list)
     iter_tot = 0
 
     img_patches = np.zeros(
         (num_patches_img, patch_size[1], patch_size[0], 3), dtype=img.dtype
     )
 
-    for h in range(num_patches_img_h):
-        for w in range(num_patches_img_w):
-            start_h = h * stride[1]
-            end_h = (h * stride[1]) + patch_size[1]
-            start_w = w * stride[0]
-            end_w = (w * stride[0]) + patch_size[0]
-            if end_h > img_h:
-                start_h = img_h - patch_size[1]
-                end_h = img_h
-
-            if end_w > img_w:
-                start_w = img_w - patch_size[0]
-                end_w = img_w
-
-            img_patches[iter_tot, :, :, :] = img[start_h:end_h, start_w:end_w, :]
-
-            iter_tot += 1
+    for coord in coord_list:
+        start_w, start_h, end_w, end_h = coord
+        img_patches[iter_tot, :, :, :] = img[start_h:end_h, start_w:end_w, :]
+        iter_tot += 1
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
@@ -265,6 +256,7 @@ def test_sliding_window_patch_extractor(_patch_extr_vf_image):
         resolution=0,
         units="level",
         stride=stride,
+        within_bound=True,
     )
 
     assert np.all(img_patches[0] == patches[0])
@@ -274,27 +266,6 @@ def test_sliding_window_patch_extractor(_patch_extr_vf_image):
         img_patches_test.append(patch)
 
     img_patches_test = np.array(img_patches_test)
-
-    assert np.all(img_patches == img_patches_test)
-
-    # Test for integer (single) patch_size and stride input
-    patches = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="slidingwindow",
-        patch_size=patch_size[0],
-        resolution=0,
-        units="level",
-        stride=stride[0],
-    )
-
-    assert np.all(img_patches[0] == patches[0])
-
-    img_patches_test = []
-    for patch in patches:
-        img_patches_test.append(patch)
-
-    img_patches_test = np.array(img_patches_test)
-
     assert np.all(img_patches == img_patches_test)
 
 
