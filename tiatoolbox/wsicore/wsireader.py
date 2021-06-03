@@ -1333,17 +1333,18 @@ class VirtualWSIReader(WSIReader):
         param = WSIMeta(
             file_path=self.input_path,
             objective_power=None,
-            slide_dimensions=self.img.shape[:-1],
+            # align to XY to match with OpenSlide
+            slide_dimensions=self.img.shape[:2][::-1],
             level_count=1,
-            level_dimensions=(self.img.shape[:-1],),
+            level_dimensions=(self.img.shape[:2][::-1],),
             level_downsamples=[1.0],
             vendor=None,
             mpp=None,
             raw=None,
         )
-        self._m_info = param
-
-        return param
+        if self._m_info is None:
+            self._m_info = param
+        return self._m_info
 
     def _find_params_from_baseline(self, location, baseline_read_size):
         """Convert read parameters from (virtual) baseline coordinates.
