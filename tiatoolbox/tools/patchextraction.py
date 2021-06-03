@@ -405,7 +405,7 @@ def get_patch_extractor(method_name, **kwargs):
 
     Args:
         method_name (str): name of patch extraction method, must be one of "point" or
-          "sliding".
+          "slidingwindow".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
@@ -420,7 +420,7 @@ def get_patch_extractor(method_name, **kwargs):
     """
     if method_name.lower() == "point":
         patch_extractor = PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "sliding":
+    elif method_name.lower() == "slidingwindow":
         patch_extractor = SlidingWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported

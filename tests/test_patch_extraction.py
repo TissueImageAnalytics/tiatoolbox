@@ -88,7 +88,7 @@ def test_get_patch_extractor(_source_image, _patch_extr_csv):
 
     sliding_window = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="sliding",
+        method_name="slidingwindow",
         patch_size=(200, 200),
     )
 
@@ -260,7 +260,7 @@ def test_sliding_window_patch_extractor(_patch_extr_vf_image):
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="sliding",
+        method_name="slidingwindow",
         patch_size=patch_size,
         resolution=0,
         units="level",
@@ -280,7 +280,7 @@ def test_sliding_window_patch_extractor(_patch_extr_vf_image):
     # Test for integer (single) patch_size and stride input
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="sliding",
+        method_name="slidingwindow",
         patch_size=patch_size[0],
         resolution=0,
         units="level",
@@ -306,7 +306,7 @@ def test_sliding_patch_extractor_ndpi(_sample_ndpi):
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="sliding",
+        method_name="slidingwindow",
         patch_size=patch_size,
         resolution=1,
         units="level",
