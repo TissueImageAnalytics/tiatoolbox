@@ -169,8 +169,8 @@ class PatchExtractor(ABC):
         img_h = slide_dimension[1]
         img_patch_w = baseline_read_size[0]
         img_patch_h = baseline_read_size[1]
-        stride_w = self.stride[0] * level_downsample
-        stride_h = self.stride[1] * level_downsample
+        stride_w = int(self.stride[0] * level_downsample)
+        stride_h = int(self.stride[1] * level_downsample)
 
         coord_list = self.get_coordinates(
             image_shape=(img_w, img_h),
@@ -229,7 +229,7 @@ class PatchExtractor(ABC):
 
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
-        if not isinstance(coordinates_list, np.ndarray) or np.issubdtype(
+        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
             coordinates_list.dtype, np.integer
         ):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
