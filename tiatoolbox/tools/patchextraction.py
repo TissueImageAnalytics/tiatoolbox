@@ -36,6 +36,13 @@ class PatchExtractor(ABC):
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
           patch extraction.
         patch_size(int or tuple(int)): patch size tuple (width, height).
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+          input mask that is used for position filtering when extracting patches
+          i.e., patches will only be extracted based on the highlighted regions in
+          the input_mask. input_mask can be either path to the mask, a numpy
+          array, :class:`VirtualWSIReader`, or 'auto`. In case of 'auto', a
+          tissue mask is generated for the input_image using tiatoolbox
+          :class:`TissueMasker` functioncality.
         resolution (int or float or tuple of float): resolution at
           which to read the image, default = 0. Either a single
           number or a sequence of two numbers for x and y are
@@ -76,6 +83,7 @@ class PatchExtractor(ABC):
         self,
         input_img,
         patch_size,
+        input_mask=None,
         resolution=0,
         units="level",
         pad_mode="constant",
@@ -93,6 +101,14 @@ class PatchExtractor(ABC):
         self.wsi = wsireader.get_wsireader(input_img=input_img)
         self.locations_df = None
         self.stride = None
+        if input_mask is None:
+            self.mask = None
+        elif input_mask == "auto":
+            self.mask = self.wsi.tissue_mask(resolution=1.25, units="power")
+        else:
+            self.mask = wsireader.VirtualWSIReader(
+                self.input_mask, info=self.wsi.info, mode="bool"
+            )
 
     def __iter__(self):
         self.n = 0
@@ -304,6 +320,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self,
         input_img,
         patch_size,
+        input_mask=None,
         resolution=0,
         units="level",
         stride=None,
@@ -312,6 +329,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
     ):
         super().__init__(
             input_img=input_img,
+            input_mask=input_mask,
             patch_size=patch_size,
             resolution=resolution,
             units=units,
