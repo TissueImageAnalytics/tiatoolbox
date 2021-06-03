@@ -21,7 +21,8 @@
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
 import numpy as np
-import math
+
+# import math
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -171,13 +172,20 @@ class PatchExtractor(ABC):
         stride_w = self.stride[0] * level_downsample
         stride_h = self.stride[1] * level_downsample
 
-        data = []
+        coord_list = self.get_coordinates(
+            image_shape=(img_w, img_h),
+            patch_shape=(img_patch_w, img_patch_h),
+            stride_shape=(stride_w, stride_h),
+            within_bound=self.within_bound,
+        )
 
-        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-                start_h = h * stride_h
-                start_w = w * stride_w
-                data.append([start_w, start_h, None])
+        data = coord_list[:, :2]  # only use the x_start and y_start
+
+        # for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
+        #     for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
+        #         start_h = h * stride_h
+        #         start_w = w * stride_w
+        #         data.append([start_w, start_h, None])
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
