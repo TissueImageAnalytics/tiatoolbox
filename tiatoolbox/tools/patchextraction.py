@@ -61,6 +61,10 @@ class PatchExtractor(ABC):
         pad_constant_values (int or tuple(int)): Values to use with
           constant padding. Defaults to 0. See :func:`numpy.pad` for
           more.
+        within_bound (bool): whether to extract patches beyond the
+          input_image size limits. If yes, extracted patches at margins
+          will be padded appropriately based on `pad_constant_values` and
+          `pad_mode`. Default is False.
 
     Attributes:
         wsi(WSIReader): input image for patch extraction of type :obj:`WSIReader`.
@@ -88,6 +92,7 @@ class PatchExtractor(ABC):
         units="level",
         pad_mode="constant",
         pad_constant_values=0,
+        within_bound=False,
     ):
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
@@ -109,6 +114,7 @@ class PatchExtractor(ABC):
             self.mask = wsireader.VirtualWSIReader(
                 self.input_mask, info=self.wsi.info, mode="bool"
             )
+        self.within_bound = within_bound
 
     def __iter__(self):
         self.n = 0
