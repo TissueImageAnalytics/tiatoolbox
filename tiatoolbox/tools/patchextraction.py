@@ -340,6 +340,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         stride=None,
         pad_mode="constant",
         pad_constant_values=0,
+        within_bound=False,
     ):
         super().__init__(
             input_img=input_img,
@@ -349,6 +350,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             units=units,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
+            within_bound=within_bound,
         )
         if stride is None:
             self.stride = self.patch_size
@@ -381,6 +383,7 @@ class PointsPatchExtractor(PatchExtractor):
         units="level",
         pad_mode="constant",
         pad_constant_values=0,
+        within_bound=False,
     ):
         super().__init__(
             input_img=input_img,
@@ -389,6 +392,7 @@ class PointsPatchExtractor(PatchExtractor):
             units=units,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
+            within_bound=within_bound,
         )
 
         self.locations_df = misc.read_locations(input_table=locations_list)
