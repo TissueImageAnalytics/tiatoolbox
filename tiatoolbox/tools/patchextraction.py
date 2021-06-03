@@ -73,7 +73,11 @@ class PatchExtractor(ABC):
         resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
-        locations_df(pd.DataFrame): A table containing location and/or type of patch.
+        locations_df(pd.DataFrame): A table containing location and/or type of patces
+          in `(x_start, y_start, class)` format.
+        coord_list(:class:`numpy.ndarray`): An array containing coordinates of patches
+          in `(x_start, y_start, x_end, y_end)` format to be used for `slidingwindow`
+          patch extraction.
         pad_mode (str): Method for padding at edges of the WSI.
           See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
@@ -110,7 +114,10 @@ class PatchExtractor(ABC):
         if input_mask is None:
             self.mask = None
         elif input_mask == "auto":
-            self.mask = self.wsi.tissue_mask(resolution=1.25, units="power")
+            if isinstance(self.wsi, wsireader.VirtualWSIReader):
+                self.mask = None
+            else:
+                self.mask = self.wsi.tissue_mask(resolution=1.25, units="power")
         else:
             self.mask = wsireader.VirtualWSIReader(
                 self.input_mask, info=self.wsi.info, mode="bool"
@@ -172,20 +179,29 @@ class PatchExtractor(ABC):
         stride_w = int(self.stride[0] * level_downsample)
         stride_h = int(self.stride[1] * level_downsample)
 
-        coord_list = self.get_coordinates(
+        self.coord_list = self.get_coordinates(
             image_shape=(img_w, img_h),
             patch_shape=(img_patch_w, img_patch_h),
             stride_shape=(stride_w, stride_h),
             within_bound=self.within_bound,
         )
 
-        data = coord_list[:, :2]  # only use the x_start and y_start
+        if self.mask is not None:
+            selected_coord_idxs = self.filter_coordinates(
+                self.mask,
+                self.coord_list,
+                resolution=self.resolution,
+                units=self.units,
+            )
+            self.coord_list = self.coord_list[selected_coord_idxs]
 
-        # for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-        #     for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-        #         start_h = h * stride_h
-        #         start_w = w * stride_w
-        #         data.append([start_w, start_h, None])
+            if len(self.input_list) == 0:
+                raise ValueError(
+                    "No candidate coordinates left after"
+                    "filtering by input_mask positions."
+                )
+
+        data = self.coord_list[:, :2]  # only use the x_start and y_start
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
