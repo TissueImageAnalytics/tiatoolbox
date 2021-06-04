@@ -144,72 +144,62 @@ def align_shape(arr_list, cval=0):
     return new_arr_list
 ###
 if __name__ == '__main__':
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,3'
+    data_root_dir = '/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/'
     wsi_path_list = [
-        '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs',
-        '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_001.svs',
-        '/home/tialab-dang/local/project/tiatoolbox/tests/data/TCGA-HE-7130-01Z-00-DX1.png',
-        '/home/tialab-dang/local/project/tiatoolbox/tests/data/PCA-mini.svs',
+        '%s/tests/local_samples/TCGA-HE-7130-01Z-00-DX1.png' % data_root_dir,
     ]
 
     mask_path_list = [
-        '/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002-mask.png',
         None,
-        None,
-        None
     ]
     from tiatoolbox.models.segmentation import SemanticSegmentor, NucleusInstanceSegmentor
 
-    # pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pecan-hover-net-pytorch.tar'
-    # hovernet = HoVerNet(mode='fast', num_types=6)
+    # pretrained = '/home/tialab-dang/local/project/pretrained/pecan-hover-net-pytorch.tar'
+    # # hovernet = HoVerNet(mode='fast', num_types=6)
     # pretrained = torch.load(pretrained)['desc']
-    # hovernet.load_state_dict(pretrained)
+    # torch.save(pretrained, 'hovernet_fast_pannuke_pytorch.tar')
+    # # hovernet.load_state_dict(pretrained)
+    # exit()
     # predictor = Predictor(model=hovernet, num_loader_worker=4, num_postproc_worker=0)
 
-    # pretrained = '/home/tialab-dang/local/project/tiatoolbox/tests/pretrained/pannuke.pth'
-    # predictor = Predictor(
-    #                 pretrained_model='hovernet-pannuke',
-    #                 pretrained_weight=pretrained,
-    #                 num_loader_worker=4,
-    #                 num_postproc_worker=0)
-    # # predictor.predict(wsi_path_list, mask_path_list, mode='wsi', resolution=0.25, units='mpp')
+    pretrained = '%s/tests/local_samples/hovernet_fast_pannuke_pytorch.tar' % data_root_dir
+    predictor = NucleusInstanceSegmentor(
+                    pretrained_model='hovernet-pannuke',
+                    pretrained_weight=pretrained,
+                    num_loader_worker=4,
+                    num_postproc_worker=2)
 
     # predictor = NucleusInstanceSegmentor(
     #                 pretrained_model='hovernet-pannuke',
     #                 num_loader_worker=4,
     #                 num_postproc_worker=0)
-    # idx = 2
-    # output_dict = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
-    #                 mode='tile', resolution=2.0, units='baseline', on_gpu=True)
-
-    # reader = get_wsireader(wsi_path_list[idx])
-    # thumb = reader.slide_thumbnail(resolution=2.0, units='baseline')
-    # overlay = visualize_instances_dict(thumb, output_dict, line_thickness=2)
-    # imwrite('dump.png', overlay)
-
-    idx = -1
-    from tiatoolbox.models.segmentation.generic import FCN_Model
-    predictor = SemanticSegmentor(
-                    pretrained_model='fcn-tissue_mask',
-                    num_loader_worker=4, 
-                    num_postproc_worker=0,)
-    output = predictor.predict([wsi_path_list[idx]],
-                     mode='wsi', resolution=1.0, units='mpp')
+    idx = 0
+    output_list = predictor.predict([wsi_path_list[idx]], [mask_path_list[idx]],
+                    mode='tile', resolution=2.0, units='baseline', on_gpu=True)
 
     reader = get_wsireader(wsi_path_list[idx])
-    thumb = reader.slide_thumbnail(resolution=1.0, units='mpp')
-    output, thumb = align_shape([output, thumb])
-    import matplotlib.pyplot as plt
-    sel = output > 0
-    alpha = 0.25
-    colorize_output = (output * 255)[...,None]
-    overlay = thumb.copy()
-    overlay[sel] = thumb[sel] * alpha + (1-alpha) * colorize_output[sel]
+    thumb = reader.slide_thumbnail(resolution=2.0, units='baseline')
+    overlay = visualize_instances_dict(thumb, output_list[0], line_thickness=2)
     imwrite('dump.png', overlay)
-    exit()
 
-# TODO: cpu mode
-# TODO: pretrained model
-# TODO: Tumor Seg
-# reader = get_wsireader('/home/tialab-dang/local/project/tiatoolbox/tests/data/CMU-mini_002.svs')
-# roi = reader.read_bounds((-150, -150, 150, 151), pad_mode='reflect')
-# imwrite('dump.png', roi)
+    # idx = -1
+    # from tiatoolbox.models.segmentation.generic import FCN_Model
+    # predictor = SemanticSegmentor(
+    #                 pretrained_model='fcn-tissue_mask',
+    #                 num_loader_worker=4, 
+    #                 num_postproc_worker=0,)
+    # output = predictor.predict([wsi_path_list[idx]],
+    #                  mode='wsi', resolution=1.0, units='mpp')
+
+    # reader = get_wsireader(wsi_path_list[idx])
+    # thumb = reader.slide_thumbnail(resolution=1.0, units='mpp')
+    # output, thumb = align_shape([output, thumb])
+    # import matplotlib.pyplot as plt
+    # sel = output > 0
+    # alpha = 0.25
+    # colorize_output = (output * 255)[...,None]
+    # overlay = thumb.copy()
+    # overlay[sel] = thumb[sel] * alpha + (1-alpha) * colorize_output[sel]
+    # imwrite('dump.png', overlay)
+    # exit()

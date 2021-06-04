@@ -32,7 +32,7 @@ import pathlib
 import random
 import time
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, deque
 
 import cv2
 import numpy as np
@@ -41,6 +41,9 @@ import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as torch_data
+from concurrent.futures import (FIRST_EXCEPTION, ProcessPoolExecutor,
+                                as_completed, wait)
+
 import tqdm
 
 import matplotlib.pyplot as plt
@@ -55,13 +58,25 @@ from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
 from .pretrained_info import get_pretrained_model
 
 ####
-class SerializeReader(torch_data.Dataset):
-    """
-    `mp_shared_space` must be from torch.multiprocessing, for example
+class SerializeWSIReader(torch_data.Dataset):
+    """Reading a wsi in parallel mode with persistent workers.
 
-    mp_manager = torch_mp.Manager()
-    mp_shared_space = mp_manager.Namespace()
-    mp_shared_space.image = torch.from_numpy(image)
+    To speed up the inference process for multiple WSIs. The
+    `torch.utils.data.Dataloader` is set to run in persistent mode.
+    Normally, it will prevent worker from altering their initial states
+    (such as provided input etc.) . To sidestep this, we use a shared parallel
+    workspace context manager to send data and signal from the main thread,
+    thus allowing each worker to load new wsi as well as corresponding patch
+    information.
+
+    Args:
+
+        `mp_shared_space`: must be from torch.multiprocessing, for example
+
+            mp_manager = torch_mp.Manager()
+            mp_shared_space = mp_manager.Namespace()
+            mp_shared_space.image = torch.from_numpy(image)
+
     """
     def __init__(
             self,
@@ -69,7 +84,6 @@ class SerializeReader(torch_data.Dataset):
             mp_shared_space,
             preproc=None,
             mode='wsi',
-            scale_to_lv0=1.0,
             resolution=None,
             units=None):
         super().__init__()
@@ -78,7 +92,6 @@ class SerializeReader(torch_data.Dataset):
         self.preproc = preproc
         self.wsi_path_list = wsi_path_list
         self.wsi_idx = None  # to be received externally via thread communication
-        self.scale_to_lv0 = scale_to_lv0  # ! need to expose or sync read this
         self.resolution = resolution
         self.units = units
         return
@@ -119,26 +132,22 @@ class SerializeReader(torch_data.Dataset):
     def __getitem__(self, idx):
         # ! no need to lock as we dont modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
-            # TODO: enforcing strict typing
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
-            self.scale_to_lv0 = self.mp_shared_space.scale_to_lv0.item()
             self.reader = self._get_reader(self.wsi_path_list[self.wsi_idx])
 
         # this is in YX and at requested resolution not lv0
         patch_info = self.mp_shared_space.patch_info_list[idx]
-        # convert from requested to lv0 coordinate and in XY
         tl, br = patch_info[0]  # retrieve input placement, [1] is output
-        bound = np.array(tl.tolist()[::-1] + br.tolist()[::-1])
-        bound = (bound * self.scale_to_lv0).astype(np.int32)
+        bounds = np.array(tl.tolist()[::-1] + br.tolist()[::-1])
+
+        # `location_is_at_requested` is expected to enforce output to
+        # be the same as bounds br-tl, unless bounds are of float
         patch_data = self.reader.read_bounds(
-                        bound,
+                        bounds.astype(np.int32),
                         resolution=self.resolution,
-                        units=self.units)
-        # ! due to internal scaling, there will be rounding error and wont match
-        # ! the requested size at requested read resolution
-        # ! hence must apply rescale again
-        output_size = (br - tl).numpy()[::-1]
-        patch_data = imresize(img=patch_data, output_size=output_size)
+                        units=self.units,
+                        location_is_at_requested=True)
+
         if self.preproc is not None:
             patch_data = patch_data.copy()
             patch_data = self.preproc(patch_data)
@@ -387,17 +396,6 @@ def _get_valid_patch_idx(wsi_proc_shape, wsi_mask, patch_info_list):
     valid_indices = np.array(valid_indices)
     return valid_indices
 
-
-def _get_valid_patch_idx_in_tile(tile_info, patch_info_list):
-    # checking basing on the output alignment
-    tile_tl, tile_br = tile_info[1]
-    patch_tl_list = patch_info_list[:,1,0] 
-    patch_br_list = patch_info_list[:,1,1]
-    sel =  (patch_tl_list[:,0] >= tile_tl[0]) & (patch_tl_list[:,1] >= tile_tl[1])
-    sel &= (patch_br_list[:,0] <= tile_br[0]) & (patch_br_list[:,1] <= tile_br[1])
-    return sel
-
-
 def _get_io_info(
     wsi_path,
     mask_path,
@@ -408,30 +406,17 @@ def _get_io_info(
     resolution=None,
     units=None):
 
-    def get_wsi_proc_shape(resolution=resolution, units=units):
-        lv0_shape = wsi_reader.info.slide_dimensions
-        lv0_bound = (0, 0) + lv0_shape
-        _, _, read_shape, _ = wsi_reader.find_read_bounds_params(
-            bounds=lv0_bound,
-            resolution=resolution,
-            units=units,
-        )
-        return np.array(read_shape)
-
     wsi_reader = get_wsireader(wsi_path)
-    wsi_proc_shape = get_wsi_proc_shape() # in XY
-    scale_to_lv0 = np.array(wsi_reader.info.slide_dimensions) / wsi_proc_shape
-    scale_to_lv0 = scale_to_lv0[0]
-    wsi_proc_shape = wsi_proc_shape[::-1]  # in YX
+    wsi_proc_shape = wsi_reader.slide_dimensions(resolution=resolution, units=units)
+    wsi_proc_shape = wsi_proc_shape[::-1]  # XY -> YX
 
     if mask_path is not None and os.path.exists(mask_path):
         wsi_mask = imread(mask_path)
         wsi_mask = cv2.cvtColor(wsi_mask, cv2.COLOR_RGB2GRAY)
     else:  # process everything if no mask is provided
-        # ! HACK: inconsistent behavior between VirtualReader and WSI
-        # ! how to reliably retrieve the shape of downscale version ?
-        thumb_shape = get_wsi_proc_shape(1.0, units='baseline')
-        wsi_mask = np.ones(thumb_shape[::-1], dtype=np.uint8)
+        # will crash if reader is virtual
+        wsi_mask_shape = wsi_reader.slide_dimensions(resolution=resolution, units=units)
+        wsi_mask = np.ones(wsi_mask_shape[::-1], dtype=np.uint8)
     wsi_mask[wsi_mask > 0] = 1
 
     # * retrieve patch and tile placement
@@ -454,7 +439,7 @@ def _get_io_info(
     #
     sel_index = _get_valid_patch_idx(wsi_proc_shape, wsi_mask, patch_info_list)
     patch_info_list = patch_info_list[sel_index]    
-    return wsi_mask, wsi_proc_shape, all_tile_info, patch_info_list, scale_to_lv0
+    return wsi_mask, wsi_proc_shape, all_tile_info, patch_info_list
 
 
 ####
@@ -483,6 +468,7 @@ def get_inst_in_margin(arr, margin_size, tile_pp_info):
     else:
         inst_in_margin = np.array([]) # empty array
     return inst_in_margin
+
 
 ####
 def get_inst_on_margin(arr, margin_size, tile_pp_info):
@@ -560,6 +546,8 @@ def get_inst_on_margin(arr, margin_size, tile_pp_info):
         inst_on_margin = np.array([]) # empty array
 
     return inst_on_margin
+
+
 ####
 def get_inst_on_edge(arr, tile_pp_info):
     inst_on_edge = []
@@ -580,8 +568,9 @@ def get_inst_on_edge(arr, tile_pp_info):
     else:
         inst_on_edge = np.array([]) # empty array
     return inst_on_edge
-####
 
+
+####
 def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
                 margin_size, patch_info_list, postproc_func, 
                 wsi_proc_shape,
@@ -693,7 +682,8 @@ def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
         # -- extend from the marked edges (top/bot or left/right) by the margin size, 
         #    remove all nuclei lie within the margin area (including on the margin line)
         # -- nuclei on all edges are removed (as these are alrd within `full grid tile`)
-        inst_in_margin = get_inst_in_margin(pred_inst, margin_size, tile_pp_info) # also contain those lying on the edges
+        inst_in_margin = get_inst_in_margin(pred_inst, margin_size, tile_pp_info) 
+        # also contain those lying on the edges
         if np.sum(tile_pp_info) == 1:
             holder_flag = tile_pp_info.copy()
             if tile_mode == 1: 
@@ -796,7 +786,7 @@ class Segmentor:
 
         def postproc_callback(new_inst_dict, remove_uid_list, wsi_inst_info, offset_id):
             # * aggregate
-            # ! the return id should be contiguous to maximuize 
+            # ! the return id should be contiguous to maximize 
             # ! counting range in int32
             inst_wsi_id = offset_id # barrier in case no output in tile!
             for inst_id, inst_info in new_inst_dict.items():
@@ -811,24 +801,29 @@ class Segmentor:
                         del wsi_inst_info[inst_uid]
             return wsi_inst_info, offset_id
 
+        def get_valid_patch_idx_in_tile(tile_info, patch_info_list):
+            # checking basing on the output alignment
+            tile_tl, tile_br = tile_info[1]
+            patch_tl_list = patch_info_list[:,1,0] 
+            patch_br_list = patch_info_list[:,1,1]
+            sel =  (patch_tl_list[:,0] >= tile_tl[0]) & (patch_tl_list[:,1] >= tile_tl[1])
+            sel &= (patch_br_list[:,0] <= tile_br[0]) & (patch_br_list[:,1] <= tile_br[1])
+            return sel
+
         forward_info_list = collections.deque()
         nr_tile = tile_io_info_list.shape[0]
         for tile_idx in range(nr_tile):
             tile_info = tile_io_info_list[tile_idx]
-            sel_index = _get_valid_patch_idx_in_tile(tile_info, patch_info_list)
+            sel_index = get_valid_patch_idx_in_tile(tile_info, patch_info_list)
             patch_in_tile_info_list = patch_info_list[sel_index]
             forward_info_list.append([tile_info, patch_in_tile_info_list])
 
         # TODO: migrate this out to global persistent worker
-        proc_pool = None
-        if self.num_postproc_worker > 0:
-            proc_pool = ProcessPoolExecutor(self.nr_post_proc_workers)
-
         pbar_t = pbar_creator('Fwrd-Tile', nr_tile, pos=1)
         pbar_p = pbar_creator('Post-Proc', nr_tile, pos=2)
 
         all_time = 0
-        future_list = []
+        future_list = deque()
         for tile_idx, tile_info in enumerate(forward_info_list):
 
             tile_info, patch_info_list = tile_info
@@ -837,7 +832,6 @@ class Segmentor:
             # ! VERY MESSY AND HARD TO MANAGE
             self._mp_shared_space.wsi_idx = torch.Tensor([self.wsi_idx]).share_memory_()
             self._mp_shared_space.patch_info_list = torch.from_numpy(patch_info_list).share_memory_()
-            self._mp_shared_space.scale_to_lv0 = torch.Tensor([self.scale_to_lv0]).share_memory_()
             end = time.perf_counter()
             all_time += (end - start)
 
@@ -866,8 +860,8 @@ class Segmentor:
                     prev_wsi_inst_dict]
 
             # launch separate thread to deal with postproc
-            if proc_pool is not None:
-                future = proc_pool.submit(_postproc_tile, *args)
+            if self.proc_pool is not None:
+                future = self.proc_pool.submit(_postproc_tile, *args)
                 future_list.append(future)
             else:
                 new_inst_dict, remove_uid_list = _postproc_tile(*args)
@@ -897,8 +891,8 @@ class Segmentor:
                                 wsi_inst_info,
                                 offset_id)            
             pbar_p.update()
-        if proc_pool is not None:
-            proc_pool.shutdown()
+        if self.proc_pool is not None:
+            self.proc_pool.shutdown()
         pbar_p.close()
         return wsi_inst_info
                 
@@ -907,17 +901,20 @@ class Segmentor:
         # * Async Inference
         # ? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        (wsi_mask, wsi_proc_shape, all_tile_info, 
-            patch_info_list, scale_to_lv0) = _get_io_info(
-                                                wsi_path, 
-                                                mask_path,
-                                                self.patch_input_shape,
-                                                self.patch_output_shape,
-                                                self.tile_shape,
-                                                self.ambiguous_size,
-                                                self.resolution,
-                                                self.units)
-        self.scale_to_lv0 = scale_to_lv0
+        (   
+            wsi_mask, 
+            wsi_proc_shape, 
+            all_tile_info, 
+            patch_info_list, 
+        ) = _get_io_info(
+                wsi_path, 
+                mask_path,
+                self.patch_input_shape,
+                self.patch_output_shape,
+                self.tile_shape,
+                self.ambiguous_size,
+                self.resolution,
+                self.units)
 
         ## ** process full grid and vert/horiz fixing at the same time
         start = time.perf_counter()
@@ -977,12 +974,16 @@ class Segmentor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        stride_shape=None,  # at requested read resolution, not wrt to lv0
+        stride_shape=None,
         resolution=0.25,
         units="mpp",
         save_dir=None,
     ):
         """Make a prediction for a list of input data."""
+
+        self.proc_pool = None
+        if self.num_postproc_worker > 0:
+            self.proc_pool = ProcessPoolExecutor(self.num_postproc_worker)
 
         self.on_gpu = on_gpu
         if on_gpu:
@@ -994,36 +995,33 @@ class Segmentor:
 
         mp_manager = torch_mp.Manager()
         mp_shared_space = mp_manager.Namespace()
-        mp_mutext = mp_manager.Lock()
         self._mp_shared_space = mp_shared_space
 
         # ! by default, torch will split idxing across worker
         # ! hence, for each batch, they coming entirely from different worker id
-        ds = SerializeReader(img_list, mp_shared_space, 
+        ds = SerializeWSIReader(img_list, mp_shared_space, 
                 resolution=resolution, units=units, mode=mode)
         loader = torch_data.DataLoader(ds,
-                                batch_size=8,
                                 drop_last=False,
-                                num_workers=0,
-                                persistent_workers=False,
-                                # num_workers=2,
-                                # persistent_workers=True,
+                                batch_size=self.batch_size,
+                                num_workers=self.num_loader_worker,
+                                persistent_workers=self.num_loader_worker > 0,
                             )
         self._loader = loader
 
-        # ! TODO: refactor this into a state holder or sthg
         for wsi_idx in range(len(img_list)):
+            # ! TODO: refactor this into a state holder or sthg
             self.wsi_idx = wsi_idx
             self.patch_input_shape  = np.array([256, 256])
             self.patch_output_shape = np.array([164, 164])
             self.tile_shape = 3000
             self.ambiguous_size = np.array([328, 328])
-            # self.resolution = 0.25
-            # self.units = 'mpp'
             self.resolution = resolution
             self.units = units
             mask_path = mask_list[wsi_idx] if mask_list is not None else None
             output = self._predict_one_wsi(img_list[wsi_idx], mask_path, loader)
             break # sanity atm
+
+        self.proc_pool = None  # release worker
         return [output]
 

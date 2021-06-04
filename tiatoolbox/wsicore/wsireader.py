@@ -1523,18 +1523,24 @@ class VirtualWSIReader(WSIReader):
         bounds_at_lv0 = bounds
         if location_is_at_requested:
             bounds_at_lv0 = self._bounds_at_requested_to_lv0(bounds, resolution, units)
-            _, size_at_requested= utils.transforms.bounds2locsize(bounds)
-
-        # * Find parameters for optimal read
-        # dont use the `output_size` (`size_at_requested`) here
-        # because the rounding error at `bounds_at_lv0` leads to
-        # different `size_at_requested` (keeping same read resolution
-        # but base image is of different scale)
-        _, _, _, post_read_scale = self._find_read_bounds_params(
-            bounds_at_lv0,
-            resolution=resolution,
-            units=units,
-        )
+            _, size_at_requested = utils.transforms.bounds2locsize(bounds)
+            # * Find parameters for optimal read
+            # dont use the `output_size` (`size_at_requested`) here
+            # because the rounding error at `bounds_at_lv0` leads to
+            # different `size_at_requested` (keeping same read resolution
+            # but base image is of different scale)
+            _, _, _, post_read_scale = self._find_read_bounds_params(
+                bounds_at_lv0,
+                resolution=resolution,
+                units=units,
+            )
+        else:
+            # * Find parameters for optimal read
+            _, _, size_at_requested, post_read_scale = self._find_read_bounds_params(
+                bounds_at_lv0,
+                resolution=resolution,
+                units=units,
+            )
 
         location_at_read, size_at_read = self._find_params_from_baseline(
             *utils.transforms.bounds2locsize(bounds_at_lv0)
