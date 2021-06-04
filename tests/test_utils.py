@@ -770,30 +770,38 @@ def test_download_data():
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    old_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    old_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     # modify the content
-    with open(save_zip_path, 'wb') as fptr:
-        fptr.write('dataXXX'.encode())  # random data
-    bad_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    with open(save_zip_path, "wb") as fptr:
+        fptr.write("dataXXX".encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    new_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert new_hash == old_hash
 
     # test not overiting
     # modify the content
-    with open(save_zip_path, 'wb') as fptr:
-        fptr.write('dataXXX'.encode())  # random data
-    bad_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    with open(save_zip_path, "wb") as fptr:
+        fptr.write("dataXXX".encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
-    new_hash = hashlib.md5(open(save_zip_path, 'rb').read()).hexdigest()
+    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
     assert os.path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
+
+    # URL not valid
+    with pytest.raises(ConnectionError):
+        # shouldn't use save_path if test runs correctly
+        save_path = os.path.join(save_dir_path, "temp")
+        misc.download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
+        )
 
 
 def test_parse_cv2_interpolaton():

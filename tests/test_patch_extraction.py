@@ -85,24 +85,13 @@ def test_get_patch_extractor(_source_image, _patch_extr_csv):
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
 
-    with pytest.raises(MethodNotSupported):
-        points.merge_patches()
-
-    fixed_window = patchextraction.get_patch_extractor(
+    sliding_window = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=(200, 200),
     )
 
-    assert isinstance(fixed_window, patchextraction.FixedWindowPatchExtractor)
-
-    variable_window = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="variablewindow",
-        patch_size=(200, 200),
-    )
-
-    assert isinstance(variable_window, patchextraction.VariableWindowPatchExtractor)
+    assert isinstance(sliding_window, patchextraction.SlidingWindowPatchExtractor)
 
     with pytest.raises(MethodNotSupported):
         patchextraction.get_patch_extractor("unknown")
@@ -123,9 +112,6 @@ def test_points_patch_extractor_image_format(
     )
 
     assert isinstance(points.wsi, VirtualWSIReader)
-
-    with pytest.raises(MethodNotSupported):
-        points.merge_patches(patches=None)
 
     points = patchextraction.get_patch_extractor(
         input_img=pathlib.Path(_sample_svs),
@@ -233,8 +219,8 @@ def test_points_patch_extractor_jp2(
     assert np.all(data == saved_data)
 
 
-def test_fixed_window_patch_extractor(_patch_extr_vf_image):
-    """Test FixedWindowPatchExtractor for VF."""
+def test_sliding_window_patch_extractor(_patch_extr_vf_image):
+    """Test SlidingWindowPatchExtractor for VF."""
     input_img = pathlib.Path(_patch_extr_vf_image)
 
     stride = (20, 20)
@@ -273,7 +259,7 @@ def test_fixed_window_patch_extractor(_patch_extr_vf_image):
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=patch_size,
         resolution=0,
         units="level",
@@ -293,7 +279,7 @@ def test_fixed_window_patch_extractor(_patch_extr_vf_image):
     # Test for integer (single) patch_size and stride input
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=patch_size[0],
         resolution=0,
         units="level",
@@ -311,15 +297,15 @@ def test_fixed_window_patch_extractor(_patch_extr_vf_image):
     assert np.all(img_patches == img_patches_test)
 
 
-def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
-    """Test FixedWindowPatchExtractor for ndpi image."""
+def test_sliding_patch_extractor_ndpi(_sample_ndpi):
+    """Test SlidingWindowPatchExtractor for ndpi image."""
     stride = (40, 20)
     patch_size = (400, 200)
     input_img = pathlib.Path(_sample_ndpi)
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=patch_size,
         resolution=1,
         units="level",

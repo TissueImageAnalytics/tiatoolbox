@@ -20,21 +20,30 @@
 
 """This module enables patch-level prediction."""
 
+import logging
 import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
 import os
 import pathlib
+import json
 import warnings
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data, save_json
-from tiatoolbox.models.classification.pretrained_info import _pretrained_model
+from tiatoolbox.utils.misc import (
+    download_data,
+    imread,
+    save_json,
+    get_pretrained_model_info,
+)
+from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.utils.visualisation import overlay_patch_prediction
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
 class CNNPatchModel(ModelBase):
@@ -135,15 +144,15 @@ class CNNPatchPredictor:
 
     Usage:
         >>> data = [img1, img2]
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> data = np.array([img1, img2])
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100K")
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> wsi_file = 'path/wsi.svs'
-        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100K")
+        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(wsi_file, mode='wsi')
 
     """
@@ -168,7 +177,7 @@ class CNNPatchPredictor:
 
             pretrained_model (str): Name of the existing models support by tiatoolbox
                 for processing the data. Refer to
-                `tiatoolbox.models.classification.get_pretrained_model` for detail.
+                `tiatoolbox.models.classification.get_pretrained_model` for details.
 
                 By default, the corresponding pretrained weights will also be
                 downloaded. However, you can override with your own set of weights
@@ -185,22 +194,257 @@ class CNNPatchPredictor:
         """
         super().__init__()
 
+        self.img_list = None
+        self.output_list = None
+        self.mode = None
+        self.patch_size = None
+        self.resolution = None
+        self.units = None
+
         if model is None and pretrained_model is None:
             raise ValueError("Must provide either of `model` or `pretrained_model`")
 
         if model is not None:
             self.model = model
         else:
-            self.model, self.patch_size, self.objective_value = get_pretrained_model(
+            model, patch_size, resolution, units = get_pretrained_model(
                 pretrained_model, pretrained_weight
             )
+            self.patch_size = patch_size
+            self.resolution = resolution
+            self.units = units
 
+        self.model = model
+        self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
         self.verbose = verbose
 
     @staticmethod
-    def __postprocess(probabilities):
+    def _get_merge_info(img_path, output_model, mode, resolution, units):
+        """Get the scaling information needed for merging the predictions
+        at a lower resolution.
+
+        Args:
+            img_path (str): Path to the input image that was originally processed.
+            output_model (dict): Dictionary of results output by the model.
+            mode (str): Mode that was used for processing the data. This must be
+                either `tile` or `wsi`.
+            resolution (float): Resolution used when merging the predictions.
+            units (str): Units of resolution. Either `power`, `mpp`, `baseline`
+                or `level`.
+
+        Returns:
+            img_resize (ndarray): Resized input image at the defined resolution.
+            scale (float): The number of times smaller the resolution of the
+                merged prediction is than the resolution used during proessing.
+
+        """
+        # get the resolution and pretrained model used during duing training
+        process_resolution = output_model["resolution"]
+
+        if resolution is None:
+            # if resolution not supplied, default to saving merged predictions
+            # at the size of the image at the processed resolution.
+            logging.warning(
+                "No resolution provided for saving the merged predictions. Default to "
+                "saving at the size at the processed resolution. Consider using a "
+                "lower resolution than that used for processing to reduce processing "
+                "speed and to reduce the memory of the generated map."
+            )
+            resolution = process_resolution
+            scale = 1
+
+        else:
+            if units == "power":
+                scale = process_resolution / resolution
+            elif units == "mpp":
+                scale = process_resolution * resolution
+            elif units == "baseline":
+                scale = resolution
+
+        if mode == "wsi":
+            reader = get_wsireader(img_path)
+            img_resize = reader.slide_thumbnail(resolution=resolution, units=units)
+        else:
+            img = imread(img_path)
+            output_size = (img.shape[1] / scale), round(img.shape[0] / scale)
+            output_size = (int(round(output_size[0])), int(round(output_size[1])))
+            img_resize = imresize(img, output_size=output_size)
+
+        return img_resize, scale
+
+    @staticmethod
+    def _merge_patch_predictions(output_model, output_shape, scale=1):
+        """Merge patch level predictions.
+
+        Args:
+            output_model (dict): Output produced by CNNPatchPredictor, containing
+                predictions, patch coordinates and class probabilities (if requested).
+            output_shape (tuple): Size of merged 2-dimensional output array.
+            scale (float): How many times smaller the output array is than
+                original image.
+
+        Returns:
+            output (ndarray): 2D map of merged predictions.
+
+        """
+        coordinates = output_model["coordinates"]
+        predictions = output_model["predictions"]
+
+        patch_shape = (coordinates[0][2], coordinates[0][3])
+        coordinates_x1 = np.unique([v[0] for v in coordinates]).tolist()
+        coordinates_y1 = np.unique([v[1] for v in coordinates]).tolist()
+        stride_shape = (sorted(coordinates_x1)[1], sorted(coordinates_y1)[1])
+
+        if (
+            stride_shape[0] < patch_shape[0] or stride_shape[1] < patch_shape[1]
+        ) and "probabilities" not in output_model.keys():
+            warnings.warn(
+                "For a better result when using stride size < patch size, consider "
+                "returning the probabilities. This will result in a smoother output."
+            )
+
+        if stride_shape == patch_shape or "probabilities" not in output_model.keys():
+            output = np.full(output_shape, 0)
+            for idx, coords in enumerate(coordinates):
+                prediction = predictions[idx]
+                coords = np.round(np.array(coords) / scale).astype("int")
+                output[coords[1] : coords[3], coords[0] : coords[2]] = prediction
+        else:
+            probabilities = output_model["probabilities"]
+            num_classes = len(output_model["probabilities"][0])
+            output = np.full([output_shape[0], output_shape[1], num_classes], 0.0)
+            # used to merge overlapping patches
+            denominator = np.ones(np.array(output_shape))
+            for idx, coords in enumerate(coordinates):
+                probabilties_ = probabilities[idx]
+                coords = np.round(np.array(coords) / scale).astype("int")
+                output[coords[1] : coords[3], coords[0] : coords[2]] += probabilties_
+                denominator[coords[1] : coords[3], coords[0] : coords[2]] += 1
+            # deal with overlapping regions
+            output = output / np.expand_dims(denominator, -1)
+            selection = denominator >= 1
+            # convert raw probabilities to preditions
+            output = CNNPatchPredictor._postprocess(output)
+            # set the background to 0
+            output[~selection] = 0
+
+        return output
+
+    @staticmethod
+    def merge_predictions(
+        img_list,
+        output_list,
+        mode,
+        resolution=None,
+        units=None,
+        return_overlay=False,
+        alpha=0.35,
+        save_dir=None,
+    ):
+        """Merge patch-level predictions to form a 2-dimensional prediction map.
+
+        Args:
+            img_list (list): List of paths to the images that were originally processed.
+            output_list (list): List of outputs generated by the model.
+            mode (str): Mode used for processing the data, that determines the input
+                data type. This must be either `tile` or `wsi`.
+            resolution (float): Resolution of merged predictions.
+            units (str): Units of resolution used when merging predictions. This
+                must be the same `units` used when processing the data.
+            return_overlay (bool): Whether to return an overlay of the merged patch
+                predictions on top of the original image.
+            alpha (float): Used to determine the transparency level of the overlay
+                between 0 and 1.
+            save_dir (str): Output directory when processing multiple tiles and
+                    whole-slide images.
+
+        Returns:
+            prediction_map (ndarray): Merged predictions as a 2D array.
+            overlay (ndarray): Overlaid output if return_overlay is set to True.
+
+        """
+        if mode not in ["tile", "wsi"]:
+            raise ValueError(
+                "Only predictions generated using `tile` or `wsi` mode can be merged."
+            )
+
+        if len(img_list) > 1:
+            output_files = []  # generate a list of output file paths
+            warnings.warn(
+                "When providing multiple whole-slide images / tiles "
+                "we save the overlays and return the locations "
+                "to the corresponding files."
+            )
+
+        if len(img_list) > 1 and save_dir is None:
+            raise ValueError(
+                "If the number of input samples > 1, then a save_dir must be provided."
+            )
+
+        output = []
+        for idx, img_path in enumerate(img_list):
+            output_merged = []
+            output_files = []
+
+            img_path = pathlib.Path(img_path)
+            basename = img_path.stem
+
+            # prepare the directories for saving
+            if len(img_list) > 1:
+                save_dir_ = os.path.join(save_dir, basename)
+                if not os.path.exists(save_dir_):
+                    os.makedirs(save_dir_)
+
+            if len(img_list) > 1:
+                with open(output_list[idx]) as json_file:
+                    output_model = json.load(json_file)
+            else:
+                output_model = output_list[idx][0]
+
+            if resolution is not None and output_model["units"] != units:
+                raise ValueError(
+                    "Defined `units` of resolution must be the same that were used "
+                    "when processing the data (%s)." % output_model["units"]
+                )
+
+            # get the resolution and pretrained model used during duing training
+            read_img, scale = CNNPatchPredictor._get_merge_info(
+                img_path, output_model, mode, resolution, units
+            )
+            # merge patch predictions to form a 2D array
+            merged_predictions = CNNPatchPredictor._merge_patch_predictions(
+                output_model, read_img.shape[:2], scale
+            )
+            output_merged.append(merged_predictions)
+
+            if return_overlay:
+                pretrained_model = output_model["pretrained_model"]
+                # generate an overlay of the 2D array on the original image
+                overlay = overlay_patch_prediction(
+                    read_img,
+                    merged_predictions,
+                    pretrained_model,
+                    alpha,
+                )
+                output_merged.append(overlay)
+
+            if len(img_list) > 1:
+                # save prediction map
+                np.save(save_dir_ + "prediction_map.npy", merged_predictions)
+                output_files.append(save_dir_ + "prediction_map.npy")
+                if return_overlay:
+                    output_files.append(save_dir_ + "overlay.npy")
+                # set output to return locations of saved files
+                output.append(output_files)
+            else:
+                output.append(output_merged)
+
+        return output
+
+    @staticmethod
+    def _postprocess(probabilities):
         """Apply post processing to output probablities. For classification, we apply
         a simple method and simply take the class with the highest probability.
 
@@ -218,7 +462,7 @@ class CNNPatchPredictor:
         return_coordinates=False,
         on_gpu=True,
     ):
-        """Make a prediction on a dataset. The dataset can be mutated.
+        """Make a prediction on a dataset. The dataset may be mutated.
 
         Args:
             dataset (torch.utils.data.Dataset): PyTorch dataset object created using
@@ -267,7 +511,7 @@ class CNNPatchPredictor:
                 model, batch_data["image"], on_gpu
             )
             # We get the index of the class with the maximum probability
-            batch_output_predictions = self.__postprocess(batch_output_probabilities)
+            batch_output_predictions = self._postprocess(batch_output_probabilities)
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
@@ -278,7 +522,6 @@ class CNNPatchPredictor:
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
 
-            # May be a with block + flag would be nicer
             if self.verbose:
                 pbar.update()
         if self.verbose:
@@ -290,6 +533,7 @@ class CNNPatchPredictor:
             cum_output.pop("labels")
         if not return_coordinates:
             cum_output.pop("coordinates")
+
         return cum_output
 
     def predict(
@@ -301,22 +545,28 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_shape=(224, 224),  # at requested read resolution, not wrt to lv0
-        stride_shape=None,  # at requested read resolution, not wrt to lv0
-        resolution=1.0,
-        units="mpp",
+        patch_size=None,
+        stride_size=None,
+        resolution=None,
+        units=None,
+        merge_predictions=False,
+        merge_resolution=None,
+        return_overlay=False,
         save_dir=None,
     ):
         """Make a prediction for a list of input data.
 
         Args:
-            img_list (list, ndarray): List of inputs to process. When using`patch` mode,
-            the input must be either a list of images, a list of image file paths
+            img_list (list, ndarray): List of inputs to process. When using `patch`
+            mode, the input must be either a list of images, a list of image file paths
             or a numpy array of an image list. When using `tile` or `wsi` mode, the
             input must be a list of file paths.
 
-            mask_list (list): List of masks. Patches are only processed if they are
-            witin a masked area. If not provided, then the entire image is processed.
+            mask_list (list): List of masks. Only utilised when processing image tiles
+            and whole-slide images. Patches are only processed if they are witin a
+            masked area. If not provided, then a tissue mask will be automatically
+            generated for whole-slide images or the entire image is processed for
+            image tiles.
 
             label_list: List of labels. If using `tile` or `wsi` mode, then only a
             single label per image tile or whole-slide image is supported.
@@ -328,15 +578,28 @@ class CNNPatchPredictor:
             return_labels (bool): Whether to return the labels with the predictions.
             on_gpu (bool): Whether to run model on the GPU.
 
-            patch_shape (tuple): Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to to level 0.
+            on_gpu (bool): whether to run model on the GPU.
 
-            stride_shape (tuple): Stride using during tile and WSI processing. Stride
+            patch_size (tuple): Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0.
+
+            stride_size (tuple): Stride using during tile and WSI processing. Stride
                 is at requested read resolution, not with respect to to level 0.
+
             resolution (float): Resolution used for reading the image.
 
             units (str): Units of resolution used for reading the image. Choose from
-                either `level` or `power` or `mpp`.
+                either `level`, `power` or `mpp`.
+
+            merge_predictions (bool): Whether to merge the predictions to form
+            a 2-dimensional map.
+
+            merge_resolution (float): Resolution of the merged prediction map. If
+                this is different to the resolution used for processing the input,
+                then the predictions will be rescaled.
+
+            return_overlay (bool): Whether to return an overlay of the merged prediction
+                map on top of the original image.
 
             save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images.
@@ -356,8 +619,18 @@ class CNNPatchPredictor:
             # if a label_list is provided, then return with the prediction
             return_labels = bool(label_list)
             if len(label_list) != len(img_list):
-                raise ValueError('len(label_list) != len(img_list) : %d != %d' %
-                                 (len(label_list), len(img_list)))
+                raise ValueError(
+                    "len(label_list) != len(img_list) : %d != %d"
+                    % (len(label_list), len(img_list))
+                )
+
+        if patch_size is None:
+            patch_size = self.patch_size
+
+        if resolution is None:
+            # if not defined in arguments, pull parameters from dataset definition
+            resolution = self.resolution
+            units = self.units
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
@@ -368,7 +641,14 @@ class CNNPatchPredictor:
             )
 
         else:
-            output_files = []  # generate a list of output file paths
+            if stride_size is None:
+                raise ValueError("`stride_size` must be provided.")
+
+            if return_overlay and not merge_predictions:
+                raise ValueError(
+                    "merge_predictions must be used if return_overlay is set to True."
+                )
+
             if len(img_list) > 1:
                 warnings.warn(
                     "When providing multiple whole-slide images / tiles, "
@@ -378,17 +658,17 @@ class CNNPatchPredictor:
             if len(img_list) > 1 and save_dir is None:
                 warnings.warn(
                     "> 1 WSIs detected but there is no save directory set."
-                    "All subsequent output will be save to current runtime"
+                    "All subsequent output will be saved to current runtime"
                     "location under folder 'output'. Overwriting may happen!"
                 )
                 save_dir = os.path.join(os.getcwd(), "output")
 
-            if save_dir is not None:
+            if len(img_list) > 1 and save_dir is not None:
                 save_dir = pathlib.Path(save_dir)
                 if not save_dir.is_dir():
                     os.makedirs(save_dir)
                 else:
-                    raise ValueError('`save_dir` exist!')
+                    raise ValueError("`save_dir` already exists!")
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
@@ -398,17 +678,19 @@ class CNNPatchPredictor:
                 )
 
             output = []
-            for idx, wsi_path in enumerate(img_list):
-                wsi_path = pathlib.Path(wsi_path)
-                wsi_label = None if label_list is None else label_list[idx]
-                wsi_mask = None if mask_list is None else mask_list[idx]
+            # generate a list of output file paths if number of input images > 1
+            output_files = []
+            for idx, img_path in enumerate(img_list):
+                img_path = pathlib.Path(img_path)
+                img_label = None if label_list is None else label_list[idx]
+                img_mask = None if mask_list is None else mask_list[idx]
 
                 dataset = WSIPatchDataset(
-                    wsi_path,
+                    img_path,
                     mode=mode,
-                    mask_path=wsi_mask,
-                    patch_shape=patch_shape,
-                    stride_shape=stride_shape,
+                    mask_path=img_mask,
+                    patch_size=patch_size,
+                    stride_size=stride_size,
                     resolution=resolution,
                     units=units,
                 )
@@ -419,16 +701,65 @@ class CNNPatchPredictor:
                     return_coordinates=return_coordinates,
                     on_gpu=on_gpu,
                 )
-                output_model["label"] = wsi_label
+                output_model["label"] = img_label
+                # add extra information useful for downstream analysis
+                output_model["pretrained_model"] = self.pretrained_model
+                output_model["resolution"] = resolution
+                output_model["units"] = units
+
+                output_list = [output_model]  # assign to a list
+                if merge_predictions:
+                    # get the resolution and pretrained model used during duing training
+                    img_resize, scale = CNNPatchPredictor._get_merge_info(
+                        img_path, output_model, mode, merge_resolution, units
+                    )
+                    merged_prediction = CNNPatchPredictor._merge_patch_predictions(
+                        output_model, img_resize.shape[:2], scale
+                    )
+                    output_list.append(merged_prediction)
+
+                if return_overlay:
+                    pretrained_model = output_model["pretrained_model"]
+                    # generate an overlay of the 2D array on the original image
+                    overlay = overlay_patch_prediction(
+                        img_resize,
+                        merged_prediction,
+                        pretrained_model,
+                    )
+                    output_list.append(overlay)
 
                 if len(img_list) > 1:
-                    basename = wsi_path.stem
-                    output_file_path = os.path.join(save_dir, basename)
-                    output_files.append(output_file_path)
-                    save_json(output_model, output_file_path)
-                    output = None
+                    basename = img_path.stem
+
+                    save_dir_ = os.path.join(save_dir, basename)
+                    if not os.path.exists(save_dir_):
+                        os.makedirs(save_dir_)
+
+                    results_file_path = save_dir_ + "/results.json"
+                    output_files.append(results_file_path)
+                    save_json(output_model, results_file_path)
+                    if merge_predictions:
+                        merged_file_path = save_dir_ + "/prediction_map.npy"
+                        output_files.append(merged_file_path)
+                        np.save(merged_file_path, merged_prediction)
+                    if return_overlay:
+                        overlay_file_path = save_dir_ + "/overlay.png"
+                        output_files.append(overlay_file_path)
+                        overlay.savefig(overlay_file_path)
+
+                    # set output to return locations of saved files
+                    output.append(output_files)
+
                 else:
-                    output.append(output_model)
+                    # return predictions if single example provided
+                    output_list = [output_model]
+                    if merge_predictions:
+                        output_list.append(merged_prediction)
+                    if return_overlay:
+                        output_list.append(overlay)
+
+                    # add image-level outputs to output_list
+                    output.append(output_list)
 
         return output
 
@@ -440,34 +771,34 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
         pretrained_model (str): Name of the existing models support by tiatoolbox
             for processing the data. Currently supports:
 
-            - alexnet-kather100K: alexnet backbone trained on Kather 100K dataset.
-            - resnet18-kather100K: resnet18 backbone trained on Kather 100K dataset.
-            - resnet34-kather100K: resnet34 backbone trained on Kather 100K dataset.
-            - resnet50-kather100K: resnet50 backbone trained on Kather 100K dataset.
-            - resnet101-kather100K: resnet101 backbone trained on Kather 100K dataset.
-            - resnext5032x4d-kather100K: resnext50_32x4d backbone trained on Kather
-              100K dataset.
-            - resnext101_32x8d-kather100K: resnext101_32x8d backbone trained on
-              Kather 100K dataset.
-            - wide_resnet50_2-kather100K: wide_resnet50_2 backbone trained on
-              Kather 100K dataset.
-            - wide_resnet101_2-kather100K: wide_resnet101_2 backbone trained on
-              Kather 100K dataset.
-            - densenet121-kather100K: densenet121 backbone trained on
-              Kather 100K dataset.
-            - densenet161-kather100K: densenet161 backbone trained on
-              Kather 100K dataset.
-            - densenet169-kather100K: densenet169 backbone trained on
-              Kather 100K dataset.
-            - densenet201-kather100K: densenet201 backbone trained on
-              Kather 100K dataset.
-            - mobilenet_v2-kather100K: mobilenet_v2 backbone trained on
-              Kather 100K dataset.
-            - mobilenet_v3_large-kather100K: mobilenet_v3_large backbone trained on
-              Kather 100K dataset.
-            - mobilenet_v3_small-kather100K: mobilenet_v3_small backbone trained on
-              Kather 100K dataset.
-            - googlenet-kather100K: googlenet backbone trained on Kather 100K dataset.
+            - alexnet-kather100k: alexnet backbone trained on Kather 100k dataset.
+            - resnet18-kather100k: resnet18 backbone trained on Kather 100k dataset.
+            - resnet34-kather100k: resnet34 backbone trained on Kather 100k dataset.
+            - resnet50-kather100k: resnet50 backbone trained on Kather 100k dataset.
+            - resnet101-kather100k: resnet101 backbone trained on Kather 100k dataset.
+            - resnext5032x4d-kather100k: resnext50_32x4d backbone trained on Kather
+              100k dataset.
+            - resnext101_32x8d-kather100k: resnext101_32x8d backbone trained on
+              Kather 100k dataset.
+            - wide_resnet50_2-kather100k: wide_resnet50_2 backbone trained on
+              Kather 100k dataset.
+            - wide_resnet101_2-kather100k: wide_resnet101_2 backbone trained on
+              Kather 100k dataset.
+            - densenet121-kather100k: densenet121 backbone trained on
+              Kather 100k dataset.
+            - densenet161-kather100k: densenet161 backbone trained on
+              Kather 100k dataset.
+            - densenet169-kather100k: densenet169 backbone trained on
+              Kather 100k dataset.
+            - densenet201-kather100k: densenet201 backbone trained on
+              Kather 100k dataset.
+            - mobilenet_v2-kather100k: mobilenet_v2 backbone trained on
+              Kather 100k dataset.
+            - mobilenet_v3_large-kather100k: mobilenet_v3_large backbone trained on
+              Kather 100k dataset.
+            - mobilenet_v3_small-kather100k: mobilenet_v3_small backbone trained on
+              Kather 100k dataset.
+            - googlenet-kather100k: googlenet backbone trained on Kather 100k dataset.
 
             By default, the corresponding pretrained weights will also be downloaded.
             However, you can override with your own set of weights via the
@@ -482,20 +813,27 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
     # parsing protocol
     pretrained_model = pretrained_model.lower()
-
-    if pretrained_model not in _pretrained_model:
-        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
-    cfg = _pretrained_model[pretrained_model]
-    patch_size = cfg["patch_size"]
-    objective_power = cfg["objective_power"]
     backbone, dataset = pretrained_model.split("-")
 
+    pretrained_yml = get_pretrained_model_info()
+
+    pretrained_info = pretrained_yml[dataset]
+    pretrained_models_dict = pretrained_info["models"]
+
+    if backbone not in pretrained_models_dict.keys():
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
+
+    patch_size = pretrained_info["patch_size"]
+    resolution = pretrained_info["resolution"]
+    units = pretrained_info["units"]
+    num_classes = pretrained_info["num_classes"]
+
     preproc_func = predefined_preproc_func(dataset)
-    model = CNNPatchModel(backbone=backbone, num_classes=cfg["num_classes"])
+    model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
     model.set_preproc_func(preproc_func)
 
     if pretrained_weight is None:
-        pretrained_weight_url = cfg["pretrained"]
+        pretrained_weight_url = pretrained_models_dict[backbone]
         pretrained_weight_url_split = pretrained_weight_url.split("/")
         pretrained_weight = os.path.join(
             rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]
@@ -508,4 +846,4 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
-    return model, patch_size, objective_power
+    return model, patch_size, resolution, units

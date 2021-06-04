@@ -19,25 +19,23 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
+
 import numpy as np
-
-from tiatoolbox import __version__
-from tiatoolbox import wsicore
-from tiatoolbox.tools import stainnorm as sn, tissuemask
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.models.classification.pretrained_info import _pretrained_model
-from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
-from tiatoolbox.models.dataset.classification import PatchDataset
-
-import json
+import yaml
 import sys
 import click
 import os
-
-# import json
 import pathlib
 from PIL import Image
+
+from tiatoolbox import __version__
+from tiatoolbox import rcParam
+from tiatoolbox import wsicore
+from tiatoolbox.tools import stainnorm as sn, tissuemask
+from tiatoolbox import utils
+from tiatoolbox.utils.misc import save_json
+from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
 
 
 def version_msg():
@@ -308,7 +306,7 @@ def save_tiles(
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.tif, *.tiff",
 )
-def stainnorm(
+def stain_norm(
     source_input, target_input, method, stain_matrix, output_path, file_types
 ):
     """Stain normalise an input image/directory of input images."""
@@ -442,8 +440,8 @@ def tissue_mask(
 
 @main.command()
 @click.option(
-    "--predefined_model",
-    help="Predefined model used to process the data. the format is "
+    "--pretrained_model",
+    help="Pretrained model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
     "is a resnet18 model trained on the kather dataset.",
     default="resnet18-kather100K",
@@ -457,12 +455,29 @@ def tissue_mask(
 @click.option(
     "--img_input",
     help="Path to the input directory containing images to process or an "
-    "individual file.",
+    "individual image file.",
+)
+@click.option(
+    "--mask_input",
+    help="Path to the input directory containing masks to use during `tile` or `wsi` "
+    "processing or an individual mask file.",
+    default=None,
+)
+@click.option(
+    "--label_list",
+    help="List of labels. If using `tile` or `wsi` mode, then only a "
+    " single label per image tile or whole-slide image is supported.",
+    default=None,
 )
 @click.option(
     "--output_path",
     help="Output directory where model predictions will be saved.",
     default="patch_prediction",
+)
+@click.option(
+    "--mode",
+    help="Type of images to process. Choose from either `patch`, `tile` or `wsi`.",
+    default="wsi",
 )
 @click.option(
     "--batch_size",
@@ -475,18 +490,77 @@ def tissue_mask(
     default=False,
 )
 @click.option(
+    "--return_labels",
+    help="Whether to return dataset labels",
+    default=False,
+)
+@click.option(
+    "--patch_size",
+    help="Size of patches input to the model.",
+    default=(224, 224),
+)
+@click.option(
+    "--stride_size",
+    help="Stride using during tile and WSI processing.",
+    default=(224, 224),
+)
+@click.option(
+    "--resolution",
+    help="Resolution of image to process during WSI processing.",
+    default=1.0,
+)
+@click.option(
+    "--units",
+    help="Units of resolution used during WSI processing.",
+    default="mpp",
+)
+@click.option(
+    "--merge_predictions",
+    help="Whether to merge the predictions to form a 2-dimensional map.",
+    default=False,
+)
+@click.option(
+    "--merge_resolution",
+    help="Resolution of the merged prediction map. If this is different to the "
+    "resolution used for processing the input, then the predictions will be rescaled.",
+    default=None,
+)
+@click.option(
+    "--return_overlay",
+    help="Whether to return an overlay of the merged prediction map on top "
+    "of the original image.",
+    default=False,
+)
+@click.option(
+    "--on_gpu",
+    help="Whether to process the data using the GPU.",
+    default=True,
+)
+@click.option(
     "--file_types",
     help="File types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
 )
 def patch_predictor(
-    predefined_model,
+    pretrained_model,
     pretrained_weight,
     img_input,
+    mask_input,
+    label_list,
     output_path,
+    mode,
     batch_size,
     return_probabilities,
+    return_labels,
+    patch_size,
+    stride_size,
+    resolution,
+    units,
+    merge_predictions,
+    merge_resolution,
+    return_overlay,
+    on_gpu,
     file_types,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
@@ -504,31 +578,77 @@ def patch_predictor(
     else:
         raise FileNotFoundError
 
-    if predefined_model.lower() not in _pretrained_model:
-        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
+    if mask_input is not None:
+        if os.path.isdir(mask_input):
+            mask_files = utils.misc.grab_files_from_dir(
+                input_path=mask_input, file_types=file_types
+            )
+        elif os.path.isfile(mask_input):
+            mask_files = [
+                mask_input,
+            ]
+        else:
+            raise FileNotFoundError
+    else:
+        mask_files = None
+
+    pretrained_model = pretrained_model.lower()
+    backbone, dataset = pretrained_model.split("-")
+
+    # get the pretrained model information from yml file
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        utils.misc.download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+
+    pretrained_info = pretrained_yml[dataset]
+    pretrained_models_dict = pretrained_info["models"]
+
+    if backbone not in pretrained_models_dict.keys():
+        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
 
     if len(img_files) < batch_size:
         batch_size = len(img_files)
 
-    dataset = PatchDataset(img_files)
-
     predictor = CNNPatchPredictor(
-        predefined_model=predefined_model,
+        pretrained_model=pretrained_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
     )
 
     output = predictor.predict(
-        dataset, return_probabilities=return_probabilities, on_gpu=False
+        img_files,
+        mask_files,
+        label_list,
+        mode,
+        return_probabilities,
+        return_labels,
+        on_gpu,
+        patch_size,
+        stride_size,
+        resolution,
+        units,
+        merge_predictions,
+        merge_resolution,
+        return_overlay,
+        output_path,
     )
 
-    output_file_path = os.path.join(output_path, "results.json")
-    if not output_path.is_dir():
-        os.makedirs(output_path)
-    # convert output, otherwise can't dump via json
-    output = {k: v.tolist() for k, v in output.items()}
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
+    if mode == "patch" or len(img_files) == 1:
+        if mode != "patch":
+            output = output[0][0]
+        output_file_path = os.path.join(output_path, "results.json")
+        if not output_path.is_dir():
+            os.makedirs(output_path)
+
+        save_json(output, output_file_path)
 
 
 if __name__ == "__main__":

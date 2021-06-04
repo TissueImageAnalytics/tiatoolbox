@@ -33,13 +33,14 @@ import torch
 import yaml
 from skimage import exposure
 
+from tiatoolbox import rcParam
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extension.
 
-    Args:
+    Args:x
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
@@ -138,10 +139,10 @@ def imread(image_path):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension) to read image
+        image_path (str or pathlib.Path): File path (including extension) to read image.
 
     Returns:
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -541,6 +542,13 @@ def download_data(url, save_path, overwrite=False):
         return
 
     r = requests.get(url)
+    request_response = requests.head(url)
+    status_code = request_response.status_code
+    url_exists = status_code == 200
+
+    if not url_exists:
+        raise ConnectionError("Could not find URL at %s" % url)
+
     with open(save_path, "wb") as f:
         f.write(r.content)
 
@@ -616,3 +624,20 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def get_pretrained_model_info():
+    """Get the pretrained model information from yml file."""
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+
+    return pretrained_yml

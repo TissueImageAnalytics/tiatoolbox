@@ -535,7 +535,7 @@ def _sample_patch2(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
-    """Sample image patches for testing."""
+    """Directory of sample image patches for testing."""
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
     try:
@@ -546,25 +546,6 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
         shutil.copy(_sample_patch2, dir_path.joinpath(_sample_patch2.basename))
 
     return dir_path
-
-
-@pytest.fixture(scope="session")
-def _sample_crc_tile(tmpdir_factory):
-    """Docstring."""
-    patch_file_path = tmpdir_factory.mktemp("data").join("crc_tile.tif")
-
-    if not pathlib.Path(patch_file_path).is_file():
-        print("\nDownloading sample patch 2")
-        r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/"
-            "CRC-Prim-HE-07_APPLICATION.tif"
-        )
-        with open(patch_file_path, "wb") as f:
-            f.write(r.content)
-    else:
-        print("\nSkipping Source Image")
-
-    return patch_file_path
 
 
 @pytest.fixture(scope="session")
@@ -625,3 +606,29 @@ def _mini_wsi1_msk(tmpdir_factory):
         print("\nSkipping %s" % file_path)
 
     return file_path
+
+
+@pytest.fixture(scope="session")
+def _dir_sample_tile(_mini_wsi1_jpg, tmpdir_factory):
+    """Directory of sample image tiles for testing."""
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(_mini_wsi1_jpg.basename).symlink_to(_mini_wsi1_jpg)
+    except OSError:
+        shutil.copy(_mini_wsi1_jpg, dir_path.joinpath(_mini_wsi1_jpg.basename))
+
+    return dir_path
+
+
+@pytest.fixture(scope="session")
+def _dir_sample_msk(_mini_wsi1_msk, tmpdir_factory):
+    """Directory of sample image tiles for testing."""
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(_mini_wsi1_msk.basename).symlink_to(_mini_wsi1_msk)
+    except OSError:
+        shutil.copy(_mini_wsi1_msk, dir_path.joinpath(_mini_wsi1_msk.basename))
+
+    return dir_path
