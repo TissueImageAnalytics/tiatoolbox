@@ -111,3 +111,4 @@ examples/*.py
 .DS_Store
 
 tests/local_samples/
+tests/*.png
