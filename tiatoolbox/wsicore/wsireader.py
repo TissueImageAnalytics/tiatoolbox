@@ -129,13 +129,13 @@ class WSIReader:
                 units.
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "mpp"))
             [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
 
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "baseline"))
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
@@ -412,9 +412,9 @@ class WSIReader:
             :class:`numpy.ndarray`: array of size MxNx3 M=size[0], N=size[1]
 
         Example:
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> # Load a WSI image
-            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # Read a region at level 0 (baseline / full resolution)
@@ -464,9 +464,9 @@ class WSIReader:
 
         Examples:
 
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> # Load a WSI image
-            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # The resolution can be different in x and y, e.g.
@@ -591,9 +591,9 @@ class WSIReader:
             M=end_h-start_h, N=end_w-start_w
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi = wsireader.WSIReader(input_path="/path/to/a/wsi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
             >>> img = wsi.read_bounds(bounds)
@@ -672,8 +672,8 @@ class WSIReader:
             :class:`numpy.ndarray`: thumbnail image
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
 
         """
@@ -745,15 +745,15 @@ class WSIReader:
             saves tiles in the output directory output_dir
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> wsi.save_tiles(output_dir='./dev_test',
             ...     tile_objective_value=10,
             ...     tile_read_size=(2000, 2000))
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_param = wsi.info
 
         """
