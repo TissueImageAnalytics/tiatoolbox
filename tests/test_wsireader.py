@@ -1526,7 +1526,7 @@ def test_read_bounds_location_in_requested_resolution(
     old_metadata = vrt_reader.info
     # check that attach altered vreader metadata
     assert np.any(old_metadata.mpp != msk_reader.info.mpp)
-    for cfg_idx, read_cfg in enumerate(read_cfg_list):
+    for _, read_cfg in enumerate(read_cfg_list):
         if read_cfg['units'] == 'baseline':
             with pytest.raises(ValueError, match=r".*bogus.*"):
                 compare_reader(
