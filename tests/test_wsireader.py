@@ -1376,19 +1376,23 @@ def test_jp2_missing_cod(_sample_jp2):
 
 # # @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_location_in_requested_resolution(
+        _mini_wsi2_jp2,
         _mini_wsi1_svs,
         _mini_wsi1_jpg,
         _mini_wsi1_msk):
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
-    # _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
-    # _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
-    # _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    _mini_wsi2_jp2 = pathlib.Path(_mini_wsi2_jp2)
+    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
+    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
+    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
 
-    _mini_wsi2_jp2 = pathlib.Path('/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/tests/local_samples/mini_wsi2.jp2')
-    _mini_wsi1_svs = pathlib.Path('/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/tests/local_samples/CMU-mini.svs')
-    _mini_wsi1_msk = pathlib.Path('/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/tests/local_samples/CMU-mask.png')
-    _mini_wsi1_jpg = pathlib.Path('/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/tests/local_samples/CMU-mini.jpg')
+    # root_dir = '/home/tialab-dang/workstation_storage_1/' \
+    #            'workspace/tiatoolbox/tests/local_samples/'
+    # _mini_wsi2_jp2 = pathlib.Path('%s/mini_wsi2.jp2'% root_dir)
+    # _mini_wsi1_svs = pathlib.Path('%s/CMU-mini.svs' % root_dir)
+    # _mini_wsi1_msk = pathlib.Path('%s/CMU-mask.png' % root_dir)
+    # _mini_wsi1_jpg = pathlib.Path('%s/CMU-mini.jpg' % root_dir)
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
         roi1 = reader1.read_bounds(
