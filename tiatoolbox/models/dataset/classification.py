@@ -30,7 +30,6 @@ import torchvision.transforms as transforms
 from tiatoolbox.models.dataset import abc
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
@@ -183,6 +182,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         stride_size=None,
         resolution=None,
         units=None,
+        auto_get_mask=True,
     ):
         """Create a WSI-level patch dataset.
 
@@ -215,6 +215,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
 
         """
         super().__init__(preproc_func=preproc_func)
+
         # Is there a generic func for path test in toolbox?
         if not os.path.isfile(img_path):
             raise ValueError("`img_path` must be a valid file path.")
@@ -253,6 +254,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             img = imread(img_path)
             # initialise metadata for VirtualWSIReader.
             # here, we simulate a whole-slide image, but with a single level.
+            # ! should we expose this so that use can provide their metadat ?
             metadata = WSIMeta(
                 mpp=np.array([1.0, 1.0]),
                 objective_power=10,
@@ -260,6 +262,10 @@ class WSIPatchDataset(abc.ABCPatchDataset):
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
+            # hack value such that read if mask is provided is through
+            # 'mpp' or 'power' as varying 'baseline' is locked atm
+            units = "mpp"
+            resolution = 1.0
             self.reader = VirtualWSIReader(
                 img,
                 metadata,
@@ -267,44 +273,38 @@ class WSIPatchDataset(abc.ABCPatchDataset):
 
         # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
-        _, _, _, _, lv0_patch_size = self.reader.find_read_rect_params(
-            location=(0, 0),
-            size=patch_size,
-            resolution=resolution,
-            units=units,
-        )
-        wsi_metadata = self.reader.info
-        scale = lv0_patch_size / patch_size
-        stride_size = patch_size if stride_size is None else stride_size
-        lv0_pyramid_size = wsi_metadata.slide_dimensions
-        lv0_stride_size = (stride_size * scale).astype(np.int32)
-        # lv0 topleft coordinates
+        wsi_shape = self.reader.slide_dimensions(resolution=resolution, units=units)
+
         self.input_list = PatchExtractor.get_coordinates(
-            lv0_pyramid_size, lv0_patch_size, lv0_stride_size
+            wsi_shape, patch_size[::-1], stride_size[::-1]
         )
 
         if len(self.input_list) == 0:
             raise ValueError("No coordinate remain after tiling!")
 
+        mask_reader = None
         if mask_path is not None:
             if not os.path.isfile(mask_path):
                 raise ValueError("`mask_path` must be a valid file path.")
             mask = imread(mask_path)
             mask_reader = VirtualWSIReader(mask)
             mask_reader.attach_to_reader(self.reader.info)
-        elif mode == "wsi" and mask_path is None:
+        elif auto_get_mask and mode == "wsi" and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
             mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
+            # ? will this mess up ?
+            mask_reader.attach_to_reader(self.reader.info)
 
-        if mode == "wsi" or mask_path is not None:
-            # scaling factor between mask lv0 and source reader lv0
-            scale = mask_reader.info.level_downsamples[0]
-            scaled_input_list = self.input_list / scale
-            # only use coordinates located within the mask.
+        # ! should update the WSIReader such that sync read can be done on
+        # ! with `baseline` input as well
+        if mask_reader is not None and units in ['baseline', 'level']:
+            raise ValueError("Mask can't be used with `resolution=%s`" % units)
+
+        if mask_reader is not None:
             selected = PatchExtractor.filter_coordinates(
                 mask_reader,  # must be at the same resolution
-                scaled_input_list,  # must be at the same resolution
+                self.input_list,  # must already be at requested resolution
                 resolution=resolution,
                 units=units,
             )
@@ -314,7 +314,6 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             raise ValueError("No coordinate remain after tiling!")
 
         self.patch_size = patch_size
-        self.lv0_patch_size = lv0_patch_size
         self.resolution = resolution
         self.units = units
 
@@ -322,20 +321,18 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         self.check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
-        lv0_coords = self.input_list[idx]
+        coords = self.input_list[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
-            lv0_coords,
+            coords,
             resolution=self.resolution,
             units=self.units,
             pad_constant_values=255,
+            location_is_at_requested=True,
         )
-        # there may be slight rounding errors when scaling. Therefore, enforce
-        # that the returned patch is at the requested size.
-        patch = imresize(img=patch, output_size=self.patch_size)
 
         # Apply preprocessing to selected patch
         patch = self.preproc_func(patch)
 
-        data = {"image": patch, "coords": np.array(lv0_coords)}
+        data = {"image": patch, "coords": np.array(coords)}
         return data

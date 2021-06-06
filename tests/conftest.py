@@ -648,14 +648,16 @@ def _mini_wsi1_msk(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _dir_sample_tile(_mini_wsi1_jpg, tmpdir_factory):
+def _dir_sample_tile(_patch_extr_vf_image, tmpdir_factory):
     """Directory of sample image tiles for testing."""
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
     try:
-        dir_path.joinpath(_mini_wsi1_jpg.basename).symlink_to(_mini_wsi1_jpg)
+        dir_path.joinpath(_patch_extr_vf_image.basename)
+        dir_path.symlink_to(_patch_extr_vf_image)
     except OSError:
-        shutil.copy(_mini_wsi1_jpg, dir_path.joinpath(_mini_wsi1_jpg.basename))
+        base_name = _patch_extr_vf_image.basename
+        shutil.copy(_patch_extr_vf_image, dir_path.joinpath(base_name))
 
     return dir_path
 
