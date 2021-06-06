@@ -1118,7 +1118,7 @@ def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch
         stderr_mssg = ''
         if result.stderr_bytes is not None:
             stderr_mssg = result.stderr_bytes.decode(encoding='UTF-8')
-        assert False, (result.exit_code, stdout_mssg, stderr_mssg, result.output)tput)
+        assert False, (result.exit_code, stdout_mssg, stderr_mssg, result.output)
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
