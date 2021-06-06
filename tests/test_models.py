@@ -1059,7 +1059,8 @@ def test_patch_predictor_output(_sample_patch1, _sample_patch2):
 def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch1):
     """Test for the patch predictor CLI using patches as input."""
     runner = CliRunner()
-    patch_predictor_dir = runner.invoke(
+
+    result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
@@ -1078,12 +1079,15 @@ def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch
             "--on_gpu",
             False,
         ],
+        catch_exceptions=True,
     )
 
     shutil.rmtree("tmp_output", ignore_errors=True)
-    assert patch_predictor_dir.exit_code == 0, patch_predictor_dir
+    if result.exit_code != 0:
+        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        assert False, error_mssg
 
-    patch_predictor_single_path = runner.invoke(
+    result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
@@ -1102,10 +1106,13 @@ def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch
             "--on_gpu",
             False,
         ],
+        catch_exceptions=True,
     )
 
     shutil.rmtree("tmp_output", ignore_errors=True)
-    assert patch_predictor_single_path.exit_code == 0, patch_predictor_single_path
+    if result.exit_code != 0:
+        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        assert False, error_mssg
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
@@ -1118,7 +1125,7 @@ def test_command_line_patch_predictor_wsi(
     runner = CliRunner()
 
     on_gpu = False  # for local debug mode, not travis
-    patch_predictor_tile_dir = runner.invoke(
+    result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
@@ -1139,12 +1146,15 @@ def test_command_line_patch_predictor_wsi(
             "--on_gpu",
             on_gpu,
         ],
+        catch_exceptions=True,
     )
 
     shutil.rmtree("tmp_output", ignore_errors=True)
-    assert patch_predictor_tile_dir.exit_code == 0
+    if result.exit_code != 0:
+        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        assert False, error_mssg
 
-    patch_predictor_tile_single_path = runner.invoke(
+    result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
@@ -1165,10 +1175,13 @@ def test_command_line_patch_predictor_wsi(
             "--on_gpu",
             on_gpu,
         ],
+        catch_exceptions=True,
     )
 
     shutil.rmtree("tmp_output", ignore_errors=True)
-    assert patch_predictor_tile_single_path.exit_code == 0
+    if result.exit_code != 0:
+        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        assert False, error_mssg
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
