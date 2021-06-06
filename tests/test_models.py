@@ -1084,8 +1084,11 @@ def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch
 
     shutil.rmtree("tmp_output", ignore_errors=True)
     if result.exit_code != 0:
-        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
-        assert False, (result.exit_code, error_mssg, result.output)
+        stdout_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        stderr_mssg = ''
+        if result.stderr_bytes is not None:
+            stderr_mssg = result.stderr_bytes.decode(encoding='UTF-8')
+        assert False, (result.exit_code, stdout_mssg, stderr_mssg, result.output)
 
     result = runner.invoke(
         cli.main,
@@ -1111,8 +1114,11 @@ def test_command_line_patch_predictor_patches(_dir_sample_patches, _sample_patch
 
     shutil.rmtree("tmp_output", ignore_errors=True)
     if result.exit_code != 0:
-        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
-        assert False, (result.exit_code, error_mssg, result.output)
+        stdout_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        stderr_mssg = ''
+        if result.stderr_bytes is not None:
+            stderr_mssg = result.stderr_bytes.decode(encoding='UTF-8')
+        assert False, (result.exit_code, stdout_mssg, stderr_mssg, result.output)tput)
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
@@ -1151,8 +1157,11 @@ def test_command_line_patch_predictor_wsi(
 
     shutil.rmtree("tmp_output", ignore_errors=True)
     if result.exit_code != 0:
-        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
-        assert False, (result.exit_code, error_mssg, result.output)
+        stdout_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        stderr_mssg = ''
+        if result.stderr_bytes is not None:
+            stderr_mssg = result.stderr_bytes.decode(encoding='UTF-8')
+        assert False, (result.exit_code, stdout_mssg, stderr_mssg, result.output)
 
     result = runner.invoke(
         cli.main,
@@ -1180,8 +1189,11 @@ def test_command_line_patch_predictor_wsi(
 
     shutil.rmtree("tmp_output", ignore_errors=True)
     if result.exit_code != 0:
-        error_mssg = result.stdout_bytes.decode(encoding='UTF-8')
-        assert False, (result.exit_code, error_mssg, result.output)
+        stdout_mssg = result.stdout_bytes.decode(encoding='UTF-8')
+        stderr_mssg = ''
+        if result.stderr_bytes is not None:
+            stderr_mssg = result.stderr_bytes.decode(encoding='UTF-8')
+        assert False, (result.exit_code, stdout_mssg, stderr_mssg, result.output)
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
