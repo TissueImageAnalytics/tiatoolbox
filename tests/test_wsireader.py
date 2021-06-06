@@ -1395,6 +1395,7 @@ def test_read_bounds_location_in_requested_resolution(
     # _mini_wsi1_jpg = pathlib.Path('%s/CMU-mini.jpg' % root_dir)
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
+        """Correlation test to compare output of 2 reader."""
         roi1 = reader1.read_bounds(
                     read_coord,
                     location_is_at_requested=True,
@@ -1498,7 +1499,7 @@ def test_read_bounds_location_in_requested_resolution(
     old_metadata = vrt_reader.info
     # check that attach altered vreader metadata
     assert np.any(old_metadata.mpp != msk_reader.info.mpp)
-    for cfg_idx, read_cfg in enumerate(read_cfg_list):
+    for _, read_cfg in enumerate(read_cfg_list):
         if read_cfg['units'] == 'baseline':
             with pytest.raises(ValueError, match=r".*bogus.*"):
                 compare_reader(wsi_reader, vrt_reader,

@@ -1358,7 +1358,7 @@ class OmnyxJP2WSIReader(WSIReader):
             # Find parameters for optimal read
             (
                 read_level,
-                bounds_at_read_lv,
+                _,  # bounds_at_read_lv,
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
