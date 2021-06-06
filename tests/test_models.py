@@ -1,6 +1,5 @@
 """Tests for code related to model usage."""
 
-from enum import auto
 import os
 import pathlib
 import shutil
@@ -28,7 +27,7 @@ from tiatoolbox.models.dataset import (
     predefined_preproc_func,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import download_data, imread, unzip_data
+from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
@@ -864,7 +863,8 @@ def test_wsi_predictor_merge_predictions(
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
     _tile_2k_x_2k = pathlib.Path(_patch_extr_vf_image)
 
-    # _tile_2k_x_2k = '/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/tests/local_samples/TCGA-HE-7130-01Z-00-DX1.png'
+    # _tile_2k_x_2k = '/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/
+    # tests/local_samples/TCGA-HE-7130-01Z-00-DX1.png'
     # _tile_2k_x_2k = pathlib.Path(_tile_2k_x_2k)
     on_gpu = False
     patch_size = np.array([224, 224])
