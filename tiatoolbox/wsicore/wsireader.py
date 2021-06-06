@@ -129,13 +129,13 @@ class WSIReader:
                 units.
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "mpp"))
             [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
 
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader("CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "baseline"))
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
@@ -313,7 +313,7 @@ class WSIReader:
     def _find_read_params_at_requested_resolution(
             self, location, size, resolution, units):
         """Work similar to `find_read_rect_params`.
-        
+
         This is similar for when location is at requested resolution.
 
         Args:
@@ -429,14 +429,9 @@ class WSIReader:
         """
         wsi_lv0_shape = self.info.slide_dimensions
         # Find parameters for optimal read
-        (
-            _,
-            _,
-            requested_shape,
-            _,
-        ) = self._find_read_bounds_params(
-                [0, 0] + list(wsi_lv0_shape),
-                resolution, units, precisions)
+        (_, _, requested_shape, _,) = self._find_read_bounds_params(
+            [0, 0] + list(wsi_lv0_shape), resolution, units, precisions
+        )
         return requested_shape
 
     def _find_read_bounds_params(self, bounds, resolution, units, precision=3):
@@ -583,9 +578,9 @@ class WSIReader:
             :class:`numpy.ndarray`: array of size MxNx3 M=size[0], N=size[1]
 
         Example:
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> # Load a WSI image
-            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # Read a region at level 0 (baseline / full resolution)
@@ -635,9 +630,9 @@ class WSIReader:
 
         Examples:
 
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> # Load a WSI image
-            >>> wsi = wsireader.WSIReader("/path/to/a/wsi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # The resolution can be different in x and y, e.g.
@@ -763,9 +758,9 @@ class WSIReader:
             M=end_h-start_h, N=end_w-start_w
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> from matplotlib import pyplot as plt
-            >>> wsi = wsireader.WSIReader(input_path="/path/to/a/wsi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
             >>> img = wsi.read_bounds(bounds)
@@ -844,8 +839,8 @@ class WSIReader:
             :class:`numpy.ndarray`: thumbnail image
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
 
         """
@@ -917,15 +912,15 @@ class WSIReader:
             saves tiles in the output directory output_dir
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> wsi.save_tiles(output_dir='./dev_test',
             ...     tile_objective_value=10,
             ...     tile_read_size=(2000, 2000))
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.WSIReader(input_path="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_param = wsi.info
 
         """
@@ -1143,7 +1138,8 @@ class OpenSlideWSIReader(WSIReader):
                 _,
                 post_read_scale,
             ) = self._find_read_bounds_params(
-                        bounds_at_lv0, resolution=resolution, units=units)
+                bounds_at_lv0, resolution=resolution, units=units
+            )
         else:  # duplicated portion with VirtualReader, factoring out ?
             # Find parameters for optimal read
             (
@@ -1152,7 +1148,8 @@ class OpenSlideWSIReader(WSIReader):
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
-                        bounds_at_lv0, resolution=resolution, units=units)
+                bounds_at_lv0, resolution=resolution, units=units
+            )
 
         wsi = self.openslide_wsi
 
@@ -1355,7 +1352,8 @@ class OmnyxJP2WSIReader(WSIReader):
                 _,
                 post_read_scale,
             ) = self._find_read_bounds_params(
-                        bounds_at_lv0, resolution=resolution, units=units)
+                bounds_at_lv0, resolution=resolution, units=units
+            )
         else:  # duplicated portion with VirtualReader, factoring out ?
             # Find parameters for optimal read
             (
@@ -1364,7 +1362,8 @@ class OmnyxJP2WSIReader(WSIReader):
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
-                        bounds_at_lv0, resolution=resolution, units=units)
+                bounds_at_lv0, resolution=resolution, units=units
+            )
 
         glymur_wsi = self.glymur_wsi
 
@@ -1613,8 +1612,8 @@ class VirtualWSIReader(WSIReader):
         location_is_at_requested=False,
         **kwargs,
     ):
-        if self.is_attach and units in ['baseline', 'level']:
-            raise ValueError('Reading using `%s` will return bogus region!' % units)
+        if self.is_attach and units in ["baseline", "level"]:
+            raise ValueError("Reading using `%s` will return bogus region!" % units)
 
         # convert from requested to `lv0`
         bounds_at_lv0 = bounds
@@ -1663,7 +1662,7 @@ class VirtualWSIReader(WSIReader):
             im_region = utils.transforms.imresize(
                 img=im_region,
                 scale_factor=post_read_scale,
-                output_size=size_at_requested
+                output_size=size_at_requested,
             )
 
         if self.mode == "rgb":
@@ -1688,9 +1687,10 @@ class VirtualWSIReader(WSIReader):
             >>> vrt_reader = VirtuReader(tile) # at 14mpp for example
             >>> vrt_reader.attach_to_reader(wsi_reader.info)
             >>> bound_in_wsi = np.array([500, 600, 500, 600])
-            >>> resolution = dict(resolutions=0.25, units='mpp')
-            >>> roi_img = wsi_reader.read_bound(bound_in_wsi, **resolution)
-            >>> roi_msk = vrt_reader.read_bound(bound_in_wsi, **resolution)
+            >>> roi_img = wsi_reader.read_bound(
+            ...     bound_in_wsi, resolutions=0.25, units='mpp')
+            >>> roi_msk = vrt_reader.read_bound(
+            ...     bound_in_wsi, resolutions=0.25, units='mpp')
             >>> # img and msk at same resolution, with same size, expected same content
             >>> assert roi_img.shape[0] == roi_msk.shape[0]
             >>> assert roi_img.shape[1] == roi_msk.shape[1]
