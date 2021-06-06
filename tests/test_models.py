@@ -11,7 +11,7 @@ import torch
 
 # import sys
 # sys.path.append('..')
-os.environ['CUDA_VISIBLE_DEVICE'] = '3'
+# os.environ['CUDA_VISIBLE_DEVICE'] = '3'
 
 from click.testing import CliRunner
 
@@ -767,7 +767,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 # @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
     """Test normal run of wsi predictor."""
-    on_gpu = True
+    on_gpu = False
     # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
@@ -866,7 +866,7 @@ def test_wsi_predictor_merge_predictions(
 
     # _tile_2k_x_2k = '/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/tests/local_samples/TCGA-HE-7130-01Z-00-DX1.png'
     # _tile_2k_x_2k = pathlib.Path(_tile_2k_x_2k)
-    on_gpu = True
+    on_gpu = False
     patch_size = np.array([224, 224])
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
@@ -1117,7 +1117,7 @@ def test_command_line_patch_predictor_wsi(
     """Test for the patch predictor CLI using tiles/wsi as input."""
     runner = CliRunner()
 
-    on_gpu = True  # for local debug mode, not travis
+    on_gpu = False  # for local debug mode, not travis
     patch_predictor_tile_dir = runner.invoke(
         cli.main,
         [
