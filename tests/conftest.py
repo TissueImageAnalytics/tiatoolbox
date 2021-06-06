@@ -549,7 +549,46 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def _sample_crc_tile(tmpdir_factory):
+    """Docstring."""
+    patch_file_path = tmpdir_factory.mktemp("data").join("crc_tile.tif")
+
+    if not pathlib.Path(patch_file_path).is_file():
+        print("\nDownloading sample patch 2")
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/"
+            "CRC-Prim-HE-07_APPLICATION.tif"
+        )
+        with open(patch_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping Source Image")
+
+    return patch_file_path
+
+
+@pytest.fixture(scope="session")
 def _mini_wsi1_svs(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-mini.svs")
+    if not pathlib.Path(svs_file_path).is_file():
+        print("\nDownloading %s" % svs_file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.svs"
+        )
+        with open(svs_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % svs_file_path)
+
+    return svs_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_jp2(tmpdir_factory):
     """Sample pytest fixture for torch wsi dataset.
     Download svs image for pytest.
 
