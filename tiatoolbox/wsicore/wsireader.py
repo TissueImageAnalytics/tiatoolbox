@@ -521,46 +521,6 @@ class WSIReader:
 
         return level, slide_dimension, rescale, tile_objective_value
 
-    def _find_tile_params(self, tile_objective_value: int):
-        """Find the params for save tiles."""
-        rescale = self.info.objective_power / tile_objective_value
-        if rescale.is_integer():
-            try:
-                level = np.log2(rescale)
-                if level.is_integer():
-                    level = np.int(level)
-                    slide_dimension = self.info.level_dimensions[level]
-                    rescale = 1
-                else:
-                    raise ValueError
-            # Raise index error if desired pyramid level not embedded
-            # in level_dimensions
-            except IndexError:
-                level = 0
-                slide_dimension = self.info.level_dimensions[level]
-                rescale = np.int(rescale)
-                warnings.warn(
-                    "Reading WSI at level 0. Desired tile_objective_value"
-                    + str(tile_objective_value)
-                    + "not available.",
-                    UserWarning,
-                )
-            except ValueError:
-                level = 0
-                slide_dimension = self.info.level_dimensions[level]
-                rescale = 1
-                warnings.warn(
-                    "Reading WSI at level 0. Reading at tile_objective_value"
-                    + str(tile_objective_value)
-                    + "not allowed.",
-                    UserWarning,
-                )
-                tile_objective_value = self.info.objective_power
-        else:
-            raise ValueError("rescaling factor must be an integer.")
-
-        return level, slide_dimension, rescale, tile_objective_value
-
     def read_rect(
         self,
         location,
