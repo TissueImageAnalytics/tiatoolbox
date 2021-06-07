@@ -1511,6 +1511,7 @@ class VirtualWSIReader(WSIReader):
             self.img = utils.misc.imread(self.input_path)
 
         self.is_attach = False
+        self._ref_info = None  # for storing ref metadata when attach
         if info is not None:
             self._m_info = info
 
