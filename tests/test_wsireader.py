@@ -1374,7 +1374,7 @@ def test_jp2_missing_cod(_sample_jp2):
         _ = wsi.info
 
 
-# # @pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_location_in_requested_resolution(
         _mini_wsi2_jp2,
         _mini_wsi1_svs,
@@ -1386,34 +1386,38 @@ def test_read_bounds_location_in_requested_resolution(
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
-
+    # exit()
     # root_dir = '/home/tialab-dang/workstation_storage_1/' \
-    #            'workspace/tiatoolbox/tests/local_samples/'
+    #             'workspace/tiatoolbox/tests/local_samples/'
     # _mini_wsi2_jp2 = pathlib.Path('%s/mini_wsi2.jp2'% root_dir)
     # _mini_wsi1_svs = pathlib.Path('%s/CMU-mini.svs' % root_dir)
     # _mini_wsi1_msk = pathlib.Path('%s/CMU-mask.png' % root_dir)
     # _mini_wsi1_jpg = pathlib.Path('%s/CMU-mini.jpg' % root_dir)
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
-        """Correlation test to compare output of 2 reader."""
+        """Correlation test to compare output of 2 readers."""
+        requested_size = read_coord[2:] - read_coord[:2]
+        requested_size = requested_size[::-1]  # XY to YX
         roi1 = reader1.read_bounds(
                     read_coord,
                     location_is_at_requested=True,
+                    pad_constant_values=255,
                     **read_cfg,
                 )
         roi2 = reader2.read_bounds(
                     read_coord,
                     location_is_at_requested=True,
+                    pad_constant_values=255,
                     **read_cfg,
                 )
         # ~ sane check code for local debug
-        # import matplotlib.pyplot as plt
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(roi1)
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(roi2)
-        # plt.savefig('dump.png')
-        # plt.close()
+        import matplotlib.pyplot as plt
+        plt.subplot(1, 2, 1)
+        plt.imshow(roi1)
+        plt.subplot(1, 2, 2)
+        plt.imshow(roi2)
+        plt.savefig('dump.png')
+        plt.close()
         # ~
         assert roi1.shape[0] == requested_size[0], (
                     read_cfg, requested_size, roi1.shape)
@@ -1424,7 +1428,7 @@ def test_read_bounds_location_in_requested_resolution(
         if check_content:
             cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
             # this control the harshness of similarity test, how much should be?
-            assert np.min(cc) > 0.90, (cc, read_cfg)
+            assert np.min(cc) > 0.90, (cc, read_cfg, read_coord)
 
     # * now check sync read by comparing the RoI with different base
     # the output should be at same resolution even if source is of different base
@@ -1437,7 +1441,7 @@ def test_read_bounds_location_in_requested_resolution(
     # * must set mpp metadata to not None else wont work
     # error checking first
     ref_metadata = bigger_msk_reader.info
-    ref_metadata.mpp = 1.0
+    ref_metadata.mpp = np.array([1.0, 1.0])
     ref_metadata.objective_power = None
     with pytest.raises(ValueError, match=r".*objective.*None.*"):
         msk_reader.attach_to_reader(ref_metadata)
@@ -1446,7 +1450,7 @@ def test_read_bounds_location_in_requested_resolution(
     with pytest.raises(ValueError, match=r".*mpp.*None.*"):
         msk_reader.attach_to_reader(ref_metadata)
 
-    ref_metadata.mpp = 1.0
+    ref_metadata.mpp = np.array([1.0, 1.0])
     ref_metadata.objective_power = 1.0
     msk_reader.attach_to_reader(ref_metadata)
 
@@ -1461,63 +1465,65 @@ def test_read_bounds_location_in_requested_resolution(
 
     # * check sync read between Virtual Reader
     requested_coords = np.array([3500, 3000, 5500, 7000])  # XY, manually pick
-    requested_size = requested_coords[2:] - requested_coords[:2]
-    requested_size = requested_size[::-1]  # XY to YX
+    # baseline value can be think of as scaling factor wrt baseline
     read_cfg_list = [
-        # read at strange resolution value so that if it fails, normal scale will
-        # also fail
-        {'resolution' : 0.35, 'units' : 'mpp'},
-        {'resolution' : 1.56, 'units' : 'power'},
-        {'resolution' : 3.00, 'units' : 'baseline'}
+        # read at strange resolution value so that if it fails,
+        # normal scale will also fail
+        ({'resolution' : 0.35, 'units' : 'mpp'}, None),
+        ({'resolution' : 1.56, 'units' : 'power'}, None),
+        ({'resolution' : 3.00, 'units' : 'mpp'},
+            np.array([1000, 1000, 1500, 1500])),
+        ({'resolution' : 0.30, 'units' : 'baseline'},
+            np.array([1000, 1000, 1500, 1500])),
     ]
-    for _, read_cfg in enumerate(read_cfg_list):
-        if read_cfg['units'] == 'baseline':
-            with pytest.raises(ValueError, match=r".*bogus.*"):
-                compare_reader(msk_reader, bigger_msk_reader,
-                               requested_coords, read_cfg)
-        else:
-            compare_reader(msk_reader, bigger_msk_reader,
-                           requested_coords, read_cfg)
+    for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
+        read_coord = requested_coords if read_coord is None else read_coord
+        compare_reader(
+                msk_reader, bigger_msk_reader,
+                read_coord, read_cfg)
 
     # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
     requested_coords = np.array([3500, 3000, 4500, 4000])  # XY, manually pick
-    requested_size = requested_coords[2:] - requested_coords[:2]
-    requested_size = requested_size[::-1]  # XY to YX
     read_cfg_list = [
         # read at strange resolution value so that if it fails,
         # it means normal scale will also fail
-        {'resolution' : 0.35, 'units' : 'mpp'},
-        {'resolution' : 23.5, 'units' : 'power'},
-        {'resolution' : 3.00, 'units' : 'baseline'}
+        ({'resolution' : 0.35, 'units' : 'mpp'},
+            np.array([3500, 3500, 5000, 5000])),
+        ({'resolution' : 23.5, 'units' : 'power'}, None),
+        ({'resolution' : 0.35, 'units' : 'baseline'}, None),
+        ({'resolution' : 1.35, 'units' : 'baseline'},
+            np.array([8000, 8000, 9000, 9000])),
+        ({'resolution' : 1.00, 'units' : 'level'},
+            np.array([1500, 1500, 2000, 2000])),
     ]
 
     wsi_reader = get_wsireader(_mini_wsi1_svs)
     tile = imread(_mini_wsi1_jpg)
-    tile = imresize(tile, scale_factor=0.5)
+    tile = imresize(tile, scale_factor=0.76)
     vrt_reader = VirtualWSIReader(tile)
     vrt_reader.attach_to_reader(wsi_reader.info)
     old_metadata = vrt_reader.info
     # check that attach altered vreader metadata
     assert np.any(old_metadata.mpp != msk_reader.info.mpp)
-    for _, read_cfg in enumerate(read_cfg_list):
-        if read_cfg['units'] == 'baseline':
-            with pytest.raises(ValueError, match=r".*bogus.*"):
-                compare_reader(wsi_reader, vrt_reader,
-                               requested_coords, read_cfg, check_content=True)
-        else:
-            compare_reader(wsi_reader, vrt_reader,
-                           requested_coords, read_cfg, check_content=True)
+    for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
+        read_coord = requested_coords if read_coord is None else read_coord
+        compare_reader(
+            wsi_reader, vrt_reader,
+            read_coord, read_cfg, check_content=True)
 
-    # *
+    # * check sync read between Virtual Reader and WSIReader (jp2) (reference)
     requested_coords = np.array([2500, 2500, 4000, 4000])  # XY, manually pick
-    requested_size = requested_coords[2:] - requested_coords[:2]
-    requested_size = requested_size[::-1]  # XY to YX
     read_cfg_list = [
-        # read at strange resolution value so that if it fails, normal scale will
-        # also fail
-        {'resolution' : 0.35, 'units' : 'mpp'},
-        {'resolution' : 23.5, 'units' : 'power'},
-        {'resolution' : 3.00, 'units' : 'baseline'}
+        # read at strange resolution value so that if it fails,
+        # normal scale will also fail
+        ({'resolution' : 0.35, 'units' : 'mpp'}, None),
+        ({'resolution' : 23.5, 'units' : 'power'}, None),
+        ({'resolution' : 0.65, 'units' : 'baseline'},
+            np.array([3000, 3000, 4000, 4000])),
+        ({'resolution' : 1.35, 'units' : 'baseline'},
+            np.array([4000, 4000, 5000, 5000])),
+        ({'resolution' : 1.00, 'units' : 'level'},
+            np.array([1500, 1500, 2000, 2000])),
     ]
     wsi_reader = get_wsireader(_mini_wsi2_jp2)
     wsi_thumb = wsi_reader.slide_thumbnail(resolution=0.85, units='mpp')
@@ -1526,16 +1532,11 @@ def test_read_bounds_location_in_requested_resolution(
     old_metadata = vrt_reader.info
     # check that attach altered vreader metadata
     assert np.any(old_metadata.mpp != msk_reader.info.mpp)
-    for _, read_cfg in enumerate(read_cfg_list):
-        if read_cfg['units'] == 'baseline':
-            with pytest.raises(ValueError, match=r".*bogus.*"):
-                compare_reader(
-                    wsi_reader, vrt_reader,
-                    requested_coords, read_cfg, check_content=True)
-        else:
-            compare_reader(
+    for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
+        read_coord = requested_coords if read_coord is None else read_coord
+        compare_reader(
                 wsi_reader, vrt_reader,
-                requested_coords, read_cfg, check_content=True)
+                read_coord, read_cfg)
 
 
 # -------------------------------------------------------------------------------------
