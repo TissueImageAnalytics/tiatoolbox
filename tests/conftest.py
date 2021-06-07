@@ -588,16 +588,16 @@ def _mini_wsi1_svs(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _mini_wsi1_jp2(tmpdir_factory):
+def _mini_wsi2_jp2(tmpdir_factory):
     """Sample pytest fixture for torch wsi dataset.
     Download svs image for pytest.
 
     """
-    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-mini.svs")
+    svs_file_path = tmpdir_factory.mktemp("data").join("mini_wsi2.jp2")
     if not pathlib.Path(svs_file_path).is_file():
         print("\nDownloading %s" % svs_file_path)
         r = requests.get(
-            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.svs"
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/mini_wsi2.jp2"
         )
         with open(svs_file_path, "wb") as f:
             f.write(r.content)

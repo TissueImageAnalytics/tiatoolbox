@@ -2,8 +2,8 @@
 
 import pathlib
 
-import sys
-sys.path.append('..')
+# import sys
+# sys.path.append('..')
 
 import cv2
 import numpy as np
@@ -1374,7 +1374,7 @@ def test_jp2_missing_cod(_sample_jp2):
         _ = wsi.info
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_location_in_requested_resolution(
         _mini_wsi2_jp2,
         _mini_wsi1_svs,
@@ -1386,38 +1386,38 @@ def test_read_bounds_location_in_requested_resolution(
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
-
-    root_dir = '/home/tialab-dang/workstation_storage_1/' \
-                'workspace/tiatoolbox/tests/local_samples/'
-    _mini_wsi2_jp2 = pathlib.Path('%s/mini_wsi2.jp2'% root_dir)
-    _mini_wsi1_svs = pathlib.Path('%s/CMU-mini.svs' % root_dir)
-    _mini_wsi1_msk = pathlib.Path('%s/CMU-mask.png' % root_dir)
-    _mini_wsi1_jpg = pathlib.Path('%s/CMU-mini.jpg' % root_dir)
+    # exit()
+    # root_dir = '/home/tialab-dang/workstation_storage_1/' \
+    #             'workspace/tiatoolbox/tests/local_samples/'
+    # _mini_wsi2_jp2 = pathlib.Path('%s/mini_wsi2.jp2'% root_dir)
+    # _mini_wsi1_svs = pathlib.Path('%s/CMU-mini.svs' % root_dir)
+    # _mini_wsi1_msk = pathlib.Path('%s/CMU-mask.png' % root_dir)
+    # _mini_wsi1_jpg = pathlib.Path('%s/CMU-mini.jpg' % root_dir)
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
-        """Correlation test to compare output of 2 reader."""
+        """Correlation test to compare output of 2 readers."""
         requested_size = read_coord[2:] - read_coord[:2]
         requested_size = requested_size[::-1]  # XY to YX
         roi1 = reader1.read_bounds(
                     read_coord,
                     location_is_at_requested=True,
-                    pad_constant_values=0,
+                    pad_constant_values=255,
                     **read_cfg,
                 )
         roi2 = reader2.read_bounds(
                     read_coord,
                     location_is_at_requested=True,
-                    pad_constant_values=0,
+                    pad_constant_values=255,
                     **read_cfg,
                 )
         # ~ sane check code for local debug
-        # import matplotlib.pyplot as plt
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(roi1)
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(roi2)
-        # plt.savefig('dump.png')
-        # plt.close()
+        import matplotlib.pyplot as plt
+        plt.subplot(1, 2, 1)
+        plt.imshow(roi1)
+        plt.subplot(1, 2, 2)
+        plt.imshow(roi2)
+        plt.savefig('dump.png')
+        plt.close()
         # ~
         assert roi1.shape[0] == requested_size[0], (
                     read_cfg, requested_size, roi1.shape)
@@ -1470,7 +1470,6 @@ def test_read_bounds_location_in_requested_resolution(
         # read at strange resolution value so that if it fails,
         # normal scale will also fail
         ({'resolution' : 0.35, 'units' : 'mpp'}, None),
-        ({'resolution' : 0.35, 'units' : 'mpp'}, None),
         ({'resolution' : 1.56, 'units' : 'power'}, None),
         ({'resolution' : 3.00, 'units' : 'mpp'},
             np.array([1000, 1000, 1500, 1500])),
@@ -1482,12 +1481,14 @@ def test_read_bounds_location_in_requested_resolution(
         compare_reader(
                 msk_reader, bigger_msk_reader,
                 read_coord, read_cfg)
+
     # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
     requested_coords = np.array([3500, 3000, 4500, 4000])  # XY, manually pick
     read_cfg_list = [
         # read at strange resolution value so that if it fails,
         # it means normal scale will also fail
-        ({'resolution' : 0.35, 'units' : 'mpp'}, None),
+        ({'resolution' : 0.35, 'units' : 'mpp'},
+            np.array([3500, 3500, 5000, 5000])),
         ({'resolution' : 23.5, 'units' : 'power'}, None),
         ({'resolution' : 0.35, 'units' : 'baseline'}, None),
         ({'resolution' : 1.35, 'units' : 'baseline'},
@@ -1513,11 +1514,10 @@ def test_read_bounds_location_in_requested_resolution(
     # * check sync read between Virtual Reader and WSIReader (jp2) (reference)
     requested_coords = np.array([2500, 2500, 4000, 4000])  # XY, manually pick
     read_cfg_list = [
-        #     # read at strange resolution value so that if it fails,
-        #     # normal scale will also fail
+        # read at strange resolution value so that if it fails,
+        # normal scale will also fail
         ({'resolution' : 0.35, 'units' : 'mpp'}, None),
         ({'resolution' : 23.5, 'units' : 'power'}, None),
-        ({'resolution' : 3.00, 'units' : 'baseline'}, None),
         ({'resolution' : 0.65, 'units' : 'baseline'},
             np.array([3000, 3000, 4000, 4000])),
         ({'resolution' : 1.35, 'units' : 'baseline'},
