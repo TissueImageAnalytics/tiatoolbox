@@ -175,7 +175,9 @@ class WSIReader:
             resolution = 1 / resolution
         elif units == "level":
             if any(resolution >= len(info.level_downsamples)):
-                raise ValueError("Target scale level > number of levels in WSI")
+                raise ValueError(
+                    "Target scale level (%s) > number of levels (%s) in WSI"
+                    % (resolution, len(info.level_downsamples)))
             base_scale = 1
             resolution = level_to_downsample(resolution)
         elif units == "baseline":
@@ -1380,7 +1382,8 @@ class OmnyxJP2WSIReader(WSIReader):
 
         bounds_at_lv0 = bounds
         if location_is_at_requested:
-            bounds_at_lv0 = self._bounds_at_requested_to_lv0(bounds, resolution, units)
+            bounds_at_lv0 = self._bounds_at_requested_to_lv0(
+                bounds, resolution, units)
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
             # dont use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_lv0` leads to
@@ -1404,7 +1407,6 @@ class OmnyxJP2WSIReader(WSIReader):
             ) = self._find_read_bounds_params(
                 bounds_at_lv0, resolution=resolution, units=units
             )
-
         glymur_wsi = self.glymur_wsi
 
         stride = 2 ** read_level
@@ -1549,6 +1551,7 @@ class VirtualWSIReader(WSIReader):
             self.img = utils.misc.imread(self.input_path)
 
         self.is_attach = False
+        self._ref_info = None  # for storing ref metadata when attach
         if info is not None:
             self._m_info = info
 
@@ -1608,6 +1611,9 @@ class VirtualWSIReader(WSIReader):
         pad_constant_values=0,
         **kwargs,
     ):
+        # ! do we need to raise error or crash in is_attach mode?
+        # ! because the behavior is not yet clearly defined atm
+
         # Find parameters for optimal read
         (_, _, _, _, baseline_read_size,) = self.find_read_rect_params(
             location=location,
@@ -1652,8 +1658,24 @@ class VirtualWSIReader(WSIReader):
         location_is_at_requested=False,
         **kwargs,
     ):
-        if self.is_attach and units in ["baseline", "level"]:
-            raise ValueError("Reading using `%s` will return bogus region!" % units)
+
+        # Note: In this case, `resolution` will be mapped to corresponding
+        # mpp value (We use it as basic because it has already been aligned) to
+        # allow correct scaling wrt to units being of ['baseline', 'level'].
+        # The output of `read_bounds` is therefore should match with output of
+        # the source reader using the same requested resolution.
+        if self.is_attach and units in ['baseline', 'level']:
+            if units == 'level':
+                # we can just use reference downsampling because
+                # we have already scaled mpp
+                # ! what is the behavior when level does not exist ?
+                scale = 1 / self._ref_info.level_downsamples[int(resolution)]
+            else:
+                scale = resolution
+            ref_base_mpp = self._ref_info.mpp[0]
+            # what will happen in un-even case?
+            resolution = ref_base_mpp / scale
+            units = 'mpp'
 
         # convert from requested to `lv0`
         bounds_at_lv0 = bounds
@@ -1749,6 +1771,7 @@ class VirtualWSIReader(WSIReader):
         mask_scale = ref_reader_info.slide_dimensions / mask_shape
         mask_mpp = ref_reader_info.mpp * mask_scale
         mask_obj = ref_reader_info.objective_power / mask_scale[0]
+        self._ref_info = copy.deepcopy(ref_reader_info)
         self.info = WSIMeta(
             file_path=self.info.file_path,
             slide_dimensions=mask_shape,
