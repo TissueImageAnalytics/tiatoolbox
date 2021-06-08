@@ -408,7 +408,7 @@ def test_mask_based_patch_extractor_ndpi(_sample_ndpi):
         patch_size=patch_size,
         resolution=res,
         units="level",
-        stride=stride,
+        stride=None,
     )
 
     # read the patch from the second row (y) in the first column
@@ -432,15 +432,15 @@ def test_mask_based_patch_extractor_ndpi(_sample_ndpi):
         patch_size=patch_size,
         resolution=res,
         units="level",
-        stride=stride,
+        stride=stride[0],
     )
 
-    # Test `auto` option for mask
+    # Test `otsu` option for mask
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask="auto",
+        input_mask="otsu",
         method_name="slidingwindow",
-        patch_size=patch_size,
+        patch_size=patch_size[0],
         resolution=res,
         units="level",
         stride=stride,
@@ -448,7 +448,7 @@ def test_mask_based_patch_extractor_ndpi(_sample_ndpi):
 
     patches = patchextraction.get_patch_extractor(
         input_img=wsi_mask,  # a numpy array to build VirtualSlideReader
-        input_mask="auto",
+        input_mask="morphological",
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,

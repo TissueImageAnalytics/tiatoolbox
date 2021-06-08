@@ -22,8 +22,6 @@
 from abc import ABC
 import numpy as np
 
-# import math
-
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils import misc
@@ -41,9 +39,9 @@ class PatchExtractor(ABC):
           input mask that is used for position filtering when extracting patches
           i.e., patches will only be extracted based on the highlighted regions in
           the input_mask. input_mask can be either path to the mask, a numpy
-          array, :class:`VirtualWSIReader`, or 'auto`. In case of 'auto', a
-          tissue mask is generated for the input_image using tiatoolbox
-          :class:`TissueMasker` functioncality.
+          array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
+          options. In case of 'otsu' or 'morphological', a tissue mask is generated
+          for the input_image using tiatoolbox :class:`TissueMasker` functionality.
         resolution (int or float or tuple of float): resolution at
           which to read the image, default = 0. Either a single
           number or a sequence of two numbers for x and y are
@@ -63,9 +61,11 @@ class PatchExtractor(ABC):
           constant padding. Defaults to 0. See :func:`numpy.pad` for
           more.
         within_bound (bool): whether to extract patches beyond the
-          input_image size limits. If yes, extracted patches at margins
+          input_image size limits. If False, extracted patches at margins
           will be padded appropriately based on `pad_constant_values` and
-          `pad_mode`. Default is False.
+          `pad_mode`. If False, patches at the margin that their bounds
+          exceed the mother image dimensions would be neglected.
+          Default is False.
 
     Attributes:
         wsi(WSIReader): input image for patch extraction of type :obj:`WSIReader`.
@@ -114,11 +114,10 @@ class PatchExtractor(ABC):
         self.stride = None
         if input_mask is None:
             self.mask = None
-        elif input_mask == "auto":
-            if isinstance(self.wsi, wsireader.VirtualWSIReader):
-                self.mask = None  # in case the input vase a VF image
-            else:
-                self.mask = self.wsi.tissue_mask(resolution=1.25, units="power")
+        elif input_mask in {"otsu", "morphological"}:
+            self.mask = self.wsi.tissue_mask(
+                method=input_mask, resolution=1.25, units="power"
+            )
         else:
             self.mask = wsireader.VirtualWSIReader(
                 input_mask, info=self.wsi.info, mode="bool"
