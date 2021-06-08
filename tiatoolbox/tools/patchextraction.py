@@ -114,7 +114,7 @@ class PatchExtractor(ABC):
         self.stride = None
         if input_mask is None:
             self.mask = None
-        elif input_mask in {"otsu", "morphological"}:
+        elif isinstance(input_mask, str) and input_mask in {"otsu", "morphological"}:
             self.mask = self.wsi.tissue_mask(
                 method=input_mask, resolution=1.25, units="power"
             )
