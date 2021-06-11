@@ -110,4 +110,7 @@ examples/*.py
 # Mac generated
 .DS_Store
 
+# vim/vi generated
+*.swp
+
 dataset
