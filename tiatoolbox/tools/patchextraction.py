@@ -150,6 +150,8 @@ class PatchExtractor(ABC):
 
             func: A function which taking `reader` and `coordinate` as arguments
                 and return True or False to indicate if the coordinate is valid.
+                By default, the function assume `mask_reader` to be a binary mask
+                (0 or 1) and any patch contain positive area is selected.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
@@ -163,6 +165,7 @@ class PatchExtractor(ABC):
                 resolution=reader.info.mpp if resolution is None else resolution,
                 units="mpp" if units is None else units,
                 interpolation="nearest",
+                location_is_at_requested=True
             )
             return np.sum(roi > 0) > 0
 

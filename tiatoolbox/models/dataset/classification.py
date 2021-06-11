@@ -23,6 +23,7 @@ import os
 import pathlib
 import warnings
 
+import cv2
 import numpy as np
 import PIL
 import torchvision.transforms as transforms
@@ -286,7 +287,10 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         if mask_path is not None:
             if not os.path.isfile(mask_path):
                 raise ValueError("`mask_path` must be a valid file path.")
-            mask = imread(mask_path)
+            mask = imread(mask_path)  # assume to be gray
+            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+            mask = np.array(mask > 0, dtype=np.uint8)
+
             mask_reader = VirtualWSIReader(mask)
             mask_reader.attach_to_reader(self.reader.info)
         elif auto_get_mask and mode == "wsi" and mask_path is None:
@@ -295,11 +299,6 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
             # ? will this mess up ?
             mask_reader.attach_to_reader(self.reader.info)
-
-        # ! should update the WSIReader such that sync read can be done on
-        # ! with `baseline` input as well
-        if mask_reader is not None and units in ['baseline', 'level']:
-            raise ValueError("Mask can't be used with `resolution=%s`" % units)
 
         if mask_reader is not None:
             selected = PatchExtractor.filter_coordinates(

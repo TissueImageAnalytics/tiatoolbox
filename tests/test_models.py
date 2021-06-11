@@ -8,9 +8,9 @@ import numpy as np
 import pytest
 import torch
 
-# import sys
-# sys.path.append('..')
-# os.environ['CUDA_VISIBLE_DEVICE'] = '3'
+import sys
+sys.path.append('.')
+os.environ['CUDA_VISIBLE_DEVICE'] = '0'
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
@@ -28,7 +28,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_get_coordinates():
     """Test get tile cooordinates functionality."""
     expected_output = np.array(
@@ -99,7 +99,7 @@ def test_get_coordinates():
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -132,7 +132,7 @@ def test_create_backbone():
         get_model("secret_model-kather100k", pretrained=False)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_set_root_dir():
     """Test for setting new root dir."""
     # skipcq
@@ -156,7 +156,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():
     """Test for kather patch dataset."""
     # test defining a subclass of dataset info but not defining
@@ -247,7 +247,7 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -265,7 +265,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -310,7 +310,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -337,7 +337,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
@@ -433,7 +433,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret-dataset")
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -527,7 +527,7 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     assert np.min(correlation) > 0.9, correlation
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg):
     """Test if different resolution read is as expected."""
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
@@ -639,7 +639,7 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
     assert (roi1 - roi2).sum() == 0
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -661,7 +661,7 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -761,81 +761,80 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
-def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
+def test_wsi_predictor_api(_sample_wsi_dict):
     """Test normal run of wsi predictor."""
-    on_gpu = False
+    on_gpu = True
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
-    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
-    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+
+    # on_gpu = True
+    # root_dir = '/root/storage_1/workspace/tiatoolbox/tests/local_samples/'
+    # _mini_wsi_svs = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.svs' % root_dir)
+    # _mini_wsi_jpg = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.jpg' % root_dir)
+    # _mini_wsi_msk = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.mask.png' % root_dir)
 
     patch_size = np.array([224, 224])
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = CNNPatchPredictor(
+        pretrained_model="resnet18-kather100k",
+        batch_size=32)
 
-    # ! add this test back once the read at `baseline` is fixed
-    # sanity check, both output should be the same with same resolution read args
-    # wsi_output = predictor.predict(
-    #     [_mini_wsi1_svs],
-    #     mask_list=[_mini_wsi1_msk],
-    #     mode="wsi",
-    #     return_probabilities=True,
-    #     return_labels=True,
-    #     on_gpu=False,
-    #     patch_size=patch_size,
-    #     stride_size=patch_size,
-    #     resolution=1.0,
-    #     units="baseline",
-    # )[0][0]
-    # tile_output = predictor.predict(
-    #     [_mini_wsi1_jpg],
-    #     mask_list=[_mini_wsi1_msk],
-    #     mode="tile",
-    #     return_probabilities=True,
-    #     return_labels=True,
-    #     on_gpu=False,
-    #     patch_size=patch_size,
-    #     stride_size=patch_size,
-    #     resolution=1.0,
-    #     units="baseline",
-    # )[0][0]
-    # wpred = np.array(wsi_output["predictions"])
-    # tpred = np.array(tile_output["predictions"])
-    # diff = tpred == wpred
-    # accuracy = np.sum(diff) / np.size(wpred)
-    # assert accuracy > 0.9, np.nonzero(~diff)
-
-    # remove previously generated data
-    save_dir = "model_wsi_output"
-    if os.path.exists(save_dir):
-        shutil.rmtree(save_dir, ignore_errors=True)
-
-    # test reading of multiple whole-slide images
-    predictor.predict(
-        [_mini_wsi1_svs, _mini_wsi1_svs, _mini_wsi1_svs],
-        mask_list=[_mini_wsi1_msk, _mini_wsi1_msk, _mini_wsi1_msk],
-        mode="wsi",
+    # wrapper to make this more clean
+    kwargs = dict(
         return_probabilities=True,
         return_labels=True,
         on_gpu=on_gpu,
         patch_size=patch_size,
         stride_size=patch_size,
         resolution=1.0,
-        units="mpp",
+        units="baseline",)
+    # ! add this test back once the read at `baseline` is fixed
+    # sanity check, both output should be the same with same resolution read args
+    wsi_output = predictor.predict(
+        [_mini_wsi_svs],
+        mask_list=[_mini_wsi_msk],
+        mode="wsi", **kwargs,
+    )[0][0]
+
+    tile_output = predictor.predict(
+        [_mini_wsi_jpg],
+        mask_list=[_mini_wsi_msk],
+        mode="tile", **kwargs,
+    )[0][0]
+
+    wpred = np.array(wsi_output["predictions"])
+    tpred = np.array(tile_output["predictions"])
+    diff = tpred == wpred
+    accuracy = np.sum(diff) / np.size(wpred)
+    assert accuracy > 0.9, np.nonzero(~diff)
+
+    # remove previously generated data
+    save_dir = "model_wsi_output"
+    if os.path.exists(save_dir):
+        shutil.rmtree(save_dir, ignore_errors=True)
+
+    kwargs = dict(
+        return_probabilities=True,
+        return_labels=True,
+        on_gpu=on_gpu,
+        patch_size=patch_size,
+        stride_size=patch_size,
+        resolution=0.5,
         save_dir=save_dir,
+        units="mpp",)
+
+    # test reading of multiple whole-slide images
+    predictor.predict(
+        [_mini_wsi_svs, _mini_wsi_svs, _mini_wsi_svs],
+        mask_list=[_mini_wsi_msk, _mini_wsi_msk, _mini_wsi_msk],
+        mode="wsi", **kwargs
     )
     with pytest.raises(ValueError, match=r".*save_dir.*exist.*"):
         predictor.predict(
-            [_mini_wsi1_svs, _mini_wsi1_svs, _mini_wsi1_svs],
-            mask_list=[_mini_wsi1_msk, _mini_wsi1_msk, _mini_wsi1_msk],
-            mode="wsi",
-            return_probabilities=True,
-            return_labels=True,
-            on_gpu=on_gpu,
-            patch_size=patch_size,
-            stride_size=patch_size,
-            resolution=1.0,
-            units="mpp",
-            save_dir=save_dir,
+            [_mini_wsi_svs, _mini_wsi_svs],
+            mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+            mode="wsi", **kwargs
         )
 
     # remove previously generated data
@@ -845,147 +844,72 @@ def test_wsi_predictor_api(_mini_wsi1_svs, _mini_wsi1_jpg, _mini_wsi1_msk):
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
-def test_wsi_predictor_merge_predictions(
-    _mini_wsi1_svs,
-    _mini_wsi1_jpg,
-    _mini_wsi1_msk,
-    # as replacement for multiple tile tests,
-    # else will be very mem expensive and crash travis
-    _patch_extr_vf_image,
-):
+def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
-    # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
-    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
-    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
-    _tile_2k_x_2k = pathlib.Path(_patch_extr_vf_image)
 
-    # _tile_2k_x_2k = '/home/tialab-dang/workstation_storage_1/workspace/tiatoolbox/
-    # tests/local_samples/TCGA-HE-7130-01Z-00-DX1.png'
-    # _tile_2k_x_2k = pathlib.Path(_tile_2k_x_2k)
-    on_gpu = False
-    patch_size = np.array([224, 224])
+    # convert to pathlib Path to prevent wsireader complaint
+    on_gpu = True
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+
+    # on_gpu = True
+    # root_dir = '/root/storage_1/workspace/tiatoolbox/tests/local_samples/'
+    # _mini_wsi_svs = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.svs' % root_dir)
+    # _mini_wsi_jpg = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.jpg' % root_dir)
+    # _mini_wsi_msk = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.mask.png' % root_dir)
+
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
-    # ! add this test back once the read at `baseline` is fixed
-    # ~~~
-    # sanity check, both output should be the same with same resolution read args
-    # wsi_output = predictor.predict(
-    #     [_mini_wsi1_svs],
-    #     mask_list=[_mini_wsi1_msk],
-    #     mode="wsi",
-    #     return_probabilities=True,
-    #     return_labels=True,
-    #     on_gpu=False,
-    #     patch_size=patch_size,
-    #     stride_size=patch_size,
-    #     resolution=1.0,
-    #     units="baseline",
-    #     merge_predictions=True,
-    #     return_overlay=True,
-    # )[0]
-    # tile_output = predictor.predict(
-    #     [_mini_wsi1_jpg],
-    #     mask_list=[_mini_wsi1_msk],
-    #     mode="tile",
-    #     return_probabilities=True,
-    #     return_labels=True,
-    #     on_gpu=False,
-    #     patch_size=patch_size,
-    #     stride_size=patch_size,
-    #     resolution=1.0,
-    #     units="baseline",
-    #     merge_predictions=True,
-    #     return_overlay=True,
-    # )[0]
-    # # first make sure nothing breaks with predictions
-    # wpred = np.array(wsi_output[0]["predictions"])
-    # tpred = np.array(tile_output[0]["predictions"])
-    # diff = tpred == wpred
-    # accuracy = np.sum(diff) / np.size(wpred)
-    # assert accuracy > 0.9, np.nonzero(~diff)
-
-    # merged_wsi = wsi_output[1]
-    # merged_tile = tile_output[1]
-    # # enure shape of merged predictions of tile and wsi input are the same
-    # assert merged_wsi.shape == merged_tile.shape
-    # # ensure conistent predictions between tile and wsi mode
-    # diff = merged_tile == merged_wsi
-    # accuracy = np.sum(diff) / np.size(merged_wsi)
-    # assert accuracy > 0.9, np.nonzero(~diff)
-
-    # overlay_wsi = wsi_output[2]
-    # overlay_tile = tile_output[2]
-    # # ensure returned overlay can be saved as matplotlib figure
-    # save_dir_path = "tmp_figure/"
-    # if os.path.exists(save_dir_path):
-    #     shutil.rmtree(save_dir_path, ignore_errors=True)
-    # os.makedirs(save_dir_path)
-    # overlay_wsi.savefig(save_dir_path + "overlay1.png")
-    # overlay_tile.savefig(save_dir_path + "overlay2.png")
-
-    # assert os.path.isfile(save_dir_path + "overlay1.png")
-    # assert os.path.isfile(save_dir_path + "overlay2.png")
-
-    # shutil.rmtree(save_dir_path, ignore_errors=True)
-    # ~~~
-
-    # remove previously generated data
-    # save_dir = "model_wsi_output"
-    # if os.path.exists(save_dir):
-    #     shutil.rmtree(save_dir, ignore_errors=True)
-
-    # # test read multiple whole-slide images
-    # predictor.predict(
-    #     [_mini_wsi1_svs, _mini_wsi1_svs, _mini_wsi1_svs],
-    #     mask_list=[_mini_wsi1_msk, _mini_wsi1_msk, _mini_wsi1_msk],
-    #     mode="wsi",
-    #     return_probabilities=True,
-    #     return_labels=True,
-    #     on_gpu=on_gpu,
-    #     patch_size=patch_size,
-    #     stride_size=patch_size,
-    #     resolution=1.0,
-    #     units="mpp",
-    #     merge_predictions=True,
-    #     return_overlay=True,
-    #     save_dir=save_dir,
-    # )
-
-    # print(_mini_wsi1_svs)
-    # print(_mini_wsi1_svs.stem)
-
-    # assert os.path.isfile(save_dir + "/%s/results.json" % _mini_wsi1_svs.stem)
-    # assert os.path.isfile(save_dir + "/%s/prediction_map.npy" % _mini_wsi1_svs.stem)
-    # assert os.path.isfile(save_dir + "/%s/overlay.png" % _mini_wsi1_svs.stem)
-    # shutil.rmtree(save_dir, ignore_errors=True)
-
-    # remove previously generated data
-    save_dir = "model_tile_output"
-    if os.path.exists(save_dir):
-        shutil.rmtree(save_dir, ignore_errors=True)
-
-    # this is very expensive
-    predictor.predict(
-        [_tile_2k_x_2k, _tile_2k_x_2k, _tile_2k_x_2k],
-        mode="tile",
+    kwargs = dict(
         return_probabilities=True,
         return_labels=True,
         on_gpu=on_gpu,
-        patch_size=patch_size,
-        stride_size=patch_size,
+        patch_size=np.array([224, 224]),
+        stride_size=np.array([224, 224]),
         resolution=1.0,
         units="baseline",
         merge_predictions=True,
-        return_overlay=True,
-        save_dir=save_dir,
     )
-    assert os.path.isfile(save_dir + "/%s/results.json" % _tile_2k_x_2k.stem)
-    assert os.path.isfile(save_dir + "/%s/prediction_map.npy" % _tile_2k_x_2k.stem)
-    assert os.path.isfile(save_dir + "/%s/overlay.png" % _tile_2k_x_2k.stem)
-    shutil.rmtree(save_dir, ignore_errors=True)
+    # sanity check, both output should be the same with same resolution read args
+    wsi_output = predictor.predict(
+        [_mini_wsi_svs],
+        mask_list=[_mini_wsi_msk],
+        mode="wsi", **kwargs,
+    )[0]
+    tile_output = predictor.predict(
+        [_mini_wsi_jpg],
+        mask_list=[_mini_wsi_msk],
+        mode="tile", **kwargs,
+    )[0]
+
+    # from tiatoolbox.utils.misc import imread
+    # import matplotlib.pyplot as plt
+    # plt.subplot(1,3,1)
+    # plt.imshow(wsi_output[1])
+    # plt.subplot(1,3,2)
+    # plt.imshow(tile_output[1])
+    # plt.subplot(1,3,3)
+    # plt.imshow(imread(_mini_wsi_jpg))
+    # plt.savefig('dump.png')
+    # first make sure nothing breaks with predictions
+    wpred = np.array(wsi_output[0]["predictions"])
+    tpred = np.array(tile_output[0]["predictions"])
+    diff = tpred == wpred
+    accuracy = np.sum(diff) / np.size(wpred)
+    assert accuracy > 0.9, np.nonzero(~diff)
+
+    merged_wsi = wsi_output[1]
+    merged_tile = tile_output[1]
+    # enure shape of merged predictions of tile and wsi input are the same
+    assert merged_wsi.shape == merged_tile.shape
+    # ensure conistent predictions between tile and wsi mode
+    diff = merged_tile == merged_wsi
+    accuracy = np.sum(diff) / np.size(merged_wsi)
+    assert accuracy > 0.9, np.nonzero(~diff)
 
 
+@pytest.mark.skip(reason="working, skip to run other test")
 def _test_predictor_output(
     input_list,
     pretrained_model,
@@ -995,7 +919,8 @@ def _test_predictor_output(
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = CNNPatchPredictor(
-        pretrained_model=pretrained_model, batch_size=1, verbose=False
+        pretrained_model=pretrained_model,
+        batch_size=32, verbose=False
     )
     # don't run test on GPU
     output = predictor.predict(
@@ -1015,7 +940,7 @@ def _test_predictor_output(
         ), pretrained_model
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     """Test the output of patch prediction models."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]

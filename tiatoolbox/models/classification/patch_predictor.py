@@ -43,7 +43,7 @@ from tiatoolbox.utils.misc import (
 from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.utils.visualisation import overlay_patch_prediction
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
 class CNNPatchModel(ModelBase):
@@ -221,60 +221,6 @@ class CNNPatchPredictor:
         self.verbose = verbose
 
     @staticmethod
-    def _get_merge_info(img_path, output_model, mode, resolution, units):
-        """Get the scaling information needed for merging the predictions
-        at a lower resolution.
-
-        Args:
-            img_path (str): Path to the input image that was originally processed.
-            output_model (dict): Dictionary of results output by the model.
-            mode (str): Mode that was used for processing the data. This must be
-                either `tile` or `wsi`.
-            resolution (float): Resolution used when merging the predictions.
-            units (str): Units of resolution. Either `power`, `mpp`, `baseline`
-                or `level`.
-
-        Returns:
-            img_resize (ndarray): Resized input image at the defined resolution.
-            scale (float): The number of times smaller the resolution of the
-                merged prediction is than the resolution used during proessing.
-
-        """
-        # get the resolution and pretrained model used during duing training
-        process_resolution = output_model["resolution"]
-
-        if resolution is None:
-            # if resolution not supplied, default to saving merged predictions
-            # at the size of the image at the processed resolution.
-            logging.warning(
-                "No resolution provided for saving the merged predictions. Default to "
-                "saving at the size at the processed resolution. Consider using a "
-                "lower resolution than that used for processing to reduce processing "
-                "speed and to reduce the memory of the generated map."
-            )
-            resolution = process_resolution
-            scale = 1
-
-        else:
-            if units == "power":
-                scale = process_resolution / resolution
-            elif units == "mpp":
-                scale = process_resolution * resolution
-            elif units == "baseline":
-                scale = resolution
-
-        if mode == "wsi":
-            reader = get_wsireader(img_path)
-            img_resize = reader.slide_thumbnail(resolution=resolution, units=units)
-        else:
-            img = imread(img_path)
-            output_size = (img.shape[1] / scale), round(img.shape[0] / scale)
-            output_size = (int(round(output_size[0])), int(round(output_size[1])))
-            img_resize = imresize(img, output_size=output_size)
-
-        return img_resize, scale
-
-    @staticmethod
     def _merge_patch_predictions(output_model, output_shape, scale=1):
         """Merge patch level predictions.
 
@@ -334,13 +280,10 @@ class CNNPatchPredictor:
 
     @staticmethod
     def merge_predictions(
-        img_list,
-        output_list,
-        mode,
+        img,
+        output,
         resolution=None,
         units=None,
-        return_overlay=False,
-        alpha=0.35,
         save_dir=None,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
@@ -365,82 +308,60 @@ class CNNPatchPredictor:
             overlay (ndarray): Overlaid output if return_overlay is set to True.
 
         """
-        if mode not in ["tile", "wsi"]:
-            raise ValueError(
-                "Only predictions generated using `tile` or `wsi` mode can be merged."
-            )
 
-        if len(img_list) > 1:
-            output_files = []  # generate a list of output file paths
+        reader = get_wsireader(img)
+        if isinstance(reader, VirtualWSIReader):
             warnings.warn(
-                "When providing multiple whole-slide images / tiles "
-                "we save the overlays and return the locations "
-                "to the corresponding files."
+                ' '.join([
+                    "Image is not pyramidal hence read is forced to be",
+                    "at `units='baseline'` and `resolution=1.0`.",
+                ])
             )
+            resolution = 1.0
+            units = 'baseline'
 
-        if len(img_list) > 1 and save_dir is None:
-            raise ValueError(
-                "If the number of input samples > 1, then a save_dir must be provided."
-            )
+        canvas_shape = reader.slide_dimensions(
+                            resolution=resolution,
+                            units=units)
+        canvas_shape = canvas_shape[::-1]  # XY to YX
 
-        output = []
-        for idx, img_path in enumerate(img_list):
-            output_merged = []
-            output_files = []
+        # may crash here, do we need to deal with this ?
+        output_shape = reader.slide_dimensions(
+                            resolution=output['resolution'],
+                            units=output['units'])
+        output_shape = output_shape[::-1]  # XY to YX
+        fx = np.array(canvas_shape) / np.array(output_shape)
 
-            img_path = pathlib.Path(img_path)
-            basename = img_path.stem
+        if "probabilities" not in output.keys():
+            coordinates = output['coordinates']
+            predictions = output['predictions']
+            denominator = None
+            output = np.zeros(list(canvas_shape), dtype=np.float32)
+        else:
+            coordinates = output['coordinates']
+            predictions = output['probabilities']
+            num_class = np.array(predictions[0]).shape[0]
+            denominator = np.zeros(canvas_shape)
+            output = np.zeros(list(canvas_shape) + [num_class], dtype=np.float32)
 
-            # prepare the directories for saving
-            if len(img_list) > 1:
-                save_dir_ = os.path.join(save_dir, basename)
-                if not os.path.exists(save_dir_):
-                    os.makedirs(save_dir_)
-
-            if len(img_list) > 1:
-                with open(output_list[idx]) as json_file:
-                    output_model = json.load(json_file)
-            else:
-                output_model = output_list[idx][0]
-
-            if resolution is not None and output_model["units"] != units:
-                raise ValueError(
-                    "Defined `units` of resolution must be the same that were used "
-                    "when processing the data (%s)." % output_model["units"]
-                )
-
-            # get the resolution and pretrained model used during duing training
-            read_img, scale = CNNPatchPredictor._get_merge_info(
-                img_path, output_model, mode, resolution, units
-            )
-            # merge patch predictions to form a 2D array
-            merged_predictions = CNNPatchPredictor._merge_patch_predictions(
-                output_model, read_img.shape[:2], scale
-            )
-            output_merged.append(merged_predictions)
-
-            if return_overlay:
-                pretrained_model = output_model["pretrained_model"]
-                # generate an overlay of the 2D array on the original image
-                overlay = overlay_patch_prediction(
-                    read_img,
-                    merged_predictions,
-                    pretrained_model,
-                    alpha,
-                )
-                output_merged.append(overlay)
-
-            if len(img_list) > 1:
-                # save prediction map
-                np.save(save_dir_ + "prediction_map.npy", merged_predictions)
-                output_files.append(save_dir_ + "prediction_map.npy")
-                if return_overlay:
-                    output_files.append(save_dir_ + "overlay.npy")
-                # set output to return locations of saved files
-                output.append(output_files)
-            else:
-                output.append(output_merged)
-
+        for idx, bound in enumerate(coordinates):
+            prediction = predictions[idx]
+            # assumed to be in XY
+            # top-left for output placement
+            tl = (np.array(bound[:2]) * fx + 0.5).astype(np.int32)
+            # bot-right for output placement
+            br = (np.array(bound[2:]) * fx + 0.5).astype(np.int32)
+            output[tl[1] : br[1], tl[0] : br[0]] = prediction
+            if denominator is not None:
+                denominator[tl[1] : br[1], tl[0] : br[1]] += 1
+        # deal with overlapping regions
+        if denominator is not None:
+            output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
+            # convert raw probabilities to preditions
+            # should not be predictor static
+            output = CNNPatchPredictor._postprocess(output)
+            # to make sure background is 0 while class wil be 1..N
+            output[denominator > 0] += 1
         return output
 
     @staticmethod
@@ -709,24 +630,12 @@ class CNNPatchPredictor:
 
                 output_list = [output_model]  # assign to a list
                 if merge_predictions:
-                    # get the resolution and pretrained model used during duing training
-                    img_resize, scale = CNNPatchPredictor._get_merge_info(
-                        img_path, output_model, mode, merge_resolution, units
-                    )
-                    merged_prediction = CNNPatchPredictor._merge_patch_predictions(
-                        output_model, img_resize.shape[:2], scale
+                    merged_prediction = self.merge_predictions(
+                        img_path, output_model,
+                        resolution=resolution,
+                        units=units
                     )
                     output_list.append(merged_prediction)
-
-                if return_overlay:
-                    pretrained_model = output_model["pretrained_model"]
-                    # generate an overlay of the 2D array on the original image
-                    overlay = overlay_patch_prediction(
-                        img_resize,
-                        merged_prediction,
-                        pretrained_model,
-                    )
-                    output_list.append(overlay)
 
                 if len(img_list) > 1:
                     basename = img_path.stem
@@ -742,10 +651,6 @@ class CNNPatchPredictor:
                         merged_file_path = save_dir_ + "/prediction_map.npy"
                         output_files.append(merged_file_path)
                         np.save(merged_file_path, merged_prediction)
-                    if return_overlay:
-                        overlay_file_path = save_dir_ + "/overlay.png"
-                        output_files.append(overlay_file_path)
-                        overlay.savefig(overlay_file_path)
 
                     # set output to return locations of saved files
                     output.append(output_files)
@@ -755,9 +660,6 @@ class CNNPatchPredictor:
                     output_list = [output_model]
                     if merge_predictions:
                         output_list.append(merged_prediction)
-                    if return_overlay:
-                        output_list.append(overlay)
-
                     # add image-level outputs to output_list
                     output.append(output_list)
 
