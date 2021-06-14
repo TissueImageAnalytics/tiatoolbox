@@ -646,6 +646,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         stride_size=patch_size,
         resolution=0.5,
         save_dir=save_dir,
+        merge_predictions=True,  # to test the api coverage
         units="mpp",)
 
     # test reading of multiple whole-slide images

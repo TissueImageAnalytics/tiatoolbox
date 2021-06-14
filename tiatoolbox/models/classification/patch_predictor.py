@@ -20,25 +20,26 @@
 
 """This module enables patch-level prediction."""
 
-from typing import OrderedDict, Tuple
-import tqdm
-import numpy as np
-import torch
-import torch.nn as nn
 import os
 import pathlib
 import warnings
+from collections import OrderedDict
+from typing import Tuple
+
+import numpy as np
+import torch
+import torch.nn as nn
+import tqdm
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.abc import ModelBase, IOStateBase
+from tiatoolbox.models.abc import IOStateBase, ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.utils.misc import (
-    download_data,
-    save_json,
-    get_pretrained_model_info,
-)
-from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.models.dataset.classification import (PatchDataset,
+                                                      WSIPatchDataset)
+from tiatoolbox.utils import misc
+from tiatoolbox.utils.misc import (download_data, get_pretrained_model_info,
+                                   save_json)
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
@@ -355,12 +356,8 @@ class CNNPatchPredictor:
                 total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
             )
 
-        if on_gpu:
-            # DataParallel works only for cuda
-            model = torch.nn.DataParallel(self.model)
-            model = model.to("cuda")
-        else:
-            model = self.model.to("cpu")
+        # use external for testing
+        model = misc.model_to(on_gpu, self.model)
 
         cum_output = {
             "probabilities": [],
@@ -437,7 +434,6 @@ class CNNPatchPredictor:
             return_probabilities (bool): Whether to return per-class probabilities.
 
             return_labels (bool): Whether to return the labels with the predictions.
-            on_gpu (bool): Whether to run model on the GPU.
 
             on_gpu (bool): whether to run model on the GPU.
 
