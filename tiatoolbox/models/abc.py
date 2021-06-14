@@ -20,6 +20,38 @@
 
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
 import torch.nn as nn
+from abc import ABC, abstractmethod
+
+
+class IOStateBase(ABC):
+    """Define an abstract class for holding a predictor input output information.
+
+    Enforcing such that following attributes must always be defined by the subclass.
+
+    Attributes
+        patch_size (tuple(height, width)): Define the size of input patch.
+        input_resolutions (list): Define the resolution of each input, incase the
+            predictor receives variable input. Must be in the same order as network
+            input.
+        units (dict): Define the resolution of each output, incase the
+            predictor return variable output.Must be in the same order as network
+            output.
+
+    """
+    @property
+    @abstractmethod
+    def patch_size(self):
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def input_resolutions(self):
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def output_resolutions(self):
+        raise NotImplementedError
 
 
 class ModelBase(nn.Module):
