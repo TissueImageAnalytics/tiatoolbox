@@ -18,19 +18,20 @@ from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.classification.abc import ModelBase
 from tiatoolbox.models.dataset import (
     ABCDatasetInfo,
+    ABCPatchDataset,
     KatherPatchDataset,
     PatchDataset,
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, unzip_data
+from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
 ON_GPU = False
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -63,31 +64,7 @@ def test_create_backbone():
         get_model("secret_model-kather100k", pretrained=False)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
-def test_set_root_dir():
-    """Test for setting new root dir."""
-    # skipcq
-    from tiatoolbox import rcParam
-
-    old_root_dir = rcParam["TIATOOLBOX_HOME"]
-    test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
-    # clean up previous test
-    if os.path.exists(test_dir_path):
-        os.rmdir(test_dir_path)
-    rcParam["TIATOOLBOX_HOME"] = test_dir_path
-    # reimport to see if it overwrites
-    # silence Deep Source because this is an intentional check
-    # skipcq
-    from tiatoolbox import rcParam
-
-    os.makedirs(rcParam["TIATOOLBOX_HOME"])
-    if not os.path.exists(test_dir_path):
-        assert False, "`%s` != `%s`" % (rcParam["TIATOOLBOX_HOME"], test_dir_path)
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
-    rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
-
-
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():
     """Test for kather patch dataset."""
     # test defining a subclass of dataset info but not defining
@@ -178,7 +155,7 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -196,7 +173,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -241,7 +218,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -268,7 +245,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
@@ -364,20 +341,68 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret-dataset")
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
 
-    def reuse_init(**kwargs):
+    def reuse_init(img_path=_mini_wsi_svs, **kwargs):
         """Testing function."""
         return WSIPatchDataset(img_path=_mini_wsi_svs, **kwargs)
 
     def reuse_init_wsi(**kwargs):
         """Testing function."""
         return reuse_init(mode="wsi", **kwargs)
+
+    # test for ABC validate
+    # TODO: migrate to another file ?
+    with pytest.raises(
+        ValueError,
+        match=r".*input_list should be a list of patch coordinates.*"
+    ):
+        # intentionally create to check error
+        # skipcq
+        class Proto(ABCPatchDataset):
+            def __init__(self):
+                super().__init__()
+                self.input_list = 'CRASH'
+                self.check_input_integrity('wsi')
+
+        # intentionally create to check error
+        # skipcq
+        _ = Proto()
+
+    # invalid path input
+    with pytest.raises(
+        ValueError,
+        match=r".*`img_path` must be a valid file path.*"
+    ):
+        WSIPatchDataset(
+            img_path='aaaa',
+            mode="wsi",
+            patch_size=[512, 512],
+            stride_size=[256, 256],
+            auto_get_mask=False
+        )
+
+    # invalid mask path input
+    with pytest.raises(
+        ValueError,
+        match=r".*`mask_path` must be a valid file path.*"
+    ):
+        WSIPatchDataset(
+            img_path=_mini_wsi_svs,
+            mask_path='aaaa',
+            mode="wsi",
+            patch_size=[512, 512],
+            stride_size=[256, 256],
+            resolution=1.0,
+            units="mpp",
+            auto_get_mask=False
+        )
 
     # invalid mode
     with pytest.raises(ValueError):
@@ -403,6 +428,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     with pytest.raises(ValueError):
         reuse_init_wsi(patch_size=[512, 512], stride_size=[512, -512])
 
+    # * for wsi
     # dummy test for analysing the output
     # stride and patch size should be as expected
     patch_size = [512, 512]
@@ -439,6 +465,45 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert ds_roi.shape[1] == rd_roi.shape[1]
     assert np.min(correlation) > 0.9, correlation
 
+    # test creation with auto mask gen and input mask
+    ds = reuse_init_wsi(
+        patch_size=patch_size,
+        stride_size=stride_size,
+        resolution=1.0,
+        units="mpp",
+        auto_get_mask=True
+    )
+    assert len(ds) > 0
+    ds = WSIPatchDataset(
+        img_path=_mini_wsi_svs,
+        mask_path=_mini_wsi_msk,
+        mode="wsi",
+        patch_size=[512, 512],
+        stride_size=[256, 256],
+        auto_get_mask=False,
+        resolution=1.0,
+        units="mpp",
+    )
+    negative_mask = imread(_mini_wsi_msk)
+    negative_mask = np.zeros_like(negative_mask)
+    imwrite('negative_mask.png', negative_mask)
+    with pytest.raises(
+        ValueError,
+        match=r".*No coordinate remain after tiling.*"
+    ):
+        ds = WSIPatchDataset(
+            img_path=_mini_wsi_svs,
+            mask_path='negative_mask.png',
+            mode="wsi",
+            patch_size=[512, 512],
+            stride_size=[256, 256],
+            auto_get_mask=False,
+            resolution=1.0,
+            units="mpp",
+        )
+    shutil.rmtree('negative_mask.png', ignore_errors=True)
+
+    # * for tile
     reader = get_wsireader(_mini_wsi_jpg)
     tile_ds = WSIPatchDataset(
         img_path=_mini_wsi_jpg,
@@ -470,7 +535,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -492,7 +557,7 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -668,7 +733,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         shutil.rmtree(save_dir, ignore_errors=True)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -726,7 +791,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     assert accuracy > 0.9, np.nonzero(~diff)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def _test_predictor_output(
     input_list,
     pretrained_model,
@@ -761,7 +826,7 @@ def _test_predictor_output(
         )
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
+@pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     """Test the output of patch prediction models."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
