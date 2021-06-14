@@ -1291,17 +1291,14 @@ def test_jp2_missing_cod(_sample_jp2):
         _ = wsi.info
 
 
-def test_read_bounds_location_in_requested_resolution(
-        _mini_wsi2_jp2,
-        _mini_wsi1_svs,
-        _mini_wsi1_jpg,
-        _mini_wsi1_msk):
+def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
-    _mini_wsi2_jp2 = pathlib.Path(_mini_wsi2_jp2)
-    _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
-    _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
-    _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
+    # convert to pathlib Path to prevent wsireader complaint
+    _mini_wsi1_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+    _mini_wsi2_svs = pathlib.Path(_sample_wsi_dict['wsi1_8k_8k_svs'])
+    _mini_wsi2_jpg = pathlib.Path(_sample_wsi_dict['wsi1_8k_8k_jpg'])
+    _mini_wsi2_jp2 = pathlib.Path(_sample_wsi_dict['wsi1_8k_8k_jp2'])
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
         """Correlation test to compare output of 2 readers."""
@@ -1319,15 +1316,10 @@ def test_read_bounds_location_in_requested_resolution(
                     pad_constant_values=255,
                     **read_cfg,
                 )
-        # ~ sane check code for local debug
-        # import matplotlib.pyplot as plt
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(roi1)
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(roi2)
-        # plt.savefig('dump.png')
-        # plt.close()
-        # ~
+        # using only reader 1 because it is reference reader
+        shape1 = reader1.slide_dimensions(**read_cfg)
+        # shape2 = reader2.slide_dimensions(**read_cfg)
+        print(read_cfg, shape1, shape2)
         assert roi1.shape[0] == requested_size[0], (
                     read_cfg, requested_size, roi1.shape)
         assert roi1.shape[1] == requested_size[1], (
@@ -1337,7 +1329,7 @@ def test_read_bounds_location_in_requested_resolution(
         if check_content:
             cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
             # this control the harshness of similarity test, how much should be?
-            assert np.min(cc) > 0.90, (cc, read_cfg, read_coord)
+            assert np.min(cc) > 0.90, (cc, read_cfg, read_coord, shape1)
 
     # * now check sync read by comparing the RoI with different base
     # the output should be at same resolution even if source is of different base
@@ -1378,12 +1370,14 @@ def test_read_bounds_location_in_requested_resolution(
     read_cfg_list = [
         # read at strange resolution value so that if it fails,
         # normal scale will also fail
-        ({'resolution' : 0.35, 'units' : 'mpp'}, None),
-        ({'resolution' : 1.56, 'units' : 'power'}, None),
+        ({'resolution' : 0.75, 'units' : 'mpp'},
+            np.array([10000, 10000, 15000, 15000])),
+        ({'resolution' : 1.56, 'units' : 'power'},
+            np.array([10000, 10000, 15000, 15000])),
         ({'resolution' : 3.00, 'units' : 'mpp'},
-            np.array([1000, 1000, 1500, 1500])),
+            np.array([2500, 2500, 4000, 4000])),
         ({'resolution' : 0.30, 'units' : 'baseline'},
-            np.array([1000, 1000, 1500, 1500])),
+            np.array([2000, 2000, 3000, 3000])),
     ]
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
         read_coord = requested_coords if read_coord is None else read_coord
@@ -1397,17 +1391,18 @@ def test_read_bounds_location_in_requested_resolution(
         # read at strange resolution value so that if it fails,
         # it means normal scale will also fail
         ({'resolution' : 0.35, 'units' : 'mpp'},
-            np.array([3500, 3500, 5000, 5000])),
+            np.array([1000, 1000, 2000, 2000])),
         ({'resolution' : 23.5, 'units' : 'power'}, None),
-        ({'resolution' : 0.35, 'units' : 'baseline'}, None),
+        ({'resolution' : 0.35, 'units' : 'baseline'},
+            np.array([1000, 1000, 2000, 2000])),
         ({'resolution' : 1.35, 'units' : 'baseline'},
             np.array([8000, 8000, 9000, 9000])),
         ({'resolution' : 1.00, 'units' : 'level'},
-            np.array([1500, 1500, 2000, 2000])),
+            np.array([1000, 1000, 2000, 2000])),
     ]
 
-    wsi_reader = get_wsireader(_mini_wsi1_svs)
-    tile = imread(_mini_wsi1_jpg)
+    wsi_reader = get_wsireader(_mini_wsi2_svs)
+    tile = imread(_mini_wsi2_jpg)
     tile = imresize(tile, scale_factor=0.76)
     vrt_reader = VirtualWSIReader(tile)
     vrt_reader.attach_to_reader(wsi_reader.info)

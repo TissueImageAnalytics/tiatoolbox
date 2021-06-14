@@ -645,3 +645,36 @@ def _mini_wsi1_msk(tmpdir_factory):
         print("\nSkipping %s" % file_path)
 
     return file_path
+
+
+@pytest.fixture(scope="session")
+def _sample_wsi_dict(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    file_name_dict = {
+        'wsi1_8k_8k_svs' : 'wsi1_8k_8k.svs',
+        'wsi1_8k_8k_jp2' : 'wsi1_8k_8k.jp2',
+        'wsi1_8k_8k_jpg' : 'wsi1_8k_8k.jpg',
+        'wsi2_4k_4k_svs' : 'wsi2_4k_4k.svs',
+        'wsi2_4k_4k_jp2' : 'wsi2_4k_4k.jp2',
+        'wsi2_4k_4k_jpg' : 'wsi2_4k_4k.jpg',
+        'wsi2_4k_4k_msk' : 'wsi2_4k_4k.mask.png',
+    }
+
+    info_dict = {}
+    URL_HOME = 'https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new'
+    for file_code, file_name in file_name_dict.items():
+        file_path = tmpdir_factory.mktemp("data").join(file_name)
+        if not pathlib.Path(file_path).is_file():
+            print("\nDownloading %s" % file_path)
+            r = requests.get(
+                '%s/%s' % (URL_HOME, file_name)
+            )
+            with open(file_path, "wb") as f:
+                f.write(r.content)
+        else:
+            print("\nSkipping %s" % file_path)
+        info_dict[file_code] = file_path
+    return info_dict
