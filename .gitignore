@@ -113,3 +113,7 @@ examples/*.py
 tests/data
 tests/*.png
 tests/local_samples/
+# vim/vi generated
+*.swp
+
+dataset
