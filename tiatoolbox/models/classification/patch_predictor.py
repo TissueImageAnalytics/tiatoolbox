@@ -457,7 +457,6 @@ class CNNPatchPredictor:
         resolution=None,
         units=None,
         merge_predictions=False,
-        merge_resolution=None,
         return_overlay=False,
         save_dir=None,
     ):
