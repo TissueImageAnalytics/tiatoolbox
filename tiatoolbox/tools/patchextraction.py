@@ -20,11 +20,7 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
-
-# from matplotlib.pyplot import flag
 import numpy as np
-
-# from numpy.lib.arraysetops import isin
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -163,124 +159,6 @@ class PatchExtractor(ABC):
         )
 
         return data
-
-    @staticmethod
-    def filter_coordinates(
-        mask_reader, coordinates_list, func=None, resolution=None, units=None
-    ):
-        """Return list of flags to indicate which coordinate is valid.
-
-        Args:
-            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader.
-
-            coordinates_list (ndarray and np.int32): Coordinates to be checked
-            via the `func`. They must be in the same resolution as requested
-            `resolution` and `units`. Must be of shape (N,K) with N is the
-            number of coordinate sets while K varies depending on information form.
-            Such as centroid is K=2 while bounding box is K=4. When using with default
-            `func=None`, `K` is expected to be bounding box of form
-            [start_x, start_y, end_x, end_y].
-
-            func: A function which taking `reader` and `coordinate` as arguments
-                and return True or False to indicate if the coordinate is valid.
-                By default, the function assume `mask_reader` to be a binary mask
-                (0 or 1) and any patch contain positive area is selected.
-
-        Returns:
-            ndarray: list of flags to indicate which coordinate is valid.
-
-        """
-
-        def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
-            """Accept coord as long as its box contains bits of mask."""
-            roi = reader.read_bounds(
-                coord,
-                resolution=reader.info.mpp if resolution is None else resolution,
-                units="mpp" if units is None else units,
-                interpolation="nearest",
-                location_is_at_requested=True
-            )
-            return np.sum(roi > 0) > 0
-
-        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
-        if not isinstance(coordinates_list, np.ndarray) and np.issubdtype(
-            coordinates_list.dtype, np.integer
-        ):
-            raise ValueError("`coordinates_list` should be ndarray.")
-        if func is None and coordinates_list.shape[-1] != 4:
-            raise ValueError(
-                "`func=None` does not support"
-                "`coordinates_list` of shape %s." % coordinates_list.shape
-            )
-        func = default_sel_func if func is None else func
-        flag_list = [func(mask_reader, coord) for coord in coordinates_list]
-        return np.array(flag_list)
-
-    @staticmethod
-    def get_coordinates(
-        image_shape=None,
-        patch_shape=None,
-        stride_shape=None,
-        within_bound=True,
-    ):
-        """Calculate patch tiling coordinates.
-
-        Args:
-            image_shape: a tuple (int, int) or ndarray of shape (2,).
-            Expected image shape at requested `resolution` and `units`.
-            Expected to be (width, height).
-
-            patch_shape: a tuple (int, int) or ndarray of shape (2,).
-            Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be (width, height).
-
-            stride_shape: a tuple(int, int) or ndarray of shape (2,).
-            Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be (width, height).
-
-        """
-        image_shape = np.array(image_shape)
-        patch_shape = np.array(patch_shape)
-        stride_shape = np.array(stride_shape)
-        if (
-            not np.issubdtype(image_shape.dtype, np.integer)
-            or np.size(image_shape) > 2
-            or np.any(image_shape < 0)
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if (
-            not np.issubdtype(patch_shape.dtype, np.integer)
-            or np.size(patch_shape) > 2
-            or np.any(patch_shape < 0)
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if (
-            not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2
-            or np.any(stride_shape < 0)
-        ):
-            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
-        if np.any(stride_shape < 1):
-            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
-
-        def flat_mesh_grid_coord(x, y):
-            """Helper function to obtain coordinate grid."""
-            x, y = np.meshgrid(x, y)
-            return np.stack([y.flatten(), x.flatten()], axis=-1)
-
-        patch_shape = np.array(patch_shape)
-        y_list = np.arange(0, image_shape[0], stride_shape[0])
-        x_list = np.arange(0, image_shape[1], stride_shape[1])
-        if within_bound:  # to check compatible with shan portion
-            sel = y_list + patch_shape[0] <= image_shape[0]
-            y_list = y_list[sel]
-            sel = x_list + patch_shape[1] <= image_shape[1]
-            x_list = x_list[sel]
-        top_left_list = flat_mesh_grid_coord(x_list, y_list)
-        bot_right_list = top_left_list + patch_shape[None]
-        coord_list = np.concatenate([top_left_list, bot_right_list], axis=-1)
-        return coord_list
 
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
