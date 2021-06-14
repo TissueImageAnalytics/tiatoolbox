@@ -176,8 +176,9 @@ class WSIReader:
         elif units == "level":
             if any(resolution >= len(info.level_downsamples)):
                 raise ValueError(
-                    "Target scale level (%s) > number of levels (%s) in WSI"
-                    % (resolution, len(info.level_downsamples)))
+                    f"Target scale level {resolution} "
+                    f"> number of levels {len(info.level_downsamples)} in WSI"
+                )
             base_scale = 1
             resolution = level_to_downsample(resolution)
         elif units == "baseline":
@@ -312,11 +313,11 @@ class WSIReader:
         )
         return output
 
-    def _find_read_params_at_requested_resolution(
+    def _find_read_params_at_resolution(
             self, location, size, resolution, units):
-        """Work similar to `find_read_rect_params`.
+        """Works similarly to `_find_read_rect_params`.
 
-        This is similar for when location is at requested resolution.
+        This is similar to when location is at requested resolution.
 
         Args:
             location (tuple(int)): Location in the requested resolution system.
@@ -329,9 +330,6 @@ class WSIReader:
                 - objective power ('power')
                 - pyramid / resolution level ('level')
                 - pixels per baseline pixel ('baseline')
-            precision (int, optional): Decimal places to use when
-                finding optimal scale. See
-                :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
             tuple: Parameters for reading the requested region
@@ -355,7 +353,7 @@ class WSIReader:
         """
         (
             read_level,
-            read_lv_to_requested_fx
+            read_lv_to_requested_scale_factor
         ) = self._find_optimal_level_and_downsample(
             resolution, units,
         )
@@ -364,12 +362,15 @@ class WSIReader:
         # Do we need sanity check for input form ?
         requested_location = np.array(location)
         requested_size = np.array(size)
-        lv0_to_read_lv_fx = 1 / info.level_downsamples[read_level]
-        lv0_to_requested_fx = lv0_to_read_lv_fx * read_lv_to_requested_fx
-        size_at_lv0 = requested_size / lv0_to_requested_fx
-        location_at_lv0 = requested_location / lv0_to_requested_fx
-        size_at_read_lv = requested_size / read_lv_to_requested_fx
-        location_at_read_lv = requested_location / read_lv_to_requested_fx
+        lv0_to_read_lv_scale_factor = 1 / info.level_downsamples[read_level]
+
+        lv0_to_requested_lv_scale_factor = lv0_to_read_lv_scale_factor
+        lv0_to_requested_lv_scale_factor *= read_lv_to_requested_scale_factor
+
+        size_at_lv0 = requested_size / lv0_to_requested_lv_scale_factor
+        location_at_lv0 = requested_location / lv0_to_requested_lv_scale_factor
+        size_at_read_lv = requested_size / read_lv_to_requested_scale_factor
+        location_at_read_lv = requested_location / read_lv_to_requested_scale_factor
         output = (
             size_at_read_lv,
             location_at_read_lv,
@@ -380,7 +381,7 @@ class WSIReader:
         output = tuple([(v + 0.5).astype(np.int64) for v in output])
         output = (
             read_level,
-            read_lv_to_requested_fx,
+            read_lv_to_requested_scale_factor,
         ) + output
         return output
 
@@ -398,12 +399,12 @@ class WSIReader:
         # Find parameters for optimal read
         (
             _,  # read_level,
-            _,  # read_lv_to_requested_fx,
+            _,  # read_lv_to_requested_scale_factor,
             _,  # size_at_read_lv,
             _,  # location_at_read_lv,
             size_at_lv0,
             location_at_lv0,
-        ) = self._find_read_params_at_requested_resolution(
+        ) = self._find_read_params_at_resolution(
                 tl_at_requested,
                 size_at_requested,
                 resolution, units)
