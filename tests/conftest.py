@@ -550,7 +550,7 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _sample_crc_tile(tmpdir_factory):
-    """Docstring."""
+    """A CRC sample pytest fixture to test model."""
     patch_file_path = tmpdir_factory.mktemp("data").join("crc_tile.tif")
 
     if not pathlib.Path(patch_file_path).is_file():
