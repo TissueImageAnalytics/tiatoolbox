@@ -38,7 +38,7 @@ JP2_TEST_TISSUE_SIZE = (1024, 1024)
 # -------------------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def strictly_increasing(seq):
     """Return True if sequence is strictly increasing.
 
@@ -51,7 +51,7 @@ def strictly_increasing(seq):
     return all(a < b for a, b in zip(seq, seq[1:]))
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def strictly_decreasing(seq):
     """Return True if sequence is strictly decreasing.
 
@@ -65,7 +65,7 @@ def strictly_decreasing(seq):
     return all(a > b for a, b in zip(seq, seq[1:]))
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def read_rect_objective_power(wsi, location, size):
     """Read rect objective helper."""
     for objective_power in [20, 10, 5, 2.5, 1.25]:
@@ -78,7 +78,7 @@ def read_rect_objective_power(wsi, location, size):
         assert im_region.shape == (*size[::-1], 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def read_bounds_mpp(wsi, bounds, size, jp2=False):
     """Read bounds mpp helper."""
     slide_mpp = wsi.info.mpp
@@ -100,7 +100,7 @@ def read_bounds_mpp(wsi, bounds, size, jp2=False):
         assert im_region.shape[2] == 3
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False):
     """Read bounds objective power helper."""
     for objective_power in [20, 10, 5, 2.5, 1.25]:
@@ -124,7 +124,7 @@ def read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False):
         assert im_region.shape[2] == 3
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def read_bounds_level_consistency(wsi, bounds):
     """Read bounds level consistency helper."""
     from skimage.registration import phase_cross_correlation
@@ -143,7 +143,7 @@ def read_bounds_level_consistency(wsi, bounds):
             assert error < 0.1
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
     """Command line slide thumbnail helper."""
     slide_thumb_result = runner.invoke(
@@ -190,7 +190,7 @@ class DummyMutableOpenSlideObject:
 # -------------------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsireader_slide_info(_sample_svs, tmp_path):
     """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
@@ -204,7 +204,7 @@ def test_wsireader_slide_info(_sample_svs, tmp_path):
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsireader_slide_info_cache(_sample_svs):
     """Test for caching slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
@@ -218,7 +218,7 @@ def test_wsireader_slide_info_cache(_sample_svs):
     assert info.as_dict() == cached_info.as_dict()
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def relative_level_scales_baseline(wsi):
     """Relative level scales for pixels per baseline pixel."""
     level_scales = wsi._relative_level_scales(0.125, "baseline")
@@ -231,21 +231,21 @@ def relative_level_scales_baseline(wsi):
     assert np.array_equal(level_scales[:, 0], expected)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_openslide_baseline(_sample_ndpi):
     """Test openslide relative level scales for pixels per baseline pixel."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     relative_level_scales_baseline(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_jp2_baseline(_sample_jp2):
     """Test jp2 relative level scales for pixels per baseline pixel."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     relative_level_scales_baseline(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_openslide_mpp(_sample_ndpi):
     """Test openslide calculation of relative level scales for mpp."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
@@ -256,7 +256,7 @@ def test__relative_level_scales_openslide_mpp(_sample_ndpi):
     assert all(level_scales[0] == wsi.info.mpp / 0.5)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_jp2_mpp(_sample_jp2):
     """Test jp2 calculation of relative level scales for mpp."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
@@ -267,7 +267,7 @@ def test__relative_level_scales_jp2_mpp(_sample_jp2):
     assert all(level_scales[0] == wsi.info.mpp / 0.5)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def relative_level_scales_power(wsi):
     """Calculation of relative level scales for objective power."""
     level_scales = wsi._relative_level_scales(wsi.info.objective_power, "power")
@@ -280,21 +280,21 @@ def relative_level_scales_power(wsi):
     assert np.array_equal(level_scales[:, 0], downsamples)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_openslide_power(_sample_ndpi):
     """Test openslide calculation of relative level scales for objective power."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     relative_level_scales_power(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_jp2_power(_sample_jp2):
     """Test jp2 calculation of relative level scales for objective power."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     relative_level_scales_power(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def relative_level_scales_level(wsi):
     """Calculation of relative level scales for level."""
     level_scales = wsi._relative_level_scales(3, "level")
@@ -306,21 +306,21 @@ def relative_level_scales_level(wsi):
     assert np.array_equal(level_scales[:, 0], expected)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_openslide_level(_sample_ndpi):
     """Test openslide calculation of relative level scales for level."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     relative_level_scales_level(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_jp2_level(_sample_jp2):
     """Test jp2 calculation of relative level scales for level."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     relative_level_scales_level(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def relative_level_scales_float(wsi):
     """Calculation of relative level scales for fractional level."""
     level_scales = wsi._relative_level_scales(1.5, "level")
@@ -332,21 +332,21 @@ def relative_level_scales_float(wsi):
     assert np.array_equal(level_scales[:, 0], expected)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_openslide_level_float(_sample_ndpi):
     """Test openslide calculation of relative level scales for fractional level."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
     relative_level_scales_float(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_jp2_level_float(_sample_jp2):
     """Test jp2 calculation of relative level scales for fractional level."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
     relative_level_scales_float(wsi)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_invalid_units(_sample_svs):
     """Test _relative_level_scales with invalid units."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -354,7 +354,7 @@ def test__relative_level_scales_invalid_units(_sample_svs):
         wsi._relative_level_scales(1.0, "gibberish")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_no_mpp():
     """Test _relative_level_scales objective when mpp is None."""
 
@@ -372,7 +372,7 @@ def test__relative_level_scales_no_mpp():
         wsi._relative_level_scales(1.0, "mpp")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_no_objective_power():
     """Test _relative_level_scales objective when objective power is None."""
 
@@ -390,7 +390,7 @@ def test__relative_level_scales_no_objective_power():
         wsi._relative_level_scales(10, "power")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test__relative_level_scales_level_too_high(_sample_svs):
     """Test _relative_level_scales levels set too high."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -398,7 +398,7 @@ def test__relative_level_scales_level_too_high(_sample_svs):
         wsi._relative_level_scales(100, "level")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     _sample_ndpi,
 ):
@@ -412,7 +412,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
         _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2):
     """Test finding optimal level for mpp read with scale > 1.
 
@@ -424,7 +424,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(_sample_jp2
         _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
     """Test finding optimal level for mpp read."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
@@ -444,7 +444,7 @@ def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
         assert post_read_scale_factor == approx(expected_scale)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_optimal_level_and_downsample_power(_sample_ndpi):
     """Test finding optimal level for objective power read."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
@@ -460,7 +460,7 @@ def test_find_optimal_level_and_downsample_power(_sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_optimal_level_and_downsample_level(_sample_ndpi):
     """Test finding optimal level for level read.
 
@@ -478,7 +478,7 @@ def test_find_optimal_level_and_downsample_level(_sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_read_rect_params_power(_sample_ndpi):
     """Test finding read rect parameters for objective power."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
@@ -500,7 +500,7 @@ def test_find_read_rect_params_power(_sample_ndpi):
         assert np.array_equal(post_read_downscaled_size, np.array(size))
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_find_read_rect_params_mpp(_sample_ndpi):
     """Test finding read rect parameters for objective mpp."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
@@ -522,7 +522,7 @@ def test_find_read_rect_params_mpp(_sample_ndpi):
         assert np.array_equal(post_read_downscaled_size, np.array(size))
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_openslide_baseline(_sample_ndpi):
     """Test openslide read rect at baseline.
 
@@ -538,7 +538,7 @@ def test_read_rect_openslide_baseline(_sample_ndpi):
     assert im_region.shape == (*size[::-1], 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_jp2_baseline(_sample_jp2):
     """Test jp2 read rect at baseline.
 
@@ -554,7 +554,7 @@ def test_read_rect_jp2_baseline(_sample_jp2):
     assert im_region.shape == (*size[::-1], 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_openslide_levels(_sample_ndpi):
     """Test openslide read rect with resolution in levels.
 
@@ -571,7 +571,7 @@ def test_read_rect_openslide_levels(_sample_ndpi):
         assert im_region.shape == (*size[::-1], 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_jp2_levels(_sample_jp2):
     """Test jp2 read rect with resolution in levels.
 
@@ -598,7 +598,7 @@ def test_read_rect_jp2_levels(_sample_jp2):
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def read_rect_mpp(wsi, location, size):
     """Read rect with resolution in microns per pixel."""
     for factor in range(1, 10):
@@ -610,7 +610,7 @@ def read_rect_mpp(wsi, location, size):
         assert im_region.shape == (*size[::-1], 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_openslide_mpp(_sample_ndpi):
     """Test openslide read rect with resolution in microns per pixel.
 
@@ -622,7 +622,7 @@ def test_read_rect_openslide_mpp(_sample_ndpi):
     read_rect_mpp(wsi, location, size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_jp2_mpp(_sample_jp2):
     """Test jp2 read rect with resolution in microns per pixel.
 
@@ -634,7 +634,7 @@ def test_read_rect_jp2_mpp(_sample_jp2):
     read_rect_mpp(wsi, location, size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_openslide_objective_power(_sample_ndpi):
     """Test openslide read rect with resolution in objective power.
 
@@ -647,7 +647,7 @@ def test_read_rect_openslide_objective_power(_sample_ndpi):
     read_rect_objective_power(wsi, location, size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_rect_jp2_objective_power(_sample_jp2):
     """Test jp2 read rect with resolution in objective power.
 
@@ -660,7 +660,7 @@ def test_read_rect_jp2_objective_power(_sample_jp2):
     read_rect_objective_power(wsi, location, size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_openslide_baseline(_sample_ndpi):
     """Test openslide read bounds at baseline.
 
@@ -676,7 +676,7 @@ def test_read_bounds_openslide_baseline(_sample_ndpi):
     assert im_region.shape == (*size[::-1], 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_jp2_baseline(_sample_jp2):
     """Test jp2 read bounds at baseline.
 
@@ -697,7 +697,7 @@ def test_read_bounds_jp2_baseline(_sample_jp2):
     assert im_region.shape == (445, 64, 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_openslide_levels(_sample_ndpi):
     """Test openslide read bounds with resolution in levels.
 
@@ -717,7 +717,7 @@ def test_read_bounds_openslide_levels(_sample_ndpi):
         assert im_region.shape == expected_output_shape
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_jp2_levels(_sample_jp2):
     """Test jp2 read bounds with resolution in levels.
 
@@ -738,7 +738,7 @@ def test_read_bounds_jp2_levels(_sample_jp2):
         assert im_region.shape[2] == 3
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_openslide_mpp(_sample_ndpi):
     """Test openslide read bounds with resolution in microns per pixel.
 
@@ -751,7 +751,7 @@ def test_read_bounds_openslide_mpp(_sample_ndpi):
     read_bounds_mpp(wsi, bounds, size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_jp2_mpp(_sample_jp2):
     """Test jp2 read bounds with resolution in microns per pixel.
 
@@ -764,7 +764,7 @@ def test_read_bounds_jp2_mpp(_sample_jp2):
     read_bounds_mpp(wsi, bounds, size, jp2=True)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_openslide_objective_power(_sample_ndpi):
     """Test openslide read bounds with resolution in objective power.
 
@@ -778,7 +778,7 @@ def test_read_bounds_openslide_objective_power(_sample_ndpi):
     read_bounds_objective_power(wsi, slide_power, bounds, size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_jp2_objective_power(_sample_jp2):
     """Test jp2 read bounds with resolution in objective power.
 
@@ -792,7 +792,7 @@ def test_read_bounds_jp2_objective_power(_sample_jp2):
     read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=True)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_interpolated(_sample_svs):
     """Test openslide read bounds with interpolated output.
 
@@ -815,7 +815,7 @@ def test_read_bounds_interpolated(_sample_svs):
     assert all(np.array(im_region.shape[:2]) > size)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_level_consistency_openslide(_sample_ndpi):
     """Test read_bounds produces the same visual field across resolution levels."""
     wsi = wsireader.OpenSlideWSIReader(_sample_ndpi)
@@ -824,7 +824,7 @@ def test_read_bounds_level_consistency_openslide(_sample_ndpi):
     read_bounds_level_consistency(wsi, bounds)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_level_consistency_jp2(_sample_jp2):
     """Test read_bounds produces the same visual field across resolution levels."""
     bounds = JP2_TEST_TISSUE_BOUNDS
@@ -833,7 +833,7 @@ def test_read_bounds_level_consistency_jp2(_sample_jp2):
     read_bounds_level_consistency(wsi, bounds)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsireader_get_thumbnail_openslide(_sample_svs):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -842,7 +842,7 @@ def test_wsireader_get_thumbnail_openslide(_sample_svs):
     assert slide_thumbnail.dtype == "uint8"
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsireader_get_thumbnail_jp2(_sample_jp2):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
@@ -851,7 +851,7 @@ def test_wsireader_get_thumbnail_jp2(_sample_jp2):
     assert slide_thumbnail.dtype == "uint8"
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsireader_save_tiles(_sample_svs, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     file_types = ("*.svs",)
@@ -889,7 +889,7 @@ def test_wsireader_save_tiles(_sample_svs, tmp_path):
     )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_incompatible_objective_value(_sample_svs, tmp_path):
     """Test for incompatible objective value."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -904,7 +904,7 @@ def test_incompatible_objective_value(_sample_svs, tmp_path):
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_incompatible_level(_sample_svs, tmp_path):
     """Test for incompatible objective value."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -919,7 +919,7 @@ def test_incompatible_level(_sample_svs, tmp_path):
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
@@ -954,7 +954,7 @@ def test_wsireader_jp2_save_tiles(_sample_jp2, tmp_path):
     )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_openslide_objective_power_from_mpp(_sample_svs):
     """Test OpenSlideWSIReader approximation of objective power from mpp."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -971,7 +971,7 @@ def test_openslide_objective_power_from_mpp(_sample_svs):
         _ = wsi._info()
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -989,7 +989,7 @@ def test_openslide_mpp_from_tiff_resolution(_sample_svs):
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader(_source_image):
     """Test VirtualWSIReader"""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
@@ -1007,14 +1007,14 @@ def test_VirtualWSIReader(_source_image):
     assert img.shape == (50, 100, 3)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_invalid_mode(_source_image):
     """Test creating a VritualWSIReader with an invalid mode."""
     with pytest.raises(ValueError):
         wsireader.VirtualWSIReader(pathlib.Path(_source_image), mode="foo")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_bounds(_source_image):
     """Test VirtualWSIReader read bounds"""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
@@ -1034,7 +1034,7 @@ def test_VirtualWSIReader_read_bounds(_source_image):
         _ = wsi.read_bounds(bounds=(0, 0, 50, 100), resolution=1, units="level")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_rect(_source_image):
     """Test VirtualWSIReader read rect."""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image))
@@ -1066,7 +1066,7 @@ def test_VirtualWSIReader_read_rect(_source_image):
     assert info.as_dict() == wsi.info.as_dict()
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_bounds_virtual_baseline(_source_image):
     """Test VirtualWSIReader read bounds with virtual baseline."""
     image_path = pathlib.Path(_source_image)
@@ -1087,7 +1087,7 @@ def test_VirtualWSIReader_read_bounds_virtual_baseline(_source_image):
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_rect_virtual_baseline():
     """Test VirtualWSIReader read rect with virtual baseline.
 
@@ -1109,7 +1109,7 @@ def test_VirtualWSIReader_read_rect_virtual_baseline():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_rect_virtual_levels():
     """Test VirtualWSIReader read rect with vritual levels.
 
@@ -1136,7 +1136,7 @@ def test_VirtualWSIReader_read_rect_virtual_levels():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_bounds_virtual_levels():
     """Test VirtualWSIReader read bounds with vritual levels.
 
@@ -1170,7 +1170,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
     """Test VirtualWSIReader read rect with vritual levels and MPP.
 
@@ -1201,7 +1201,7 @@ def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
     """Test VirtualWSIReader read bounds with vritual levels and MPP.
 
@@ -1237,7 +1237,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_tissue_mask_otsu(_sample_svs):
     """Test wsi.tissue_mask with Otsu's method."""
 
@@ -1255,7 +1255,7 @@ def test_tissue_mask_otsu(_sample_svs):
     assert np.mean(np.logical_xor(mask_thumb, otsu_mask)) < 0.05
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_tissue_mask_morphological(_sample_svs):
     """Test wsi.tissue_mask with morphological method."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -1280,7 +1280,7 @@ def test_tissue_mask_morphological(_sample_svs):
     assert np.mean(np.logical_xor(mask_thumb, morpho_mask)) < 0.1
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_tissue_mask_morphological_levels(_sample_svs):
     """Test wsi.tissue_mask with morphological method and resolution in level."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -1299,7 +1299,7 @@ def test_tissue_mask_morphological_levels(_sample_svs):
     assert np.mean(mask_thumb == reference) > 0.95
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_tissue_mask_read_bounds_none_interpolation(_sample_svs):
     """Test reading a mask using read_bounds with no interpolation."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -1309,7 +1309,7 @@ def test_tissue_mask_read_bounds_none_interpolation(_sample_svs):
     assert mask_region.shape[1] == 33
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_tissue_mask_read_rect_none_interpolation(_sample_svs):
     """Test reading a mask using read_rect with no interpolation."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -1319,7 +1319,7 @@ def test_tissue_mask_read_rect_none_interpolation(_sample_svs):
     assert mask_region.shape[1] == 33
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_invalid_masker_method(_sample_svs):
     """Test that an invalid masker method string raises a ValueError."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -1327,7 +1327,7 @@ def test_invalid_masker_method(_sample_svs):
         wsi.tissue_mask(method="foo")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     """Test get_wsireader to return correct object."""
     _sample_svs = str(_sample_svs)
@@ -1362,7 +1362,7 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     assert isinstance(wsi_out, wsi_type)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_jp2_missing_cod(_sample_jp2):
     """Test for warning if JP2 is missing COD segment."""
     wsi = wsireader.OmnyxJP2WSIReader(_sample_jp2)
@@ -1538,7 +1538,7 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
 # -------------------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_read_bounds(_sample_ndpi, tmp_path):
     """Test OpenSlide read_bounds CLI."""
     runner = CliRunner()
@@ -1588,7 +1588,7 @@ def test_command_line_read_bounds(_sample_ndpi, tmp_path):
     assert pathlib.Path(tmp_path).joinpath("im_region2.jpg").is_file()
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_jp2_read_bounds(_sample_jp2, tmp_path):
     """Test JP2 read_bounds."""
     runner = CliRunner()
@@ -1611,7 +1611,7 @@ def test_command_line_jp2_read_bounds(_sample_jp2, tmp_path):
     assert pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_jp2_read_bounds_show(_sample_jp2, tmp_path):
     """Test JP2 read_bounds with mode as 'show'."""
     runner = CliRunner()
@@ -1633,7 +1633,7 @@ def test_command_line_jp2_read_bounds_show(_sample_jp2, tmp_path):
     assert read_bounds_result.exit_code == 0
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_unsupported_file_read_bounds(_sample_svs, tmp_path):
     """Test unsupported file read bounds."""
     runner = CliRunner()
@@ -1657,7 +1657,7 @@ def test_command_line_unsupported_file_read_bounds(_sample_svs, tmp_path):
     assert isinstance(read_bounds_result.exception, FileNotSupported)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_slide_thumbnail(_sample_ndpi, tmp_path):
     """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
@@ -1665,7 +1665,7 @@ def test_command_line_slide_thumbnail(_sample_ndpi, tmp_path):
     command_line_slide_thumbnail(runner, sample=_sample_ndpi, tmp_path=tmp_path)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_slide_thumbnail_output_none(_sample_svs, tmp_path):
     """Test cli slide thumbnail with output dir None."""
     runner = CliRunner()
@@ -1684,7 +1684,7 @@ def test_command_line_slide_thumbnail_output_none(_sample_svs, tmp_path):
     assert pathlib.Path(tmp_path).joinpath("../slide_thumb.jpg").is_file()
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
@@ -1692,7 +1692,7 @@ def test_command_line_jp2_slide_thumbnail(_sample_jp2, tmp_path):
     command_line_slide_thumbnail(runner, sample=_sample_jp2, tmp_path=tmp_path)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_jp2_slide_thumbnail_mode_show(_sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI mode='show'."""
     runner = CliRunner()
@@ -1702,7 +1702,7 @@ def test_command_line_jp2_slide_thumbnail_mode_show(_sample_jp2, tmp_path):
     )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_command_line_jp2_slide_thumbnail_file_not_supported(_sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
@@ -1725,7 +1725,7 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(_sample_jp2, tmp_pa
     assert isinstance(slide_thumb_result.exception, FileNotSupported)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_openslide_read_rect_edge_reflect_padding(_sample_svs):
     """Test openslide edge reflect padding for read_rect."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
@@ -1733,7 +1733,7 @@ def test_openslide_read_rect_edge_reflect_padding(_sample_svs):
     assert 0 not in region.min(axis=-1)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
     """Test openslide edge reflect padding for read_bounds."""
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
