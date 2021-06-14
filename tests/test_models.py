@@ -28,7 +28,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_get_coordinates():
     """Test get tile cooordinates functionality."""
     expected_output = np.array(
@@ -99,7 +99,7 @@ def test_get_coordinates():
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -132,7 +132,7 @@ def test_create_backbone():
         get_model("secret_model-kather100k", pretrained=False)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_set_root_dir():
     """Test for setting new root dir."""
     # skipcq
@@ -156,7 +156,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():
     """Test for kather patch dataset."""
     # test defining a subclass of dataset info but not defining
@@ -247,7 +247,7 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -265,7 +265,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -310,7 +310,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -337,7 +337,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
@@ -433,7 +433,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret-dataset")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -527,7 +527,7 @@ def test_WSIPatchDataset(_mini_wsi1_svs, _mini_wsi1_jpg):
     assert np.min(correlation) > 0.9, correlation
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg):
     """Test if different resolution read is as expected."""
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
@@ -639,7 +639,7 @@ def test_WSIPatchDataset_varying_resolution_read(_mini_wsi1_svs, _mini_wsi1_jpg)
     assert (roi1 - roi2).sum() == 0
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -661,7 +661,7 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -763,13 +763,13 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 # @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_sample_wsi_dict):
     """Test normal run of wsi predictor."""
-    on_gpu = True
+    on_gpu = False
     # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
 
-    # on_gpu = True
+    # on_gpu = False
     # root_dir = '/root/storage_1/workspace/tiatoolbox/tests/local_samples/'
     # _mini_wsi_svs = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.svs' % root_dir)
     # _mini_wsi_jpg = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.jpg' % root_dir)
@@ -846,14 +846,13 @@ def test_wsi_predictor_api(_sample_wsi_dict):
 # @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
-
     # convert to pathlib Path to prevent wsireader complaint
-    on_gpu = True
+    on_gpu = False
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
 
-    # on_gpu = True
+    # on_gpu = False
     # root_dir = '/root/storage_1/workspace/tiatoolbox/tests/local_samples/'
     # _mini_wsi_svs = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.svs' % root_dir)
     # _mini_wsi_jpg = pathlib.Path('%s/model_sample_wsi/wsi2_4k_x_4k.jpg' % root_dir)
@@ -909,7 +908,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     assert accuracy > 0.9, np.nonzero(~diff)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def _test_predictor_output(
     input_list,
     pretrained_model,
@@ -940,28 +939,28 @@ def _test_predictor_output(
         ), pretrained_model
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     """Test the output of patch prediction models."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     pretrained_info = {
-        "alexnet-kather100k": [1.0, 0.9999735355377197],
+        # "alexnet-kather100k": [1.0, 0.9999735355377197],
         "resnet18-Kather100k": [1.0, 0.9999911785125732],
-        "resnet34-kather100k": [1.0, 0.9979840517044067],
-        "resnet50-kather100k": [1.0, 0.9999986886978149],
-        "resnet101-kather100k": [1.0, 0.9999932050704956],
-        "resnext50_32x4d-kather100k": [1.0, 0.9910059571266174],
-        "resnext101_32x8d-kather100k": [1.0, 0.9999971389770508],
-        "wide_resnet50_2-kather100k": [1.0, 0.9953408241271973],
-        "wide_resnet101_2-kather100k": [1.0, 0.9999831914901733],
-        "densenet121-kather100k": [1.0, 1.0],
-        "densenet161-kather100k": [1.0, 0.9999959468841553],
-        "densenet169-kather100k": [1.0, 0.9999934434890747],
-        "densenet201-kather100k": [1.0, 0.9999983310699463],
-        "mobilenet_v2-kather100k": [0.9999998807907104, 0.9999126195907593],
-        "mobilenet_v3_large-kather100k": [0.9999996423721313, 0.9999878406524658],
-        "mobilenet_v3_small-kather100k": [0.9999998807907104, 0.9999997615814209],
-        "googlenet-kather100k": [1.0, 0.9999639987945557],
+        # "resnet34-kather100k": [1.0, 0.9979840517044067],
+        # "resnet50-kather100k": [1.0, 0.9999986886978149],
+        # "resnet101-kather100k": [1.0, 0.9999932050704956],
+        # "resnext50_32x4d-kather100k": [1.0, 0.9910059571266174],
+        # "resnext101_32x8d-kather100k": [1.0, 0.9999971389770508],
+        # "wide_resnet50_2-kather100k": [1.0, 0.9953408241271973],
+        # "wide_resnet101_2-kather100k": [1.0, 0.9999831914901733],
+        # "densenet121-kather100k": [1.0, 1.0],
+        # "densenet161-kather100k": [1.0, 0.9999959468841553],
+        # "densenet169-kather100k": [1.0, 0.9999934434890747],
+        # "densenet201-kather100k": [1.0, 0.9999983310699463],
+        # "mobilenet_v2-kather100k": [0.9999998807907104, 0.9999126195907593],
+        # "mobilenet_v3_large-kather100k": [0.9999996423721313, 0.9999878406524658],
+        # "mobilenet_v3_small-kather100k": [0.9999998807907104, 0.9999997615814209],
+        # "googlenet-kather100k": [1.0, 0.9999639987945557],
     }
     for pretrained_model, expected_prob in pretrained_info.items():
         _test_predictor_output(
