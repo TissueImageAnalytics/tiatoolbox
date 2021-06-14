@@ -425,7 +425,7 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_shape = wsi.slide_dimensions(0.55, 'mpp')
 
         """

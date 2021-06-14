@@ -2,9 +2,6 @@
 
 import pathlib
 
-# import sys
-# sys.path.append('..')
-
 import cv2
 import numpy as np
 import pytest
@@ -1386,13 +1383,6 @@ def test_read_bounds_location_in_requested_resolution(
     _mini_wsi1_svs = pathlib.Path(_mini_wsi1_svs)
     _mini_wsi1_msk = pathlib.Path(_mini_wsi1_msk)
     _mini_wsi1_jpg = pathlib.Path(_mini_wsi1_jpg)
-    # exit()
-    # root_dir = '/home/tialab-dang/workstation_storage_1/' \
-    #             'workspace/tiatoolbox/tests/local_samples/'
-    # _mini_wsi2_jp2 = pathlib.Path('%s/mini_wsi2.jp2'% root_dir)
-    # _mini_wsi1_svs = pathlib.Path('%s/CMU-mini.svs' % root_dir)
-    # _mini_wsi1_msk = pathlib.Path('%s/CMU-mask.png' % root_dir)
-    # _mini_wsi1_jpg = pathlib.Path('%s/CMU-mini.jpg' % root_dir)
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
         """Correlation test to compare output of 2 readers."""
@@ -1411,13 +1401,13 @@ def test_read_bounds_location_in_requested_resolution(
                     **read_cfg,
                 )
         # ~ sane check code for local debug
-        import matplotlib.pyplot as plt
-        plt.subplot(1, 2, 1)
-        plt.imshow(roi1)
-        plt.subplot(1, 2, 2)
-        plt.imshow(roi2)
-        plt.savefig('dump.png')
-        plt.close()
+        # import matplotlib.pyplot as plt
+        # plt.subplot(1, 2, 1)
+        # plt.imshow(roi1)
+        # plt.subplot(1, 2, 2)
+        # plt.imshow(roi2)
+        # plt.savefig('dump.png')
+        # plt.close()
         # ~
         assert roi1.shape[0] == requested_size[0], (
                     read_cfg, requested_size, roi1.shape)
