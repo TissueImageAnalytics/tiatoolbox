@@ -74,7 +74,7 @@ class KatherPatchDataset(ABCDatasetInfo):
 
     """
 
-    # We predefine to follow enforcement, actual initialization in innit
+    # We predefine to follow enforcement, actual initialization in init
     input_list = None
     label_list = None
     label_name = None
@@ -107,7 +107,8 @@ class KatherPatchDataset(ABCDatasetInfo):
             save_dir_path = os.path.join(
                 save_dir_path, "Kather_texture_2016_image_tiles_5000/"
             )
-        elif not os.path.exists(save_dir_path):
+        # bring outside to prevent case where download fail
+        if not os.path.exists(save_dir_path):
             raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
 
         # What will happen if downloaded data get corrupted?
