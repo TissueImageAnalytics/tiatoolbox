@@ -27,7 +27,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -60,7 +60,7 @@ def test_create_backbone():
         get_model("secret_model-kather100k", pretrained=False)
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_set_root_dir():
     """Test for setting new root dir."""
     # skipcq
@@ -84,7 +84,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():
     """Test for kather patch dataset."""
     # test defining a subclass of dataset info but not defining
@@ -175,7 +175,7 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -193,7 +193,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -238,7 +238,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -265,7 +265,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
@@ -361,7 +361,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret-dataset")
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -467,7 +467,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -489,7 +489,7 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -588,7 +588,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_sample_wsi_dict):
     """Test normal run of wsi predictor."""
     on_gpu = False
@@ -665,7 +665,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         shutil.rmtree(save_dir, ignore_errors=True)
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -724,7 +724,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     assert accuracy > 0.9, np.nonzero(~diff)
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def _test_predictor_output(
     input_list,
     pretrained_model,
@@ -755,7 +755,7 @@ def _test_predictor_output(
         ), pretrained_model
 
 
-#@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     """Test the output of patch prediction models."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
