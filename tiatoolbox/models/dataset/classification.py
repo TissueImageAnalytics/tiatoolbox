@@ -198,11 +198,13 @@ class WSIPatchDataset(abc.ABCPatchDataset):
 
             patch_size: a tuple (int, int) or ndarray of shape (2,).
             Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be (height, width). Note, this is not at level 0.
+            Expected to be positive and of (height, width). Note, this is not at
+            level 0.
 
             stride_size: a tuple (int, int) or ndarray of shape (2,).
             Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be (height, width). Note, this is not at level 0.
+            Expected to be positive and of (height, width). Note, this is not at
+            level 0.
 
             resolution: check (:class:`.WSIReader`) for details. When `mode='tile'`,
             value is fixed to be `resolution=1.0` and `units='baseline'`
@@ -237,8 +239,6 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             or np.any(stride_size < 0)
         ):
             raise ValueError("Invalid `stride_size` value %s." % stride_size)
-        if np.any(stride_size < 1):
-            raise ValueError("`stride_size` value %s must be > 1." % stride_size)
 
         img_path = pathlib.Path(img_path)
         if mode == "wsi":
@@ -281,9 +281,6 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             wsi_shape, patch_size[::-1], stride_size[::-1],
             within_bound=False,
         )
-
-        if len(self.input_list) == 0:
-            raise ValueError("No coordinate remain after tiling!")
 
         mask_reader = None
         if mask_path is not None:

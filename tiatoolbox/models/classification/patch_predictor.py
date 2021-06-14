@@ -296,7 +296,8 @@ class CNNPatchPredictor:
             br = (np.array(bound[2:]) * fx + 0.5).astype(np.int32)
             output[tl[1] : br[1], tl[0] : br[0]] = prediction
             if denominator is not None:
-                denominator[tl[1] : br[1], tl[0] : br[1]] += 1
+                denominator[tl[1] : br[1], tl[0] : br[0]] += 1
+
         # deal with overlapping regions
         if denominator is not None:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
@@ -438,11 +439,12 @@ class CNNPatchPredictor:
             on_gpu (bool): whether to run model on the GPU.
 
             patch_size (tuple): Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to level 0.
+                requested read resolution, not with respect to level 0, and must be
+                positive.
 
             stride_size (tuple): Stride using during tile and WSI processing. Stride
-                is at requested read resolution, not with respect to to level 0. If
-                not provided, `stride_size=patch_size`.
+                is at requested read resolution, not with respect to to level 0, and
+                must be positive. If not provided, `stride_size=patch_size`.
 
             resolution (float): Resolution used for reading the image.
 
@@ -474,7 +476,7 @@ class CNNPatchPredictor:
             raise ValueError(
                 "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
             )
-        if label_list is not None:
+        if label_list is not None and mode == 'patch':
             # if a label_list is provided, then return with the prediction
             return_labels = bool(label_list)
             if len(label_list) != len(img_list):
@@ -510,15 +512,14 @@ class CNNPatchPredictor:
                     "we save the outputs and return the locations "
                     "to the corresponding files."
                 )
-            if len(img_list) > 1 and save_dir is None:
-                warnings.warn(
-                    "> 1 WSIs detected but there is no save directory set."
-                    "All subsequent output will be saved to current runtime"
-                    "location under folder 'output'. Overwriting may happen!"
-                )
-                save_dir = os.path.join(os.getcwd(), "output")
+                if save_dir is None:
+                    warnings.warn(
+                        "> 1 WSIs detected but there is no save directory set."
+                        "All subsequent output will be saved to current runtime"
+                        "location under folder 'output'. Overwriting may happen!"
+                    )
+                    save_dir = os.path.join(os.getcwd(), "output")
 
-            if len(img_list) > 1:
                 save_dir = pathlib.Path(save_dir)
                 if not save_dir.is_dir():
                     os.makedirs(save_dir)

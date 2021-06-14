@@ -20,6 +20,7 @@
 
 """Contains dataset functionality for use with models in tiatoolbox."""
 
+from tiatoolbox.models.dataset.abc import ABCPatchDataset
 from tiatoolbox.models.dataset.classification import (
     PatchDataset,
     WSIPatchDataset,

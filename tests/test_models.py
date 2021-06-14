@@ -8,10 +8,6 @@ import numpy as np
 import pytest
 import torch
 
-# import sys
-# sys.path.append('.')
-# os.environ['CUDA_VISIBLE_DEVICE'] = '0'
-
 from tiatoolbox import rcParam
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
@@ -28,10 +24,10 @@ from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-ON_GPU = False
+ON_GPU = True
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
@@ -64,7 +60,7 @@ def test_create_backbone():
         get_model("secret_model-kather100k", pretrained=False)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():
     """Test for kather patch dataset."""
     # test defining a subclass of dataset info but not defining
@@ -155,7 +151,7 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -173,7 +169,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)
@@ -218,7 +214,7 @@ def test_PatchDatasetlist_imgs():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
@@ -245,7 +241,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_PatchDatasetcrash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
@@ -341,7 +337,7 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret-dataset")
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -535,7 +531,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -556,8 +552,23 @@ def test_predictor_crash():
     with pytest.raises(ValueError, match=r".*must be a string.*"):
         CNNPatchPredictor(pretrained_model=123)
 
+    # test predict crash
+    predictor = CNNPatchPredictor(
+        pretrained_model="resnet18-kather100k",
+        batch_size=32)
 
-@pytest.mark.skip(reason="working, skip to run other test")
+    with pytest.raises(ValueError, match=r".*not a valid mode.*"):
+        predictor.predict('aaa', mode='random')
+    with pytest.raises(ValueError, match=r".*must be a list of file paths.*"):
+        predictor.predict('aaa', mode='wsi')
+    with pytest.raises(ValueError):
+        predictor.predict([1, 2, 3], label_list=[1, 2], mode='patch')
+    # remove previously generated data
+    if os.path.exists('output'):
+        shutil.rmtree('output', ignore_errors=True)
+
+
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # must wrap or sthg stupid happens
@@ -656,7 +667,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_sample_wsi_dict):
     """Test normal run of wsi predictor."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -714,26 +725,61 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         merge_predictions=True,  # to test the api coverage
         units="mpp",)
 
+    import copy
+    _kwargs = copy.deepcopy(kwargs)
+    _kwargs['merge_predictions'] = False
     # test reading of multiple whole-slide images
-    predictor.predict(
-        [_mini_wsi_svs, _mini_wsi_svs, _mini_wsi_svs],
-        mask_list=[_mini_wsi_msk, _mini_wsi_msk, _mini_wsi_msk],
-        mode="wsi", **kwargs
+    output = predictor.predict(
+        [_mini_wsi_svs, _mini_wsi_svs],
+        mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+        mode="wsi", **_kwargs,
+    )
+    for output_info in output.values():
+        assert os.path.exists(output_info['raw'])
+        assert 'merged' not in output_info
+    if os.path.exists(_kwargs['save_dir']):
+        shutil.rmtree(_kwargs['save_dir'], ignore_errors=True)
+
+    # coverage test
+    _kwargs = copy.deepcopy(kwargs)
+    _kwargs['merge_predictions'] = True
+    # test reading of multiple whole-slide images
+    output = predictor.predict(
+        [_mini_wsi_svs, _mini_wsi_svs],
+        mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+        mode="wsi", **_kwargs,
     )
     with pytest.raises(ValueError, match=r".*save_dir.*exist.*"):
+        _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
             mask_list=[_mini_wsi_msk, _mini_wsi_msk],
-            mode="wsi", **kwargs
+            mode="wsi", **_kwargs
         )
+    # remove previously generated data
+    if os.path.exists(_kwargs['save_dir']):
+        shutil.rmtree(_kwargs['save_dir'], ignore_errors=True)
+
+    # test reading of multiple whole-slide images
+    _kwargs = copy.deepcopy(kwargs)
+    _kwargs['save_dir'] = None  # default coverage
+    _kwargs['return_probabilities'] = False
+    output = predictor.predict(
+        [_mini_wsi_svs, _mini_wsi_svs],
+        mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+        mode="wsi", **_kwargs,
+    )
+    assert os.path.exists('output')
+    for output_info in output.values():
+        assert os.path.exists(output_info['raw'])
+        assert 'merged' in output_info and os.path.exists(output_info['merged'])
 
     # remove previously generated data
-    save_dir = "model_wsi_output"
-    if os.path.exists(save_dir):
-        shutil.rmtree(save_dir, ignore_errors=True)
+    if os.path.exists('output'):
+        shutil.rmtree('output', ignore_errors=True)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -791,7 +837,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     assert accuracy > 0.9, np.nonzero(~diff)
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def _test_predictor_output(
     input_list,
     pretrained_model,
@@ -826,7 +872,7 @@ def _test_predictor_output(
         )
 
 
-@pytest.mark.skip(reason="working, skip to run other test")
+# @pytest.mark.skip(reason="working, skip to run other test")
 def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     """Test the output of patch prediction models."""
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
