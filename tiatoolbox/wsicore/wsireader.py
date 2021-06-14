@@ -727,9 +727,11 @@ class WSIReader:
         :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)): Tuple of (start_x, start_y, end_x,
-                end_y) i.e. (left, top, right, bottom) of the region in
-                baseline reference frame.
+            bounds (tuple(int)): By deafult, this is a tuple of (start_x,
+                start_y, end_x, end_y) i.e. (left, top, right, bottom) of
+                the region in baseline reference frame. However, with
+                `location_is_at_requested=True`, the bound is expected to
+                be at the requested resolution system.
             resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
@@ -750,6 +752,10 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
+            location_is_at_requested (bool): default to `False`, this is a
+                flag to indicate if the input `bounds` is in the baseline
+                coordinate system (`False`) or is in the requested resolution
+                system (`True`).
             **kwargs (dict): Extra key-word arguments for reader
                 specific parameters. Currently only used by
                 :obj:`VirtualWSIReader`. See class docstrings for more
