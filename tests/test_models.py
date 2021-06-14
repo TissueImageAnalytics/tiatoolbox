@@ -24,7 +24,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-ON_GPU = True
+ON_GPU = False
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
