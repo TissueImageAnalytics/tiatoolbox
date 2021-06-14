@@ -276,8 +276,10 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         # the scaling factor will scale base level to requested read resolution/units
         wsi_shape = self.reader.slide_dimensions(resolution=resolution, units=units)
 
+        # use all patches, as long as it overlaps source image
         self.input_list = PatchExtractor.get_coordinates(
-            wsi_shape, patch_size[::-1], stride_size[::-1]
+            wsi_shape, patch_size[::-1], stride_size[::-1],
+            within_bound=False,
         )
 
         if len(self.input_list) == 0:
