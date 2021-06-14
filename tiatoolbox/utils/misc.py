@@ -578,6 +578,7 @@ def save_json(output, output_path):
         output_path (str): Output path for dictionary.
 
     """
+    # TODO: very primitive and naive, actual json parser class later?
     new_output = {}
     for k, v in output.items():
         if isinstance(v, np.ndarray):
@@ -585,7 +586,7 @@ def save_json(output, output_path):
         else:
             new_output[k] = v
     with open(output_path, "w") as handle:
-        json.dump(output, handle)
+        json.dump(new_output, handle)
 
 
 def select_device(on_gpu):
