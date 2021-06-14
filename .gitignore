@@ -110,10 +110,5 @@ examples/*.py
 # Mac generated
 .DS_Store
 
-tests/data
-tests/*.png
-tests/local_samples/
 # vim/vi generated
 *.swp
-
-dataset
