@@ -555,7 +555,11 @@ def _sample_wsi_dict(tmpdir_factory):
 
     """
     file_name_dict = {
+        'wsi1_8k_8k_svs' : 'wsi1_8k_8k.svs',
+        'wsi1_8k_8k_jp2' : 'wsi1_8k_8k.jp2',
+        'wsi1_8k_8k_jpg' : 'wsi1_8k_8k.jpg',
         'wsi2_4k_4k_svs' : 'wsi2_4k_4k.svs',
+        'wsi2_4k_4k_jp2' : 'wsi2_4k_4k.jp2',
         'wsi2_4k_4k_jpg' : 'wsi2_4k_4k.jpg',
         'wsi2_4k_4k_msk' : 'wsi2_4k_4k.mask.png',
     }
