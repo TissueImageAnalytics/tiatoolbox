@@ -128,10 +128,7 @@ class CNNPatchModel(ModelBase):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        if on_gpu:
-            device = "cuda"
-        else:
-            device = "cpu"
+        device = misc.select_device(on_gpu)
 
         img_patches = batch_data
         img_patches_device = img_patches.to(device).type(torch.float32)  # to NCHW
