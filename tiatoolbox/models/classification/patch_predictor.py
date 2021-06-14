@@ -500,7 +500,6 @@ class CNNPatchPredictor:
 
             self.iostate = self._iostate
             if patch_size is not None:
-                stride_size = stride_size
                 iostate = _IOStatePatchPredictor(
                     input_resolutions=[{'resolution': resolution, 'units': units}],
                     output_resolutions=[{'resolution': resolution, 'units': units}],

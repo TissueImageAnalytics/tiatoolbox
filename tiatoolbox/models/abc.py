@@ -38,6 +38,7 @@ class IOStateBase(ABC):
             output.
 
     """
+
     @property
     @abstractmethod
     def patch_size(self):
