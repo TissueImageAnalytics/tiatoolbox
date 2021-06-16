@@ -546,3 +546,136 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
         shutil.copy(_sample_patch2, dir_path.joinpath(_sample_patch2.basename))
 
     return dir_path
+
+
+@pytest.fixture(scope="session")
+def _sample_crc_tile(tmpdir_factory):
+    """A CRC sample pytest fixture to test model."""
+    patch_file_path = tmpdir_factory.mktemp("data").join("crc_tile.tif")
+
+    if not pathlib.Path(patch_file_path).is_file():
+        print("\nDownloading sample patch 2")
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/"
+            "CRC-Prim-HE-07_APPLICATION.tif"
+        )
+        with open(patch_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping Source Image")
+
+    return patch_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_svs(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-mini.svs")
+    if not pathlib.Path(svs_file_path).is_file():
+        print("\nDownloading %s" % svs_file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.svs"
+        )
+        with open(svs_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % svs_file_path)
+
+    return svs_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi2_jp2(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    svs_file_path = tmpdir_factory.mktemp("data").join("mini_wsi2.jp2")
+    if not pathlib.Path(svs_file_path).is_file():
+        print("\nDownloading %s" % svs_file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/mini_wsi2.jp2"
+        )
+        with open(svs_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % svs_file_path)
+
+    return svs_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_jpg(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    svs_file_path = tmpdir_factory.mktemp("data").join("CMU-mini.jpg")
+    if not pathlib.Path(svs_file_path).is_file():
+        print("\nDownloading %s" % svs_file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mini.jpg"
+        )
+        with open(svs_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % svs_file_path)
+
+    return svs_file_path
+
+
+@pytest.fixture(scope="session")
+def _mini_wsi1_msk(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    file_path = tmpdir_factory.mktemp("data").join("CMU-mask.png")
+    if not pathlib.Path(file_path).is_file():
+        print("\nDownloading %s" % file_path)
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/CMU-mask.png"
+        )
+        with open(file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping %s" % file_path)
+
+    return file_path
+
+
+@pytest.fixture(scope="session")
+def _sample_wsi_dict(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    file_name_dict = {
+        'wsi1_8k_8k_svs' : 'wsi1_8k_8k.svs',
+        'wsi1_8k_8k_jp2' : 'wsi1_8k_8k.jp2',
+        'wsi1_8k_8k_jpg' : 'wsi1_8k_8k.jpg',
+        'wsi2_4k_4k_svs' : 'wsi2_4k_4k.svs',
+        'wsi2_4k_4k_jp2' : 'wsi2_4k_4k.jp2',
+        'wsi2_4k_4k_jpg' : 'wsi2_4k_4k.jpg',
+        'wsi2_4k_4k_msk' : 'wsi2_4k_4k.mask.png',
+        'wsi2_4k_4k_pred' : 'wsi2_4k_4k.pred.dat',
+    }
+
+    info_dict = {}
+    URL_HOME = 'https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new'
+    for file_code, file_name in file_name_dict.items():
+        file_path = tmpdir_factory.mktemp("data").join(file_name)
+        if not pathlib.Path(file_path).is_file():
+            print("\nDownloading %s" % file_path)
+            r = requests.get(
+                '%s/%s' % (URL_HOME, file_name)
+            )
+            with open(file_path, "wb") as f:
+                f.write(r.content)
+        else:
+            print("\nSkipping %s" % file_path)
+        info_dict[file_code] = file_path
+    return info_dict
