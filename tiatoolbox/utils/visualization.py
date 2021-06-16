@@ -111,7 +111,7 @@ def overlay_patch_prediction(
 
     # generate another ax, else using the provided
     if ax is None:
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
     ax.imshow(overlay)
     ax.axis("off")
     # generate colour bar
