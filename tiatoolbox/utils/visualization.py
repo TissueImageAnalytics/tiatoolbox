@@ -25,15 +25,12 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from tiatoolbox.utils.misc import get_pretrained_model_info
-
 
 def overlay_patch_prediction(
             img : np.ndarray,
             prediction : np.ndarray,
             alpha : float = 0.35,
             label_info : dict = None,
-            cmap=None,
             ax=None,
         ):
     """Generate an overlay, given a 2D prediction map.
@@ -46,33 +43,46 @@ def overlay_patch_prediction(
             within `prediction` to its string and color. [int] : (str, (int, int, int)).
             By default, integer will be taken as label and color will be random.
         alpha (float): Opacity value used for the overlay.
-
+        ax (ax): Matplotlib ax object.
     """
+    if img.shape[:2] != prediction.shape[:2]:
+        raise ValueError(
+            'Mismatch shape `img` {0} vs `prediction` {1}.'.format(
+                img.shape[:2], prediction.shape[:2]
+            ))
+
     img = img.astype("uint8")
     overlay = img.copy()
 
     # generate random colours
     predicted_classes = sorted(np.unique(prediction).tolist())
-    if label_info is not None:
+    if label_info is None:
         np.random.seed(123)
         label_info = {}
         for label_uid in predicted_classes:
             random_colour = np.random.choice(range(256), size=3)
             label_info[label_uid] = (str(label_uid), random_colour)
     else:
-        if len(predicted_classes) != len(label_info):
-            raise ValueError((
-                    'Label info does not match '
-                    'number of classes in prediction.'))
+        # may need better error message
+        check_uid_list = list(predicted_classes)
         for label_uid, (label_name, label_colour) in label_info.items():
-            if not np.issubdtype(label_uid, np.interger):
-                raise ValueError('Wrong format')
+            if label_uid in check_uid_list:
+                check_uid_list.remove(label_uid)
+            if not isinstance(label_uid, int):
+                raise ValueError('Wrong `label_info` format: label_uid {0}'.format(
+                    [label_uid, (label_name, label_colour)]))
             if not isinstance(label_name, str):
-                raise ValueError('Wrong format')
-            if not isinstance(label_colour, [tuple, list, np.ndarray]):
-                raise ValueError('Wrong format')
+                raise ValueError('Wrong `label_info` format: label_name {0}'.format(
+                    [label_uid, (label_name, label_colour)]))
+            if not isinstance(label_colour, (tuple, list, np.ndarray)):
+                raise ValueError('Wrong `label_info` format: label_colour {0}'.format(
+                    [label_uid, (label_name, label_colour)]))
             if len(label_colour) != 3:
-                raise ValueError('Wrong format')
+                raise ValueError('Wrong `label_info` format: label_colour {0}'.format(
+                    [label_uid, (label_name, label_colour)]))
+        #
+        if len(check_uid_list) != 0:
+            raise ValueError('Missing label for: {0}'.format(check_uid_list))
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
@@ -100,7 +110,7 @@ def overlay_patch_prediction(
     }
 
     # generate another ax, else using the provided
-    if ax is not None:
+    if ax is None:
         fig, ax = plt.subplots()
     ax.imshow(overlay)
     ax.axis("off")
