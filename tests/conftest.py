@@ -661,6 +661,7 @@ def _sample_wsi_dict(tmpdir_factory):
         'wsi2_4k_4k_jp2' : 'wsi2_4k_4k.jp2',
         'wsi2_4k_4k_jpg' : 'wsi2_4k_4k.jpg',
         'wsi2_4k_4k_msk' : 'wsi2_4k_4k.mask.png',
+        'wsi2_4k_4k_pred' : 'wsi2_4k_4k.pred.dat',
     }
 
     info_dict = {}
