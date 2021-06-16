@@ -1,11 +1,12 @@
-"""Tests for reading whole-slide images."""
-
-import pathlib
+"""Tests for visualization."""
 
 import copy
-import pytest
+import pathlib
+
 import joblib
 import matplotlib.pyplot as plt
+import numpy as np
+import pytest
 
 from tiatoolbox.utils.visualization import overlay_patch_prediction
 from tiatoolbox.wsicore.wsireader import get_wsireader
@@ -36,6 +37,9 @@ def test_overlay_patch_prediction(_sample_wsi_dict):
     }
 
     thumb = reader.slide_thumbnail(resolution=raw['resolution'], units=raw['units'])
+    with pytest.raises(ValueError, match=r".*float `img` outside.*"):
+        _ = overlay_patch_prediction(thumb.astype(np.float32), merged)
+
     with pytest.raises(ValueError, match=r".*Missing label.*"):
         label_info_fail = copy.deepcopy(label_info_full)
         del label_info_fail[1]
@@ -54,6 +58,8 @@ def test_overlay_patch_prediction(_sample_wsi_dict):
         _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
 
     # test normal run, should not crash
+    thumb_float = thumb / 255.0
+    _ = overlay_patch_prediction(thumb_float, merged, label_info=label_info_full)
     _ = overlay_patch_prediction(thumb, merged, label_info=label_info_full)
     ax = plt.subplot(1, 2, 1)
     _ = overlay_patch_prediction(thumb, merged, label_info=label_info_full, ax=ax)

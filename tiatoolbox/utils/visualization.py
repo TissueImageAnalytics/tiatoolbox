@@ -36,7 +36,7 @@ def overlay_patch_prediction(
     """Generate an overlay, given a 2D prediction map.
 
     Args:
-        img (ndarray): Image to overlay the results on top of.
+        img (ndarray): Input image to overlay the results on top of.
         prediction (ndarray): 2D prediction map. Multi-class prediction should have
             values ranging from 0 to N-1, where N is the number of classes.
         label_info (dict): A dictionary contains the mapping for each integer value
@@ -51,7 +51,11 @@ def overlay_patch_prediction(
                 img.shape[:2], prediction.shape[:2]
             ))
 
-    img = img.astype("uint8")
+    if np.issubdtype(img.dtype, np.floating):
+        if not (img.max() <= 1.0 and img.min() >= 0):
+            raise ValueError('Not support float `img` outside [0, 1].')
+        img = np.array(img * 255, dtype=np.uint8)
+
     overlay = img.copy()
 
     # generate random colours
