@@ -174,15 +174,17 @@ class Segmentor:
             raise ValueError("Must provide either of `model` or `pretrained_model`")
 
         if model is not None:
-            self._model = copy.deepcopy(model)
+            self.model = model
+            iostate = None  # retrieve iostate from provided model ?
         else:
-            self._model = get_pretrained_model(
+            model, iostate = get_pretrained_model(
                 pretrained_model, pretrained_weight
             )
 
-        # to keepsake in case of being nested in DataParallel
-        self.model = None # this is for runtime
-
+        self._iostate = iostate  # for storing original
+        self.iostate = None  # for runtime
+        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
+        self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
         self.num_postproc_worker = num_postproc_worker
@@ -190,34 +192,13 @@ class Segmentor:
 
     def _predict_one_wsi(self, wsi_path, mask_path, loader):
 
-        # ! refactor this out
-        # ~~~~~
-        def get_wsi_proc_shape(resolution=self.resolution, units=self.units):
-            lv0_shape = wsi_reader.info.slide_dimensions
-            lv0_bound = (0, 0) + lv0_shape
-            _, _, read_shape, _ = wsi_reader.find_read_bounds_params(
-                bounds=lv0_bound,
-                resolution=resolution,
-                units=units,
-            )
-            return np.array(read_shape)
-
         wsi_reader = get_wsireader(wsi_path)
-        wsi_proc_shape = get_wsi_proc_shape() # in XY
-        scale_to_lv0 = np.array(wsi_reader.info.slide_dimensions) / wsi_proc_shape
-        scale_to_lv0 = scale_to_lv0[0]
-        wsi_proc_shape = wsi_proc_shape[::-1]  # in YX
+        # in XY
+        wsi_proc_shape = wsi_reader.slide_dimensions(
+                            self.iostate.resolution,
+                            self.iostate.units)
 
-        if mask_path is not None and os.path.exists(mask_path):
-            wsi_mask = imread(mask_path)
-            wsi_mask = cv2.cvtColor(wsi_mask, cv2.COLOR_RGB2GRAY)
-        else:  # process everything if no mask is provided
-            # ! HACK: inconsistent behavior between VirtualReader and WSI
-            # ! how to reliably retrieve the shape of downscale version ?
-            thumb_shape = get_wsi_proc_shape(1.0, units='baseline')
-            wsi_mask = np.ones(thumb_shape[::-1], dtype=np.uint8)
-        wsi_mask[wsi_mask > 0] = 1
-        # ~~~~~
+
 
         # * retrieve patch and tile placement
         patch_info_list = _get_patch_info(
@@ -354,4 +335,3 @@ class Segmentor:
         wsi_mask = morphology.remove_small_objects(wsi_mask, min_size=32*32, connectivity=2)
 
         return [wsi_mask]
-
