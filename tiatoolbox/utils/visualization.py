@@ -73,7 +73,6 @@ def overlay_patch_prediction(
             if label_uid in check_uid_list:
                 check_uid_list.remove(label_uid)
             if not isinstance(label_uid, int):
-                print('HERE')
                 raise ValueError('Wrong `label_info` format: label_uid {0}'.format(
                     [label_uid, (label_name, label_colour)]))
             if not isinstance(label_name, str):

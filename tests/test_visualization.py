@@ -50,6 +50,10 @@ def test_overlay_patch_prediction(_sample_wsi_dict):
         _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
     with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
         label_info_fail = copy.deepcopy(label_info_full)
+        label_info_fail['ABC'] = ('ABC', (255, 255, 255))
+        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+        label_info_fail = copy.deepcopy(label_info_full)
         label_info_fail[1] = ('ABC', 'ABC')
         _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
     with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
