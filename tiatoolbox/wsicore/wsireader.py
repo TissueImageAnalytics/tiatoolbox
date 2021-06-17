@@ -313,7 +313,7 @@ class WSIReader:
         )
         return output
 
-    def _find_read_params_at_requested_resolution(
+    def _find_read_params_at_resolution(
             self, location, size, resolution, units):
         """Work similar to `find_read_rect_params`.
 
