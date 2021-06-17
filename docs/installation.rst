@@ -5,6 +5,38 @@ Installation
 ============
 
 
+Prerequisites
+--------------
+The prerequisites for tiatoolbox installation are OpenSlide binaries and OpenJpeg version 2.3.0 or above.
+Please follow the instructions below to install prerequisite software on your respective platform.
+
+Windows
+^^^^^^^
+1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_ and add it to
+Windows `system path <https://docs.microsoft.com/en-us/previous-versions/office/developer/sharepoint-2010/ee537574(v=office.14)>`_.
+
+2. Install OpenJPEG. The easiest way is to install OpenJpeg is through conda
+using
+
+.. code-block:: console
+
+    C:\> conda install -c conda-forge openjpeg>=2.3.0
+
+Linux (Ubuntu)
+^^^^^^^^^^^^^^
+On Linux the preprequiste software can be installed using a single command
+
+.. code-block:: console
+
+    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools openslide-tools
+
+This is the same command used in Google Colab examples. Although Google Colab examples remove `datascience`
+and `albumentations` due to compatibility issues.
+
+MacOS
+^^^^^
+
+
 Stable release
 --------------
 
