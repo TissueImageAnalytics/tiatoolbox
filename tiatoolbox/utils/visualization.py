@@ -68,11 +68,12 @@ def overlay_patch_prediction(
             label_info[label_uid] = (str(label_uid), random_colour)
     else:
         # may need better error message
-        check_uid_list = list(predicted_classes)
+        check_uid_list = predicted_classes.copy()
         for label_uid, (label_name, label_colour) in label_info.items():
             if label_uid in check_uid_list:
                 check_uid_list.remove(label_uid)
             if not isinstance(label_uid, int):
+                print('HERE')
                 raise ValueError('Wrong `label_info` format: label_uid {0}'.format(
                     [label_uid, (label_name, label_colour)]))
             if not isinstance(label_name, str):
