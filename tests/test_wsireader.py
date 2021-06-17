@@ -1306,13 +1306,13 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
         requested_size = requested_size[::-1]  # XY to YX
         roi1 = reader1.read_bounds(
                     read_coord,
-                    location_is_at_requested=True,
+                    location_at_requested=True,
                     pad_constant_values=255,
                     **read_cfg,
                 )
         roi2 = reader2.read_bounds(
                     read_coord,
-                    location_is_at_requested=True,
+                    location_at_requested=True,
                     pad_constant_values=255,
                     **read_cfg,
                 )
