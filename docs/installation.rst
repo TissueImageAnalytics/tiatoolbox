@@ -24,7 +24,7 @@ using
 
 Linux (Ubuntu)
 ^^^^^^^^^^^^^^
-On Linux the preprequiste software can be installed using a single command
+On Linux the preprequiste software can be installed using the command
 
 .. code-block:: console
 
