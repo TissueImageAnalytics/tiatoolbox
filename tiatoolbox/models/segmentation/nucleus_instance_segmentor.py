@@ -576,7 +576,7 @@ def _postproc_tile(tile_io_info, tile_pp_info, tile_mode,
                 wsi_proc_shape,
                 prev_wsi_inst_dict=None):
     # output pos of the tile within the source wsi
-    tile_input_tl, tile_output_br = tile_io_info[0]
+    tile_input_tl, tile_input_br = tile_io_info[0]
     tile_output_tl, tile_output_br = tile_io_info[1] # Y, X
 
     # ! shape may be uneven hence just detach all into a big list

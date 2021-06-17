@@ -264,9 +264,11 @@ class PatchExtractor(ABC):
     @staticmethod
     def get_coordinates(
         image_shape=None,
-        patch_shape=None,
+        patch_input_shape=None,
+        patch_output_shape=None,
         stride_shape=None,
-        within_bound=True,
+        input_within_bound=False,
+        output_within_bound=False,
     ):
         """Calculate patch tiling coordinates.
 
@@ -292,49 +294,73 @@ class PatchExtractor(ABC):
             format to be used for patch extraction.
 
         """
+        return_output_bound = patch_output_shape is not None
         image_shape = np.array(image_shape)
-        patch_shape = np.array(patch_shape)
+        patch_input_shape = np.array(patch_input_shape)
+        if patch_output_shape is None:
+            output_within_bound = False
+            patch_output_shape = patch_input_shape
+        patch_output_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
-        if (
-            not np.issubdtype(image_shape.dtype, np.integer)
-            or np.size(image_shape) > 2
-            or np.any(image_shape < 0)
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if (
-            not np.issubdtype(patch_shape.dtype, np.integer)
-            or np.size(patch_shape) > 2
-            or np.any(patch_shape < 0)
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if (
-            not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2
-            or np.any(stride_shape < 0)
-        ):
-            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
+
+        def validate_shape(shape):
+            return (
+                not np.issubdtype(shape.dtype, np.integer)
+                or np.size(shape) > 2 or np.any(shape < 0)
+            )
+
+        if validate_shape(image_shape):
+            raise ValueError(
+                f"Invalid `image_shape` value {image_shape}.")
+        if validate_shape(patch_input_shape):
+            raise ValueError(
+                f"Invalid `patch_input_shape` value {patch_input_shape}.")
+        if validate_shape(patch_output_shape):
+            raise ValueError(
+                f"Invalid `patch_output_shape` value {patch_output_shape}.")
+        if validate_shape(stride_shape):
+            raise ValueError(
+                f"Invalid `stride_shape` value {stride_shape}.")
+        if np.any(patch_input_shape < patch_output_shape):
+            raise ValueError((
+                f"`patch_input_shape` must larger than `patch_output_shape`"
+                f" {patch_input_shape} must > {patch_output_shape}."))
         if np.any(stride_shape < 1):
-            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
+            raise ValueError(
+                f"`stride_shape` value {stride_shape} must > 1.")
 
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
-        patch_shape = np.array(patch_shape)
-        x_list = np.arange(0, image_shape[0], stride_shape[0])
-        y_list = np.arange(0, image_shape[1], stride_shape[1])
+        output_x_end = image_shape[0] + patch_output_shape[0]
+        output_x_list = np.arange(0, output_x_end, stride_shape[0])
+        output_y_end = image_shape[1] + patch_output_shape[1]
+        output_y_list = np.arange(0, output_y_end, stride_shape[1])
+        output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
+        output_br_list = output_tl_list + patch_output_shape[None]
 
-        if within_bound:
-            sel = x_list + patch_shape[0] <= image_shape[0]
-            x_list = x_list[sel]
-            sel = y_list + patch_shape[1] <= image_shape[1]
-            y_list = y_list[sel]
+        io_diff = patch_input_shape - patch_output_shape
+        input_tl_list = output_tl_list - (io_diff // 2)[None]
+        input_br_list = input_tl_list + patch_input_shape[None]
 
-        top_left_list = flat_mesh_grid_coord(x_list, y_list)
-        bot_right_list = top_left_list + patch_shape[None]
-        coord_list = np.concatenate([top_left_list, bot_right_list], axis=-1)
-        return coord_list
+        sel = np.zeros(input_tl_list.shape[0], dtype=np.bool)
+        if output_within_bound:
+            sel |= np.any(output_br_list > image_shape[None], axis=0)
+        if input_within_bound:
+            sel |= np.any(input_br_list > image_shape[None], axis=0)
+            sel |= np.any(input_tl_list < 0, axis=0)
+        ####
+        input_bound_list = np.stack([
+            input_tl_list[~sel],
+            input_br_list[~sel]], axis=1)
+        output_bound_list = np.stack([
+            output_tl_list[~sel],
+            output_br_list[~sel]], axis=1)
+        if return_output_bound:
+            return input_bound_list, output_bound_list
+        return input_bound_list
 
 
 class SlidingWindowPatchExtractor(PatchExtractor):

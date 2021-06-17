@@ -56,13 +56,26 @@ from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
 from .pretrained_info import get_pretrained_model
 
 
-class _SerializeReader(torch_data.Dataset):
-    """
-    `mp_shared_space` must be from torch.multiprocessing, for example
+####
+class SerializeWSIReader(torch_data.Dataset):
+    """Reading a wsi in parallel mode with persistent workers.
 
-    mp_manager = torch_mp.Manager()
-    mp_shared_space = mp_manager.Namespace()
-    mp_shared_space.image = torch.from_numpy(image)
+    To speed up the inference process for multiple WSIs. The
+    `torch.utils.data.Dataloader` is set to run in persistent mode.
+    Normally, it will prevent worker from altering their initial states
+    (such as provided input etc.) . To sidestep this, we use a shared parallel
+    workspace context manager to send data and signal from the main thread,
+    thus allowing each worker to load new wsi as well as corresponding patch
+    information.
+
+    Args:
+
+        `mp_shared_space`: must be from torch.multiprocessing, for example
+
+            mp_manager = torch_mp.Manager()
+            mp_shared_space = mp_manager.Namespace()
+            mp_shared_space.image = torch.from_numpy(image)
+
     """
     def __init__(
             self,
@@ -70,44 +83,43 @@ class _SerializeReader(torch_data.Dataset):
             mp_shared_space,
             preproc=None,
             mode='wsi',
-            scale_to_lv0=1.0,
             resolution=None,
             units=None):
         super().__init__()
         self.mode = mode
-        self.mp_shared_space = mp_shared_space
         self.preproc = preproc
-        self.wsi_path_list = wsi_path_list
-        self.wsi_idx = None  # to be received externally via thread communication
-        self.scale_to_lv0 = scale_to_lv0  # ! need to expose or sync read this
+        if mode == "tile":
+            warnings.warn(
+                (
+                    "WSIPatchDataset only reads image tile at "
+                    '`units="baseline"` and `resolution=1.0`.'
+                )
+            )
+            units = "baseline"
+            resolution = 1.0
         self.resolution = resolution
         self.units = units
+
+        self.mp_shared_space = mp_shared_space
+        self.wsi_path_list = wsi_path_list
+        self.wsi_idx = None  # to be received externally via thread communication
         return
 
-    def _get_reader(self, wsi_path):
-        wsi_path = pathlib.Path(wsi_path)
+    def _get_reader(self, img_path):
+        img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
-            reader = get_wsireader(wsi_path)
+            self.reader = get_wsireader(img_path)
         else:
-            # overwriting for later read
-            # units = 'mpp'
-            # resolution = 1.0
-            # units = "baseline"
-            # resolution = 1.0
-            img = imread(wsi_path)
+            img = imread(img_path)
+            # initialise metadata for VirtualWSIReader.
+            # here, we simulate a whole-slide image, but with a single level.
             metadata = WSIMeta(
-                # Assign blind default value as it has no impact later
-                # but is required for sync mask read
                 mpp=np.array([1.0, 1.0]),
                 objective_power=10,
                 slide_dimensions=np.array(img.shape[:2][::-1]),
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
-            # any value for mpp is fine, but the read
-            # resolution for mask later must match
-            # ? alignement, XY or YX ? Default to XY
-            # ? to match OpenSlide for now
             reader = VirtualWSIReader(
                 img,
                 metadata,
@@ -120,66 +132,26 @@ class _SerializeReader(torch_data.Dataset):
     def __getitem__(self, idx):
         # ! no need to lock as we dont modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
-            # TODO: enforcing strict typing
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
-            self.scale_to_lv0 = self.mp_shared_space.scale_to_lv0.item()
             self.reader = self._get_reader(self.wsi_path_list[self.wsi_idx])
 
         # this is in YX and at requested resolution not lv0
-        patch_info = self.mp_shared_space.patch_info_list[idx]
-        # convert from requested to lv0 coordinate and in XY
-        tl, br = patch_info[0]  # retrieve input placement, [1] is output
-        bound = np.array(tl.tolist()[::-1] + br.tolist()[::-1])
-        bound = (bound * self.scale_to_lv0).astype(np.int32)
+        tl, br = self.mp_shared_space.patch_input_list[idx]
+        bounds = np.array(tl.tolist()[::-1] + br.tolist()[::-1])
+
+        # be the same as bounds br-tl, unless bounds are of float
         patch_data = self.reader.read_bounds(
-                        bound,
+                        bounds.astype(np.int32),
                         resolution=self.resolution,
-                        units=self.units)
-        # ! due to internal scaling, there will be rounding error and wont match
-        # ! the requested size at requested read resolution
-        # ! hence must apply rescale again
-        output_size = (br - tl).numpy()[::-1]
-        patch_data = imresize(img=patch_data, output_size=output_size)
+                        units=self.units,
+                        location_at_requested=True)
+
         if self.preproc is not None:
             patch_data = patch_data.copy()
             patch_data = self.preproc(patch_data)
-        return patch_data, patch_info
 
-
-# ! this is more elaborate compared to version in PatchExtractor
-# ! TODO: merge and may deprecate the other version ?
-def _get_patch_info(image_size, input_size, output_size, stride_size):
-    """Get top left coordinate information of patches from original image.
-
-    Args:
-        img_shape: input image shape
-        input_size: patch input shape
-        output_size: patch output shape
-    """
-    def flat_mesh_grid_coord(y, x):
-        """Helper function to obtain coordinate grid."""
-        y, x = np.meshgrid(y, x)
-        return np.stack([y.flatten(), x.flatten()], axis=-1)
-    # ! output starting from 0 so that the assembled prediction always
-    # ! contain whole original image (or more)
-    output_tl_y = np.arange(0, image_size[0] + output_size[0], stride_size[0])
-    output_tl_x = np.arange(0, image_size[1] + output_size[1], stride_size[1])
-    output_tl = flat_mesh_grid_coord(output_tl_y, output_tl_x)
-    output_br = output_tl + output_size[None]
-
-    # one size diff for shifting
-    io_diff = (input_size - output_size) // 2
-    input_tl = output_tl - io_diff
-    input_br = input_tl + input_size[None]
-
-    # post filtering, incase exceed 1 index
-    sel = np.any(input_tl > image_size, axis=-1)
-    info_list = np.stack(
-        [
-            np.stack([ input_tl[~sel],  input_br[~sel]], axis=1),  # noqa: E201
-            np.stack([output_tl[~sel], output_br[~sel]], axis=1),
-        ], axis=1)
-    return info_list
+        tl, br = self.mp_shared_space.patch_output_list[idx]
+        return patch_data, [tl, br]
 
 
 class Segmentor:
