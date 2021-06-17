@@ -110,6 +110,5 @@ examples/*.py
 # Mac generated
 .DS_Store
 
-tests/data
-tests/local_samples/
-tests/*.png
+# vim/vi generated
+*.swp
