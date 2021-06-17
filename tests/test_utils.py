@@ -989,3 +989,18 @@ def test_model_to():
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
+
+
+def test_save_json():
+    """Test for placing model on device."""
+    import json
+
+    sample = dict(
+        k1=1,
+        k2=np.array([1, 2, 3])
+    )
+    misc.save_json(sample, 'sample_json.json')
+    with open('sample_json.json', 'r') as fptr:
+        read_sample = json.load(fptr)
+    assert read_sample['k1'] == sample['k1']
+    assert read_sample['k2'] == [1, 2, 3]
