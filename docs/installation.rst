@@ -30,16 +30,19 @@ On Linux the preprequiste software can be installed using the command
 
     $ apt-get -y install libopenjp2-7-dev libopenjp2-tools openslide-tools
 
-This is the same command used in Google Colab examples. Although Google Colab examples remove `datascience`
-and `albumentations` due to compatibility issues.
+The same command is used when working on the Colab or Kaggle platforms.
+In addition, we remove the packages`datascience`and`albumentations`from Colab because they conflict
+and produce an error message.
 
 MacOS
 ^^^^^
 
+TBA
 
 Stable release
 --------------
 
+Please note that TIAToolbox is tested for python version 3.6, 3.7 and 3.8.
 To install TIA Toolbox, run this command in your terminal:
 
 .. code-block:: console
@@ -47,6 +50,12 @@ To install TIA Toolbox, run this command in your terminal:
     $ pip install tiatoolbox
 
 This is the preferred method to install TIA Toolbox, as it will always install the most recent stable release.
+
+To upgrade an existing version of tiatoolbox to the latest stable release, run this command in your terminal:
+
+.. code-block:: console
+
+    $ pip install --ignore-installed --upgrade tiatoolbox
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
