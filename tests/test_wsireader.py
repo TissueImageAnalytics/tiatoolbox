@@ -1371,7 +1371,6 @@ def test_jp2_missing_cod(_sample_jp2):
         _ = wsi.info
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
 def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
@@ -1405,7 +1404,6 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
         plt.imshow(roi2)
         plt.savefig('dump.png')
         plt.close()
-        # ~
         # using only reader 1 because it is reference reader
         shape1 = reader1.slide_dimensions(**read_cfg)
         # shape2 = reader2.slide_dimensions(**read_cfg)

@@ -176,8 +176,9 @@ class WSIReader:
         elif units == "level":
             if any(resolution >= len(info.level_downsamples)):
                 raise ValueError(
-                    "Target scale level (%s) > number of levels (%s) in WSI"
-                    % (resolution, len(info.level_downsamples)))
+                    f"Target scale level {resolution} "
+                    f"> number of levels {len(info.level_downsamples)} in WSI"
+                )
             base_scale = 1
             resolution = level_to_downsample(resolution)
         elif units == "baseline":
@@ -317,7 +318,6 @@ class WSIReader:
         """Work similar to `find_read_rect_params`.
 
         This is similar for when location is at requested resolution.
-
         Args:
             location (tuple(int)): Location in the requested resolution system.
             size (tuple(int)): Desired output size in pixels (width,
@@ -329,9 +329,6 @@ class WSIReader:
                 - objective power ('power')
                 - pyramid / resolution level ('level')
                 - pixels per baseline pixel ('baseline')
-            precision (int, optional): Decimal places to use when
-                finding optimal scale. See
-                :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
             tuple: Parameters for reading the requested region
@@ -355,7 +352,7 @@ class WSIReader:
         """
         (
             read_level,
-            read_lv_to_requested_fx
+            read_lv_to_requested_scale_factor
         ) = self._find_optimal_level_and_downsample(
             resolution, units,
         )
@@ -364,12 +361,15 @@ class WSIReader:
         # Do we need sanity check for input form ?
         requested_location = np.array(location)
         requested_size = np.array(size)
-        lv0_to_read_lv_fx = 1 / info.level_downsamples[read_level]
-        lv0_to_requested_fx = lv0_to_read_lv_fx * read_lv_to_requested_fx
-        size_at_lv0 = requested_size / lv0_to_requested_fx
-        location_at_lv0 = requested_location / lv0_to_requested_fx
-        size_at_read_lv = requested_size / read_lv_to_requested_fx
-        location_at_read_lv = requested_location / read_lv_to_requested_fx
+        lv0_to_read_lv_scale_factor = 1 / info.level_downsamples[read_level]
+
+        lv0_to_requested_lv_scale_factor = lv0_to_read_lv_scale_factor
+        lv0_to_requested_lv_scale_factor *= read_lv_to_requested_scale_factor
+
+        size_at_lv0 = requested_size / lv0_to_requested_lv_scale_factor
+        location_at_lv0 = requested_location / lv0_to_requested_lv_scale_factor
+        size_at_read_lv = requested_size / read_lv_to_requested_scale_factor
+        location_at_read_lv = requested_location / read_lv_to_requested_scale_factor
         output = (
             size_at_read_lv,
             location_at_read_lv,
@@ -380,7 +380,7 @@ class WSIReader:
         output = tuple([(v + 0.5).astype(np.int64) for v in output])
         output = (
             read_level,
-            read_lv_to_requested_fx,
+            read_lv_to_requested_scale_factor,
         ) + output
         return output
 
@@ -398,12 +398,12 @@ class WSIReader:
         # Find parameters for optimal read
         (
             _,  # read_level,
-            _,  # read_lv_to_requested_fx,
+            _,  # read_lv_to_requested_scale_factor,
             _,  # size_at_read_lv,
             _,  # location_at_read_lv,
             size_at_lv0,
             location_at_lv0,
-        ) = self._find_read_params_at_requested_resolution(
+        ) = self._find_read_params_at_resolution(
                 tl_at_requested,
                 size_at_requested,
                 resolution, units)
@@ -425,7 +425,7 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.wsicore import wsireader
-            >>> wsi = wsireader.OpenSlideWSIReader(input_path="./CMU-1.ndpi")
+            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_shape = wsi.slide_dimensions(0.55, 'mpp')
 
         """
@@ -727,9 +727,11 @@ class WSIReader:
         :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)): Tuple of (start_x, start_y, end_x,
-                end_y) i.e. (left, top, right, bottom) of the region in
-                baseline reference frame.
+            bounds (tuple(int)): By deafult, this is a tuple of (start_x,
+                start_y, end_x, end_y) i.e. (left, top, right, bottom) of
+                the region in baseline reference frame. However, with
+                `location_is_at_requested=True`, the bound is expected to
+                be at the requested resolution system.
             resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
                 number or a sequence of two numbers for x and y are
@@ -750,6 +752,10 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
+            location_is_at_requested (bool): default to `False`, this is a
+                flag to indicate if the input `bounds` is in the baseline
+                coordinate system (`False`) or is in the requested resolution
+                system (`True`).
             **kwargs (dict): Extra key-word arguments for reader
                 specific parameters. Currently only used by
                 :obj:`VirtualWSIReader`. See class docstrings for more
