@@ -318,7 +318,8 @@ class WSIReader:
         """Works similarly to `_find_read_rect_params`.
 
         Return the information neccessary for scaling. While `_find_read_rect_params`
-        assume location to be at baseline. This assumes location to be at requested resolution. 
+        assume location to be at baseline. This assumes location to be at requested
+        resolution.
 
         Args:
             location (tuple(int)): Location in the requested resolution system.
@@ -1138,7 +1139,8 @@ class OpenSlideWSIReader(WSIReader):
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if location_at_requested:
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(bounds, resolution, units)
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units)
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
             # dont use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
