@@ -317,8 +317,7 @@ class Segmentor:
 
     @staticmethod
     def merge_prediction(
-            # canvas_shape : Union[Tuple[int, int], List[int, int], np.ndarray],
-            canvas_shape,
+            canvas_shape : Union[Tuple[int], List[int], np.ndarray],
             prediction_list : List[np.ndarray],
             location_list : List[np.ndarray],
             save_path : Union[str, pathlib.Path] = None,

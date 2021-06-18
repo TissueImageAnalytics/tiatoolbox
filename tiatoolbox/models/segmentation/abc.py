@@ -53,12 +53,10 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
         for variable, value in kwargs.items():
             self.__setattr__(variable, value)
 
-    @abstractmethod
     def _validate(self):
         """Validate the data format."""
         pass
 
-    @abstractmethod
     def convert_to_baseline(self):
         """Convert IO resolution to 'baseline'.
 

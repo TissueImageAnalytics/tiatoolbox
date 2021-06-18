@@ -21,7 +21,6 @@
 
 """Package where patch-level classification models are stored."""
 
-from tiatoolbox.models.segmentation.nucleus_instance_segmentor import Segmentor as NucleusInstanceSegmentor
 from tiatoolbox.models.segmentation.semantic_segmentor import Segmentor as SemanticSegmentor
-from tiatoolbox.models.segmentation.semantic_segmentor import IOStateSegmentor 
+from tiatoolbox.models.segmentation.abc import IOStateSegmentor 
 
