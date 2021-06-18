@@ -41,7 +41,9 @@ def test_imresize():
     assert resized_img.shape == (2000, 1000, 3)
 
     resized_img = utils.transforms.imresize(
-        img, scale_factor=0.5, interpolation=cv2.INTER_CUBIC,
+        img,
+        scale_factor=0.5,
+        interpolation=cv2.INTER_CUBIC,
     )
     assert resized_img.shape == (1000, 500, 3)
 
@@ -132,7 +134,10 @@ def test_safe_padded_read_padding_formats():
     stride = (1, 1)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.safe_padded_read(
-            data, bounds, padding=padding, stride=stride,
+            data,
+            bounds,
+            padding=padding,
+            stride=stride,
         )
         assert region.shape == (8 + 2, 8 + 2)
 
@@ -143,14 +148,19 @@ def test_safe_padded_read_pad_kwargs(_source_image):
     bounds = (0, 0, 8, 8)
     padding = 2
     region = utils.image.safe_padded_read(
-        data, bounds, pad_mode="reflect", padding=padding,
+        data,
+        bounds,
+        pad_mode="reflect",
+        padding=padding,
     )
     even_region = utils.image.safe_padded_read(
         data,
         bounds,
         pad_mode="reflect",
         padding=padding,
-        pad_kwargs={"reflect_type": "even",},
+        pad_kwargs={
+            "reflect_type": "even",
+        },
     )
     assert np.all(region == even_region)
 
@@ -159,7 +169,9 @@ def test_safe_padded_read_pad_kwargs(_source_image):
         bounds,
         pad_mode="reflect",
         padding=padding,
-        pad_kwargs={"reflect_type": "odd",},
+        pad_kwargs={
+            "reflect_type": "odd",
+        },
     )
     assert not np.all(region == odd_region)
 
@@ -176,7 +188,10 @@ def test_safe_padded_read_pad_constant_values():
         bounds = (0, 0, side_len, side_len)
         padding = 1
         region = utils.image.safe_padded_read(
-            data, bounds, padding=padding, pad_constant_values=10,
+            data,
+            bounds,
+            padding=padding,
+            pad_constant_values=10,
         )
 
         assert np.sum(region == 10) == (4 * side_len) + 4
@@ -413,7 +428,10 @@ def test_fuzz_sub_pixel_read(_source_image):
         ow = random.randint(4, 128)
         oh = random.randint(4, 128)
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), interpolation="linear",
+            test_image,
+            bounds,
+            (ow, oh),
+            interpolation="linear",
         )
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
@@ -436,7 +454,11 @@ def test_fuzz_padded_sub_pixel_read(_source_image):
         ow = random.randint(4, 128)
         oh = random.randint(4, 128)
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), interpolation="linear", padding=padding,
+            test_image,
+            bounds,
+            (ow, oh),
+            interpolation="linear",
+            padding=padding,
         )
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
@@ -461,7 +483,10 @@ def test_sub_pixel_read_incorrect_read_func_return():
 
     with pytest.raises(ValueError):
         utils.image.sub_pixel_read(
-            image, bounds=bounds, output_size=(10, 10), read_func=read_func,
+            image,
+            bounds=bounds,
+            output_size=(10, 10),
+            read_func=read_func,
         )
 
 
@@ -475,7 +500,10 @@ def test_sub_pixel_read_empty_read_func_return():
 
     with pytest.raises(ValueError):
         utils.image.sub_pixel_read(
-            image, bounds=bounds, output_size=(10, 10), read_func=read_func,
+            image,
+            bounds=bounds,
+            output_size=(10, 10),
+            read_func=read_func,
         )
 
 
@@ -486,7 +514,10 @@ def test_sub_pixel_read_empty_bounds():
 
     with pytest.raises(ValueError):
         utils.image.sub_pixel_read(
-            image, bounds=bounds, output_size=(2, 2), padding=-1,
+            image,
+            bounds=bounds,
+            output_size=(2, 2),
+            padding=-1,
         )
 
 
