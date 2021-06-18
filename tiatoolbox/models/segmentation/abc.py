@@ -20,63 +20,80 @@
 
 """This module enables patch-level prediction."""
 
-import os
-
-import torch
+import numpy as np
+from abc import abstractmethod
 
 from tiatoolbox.models import abc as tia_model_abc
 
-class ModelBase(tia_model_abc.ModelBase):
-    """ABC.
 
-    Attributes:
-        num_classes (int): Number of classes output by the model.
-        feat_extract (nn.Module): Backbone CNN model.
-        pool (nn.Module): Type of pooling applied after feature extraction.
-        classifier (nn.Module): Linear classifier module used to map the features
-                                to the output.
+class IOStateSegmentor(tia_model_abc.IOStateBase):
+    """Define a class to hold IO information for patch predictor."""
 
-    """
+    # We predefine to follow enforcement, actual initialization in init
+    input_resolutions = None
+    output_resolutions = None
 
     def __init__(
-        self,
-    ):
-        super().__init__()
+            self,
+            input_resolutions,
+            output_resolutions,
+            save_resolution=None,
+            **kwargs):
 
-    def set_preproc_func(self, func=None):
-        """To set function for preprocessing.
+        self.patch_input_shape = None
+        self.patch_output_shape = None
+        self.stride_shape = None
+        self.input_resolutions = input_resolutions
+        self.output_resolutions = output_resolutions
 
-        Set the `preproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return source image.
+        # setting this to overwrite, such that all output head
+        # will be saved under a same resolution
+        self.save_resolution = None
 
-        `func` must behave in the following manner:
+        for variable, value in kwargs.items():
+            self.__setattr__(variable, value)
 
-        >>> transformed_img = func(img)
+    @abstractmethod
+    def _validate(self):
+        """Validate the data format."""
+        pass
 
+    @abstractmethod
+    def convert_to_baseline(self):
+        """Convert IO resolution to 'baseline'.
+
+        This will permanently alter the object values.
+        Actually return scale factor wrt highest resolution initially defined.
         """
-        # TODO: enforece TypeError like DataLayoyt
-        self.preproc_func = func if func is not None else lambda x: x
+        def _to_baseline(resolution_list):
+            old_val = [v['resolution'] for v in resolution_list]
+            if resolution_list[0]['units'] == 'baseline':
+                new_val = old_val
+            elif resolution_list[0]['units'] == 'mpp':
+                new_val = np.array(old_val) / np.min(old_val)
+            elif resolution_list[0]['units'] == 'power':
+                new_val = np.array(old_val) / np.max(old_val)
+            resolution_list = [
+                {'units' : 'baseline', 'resolution' : v}
+                for v in new_val]
+            return resolution_list
+        self.input_resolutions = _to_baseline(self.input_resolutions)
+        self.output_resolutions = _to_baseline(self.output_resolutions)
 
-    def get_preproc_func(self):
-        """Get preprocessing function."""
-        return self.preproc_func
 
-    def set_postproc_func(self, func=None):
-        """To set function for postprocessing.
+class ModelBase(tia_model_abc.ModelBase):
+    """ABC.
+    """
 
-        Set the `postproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return source image.
+    @property
+    @abstractmethod
+    def pre_proc(self):
+        raise NotImplementedError
 
-        `func` must behave in the following manner:
-
-        >>> final_output_image = func(raw_prediction)
-
-        """
-        self.postproc_func = func if func is not None else lambda x: x
-
-    def get_postproc_func(self):
-        """Get preprocessing function."""
-        return self.postproc_func
+    @property
+    @abstractmethod
+    def post_proc(self):
+        raise NotImplementedError
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):

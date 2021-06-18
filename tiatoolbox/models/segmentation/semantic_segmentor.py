@@ -18,51 +18,41 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""This module enables patch-level prediction."""
+"""This module enables semantic segmentation."""
 
 import collections
 import colorsys
 import copy
 import itertools
 import logging
-####
+
 import math
 import os
 import pathlib
-import random
-import time
+from typing import Callable, Optional, Tuple, Union, List
 import warnings
-from collections import OrderedDict
 
 import cv2
 import numpy as np
 import torch
 import torch.multiprocessing as torch_mp
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.utils.data as torch_data
 import tqdm
 
-import matplotlib.pyplot as plt
-from matplotlib import cm
-
-from tiatoolbox import rcParam
+from tiatoolbox.models.segmentation.abc import IOStateSegmentor
+from tiatoolbox.utils import misc
+from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import imread, imwrite, save_json
-from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
                                           get_wsireader)
 
-from .pretrained_info import get_pretrained_model
 
-
-####
 class SerializeWSIReader(torch_data.Dataset):
     """Reading a wsi in parallel mode with persistent workers.
 
     To speed up the inference process for multiple WSIs. The
     `torch.utils.data.Dataloader` is set to run in persistent mode.
-    Normally, it will prevent worker from altering their initial states
+    Normally, this will prevent worker from altering their initial states
     (such as provided input etc.) . To sidestep this, we use a shared parallel
     workspace context manager to send data and signal from the main thread,
     thus allowing each worker to load new wsi as well as corresponding patch
@@ -79,26 +69,25 @@ class SerializeWSIReader(torch_data.Dataset):
     """
     def __init__(
             self,
-            wsi_path_list,
+            iostate : IOStateSegmentor,
+            wsi_path_list : List[Union[str, pathlib.Path]],
             mp_shared_space,
-            preproc=None,
-            mode='wsi',
-            resolution=None,
-            units=None):
+            preproc : Callable[[np.ndarray], np.ndarray] = None,
+            mode='wsi',):
         super().__init__()
         self.mode = mode
         self.preproc = preproc
+        self.iostate = copy.deepcopy(iostate)
         if mode == "tile":
             warnings.warn(
                 (
                     "WSIPatchDataset only reads image tile at "
-                    '`units="baseline"` and `resolution=1.0`.'
+                    '`units="baseline"`. Resolutios will be converted '
+                    'to baseline value.'
                 )
             )
-            units = "baseline"
-            resolution = 1.0
-        self.resolution = resolution
-        self.units = units
+            # migrate to IOState?
+            self.iostate.convert_to_baseline()
 
         self.mp_shared_space = mp_shared_space
         self.wsi_path_list = wsi_path_list
@@ -127,7 +116,7 @@ class SerializeWSIReader(torch_data.Dataset):
         return reader
 
     def __len__(self):
-        return len(self.mp_shared_space.patch_info_list)
+        return len(self.mp_shared_space.patch_input_list)
 
     def __getitem__(self, idx):
         # ! no need to lock as we dont modify source value in shared space
@@ -135,23 +124,24 @@ class SerializeWSIReader(torch_data.Dataset):
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
             self.reader = self._get_reader(self.wsi_path_list[self.wsi_idx])
 
-        # this is in YX and at requested resolution not lv0
+        # this is in XY and at requested resolution not baseline
         tl, br = self.mp_shared_space.patch_input_list[idx]
-        bounds = np.array(tl.tolist()[::-1] + br.tolist()[::-1])
+        bounds = np.array(tl.tolist() + br.tolist())
 
         # be the same as bounds br-tl, unless bounds are of float
-        patch_data = self.reader.read_bounds(
-                        bounds.astype(np.int32),
-                        resolution=self.resolution,
-                        units=self.units,
-                        location_at_requested=True)
+        for resolution in self.iostate.input_resolutions:
+            # ! conversion for other resolution !
+            patch_data = self.reader.read_bounds(
+                            bounds.astype(np.int32),
+                            location_at_requested=True,
+                            **resolution)
 
         if self.preproc is not None:
             patch_data = patch_data.copy()
             patch_data = self.preproc(patch_data)
 
         tl, br = self.mp_shared_space.patch_output_list[idx]
-        return patch_data, [tl, br]
+        return patch_data, torch.stack([tl, br])
 
 
 class Segmentor:
@@ -173,165 +163,308 @@ class Segmentor:
         if model is None and pretrained_model is None:
             raise ValueError("Must provide either of `model` or `pretrained_model`")
 
-        if model is not None:
-            self.model = model
-            iostate = None  # retrieve iostate from provided model ?
-        else:
-            model, iostate = get_pretrained_model(
-                pretrained_model, pretrained_weight
-            )
+        # TODO: add pretrained model
 
-        self._iostate = iostate  # for storing original
-        self.iostate = None  # for runtime
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
+        # for runtime, such as after wrapping with nn.DataParallel
+        self._model = None
+        self._on_gpu = None
+        self._mp_shared_space = None
+
+        self.model = model  # original copy
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
         self.num_postproc_worker = num_postproc_worker
         self.verbose = verbose
 
-    def _predict_one_wsi(self, wsi_path, mask_path, loader):
+    # TODO: refactor this, duplicated functionalities wrt the patchpredictor
+    @staticmethod
+    def get_reader(img_path, mask_path, mode, auto_get_mask):
+        img_path = pathlib.Path(img_path)
+        reader = get_wsireader(img_path)
 
-        wsi_reader = get_wsireader(wsi_path)
-        # in XY
-        wsi_proc_shape = wsi_reader.slide_dimensions(
-                            self.iostate.resolution,
-                            self.iostate.units)
+        mask_reader = None
+        if mask_path is not None:
+            if not os.path.isfile(mask_path):
+                raise ValueError("`mask_path` must be a valid file path.")
+            mask = imread(mask_path)  # assume to be gray
+            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+            mask = np.array(mask > 0, dtype=np.uint8)
 
+            mask_reader = VirtualWSIReader(mask)
+            mask_reader.attach_to_reader(reader.info)
+        elif auto_get_mask and mode == "wsi" and mask_path is None:
+            # if no mask provided and `wsi` mode, generate basic tissue
+            # mask on the fly
+            mask_reader = reader.tissue_mask(resolution=1.25, units="power")
+            # ? will this mess up ?
+            mask_reader.attach_to_reader(reader.info)
+        return reader, mask_reader
 
+    def _predict_one_wsi(
+            self,
+            wsi_idx : int,
+            iostate : IOStateSegmentor,
+            loader,
+            save_dir : str,
+            mode : str):
+        """
+        """
+        wsi_path = self.img_list[wsi_idx]
+        base_name = pathlib.Path(wsi_path).stem
+        mask_path = None if self.mask_list is None else self.msk_list[wsi_idx]
+        wsi_reader, mask_reader = self.get_reader(wsi_path, mask_path, mode, False)
+
+        # take the highest input resolution, may need a find function ?
+        resolution = iostate.input_resolutions[0]  # in XY
+        if isinstance(wsi_reader, VirtualWSIReader):
+            if resolution['units'] != 'baseline':
+                raise ValueError("Inference on `tile` only use `units='mpp'`")
+        wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
         # * retrieve patch and tile placement
-        patch_info_list = _get_patch_info(
-            wsi_proc_shape,
-            self.patch_input_shape,
-            self.patch_output_shape,
-            self.stride_shape
+        patch_input_list, patch_output_list = PatchExtractor.get_coordinates(
+            image_shape=wsi_proc_shape,
+            patch_input_shape=iostate.patch_input_shape,
+            patch_output_shape=iostate.patch_output_shape,
+            stride_shape=iostate.stride_shape
         )
+        if mask_reader is not None:
+            sel = PatchExtractor.filter_coordinates(
+                    mask_reader, patch_output_list, **resolution)
+            patch_output_list = patch_output_list[sel]
+            patch_input_list = patch_input_list[sel]
 
-        self._mp_shared_space.wsi_idx = torch.Tensor([self.wsi_idx]).share_memory_()
-        self._mp_shared_space.patch_info_list = torch.from_numpy(patch_info_list).share_memory_()
-        self._mp_shared_space.scale_to_lv0 = torch.Tensor([scale_to_lv0]).share_memory_()
+        # modify the shared space so that we can update worker info without
+        # needing to re-create the worker. There should be no race-condition because
+        # only the following enumerate loop triggers the parallelism, and this portion
+        # is still in sequential execution order
+        patch_input_list = torch.from_numpy(patch_input_list).share_memory_()
+        patch_output_list = torch.from_numpy(patch_output_list).share_memory_()
+        self._mp_shared_space.patch_input_list = patch_input_list
+        self._mp_shared_space.patch_output_list = patch_output_list
+        self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
+        # ! TODO: need a protocol for pbar, or a decorator to make this less redundant
         pbar_desc = 'Process Batch: '
-        pbar = tqdm.tqdm(desc=pbar_desc, leave=True,
-                    total=int(len(self._loader)), 
-                    ncols=80, ascii=True, position=0)
+        pbar = tqdm.tqdm(
+                desc=pbar_desc, leave=True,
+                total=int(len(loader)),
+                ncols=80, ascii=True, position=0)
 
+        # refactor this out to explicit imply need to redefine when
+        # changing model IO format ?
         cum_output = []
-        for batch_idx, batch_data in enumerate(self._loader):
+        for _, batch_data in enumerate(loader):
             sample_data_list, sample_info_list = batch_data
-            sample_output_list = self._model.infer_batch(
-                            self.model, sample_data_list, 
-                            self.on_gpu,
+            batch_size = sample_info_list.shape[0]
+            # ! depending on the protocol of the output within infer_batch
+            # ! this may change, how to enforce/document/expose this in a
+            # ! sensible way?
+
+            # assume to return a list of L output,
+            # each of shape N x etc. (N=batch size)
+            sample_output_list = self.model.infer_batch(
+                            self._model, sample_data_list,
+                            self._on_gpu,
                         )
-            curr_batch_size = sample_output_list.shape[0]
-            sample_output_list = np.split(sample_output_list, curr_batch_size, axis=0) 
+            # repackage so that its a N list, each contains
+            # L x etc. output
+            sample_output_list = [
+                np.split(v, batch_size, axis=0)
+                for v in sample_output_list]
+            sample_output_list = list(zip(*sample_output_list))
+
+            # tensor to numpy, costly?
+            sample_info_list = sample_info_list.numpy()
+            sample_info_list = np.split(sample_info_list, batch_size, axis=0)
+
             sample_output_list = list(zip(sample_info_list, sample_output_list))
             cum_output.extend(sample_output_list)
             pbar.update()
         pbar.close()
 
-        nr_output_ch = cum_output[0][1].shape[-1]
-        scale_output = 1.0 # ! TODO: protocol for this hard coded
-        wsi_mask_shape = (wsi_proc_shape * scale_output).astype(np.int32)
-        cum_canvas = np.zeros(list(wsi_mask_shape) + [nr_output_ch,], dtype=np.float32)
-        counter_canvas = np.zeros(wsi_mask_shape, dtype=np.float32)
-        for patch_idx, (patch_info, patch_pred) in enumerate(cum_output):
-            patch_output_info = patch_info[1].numpy().copy()
-            patch_output_info = (patch_output_info * scale_output).astype(np.int32)
-            tl_in_wsi, br_in_wsi = patch_output_info
+        # assume prediction_list is N, each item has L output element
+        location_list, prediction_list = list(zip(*cum_output))
+        # Nx2x2 (N x [tl, br]), denotes the location of output patch
+        # this can exceed the image bound at the requested resolution
+        # remove simpleton due to split
+        location_list = [v[0] for v in location_list]
+        for idx, output_resolution in enumerate(iostate.output_resolutions):
+            # assume resolution idx to be in the same order as L
+            merged_resolution = resolution
+            merged_location_list = location_list
+            # ! location is wrt highest resolution, hence still need conversion
+            if iostate.save_resolution is not None:
+                merged_resolution = iostate.save_resolution
+                output_shape = wsi_reader.slide_dimensions(**output_resolution)
+                merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
+                fx = output_shape[0] / merged_shape[0]
+                # fy = output_shape[1] / merged_shape[1]
+                merged_location_list = [np.ceil(v * fx).astype(np.int64)
+                                        for v in location_list]
+            merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
+            # 0 idx is to remove singleton wihout removing other axes singleton
+            to_merge_prediction_list = [v[idx][0] for v in prediction_list]
+            save_path = os.path.join(save_dir, f'{base_name}.raw.{idx}.npy')
+            self.merge_prediction(
+                        merged_shape,
+                        to_merge_prediction_list,
+                        merged_location_list,
+                        # save_path=save_path,
+                        remove_prediction=True)
+        return
 
-            # recalibrate the position in case of patch passing the edge
-            crop_tl = np.zeros_like(tl_in_wsi)
-            crop_tl[tl_in_wsi < 0] = np.abs(tl_in_wsi[tl_in_wsi < 0])
+    @staticmethod
+    def merge_prediction(
+            # canvas_shape : Union[Tuple[int, int], List[int, int], np.ndarray],
+            canvas_shape,
+            prediction_list : List[np.ndarray],
+            location_list : List[np.ndarray],
+            save_path : Union[str, pathlib.Path] = None,
+            remove_prediction : bool = True,
+            ):
+        """"""
+        out_ch = prediction_list[0].shape[-1]
+        if save_path is not None:
+            cum_canvas = np.lib.format.open_memmap(
+                save_path,
+                mode="w+",
+                shape=tuple(canvas_shape) + (out_ch,),
+                dtype=np.float32,
+            )
+        else:
+            cum_canvas = np.zeros(tuple(canvas_shape) + (out_ch,), dtype=np.float32)
+        # for pixel occurence counting
+        cnt_canvas = np.zeros(canvas_shape, dtype=np.float32)
 
-            sel = br_in_wsi > wsi_mask_shape
-            crop_br = br_in_wsi.copy()
-            crop_br[sel] = wsi_mask_shape[sel]
-            crop_br = crop_br - tl_in_wsi  # shift back to tile coordinate
-            # now crop
-            patch_pred = patch_pred[0, crop_tl[0]:crop_br[0], crop_tl[1]:crop_br[1]]
+        patch_info_list = list(zip(location_list, prediction_list))
+        for patch_idx, patch_info in enumerate(patch_info_list):
+            ((tl_in_wsi, br_in_wsi), prediction) = patch_info
+            tl_in_wsi = np.array(tl_in_wsi)
+            br_in_wsi = np.array(br_in_wsi)
+            old_tl_in_wsi = tl_in_wsi.copy()
 
-            if tl_in_wsi[0] < 0: tl_in_wsi[0] = 0
-            if tl_in_wsi[1] < 0: tl_in_wsi[1] = 0
-            if tl_in_wsi[0] >= wsi_mask_shape[0]: tl_in_wsi[0] = wsi_mask_shape[0]
-            if tl_in_wsi[1] >= wsi_mask_shape[1]: tl_in_wsi[1] = wsi_mask_shape[1]
-            if br_in_wsi[0] >= wsi_mask_shape[0]: br_in_wsi[0] = wsi_mask_shape[0]
-            if br_in_wsi[1] >= wsi_mask_shape[1]: br_in_wsi[1] = wsi_mask_shape[1]
+            sel = tl_in_wsi < 0
+            tl_in_wsi[sel] = 0
 
-            patch_in_wsi_shape = br_in_wsi - tl_in_wsi
-            if np.any(patch_in_wsi_shape == 0): continue
+            if np.any(tl_in_wsi > canvas_shape):
+                continue
 
-            patch_count = np.ones(patch_pred.shape[:2]) 
+            sel = br_in_wsi > canvas_shape
+            br_in_wsi[sel] = canvas_shape[sel]
+
+            # recalibrate the position in case patch passing the image bound
+            br_in_patch = br_in_wsi - old_tl_in_wsi
+            patch_actual_shape = br_in_wsi - tl_in_wsi
+            tl_in_patch = br_in_patch - patch_actual_shape
+            # internal error, switch to raise ?
+            assert np.all(br_in_patch >= 0) and np.all(tl_in_patch >= 0)
+            # now croping the prediction region
+            patch_pred = prediction[tl_in_patch[0]:br_in_patch[0],
+                                    tl_in_patch[1]:br_in_patch[1]]
+
+            patch_count = np.ones(patch_pred.shape[:2])
             cum_canvas[tl_in_wsi[0] : br_in_wsi[0],
                        tl_in_wsi[1] : br_in_wsi[1]] += patch_pred
-            counter_canvas[tl_in_wsi[0] : br_in_wsi[0],
-                           tl_in_wsi[1] : br_in_wsi[1]] += patch_count
-            cum_output[patch_idx] = None # delete out
-        cum_canvas = cum_canvas / (counter_canvas[...,None] + 1.0e-6)
+            cnt_canvas[tl_in_wsi[0] : br_in_wsi[0],
+                       tl_in_wsi[1] : br_in_wsi[1]] += patch_count
+            # remove prediction without altering list ordering or length
+            if remove_prediction:
+                patch_info_list[patch_idx] = None
+        cum_canvas /= (cnt_canvas[..., None] + 1.0e-6)
+
+        dump = cum_canvas[..., 0] / np.max(cum_canvas)
+        # dump = cnt_canvas / np.max(cnt_canvas)
+        dump = (dump * 255).astype(np.uint8)
+        imwrite('dump.png', dump)
+        exit()
         return cum_canvas
 
     def predict(
         self,
         img_list,
         mask_list=None,
-        mode="patch",
-        return_probabilities=False,
-        return_labels=False,
+        mode="tile",
         on_gpu=True,
+        iostate=None,
+        patch_input_shape=None,
+        patch_output_shape=None,
         stride_shape=None,  # at requested read resolution, not wrt to lv0
         resolution=0.25,
         units="mpp",
         save_dir=None,
     ):
         """Make a prediction for a list of input data."""
+        if mode not in ["wsi", "tile"]:
+            raise ValueError(
+                f"{mode} is not a valid mode. Use either `tile` or `wsi`."
+            )
+        if save_dir is None:
+            warnings.warn(
+                ' '.join(
+                    "Segmentor will only output to directory.",
+                    "All subsequent output will be saved to current runtime",
+                    "location under folder 'output'. Overwriting may happen!",
+                )
+            )
+            save_dir = os.path.join(os.getcwd(), "output")
 
-        self.on_gpu = on_gpu
-        if on_gpu:
-            self.model = torch.nn.DataParallel(self._model)
-            self.model = self.model.to('cuda')
+        save_dir = os.path.abspath(save_dir)
+        save_dir = pathlib.Path(save_dir)
+        if not save_dir.is_dir():
+            os.makedirs(save_dir)
         else:
-            self.model = copy.deepcopy(self._model)
-            self.model = self.model.to('cpu')
+            raise ValueError(f"`save_dir` already exists! {save_dir}")
+
+        # use external for testing
+        self._on_gpu = on_gpu
+        self._model = misc.model_to(on_gpu, self.model)
 
         mp_manager = torch_mp.Manager()
         mp_shared_space = mp_manager.Namespace()
         self._mp_shared_space = mp_shared_space
 
-        # ! by default, torch will split idxing across worker
-        # ! hence, for each batch, they coming entirely from different worker id
-        ds = _SerializeReader(img_list, mp_shared_space, 
-                resolution=resolution, units=units, mode=mode)
-        loader = torch_data.DataLoader(ds,
-                                batch_size=8,
-                                drop_last=False,
-                                num_workers=0,
-                                persistent_workers=False,
-                                # num_workers=2,
-                                # persistent_workers=True,
-                            )
-        self._loader = loader
+        if patch_output_shape is None:
+            patch_output_shape = patch_input_shape
+        if stride_shape is None:
+            stride_shape = patch_output_shape
 
-        # ! TODO: refactor this into a state holder or sthg
-        for wsi_idx in range(len(img_list)):
-            self.wsi_idx = wsi_idx
-            self.patch_input_shape  = np.array([1024, 1024])
-            self.patch_output_shape = np.array([512 ,  512])
-            self.stride_shape = np.array([256 , 256])
-            self.tile_shape = 3000
-            # self.resolution = 0.25
-            # self.units = 'mpp'
-            self.resolution = resolution
-            self.units = units
-            mask_path = mask_list[wsi_idx] if mask_list is not None else None
-            output = self._predict_one_wsi(img_list[wsi_idx], mask_path, loader)
-            break
-        
-        # ! TODO: retrieval mode
-        from skimage import morphology
-        wsi_mask = output[...,1]
-        wsi_mask = np.array(wsi_mask > 0.8).astype(np.uint8)
-        wsi_mask = morphology.remove_small_holes(wsi_mask, area_threshold=256*256)
-        wsi_mask = morphology.remove_small_objects(wsi_mask, min_size=32*32, connectivity=2)
+        if iostate is None:
+            iostate = IOStateSegmentor(
+                input_resolutions=[{'resolution': resolution, 'units': units}],
+                output_resolutions=[{'resolution': resolution, 'units': units}],
+                patch_input_shape=patch_input_shape,
+                patch_output_shape=patch_output_shape,
+                stride_shape=stride_shape
+            )
 
-        return [wsi_mask]
+        ds = SerializeWSIReader(
+                iostate,
+                img_list,
+                mp_shared_space,
+                mode=mode)
+
+        loader = torch_data.DataLoader(
+                            ds,
+                            batch_size=8,
+                            drop_last=False,
+                            num_workers=0,
+                            persistent_workers=False,
+                            # num_workers=2,
+                            # persistent_workers=True,
+                        )
+
+        self.img_list = img_list
+        self.mask_list = mask_list
+        for wsi_idx, _ in enumerate(img_list):
+            self._predict_one_wsi(
+                    wsi_idx, iostate, loader, save_dir, mode)
+
+        # memory clean up
+        self.img_list = None
+        self.msk_list = None
+        self._model = None
+        self._on_gpu = None
+        self._mp_shared_space = None
+        return
