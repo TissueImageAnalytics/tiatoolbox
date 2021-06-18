@@ -717,15 +717,15 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(["a", "b", "c"])
 
 
-def test_grab_files_from_dir():
+def test_grab_files_from_dir(_sample_visual_fields):
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
     input_path = file_parent_dir.joinpath("data")
 
     file_types = "*.tif, *.png, *.jpg"
 
-    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
-    assert len(out) == 6
+    out = utils.misc.grab_files_from_dir(input_path=_sample_visual_fields, file_types=file_types)
+    assert len(out) == 5
 
     out = utils.misc.grab_files_from_dir(
         input_path=input_path.parent, file_types="test_utils*"

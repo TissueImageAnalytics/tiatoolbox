@@ -186,6 +186,27 @@ def _norm_vahadane(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def _sample_visual_fields(_source_image, _norm_ruifrok, _norm_reinhard, _norm_macenko, _norm_vahadane, tmpdir_factory):
+    """Sample visual fields(s) of all types supported by tiatoolbox."""
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(_source_image.basename).symlink_to(_source_image)
+        dir_path.joinpath(_norm_ruifrok.basename).symlink_to(_norm_ruifrok)
+        dir_path.joinpath(_norm_reinhard.basename).symlink_to(_norm_reinhard)
+        dir_path.joinpath(_norm_macenko.basename).symlink_to(_norm_macenko)
+        dir_path.joinpath(_norm_vahadane.basename).symlink_to(_norm_vahadane)
+    except OSError:
+        shutil.copy(_source_image, dir_path.joinpath(_source_image.basename))
+        shutil.copy(_norm_ruifrok, dir_path.joinpath(_norm_ruifrok.basename))
+        shutil.copy(_norm_reinhard, dir_path.joinpath(_norm_reinhard.basename))
+        shutil.copy(_norm_macenko, dir_path.joinpath(_norm_macenko.basename))
+        shutil.copy(_norm_vahadane, dir_path.joinpath(_norm_vahadane.basename))
+
+    return dir_path
+
+
+@pytest.fixture(scope="session")
 def _patch_extr_vf_image(tmpdir_factory):
     """Sample pytest fixture for a visual field image.
     Download TCGA-HE-7130-01Z-00-DX1 image for pytest.
