@@ -186,7 +186,14 @@ def _norm_vahadane(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def _sample_visual_fields(_source_image, _norm_ruifrok, _norm_reinhard, _norm_macenko, _norm_vahadane, tmpdir_factory):
+def _sample_visual_fields(
+    _source_image,
+    _norm_ruifrok,
+    _norm_reinhard,
+    _norm_macenko,
+    _norm_vahadane,
+    tmpdir_factory,
+):
     """Sample visual fields(s) of all types supported by tiatoolbox."""
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
@@ -675,25 +682,23 @@ def _sample_wsi_dict(tmpdir_factory):
 
     """
     file_name_dict = {
-        'wsi1_8k_8k_svs' : 'wsi1_8k_8k.svs',
-        'wsi1_8k_8k_jp2' : 'wsi1_8k_8k.jp2',
-        'wsi1_8k_8k_jpg' : 'wsi1_8k_8k.jpg',
-        'wsi2_4k_4k_svs' : 'wsi2_4k_4k.svs',
-        'wsi2_4k_4k_jp2' : 'wsi2_4k_4k.jp2',
-        'wsi2_4k_4k_jpg' : 'wsi2_4k_4k.jpg',
-        'wsi2_4k_4k_msk' : 'wsi2_4k_4k.mask.png',
-        'wsi2_4k_4k_pred' : 'wsi2_4k_4k.pred.dat',
+        "wsi1_8k_8k_svs": "wsi1_8k_8k.svs",
+        "wsi1_8k_8k_jp2": "wsi1_8k_8k.jp2",
+        "wsi1_8k_8k_jpg": "wsi1_8k_8k.jpg",
+        "wsi2_4k_4k_svs": "wsi2_4k_4k.svs",
+        "wsi2_4k_4k_jp2": "wsi2_4k_4k.jp2",
+        "wsi2_4k_4k_jpg": "wsi2_4k_4k.jpg",
+        "wsi2_4k_4k_msk": "wsi2_4k_4k.mask.png",
+        "wsi2_4k_4k_pred": "wsi2_4k_4k.pred.dat",
     }
 
     info_dict = {}
-    URL_HOME = 'https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new'
+    URL_HOME = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new"
     for file_code, file_name in file_name_dict.items():
         file_path = tmpdir_factory.mktemp("data").join(file_name)
         if not pathlib.Path(file_path).is_file():
             print("\nDownloading %s" % file_path)
-            r = requests.get(
-                '%s/%s' % (URL_HOME, file_name)
-            )
+            r = requests.get("%s/%s" % (URL_HOME, file_name))
             with open(file_path, "wb") as f:
                 f.write(r.content)
         else:
