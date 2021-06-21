@@ -288,8 +288,9 @@ class Segmentor:
         location_list, prediction_list = list(zip(*cum_output))
         # Nx2x2 (N x [tl, br]), denotes the location of output patch
         # this can exceed the image bound at the requested resolution
-        # remove simpleton due to split
-        location_list = [v[0] for v in location_list]
+        # remove simpleton due to split, 
+        # also convert from XY to YX coordinate system
+        location_list = [v[0][:,[1,0]] for v in location_list]
         for idx, output_resolution in enumerate(iostate.output_resolutions):
             # assume resolution idx to be in the same order as L
             merged_resolution = resolution
@@ -311,7 +312,7 @@ class Segmentor:
                         merged_shape,
                         to_merge_prediction_list,
                         merged_location_list,
-                        # save_path=save_path,
+                        save_path=save_path,
                         remove_prediction=True)
         return
 
@@ -339,10 +340,19 @@ class Segmentor:
 
         patch_info_list = list(zip(location_list, prediction_list))
         for patch_idx, patch_info in enumerate(patch_info_list):
+            # position is assumed to be in YX coordinate
             ((tl_in_wsi, br_in_wsi), prediction) = patch_info
             tl_in_wsi = np.array(tl_in_wsi)
             br_in_wsi = np.array(br_in_wsi)
             old_tl_in_wsi = tl_in_wsi.copy()
+
+            # need to do conversion
+            patch_shape_in_wsi = tuple(br_in_wsi - tl_in_wsi)
+            prediction = cv2.resize(prediction, patch_shape_in_wsi[::-1])
+
+            # insert singleton to align the shape when merging (which is HWC)
+            if len(prediction.shape) == 2:
+                prediction = prediction[...,None]
 
             sel = tl_in_wsi < 0
             tl_in_wsi[sel] = 0
@@ -372,12 +382,6 @@ class Segmentor:
             if remove_prediction:
                 patch_info_list[patch_idx] = None
         cum_canvas /= (cnt_canvas[..., None] + 1.0e-6)
-
-        dump = cum_canvas[..., 0] / np.max(cum_canvas)
-        # dump = cnt_canvas / np.max(cnt_canvas)
-        dump = (dump * 255).astype(np.uint8)
-        imwrite('dump.png', dump)
-        exit()
         return cum_canvas
 
     def predict(
