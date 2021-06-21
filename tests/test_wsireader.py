@@ -1300,20 +1300,20 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
         requested_size = requested_size[::-1]  # XY to YX
         roi1 = reader1.read_bounds(
                     read_coord,
-                    location_at_requested=True,
+                    coords_space='resolution',
                     pad_constant_values=255,
                     **read_cfg,
                 )
         roi2 = reader2.read_bounds(
                     read_coord,
-                    location_at_requested=True,
+                    coords_space='resolution',
                     pad_constant_values=255,
                     **read_cfg,
                 )
         # using only reader 1 because it is reference reader
         shape1 = reader1.slide_dimensions(**read_cfg)
         # shape2 = reader2.slide_dimensions(**read_cfg)
-        print(read_cfg, shape1, shape2)
+        # print(read_cfg, shape1, shape2)
         assert roi1.shape[0] == requested_size[0], (
                     read_cfg, requested_size, roi1.shape)
         assert roi1.shape[1] == requested_size[1], (
@@ -1334,20 +1334,10 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
                             interpolation=cv2.INTER_NEAREST)
     bigger_msk_reader = VirtualWSIReader(bigger_msk)
     # * must set mpp metadata to not None else wont work
-    # error checking first
     ref_metadata = bigger_msk_reader.info
     ref_metadata.mpp = np.array([1.0, 1.0])
-    ref_metadata.objective_power = None
-    with pytest.raises(ValueError, match=r".*objective.*None.*"):
-        msk_reader.attach_to_reader(ref_metadata)
-    ref_metadata.mpp = None
     ref_metadata.objective_power = 1.0
-    with pytest.raises(ValueError, match=r".*mpp.*None.*"):
-        msk_reader.attach_to_reader(ref_metadata)
-
-    ref_metadata.mpp = np.array([1.0, 1.0])
-    ref_metadata.objective_power = 1.0
-    msk_reader.attach_to_reader(ref_metadata)
+    msk_reader.info = ref_metadata
 
     shape2 = bigger_msk_reader.slide_dimensions(resolution=0.75, units='mpp')
     shape1 = msk_reader.slide_dimensions(resolution=0.75, units='mpp')
@@ -1399,10 +1389,8 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
     tile = imread(_mini_wsi2_jpg)
     tile = imresize(tile, scale_factor=0.76)
     vrt_reader = VirtualWSIReader(tile)
-    vrt_reader.attach_to_reader(wsi_reader.info)
-    old_metadata = vrt_reader.info
-    # check that attach altered vreader metadata
-    assert np.any(old_metadata.mpp != msk_reader.info.mpp)
+    vrt_reader.info = wsi_reader.info
+
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
         read_coord = requested_coords if read_coord is None else read_coord
         compare_reader(
@@ -1426,10 +1414,8 @@ def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
     wsi_reader = get_wsireader(_mini_wsi2_jp2)
     wsi_thumb = wsi_reader.slide_thumbnail(resolution=0.85, units='mpp')
     vrt_reader = VirtualWSIReader(wsi_thumb)
-    vrt_reader.attach_to_reader(wsi_reader.info)
-    old_metadata = vrt_reader.info
-    # check that attach altered vreader metadata
-    assert np.any(old_metadata.mpp != msk_reader.info.mpp)
+    vrt_reader.info = wsi_reader.info
+
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
         read_coord = requested_coords if read_coord is None else read_coord
         compare_reader(
