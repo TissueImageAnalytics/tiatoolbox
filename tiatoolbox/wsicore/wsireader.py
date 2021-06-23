@@ -368,14 +368,12 @@ class WSIReader:
         baseline_to_read_level_scale_factor = 1 / info.level_downsamples[read_level]
 
         baseline_to_resolution_scale_factor = (
-            baseline_to_read_level_scale_factor
-            * read_level_to_resolution_scale_factor
+            baseline_to_read_level_scale_factor * read_level_to_resolution_scale_factor
         )
 
         size_at_baseline = requested_size / baseline_to_resolution_scale_factor
         location_at_baseline = (
-            requested_location.astype(np.float32)
-            / baseline_to_resolution_scale_factor
+            requested_location.astype(np.float32) / baseline_to_resolution_scale_factor
         )
         size_at_read_level = requested_size / read_level_to_resolution_scale_factor
         location_at_read_level = (
@@ -415,9 +413,8 @@ class WSIReader:
             size_at_baseline,
             location_at_baseline,
         ) = self._find_read_params_at_resolution(
-                tl_at_resolution,
-                size_at_resolution,
-                resolution, units)
+            tl_at_resolution, size_at_resolution, resolution, units
+        )
         tl_at_baseline = location_at_baseline
         br_at_baseline = tl_at_baseline + size_at_baseline
         bounds_at_baseline = np.concatenate([tl_at_baseline, br_at_baseline])
@@ -532,6 +529,38 @@ class WSIReader:
 
         return level, slide_dimension, rescale, tile_objective_value
 
+    def _read_rect_at_resolution(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        **kwargs,
+    ):
+        """Internal helper to perform `read_rect` at resolution.
+
+        In actuallity, `read_rect` at resolution is synonymous with
+        calling `read_bound` at resolution because `size` has always been
+        within the resolution system,
+        """
+        tl = np.array(location)
+        br = location + np.array(size)
+        bounds = np.concatenate([tl, br])
+        region = self.read_bounds(
+            bounds,
+            resolution=resolution,
+            units=units,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            coord_space="resolution",
+            **kwargs,
+        )
+        return region
+
     def read_rect(
         self,
         location,
@@ -541,6 +570,7 @@ class WSIReader:
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        coord_space="baseline",
         **kwargs,
     ):
         """Read a region of the whole slide image at a location and size.
@@ -582,6 +612,10 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
+            coord_space (str): default to "baseline", this is a
+                flag to indicate if the input `bounds` is in the baseline
+                coordinate system ("baseline") or is in the requested resolution
+                system ("resolution").
             **kwargs (dict): Extra key-word arguments for reader
                 specific parameters. Currently only used by
                 VirtualWSIReader. See class docstrings for more
@@ -719,7 +753,7 @@ class WSIReader:
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
-        coords_space="baseline",
+        coord_space="baseline",
         **kwargs,
     ):
         """Read a region of the whole slide image within given bounds.
@@ -741,7 +775,7 @@ class WSIReader:
             bounds (tuple(int)): By default, this is a tuple of (start_x,
                 start_y, end_x, end_y) i.e. (left, top, right, bottom) of
                 the region in baseline reference frame. However, with
-                `coords_space="resolution"`, the bound is expected to
+                `coord_space="resolution"`, the bound is expected to
                 be at the requested resolution system.
             resolution (int or float or tuple(float)): resolution at
                 which to read the image, default = 0. Either a single
@@ -763,7 +797,7 @@ class WSIReader:
             pad_mode (str): Method to use when padding at the edges of the
                 image. Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
-            coords_space (str): default to "baseline", this is a
+            coord_space (str): default to "baseline", this is a
                 flag to indicate if the input `bounds` is in the baseline
                 coordinate system ("baseline") or is in the requested resolution
                 system ("resolution").
@@ -1088,8 +1122,20 @@ class OpenSlideWSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        coord_space="baseline",
         **kwargs,
     ):
+        if coord_space == "resolution":
+            region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return region
 
         # Find parameters for optimal read
         (
@@ -1139,12 +1185,12 @@ class OpenSlideWSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
-        coords_space="baseline",
+        coord_space="baseline",
         **kwargs,
     ):
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
-        if coords_space == "resolution":
+        if coord_space == "resolution":
             bounds_at_baseline = self._bounds_at_resolution_to_baseline(
                 bounds, resolution, units
             )
@@ -1192,7 +1238,7 @@ class OpenSlideWSIReader(WSIReader):
         )
 
         # Resize to correct scale if required
-        if coords_space == "resolution":
+        if coord_space == "resolution":
             im_region = utils.transforms.imresize(
                 img=im_region,
                 output_size=size_at_requested,
@@ -1308,8 +1354,21 @@ class OmnyxJP2WSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        coord_space="baseline",
         **kwargs,
     ):
+        if coord_space == "resolution":
+            region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return region
+
         # Find parameters for optimal read
         (
             read_level,
@@ -1355,12 +1414,12 @@ class OmnyxJP2WSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
-        coords_space="baseline",
+        coord_space="baseline",
         **kwargs,
     ):
 
         bounds_at_baseline = bounds
-        if coords_space == "resolution":
+        if coord_space == "resolution":
             bounds_at_baseline = self._bounds_at_resolution_to_baseline(
                 bounds, resolution, units
             )
@@ -1402,7 +1461,7 @@ class OmnyxJP2WSIReader(WSIReader):
         )
 
         # Resize to correct scale if required
-        if coords_space == "resolution":
+        if coord_space == "resolution":
             im_region = utils.transforms.imresize(
                 img=im_region,
                 output_size=size_at_requested,
@@ -1582,10 +1641,20 @@ class VirtualWSIReader(WSIReader):
         interpolation="cubic",
         pad_mode="constant",
         pad_constant_values=0,
+        coord_space="baseline",
         **kwargs,
     ):
-        # ! do we need to raise error or crash in is_attach mode?
-        # ! because the behavior is not yet clearly defined atm
+        if coord_space == "resolution":
+            region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return region
 
         # Find parameters for optimal read
         (_, _, _, _, baseline_read_size,) = self.find_read_rect_params(
@@ -1628,13 +1697,13 @@ class VirtualWSIReader(WSIReader):
         interpolation="cubic",
         pad_mode="constant",
         pad_constant_values=0,
-        coords_space="baseline",
+        coord_space="baseline",
         **kwargs,
     ):
 
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
-        if coords_space == "resolution":
+        if coord_space == "resolution":
             bounds_at_baseline = self._bounds_at_resolution_to_baseline(
                 bounds, resolution, units
             )
@@ -1672,7 +1741,7 @@ class VirtualWSIReader(WSIReader):
             read_kwargs=kwargs,
         )
 
-        if coords_space == "resolution":
+        if coord_space == "resolution":
             # do this to enforce output size is as defined by input bounds
             im_region = utils.transforms.imresize(
                 img=im_region, output_size=size_at_requested
