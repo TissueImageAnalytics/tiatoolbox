@@ -544,7 +544,8 @@ class WSIReader:
 
         In actuallity, `read_rect` at resolution is synonymous with
         calling `read_bound` at resolution because `size` has always been
-        within the resolution system,
+        within the resolution system.
+
         """
         tl = np.array(location)
         br = location + np.array(size)
