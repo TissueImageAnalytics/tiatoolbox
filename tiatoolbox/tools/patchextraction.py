@@ -325,10 +325,19 @@ class PatchExtractor(ABC):
         x_list = np.arange(0, image_shape[0], stride_shape[0])
         y_list = np.arange(0, image_shape[1], stride_shape[1])
 
-        if within_bound:
+        if within_bound == 2:
             sel = x_list + patch_shape[0] <= image_shape[0]
             x_list = x_list[sel]
             sel = y_list + patch_shape[1] <= image_shape[1]
+            y_list = y_list[sel]
+        elif within_bound == 1:
+            sel = x_list + patch_shape[0] < (
+                image_shape[0] + patch_shape[0] - stride_shape[0]
+            )
+            x_list = x_list[sel]
+            sel = y_list + patch_shape[1] < (
+                image_shape[1] + patch_shape[1] - stride_shape[1]
+            )
             y_list = y_list[sel]
 
         top_left_list = flat_mesh_grid_coord(x_list, y_list)
