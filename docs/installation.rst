@@ -1,8 +1,23 @@
 .. highlight:: shell
 
-============
+************
 Installation
-============
+************
+
+Using Anaconda (Reccommend)
+===========================
+
+After `installing Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or miniconda), you can create a virtual environment for TIA toolbox using the following command:
+
+.. code-block:: console
+
+    $ conda env create --file requirements.conda.yml
+    
+    
+Alternative Method
+==================
+
+If you cannot use Anaconda or are having trouble with it, you can try and alternative install method. Here we will show how to install pre-requisite binary packages before installing pythong dependencies using the Python package manager (pip).
 
 
 Prerequisites
@@ -34,10 +49,28 @@ The same command is used when working on the Colab or Kaggle platforms.
 In addition, we remove the packages`datascience`and`albumentations`from Colab because they conflict
 and produce an error message.
 
-MacOS
+macOS
 ^^^^^
 
-TBA
+On macOS there are two popular package managers, `homebrew`_ and `macports`_.
+
+.. _homebrew: https://brew.sh/
+.. _macports: https://www.macports.org/
+
+Homebrew
+""""""""
+
+.. code-block:: console
+
+    $ brew install openjpeg openslide
+ 
+MacPorts
+""""""""
+
+.. code-block:: console
+
+    $ port install openjpeg openslide
+
 
 Stable release
 --------------
