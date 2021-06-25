@@ -4,26 +4,25 @@
 Installation
 ************
 
-Using Anaconda (Reccommend)
-===========================
+Prerequisites
+--------------
+The prerequisites for tiatoolbox installation are OpenSlide binaries and OpenJpeg version 2.3.0 or above.
+Please follow the instructions below to install prerequisite software on your respective platform.
+
+Using Anaconda (Recommended)
+============================
 
 After `installing Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or miniconda), you can create a virtual environment for TIA toolbox using the following command:
 
 .. code-block:: console
 
     $ conda env create --file requirements.conda.yml
-    
-    
+
+
 Alternative Method
 ==================
 
 If you cannot use Anaconda or are having trouble with it, you can try and alternative install method. Here we will show how to install pre-requisite binary packages before installing pythong dependencies using the Python package manager (pip).
-
-
-Prerequisites
---------------
-The prerequisites for tiatoolbox installation are OpenSlide binaries and OpenJpeg version 2.3.0 or above.
-Please follow the instructions below to install prerequisite software on your respective platform.
 
 Windows
 ^^^^^^^
@@ -46,7 +45,7 @@ On Linux the preprequiste software can be installed using the command
     $ apt-get -y install libopenjp2-7-dev libopenjp2-tools openslide-tools
 
 The same command is used when working on the Colab or Kaggle platforms.
-In addition, we remove the packages`datascience`and`albumentations`from Colab because they conflict
+In addition, we remove the packages `datascience` and `albumentations` from Colab because they conflict
 and produce an error message.
 
 macOS
@@ -63,7 +62,7 @@ Homebrew
 .. code-block:: console
 
     $ brew install openjpeg openslide
- 
+
 MacPorts
 """"""""
 
@@ -76,7 +75,7 @@ Stable release
 --------------
 
 Please note that TIAToolbox is tested for python version 3.6, 3.7 and 3.8.
-To install TIA Toolbox, run this command in your terminal:
+To install TIA Toolbox, run this command in your terminal after you have installed the pre-requisite software:
 
 .. code-block:: console
 
