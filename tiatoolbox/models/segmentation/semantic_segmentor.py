@@ -29,7 +29,7 @@ import logging
 import math
 import os
 import pathlib
-from typing import Callable, Optional, Tuple, Union, List
+from typing import Callable, Optional, Tuple, Type, Union, List
 import warnings
 
 import cv2
@@ -118,6 +118,14 @@ class SerializeWSIReader(torch_data.Dataset):
     def __len__(self):
         return len(self.mp_shared_space.patch_input_list)
 
+    @staticmethod
+    def collate_fn(batch):
+        """
+        Proto to handle reading exception
+        """
+        batch = [v for v in batch if v is not None]
+        return torch.utils.data.dataloader.default_collate(batch)
+
     def __getitem__(self, idx):
         # ! no need to lock as we dont modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
@@ -134,6 +142,7 @@ class SerializeWSIReader(torch_data.Dataset):
             patch_data = self.reader.read_bounds(
                             bounds.astype(np.int32),
                             location_at_requested=True,
+                            pad_constant_values=0,  # expose this ?
                             **resolution)
 
         if self.preproc is not None:
@@ -144,18 +153,19 @@ class SerializeWSIReader(torch_data.Dataset):
         return patch_data, torch.stack([tl, br])
 
 
-class Segmentor:
+class SemanticSegmentor:
     """Pixel-wise segmentation predictor."""
 
     def __init__(
         self,
         batch_size=8,
         num_loader_worker=0,
-        num_postproc_worker=0,
+        num_postproc_worker=0,  # has not effect
         model=None,
         pretrained_model=None,
         pretrained_weight=None,
         verbose=True,
+        dataset_class : Callable = SerializeWSIReader,
     ):
         """Initialise the Patch Predictor."""
         super().__init__()
@@ -170,6 +180,7 @@ class Segmentor:
         self._on_gpu = None
         self._mp_shared_space = None
 
+        self.dataset_class : SerializeWSIReader = dataset_class
         self.model = model  # original copy
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
@@ -206,12 +217,11 @@ class Segmentor:
             wsi_idx : int,
             iostate : IOStateSegmentor,
             loader,
-            save_dir : str,
+            save_path : str,
             mode : str):
         """
         """
         wsi_path = self.img_list[wsi_idx]
-        base_name = pathlib.Path(wsi_path).stem
         mask_path = None if self.mask_list is None else self.msk_list[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(wsi_path, mask_path, mode, False)
 
@@ -288,9 +298,9 @@ class Segmentor:
         location_list, prediction_list = list(zip(*cum_output))
         # Nx2x2 (N x [tl, br]), denotes the location of output patch
         # this can exceed the image bound at the requested resolution
-        # remove simpleton due to split, 
+        # remove singleton due to split,
         # also convert from XY to YX coordinate system
-        location_list = [v[0][:,[1,0]] for v in location_list]
+        location_list = [v[0][:, [1, 0]] for v in location_list]
         for idx, output_resolution in enumerate(iostate.output_resolutions):
             # assume resolution idx to be in the same order as L
             merged_resolution = resolution
@@ -307,12 +317,12 @@ class Segmentor:
             merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
             # 0 idx is to remove singleton wihout removing other axes singleton
             to_merge_prediction_list = [v[idx][0] for v in prediction_list]
-            save_path = os.path.join(save_dir, f'{base_name}.raw.{idx}.npy')
+            sub_save_path = f"{save_path}.raw.{idx}.npy"
             self.merge_prediction(
-                        merged_shape,
+                        merged_shape[::-1],  # XY to YX
                         to_merge_prediction_list,
                         merged_location_list,
-                        save_path=save_path,
+                        save_path=sub_save_path,
                         remove_prediction=True)
         return
 
@@ -397,6 +407,7 @@ class Segmentor:
         resolution=0.25,
         units="mpp",
         save_dir=None,
+        crash_on_exception=False,
     ):
         """Make a prediction for a list of input data."""
         if mode not in ["wsi", "tile"]:
@@ -442,7 +453,7 @@ class Segmentor:
                 stride_shape=stride_shape
             )
 
-        ds = SerializeWSIReader(
+        ds = self.dataset_class(
                 iostate,
                 img_list,
                 mp_shared_space,
@@ -450,19 +461,36 @@ class Segmentor:
 
         loader = torch_data.DataLoader(
                             ds,
-                            batch_size=8,
                             drop_last=False,
-                            num_workers=0,
-                            persistent_workers=False,
-                            # num_workers=2,
-                            # persistent_workers=True,
+                            batch_size=self.batch_size,
+                            num_workers=self.num_loader_worker,
+                            persistent_workers=self.num_loader_worker > 0,
                         )
 
         self.img_list = img_list
         self.mask_list = mask_list
-        for wsi_idx, _ in enumerate(img_list):
-            self._predict_one_wsi(
-                    wsi_idx, iostate, loader, save_dir, mode)
+
+        # contain input / ouput prediction mapping
+        file_dict = {}
+        # ? what will happen if this crash midway?
+        # => may not be able to retrieve the result dict
+        for wsi_idx, img_path in enumerate(img_list):
+            try:
+                wsi_save_path = os.path.join(save_dir, f'{wsi_idx}')
+                self._predict_one_wsi(
+                        wsi_idx, iostate, loader, wsi_save_path, mode)
+                file_dict[img_path] = wsi_save_path
+
+                # verbose mode, error by passing ?
+                logging.info(f'Finish: {wsi_idx}/{len(img_list)}')
+                logging.info(f'--Input: {img_path}')
+                logging.info(f'--Ouput: {wsi_save_path}')
+            except Exception as err:
+                if crash_on_exception:
+                    raise err
+                else:
+                    logging.error(err)
+                    continue
 
         # memory clean up
         self.img_list = None
@@ -470,4 +498,4 @@ class Segmentor:
         self._model = None
         self._on_gpu = None
         self._mp_shared_space = None
-        return
+        return file_dict
