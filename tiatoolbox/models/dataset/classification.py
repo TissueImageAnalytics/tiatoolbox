@@ -278,10 +278,10 @@ class WSIPatchDataset(abc.ABCPatchDataset):
 
         # use all patches, as long as it overlaps source image
         self.input_list = PatchExtractor.get_coordinates(
-            wsi_shape,
-            patch_size[::-1],
-            stride_size[::-1],
-            within_bound=False,
+            image_shape=wsi_shape,
+            patch_input_shape=patch_size[::-1],
+            stride_shape=stride_size[::-1],
+            input_within_bound=False,
         )
 
         mask_reader = None
