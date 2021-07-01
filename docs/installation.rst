@@ -7,7 +7,7 @@ Installation
 Prerequisites
 --------------
 The prerequisites for tiatoolbox installation are OpenSlide binaries and OpenJpeg version 2.3.0 or above.
-Please follow the instructions below to install prerequisite software on your respective platform.
+Please follow the instructions below to install prerequisite software according to the platform you are using.
 
 Using Anaconda (Recommended)
 ============================
