@@ -116,7 +116,7 @@ class KatherPatchDataset(ABCDatasetInfo):
         all_path_list = []
         for label_id, label_code in enumerate(label_code_list):
             path_list = grab_files_from_dir(
-                "%s/%s/" % (save_dir_path, label_code), file_types="*.tif"
+                f"{save_dir_path}/{label_code}/", file_types="*.tif"
             )
             path_list = [[v, label_id] for v in path_list]
             path_list.sort()

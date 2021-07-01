@@ -278,7 +278,9 @@ class WSIPatchDataset(abc.ABCPatchDataset):
 
         # use all patches, as long as it overlaps source image
         self.input_list = PatchExtractor.get_coordinates(
-            wsi_shape, patch_size[::-1], stride_size[::-1],
+            wsi_shape,
+            patch_size[::-1],
+            stride_size[::-1],
             within_bound=False,
         )
 
@@ -296,7 +298,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
             mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
-            # ? will this mess up ?
+            # ? will this mess up  ?
             mask_reader.info = self.reader.info
 
         if mask_reader is not None:
@@ -326,7 +328,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             resolution=self.resolution,
             units=self.units,
             pad_constant_values=255,
-            coord_space='resolution',
+            coord_space="resolution",
         )
 
         # Apply preprocessing to selected patch

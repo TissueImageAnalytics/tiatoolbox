@@ -35,11 +35,9 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.abc import IOStateBase, ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
-from tiatoolbox.models.dataset.classification import (PatchDataset,
-                                                      WSIPatchDataset)
+from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import (download_data, get_pretrained_model_info,
-                                   save_json)
+from tiatoolbox.utils.misc import download_data, get_pretrained_model_info, save_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
@@ -215,9 +213,7 @@ class CNNPatchPredictor:
             self.model = model
             iostate = None  # retrieve iostate from provided model ?
         else:
-            model, iostate = get_pretrained_model(
-                pretrained_model, pretrained_weight
-            )
+            model, iostate = get_pretrained_model(pretrained_model, pretrained_weight)
 
         self._iostate = iostate  # for storing original
         self.iostate = None  # for runtime
@@ -252,34 +248,34 @@ class CNNPatchPredictor:
         reader = get_wsireader(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
-                ' '.join([
-                    "Image is not pyramidal hence read is forced to be",
-                    "at `units='baseline'` and `resolution=1.0`.",
-                ])
+                " ".join(
+                    [
+                        "Image is not pyramidal hence read is forced to be",
+                        "at `units='baseline'` and `resolution=1.0`.",
+                    ]
+                )
             )
             resolution = 1.0
-            units = 'baseline'
+            units = "baseline"
 
-        canvas_shape = reader.slide_dimensions(
-                            resolution=resolution,
-                            units=units)
+        canvas_shape = reader.slide_dimensions(resolution=resolution, units=units)
         canvas_shape = canvas_shape[::-1]  # XY to YX
 
         # may crash here, do we need to deal with this ?
         output_shape = reader.slide_dimensions(
-                            resolution=output['resolution'],
-                            units=output['units'])
+            resolution=output["resolution"], units=output["units"]
+        )
         output_shape = output_shape[::-1]  # XY to YX
         fx = np.array(canvas_shape) / np.array(output_shape)
 
         if "probabilities" not in output.keys():
-            coordinates = output['coordinates']
-            predictions = output['predictions']
+            coordinates = output["coordinates"]
+            predictions = output["predictions"]
             denominator = None
             output = np.zeros(list(canvas_shape), dtype=np.float32)
         else:
-            coordinates = output['coordinates']
-            predictions = output['probabilities']
+            coordinates = output["coordinates"]
+            predictions = output["probabilities"]
             num_class = np.array(predictions[0]).shape[0]
             denominator = np.zeros(canvas_shape)
             output = np.zeros(list(canvas_shape) + [num_class], dtype=np.float32)
@@ -403,8 +399,8 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_size : Tuple[int, int] = None,
-        stride_size : Tuple[int, int] = None,
+        patch_size: Tuple[int, int] = None,
+        stride_size: Tuple[int, int] = None,
         resolution=None,
         units=None,
         merge_predictions=False,
@@ -473,7 +469,7 @@ class CNNPatchPredictor:
             raise ValueError(
                 "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
             )
-        if label_list is not None and mode == 'patch':
+        if label_list is not None and mode == "patch":
             # if a label_list is provided, then return with the prediction
             return_labels = bool(label_list)
             if len(label_list) != len(img_list):
@@ -496,8 +492,8 @@ class CNNPatchPredictor:
             self.iostate = self._iostate
             if patch_size is not None:
                 iostate = _IOStatePatchPredictor(
-                    input_resolutions=[{'resolution': resolution, 'units': units}],
-                    output_resolutions=[{'resolution': resolution, 'units': units}],
+                    input_resolutions=[{"resolution": resolution, "units": units}],
+                    output_resolutions=[{"resolution": resolution, "units": units}],
                     patch_size=patch_size,
                     stride_size=stride_size,
                 )
@@ -543,8 +539,8 @@ class CNNPatchPredictor:
                     mask_path=img_mask,
                     patch_size=self.iostate.patch_size,
                     stride_size=self.iostate.stride_size,
-                    resolution=self.iostate.input_resolutions[0]['resolution'],
-                    units=self.iostate.input_resolutions[0]['units'],
+                    resolution=self.iostate.input_resolutions[0]["resolution"],
+                    units=self.iostate.input_resolutions[0]["units"],
                 )
                 output_model = self._predict_engine(
                     dataset,
@@ -562,25 +558,23 @@ class CNNPatchPredictor:
                 output_list = [output_model]  # assign to a list
                 if merge_predictions:
                     merged_prediction = self.merge_predictions(
-                        img_path, output_model,
-                        resolution=resolution,
-                        units=units
+                        img_path, output_model, resolution=resolution, units=units
                     )
                     output_list.append(merged_prediction)
 
                 if len(img_list) > 1:
-                    img_code = '{number:0{width}d}'.format(
-                                    width=len(str(len(img_list))),
-                                    number=idx)
+                    img_code = "{number:0{width}d}".format(
+                        width=len(str(len(img_list))), number=idx
+                    )
                     save_info = {}
                     save_path = os.path.join(save_dir, img_code)
-                    raw_save_path = '%s%s' % (save_path, ".raw.json")
-                    save_info['raw'] = raw_save_path
+                    raw_save_path = f"{save_path}.raw.json"
+                    save_info["raw"] = raw_save_path
                     save_json(output_model, raw_save_path)
                     if merge_predictions:
-                        merged_file_path = '%s%s' % (save_path, ".merged.npy")
+                        merged_file_path = f"{save_path}.merged.npy"
                         np.save(merged_file_path, merged_prediction)
-                        save_info['merged'] = merged_file_path
+                        save_info["merged"] = merged_file_path
                     file_dict[img_path] = save_info
                 else:
                     output = output_list
@@ -673,7 +667,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
     iostate = _IOStatePatchPredictor(
         patch_size=patch_size,
-        input_resolutions=[{'resolution': resolution, 'units': units}],
-        output_resolutions=[{'resolution': resolution, 'units': units}]
+        input_resolutions=[{"resolution": resolution, "units": units}],
+        output_resolutions=[{"resolution": resolution, "units": units}],
     )
     return model, iostate
