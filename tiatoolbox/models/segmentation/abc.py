@@ -75,18 +75,16 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
     def _validate(self):
         """Validate the data format."""
 
-        def validate_units(resolution_list):
-            unit_list = [v["units"] for v in resolution_list]
-            unit_list = np.unique(unit_list)
-            if len(unit_list) != 1 or unit_list[0] not in [
-                "power",
-                "baseline",
-                "mpp",
-                "level",
-            ]:
-                raise ValueError("Invalid resolution units.")
-
-        validate_units(self.input_resolutions + self.output_resolutions)
+        resolution_list = self.input_resolutions + self.output_resolutions
+        unit_list = [v["units"] for v in resolution_list]
+        unit_list = np.unique(unit_list)
+        if len(unit_list) != 1 or unit_list[0] not in [
+            "power",
+            "baseline",
+            "mpp",
+            "level",
+        ]:
+            raise ValueError("Invalid resolution units.")
 
     def convert_to_baseline(self):
         """Convert IO resolution to 'baseline'.
@@ -96,6 +94,7 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
         """
 
         def _to_baseline(resolution_list):
+            """Helper to convert to scale factor."""
             old_val = [v["resolution"] for v in resolution_list]
             if self.resolution_unit == "baseline":
                 new_val = old_val

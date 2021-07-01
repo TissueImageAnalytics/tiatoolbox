@@ -75,6 +75,7 @@ class _CNNTo1(nn.Module):
         return img
 
     def forward(self, img):
+        """Define how to use layer."""
         output = self.conv(img)
         return output
 

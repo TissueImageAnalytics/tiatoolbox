@@ -96,9 +96,10 @@ class SerializeWSIReader(torch_data.Dataset):
         self.mp_shared_space = mp_shared_space
         self.wsi_path_list = wsi_path_list
         self.wsi_idx = None  # to be received externally via thread communication
-        return
+        self.reader = None
 
     def _get_reader(self, img_path):
+        """Get approriate reader for input path."""
         img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
             reader = get_wsireader(img_path)
@@ -216,6 +217,8 @@ class SemanticSegmentor:
         self._model = None
         self._on_gpu = None
         self._mp_shared_space = None
+        self.img_list = None
+        self.mask_list = None
 
         self.dataset_class: SerializeWSIReader = dataset_class
         self.model = model  # original copy
@@ -272,9 +275,11 @@ class SemanticSegmentor:
         )
 
         resolution = iostate.highest_input_resolution
-        if isinstance(wsi_reader, VirtualWSIReader):
-            if resolution["units"] != "baseline":
-                raise ValueError("Inference on `tile` only use `units='baseline'` !")
+        if (
+            isinstance(wsi_reader, VirtualWSIReader)
+            and resolution["units"] != "baseline"
+        ):
+            raise ValueError("Inference on `tile` only use `units='baseline'` !")
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
         # * retrieve patch and tile placement
@@ -374,7 +379,6 @@ class SemanticSegmentor:
                 save_path=sub_save_path,
                 free_prediction=True,
             )
-        return
 
     @staticmethod
     def merge_prediction(
@@ -624,16 +628,17 @@ class SemanticSegmentor:
                 logging.info(f"Finish: {wsi_idx}/{len(img_list)}")
                 logging.info(f"--Input: {img_path}")
                 logging.info(f"--Ouput: {wsi_save_path}")
-            except Exception as err:
-                if crash_on_exception:
-                    raise err
-                else:
+            # prevent deep source check because this is bypass and
+            # delegating error message
+            except Exception as err:  # noqa
+                if not crash_on_exception:
                     logging.error(err)
                     continue
+                raise err
 
         # memory clean up
         self.img_list = None
-        self.msk_list = None
+        self.mask_list = None
         self._model = None
         self._on_gpu = None
         self._mp_shared_space = None
