@@ -10,13 +10,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-sys.path.append('.')
+sys.path.append(".")
 from tiatoolbox import rcParam
-from tiatoolbox.models.segmentation import (IOStateSegmentor,
-                                            SemanticSegmentor,
-                                            SerializeWSIReader)
-from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
-                                          get_wsireader)
+from tiatoolbox.models.segmentation import (
+    IOStateSegmentor,
+    SemanticSegmentor,
+    SerializeWSIReader,
+)
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
 
 ON_GPU = True
 # ----------------------------------------------------
@@ -61,6 +62,7 @@ class _CNNTo1(nn.Module):
     Simple model to test functionality, this contains a single
     convolution layer which has weight=0 and bias=1.
     """
+
     def __init__(self):
         super(_CNNTo1, self).__init__()
         self.conv = nn.Conv2d(3, 1, 3, padding=1)
@@ -88,7 +90,7 @@ class _CNNTo1(nn.Module):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        device = 'cuda' if on_gpu else 'cpu'
+        device = "cuda" if on_gpu else "cpu"
         ####
         model.eval()  # infer mode
 
@@ -108,6 +110,7 @@ class _CNNTo1(nn.Module):
         prob_list = prob_list.cpu().numpy()
         return [prob_list]
 
+
 # ----------------------------------------------------
 
 
@@ -115,41 +118,41 @@ def test_segmentor_iostate():
     """Test for IOState"""
     iostate = IOStateSegmentor(
         input_resolutions=[
-                {'units' : 'mpp', 'resolution' : 0.25},
-                {'units' : 'mpp', 'resolution' : 0.50},
-                {'units' : 'mpp', 'resolution' : 0.75}
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.50},
+            {"units": "mpp", "resolution": 0.75},
         ],
         output_resolutions=[
-                {'units' : 'mpp', 'resolution' : 0.25},
-                {'units' : 'mpp', 'resolution' : 0.50}
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.50},
         ],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
-    assert iostate.highest_input_resolution == {'units' : 'mpp', 'resolution' : 0.25}
+    assert iostate.highest_input_resolution == {"units": "mpp", "resolution": 0.25}
     iostate.convert_to_baseline()
-    assert iostate.input_resolutions[0]['resolution'] == 1.0
-    assert iostate.input_resolutions[1]['resolution'] == 0.5
-    assert iostate.input_resolutions[2]['resolution'] == 1/3
+    assert iostate.input_resolutions[0]["resolution"] == 1.0
+    assert iostate.input_resolutions[1]["resolution"] == 0.5
+    assert iostate.input_resolutions[2]["resolution"] == 1 / 3
 
     iostate = IOStateSegmentor(
         input_resolutions=[
-                {'units' : 'power', 'resolution' : 0.25},
-                {'units' : 'power', 'resolution' : 0.50}
+            {"units": "power", "resolution": 0.25},
+            {"units": "power", "resolution": 0.50},
         ],
         output_resolutions=[
-                {'units' : 'power', 'resolution' : 0.25},
-                {'units' : 'power', 'resolution' : 0.50}
+            {"units": "power", "resolution": 0.25},
+            {"units": "power", "resolution": 0.50},
         ],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
-    assert iostate.highest_input_resolution == {'units' : 'power', 'resolution' : 0.50}
+    assert iostate.highest_input_resolution == {"units": "power", "resolution": 0.50}
     iostate.convert_to_baseline()
-    assert iostate.input_resolutions[0]['resolution'] == 0.5
-    assert iostate.input_resolutions[1]['resolution'] == 1.0
+    assert iostate.input_resolutions[0]["resolution"] == 0.5
+    assert iostate.input_resolutions[1]["resolution"] == 1.0
 
 
 def test_functional_segmentor(_sample_wsi_dict):
@@ -157,42 +160,48 @@ def test_functional_segmentor(_sample_wsi_dict):
     save_dir = _get_temp_folder_path()
     save_dir = pathlib.Path(save_dir)
     # # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
     model = _CNNTo1()
     runner = SemanticSegmentor(batch_size=32, model=model)
 
     # * test basic crash
-    _rm_dir('output')  # default output dir test
-    with pytest.raises(ValueError, match=r'.*provide.*'):
+    _rm_dir("output")  # default output dir test
+    with pytest.raises(ValueError, match=r".*provide.*"):
         SemanticSegmentor()
-    with pytest.raises(ValueError, match=r'.*valid mode.*'):
-        runner.predict([], mode='abc')
-    with pytest.raises(ValueError, match=r'.*`tile` only use .*baseline.*'):
+    with pytest.raises(ValueError, match=r".*valid mode.*"):
+        runner.predict([], mode="abc")
+    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
         runner.predict(
-            [_mini_wsi_jpg], mode='tile',
+            [_mini_wsi_jpg],
+            mode="tile",
             patch_input_shape=[2048, 2048],
-            resolution=1.0, units='mpp',
-            crash_on_exception=True)
-    with pytest.raises(ValueError, match=r'.*already exists.*'):
-        runner.predict([], mode='tile')
-    _rm_dir('output')  # default output dir test
+            resolution=1.0,
+            units="mpp",
+            crash_on_exception=True,
+        )
+    with pytest.raises(ValueError, match=r".*already exists.*"):
+        runner.predict([], mode="tile")
+    _rm_dir("output")  # default output dir test
     # * check exception bypass in the log
     # there should be no exception, but how to check the log?
     runner.predict(
-        [_mini_wsi_jpg], mode='tile',
+        [_mini_wsi_jpg],
+        mode="tile",
         patch_input_shape=[2048, 2048],
-        resolution=1.0, units='mpp',
-        crash_on_exception=False)
-    _rm_dir('output')  # default output dir test
+        resolution=1.0,
+        units="mpp",
+        crash_on_exception=False,
+    )
+    _rm_dir("output")  # default output dir test
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
     iostate = IOStateSegmentor(
-        input_resolutions=[{'units' : 'baseline', 'resolution' : 2.0}],
-        output_resolutions=[{'units' : 'baseline', 'resolution' : 2.0}],
+        input_resolutions=[{"units": "baseline", "resolution": 2.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 2.0}],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
@@ -204,57 +213,59 @@ def test_functional_segmentor(_sample_wsi_dict):
         _mini_wsi_jpg,
     ]
     output_list = runner.predict(
-            file_list,
-            mode='tile',
-            on_gpu=ON_GPU,
-            iostate=iostate,
-            crash_on_exception=True,
-            save_dir=f'{save_dir}/raw/')
-    pred_1 = np.load(output_list[0][1] + '.raw.0.npy')
-    pred_2 = np.load(output_list[1][1] + '.raw.0.npy')
+        file_list,
+        mode="tile",
+        on_gpu=ON_GPU,
+        iostate=iostate,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
+    pred_2 = np.load(output_list[1][1] + ".raw.0.npy")
     assert len(output_list) == 2
     assert np.sum(pred_1 - pred_2) == 0
     # due to overlapping merge and division, will not be
-    # exactly 1, but should approximate so
+    # exactly 1, but should be approximately so
     assert np.sum((pred_1 - 1) > 1.0e-6) == 0
     _rm_dir(save_dir)
 
     # * test running with mask and svs
     # * also test mergin prediction at designated resolution
     iostate = IOStateSegmentor(
-        input_resolutions=[{'units' : 'baseline', 'resolution' : 1.0}],
-        output_resolutions=[{'units' : 'baseline', 'resolution' : 1.0}],
-        save_resolution={'units' : 'baseline', 'resolution' : 0.25},
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        save_resolution={"units": "baseline", "resolution": 0.25},
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
     _rm_dir(save_dir)
     output_list = runner.predict(
-            [_mini_wsi_svs],
-            mask_list=[_mini_wsi_msk],
-            mode='wsi',
-            on_gpu=ON_GPU,
-            iostate=iostate,
-            crash_on_exception=True,
-            save_dir=f'{save_dir}/raw/')
+        [_mini_wsi_svs],
+        mask_list=[_mini_wsi_msk],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        iostate=iostate,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
     reader = get_wsireader(_mini_wsi_svs)
     expected_shape = reader.slide_dimensions(**iostate.save_resolution)
     expected_shape = np.array(expected_shape)[::-1]  # to YX
-    pred_1 = np.load(output_list[0][1] + '.raw.0.npy')
+    pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
     saved_shape = np.array(pred_1.shape[:2])
     assert np.sum(expected_shape - saved_shape) == 0
     assert np.sum((pred_1 - 1) > 1.0e-6) == 0
     _rm_dir(save_dir)
 
     # check normal run with auto get mask
-    runner = SemanticSegmentor(
-                batch_size=32, model=model, auto_generate_mask=True)
+    runner = SemanticSegmentor(batch_size=32, model=model, auto_generate_mask=True)
     output_list = runner.predict(
-            [_mini_wsi_svs],
-            mask_list=[_mini_wsi_msk],
-            mode='wsi',
-            on_gpu=ON_GPU,
-            iostate=iostate,
-            crash_on_exception=True,
-            save_dir=f'{save_dir}/raw/')
+        [_mini_wsi_svs],
+        mask_list=[_mini_wsi_msk],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        iostate=iostate,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )

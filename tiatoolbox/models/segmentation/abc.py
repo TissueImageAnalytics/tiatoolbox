@@ -34,16 +34,13 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
     output_resolutions = None
 
     def __init__(
-            self,
-            input_resolutions,
-            output_resolutions,
-            save_resolution=None,
-            **kwargs):
+        self, input_resolutions, output_resolutions, save_resolution=None, **kwargs
+    ):
         """Define IO placement for patch input and output.
 
         Args:
 
-            input_resolutions: resolution of each input head to model
+            input_resolutions: resolution of each input head of model
                 inference, must be in the same order as target model.forward().
 
             output_resolutions: resolution of each output head from model
@@ -58,7 +55,7 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
         self.input_resolutions = input_resolutions
         self.output_resolutions = output_resolutions
 
-        self.resolution_unit = input_resolutions[0]['units']
+        self.resolution_unit = input_resolutions[0]["units"]
         self.save_resolution = save_resolution
 
         for variable, value in kwargs.items():
@@ -66,21 +63,29 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
 
         self._validate()
 
-        if self.resolution_unit == 'mpp':
+        if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x['resolution'])
+                self.input_resolutions, key=lambda x: x["resolution"]
+            )
         else:
             self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x['resolution'])
+                self.input_resolutions, key=lambda x: x["resolution"]
+            )
 
     def _validate(self):
         """Validate the data format."""
+
         def validate_units(resolution_list):
-            unit_list = [v['units'] for v in resolution_list]
+            unit_list = [v["units"] for v in resolution_list]
             unit_list = np.unique(unit_list)
-            if (len(unit_list) != 1 or unit_list[0] 
-                    not in ['power',  'baseline', 'mpp', 'level']):
-                raise ValueError('Invalid resolution units.')
+            if len(unit_list) != 1 or unit_list[0] not in [
+                "power",
+                "baseline",
+                "mpp",
+                "level",
+            ]:
+                raise ValueError("Invalid resolution units.")
+
         validate_units(self.input_resolutions + self.output_resolutions)
 
     def convert_to_baseline(self):
@@ -89,25 +94,24 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
         This will permanently alter the object values.
         Actually return scale factor wrt highest resolution initially defined.
         """
+
         def _to_baseline(resolution_list):
-            old_val = [v['resolution'] for v in resolution_list]
-            if self.resolution_unit == 'baseline':
+            old_val = [v["resolution"] for v in resolution_list]
+            if self.resolution_unit == "baseline":
                 new_val = old_val
-            elif self.resolution_unit == 'mpp':
+            elif self.resolution_unit == "mpp":
                 new_val = np.min(old_val) / np.array(old_val)
-            elif self.resolution_unit == 'power':
+            elif self.resolution_unit == "power":
                 new_val = np.array(old_val) / np.max(old_val)
-            resolution_list = [
-                {'units' : 'baseline', 'resolution' : v}
-                for v in new_val]
+            resolution_list = [{"units": "baseline", "resolution": v} for v in new_val]
             return resolution_list
+
         self.input_resolutions = _to_baseline(self.input_resolutions)
         self.output_resolutions = _to_baseline(self.output_resolutions)
 
 
 class ModelBase(tia_model_abc.ModelBase):
-    """ABC.
-    """
+    """ABC."""
 
     @property
     @abstractmethod
