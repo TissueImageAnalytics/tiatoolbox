@@ -308,8 +308,7 @@ class SemanticSegmentor:
                 merged_resolution = iostate.save_resolution
                 output_shape = wsi_reader.slide_dimensions(**output_resolution)
                 merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
-                fx = output_shape[0] / merged_shape[0]
-                # fy = output_shape[1] / merged_shape[1]
+                fx = merged_shape[0] / output_shape[0]
                 merged_location_list = np.ceil(location_list * fx).astype(np.int64)
             merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
             # 0 idx is to remove singleton wihout removing other axes singleton
