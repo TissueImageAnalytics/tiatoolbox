@@ -48,7 +48,7 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
 
         # setting this to overwrite, such that all output head
         # will be saved under a same resolution
-        self.save_resolution = None
+        self.save_resolution = save_resolution
 
         for variable, value in kwargs.items():
             self.__setattr__(variable, value)

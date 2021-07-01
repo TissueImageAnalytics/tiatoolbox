@@ -20,17 +20,13 @@
 
 """This module enables semantic segmentation."""
 
-import collections
-import colorsys
-import copy
-import itertools
-import logging
 
-import math
+import copy
+import logging
 import os
 import pathlib
-from typing import Callable, Optional, Tuple, Type, Union, List
 import warnings
+from typing import Callable, List, Tuple, Union
 
 import cv2
 import numpy as np
@@ -40,9 +36,9 @@ import torch.utils.data as torch_data
 import tqdm
 
 from tiatoolbox.models.segmentation.abc import IOStateSegmentor
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread, imwrite
-from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
                                           get_wsireader)
 
@@ -97,7 +93,7 @@ class SerializeWSIReader(torch_data.Dataset):
     def _get_reader(self, img_path):
         img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
-            self.reader = get_wsireader(img_path)
+            reader = get_wsireader(img_path)
         else:
             img = imread(img_path)
             # initialise metadata for VirtualWSIReader.
@@ -141,7 +137,7 @@ class SerializeWSIReader(torch_data.Dataset):
             # ! conversion for other resolution !
             patch_data = self.reader.read_bounds(
                             bounds.astype(np.int32),
-                            location_at_requested=True,
+                            coord_space='resolution',
                             pad_constant_values=0,  # expose this ?
                             **resolution)
 
@@ -203,13 +199,12 @@ class SemanticSegmentor:
             mask = np.array(mask > 0, dtype=np.uint8)
 
             mask_reader = VirtualWSIReader(mask)
-            mask_reader.attach_to_reader(reader.info)
+            mask_reader.info = reader.info
         elif auto_get_mask and mode == "wsi" and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
             mask_reader = reader.tissue_mask(resolution=1.25, units="power")
-            # ? will this mess up ?
-            mask_reader.attach_to_reader(reader.info)
+            mask_reader.info = reader.info
         return reader, mask_reader
 
     def _predict_one_wsi(
@@ -222,7 +217,7 @@ class SemanticSegmentor:
         """
         """
         wsi_path = self.img_list[wsi_idx]
-        mask_path = None if self.mask_list is None else self.msk_list[wsi_idx]
+        mask_path = None if self.mask_list is None else self.mask_list[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(wsi_path, mask_path, mode, False)
 
         # take the highest input resolution, may need a find function ?
@@ -233,15 +228,23 @@ class SemanticSegmentor:
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
         # * retrieve patch and tile placement
-        patch_input_list, patch_output_list = PatchExtractor.get_coordinates(
+        # this is in XY
+        (
+            patch_input_list,
+            patch_output_list
+        ) = PatchExtractor.get_coordinates(
             image_shape=wsi_proc_shape,
             patch_input_shape=iostate.patch_input_shape,
             patch_output_shape=iostate.patch_output_shape,
             stride_shape=iostate.stride_shape
         )
         if mask_reader is not None:
+            output_bound_list = np.concatenate([
+                patch_output_list[:, 0],  # top left
+                patch_output_list[:, 1]   # bot right
+            ], axis=-1)
             sel = PatchExtractor.filter_coordinates(
-                    mask_reader, patch_output_list, **resolution)
+                    mask_reader, output_bound_list, **resolution)
             patch_output_list = patch_output_list[sel]
             patch_input_list = patch_input_list[sel]
 
@@ -362,7 +365,7 @@ class SemanticSegmentor:
 
             # insert singleton to align the shape when merging (which is HWC)
             if len(prediction.shape) == 2:
-                prediction = prediction[...,None]
+                prediction = prediction[..., None]
 
             sel = tl_in_wsi < 0
             tl_in_wsi[sel] = 0
@@ -377,8 +380,13 @@ class SemanticSegmentor:
             br_in_patch = br_in_wsi - old_tl_in_wsi
             patch_actual_shape = br_in_wsi - tl_in_wsi
             tl_in_patch = br_in_patch - patch_actual_shape
+
             # internal error, switch to raise ?
-            assert np.all(br_in_patch >= 0) and np.all(tl_in_patch >= 0)
+            if not (np.all(br_in_patch >= 0)
+                    and np.all(tl_in_patch >= 0)):
+                raise RuntimeError(
+                        '[BUG] Locations should not be negative at this stage!')
+
             # now croping the prediction region
             patch_pred = prediction[tl_in_patch[0]:br_in_patch[0],
                                     tl_in_patch[1]:br_in_patch[1]]
@@ -471,7 +479,7 @@ class SemanticSegmentor:
         self.mask_list = mask_list
 
         # contain input / ouput prediction mapping
-        file_dict = {}
+        output_list = []
         # ? what will happen if this crash midway?
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(img_list):
@@ -479,7 +487,10 @@ class SemanticSegmentor:
                 wsi_save_path = os.path.join(save_dir, f'{wsi_idx}')
                 self._predict_one_wsi(
                         wsi_idx, iostate, loader, wsi_save_path, mode)
-                file_dict[img_path] = wsi_save_path
+
+                # dont use dict as mapping, because can overwrite, if that is
+                # user intention to provide same path twice
+                output_list.append([img_path, wsi_save_path])
 
                 # verbose mode, error by passing ?
                 logging.info(f'Finish: {wsi_idx}/{len(img_list)}')
@@ -498,4 +509,4 @@ class SemanticSegmentor:
         self._model = None
         self._on_gpu = None
         self._mp_shared_space = None
-        return file_dict
+        return output_list
