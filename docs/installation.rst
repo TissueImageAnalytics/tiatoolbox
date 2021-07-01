@@ -22,11 +22,11 @@ After `installing Anaconda <https://docs.anaconda.com/anaconda/install/index.htm
 Alternative Method
 ==================
 
-If you cannot use Anaconda or are having trouble with it, you can try and alternative install method. Here we will show how to install pre-requisite binary packages before installing pythong dependencies using the Python package manager (pip).
+If you cannot use Anaconda or are having trouble with it, you can try an alternative install method. We will install prerequisite binary packages and then use pip (the Python package manager) to install python dependencies.
 
 Windows
 ^^^^^^^
-1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_ and add it to
+1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_. Extract the folder and add `bin` and `lib` subdirectories to
 Windows `system path <https://docs.microsoft.com/en-us/previous-versions/office/developer/sharepoint-2010/ee537574(v=office.14)>`_.
 
 2. Install OpenJPEG. The easiest way is to install OpenJpeg is through conda
@@ -38,14 +38,14 @@ using
 
 Linux (Ubuntu)
 ^^^^^^^^^^^^^^
-On Linux the preprequiste software can be installed using the command
+On Linux the prerequisite software can be installed using the command
 
 .. code-block:: console
 
     $ apt-get -y install libopenjp2-7-dev libopenjp2-tools openslide-tools
 
 The same command is used when working on the Colab or Kaggle platforms.
-In addition, we remove the packages `datascience` and `albumentations` from Colab because they conflict
+When working on Google Colab, we remove the packages `datascience` and `albumentations` because they conflict
 and produce an error message.
 
 macOS
