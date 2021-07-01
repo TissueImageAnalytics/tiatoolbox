@@ -2,6 +2,7 @@ import pathlib
 import shutil
 import sys
 
+import pytest
 import numpy as np
 
 import torch
@@ -79,7 +80,7 @@ def test_functional_segmentor(_sample_wsi_dict):
     # _mini_wsi_msk = pathlib.Path(f'{SAMPLE_ROOT_DIR}/wsi2_4k_x_4k.mask.png')
 
     save_dir = 'output_model_semantic/'
-    # convert to pathlib Path to prevent wsireader complaint
+    # # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
@@ -146,4 +147,16 @@ def test_functional_segmentor(_sample_wsi_dict):
     saved_shape = np.array(pred_1.shape[:2])
     assert np.sum(expected_shape - saved_shape) == 0
     assert np.sum((pred_1 - 1) > 1.0e-6) == 0
+    _rm_dir(save_dir)
+
+    # * test crash for wild bypass
+    with pytest.raises(ValueError):
+        output_list = runner.predict(
+            [_mini_wsi_svs],
+            mask_list=['_mini_wsi_msk'],
+            mode='wsi',
+            on_gpu=ON_GPU,
+            iostate=iostate,
+            crash_on_exception=True,
+            save_dir=f'{save_dir}/raw/')
     _rm_dir(save_dir)

@@ -184,9 +184,9 @@ class PatchExtractor(ABC):
 
         self.coord_list = self.get_coordinates(
             image_shape=(img_w, img_h),
-            patch_shape=(img_patch_w, img_patch_h),
+            patch_input_shape=(img_patch_w, img_patch_h),
             stride_shape=(stride_w, stride_h),
-            within_bound=self.within_bound,
+            input_within_bound=self.within_bound,
         )
 
         if self.mask is not None:
@@ -288,7 +288,8 @@ class PatchExtractor(ABC):
                                 :class:`numpy.ndarray`of shape (2,)):
                 Specifies the output shape of requested patches to be extracted from
                 mother image at desired `resolution` and `units`. This argument is also
-                expected to be in (width, height) format.
+                expected to be in (width, height) format. If this is not provided,
+                `patch_output_shape` will be the same as `patch_input_shape`.
 
             stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
                 The stride that is used to calcualte the patch location during the patch
@@ -351,10 +352,12 @@ class PatchExtractor(ABC):
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
-        output_x_end = image_shape[0] + patch_output_shape[0]
-        output_x_list = np.arange(0, output_x_end, stride_shape[0])
-        output_y_end = image_shape[1] + patch_output_shape[1]
-        output_y_list = np.arange(0, output_y_end, stride_shape[1])
+        output_x_end = (
+            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0])
+        output_x_list = np.arange(0, int(output_x_end), stride_shape[0])
+        output_y_end = (
+            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1])
+        output_y_list = np.arange(0, int(output_y_end), stride_shape[1])
         output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
         output_br_list = output_tl_list + patch_output_shape[None]
 
@@ -364,17 +367,17 @@ class PatchExtractor(ABC):
 
         sel = np.zeros(input_tl_list.shape[0], dtype=np.bool)
         if output_within_bound:
-            sel |= np.any(output_br_list > image_shape[None], axis=0)
+            sel |= np.any(output_br_list > image_shape[None], axis=1)
         if input_within_bound:
-            sel |= np.any(input_br_list > image_shape[None], axis=0)
-            sel |= np.any(input_tl_list < 0, axis=0)
+            sel |= np.any(input_br_list > image_shape[None], axis=1)
+            sel |= np.any(input_tl_list < 0, axis=1)
         ####
-        input_bound_list = np.stack([
+        input_bound_list = np.concatenate([
             input_tl_list[~sel],
-            input_br_list[~sel]], axis=1)
-        output_bound_list = np.stack([
+            input_br_list[~sel]], axis=-1)
+        output_bound_list = np.concatenate([
             output_tl_list[~sel],
-            output_br_list[~sel]], axis=1)
+            output_br_list[~sel]], axis=-1)
         if return_output_bound:
             return input_bound_list, output_bound_list
         return input_bound_list

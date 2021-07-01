@@ -129,14 +129,14 @@ class SerializeWSIReader(torch_data.Dataset):
             self.reader = self._get_reader(self.wsi_path_list[self.wsi_idx])
 
         # this is in XY and at requested resolution not baseline
-        tl, br = self.mp_shared_space.patch_input_list[idx]
-        bounds = np.array(tl.tolist() + br.tolist())
+        bound = self.mp_shared_space.patch_input_list[idx]
+        bound = bound.numpy()  # expected to be torch.Tensor
 
         # be the same as bounds br-tl, unless bounds are of float
         for resolution in self.iostate.input_resolutions:
             # ! conversion for other resolution !
             patch_data = self.reader.read_bounds(
-                            bounds.astype(np.int32),
+                            bound.astype(np.int32),
                             coord_space='resolution',
                             pad_constant_values=0,  # expose this ?
                             **resolution)
@@ -145,8 +145,8 @@ class SerializeWSIReader(torch_data.Dataset):
             patch_data = patch_data.copy()
             patch_data = self.preproc(patch_data)
 
-        tl, br = self.mp_shared_space.patch_output_list[idx]
-        return patch_data, torch.stack([tl, br])
+        bound = self.mp_shared_space.patch_output_list[idx]
+        return patch_data, bound
 
 
 class SemanticSegmentor:
@@ -233,18 +233,14 @@ class SemanticSegmentor:
             patch_input_list,
             patch_output_list
         ) = PatchExtractor.get_coordinates(
-            image_shape=wsi_proc_shape,
-            patch_input_shape=iostate.patch_input_shape,
-            patch_output_shape=iostate.patch_output_shape,
-            stride_shape=iostate.stride_shape
+                image_shape=wsi_proc_shape,
+                patch_input_shape=iostate.patch_input_shape,
+                patch_output_shape=iostate.patch_output_shape,
+                stride_shape=iostate.stride_shape
         )
         if mask_reader is not None:
-            output_bound_list = np.concatenate([
-                patch_output_list[:, 0],  # top left
-                patch_output_list[:, 1]   # bot right
-            ], axis=-1)
             sel = PatchExtractor.filter_coordinates(
-                    mask_reader, output_bound_list, **resolution)
+                    mask_reader, patch_output_list, **resolution)
             patch_output_list = patch_output_list[sel]
             patch_input_list = patch_input_list[sel]
 
@@ -299,11 +295,10 @@ class SemanticSegmentor:
 
         # assume prediction_list is N, each item has L output element
         location_list, prediction_list = list(zip(*cum_output))
-        # Nx2x2 (N x [tl, br]), denotes the location of output patch
+        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output patch
         # this can exceed the image bound at the requested resolution
-        # remove singleton due to split,
-        # also convert from XY to YX coordinate system
-        location_list = [v[0][:, [1, 0]] for v in location_list]
+        # remove singleton due to split.
+        location_list = np.array([v[0] for v in location_list])
         for idx, output_resolution in enumerate(iostate.output_resolutions):
             # assume resolution idx to be in the same order as L
             merged_resolution = resolution
@@ -315,8 +310,7 @@ class SemanticSegmentor:
                 merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
                 fx = output_shape[0] / merged_shape[0]
                 # fy = output_shape[1] / merged_shape[1]
-                merged_location_list = [np.ceil(v * fx).astype(np.int64)
-                                        for v in location_list]
+                merged_location_list = np.ceil(location_list * fx).astype(np.int64)
             merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
             # 0 idx is to remove singleton wihout removing other axes singleton
             to_merge_prediction_list = [v[idx][0] for v in prediction_list]
@@ -333,7 +327,7 @@ class SemanticSegmentor:
     def merge_prediction(
             canvas_shape : Union[Tuple[int], List[int], np.ndarray],
             prediction_list : List[np.ndarray],
-            location_list : List[np.ndarray],
+            location_list : Union[List, np.ndarray],
             save_path : Union[str, pathlib.Path] = None,
             remove_prediction : bool = True,
             ):
@@ -353,10 +347,11 @@ class SemanticSegmentor:
 
         patch_info_list = list(zip(location_list, prediction_list))
         for patch_idx, patch_info in enumerate(patch_info_list):
-            # position is assumed to be in YX coordinate
-            ((tl_in_wsi, br_in_wsi), prediction) = patch_info
-            tl_in_wsi = np.array(tl_in_wsi)
-            br_in_wsi = np.array(br_in_wsi)
+            # position is assumed to be in XY coordinate
+            (bound_in_wsi, prediction) = patch_info
+            # convert to XY to YX, and in tl, br
+            tl_in_wsi = np.array(bound_in_wsi[:2][::-1])
+            br_in_wsi = np.array(bound_in_wsi[2:][::-1])
             old_tl_in_wsi = tl_in_wsi.copy()
 
             # need to do conversion
