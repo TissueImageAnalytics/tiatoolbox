@@ -61,7 +61,7 @@ def test_create_backbone():
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
-            assert False, "Model %s failed." % backbone
+            assert False, f"Model {backbone} failed."
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
