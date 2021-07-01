@@ -32,8 +32,7 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
     Attributes:
         return_labels (bool, False): `__getitem__` will return both the img and
-        its label.
-                If `label_list` is `None`, `None` is returned
+        its label. If `label_list` is `None`, `None` is returned
 
         preproc_func: Preprocessing function used to transform the input data. If
         supplied, then torch.Compose will be used on the input preproc_list.

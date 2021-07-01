@@ -1,5 +1,6 @@
 """Tests for code related to model usage."""
 
+from time import time
 import os
 import pathlib
 import shutil
@@ -23,6 +24,16 @@ from tiatoolbox.models.dataset import (
 from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
+
+ON_GPU = True
+
+
+def _get_temp_folder_path():
+    """Return unique temp folder path"""
+    new_dir = os.path.join(
+        rcParam["TIATOOLBOX_HOME"], f"test_model_patch_{int(time())}"
+    )
+    return new_dir
 
 ON_GPU = False
 
@@ -53,14 +64,13 @@ def test_create_backbone():
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
-            assert False, "Model %s failed." % backbone
+            assert False, f"Model {backbone} failed."
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
         get_model("secret_model-kather100k", pretrained=False)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
 def test_DatasetInfo():
     """Test for kather patch dataset."""
     # test defining a subclass of dataset info but not defining
@@ -122,7 +132,7 @@ def test_DatasetInfo():
         _ = KatherPatchDataset(save_dir_path="unknown_place")
 
     # save to temporary location
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
+    save_dir_path = _get_temp_folder_path()
     # remove previously generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -193,7 +203,7 @@ def test_PatchDatasetlist_imgs():
     assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
     # test for loading npy
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
+    save_dir_path = _get_temp_folder_path()
     # remove previously generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -211,7 +221,7 @@ def test_PatchDatasetlist_imgs():
         pathlib.Path(os.path.join(save_dir_path, "sample2.npy")),
     ]
     _ = PatchDataset(img_list)
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+    shutil.rmtree(save_dir_path)
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
@@ -308,7 +318,7 @@ def test_PatchDatasetcrash():
 
     # ** test different extenstion parser
     # save dummy data to temporary location
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_check/")
+    save_dir_path = _get_temp_folder_path()
     # remove prev generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -337,13 +347,12 @@ def test_PatchDatasetcrash():
         predefined_preproc_func("secret-dataset")
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
 def test_WSIPatchDataset(_sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
     def reuse_init(img_path=_mini_wsi_svs, **kwargs):
         """Testing function."""
@@ -356,48 +365,41 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     # test for ABC validate
     # TODO: migrate to another file ?
     with pytest.raises(
-        ValueError,
-        match=r".*input_list should be a list of patch coordinates.*"
+        ValueError, match=r".*input_list should be a list of patch coordinates.*"
     ):
         # intentionally create to check error
         # skipcq
         class Proto(ABCPatchDataset):
             def __init__(self):
                 super().__init__()
-                self.input_list = 'CRASH'
-                self.check_input_integrity('wsi')
+                self.input_list = "CRASH"
+                self.check_input_integrity("wsi")
 
         # intentionally create to check error
         # skipcq
         _ = Proto()
 
     # invalid path input
-    with pytest.raises(
-        ValueError,
-        match=r".*`img_path` must be a valid file path.*"
-    ):
+    with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path='aaaa',
+            img_path="aaaa",
             mode="wsi",
             patch_size=[512, 512],
             stride_size=[256, 256],
-            auto_get_mask=False
+            auto_get_mask=False,
         )
 
     # invalid mask path input
-    with pytest.raises(
-        ValueError,
-        match=r".*`mask_path` must be a valid file path.*"
-    ):
+    with pytest.raises(ValueError, match=r".*`mask_path` must be a valid file path.*"):
         WSIPatchDataset(
             img_path=_mini_wsi_svs,
-            mask_path='aaaa',
+            mask_path="aaaa",
             mode="wsi",
             patch_size=[512, 512],
             stride_size=[256, 256],
             resolution=1.0,
             units="mpp",
-            auto_get_mask=False
+            auto_get_mask=False,
         )
 
     # invalid mode
@@ -434,7 +436,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
         stride_size=stride_size,
         resolution=1.0,
         units="mpp",
-        auto_get_mask=False
+        auto_get_mask=False,
     )
     reader = get_wsireader(_mini_wsi_svs)
     # tiling top to bottom, left to right
@@ -443,20 +445,12 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     start = (step_idx * stride_size[1], 0)
     end = (start[0] + patch_size[0], start[1] + patch_size[1])
     rd_roi = reader.read_bounds(
-                        start + end,
-                        resolution=1.0, units="mpp",
-                        location_is_at_requested=True)
+        start + end, resolution=1.0, units="mpp", coord_space="resolution"
+    )
     correlation = np.corrcoef(
         cv2.cvtColor(ds_roi, cv2.COLOR_RGB2GRAY).flatten(),
         cv2.cvtColor(rd_roi, cv2.COLOR_RGB2GRAY).flatten(),
     )
-
-    # import matplotlib.pyplot as plt
-    # plt.subplot(1,2,1)
-    # plt.imshow(rd_roi)
-    # plt.subplot(1,2,2)
-    # plt.imshow(ds_roi)
-    # plt.savefig('dump.png')
     assert ds_roi.shape[0] == rd_roi.shape[0]
     assert ds_roi.shape[1] == rd_roi.shape[1]
     assert np.min(correlation) > 0.9, correlation
@@ -467,7 +461,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
         stride_size=stride_size,
         resolution=1.0,
         units="mpp",
-        auto_get_mask=True
+        auto_get_mask=True,
     )
     assert len(ds) > 0
     ds = WSIPatchDataset(
@@ -482,14 +476,11 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     )
     negative_mask = imread(_mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
-    imwrite('negative_mask.png', negative_mask)
-    with pytest.raises(
-        ValueError,
-        match=r".*No coordinate remain after tiling.*"
-    ):
+    imwrite("negative_mask.png", negative_mask)
+    with pytest.raises(ValueError, match=r".*No coordinate remain after tiling.*"):
         ds = WSIPatchDataset(
             img_path=_mini_wsi_svs,
-            mask_path='negative_mask.png',
+            mask_path="negative_mask.png",
             mode="wsi",
             patch_size=[512, 512],
             stride_size=[256, 256],
@@ -497,7 +488,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
             resolution=1.0,
             units="mpp",
         )
-    shutil.rmtree('negative_mask.png', ignore_errors=True)
+    shutil.rmtree("negative_mask.png", ignore_errors=True)
 
     # * for tile
     reader = get_wsireader(_mini_wsi_jpg)
@@ -506,15 +497,14 @@ def test_WSIPatchDataset(_sample_wsi_dict):
         mode="tile",
         patch_size=patch_size,
         stride_size=stride_size,
-        auto_get_mask=False
+        auto_get_mask=False,
     )
     step_idx = 3  # manually calibrate
     start = (step_idx * stride_size[1], 0)
     end = (start[0] + patch_size[0], start[1] + patch_size[1])
     roi2 = reader.read_bounds(
-                start + end,
-                resolution=1.0, units="baseline",
-                location_is_at_requested=True)
+        start + end, resolution=1.0, units="baseline", coord_space="resolution"
+    )
     roi1 = tile_ds[3]["image"]  # match with step_idx
     correlation = np.corrcoef(
         cv2.cvtColor(roi1, cv2.COLOR_RGB2GRAY).flatten(),
@@ -531,7 +521,6 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # test abc
@@ -553,19 +542,17 @@ def test_predictor_crash():
         CNNPatchPredictor(pretrained_model=123)
 
     # test predict crash
-    predictor = CNNPatchPredictor(
-        pretrained_model="resnet18-kather100k",
-        batch_size=32)
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     with pytest.raises(ValueError, match=r".*not a valid mode.*"):
-        predictor.predict('aaa', mode='random')
+        predictor.predict("aaa", mode="random")
     with pytest.raises(ValueError, match=r".*must be a list of file paths.*"):
-        predictor.predict('aaa', mode='wsi')
+        predictor.predict("aaa", mode="wsi")
     with pytest.raises(ValueError):
-        predictor.predict([1, 2, 3], label_list=[1, 2], mode='patch')
+        predictor.predict([1, 2, 3], label_list=[1, 2], mode="patch")
     # remove previously generated data
-    if os.path.exists('output'):
-        shutil.rmtree('output', ignore_errors=True)
+    if os.path.exists("output"):
+        shutil.rmtree("output", ignore_errors=True)
 
 
 # @pytest.mark.skip(reason="working, skip to run other test")
@@ -626,7 +613,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
         "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
 
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp_pretrained_weigths")
+    save_dir_path = _get_temp_folder_path()
     # remove prev generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -667,18 +654,15 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_api(_sample_wsi_dict):
     """Test normal run of wsi predictor."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
-    predictor = CNNPatchPredictor(
-        pretrained_model="resnet18-kather100k",
-        batch_size=32)
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     # wrapper to make this more clean
     kwargs = dict(
@@ -688,19 +672,22 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         patch_size=patch_size,
         stride_size=patch_size,
         resolution=1.0,
-        units="baseline",)
+        units="baseline",
+    )
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
         [_mini_wsi_svs],
         mask_list=[_mini_wsi_msk],
-        mode="wsi", **kwargs,
+        mode="wsi",
+        **kwargs,
     )
 
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
         mask_list=[_mini_wsi_msk],
-        mode="tile", **kwargs,
+        mode="tile",
+        **kwargs,
     )
 
     wpred = np.array(wsi_output[0]["predictions"])
@@ -723,69 +710,74 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         resolution=0.5,
         save_dir=save_dir,
         merge_predictions=True,  # to test the api coverage
-        units="mpp",)
+        units="mpp",
+    )
 
     import copy
+
     _kwargs = copy.deepcopy(kwargs)
-    _kwargs['merge_predictions'] = False
+    _kwargs["merge_predictions"] = False
     # test reading of multiple whole-slide images
     output = predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
         mask_list=[_mini_wsi_msk, _mini_wsi_msk],
-        mode="wsi", **_kwargs,
+        mode="wsi",
+        **_kwargs,
     )
     for output_info in output.values():
-        assert os.path.exists(output_info['raw'])
-        assert 'merged' not in output_info
-    if os.path.exists(_kwargs['save_dir']):
-        shutil.rmtree(_kwargs['save_dir'], ignore_errors=True)
+        assert os.path.exists(output_info["raw"])
+        assert "merged" not in output_info
+    if os.path.exists(_kwargs["save_dir"]):
+        shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
 
     # coverage test
     _kwargs = copy.deepcopy(kwargs)
-    _kwargs['merge_predictions'] = True
+    _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
     output = predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
         mask_list=[_mini_wsi_msk, _mini_wsi_msk],
-        mode="wsi", **_kwargs,
+        mode="wsi",
+        **_kwargs,
     )
     with pytest.raises(ValueError, match=r".*save_dir.*exist.*"):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
             mask_list=[_mini_wsi_msk, _mini_wsi_msk],
-            mode="wsi", **_kwargs
+            mode="wsi",
+            **_kwargs,
         )
     # remove previously generated data
-    if os.path.exists(_kwargs['save_dir']):
-        shutil.rmtree(_kwargs['save_dir'], ignore_errors=True)
+    if os.path.exists(_kwargs["save_dir"]):
+        shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
 
     # test reading of multiple whole-slide images
     _kwargs = copy.deepcopy(kwargs)
-    _kwargs['save_dir'] = None  # default coverage
-    _kwargs['return_probabilities'] = False
+    _kwargs["save_dir"] = None  # default coverage
+    _kwargs["return_probabilities"] = False
     output = predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
         mask_list=[_mini_wsi_msk, _mini_wsi_msk],
-        mode="wsi", **_kwargs,
+        mode="wsi",
+        **_kwargs,
     )
-    assert os.path.exists('output')
+    assert os.path.exists("output")
     for output_info in output.values():
-        assert os.path.exists(output_info['raw'])
-        assert 'merged' in output_info and os.path.exists(output_info['merged'])
+        assert os.path.exists(output_info["raw"])
+        assert "merged" in output_info and os.path.exists(output_info["merged"])
 
     # remove previously generated data
-    if os.path.exists('output'):
-        shutil.rmtree('output', ignore_errors=True)
+    if os.path.exists("output"):
+        shutil.rmtree("output", ignore_errors=True)
 
 
-# @pytest.mark.skip(reason="working, skip to run other test")
 def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
-    # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
+    # convert to pathlib Path to prevent reader complaint
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
@@ -803,23 +795,16 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     wsi_output = predictor.predict(
         [_mini_wsi_svs],
         mask_list=[_mini_wsi_msk],
-        mode="wsi", **kwargs,
+        mode="wsi",
+        **kwargs,
     )
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
         mask_list=[_mini_wsi_msk],
-        mode="tile", **kwargs,
+        mode="tile",
+        **kwargs,
     )
 
-    # from tiatoolbox.utils.misc import imread
-    # import matplotlib.pyplot as plt
-    # plt.subplot(1,3,1)
-    # plt.imshow(wsi_output[1])
-    # plt.subplot(1,3,2)
-    # plt.imshow(tile_output[1])
-    # plt.subplot(1,3,3)
-    # plt.imshow(imread(_mini_wsi_jpg))
-    # plt.savefig('dump.png')
     # first make sure nothing breaks with predictions
     wpred = np.array(wsi_output[0]["predictions"])
     tpred = np.array(tile_output[0]["predictions"])
@@ -847,8 +832,7 @@ def _test_predictor_output(
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = CNNPatchPredictor(
-        pretrained_model=pretrained_model,
-        batch_size=32, verbose=False
+        pretrained_model=pretrained_model, batch_size=32, verbose=False
     )
     # don't run test on GPU
     output = predictor.predict(
@@ -867,8 +851,10 @@ def _test_predictor_output(
             and predictions[idx] == predictions_check[idx]
         ), (
             pretrained_model,
-            probabilities_max, probabilities_check[idx],
-            predictions[idx], predictions_check[idx],
+            probabilities_max,
+            probabilities_check[idx],
+            predictions[idx],
+            predictions_check[idx],
         )
 
 
