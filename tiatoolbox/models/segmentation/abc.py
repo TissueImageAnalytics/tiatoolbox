@@ -39,23 +39,49 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
             output_resolutions,
             save_resolution=None,
             **kwargs):
+        """Define IO placement for patch input and output.
 
+        Args:
+
+            input_resolutions: resolution of each input head to model
+                inference, must be in the same order as target model.forward().
+
+            output_resolutions: resolution of each output head from model
+                inference, must be in the same order as target model.infer_batch().
+
+            save_resolution: resolution to save all output.
+
+        """
         self.patch_input_shape = None
         self.patch_output_shape = None
         self.stride_shape = None
         self.input_resolutions = input_resolutions
         self.output_resolutions = output_resolutions
 
-        # setting this to overwrite, such that all output head
-        # will be saved under a same resolution
+        self.resolution_unit = input_resolutions[0]['units']
         self.save_resolution = save_resolution
 
         for variable, value in kwargs.items():
             self.__setattr__(variable, value)
 
+        self._validate()
+
+        if self.resolution_unit == 'mpp':
+            self.highest_input_resolution = min(
+                self.input_resolutions, key=lambda x: x['resolution'])
+        else:
+            self.highest_input_resolution = max(
+                self.input_resolutions, key=lambda x: x['resolution'])
+
     def _validate(self):
         """Validate the data format."""
-        pass
+        def validate_units(resolution_list):
+            unit_list = [v['units'] for v in resolution_list]
+            unit_list = np.unique(unit_list)
+            if (len(unit_list) != 1 or unit_list[0] 
+                    not in ['power',  'baseline', 'mpp', 'level']):
+                raise ValueError('Invalid resolution units.')
+        validate_units(self.input_resolutions + self.output_resolutions)
 
     def convert_to_baseline(self):
         """Convert IO resolution to 'baseline'.
@@ -65,11 +91,11 @@ class IOStateSegmentor(tia_model_abc.IOStateBase):
         """
         def _to_baseline(resolution_list):
             old_val = [v['resolution'] for v in resolution_list]
-            if resolution_list[0]['units'] == 'baseline':
+            if self.resolution_unit == 'baseline':
                 new_val = old_val
-            elif resolution_list[0]['units'] == 'mpp':
-                new_val = np.array(old_val) / np.min(old_val)
-            elif resolution_list[0]['units'] == 'power':
+            elif self.resolution_unit == 'mpp':
+                new_val = np.min(old_val) / np.array(old_val)
+            elif self.resolution_unit == 'power':
                 new_val = np.array(old_val) / np.max(old_val)
             resolution_list = [
                 {'units' : 'baseline', 'resolution' : v}

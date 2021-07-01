@@ -1,24 +1,58 @@
+import os
 import pathlib
 import shutil
 import sys
+from time import time
 
-import pytest
 import numpy as np
-
+import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 sys.path.append('.')
+from tiatoolbox import rcParam
 from tiatoolbox.models.segmentation import (IOStateSegmentor,
                                             SemanticSegmentor,
                                             SerializeWSIReader)
 from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
                                           get_wsireader)
 
-
 ON_GPU = True
 # ----------------------------------------------------
+
+
+def _rm_dir(path):
+    """Helper func to remove directory."""
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def _get_temp_folder_path():
+    """Return unique temp folder path"""
+    new_dir = os.path.join(
+        rcParam["TIATOOLBOX_HOME"], f"test_model_patch_{int(time())}"
+    )
+    return new_dir
+
+
+def _crop_op(x, cropping, data_format="NCHW"):
+    """Center crop image.
+
+    Args:
+        x: input image
+        cropping: the substracted amount
+        data_format: choose either `NCHW` or `NHWC`
+
+    """
+    crop_t = cropping[0] // 2
+    crop_b = cropping[0] - crop_t
+    crop_l = cropping[1] // 2
+    crop_r = cropping[1] - crop_l
+    if data_format == "NCHW":
+        x = x[:, :, crop_t:-crop_b, crop_l:-crop_r]
+    else:
+        x = x[:, crop_t:-crop_b, crop_l:-crop_r, :]
+    return x
 
 
 class _CNNTo1(nn.Module):
@@ -32,6 +66,11 @@ class _CNNTo1(nn.Module):
         self.conv = nn.Conv2d(3, 1, 3, padding=1)
         self.conv.weight.data.fill_(0)
         self.conv.bias.data.fill_(1)
+
+    @staticmethod
+    def preproc(img):
+        """Placeholder preproc function."""
+        return img
 
     def forward(self, img):
         output = self.conv(img)
@@ -59,45 +98,104 @@ class _CNNTo1(nn.Module):
         img_list = img_list.to(device).type(torch.float32)
         img_list = img_list.permute(0, 3, 1, 2)  # to NCHW
 
+        hw = np.array(img_list.shape[2:])
         with torch.no_grad():  # dont compute gradient
             logit_list = model(img_list)
+            logit_list = _crop_op(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
             prob_list = F.relu(logit_list)
 
         prob_list = prob_list.cpu().numpy()
         return [prob_list]
 
+# ----------------------------------------------------
 
-def _rm_dir(path):
-    """Helper func to remove directory."""
-    shutil.rmtree(path, ignore_errors=True)
+
+def test_segmentor_iostate():
+    """Test for IOState"""
+    iostate = IOStateSegmentor(
+        input_resolutions=[
+                {'units' : 'mpp', 'resolution' : 0.25},
+                {'units' : 'mpp', 'resolution' : 0.50},
+                {'units' : 'mpp', 'resolution' : 0.75}
+        ],
+        output_resolutions=[
+                {'units' : 'mpp', 'resolution' : 0.25},
+                {'units' : 'mpp', 'resolution' : 0.50}
+        ],
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
+    )
+    assert iostate.highest_input_resolution == {'units' : 'mpp', 'resolution' : 0.25}
+    iostate.convert_to_baseline()
+    assert iostate.input_resolutions[0]['resolution'] == 1.0
+    assert iostate.input_resolutions[1]['resolution'] == 0.5
+    assert iostate.input_resolutions[2]['resolution'] == 1/3
+
+    iostate = IOStateSegmentor(
+        input_resolutions=[
+                {'units' : 'power', 'resolution' : 0.25},
+                {'units' : 'power', 'resolution' : 0.50}
+        ],
+        output_resolutions=[
+                {'units' : 'power', 'resolution' : 0.25},
+                {'units' : 'power', 'resolution' : 0.50}
+        ],
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
+    )
+    assert iostate.highest_input_resolution == {'units' : 'power', 'resolution' : 0.50}
+    iostate.convert_to_baseline()
+    assert iostate.input_resolutions[0]['resolution'] == 0.5
+    assert iostate.input_resolutions[1]['resolution'] == 1.0
 
 
 def test_functional_segmentor(_sample_wsi_dict):
-    # SAMPLE_ROOT_DIR = '/home/dang/storage_1/workspace/tiatoolbox/tests/local_samples/model_sample_wsi/'
-    # _mini_wsi_svs = pathlib.Path(f'{SAMPLE_ROOT_DIR}/wsi2_4k_x_4k.svs')
-    # _mini_wsi_jpg = pathlib.Path(f'{SAMPLE_ROOT_DIR}/wsi2_4k_x_4k.jpg')
-    # _mini_wsi_msk = pathlib.Path(f'{SAMPLE_ROOT_DIR}/wsi2_4k_x_4k.mask.png')
-
-    save_dir = 'output_model_semantic/'
+    """Functional test for segmentor."""
+    save_dir = _get_temp_folder_path()
+    save_dir = pathlib.Path(save_dir)
     # # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_svs'])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_jpg'])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict['wsi2_4k_4k_msk'])
 
     model = _CNNTo1()
-    runner = SemanticSegmentor(
-                batch_size=8,
-                model=model)
+    runner = SemanticSegmentor(batch_size=32, model=model)
+
+    # * test basic crash
+    _rm_dir('output')  # default output dir test
+    with pytest.raises(ValueError, match=r'.*provide.*'):
+        SemanticSegmentor()
+    with pytest.raises(ValueError, match=r'.*valid mode.*'):
+        runner.predict([], mode='abc')
+    with pytest.raises(ValueError, match=r'.*`tile` only use .*baseline.*'):
+        runner.predict(
+            [_mini_wsi_jpg], mode='tile',
+            patch_input_shape=[2048, 2048],
+            resolution=1.0, units='mpp',
+            crash_on_exception=True)
+    with pytest.raises(ValueError, match=r'.*already exists.*'):
+        runner.predict([], mode='tile')
+    _rm_dir('output')  # default output dir test
+    # * check exception bypass in the log
+    # there should be no exception, but how to check the log?
+    runner.predict(
+        [_mini_wsi_jpg], mode='tile',
+        patch_input_shape=[2048, 2048],
+        resolution=1.0, units='mpp',
+        crash_on_exception=False)
+    _rm_dir('output')  # default output dir test
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
     iostate = IOStateSegmentor(
         input_resolutions=[{'units' : 'baseline', 'resolution' : 2.0}],
         output_resolutions=[{'units' : 'baseline', 'resolution' : 2.0}],
-        patch_input_shape=[1024, 1024],
-        patch_output_shape=[512, 512],
-        stride_shape=[256, 256],
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
     )
 
     _rm_dir(save_dir)
@@ -127,9 +225,9 @@ def test_functional_segmentor(_sample_wsi_dict):
         input_resolutions=[{'units' : 'baseline', 'resolution' : 1.0}],
         output_resolutions=[{'units' : 'baseline', 'resolution' : 1.0}],
         save_resolution={'units' : 'baseline', 'resolution' : 0.25},
-        patch_input_shape=[1024, 1024],
-        patch_output_shape=[512, 512],
-        stride_shape=[256, 256],
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
     )
     _rm_dir(save_dir)
     output_list = runner.predict(
@@ -149,14 +247,14 @@ def test_functional_segmentor(_sample_wsi_dict):
     assert np.sum((pred_1 - 1) > 1.0e-6) == 0
     _rm_dir(save_dir)
 
-    # * test crash for wild bypass
-    with pytest.raises(ValueError):
-        output_list = runner.predict(
+    # check normal run with auto get mask
+    runner = SemanticSegmentor(
+                batch_size=32, model=model, auto_generate_mask=True)
+    output_list = runner.predict(
             [_mini_wsi_svs],
-            mask_list=['_mini_wsi_msk'],
+            mask_list=[_mini_wsi_msk],
             mode='wsi',
             on_gpu=ON_GPU,
             iostate=iostate,
             crash_on_exception=True,
             save_dir=f'{save_dir}/raw/')
-    _rm_dir(save_dir)

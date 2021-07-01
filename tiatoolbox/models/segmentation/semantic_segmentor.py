@@ -38,7 +38,7 @@ import tqdm
 from tiatoolbox.models.segmentation.abc import IOStateSegmentor
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import imread, imwrite
+from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import (VirtualWSIReader, WSIMeta,
                                           get_wsireader)
 
@@ -56,18 +56,25 @@ class SerializeWSIReader(torch_data.Dataset):
 
     Args:
 
-        `mp_shared_space`: must be from torch.multiprocessing, for example
+        mp_shared_space: must be from torch.multiprocessing, for example
 
-            mp_manager = torch_mp.Manager()
-            mp_shared_space = mp_manager.Namespace()
-            mp_shared_space.image = torch.from_numpy(image)
+        >>> mp_manager = torch_mp.Manager()
+        >>> mp_shared_space = mp_manager.Namespace()
 
+        iostate: object which contains I/O placement for patches.
+
+        wsi_path_list: List of paths pointing to a WSI or tiles.
+
+        preproc: pre-processing function to be applied on a patch.
+
+        mode: either `wsi` or `tile` to indicate which form the input in
+            `wsi_path_list` is.
     """
     def __init__(
             self,
-            iostate : IOStateSegmentor,
-            wsi_path_list : List[Union[str, pathlib.Path]],
-            mp_shared_space,
+            iostate : IOStateSegmentor = None,
+            wsi_path_list : List[Union[str, pathlib.Path]] = None,
+            mp_shared_space=None,  # context variable, how to type hint this?
             preproc : Callable[[np.ndarray], np.ndarray] = None,
             mode='wsi',):
         super().__init__()
@@ -161,9 +168,41 @@ class SemanticSegmentor:
         pretrained_model=None,
         pretrained_weight=None,
         verbose=True,
+        auto_generate_mask=False,
         dataset_class : Callable = SerializeWSIReader,
     ):
-        """Initialise the Patch Predictor."""
+        """Initialise the Semantic Segmentor.
+
+        Note, if model is supplied in the arguments, it will override the backbone.
+
+        Args:
+            model (nn.Module): Use externally defined PyTorch model for prediction with.
+                weights already loaded. Default is `None`. If provided,
+                `pretrained_model` argument is ignored.
+
+            pretrained_model (str): Name of the existing models support by tiatoolbox
+                for processing the data. Refer to
+                `tiatoolbox.models.classification.get_pretrained_model` for details.
+
+                By default, the corresponding pretrained weights will also be
+                downloaded. However, you can override with your own set of weights
+                via the `pretrained_weight` argument. Argument is case insensitive.
+
+            pretrained_weight (str): Path to the weight of the corresponding
+                `pretrained_model`.
+
+            batch_size (int) : Number of images fed into the model each time.
+
+            num_loader_worker (int) : Number of workers to load the data.
+                Take note that they will also perform preprocessing.
+
+            verbose (bool): Whether to output logging information.
+
+            dataset_class (obj): Dataset class to be used instead of default.
+
+            auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
+                if is not provided.
+        """
         super().__init__()
 
         if model is None and pretrained_model is None:
@@ -183,10 +222,16 @@ class SemanticSegmentor:
         self.num_loader_worker = num_loader_worker
         self.num_postproc_worker = num_postproc_worker
         self.verbose = verbose
+        self.auto_generate_mask = auto_generate_mask
 
     # TODO: refactor this, duplicated functionalities wrt the patchpredictor
     @staticmethod
-    def get_reader(img_path, mask_path, mode, auto_get_mask):
+    def get_reader(
+            img_path: str,
+            mask_path: str,
+            mode: str,
+            auto_get_mask: bool):
+        """Get reader for mask and source image."""
         img_path = pathlib.Path(img_path)
         reader = get_wsireader(img_path)
 
@@ -214,17 +259,27 @@ class SemanticSegmentor:
             loader,
             save_path : str,
             mode : str):
-        """
+        """Make a prediction on tile/wsi.
+
+        Args:
+            wsi_idx (int): index of the tile/wsi to be processed within `self`.
+            iostate (IOStateSegmentor): object which defines I/O placement during
+                inference and when assembling back to full tile/wsi.
+            loader (torch.Dataloader): loader object which return batch of data
+                to be input to model.
+            save_path (str): location to save output prediction as well as possible
+                intermediat results.
+            mode (str): `tile` or `wsi` to indicate run mode.
         """
         wsi_path = self.img_list[wsi_idx]
         mask_path = None if self.mask_list is None else self.mask_list[wsi_idx]
-        wsi_reader, mask_reader = self.get_reader(wsi_path, mask_path, mode, False)
+        wsi_reader, mask_reader = self.get_reader(
+                wsi_path, mask_path, mode, self.auto_generate_mask)
 
-        # take the highest input resolution, may need a find function ?
-        resolution = iostate.input_resolutions[0]  # in XY
+        resolution = iostate.highest_input_resolution
         if isinstance(wsi_reader, VirtualWSIReader):
             if resolution['units'] != 'baseline':
-                raise ValueError("Inference on `tile` only use `units='mpp'`")
+                raise ValueError("Inference on `tile` only use `units='baseline'` !")
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
         # * retrieve patch and tile placement
@@ -319,7 +374,7 @@ class SemanticSegmentor:
                         to_merge_prediction_list,
                         merged_location_list,
                         save_path=sub_save_path,
-                        remove_prediction=True)
+                        free_prediction=True)
         return
 
     @staticmethod
@@ -328,19 +383,35 @@ class SemanticSegmentor:
             prediction_list : List[np.ndarray],
             location_list : Union[List, np.ndarray],
             save_path : Union[str, pathlib.Path] = None,
-            remove_prediction : bool = True,
+            free_prediction : bool = True,
             ):
-        """"""
+        """Merge patch-level predictions to form a 2-dimensional prediction map.
+
+        Args:
+            canvas_shape (:class:`numpy.ndarray`): HW of the supposed assembled image.
+
+            prediction_list (list): List of nd.array, each item is a prediction of
+                a patch, assuming to be of shape HWC.
+
+            location_list (list): List of nd.array, each item is the location of
+                the patch at the same index within `prediction_list` in the to be
+                assembled canvas.
+
+            save_path (str): Location to save the assembled image.
+
+            free_prediction (bool): If this is `True`, `prediction_list` will
+                be modified in place and each patch will be replace with `None`
+                once processed. This is to save memory when assembling.
+
+        """
         out_ch = prediction_list[0].shape[-1]
-        if save_path is not None:
-            cum_canvas = np.lib.format.open_memmap(
-                save_path,
-                mode="w+",
-                shape=tuple(canvas_shape) + (out_ch,),
-                dtype=np.float32,
-            )
-        else:
-            cum_canvas = np.zeros(tuple(canvas_shape) + (out_ch,), dtype=np.float32)
+        cum_canvas = np.lib.format.open_memmap(
+            save_path,
+            mode="w+",
+            shape=tuple(canvas_shape) + (out_ch,),
+            dtype=np.float32,
+        )
+
         # for pixel occurence counting
         cnt_canvas = np.zeros(canvas_shape, dtype=np.float32)
 
@@ -376,10 +447,10 @@ class SemanticSegmentor:
             tl_in_patch = br_in_patch - patch_actual_shape
 
             # internal error, switch to raise ?
-            if not (np.all(br_in_patch >= 0)
-                    and np.all(tl_in_patch >= 0)):
-                raise RuntimeError(
-                        '[BUG] Locations should not be negative at this stage!')
+            # if not (np.all(br_in_patch >= 0)
+            #         and np.all(tl_in_patch >= 0)):
+            #     raise RuntimeError(
+            #             '[BUG] Locations should not be negative at this stage!')
 
             # now croping the prediction region
             patch_pred = prediction[tl_in_patch[0]:br_in_patch[0],
@@ -391,7 +462,7 @@ class SemanticSegmentor:
             cnt_canvas[tl_in_wsi[0] : br_in_wsi[0],
                        tl_in_wsi[1] : br_in_wsi[1]] += patch_count
             # remove prediction without altering list ordering or length
-            if remove_prediction:
+            if free_prediction:
                 patch_info_list[patch_idx] = None
         cum_canvas /= (cnt_canvas[..., None] + 1.0e-6)
         return cum_canvas
@@ -411,18 +482,78 @@ class SemanticSegmentor:
         save_dir=None,
         crash_on_exception=False,
     ):
-        """Make a prediction for a list of input data."""
+        """Make a prediction for a list of input data.
+
+        Args:
+            img_list (list, ndarray): List of inputs to process. When using `patch`
+            mode, the input must be either a list of images, a list of image file paths
+            or a numpy array of an image list. When using `tile` or `wsi` mode, the
+            input must be a list of file paths.
+
+            mask_list (list): List of masks. Only utilised when processing image tiles
+            and whole-slide images. Patches are only processed if they are witin a
+            masked area. If not provided, then a tissue mask will be automatically
+            generated for whole-slide images or the entire image is processed for
+            image tiles.
+
+            label_list: List of labels. If using `tile` or `wsi` mode, then only a
+            single label per image tile or whole-slide image is supported.
+            mode (str): Type of input to process. Choose from either `patch`, `tile` or
+                `wsi`.
+
+            return_probabilities (bool): Whether to return per-class probabilities.
+
+            return_labels (bool): Whether to return the labels with the predictions.
+
+            on_gpu (bool): whether to run model on the GPU.
+
+            patch_input_shape (tuple): Size of patches input to the model. The value
+                are at requested read resolution and must be positive.
+
+            patch_output_shape (tuple): Size of patches output by the model. The value
+                are at requested read resolution and must be positive.
+
+            stride_shape (tuple): Stride using during tile and WSI processing. The value
+                are at requested read resolution and must be positive.
+                If not provided, `stride_shape=patch_input_shape`.
+
+            resolution (float): Resolution used for reading the image.
+
+            units (str): Units of resolution used for reading the image. Choose from
+                either `level`, `power` or `mpp`.
+
+            merge_predictions (bool): Whether to merge the predictions to form
+            a 2-dimensional map. This is only applicable for `mode='wsi'` or
+            `mode='tile'`.
+
+            save_dir (str): Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output` where the
+                running script is invoked.
+
+        Returns:
+            output (ndarray, dict): Model predictions of the input dataset.
+                If multiple image tiles or whole-slide images are provided as input,
+                then results are saved to `save_dir` and a dictionary indicating save
+                location for each input is return.
+
+                The dict has following format:
+                - img_path: path of the input image.
+                    - raw: path to save location for raw prediction.
+                    - merged: path to .npy contain merged predictions.
+
+
+        """
         if mode not in ["wsi", "tile"]:
             raise ValueError(
                 f"{mode} is not a valid mode. Use either `tile` or `wsi`."
             )
         if save_dir is None:
             warnings.warn(
-                ' '.join(
+                ' '.join([
                     "Segmentor will only output to directory.",
                     "All subsequent output will be saved to current runtime",
                     "location under folder 'output'. Overwriting may happen!",
-                )
+                ])
             )
             save_dir = os.path.join(os.getcwd(), "output")
 
@@ -456,9 +587,10 @@ class SemanticSegmentor:
             )
 
         ds = self.dataset_class(
-                iostate,
-                img_list,
-                mp_shared_space,
+                iostate=iostate,
+                preproc=self.model.preproc,
+                wsi_path_list=img_list,
+                mp_shared_space=mp_shared_space,
                 mode=mode)
 
         loader = torch_data.DataLoader(
