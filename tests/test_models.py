@@ -449,12 +449,6 @@ def test_WSIPatchDataset(_sample_wsi_dict):
                         start + end,
                         resolution=1.0, units="mpp",
                         coord_space='resolution')
-    # import matplotlib.pyplot as plt
-    # plt.subplot(1,2,1)
-    # plt.imshow(rd_roi)
-    # plt.subplot(1,2,2)
-    # plt.imshow(ds_roi)
-    # plt.savefig('dump.png')
     correlation = np.corrcoef(
         cv2.cvtColor(ds_roi, cv2.COLOR_RGB2GRAY).flatten(),
         cv2.cvtColor(rd_roi, cv2.COLOR_RGB2GRAY).flatten(),
@@ -522,12 +516,6 @@ def test_WSIPatchDataset(_sample_wsi_dict):
         cv2.cvtColor(roi1, cv2.COLOR_RGB2GRAY).flatten(),
         cv2.cvtColor(roi2, cv2.COLOR_RGB2GRAY).flatten(),
     )
-    # import matplotlib.pyplot as plt
-    # plt.subplot(1,2,1)
-    # plt.imshow(roi1)
-    # plt.subplot(1,2,2)
-    # plt.imshow(roi2)
-    # plt.savefig('dump.png')
     assert roi1.shape[0] == roi2.shape[0]
     assert roi1.shape[1] == roi2.shape[1]
     assert np.min(correlation) > 0.9, correlation
@@ -809,15 +797,6 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
         mode="tile", **kwargs,
     )
 
-    # from tiatoolbox.utils.misc import imread
-    # import matplotlib.pyplot as plt
-    # plt.subplot(1,3,1)
-    # plt.imshow(wsi_output[1])
-    # plt.subplot(1,3,2)
-    # plt.imshow(tile_output[1])
-    # plt.subplot(1,3,3)
-    # plt.imshow(imread(_mini_wsi_jpg))
-    # plt.savefig('dump.png')
     # first make sure nothing breaks with predictions
     wpred = np.array(wsi_output[0]["predictions"])
     tpred = np.array(tile_output[0]["predictions"])
