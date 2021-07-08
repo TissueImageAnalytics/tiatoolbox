@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
+import torch.cuda
 from PIL import Image
 from pytest import approx
 
@@ -983,9 +984,10 @@ def test_model_to():
 
     # test on GPU
     # no GPU on Travis so this will crash
-    with pytest.raises(RuntimeError):
-        model = torch_models.resnet18()
-        model = misc.model_to(on_gpu=True, model=model)
+    if not torch.cuda.is_available():
+        with pytest.raises(RuntimeError):
+            model = torch_models.resnet18()
+            _ = misc.model_to(on_gpu=True, model=model)
 
     # test on CPU
     model = torch_models.resnet18()
