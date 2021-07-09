@@ -1491,8 +1491,8 @@ class ArrayView:
         if self.axes == "YXS":
             return self.array[index]
         elif self.axes == "SYX":
-            S, Y, X = index
-            index = (Y, X, S)
+            Y, X, S = index
+            index = (S, Y, X)
             return np.rollaxis(self.array[index], 0, 3)
         else:
             raise Exception("Unsupported axes")
