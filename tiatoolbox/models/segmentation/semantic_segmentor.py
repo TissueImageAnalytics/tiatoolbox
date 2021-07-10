@@ -397,8 +397,9 @@ class SemanticSegmentor:
                 a patch, assuming to be of shape HWC.
 
             location_list (list): List of nd.array, each item is the location of
-                the patch at the same index within `prediction_list` in the to be
-                assembled canvas.
+                the patch at the same index within `prediction_list`. The location
+                is in the to be assembled canvas and of the form
+                (top_left_x, top_left_y, bottom_right_x, bottom_right_x).
 
             save_path (str): Location to save the assembled image.
 
@@ -492,24 +493,21 @@ class SemanticSegmentor:
 
         Args:
             img_list (list, ndarray): List of inputs to process. When using `patch`
-            mode, the input must be either a list of images, a list of image file paths
-            or a numpy array of an image list. When using `tile` or `wsi` mode, the
-            input must be a list of file paths.
+                mode, the input must be either a list of images, a list of image file paths
+                or a numpy array of an image list. When using `tile` or `wsi` mode, the
+                input must be a list of file paths.
 
             mask_list (list): List of masks. Only utilised when processing image tiles
-            and whole-slide images. Patches are only processed if they are witin a
-            masked area. If not provided, then a tissue mask will be automatically
-            generated for whole-slide images or the entire image is processed for
-            image tiles.
+                and whole-slide images. Patches are only processed if they are witin a
+                masked area. If not provided, then a tissue mask will be automatically
+                generated for whole-slide images or the entire image is processed for
+                image tiles.
 
-            label_list: List of labels. If using `tile` or `wsi` mode, then only a
-            single label per image tile or whole-slide image is supported.
-            mode (str): Type of input to process. Choose from either `patch`, `tile` or
-                `wsi`.
-
-            return_probabilities (bool): Whether to return per-class probabilities.
-
-            return_labels (bool): Whether to return the labels with the predictions.
+            iostate (bool): object that define information about input and ouput
+                placement of patches. When provided, `patch_input_shape`,
+                `patch_output_shape`, `stride_shape`, `resolution`, and `units`
+                arguments are ignore. Otherwise, those arguments will be internally
+                converted to an iostate object.
 
             on_gpu (bool): whether to run model on the GPU.
 
@@ -528,25 +526,21 @@ class SemanticSegmentor:
             units (str): Units of resolution used for reading the image. Choose from
                 either `level`, `power` or `mpp`.
 
-            merge_predictions (bool): Whether to merge the predictions to form
-            a 2-dimensional map. This is only applicable for `mode='wsi'` or
-            `mode='tile'`.
-
             save_dir (str): Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output` where the
                 running script is invoked.
 
+            crash_on_exception (bool): If `True`, the running loop will crash
+                if there is any error during processing a WSI. Otherwise, the loop
+                will move on to the next wsi for processing.
+
         Returns:
-            output (ndarray, dict): Model predictions of the input dataset.
-                If multiple image tiles or whole-slide images are provided as input,
-                then results are saved to `save_dir` and a dictionary indicating save
-                location for each input is return.
-
-                The dict has following format:
-                - img_path: path of the input image.
-                    - raw: path to save location for raw prediction.
-                    - merged: path to .npy contain merged predictions.
-
+            output (list): A list of tuple(input_path, save_path) where
+                `input_path` is the path of the input wsi while `save_path`
+                corresponds to the output predictions. However, `save_path`
+                is a path prefix contain the `stem` of `input_path`, not the
+                full path of output files because one model can generate multiple
+                outputs.
 
         """
         if mode not in ["wsi", "tile"]:
