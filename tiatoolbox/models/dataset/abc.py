@@ -19,10 +19,11 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
-import torch
-import pathlib
-import numpy as np
 import os
+import pathlib
+
+import numpy as np
+import torch
 
 from tiatoolbox.utils.misc import imread
 
@@ -44,7 +45,7 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
     def __init__(self, preproc_func=None):
         super().__init__()
-        self.set_preproc_func(preproc_func)
+        self.preproc = preproc_func
         self.data_is_npy_alike = False
         self.input_list = []
         self.label_list = []
@@ -136,8 +137,16 @@ class ABCPatchDataset(torch.utils.data.Dataset):
             raise ValueError(f"Can not load data of `{path.suffix}`")
         return patch
 
-    def set_preproc_func(self, func):
-        """Set the `preproc_func` to this `func` if it is not None.
+    @property
+    def preproc(self):
+        """Get preprocessing function."""
+        return self.preproc_func
+
+    @preproc.setter
+    def preproc(self, func):
+        """Setter for preprocessing function.
+
+        Set the `preproc_func` to this `func` if it is not None.
         Else the `preproc_func` is reset to return source image.
 
         `func` must behave in the following manner:

@@ -40,28 +40,28 @@ def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
         "alexnet",
-        # "resnet18",
-        # "resnet34",
-        # "resnet50",
-        # "resnet101",
-        # "resnext50_32x4d",
-        # "resnext101_32x8d",
-        # "wide_resnet50_2",
-        # "wide_resnet101_2",
-        # "densenet121",
-        # "densenet161",
-        # "densenet169",
-        # "densenet201",
-        # "googlenet",
-        # "mobilenet_v2",
-        # "mobilenet_v3_large",
-        # "mobilenet_v3_small",
+        "resnet18",
+        "resnet34",
+        "resnet50",
+        "resnet101",
+        "resnext50_32x4d",
+        "resnext101_32x8d",
+        "wide_resnet50_2",
+        "wide_resnet101_2",
+        "densenet121",
+        "densenet161",
+        "densenet169",
+        "densenet201",
+        "googlenet",
+        "mobilenet_v2",
+        "mobilenet_v3_large",
+        "mobilenet_v3_small",
     ]
     for backbone in backbone_list:
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
-            assert False, f"Model {backbone} failed."
+            raise AssertionError(f"Model {backbone} failed.")
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
@@ -164,7 +164,7 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
 
     dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
 
-    dataset.preproc_func = lambda x: x
+    dataset.preproc = lambda x: x
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -182,7 +182,7 @@ def test_PatchDatasetlist_imgs():
     list_imgs = [img, img, img]
     dataset = PatchDataset(list_imgs)
 
-    dataset.preproc_func = lambda x: x
+    dataset.preproc = lambda x: x
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -193,7 +193,7 @@ def test_PatchDatasetlist_imgs():
         )
 
     # test for changing to another preproc
-    dataset.preproc_func = lambda x: x - 10
+    dataset.preproc = lambda x: x - 10
     item = dataset[0]
     assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
@@ -366,7 +366,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
             def __init__(self):
                 super().__init__()
                 self.input_list = "CRASH"
-                self.check_input_integrity("wsi")
+                self._check_input_integrity("wsi")
 
         # intentionally create to check error
         # skipcq
@@ -544,7 +544,7 @@ def test_predictor_crash():
 
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
-    # must wrap or sthg stupid happens
+    # convert to pathlib Path to prevent reader complaint
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
@@ -620,11 +620,11 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     # test different using user model
     model = CNNPatchModel(backbone="resnet18", num_classes=9)
     # coverage setter check
-    model.set_preproc_func(lambda x: x - 1)  # do this for coverage
-    assert model.get_preproc_func()(1) == 0
+    model.preproc = lambda x: x - 1  # do this for coverage
+    assert model.preproc(1) == 0
     # coverage setter check
-    model.set_preproc_func(None)  # do this for coverage
-    assert model.get_preproc_func()(1) == 1
+    model.preproc = None  # do this for coverage
+    assert model.preproc(1) == 1
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
         input_list,
@@ -830,7 +830,6 @@ def _test_predictor_output(
     probabilities = output["probabilities"]
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
-        print(predictions[idx], predictions_check[idx])
         assert (
             np.abs(probabilities_max - probabilities_check[idx]) <= 1e-6
             and predictions[idx] == predictions_check[idx]
