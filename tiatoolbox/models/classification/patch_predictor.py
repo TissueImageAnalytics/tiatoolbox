@@ -243,6 +243,9 @@ class CNNPatchPredictor:
             resolution (float): Resolution of merged predictions.
             units (str): Units of resolution used when merging predictions. This
                 must be the same `units` used when processing the data.
+            postproc_func (callable): a function to post-process raw prediction
+                from model. Must be in the form
+                >>> value = postproc_func(predictions)
 
         Returns:
             prediction_map (ndarray): Merged predictions as a 2D array.
@@ -464,9 +467,20 @@ class CNNPatchPredictor:
 
                 The dict has following format:
                 - img_path: path of the input image.
-                    - raw: path to save location for raw prediction.
-                    - merged: path to .npy contain merged predictions.
+                    - raw: path to save location for raw prediction, saved in .json.
+                    - merged: path to .npy contain merged predictions if `merge_predictions`
+                    is `True`.
 
+                For example
+                >>> wsi_list = ['wsi1.svs', 'wsi2.svs']
+                >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+                >>> output = predictor.predict(wsi_list, mode='wsi)
+                >>> output.keys()
+                ['wsi1.svs', 'wsi2.svs']
+                >>> output['wsi1.svs']
+                {'raw': '0.raw.json', 'merged': '0.merged.npy}
+                >>> output['wsi2.svs']
+                {'raw': '1.raw.json', 'merged': '1.merged.npy}
 
         """
         if mode not in ["patch", "wsi", "tile"]:
