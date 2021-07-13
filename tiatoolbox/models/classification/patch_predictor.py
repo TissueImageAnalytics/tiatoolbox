@@ -84,7 +84,7 @@ class CNNPatchModel(ModelBase):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
-        self.preproc_func = None
+        self.preproc_func = lambda x: x
         self.postproc_func = lambda x: np.argmax(x, axis=-1)
 
     def forward(self, imgs):
@@ -516,8 +516,7 @@ class CNNPatchPredictor:
                     f"len(label_list) != len(img_list) : "
                     f"{len(label_list)} != {len(img_list)}"
                 )
-        if (mode == "wsi" and mask_list is not None
-                and len(mask_list) != len(img_list)):
+        if mode == "wsi" and mask_list is not None and len(mask_list) != len(img_list):
             raise ValueError(
                 f"len(mask_list) != len(img_list) : "
                 f"{len(mask_list)} != {len(img_list)}"
