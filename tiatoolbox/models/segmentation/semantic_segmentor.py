@@ -21,6 +21,8 @@
 """This module enables semantic segmentation."""
 
 
+import shutil
+import joblib
 import copy
 import logging
 import os
@@ -229,6 +231,55 @@ class SemanticSegmentor:
         self.verbose = verbose
         self.auto_generate_mask = auto_generate_mask
 
+    @staticmethod
+    def filter_coordinates(mask_reader, coordinates_list, resolution=None, units=None):
+        """
+        Indicates which coordinate is valid for mask-based patch
+        extraction. Locations are being validated by a custom or
+        build-in `func`.
+
+        Args:
+            mask_reader (:class:`.VirtualReader`): a virtual pyramidal
+                reader of the mask related to the WSI from which we want
+                to extract the patches.
+
+            coordinates_list (ndarray and np.int32): Coordinates to be checked
+                via the `func`. They must be in the same resolution as requested
+                `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+                where N is the number of coordinate sets and K is either 2 for centroids
+                or 4 for bounding boxes. When using the default `func=None`, K should be
+                4, as we expect the `coordinates_list` to be refer to bounding boxes in
+                `[start_x, start_y, end_x, end_y]` format.
+
+        Returns:
+            ndarray: list of flags to indicate which coordinate is valid.
+        """
+        if not isinstance(mask_reader, VirtualWSIReader):
+            raise ValueError("`mask_reader` should be VirtualWSIReader.")
+        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
+            coordinates_list.dtype, np.integer
+        ):
+            raise ValueError("`coordinates_list` should be ndarray of integer type.")
+
+        mask_real_shape = mask_reader.img.shape[:2]
+        mask_resolution_shape = mask_reader.slide_dimensions(
+            resolution=resolution, units=units
+        )[::-1]
+        mask_real_shape = np.array(mask_real_shape)
+        mask_resolution_shape = np.array(mask_resolution_shape)
+        scale_factor = mask_real_shape / mask_resolution_shape
+        scale_factor = scale_factor[0]  # what if ratio x != y
+
+        def sel_func(coord: np.ndarray):
+            """Accept coord as long as its box contains bits of mask."""
+            coord_in_real_mask = np.ceil(scale_factor * coord).astype(np.int32)
+            tl_x, tl_y, br_x, br_y = coord_in_real_mask
+            roi = mask_reader.img[tl_y:br_y, tl_x:br_x]
+            return np.sum(roi > 0) > 0
+
+        flag_list = [sel_func(coord) for coord in coordinates_list]
+        return np.array(flag_list)
+
     # TODO: refactor this, duplicated functionalities wrt the patchpredictor
     @staticmethod
     def get_reader(img_path: str, mask_path: str, mode: str, auto_get_mask: bool):
@@ -291,9 +342,7 @@ class SemanticSegmentor:
             stride_shape=iostate.stride_shape,
         )
         if mask_reader is not None:
-            sel = PatchExtractor.filter_coordinates(
-                mask_reader, patch_output_list, **resolution
-            )
+            sel = self.filter_coordinates(mask_reader, patch_output_list, **resolution)
             patch_output_list = patch_output_list[sel]
             patch_input_list = patch_input_list[sel]
 
@@ -617,6 +666,14 @@ class SemanticSegmentor:
                 # dont use dict as mapping, because can overwrite, if that is
                 # user intention to provide same path twice
                 output_list.append([img_path, wsi_save_path])
+
+                # will this corrupt old version if ctrl-c midway?
+                map_file_path = os.path.join(save_dir, "file_map.dat")
+                # backup old version first
+                if os.path.exists(map_file_path):
+                    old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
+                    shutil.copy(map_file_path, old_map_file_path)
+                joblib.dump(output_list, map_file_path)
 
                 # verbose mode, error by passing ?
                 logging.info(f"Finish: {wsi_idx}/{len(img_list)}")
