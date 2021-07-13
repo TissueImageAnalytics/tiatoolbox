@@ -576,12 +576,16 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_dict_to_json(input, output_path):
-    """Convert output to a format supported by json.dumps.
+def save_dict_to_json(input_dict, save_path):
+    """Save input dictionary to a json file.
+
+    Internally, will convert data types within `input_dict` into
+    a type that is json serializable, such as np.array([2, 3, 2])
+    to [2, 3, 2] list.
 
     Args:
-        output (dict): Output dictionary to save.
-        output_path (str): Output path for dictionary.
+        input_dict (dict): Output dictionary to save.
+        save_path (str): Output to save the json of `input_dict`.
 
     """
     # TODO: very primitive and naive, actual json parser class later?
@@ -591,7 +595,7 @@ def save_dict_to_json(input, output_path):
             new_input[k] = v.tolist()
         else:
             new_input[k] = v
-    with open(output_path, "w") as handle:
+    with open(save_path, "w") as handle:
         json.dump(new_input, handle)
 
 
