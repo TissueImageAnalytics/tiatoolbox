@@ -37,7 +37,11 @@ from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import download_data, get_pretrained_model_info, save_json
+from tiatoolbox.utils.misc import (
+    download_data,
+    get_pretrained_model_info,
+    save_dict_to_json,
+)
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
@@ -570,7 +574,7 @@ class CNNPatchPredictor:
                     save_path = os.path.join(save_dir, img_code)
                     raw_save_path = f"{save_path}.raw.json"
                     save_info["raw"] = raw_save_path
-                    save_json(output_model, raw_save_path)
+                    save_dict_to_json(output_model, raw_save_path)
                     if merge_predictions:
                         merged_file_path = f"{save_path}.merged.npy"
                         np.save(merged_file_path, merged_prediction)
