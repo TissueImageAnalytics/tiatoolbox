@@ -157,7 +157,7 @@ def imread(image_path, as_uint8=True):
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
-        image = image.to(np.uint8)
+        image = image.astype(np.uint8)
     return image
 
 
@@ -590,7 +590,7 @@ def save_dict_to_json(input_dict, save_path):
     """
     # TODO: very primitive and naive, actual json parser class later?
     new_input = {}
-    for k, v in input.items():
+    for k, v in input_dict.items():
         if isinstance(v, np.ndarray):
             new_input[k] = v.tolist()
         else:
