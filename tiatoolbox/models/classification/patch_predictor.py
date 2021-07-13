@@ -516,12 +516,12 @@ class CNNPatchPredictor:
                     f"len(label_list) != len(img_list) : "
                     f"{len(label_list)} != {len(img_list)}"
                 )
-        if mode == "wsi" and mask_list is not None:
-            if len(mask_list) != len(img_list):
-                raise ValueError(
-                    f"len(mask_list) != len(img_list) : "
-                    f"{len(mask_list)} != {len(img_list)}"
-                )
+        if (mode == "wsi" and mask_list is not None
+                and len(mask_list) != len(img_list)):
+            raise ValueError(
+                f"len(mask_list) != len(img_list) : "
+                f"{len(mask_list)} != {len(img_list)}"
+            )
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
