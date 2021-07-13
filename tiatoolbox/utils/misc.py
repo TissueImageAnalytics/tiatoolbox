@@ -570,7 +570,7 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_json(output, output_path):
+def save_dict_to_json(output, output_path):
     """Convert output to a format supported by json.dumps.
 
     Args:
