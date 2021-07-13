@@ -40,7 +40,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extension.
 
-    Args:x
+    Args:
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
