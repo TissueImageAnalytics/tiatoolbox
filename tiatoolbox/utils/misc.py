@@ -576,7 +576,7 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_dict_to_json(output, output_path):
+def save_dict_to_json(input, output_path):
     """Convert output to a format supported by json.dumps.
 
     Args:
@@ -585,14 +585,14 @@ def save_dict_to_json(output, output_path):
 
     """
     # TODO: very primitive and naive, actual json parser class later?
-    new_output = {}
-    for k, v in output.items():
+    new_input = {}
+    for k, v in input.items():
         if isinstance(v, np.ndarray):
-            new_output[k] = v.tolist()
+            new_input[k] = v.tolist()
         else:
-            new_output[k] = v
+            new_input[k] = v
     with open(output_path, "w") as handle:
-        json.dump(new_output, handle)
+        json.dump(new_input, handle)
 
 
 def select_device(on_gpu):
