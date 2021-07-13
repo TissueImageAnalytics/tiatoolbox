@@ -197,6 +197,9 @@ class CNNPatchPredictor:
 
             pretrained_weight (str): Path to the weight of the corresponding
                 `pretrained_model`.
+                >>> predictor = CNNPatchPredictor(
+                ...    pretrained_model="resnet18-kather100k",
+                ...    pretrained_weight="resnet18_local_weight")
 
             batch_size (int) : Number of images fed into the model each time.
             num_loader_worker (int) : Number of workers to load the data.
@@ -485,15 +488,21 @@ class CNNPatchPredictor:
         """
         if mode not in ["patch", "wsi", "tile"]:
             raise ValueError(
-                "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
+                f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
-        if label_list is not None and mode == "patch":
+        if mode == "patch" and label_list is not None:
             # if a label_list is provided, then return with the prediction
             return_labels = bool(label_list)
             if len(label_list) != len(img_list):
                 raise ValueError(
-                    "len(label_list) != len(img_list) : %d != %d"
-                    % (len(label_list), len(img_list))
+                    f"len(label_list) != len(img_list) : "
+                    f"{len(label_list)} != {len(img_list)}"
+                )
+        if mode == "wsi" and mask_list is not None:
+            if len(mask_list) != len(img_list):
+                raise ValueError(
+                    f"len(mask_list) != len(img_list) : "
+                    f"{len(mask_list)} != {len(img_list)}"
                 )
 
         if mode == "patch":

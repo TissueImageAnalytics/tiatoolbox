@@ -49,8 +49,13 @@ class ABCPatchDataset(torch.utils.data.Dataset):
         self.input_list = []
         self.label_list = []
 
-    def check_input_integrity(self, mode):
-        """Perform check on the input to make sure it is valid."""
+    def _check_input_integrity(self, mode):
+        """Perform check to make sure variables received during init are valid.
+
+        These check include:
+            - Input is of a singular data type, such as a list of paths.
+            - If it is list of images, all images are of the same height and width
+        """
         if mode == "patch":
             self.data_is_npy_alike = False
 
@@ -88,7 +93,6 @@ class ABCPatchDataset(torch.utils.data.Dataset):
                     raise ValueError("Each sample must be an array of the form HWC.")
 
                 max_shape = np.max(shape_list, axis=0)
-                # How will this behave for mixed channel ?
                 if (shape_list - max_shape[None]).sum() != 0:
                     raise ValueError("Images must have the same dimensions.")
 
@@ -129,7 +133,7 @@ class ABCPatchDataset(torch.utils.data.Dataset):
         if path.suffix in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             patch = imread(path, as_uint8=False)
         else:
-            raise ValueError("Can not load data of `%s`" % path.suffix)
+            raise ValueError(f"Can not load data of `{path.suffix}`")
         return patch
 
     def set_preproc_func(self, func):
