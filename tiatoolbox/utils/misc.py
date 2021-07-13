@@ -135,7 +135,7 @@ def imwrite(image_path, img):
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path):
+def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
@@ -151,8 +151,14 @@ def imread(image_path):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
-    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-    return image.astype("uint8")
+    if pathlib.Path(image_path).suffix == ".npy":
+        image = np.load(image_path)
+    else:
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    if as_uint8:
+        image = image.to(np.uint8)
+    return image
 
 
 def load_stain_matrix(stain_matrix_input):

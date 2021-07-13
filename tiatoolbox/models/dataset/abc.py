@@ -126,10 +126,8 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
         """
         path = pathlib.Path(path)
-        if path.suffix == ".npy":
-            patch = np.load(path)
-        elif path.suffix in (".jpg", ".jpeg", ".tif", ".tiff", ".png"):
-            patch = imread(path)
+        if path.suffix in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
+            patch = imread(path, as_uint8=False)
         else:
             raise ValueError("Can not load data of `%s`" % path.suffix)
         return patch
