@@ -73,7 +73,7 @@ def predefined_preproc_func(dataset_name):
     }
     if dataset_name not in preproc_dict:
         raise ValueError(
-            "Predefined preprocessing for" "dataset `%s` does not exist." % dataset_name
+            f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
         )
 
     preproc_list = preproc_dict[dataset_name]
@@ -122,7 +122,7 @@ class PatchDataset(abc.ABCPatchDataset):
         self.label_list = label_list
 
         # perform check on the input
-        self.check_input_integrity(mode="patch")
+        self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
         patch = self.input_list[idx]
@@ -223,7 +223,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         if not os.path.isfile(img_path):
             raise ValueError("`img_path` must be a valid file path.")
         if mode not in ["wsi", "tile"]:
-            raise ValueError("`%s` is not supported." % mode)
+            raise ValueError(f"`{mode}` is not supported.")
         patch_size = np.array(patch_size)
         stride_size = np.array(stride_size)
 
@@ -232,13 +232,13 @@ class WSIPatchDataset(abc.ABCPatchDataset):
             or np.size(patch_size) > 2
             or np.any(patch_size < 0)
         ):
-            raise ValueError("Invalid `patch_size` value %s." % patch_size)
+            raise ValueError(f"Invalid `patch_size` value {patch_size}.")
         if (
             not np.issubdtype(stride_size.dtype, np.integer)
             or np.size(stride_size) > 2
             or np.any(stride_size < 0)
         ):
-            raise ValueError("Invalid `stride_size` value %s." % stride_size)
+            raise ValueError(f"Invalid `stride_size` value {stride_size}.")
 
         img_path = pathlib.Path(img_path)
         if mode == "wsi":
@@ -318,7 +318,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         self.units = units
 
         # Perform check on the input
-        self.check_input_integrity(mode="wsi")
+        self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
         coords = self.input_list[idx]

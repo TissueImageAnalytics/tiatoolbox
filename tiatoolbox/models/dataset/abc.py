@@ -19,10 +19,11 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
-import torch
-import pathlib
-import numpy as np
 import os
+import pathlib
+
+import numpy as np
+import torch
 
 from tiatoolbox.utils.misc import imread
 
@@ -44,13 +45,18 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
     def __init__(self, preproc_func=None):
         super().__init__()
-        self.set_preproc_func(preproc_func)
+        self.preproc = preproc_func
         self.data_is_npy_alike = False
         self.input_list = []
         self.label_list = []
 
-    def check_input_integrity(self, mode):
-        """Perform check on the input to make sure it is valid."""
+    def _check_input_integrity(self, mode):
+        """Perform check to make sure variables received during init are valid.
+
+        These check include:
+            - Input is of a singular data type, such as a list of paths.
+            - If it is list of images, all images are of the same height and width
+        """
         if mode == "patch":
             self.data_is_npy_alike = False
 
@@ -88,7 +94,6 @@ class ABCPatchDataset(torch.utils.data.Dataset):
                     raise ValueError("Each sample must be an array of the form HWC.")
 
                 max_shape = np.max(shape_list, axis=0)
-                # How will this behave for mixed channel ?
                 if (shape_list - max_shape[None]).sum() != 0:
                     raise ValueError("Images must have the same dimensions.")
 
@@ -126,16 +131,22 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
         """
         path = pathlib.Path(path)
-        if path.suffix == ".npy":
-            patch = np.load(path)
-        elif path.suffix in (".jpg", ".jpeg", ".tif", ".tiff", ".png"):
-            patch = imread(path)
+        if path.suffix in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
+            patch = imread(path, as_uint8=False)
         else:
-            raise ValueError("Can not load data of `%s`" % path.suffix)
+            raise ValueError(f"Can not load data of `{path.suffix}`")
         return patch
 
-    def set_preproc_func(self, func):
-        """Set the `preproc_func` to this `func` if it is not None.
+    @property
+    def preproc(self):
+        """Get preprocessing function."""
+        return self.preproc_func
+
+    @preproc.setter
+    def preproc(self, func):
+        """Setter for preprocessing function.
+
+        Set the `preproc_func` to this `func` if it is not None.
         Else the `preproc_func` is reset to return source image.
 
         `func` must behave in the following manner:

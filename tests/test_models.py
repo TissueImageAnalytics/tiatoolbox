@@ -40,28 +40,28 @@ def test_create_backbone():
     """Test for creating backbone."""
     backbone_list = [
         "alexnet",
-        # "resnet18",
-        # "resnet34",
-        # "resnet50",
-        # "resnet101",
-        # "resnext50_32x4d",
-        # "resnext101_32x8d",
-        # "wide_resnet50_2",
-        # "wide_resnet101_2",
-        # "densenet121",
-        # "densenet161",
-        # "densenet169",
-        # "densenet201",
-        # "googlenet",
-        # "mobilenet_v2",
-        # "mobilenet_v3_large",
-        # "mobilenet_v3_small",
+        "resnet18",
+        "resnet34",
+        "resnet50",
+        "resnet101",
+        "resnext50_32x4d",
+        "resnext101_32x8d",
+        "wide_resnet50_2",
+        "wide_resnet101_2",
+        "densenet121",
+        "densenet161",
+        "densenet169",
+        "densenet201",
+        "googlenet",
+        "mobilenet_v2",
+        "mobilenet_v3_large",
+        "mobilenet_v3_small",
     ]
     for backbone in backbone_list:
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
-            assert False, f"Model {backbone} failed."
+            raise AssertionError(f"Model {backbone} failed.")
 
     # test for model not defined
     with pytest.raises(ValueError, match=r".*not supported.*"):
@@ -164,7 +164,12 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
 
     dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
 
-    dataset.preproc_func = lambda x: x
+    # test setter and getter
+    assert dataset.preproc(1) == 1
+    dataset.preproc = lambda x: x - 1
+    assert dataset.preproc(1) == 0
+    dataset.preproc = None
+    assert dataset.preproc(2) == 2
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -182,7 +187,7 @@ def test_PatchDatasetlist_imgs():
     list_imgs = [img, img, img]
     dataset = PatchDataset(list_imgs)
 
-    dataset.preproc_func = lambda x: x
+    dataset.preproc = lambda x: x
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -193,7 +198,7 @@ def test_PatchDatasetlist_imgs():
         )
 
     # test for changing to another preproc
-    dataset.preproc_func = lambda x: x - 10
+    dataset.preproc = lambda x: x - 10
     item = dataset[0]
     assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
@@ -245,7 +250,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-def test_PatchDatasetcrash():
+def test_PatchDataset_crash():
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
 
@@ -366,7 +371,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
             def __init__(self):
                 super().__init__()
                 self.input_list = "CRASH"
-                self.check_input_integrity("wsi")
+                self._check_input_integrity("wsi")
 
         # intentionally create to check error
         # skipcq
@@ -533,10 +538,16 @@ def test_predictor_crash():
 
     with pytest.raises(ValueError, match=r".*not a valid mode.*"):
         predictor.predict("aaa", mode="random")
+    # remove previously generated data
+    if os.path.exists("output"):
+        shutil.rmtree("output", ignore_errors=True)
     with pytest.raises(ValueError, match=r".*must be a list of file paths.*"):
         predictor.predict("aaa", mode="wsi")
-    with pytest.raises(ValueError):
-        predictor.predict([1, 2, 3], label_list=[1, 2], mode="patch")
+    # remove previously generated data
+    if os.path.exists("output"):
+        shutil.rmtree("output", ignore_errors=True)
+    with pytest.raises(ValueError, match=r".*mask_list.*!=.*img_list.*"):
+        predictor.predict([1, 2, 3], mask_list=[1, 2], mode="wsi")
     # remove previously generated data
     if os.path.exists("output"):
         shutil.rmtree("output", ignore_errors=True)
@@ -544,7 +555,7 @@ def test_predictor_crash():
 
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
-    # must wrap or sthg stupid happens
+    # convert to pathlib Path to prevent reader complaint
     input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
@@ -617,14 +628,24 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
         batch_size=1,
     )
 
-    # test different using user model
+    # --- test different using user model
+    # test setter/getter/inital of postproc/preproc
     model = CNNPatchModel(backbone="resnet18", num_classes=9)
+    assert model.preproc(1) == 1
+    model.preproc = lambda x: x - 1
+    assert model.preproc(1) == 0
+    model.preproc = None
+    assert model.preproc(2) == 2
+
+    # repeat the setter test for postproc
+    assert model.postproc(np.array([1, 2, 3])) == 2  # argmax by default
+    model.postproc = lambda x: x - 1
+    assert model.postproc(1) == 0
     # coverage setter check
-    model.set_preproc_func(lambda x: x - 1)  # do this for coverage
-    assert model.get_preproc_func()(1) == 0
-    # coverage setter check
-    model.set_preproc_func(None)  # do this for coverage
-    assert model.get_preproc_func()(1) == 1
+    model.postproc = None
+    assert model.postproc(np.array([1, 2, 3])) == 2
+
+    # test prediction
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
         input_list,
@@ -737,6 +758,8 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     # remove previously generated data
     if os.path.exists(_kwargs["save_dir"]):
         shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
+    if os.path.exists("output"):
+        shutil.rmtree("output", ignore_errors=True)
 
     # test reading of multiple whole-slide images
     _kwargs = copy.deepcopy(kwargs)
@@ -784,12 +807,24 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
         mode="wsi",
         **kwargs,
     )
+
+    # mockup to change the preproc func and
+    # force to use the default in merge function
+    # stil should have the same resuls
+    kwargs["merge_predictions"] = False
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
         mask_list=[_mini_wsi_msk],
         mode="tile",
         **kwargs,
     )
+    merged_tile_output = predictor.merge_predictions(
+        _mini_wsi_jpg,
+        tile_output[0],
+        resolution=kwargs["resolution"],
+        units=kwargs["units"],
+    )
+    tile_output.append(merged_tile_output)
 
     # first make sure nothing breaks with predictions
     wpred = np.array(wsi_output[0]["predictions"])
@@ -802,7 +837,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     merged_tile = tile_output[1]
     # enure shape of merged predictions of tile and wsi input are the same
     assert merged_wsi.shape == merged_tile.shape
-    # ensure conistent predictions between tile and wsi mode
+    # ensure consistent predictions between tile and wsi mode
     diff = merged_tile == merged_wsi
     accuracy = np.sum(diff) / np.size(merged_wsi)
     assert accuracy > 0.9, np.nonzero(~diff)
@@ -830,7 +865,6 @@ def _test_predictor_output(
     probabilities = output["probabilities"]
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
-        print(predictions[idx], predictions_check[idx])
         assert (
             np.abs(probabilities_max - probabilities_check[idx]) <= 1e-6
             and predictions[idx] == predictions_check[idx]

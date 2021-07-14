@@ -61,9 +61,9 @@ class KatherPatchDataset(ABCDatasetInfo):
 
     Args:
         save_dir_path (str or None): Path to directory containing the Kather dataset,
-                 assumed to be as is after extracted. If the argument is `None`,
-                 the dataset will be downloaded and extracted into the
-                 'run_dir/download/Kather'.
+            assumed to be as is after extracted. If the argument is `None`,
+            the dataset will be downloaded and extracted into the
+            'run_dir/download/Kather'.
 
     Attributes
         input_list (list): A list of paths where each path points to a sample image.

@@ -40,7 +40,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extension.
 
-    Args:x
+    Args:
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
@@ -135,7 +135,7 @@ def imwrite(image_path, img):
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path):
+def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
@@ -151,8 +151,14 @@ def imread(image_path):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
-    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-    return image.astype("uint8")
+    if pathlib.Path(image_path).suffix == ".npy":
+        image = np.load(image_path)
+    else:
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    if as_uint8:
+        image = image.astype(np.uint8)
+    return image
 
 
 def load_stain_matrix(stain_matrix_input):
@@ -570,23 +576,27 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_json(output, output_path):
-    """Convert output to a format supported by json.dumps.
+def save_dict_to_json(input_dict, save_path):
+    """Save input dictionary to a json file.
+
+    Internally, will convert data types within `input_dict` into
+    a type that is json serializable, such as np.array([2, 3, 2])
+    to [2, 3, 2] list.
 
     Args:
-        output (dict): Output dictionary to save.
-        output_path (str): Output path for dictionary.
+        input_dict (dict): Output dictionary to save.
+        save_path (str): Output to save the json of `input_dict`.
 
     """
     # TODO: very primitive and naive, actual json parser class later?
-    new_output = {}
-    for k, v in output.items():
+    new_input = {}
+    for k, v in input_dict.items():
         if isinstance(v, np.ndarray):
-            new_output[k] = v.tolist()
+            new_input[k] = v.tolist()
         else:
-            new_output[k] = v
-    with open(output_path, "w") as handle:
-        json.dump(new_output, handle)
+            new_input[k] = v
+    with open(save_path, "w") as handle:
+        json.dump(new_input, handle)
 
 
 def select_device(on_gpu):
