@@ -51,7 +51,7 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 
 ### Install Python package
 
-If you wish to use our programs, perhaps without developing them further, run the command `pip install tiatoolbox`.
+If you wish to use our programs, perhaps without developing them further, run the command `pip install tiatoolbox` or `pip install --ignore-installed --upgrade tiatoolbox` to upgrade from an existing installation.
 Detailed installation instructions can be found in the [documentation](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
 
 To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**.
