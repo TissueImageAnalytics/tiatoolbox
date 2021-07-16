@@ -542,6 +542,8 @@ def test_predictor_crash():
         shutil.rmtree("output", ignore_errors=True)
     with pytest.raises(ValueError, match=r".*masks.*!=.*imgs.*"):
         predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
+    with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
+        predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
     # remove previously generated data
     if os.path.exists("output"):
         shutil.rmtree("output", ignore_errors=True)
