@@ -32,7 +32,7 @@ import torch.nn as nn
 import tqdm
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.abc import IOConfigBase, ModelBase
+from tiatoolbox.models.abc import IOConfigABC, ModelABC
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
@@ -45,7 +45,7 @@ from tiatoolbox.utils.misc import (
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-class _IOConfigPatchPredictor(IOConfigBase):
+class _IOConfigPatchPredictor(IOConfigABC):
     """Define a class to hold IO information for patch predictor."""
 
     # We predefine to follow enforcement, actual initialization in init
@@ -61,7 +61,7 @@ class _IOConfigPatchPredictor(IOConfigBase):
             self.__setattr__(variable, value)
 
 
-class CNNPatchModel(ModelBase):
+class CNNPatchModel(ModelABC):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
     Attributes:

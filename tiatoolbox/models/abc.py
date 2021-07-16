@@ -23,7 +23,7 @@ import torch.nn as nn
 from abc import ABC, abstractmethod
 
 
-class IOConfigBase(ABC):
+class IOConfigABC(ABC):
     """Define an abstract class for holding a predictor input output information.
 
     Enforcing such that following attributes must always be defined by the subclass.
@@ -55,7 +55,7 @@ class IOConfigBase(ABC):
         raise NotImplementedError
 
 
-class ModelBase(ABC, nn.Module):
+class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self):
@@ -116,7 +116,7 @@ class ModelBase(ABC, nn.Module):
         elif callable(func):
             self._preproc = func
         else:
-            raise RuntimeError(f"{func} is not callable!")
+            raise ValueError(f"{func} is not callable!")
 
     @property
     def postproc_func(self):
@@ -142,4 +142,4 @@ class ModelBase(ABC, nn.Module):
         elif callable(func):
             self._postproc = func
         else:
-            raise RuntimeError(f"{func} is not callable!")
+            raise ValueError(f"{func} is not callable!")

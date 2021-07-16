@@ -10,11 +10,12 @@ import pytest
 import torch
 
 from tiatoolbox import rcParam
+from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.dataset import (
-    ABCDatasetInfo,
-    ABCPatchDataset,
+    DatasetInfoABC,
+    PatchDatasetABC,
     KatherPatchDataset,
     PatchDataset,
     WSIPatchDataset,
@@ -75,7 +76,7 @@ def test_DatasetInfo():
 
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
                 self.a = "a"
 
@@ -86,7 +87,7 @@ def test_DatasetInfo():
 
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
 
@@ -96,7 +97,7 @@ def test_DatasetInfo():
     with pytest.raises(TypeError):
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
                 self.labels = "a"
@@ -108,7 +109,7 @@ def test_DatasetInfo():
 
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
                 self.label_name = "a"
@@ -162,14 +163,6 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     size = (224, 224, 3)
 
     dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
-
-    # test setter and getter
-    assert dataset.preproc_func(1) == 1
-    dataset.preproc_func = lambda x: x - 1
-    assert dataset.preproc_func(1) == 0
-    assert dataset.preproc(1) == 1, "Must be unchanged!"
-    dataset.preproc_func = None
-    assert dataset.preproc_func(2) == 2
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -367,11 +360,14 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     ):
         # intentionally create to check error
         # skipcq
-        class Proto(ABCPatchDataset):
+        class Proto(PatchDatasetABC):
             def __init__(self):
                 super().__init__()
                 self.inputs = "CRASH"
                 self._check_input_integrity("wsi")
+
+            def __getitem__(self, idx):
+                pass
 
         # intentionally create to check error
         # skipcq
@@ -513,6 +509,117 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
+def test_PatchDataset_abc():
+    # test missing definition for abstract
+    with pytest.raises(TypeError):
+
+        # intentionally create to check error
+        # skipcq
+        class Proto(PatchDatasetABC):
+            def __init__(self):
+                super().__init__()
+
+        # crash due to not define __getitem__
+        _ = Proto()
+
+    # skipcq
+    class Proto(PatchDatasetABC):
+        def __init__(self):
+            super().__init__()
+
+        def __getitem__(self, idx):
+            pass
+
+    ds = Proto()
+
+    # test setter and getter
+    assert ds.preproc_func(1) == 1
+    ds.preproc_func = lambda x: x - 1
+    assert ds.preproc_func(1) == 0
+    assert ds.preproc(1) == 1, "Must be unchanged!"
+    ds.preproc_func = None
+    assert ds.preproc_func(2) == 2
+
+    # test assign uncallable to preproc_func/postproc_func
+    with pytest.raises(ValueError, match=r".*callable*"):
+        ds.preproc_func = 1
+
+
+def test_model_abc():
+    """Test API in model ABC."""
+    # test missing definition for abstract
+    with pytest.raises(TypeError):
+
+        # intentionally create to check error
+        # skipcq
+        class Proto(ModelABC):
+            def __init__(self):
+                super().__init__()
+
+        # crash due to not define forward and infer_batch
+        _ = Proto()
+
+    with pytest.raises(TypeError):
+
+        # intentionally create to check error
+        # skipcq
+        class Proto(ModelABC):
+            def __init__(self):
+                super().__init__()
+
+            @staticmethod
+            def infer_batch():
+                pass
+
+        # crash due to not define forward
+        _ = Proto()
+
+    # intentionally create to check error
+    # skipcq
+    class Proto(ModelABC):
+        def __init__(self):
+            super().__init__()
+
+        @staticmethod
+        def postproc(image):
+            return image - 2
+
+        def forward(self):
+            pass
+
+        @staticmethod
+        def infer_batch():
+            pass
+
+    # crash due to not define forward
+    model = Proto()
+
+    # test assign uncallable to preproc_func/postproc_func
+    with pytest.raises(ValueError, match=r".*callable*"):
+        model.postproc_func = 1
+    with pytest.raises(ValueError, match=r".*callable*"):
+        model.preproc_func = 1
+
+    # test setter/getter/inital of preproc_func/postproc_func
+    assert model.preproc_func(1) == 1
+    model.preproc_func = lambda x: x - 1
+    assert model.preproc_func(1) == 0
+    assert model.preproc(1) == 1, "Must be unchanged!"
+    assert model.postproc(1) == -1, "Must be unchanged!"
+    model.preproc_func = None
+    assert model.preproc_func(2) == 2
+
+    # repeat the setter test for postproc
+    assert model.postproc_func(2) == 0
+    model.postproc_func = lambda x: x - 1
+    assert model.postproc_func(1) == 0
+    assert model.preproc(1) == 1, "Must be unchanged!"
+    assert model.postproc(2) == 0, "Must be unchanged!"
+    # coverage setter check
+    model.postproc_func = None
+    assert model.postproc_func(2) == 0
+
+
 def test_predictor_crash():
     """Test for crash when making predictor."""
     # without providing any model
@@ -625,26 +732,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     )
 
     # --- test different using user model
-    # test setter/getter/inital of postproc/preproc
     model = CNNPatchModel(backbone="resnet18", num_classes=9)
-    assert model.preproc_func(1) == 1
-    model.preproc_func = lambda x: x - 1
-    assert model.preproc_func(1) == 0
-    assert model.preproc(1) == 1, "Must be unchanged!"
-    assert model.postproc(np.array([1, 2, 3])) == 2, "Must be unchanged!"
-    model.preproc_func = None
-    assert model.preproc_func(2) == 2
-
-    # repeat the setter test for postproc
-    assert model.postproc_func(np.array([1, 2, 3])) == 2  # argmax by default
-    model.postproc_func = lambda x: x - 1
-    assert model.postproc_func(1) == 0
-    assert model.preproc(1) == 1, "Must be unchanged!"
-    assert model.postproc(np.array([1, 2, 3])) == 2, "Must be unchanged!"
-    # coverage setter check
-    model.postproc_func = None
-    assert model.postproc_func(np.array([1, 2, 3])) == 2
-
     # test prediction
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(

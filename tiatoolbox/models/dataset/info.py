@@ -26,7 +26,7 @@ from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 
 
-class ABCDatasetInfo(ABC):
+class DatasetInfoABC(ABC):
     """Define an abstract class for holding a dataset information.
 
     Enforcing such that following attributes must always be defined by the subclass.
@@ -56,7 +56,7 @@ class ABCDatasetInfo(ABC):
         raise NotImplementedError
 
 
-class KatherPatchDataset(ABCDatasetInfo):
+class KatherPatchDataset(DatasetInfoABC):
     """Define a class for holding the Kather dataset information.
 
     Args:

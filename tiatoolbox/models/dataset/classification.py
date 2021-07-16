@@ -81,7 +81,7 @@ def predefined_preproc_func(dataset_name):
     return preproc_func
 
 
-class PatchDataset(abc.ABCPatchDataset):
+class PatchDataset(abc.PatchDatasetABC):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
 
@@ -118,7 +118,7 @@ class PatchDataset(abc.ABCPatchDataset):
             patch = self.load_img(patch)
 
         # Apply preprocessing to selected patch
-        patch = self.preproc_func(patch)
+        patch = self._preproc(patch)
 
         data = {
             "image": patch,
@@ -130,7 +130,7 @@ class PatchDataset(abc.ABCPatchDataset):
         return data
 
 
-class WSIPatchDataset(abc.ABCPatchDataset):
+class WSIPatchDataset(abc.PatchDatasetABC):
     """Defines a WSI-level patch dataset.
 
     Attributes:
@@ -315,7 +315,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         )
 
         # Apply preprocessing to selected patch
-        patch = self.preproc_func(patch)
+        patch = self._preproc(patch)
 
         data = {"image": patch, "coords": np.array(coords)}
         return data

@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 import os
 import pathlib
 
@@ -29,7 +29,7 @@ import torch
 from tiatoolbox.utils.misc import imread
 
 
-class ABCPatchDataset(torch.utils.data.Dataset):
+class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
 
     Attributes:
@@ -166,7 +166,7 @@ class ABCPatchDataset(torch.utils.data.Dataset):
         elif callable(func):
             self._preproc = func
         else:
-            raise RuntimeError(f"{func} is not callable!")
+            raise ValueError(f"{func} is not callable!")
 
     def __len__(self):
         return len(self.inputs)
