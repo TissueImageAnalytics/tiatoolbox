@@ -516,6 +516,7 @@ def test_PatchDataset_abc():
         # intentionally create to check error
         # skipcq
         class Proto(PatchDatasetABC):
+            # skipcq
             def __init__(self):
                 super().__init__()
 
@@ -524,9 +525,11 @@ def test_PatchDataset_abc():
 
     # skipcq
     class Proto(PatchDatasetABC):
+        # skipcq
         def __init__(self):
             super().__init__()
 
+        # skipcq
         def __getitem__(self, idx):
             pass
 
@@ -553,26 +556,29 @@ def test_model_abc():
         # intentionally create to check error
         # skipcq
         class Proto(ModelABC):
+            # skipcq
             def __init__(self):
                 super().__init__()
 
         # crash due to not define forward and infer_batch
-        _ = Proto()
+        Proto()
 
     with pytest.raises(TypeError):
 
         # intentionally create to check error
         # skipcq
         class Proto(ModelABC):
+            # skipcq
             def __init__(self):
                 super().__init__()
 
             @staticmethod
+            # skipcq
             def infer_batch():
                 pass
 
         # crash due to not define forward
-        _ = Proto()
+        Proto()
 
     # intentionally create to check error
     # skipcq
@@ -584,16 +590,16 @@ def test_model_abc():
         def postproc(image):
             return image - 2
 
+        # skipcq
         def forward(self):
             pass
 
         @staticmethod
+        # skipcq
         def infer_batch():
             pass
 
-    # crash due to not define forward
     model = Proto()
-
     # test assign uncallable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
         model.postproc_func = 1
