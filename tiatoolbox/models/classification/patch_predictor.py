@@ -87,6 +87,8 @@ class CNNPatchModel(ModelABC):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
+    # pylint: disable=W0221
+    # shut up pylint because abc is generic, this is actual definition
     def forward(self, imgs):
         """Pass input data through the model.
 
