@@ -53,8 +53,11 @@ class _IOConfigPatchPredictor(IOConfigABC):
     input_resolutions = None
     output_resolutions = None
 
-    def __init__(self, patch_size, input_resolutions, output_resolutions, **kwargs):
+    def __init__(
+        self, patch_size, input_resolutions, output_resolutions, stride_size, **kwargs
+    ):
         self.patch_size = patch_size
+        self.stride_size = stride_size
         self.input_resolutions = input_resolutions
         self.output_resolutions = output_resolutions
         for variable, value in kwargs.items():
@@ -84,7 +87,7 @@ class CNNPatchModel(ModelABC):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
-    def forward(self, imgs):
+    def forward(self, imgs, *args, **kwargs):
         """Pass input data through the model.
 
         Args:
@@ -679,6 +682,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
     iostate = _IOConfigPatchPredictor(
         patch_size=patch_size,
+        stride_size=patch_size,
         input_resolutions=[{"resolution": resolution, "units": units}],
         output_resolutions=[{"resolution": resolution, "units": units}],
     )
