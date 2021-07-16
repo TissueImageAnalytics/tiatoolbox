@@ -232,11 +232,50 @@ class SemanticSegmentor:
         self.auto_generate_mask = auto_generate_mask
 
     @staticmethod
-    def filter_coordinates(mask_reader, coordinates_list, resolution=None, units=None):
+    def get_coordinates(
+        image_shape: Union[List[int], np.ndarray], iostate: IOStateSegmentor
+    ):
+        """Calculate patch tiling coordinates.
+
+        Internally, it will call the `PatchExtractor.get_coordinates`.
+
+        Args:
+            image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                This argument specifies the shape of mother image (the image we want to)
+                extract patches from) at requested `resolution` and `units` and it is
+                expected to be in (width, height) format.
+
+            iostate (object): object that contains information about input and ouput
+                placement of patches. Check `IOStateSegmentor` for details about
+                available attributes.
+
+        Return:
+            patch_input_list: a list of corrdinates in
+                `[start_x, start_y, end_x, end_y]` format indicating the read location
+                of the patch in the mother image.
+
+            patch_output_list: a list of corrdinates in
+                `[start_x, start_y, end_x, end_y]` format indicating the write location
+                of the patch in the mother image.
+
         """
-        Indicates which coordinate is valid for mask-based patch
-        extraction. Locations are being validated by a custom or
-        build-in `func`.
+        (patch_input_list, patch_output_list) = PatchExtractor.get_coordinates(
+            image_shape=image_shape,
+            patch_input_shape=iostate.patch_input_shape,
+            patch_output_shape=iostate.patch_output_shape,
+            stride_shape=iostate.stride_shape,
+        )
+        return patch_input_list, patch_output_list
+
+    @staticmethod
+    def filter_coordinates(
+        mask_reader: VirtualWSIReader,
+        coordinates_list: np.ndarray,
+        resolution: Union[float, int] = None,
+        units: str = None,
+    ):
+        """
+        Indicates which coordinate is valid basing on the mask.
 
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal
@@ -335,11 +374,8 @@ class SemanticSegmentor:
 
         # * retrieve patch and tile placement
         # this is in XY
-        (patch_input_list, patch_output_list) = PatchExtractor.get_coordinates(
-            image_shape=wsi_proc_shape,
-            patch_input_shape=iostate.patch_input_shape,
-            patch_output_shape=iostate.patch_output_shape,
-            stride_shape=iostate.stride_shape,
+        (patch_input_list, patch_output_list) = self.get_coordinates(
+            wsi_proc_shape, iostate
         )
         if mask_reader is not None:
             sel = self.filter_coordinates(mask_reader, patch_output_list, **resolution)
@@ -399,16 +435,25 @@ class SemanticSegmentor:
             cum_output.extend(sample_output_list)
             pbar.update()
         pbar.close()
+        self.process_predictions(cum_output, wsi_reader, iostate, save_path)
 
+    def process_predictions(
+        self, cum_batch_predictions, wsi_reader, iostate, save_path
+    ):
+        """Define how the aggregated predictions are processed.
+
+        This includes merging the prediction if necessary and also saving afterward.
+
+        """
         # assume prediction_list is N, each item has L output element
-        location_list, prediction_list = list(zip(*cum_output))
+        location_list, prediction_list = list(zip(*cum_batch_predictions))
         # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output patch
         # this can exceed the image bound at the requested resolution
         # remove singleton due to split.
         location_list = np.array([v[0] for v in location_list])
         for idx, output_resolution in enumerate(iostate.output_resolutions):
             # assume resolution idx to be in the same order as L
-            merged_resolution = resolution
+            merged_resolution = iostate.highest_input_resolution
             merged_location_list = location_list
             # ! location is wrt highest resolution, hence still need conversion
             if iostate.save_resolution is not None:
@@ -542,9 +587,9 @@ class SemanticSegmentor:
 
         Args:
             img_list (list, ndarray): List of inputs to process. When using `patch`
-                mode, the input must be either a list of images, a list of image file paths
-                or a numpy array of an image list. When using `tile` or `wsi` mode, the
-                input must be a list of file paths.
+                mode, the input must be either a list of images, a list of image file
+                paths or a numpy array of an image list. When using `tile` or `wsi`
+                mode, the input must be a list of file paths.
 
             mask_list (list): List of masks. Only utilised when processing image tiles
                 and whole-slide images. Patches are only processed if they are witin a
@@ -552,7 +597,7 @@ class SemanticSegmentor:
                 generated for whole-slide images or the entire image is processed for
                 image tiles.
 
-            iostate (bool): object that define information about input and ouput
+            iostate (object): object that define information about input and ouput
                 placement of patches. When provided, `patch_input_shape`,
                 `patch_output_shape`, `stride_shape`, `resolution`, and `units`
                 arguments are ignore. Otherwise, those arguments will be internally
