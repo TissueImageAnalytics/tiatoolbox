@@ -164,11 +164,12 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
 
     # test setter and getter
-    assert dataset.preproc(1) == 1
-    dataset.preproc = lambda x: x - 1
-    assert dataset.preproc(1) == 0
-    dataset.preproc = None
-    assert dataset.preproc(2) == 2
+    assert dataset.preproc_func(1) == 1
+    dataset.preproc_func = lambda x: x - 1
+    assert dataset.preproc_func(1) == 0
+    assert dataset.preproc(1) == 1, "Must be unchanged!"
+    dataset.preproc_func = None
+    assert dataset.preproc_func(2) == 2
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -186,7 +187,7 @@ def test_PatchDatasetlist_imgs():
     list_imgs = [img, img, img]
     dataset = PatchDataset(list_imgs)
 
-    dataset.preproc = lambda x: x
+    dataset.preproc_func = lambda x: x
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -197,7 +198,7 @@ def test_PatchDatasetlist_imgs():
         )
 
     # test for changing to another preproc
-    dataset.preproc = lambda x: x - 10
+    dataset.preproc_func = lambda x: x - 10
     item = dataset[0]
     assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
@@ -626,19 +627,23 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     # --- test different using user model
     # test setter/getter/inital of postproc/preproc
     model = CNNPatchModel(backbone="resnet18", num_classes=9)
-    assert model.preproc(1) == 1
-    model.preproc = lambda x: x - 1
-    assert model.preproc(1) == 0
-    model.preproc = None
-    assert model.preproc(2) == 2
+    assert model.preproc_func(1) == 1
+    model.preproc_func = lambda x: x - 1
+    assert model.preproc_func(1) == 0
+    assert model.preproc(1) == 1, "Must be unchanged!"
+    assert model.postproc(np.array([1, 2, 3])) == 2, "Must be unchanged!"
+    model.preproc_func = None
+    assert model.preproc_func(2) == 2
 
     # repeat the setter test for postproc
-    assert model.postproc(np.array([1, 2, 3])) == 2  # argmax by default
-    model.postproc = lambda x: x - 1
-    assert model.postproc(1) == 0
+    assert model.postproc_func(np.array([1, 2, 3])) == 2  # argmax by default
+    model.postproc_func = lambda x: x - 1
+    assert model.postproc_func(1) == 0
+    assert model.preproc(1) == 1, "Must be unchanged!"
+    assert model.postproc(np.array([1, 2, 3])) == 2, "Must be unchanged!"
     # coverage setter check
-    model.postproc = None
-    assert model.postproc(np.array([1, 2, 3])) == 2
+    model.postproc_func = None
+    assert model.postproc_func(np.array([1, 2, 3])) == 2
 
     # test prediction
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)

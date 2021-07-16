@@ -84,9 +84,6 @@ class CNNPatchModel(ModelBase):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
-        self.preproc_func = lambda x: x
-        self.postproc_func = lambda x: np.argmax(x, axis=-1)
-
     def forward(self, imgs):
         """Pass input data through the model.
 
@@ -101,46 +98,13 @@ class CNNPatchModel(ModelBase):
         prob = torch.softmax(logit, -1)
         return prob
 
-    @property
-    def preproc(self):
-        """Get preprocessing function."""
-        return self.preproc_func
+    @staticmethod
+    def postproc(image):
+        """Define the post-processing of this class of model.
 
-    @preproc.setter
-    def preproc(self, func):
-        """Setter for preprocessing function.
-
-        Set the `self.preproc_func` to this `func` if it is not None.
-        Else the `self.preproc_func` is reset to return source image.
-
-        `func` must behave in the following manner:
-
-        >>> transformed_img = func(img)
-
+        This simply applies argmax along last axis of the input.
         """
-        self.preproc_func = func if func is not None else lambda x: x
-
-    @property
-    def postproc(self):
-        """Get postprocessing function."""
-        return self.postproc_func
-
-    @postproc.setter
-    def postproc(self, func):
-        """Setter for postprocessing function.
-
-        Set the `self.postproc_func` to this `func` if it is not None.
-        Else the `self.preproc_func` is reset to return argmax along last
-        axis of the input.
-
-        `func` must behave in the following manner:
-
-        >>> transformed_img = func(prediction_of_an_image)
-
-        """
-        self.postproc_func = (
-            func if func is not None else lambda x: np.argmax(x, axis=-1)
-        )
+        return np.argmax(image, axis=-1)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -361,7 +325,7 @@ class CNNPatchPredictor:
             output (ndarray): Model predictions of the input dataset
 
         """
-        dataset.preproc = self.model.preproc
+        dataset.preproc_func = self.model.preproc_func
 
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -392,7 +356,10 @@ class CNNPatchPredictor:
                 model, batch_data["image"], on_gpu
             )
             # We get the index of the class with the maximum probability
-            batch_output_predictions = self.model.postproc(batch_output_probabilities)
+            batch_output_predictions = self.model.postproc_func(
+                batch_output_probabilities
+            )
+
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
@@ -694,7 +661,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     num_classes = pretrained_info["num_classes"]
 
     model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
-    model.preproc = predefined_preproc_func(dataset)
+    model.preproc_func = predefined_preproc_func(dataset)
 
     if pretrained_weight is None:
         pretrained_weight_url = pretrained_models_dict[backbone]

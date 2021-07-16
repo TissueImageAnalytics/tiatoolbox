@@ -44,9 +44,11 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
     """
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
-        self.preproc_func = lambda x: x
+        self._preproc = self.preproc
         self.data_is_npy_alike = False
         self.inputs = []
         self.labels = []
@@ -136,28 +138,39 @@ class ABCPatchDataset(torch.utils.data.Dataset):
             raise ValueError(f"Can not load data of `{path.suffix}`")
         return patch
 
+    @staticmethod
+    def preproc(image):
+        """Define the pre-processing of this class of loader."""
+        return image
+
     @property
-    def preproc(self):
-        """Get preprocessing function."""
-        return self.preproc_func
+    def preproc_func(self):
+        """Return the current pre-processing function of this instance.
 
-    @preproc.setter
-    def preproc(self, func):
-        """Setter for preprocessing function.
-
-        Set the `self.preproc_func` to this `func` if it is not None.
-        Else the `self.preproc_func` is reset to return source image.
-
-        `func` must behave in the following manner:
-
+        The returned function is expected to behave as follows:
         >>> transformed_img = func(img)
 
         """
-        self.preproc_func = func if func is not None else lambda x: x
+        return self._preproc
+
+    @preproc_func.setter
+    def preproc_func(self, func):
+        """Set the pre-processing function for this instance.
+
+        If `func=None`, the method will default to `self.preproc`. Otherwise,
+        `func` is expected to be callable and behave as follows:
+        >>> transformed_img = func(img)
+        """
+        if func is None:
+            self._preproc = self.preproc
+        elif callable(func):
+            self._preproc = func
+        else:
+            raise RuntimeError(f"{func} is not callable!")
 
     def __len__(self):
         return len(self.inputs)
 
     @abstractmethod
     def __getitem__(self, idx):
-        raise NotImplementedError
+        ...

@@ -20,7 +20,7 @@
 
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
 import torch.nn as nn
-from abc import ABC, abstractmethod, abstractproperty, abstractstaticmethod
+from abc import ABC, abstractmethod
 
 
 class IOConfigBase(ABC):
@@ -39,17 +39,17 @@ class IOConfigBase(ABC):
 
     """
 
-    @abstractproperty
+    @property
     @abstractmethod
     def patch_size(self):
         raise NotImplementedError
 
-    @abstractproperty
+    @property
     @abstractmethod
     def input_resolutions(self):
         raise NotImplementedError
 
-    @abstractproperty
+    @property
     @abstractmethod
     def output_resolutions(self):
         raise NotImplementedError
@@ -58,7 +58,18 @@ class IOConfigBase(ABC):
 class ModelBase(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    @abstractstaticmethod
+    def __init__(self):
+        super().__init__()
+        self._postproc = self.postproc
+        self._preproc = self.preproc
+
+    @abstractmethod
+    def forward(self):
+        """Torch method, this contains logic for using layers defined in init."""
+        ...
+
+    @staticmethod
+    @abstractmethod
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch. Contains logic for
         forward operation as well as i/o aggregation.
@@ -70,31 +81,65 @@ class ModelBase(ABC, nn.Module):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        raise NotImplementedError
+        ...
 
-    @abstractproperty
-    @abstractstaticmethod
+    @staticmethod
     def preproc(image):
-        """Pre-processing function for this class of model.
+        """Define the pre-processing of this class of model."""
+        return image
 
-        Expect to do:
-        >>> transformed_img = func(img)
-
-        """
-        raise NotImplementedError
-
-    @abstractproperty
-    @abstractstaticmethod
+    @staticmethod
     def postproc(image):
-        """Post-processing function for this class of model.
+        """Define the post-processing of this class of model."""
+        return image
 
-        Expect to do:
+    @property
+    def preproc_func(self):
+        """Return the current pre-processing function of this instance.
+
+        The returned function is expected to behave as follows:
         >>> transformed_img = func(img)
 
         """
-        raise NotImplementedError
+        return self._preproc
 
-    @abstractmethod
-    def forward(self):
-        """Torch method, contain logic for layers defined in init."""
-        raise NotImplementedError
+    @preproc_func.setter
+    def preproc_func(self, func):
+        """Set the pre-processing function for this instance.
+
+        If `func=None`, the method will default to `self.preproc`. Otherwise,
+        `func` is expected to be callable and behave as follows:
+        >>> transformed_img = func(img)
+        """
+        if func is None:
+            self._preproc = self.preproc
+        elif callable(func):
+            self._preproc = func
+        else:
+            raise RuntimeError(f"{func} is not callable!")
+
+    @property
+    def postproc_func(self):
+        """Return the current post-processing function of this instance.
+
+        The returned function is expected to behave as follows:
+        >>> transformed_img = func(img)
+
+        """
+        return self._postproc
+
+    @postproc_func.setter
+    def postproc_func(self, func):
+        """Set the pre-processing function for this instance of model.
+
+        If `func=None`, the method will default to `self.postproc`. Otherwise,
+        `func` is expected to be callable and behave as follows:
+        >>> transformed_img = func(img)
+
+        """
+        if func is None:
+            self._postproc = self.postproc
+        elif callable(func):
+            self._postproc = func
+        else:
+            raise RuntimeError(f"{func} is not callable!")
