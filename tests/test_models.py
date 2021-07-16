@@ -81,8 +81,7 @@ def test_DatasetInfo():
                 self.a = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     with pytest.raises(TypeError):
 
         # intentionally create to check error
@@ -92,8 +91,7 @@ def test_DatasetInfo():
                 self.inputs = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     with pytest.raises(TypeError):
         # intentionally create to check error
         # skipcq
@@ -103,8 +101,7 @@ def test_DatasetInfo():
                 self.labels = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     with pytest.raises(TypeError):
 
         # intentionally create to check error
@@ -115,8 +112,7 @@ def test_DatasetInfo():
                 self.label_name = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     # test kather with default init
     dataset = KatherPatchDataset()
     # kather with default data path skip download
@@ -366,12 +362,12 @@ def test_WSIPatchDataset(_sample_wsi_dict):
                 self.inputs = "CRASH"
                 self._check_input_integrity("wsi")
 
+            # skipcq
             def __getitem__(self, idx):
                 pass
 
         # intentionally create to check error
-        # skipcq
-        _ = Proto()
+        Proto()  # skipcq
 
     # invalid path input
     with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
@@ -521,7 +517,7 @@ def test_PatchDataset_abc():
                 super().__init__()
 
         # crash due to not define __getitem__
-        _ = Proto()
+        Proto()  # skipcq
 
     # skipcq
     class Proto(PatchDatasetABC):
@@ -533,7 +529,7 @@ def test_PatchDataset_abc():
         def __getitem__(self, idx):
             pass
 
-    ds = Proto()
+    ds = Proto()  # skipcq
 
     # test setter and getter
     assert ds.preproc_func(1) == 1
@@ -561,7 +557,7 @@ def test_model_abc():
                 super().__init__()
 
         # crash due to not define forward and infer_batch
-        Proto()
+        Proto()  # skipcq
 
     with pytest.raises(TypeError):
 
@@ -578,11 +574,12 @@ def test_model_abc():
                 pass
 
         # crash due to not define forward
-        Proto()
+        Proto()  # skipcq
 
     # intentionally create to check error
     # skipcq
     class Proto(ModelABC):
+        # skipcq
         def __init__(self):
             super().__init__()
 
@@ -599,7 +596,7 @@ def test_model_abc():
         def infer_batch():
             pass
 
-    model = Proto()
+    model = Proto()  # skipcq
     # test assign uncallable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
         model.postproc_func = 1
