@@ -64,7 +64,7 @@ class ModelABC(ABC, nn.Module):
         self._preproc = self.preproc
 
     @abstractmethod
-    def forward(self):
+    def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
         ...
 
