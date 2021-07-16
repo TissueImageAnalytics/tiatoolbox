@@ -600,7 +600,11 @@ class CNNPatchPredictor:
                 outputs = [output_model]  # assign to a list
                 if merge_predictions:
                     merged_prediction = self.merge_predictions(
-                        img_path, output_model, resolution=resolution, units=units
+                        img_path,
+                        output_model,
+                        resolution=resolution,
+                        units=units,
+                        postproc_func=self.model.postproc,
                     )
                     outputs.append(merged_prediction)
 

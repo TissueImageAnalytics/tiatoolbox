@@ -157,7 +157,6 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
@@ -180,7 +179,6 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
 def test_PatchDatasetlist_imgs():
     """Test for patch dataset with a list of images as input."""
     size = (5, 5, 3)

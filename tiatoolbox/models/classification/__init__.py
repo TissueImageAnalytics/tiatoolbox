@@ -25,4 +25,4 @@ from tiatoolbox.models.classification.patch_predictor import (
     CNNPatchPredictor,
     CNNPatchModel,
 )
-from tiatoolbox.models.classification import patch_predictor, abc
+from tiatoolbox.models.classification import patch_predictor
