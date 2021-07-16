@@ -99,8 +99,8 @@ class PatchDataset(abc.ABCPatchDataset):
 
     """
 
-    def __init__(self, inputs, labels=None, preproc_func=None):
-        super().__init__(preproc_func=preproc_func)
+    def __init__(self, inputs, labels=None):
+        super().__init__()
 
         self.data_is_npy_alike = False
 
@@ -164,7 +164,6 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         img_path,
         mode="wsi",
         mask_path=None,
-        preproc_func=None,
         patch_size=None,
         stride_size=None,
         resolution=None,
@@ -201,7 +200,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
                 >>> transformed_img = func(img)
 
         """
-        super().__init__(preproc_func=preproc_func)
+        super().__init__()
 
         # Is there a generic func for path test in toolbox?
         if not os.path.isfile(img_path):

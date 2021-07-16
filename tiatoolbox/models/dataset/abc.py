@@ -44,9 +44,9 @@ class ABCPatchDataset(torch.utils.data.Dataset):
 
     """
 
-    def __init__(self, preproc_func=None):
+    def __init__(self,):
         super().__init__()
-        self.preproc = preproc_func
+        self.preproc_func = lambda x: x
         self.data_is_npy_alike = False
         self.inputs = []
         self.labels = []
@@ -145,8 +145,8 @@ class ABCPatchDataset(torch.utils.data.Dataset):
     def preproc(self, func):
         """Setter for preprocessing function.
 
-        Set the `preproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return source image.
+        Set the `self.preproc_func` to this `func` if it is not None.
+        Else the `self.preproc_func` is reset to return source image.
 
         `func` must behave in the following manner:
 

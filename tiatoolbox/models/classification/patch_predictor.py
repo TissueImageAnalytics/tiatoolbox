@@ -110,8 +110,8 @@ class CNNPatchModel(ModelBase):
     def preproc(self, func):
         """Setter for preprocessing function.
 
-        Set the `preproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return source image.
+        Set the `self.preproc_func` to this `func` if it is not None.
+        Else the `self.preproc_func` is reset to return source image.
 
         `func` must behave in the following manner:
 
@@ -129,8 +129,8 @@ class CNNPatchModel(ModelBase):
     def postproc(self, func):
         """Setter for postprocessing function.
 
-        Set the `postproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return argmax along last
+        Set the `self.postproc_func` to this `func` if it is not None.
+        Else the `self.preproc_func` is reset to return argmax along last
         axis of the input.
 
         `func` must behave in the following manner:
