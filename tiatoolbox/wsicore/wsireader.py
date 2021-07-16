@@ -185,7 +185,7 @@ class WSIReader:
             base_scale = 1
             resolution = 1 / resolution
         else:
-            raise ValueError("Invalid units `%s`." % units)
+            raise ValueError(f"Invalid units `{units}`.")
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
