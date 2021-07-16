@@ -324,28 +324,29 @@ class PatchExtractor(ABC):
         def validate_shape(shape):
             return (
                 not np.issubdtype(shape.dtype, np.integer)
-                or np.size(shape) > 2 or np.any(shape < 0)
+                or np.size(shape) > 2
+                or np.any(shape < 0)
             )
 
         if validate_shape(image_shape):
-            raise ValueError(
-                f"Invalid `image_shape` value {image_shape}.")
+            raise ValueError(f"Invalid `image_shape` value {image_shape}.")
         if validate_shape(patch_input_shape):
-            raise ValueError(
-                f"Invalid `patch_input_shape` value {patch_input_shape}.")
+            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
         if validate_shape(patch_output_shape):
             raise ValueError(
-                f"Invalid `patch_output_shape` value {patch_output_shape}.")
+                f"Invalid `patch_output_shape` value {patch_output_shape}."
+            )
         if validate_shape(stride_shape):
-            raise ValueError(
-                f"Invalid `stride_shape` value {stride_shape}.")
+            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
         if np.any(patch_input_shape < patch_output_shape):
-            raise ValueError((
-                f"`patch_input_shape` must larger than `patch_output_shape`"
-                f" {patch_input_shape} must > {patch_output_shape}."))
-        if np.any(stride_shape < 1):
             raise ValueError(
-                f"`stride_shape` value {stride_shape} must > 1.")
+                (
+                    f"`patch_input_shape` must larger than `patch_output_shape`"
+                    f" {patch_input_shape} must > {patch_output_shape}."
+                )
+            )
+        if np.any(stride_shape < 1):
+            raise ValueError(f"`stride_shape` value {stride_shape} must > 1.")
 
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""
@@ -353,10 +354,12 @@ class PatchExtractor(ABC):
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
         output_x_end = (
-            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0])
+            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0]
+        )
         output_x_list = np.arange(0, int(output_x_end), stride_shape[0])
         output_y_end = (
-            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1])
+            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1]
+        )
         output_y_list = np.arange(0, int(output_y_end), stride_shape[1])
         output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
         output_br_list = output_tl_list + patch_output_shape[None]
@@ -365,19 +368,19 @@ class PatchExtractor(ABC):
         input_tl_list = output_tl_list - (io_diff // 2)[None]
         input_br_list = input_tl_list + patch_input_shape[None]
 
-        sel = np.zeros(input_tl_list.shape[0], dtype=np.bool)
+        sel = np.zeros(input_tl_list.shape[0], dtype=bool)
         if output_within_bound:
             sel |= np.any(output_br_list > image_shape[None], axis=1)
         if input_within_bound:
             sel |= np.any(input_br_list > image_shape[None], axis=1)
             sel |= np.any(input_tl_list < 0, axis=1)
         ####
-        input_bound_list = np.concatenate([
-            input_tl_list[~sel],
-            input_br_list[~sel]], axis=-1)
-        output_bound_list = np.concatenate([
-            output_tl_list[~sel],
-            output_br_list[~sel]], axis=-1)
+        input_bound_list = np.concatenate(
+            [input_tl_list[~sel], input_br_list[~sel]], axis=-1
+        )
+        output_bound_list = np.concatenate(
+            [output_tl_list[~sel], output_br_list[~sel]], axis=-1
+        )
         if return_output_bound:
             return input_bound_list, output_bound_list
         return input_bound_list

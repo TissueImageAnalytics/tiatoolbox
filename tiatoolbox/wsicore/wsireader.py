@@ -1629,7 +1629,7 @@ class VirtualWSIReader(WSIReader):
         baseline_size = np.array(self.info.slide_dimensions)
         image_size = np.array(self.img.shape[:2][::-1])
         size_ratio = image_size / baseline_size
-        image_location = np.array(location, dtype=np.float) * size_ratio
+        image_location = np.array(location, dtype=np.float32) * size_ratio
         read_size = np.array(baseline_read_size) * size_ratio
         return image_location, read_size
 
