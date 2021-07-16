@@ -514,7 +514,6 @@ def test_WSIPatchDataset(_sample_wsi_dict):
 
 def test_predictor_crash():
     """Test for crash when making predictor."""
-
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
         CNNPatchPredictor()

@@ -576,36 +576,36 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_as_json(input, save_path):
-    """Save input to a json file.
+def save_as_json(data, save_path):
+    """Save data to a json file.
 
-    Internally, will convert data types within `input` into
+    Internally, will convert data types within `data` into
     a type that is json serializable, such as np.array([2, 3, 2])
     to [2, 3, 2] list.
 
     Args:
-        input_dict (dict or list): Input data to save.
+        data (dict or list): Input data to save.
         save_path (str): Output to save the json of `input`.
 
     """
     # TODO: very primitive and naive, actual json parser class later?
-    if isinstance(input, dict):
-        new_input = {}
-        for k, v in input.items():
+    if isinstance(data, dict):
+        new_data = {}
+        for k, v in data.items():
             if isinstance(v, np.ndarray):
-                new_input[k] = v.tolist()
+                new_data[k] = v.tolist()
             else:
-                new_input[k] = v
-    elif isinstance(input, list):
-        new_input = []
-        for v in input:
+                new_data[k] = v
+    elif isinstance(data, list):
+        new_data = []
+        for v in data:
             if isinstance(v, np.ndarray):
-                new_input.append(v.tolist())
+                new_data.append(v.tolist())
             else:
-                new_input.append(v)
+                new_data.append(v)
 
     with open(save_path, "w") as handle:
-        json.dump(new_input, handle)
+        json.dump(new_data, handle)
 
 
 def select_device(on_gpu):
