@@ -32,8 +32,8 @@ class ABCDatasetInfo(ABC):
     Enforcing such that following attributes must always be defined by the subclass.
 
     Attributes
-        input_list (list): A list of paths where each path points to a sample image.
-        label_list (list): A list of `int` where each is the label of the sample at
+        inputs (list): A list of paths where each path points to a sample image.
+        labels (list): A list of `int` where each is the label of the sample at
             the same index.
         label_name (dict): A dict indicates the possible associate name of each label
             value.
@@ -42,12 +42,12 @@ class ABCDatasetInfo(ABC):
 
     @property
     @abstractmethod
-    def input_list(self):
+    def inputs(self):
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def label_list(self):
+    def labels(self):
         raise NotImplementedError
 
     @property
@@ -66,8 +66,8 @@ class KatherPatchDataset(ABCDatasetInfo):
             'run_dir/download/Kather'.
 
     Attributes
-        input_list (list): A list of paths where each path points to a sample image.
-        label_list (list): A list of `int` where each is the label of the sample at
+        inputs (list): A list of paths where each path points to a sample image.
+        labels (list): A list of `int` where each is the label of the sample at
             the same index.
         label_name (dict): A dict indicates the possible associate name of each label
             value.
@@ -75,15 +75,15 @@ class KatherPatchDataset(ABCDatasetInfo):
     """
 
     # We predefine to follow enforcement, actual initialization in init
-    input_list = None
-    label_list = None
+    inputs = None
+    labels = None
     label_name = None
 
     def __init__(
         self,
         save_dir_path=None,
     ):
-        label_code_list = [
+        label_codes = [
             "01_TUMOR",
             "02_STROMA",
             "03_COMPLEX",
@@ -113,17 +113,17 @@ class KatherPatchDataset(ABCDatasetInfo):
 
         # What will happen if downloaded data get corrupted?
         label_name = {}
-        all_path_list = []
-        for label_id, label_code in enumerate(label_code_list):
-            path_list = grab_files_from_dir(
+        all_paths = []
+        for label_id, label_code in enumerate(label_codes):
+            paths = grab_files_from_dir(
                 f"{save_dir_path}/{label_code}/", file_types="*.tif"
             )
-            path_list = [[v, label_id] for v in path_list]
-            path_list.sort()
-            all_path_list.extend(path_list)
+            paths = [[v, label_id] for v in paths]
+            paths.sort()
+            all_paths.extend(paths)
             label_name[label_id] = label_code
-        input_list, label_list = list(zip(*all_path_list))
+        inputs, labels = list(zip(*all_paths))
 
         self.label_name = label_name
-        self.input_list = list(input_list)  # type casting to list
-        self.label_list = list(label_list)  # type casting to list
+        self.inputs = list(inputs)  # type casting to list
+        self.labels = list(labels)  # type casting to list

@@ -20,10 +20,10 @@
 
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
 import torch.nn as nn
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty, abstractstaticmethod
 
 
-class IOStateBase(ABC):
+class IOConfigBase(ABC):
     """Define an abstract class for holding a predictor input output information.
 
     Enforcing such that following attributes must always be defined by the subclass.
@@ -39,29 +39,26 @@ class IOStateBase(ABC):
 
     """
 
-    @property
+    @abstractproperty
     @abstractmethod
     def patch_size(self):
         raise NotImplementedError
 
-    @property
+    @abstractproperty
     @abstractmethod
     def input_resolutions(self):
         raise NotImplementedError
 
-    @property
+    @abstractproperty
     @abstractmethod
     def output_resolutions(self):
         raise NotImplementedError
 
 
-class ModelBase(nn.Module):
+class ModelBase(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    @staticmethod
+    @abstractstaticmethod
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch. Contains logic for
         forward operation as well as i/o aggregation.
@@ -73,4 +70,31 @@ class ModelBase(nn.Module):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
+        raise NotImplementedError
+
+    @abstractproperty
+    @abstractstaticmethod
+    def preproc(image):
+        """Pre-processing function for this class of model.
+
+        Expect to do:
+        >>> transformed_img = func(img)
+
+        """
+        raise NotImplementedError
+
+    @abstractproperty
+    @abstractstaticmethod
+    def postproc(image):
+        """Post-processing function for this class of model.
+
+        Expect to do:
+        >>> transformed_img = func(img)
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def forward(self):
+        """Torch method, contain logic for layers defined in init."""
         raise NotImplementedError

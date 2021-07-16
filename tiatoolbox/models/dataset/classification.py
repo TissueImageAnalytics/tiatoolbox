@@ -39,14 +39,14 @@ class _TorchPreprocCaller:
     """Wrapper for applying PyTorch transforms.
 
     Args:
-        preproc_list (list): List of torchvision transforms for preprocessing the image.
+        preprocs (list): List of torchvision transforms for preprocessing the image.
             The transforms will be applied in the order that they are
             given in the list. https://pytorch.org/vision/stable/transforms.html.
 
     """
 
-    def __init__(self, preproc_list):
-        self.func = transforms.Compose(preproc_list)
+    def __init__(self, preprocs):
+        self.func = transforms.Compose(preprocs)
 
     def __call__(self, img):
         img = PIL.Image.fromarray(img)
@@ -76,8 +76,8 @@ def predefined_preproc_func(dataset_name):
             f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
         )
 
-    preproc_list = preproc_dict[dataset_name]
-    preproc_func = _TorchPreprocCaller(preproc_list)
+    preprocs = preproc_dict[dataset_name]
+    preproc_func = _TorchPreprocCaller(preprocs)
     return preproc_func
 
 
@@ -86,46 +86,32 @@ class PatchDataset(abc.ABCPatchDataset):
     from the torch.utils.data.Dataset class.
 
     Attributes:
-        input_list: Either a list of patches, where each patch is a ndarray or a list of
-        valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
-        pointing to an image.
+        inputs: Either a list of patches, where each patch is a ndarray or a list of
+            valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
+            pointing to an image.
 
-        label_list: List of label for sample at the same index in `input_list` .
-        Default is `None`.
+        labels: List of label for sample at the same index in `inputs` .
+            Default is `None`.
 
-        preproc_func: Preprocessing function used to transform the input data. If
-        supplied, then torch.Compose will be used on the input preproc_list.
-        preproc_list is a list of torchvision transforms for preprocessing the image.
-        The transforms will be applied in the order that they are given in the list.
-        https://pytorch.org/vision/stable/transforms.html.
-
-    Examples:
-        >>> from tiatoolbox.models.data import Patch_Dataset
-        >>> mean = [0.485, 0.456, 0.406]
-        >>> std = [0.229, 0.224, 0.225]
-        >>> preproc_list =
-                [
-                    transforms.Resize(224),
-                    transforms.ToTensor(),
-                    transforms.Normalize(mean=mean, std=std)
-                ]
-        >>> ds = Patch_Dataset('/path/to/data/', preproc_list=preproc_list)
+        preproc_func: Preprocessing function used to transform the input data.
+            Expect to do:
+            >>> transformed_img = func(img)
 
     """
 
-    def __init__(self, input_list, label_list=None, preproc_func=None):
+    def __init__(self, inputs, labels=None, preproc_func=None):
         super().__init__(preproc_func=preproc_func)
 
         self.data_is_npy_alike = False
 
-        self.input_list = input_list
-        self.label_list = label_list
+        self.inputs = inputs
+        self.labels = labels
 
         # perform check on the input
         self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
-        patch = self.input_list[idx]
+        patch = self.inputs[idx]
 
         # Mode 0 is list of paths
         if not self.data_is_npy_alike:
@@ -137,8 +123,8 @@ class PatchDataset(abc.ABCPatchDataset):
         data = {
             "image": patch,
         }
-        if self.label_list is not None:
-            data["label"] = self.label_list[idx]
+        if self.labels is not None:
+            data["label"] = self.labels[idx]
             return data
 
         return data
@@ -151,7 +137,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         reader (:class:`.WSIReader`): an WSI Reader or Virtual Reader
         for reading pyramidal image or large tile in pyramidal way.
 
-        input_list: List of coordinates to read from the `reader`,
+        inputs: List of coordinates to read from the `reader`,
         each coordinate is of the form [start_x, start_y, end_x, end_y].
 
         patch_size: a tuple(int, int) or ndarray of shape (2,).
@@ -166,8 +152,8 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         units: check (:class:`.WSIReader`) for details.
 
         preproc_func: Preprocessing function used to transform the input data. If
-        supplied, then torch.Compose will be used on the input preproc_list.
-        preproc_list is a list of torchvision transforms for preprocessing the image.
+        supplied, then torch.Compose will be used on the input preprocs.
+        preprocs is a list of torchvision transforms for preprocessing the image.
         The transforms will be applied in the order that they are given in the list.
         https://pytorch.org/vision/stable/transforms.html.
 
@@ -189,32 +175,30 @@ class WSIPatchDataset(abc.ABCPatchDataset):
 
         Args:
             mode (str): can be either `wsi` or `tile` to denote the image to read is
-            either a whole-slide image or a large image tile.
+                either a whole-slide image or a large image tile.
 
             img_path (:obj:`str` or :obj:`pathlib.Path`): valid to pyramidal
-            whole-slide image or large tile to read.
+                whole-slide image or large tile to read.
 
             mask_path (:obj:`str` or :obj:`pathlib.Path`): valid mask image.
 
             patch_size: a tuple (int, int) or ndarray of shape (2,).
-            Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be positive and of (height, width). Note, this is not at
-            level 0.
+                Expected shape to read from `reader` at requested `resolution` and
+                `units`. Expected to be positive and of (height, width). Note, this
+                is not at `resolution` coordinate space.
 
             stride_size: a tuple (int, int) or ndarray of shape (2,).
-            Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be positive and of (height, width). Note, this is not at
-            level 0.
+                Expected stride shape to read at requested `resolution` and `units`.
+                Expected to be positive and of (height, width). Note, this is not at
+                level 0.
 
             resolution: check (:class:`.WSIReader`) for details. When `mode='tile'`,
-            value is fixed to be `resolution=1.0` and `units='baseline'`
-            units: check (:class:`.WSIReader`) for details.
+                value is fixed to be `resolution=1.0` and `units='baseline'`
+                units: check (:class:`.WSIReader`) for details.
 
             preproc_func: Preprocessing function used to transform the input data.
-            If supplied, then torch.Compose will be used on the input preproc_list.
-            preproc_list is a list of torchvision transforms for preprocessing the
-            image. The transforms will be applied in the order that they are given
-            in the list. https://pytorch.org/vision/stable/transforms.html.
+                Expect to do:
+                >>> transformed_img = func(img)
 
         """
         super().__init__(preproc_func=preproc_func)
@@ -277,7 +261,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         wsi_shape = self.reader.slide_dimensions(resolution=resolution, units=units)
 
         # use all patches, as long as it overlaps source image
-        self.input_list = PatchExtractor.get_coordinates(
+        self.inputs = PatchExtractor.get_coordinates(
             wsi_shape,
             patch_size[::-1],
             stride_size[::-1],
@@ -304,13 +288,13 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         if mask_reader is not None:
             selected = PatchExtractor.filter_coordinates(
                 mask_reader,  # must be at the same resolution
-                self.input_list,  # must already be at requested resolution
+                self.inputs,  # must already be at requested resolution
                 resolution=resolution,
                 units=units,
             )
-            self.input_list = self.input_list[selected]
+            self.inputs = self.inputs[selected]
 
-        if len(self.input_list) == 0:
+        if len(self.inputs) == 0:
             raise ValueError("No coordinate remain after tiling!")
 
         self.patch_size = patch_size
@@ -321,7 +305,7 @@ class WSIPatchDataset(abc.ABCPatchDataset):
         self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
-        coords = self.input_list[idx]
+        coords = self.inputs[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
             coords,

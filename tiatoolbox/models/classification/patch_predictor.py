@@ -32,7 +32,7 @@ import torch.nn as nn
 import tqdm
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.abc import IOStateBase, ModelBase
+from tiatoolbox.models.abc import IOConfigBase, ModelBase
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
@@ -40,12 +40,12 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import (
     download_data,
     get_pretrained_model_info,
-    save_dict_to_json,
+    save_as_json,
 )
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-class _IOStatePatchPredictor(IOStateBase):
+class _IOConfigPatchPredictor(IOConfigBase):
     """Define a class to hold IO information for patch predictor."""
 
     # We predefine to follow enforcement, actual initialization in init
@@ -234,8 +234,8 @@ class CNNPatchPredictor:
         """
         super().__init__()
 
-        self.img_list = None
-        self.output_list = None
+        self.imgs = None
+        self.outputs = None
         self.mode = None
 
         if model is None and pretrained_model is None:
@@ -419,9 +419,9 @@ class CNNPatchPredictor:
 
     def predict(
         self,
-        img_list,
-        mask_list=None,
-        label_list=None,
+        imgs,
+        masks=None,
+        labels=None,
         mode="patch",
         return_probabilities=False,
         return_labels=False,
@@ -436,18 +436,18 @@ class CNNPatchPredictor:
         """Make a prediction for a list of input data.
 
         Args:
-            img_list (list, ndarray): List of inputs to process. When using `patch`
+            imgs (list, ndarray): List of inputs to process. When using `patch`
             mode, the input must be either a list of images, a list of image file paths
             or a numpy array of an image list. When using `tile` or `wsi` mode, the
             input must be a list of file paths.
 
-            mask_list (list): List of masks. Only utilised when processing image tiles
+            masks (list): List of masks. Only utilised when processing image tiles
             and whole-slide images. Patches are only processed if they are witin a
             masked area. If not provided, then a tissue mask will be automatically
             generated for whole-slide images or the entire image is processed for
             image tiles.
 
-            label_list: List of labels. If using `tile` or `wsi` mode, then only a
+            labels: List of labels. If using `tile` or `wsi` mode, then only a
             single label per image tile or whole-slide image is supported.
             mode (str): Type of input to process. Choose from either `patch`, `tile` or
                 `wsi`.
@@ -492,10 +492,10 @@ class CNNPatchPredictor:
                     `merge_predictions` is `True`.
 
                 For example
-                >>> wsi_list = ['wsi1.svs', 'wsi2.svs']
+                >>> wsis = ['wsi1.svs', 'wsi2.svs']
                 >>> predictor = CNNPatchPredictor(
                 ...                 pretrained_model="resnet18-kather100k")
-                >>> output = predictor.predict(wsi_list, mode='wsi)
+                >>> output = predictor.predict(wsis, mode='wsi)
                 >>> output.keys()
                 ['wsi1.svs', 'wsi2.svs']
                 >>> output['wsi1.svs']
@@ -508,24 +508,22 @@ class CNNPatchPredictor:
             raise ValueError(
                 f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
-        if mode == "patch" and label_list is not None:
-            # if a label_list is provided, then return with the prediction
-            return_labels = bool(label_list)
-            if len(label_list) != len(img_list):
+        if mode == "patch" and labels is not None:
+            # if a labels is provided, then return with the prediction
+            return_labels = bool(labels)
+            if len(labels) != len(imgs):
                 raise ValueError(
-                    f"len(label_list) != len(img_list) : "
-                    f"{len(label_list)} != {len(img_list)}"
+                    f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
                 )
-        if mode == "wsi" and mask_list is not None and len(mask_list) != len(img_list):
+        if mode == "wsi" and masks is not None and len(masks) != len(imgs):
             raise ValueError(
-                f"len(mask_list) != len(img_list) : "
-                f"{len(mask_list)} != {len(img_list)}"
+                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
             )
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
             return_coordinates = False
-            dataset = PatchDataset(img_list, label_list)
+            dataset = PatchDataset(imgs, labels)
             output = self._predict_engine(
                 dataset, return_probabilities, return_labels, return_coordinates, on_gpu
             )
@@ -535,7 +533,7 @@ class CNNPatchPredictor:
 
             self.iostate = self._iostate
             if patch_size is not None:
-                iostate = _IOStatePatchPredictor(
+                iostate = _IOConfigPatchPredictor(
                     input_resolutions=[{"resolution": resolution, "units": units}],
                     output_resolutions=[{"resolution": resolution, "units": units}],
                     patch_size=patch_size,
@@ -543,7 +541,7 @@ class CNNPatchPredictor:
                 )
                 self.iostate = iostate
 
-            if len(img_list) > 1:
+            if len(imgs) > 1:
                 warnings.warn(
                     "When providing multiple whole-slide images / tiles, "
                     "we save the outputs and return the locations "
@@ -565,17 +563,17 @@ class CNNPatchPredictor:
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
-            if not isinstance(img_list, list):
+            if not isinstance(imgs, list):
                 raise ValueError(
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
 
             # generate a list of output file paths if number of input images > 1
             file_dict = OrderedDict()
-            for idx, img_path in enumerate(img_list):
+            for idx, img_path in enumerate(imgs):
                 img_path = pathlib.Path(img_path)
-                img_label = None if label_list is None else label_list[idx]
-                img_mask = None if mask_list is None else mask_list[idx]
+                img_label = None if labels is None else labels[idx]
+                img_mask = None if masks is None else masks[idx]
 
                 dataset = WSIPatchDataset(
                     img_path,
@@ -599,30 +597,30 @@ class CNNPatchPredictor:
                 output_model["resolution"] = resolution
                 output_model["units"] = units
 
-                output_list = [output_model]  # assign to a list
+                outputs = [output_model]  # assign to a list
                 if merge_predictions:
                     merged_prediction = self.merge_predictions(
                         img_path, output_model, resolution=resolution, units=units
                     )
-                    output_list.append(merged_prediction)
+                    outputs.append(merged_prediction)
 
-                if len(img_list) > 1:
+                if len(imgs) > 1:
                     img_code = "{number:0{width}d}".format(
-                        width=len(str(len(img_list))), number=idx
+                        width=len(str(len(imgs))), number=idx
                     )
                     save_info = {}
                     save_path = os.path.join(save_dir, img_code)
                     raw_save_path = f"{save_path}.raw.json"
                     save_info["raw"] = raw_save_path
-                    save_dict_to_json(output_model, raw_save_path)
+                    save_as_json(output_model, raw_save_path)
                     if merge_predictions:
                         merged_file_path = f"{save_path}.merged.npy"
                         np.save(merged_file_path, merged_prediction)
                         save_info["merged"] = merged_file_path
                     file_dict[img_path] = save_info
                 else:
-                    output = output_list
-            output = file_dict if len(img_list) > 1 else output
+                    output = outputs
+            output = file_dict if len(imgs) > 1 else output
 
         return output
 
@@ -708,7 +706,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
-    iostate = _IOStatePatchPredictor(
+    iostate = _IOConfigPatchPredictor(
         patch_size=patch_size,
         input_resolutions=[{"resolution": resolution, "units": units}],
         output_resolutions=[{"resolution": resolution, "units": units}],
