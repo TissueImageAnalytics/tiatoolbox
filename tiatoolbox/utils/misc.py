@@ -603,7 +603,7 @@ def save_as_json(data, save_path):
                 v = v.tolist()
                 walk_list(v)
             elif not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"{type(v)} is not jsonified.")
+                raise ValueError(f"Value type `{type(v)}` is not jsonified.")
             lst[i] = v
 
     def walk_dict(dct):

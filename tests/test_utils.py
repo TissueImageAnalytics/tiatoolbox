@@ -1014,10 +1014,17 @@ def test_save_as_json():
             True: False,
         },
         "d": [key_dict, np.random.rand(2, 2)],
+        "e": np.random.rand(16, 2),
     }
+    not_jsonable = {"x86": lambda x: x}
+    not_jsonable.update(sample)
     # should fail because key is not of primitive type [str, int, float, bool]
     with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(not_jsonable, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
     with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
         misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
     # test complex nested dict
@@ -1033,5 +1040,5 @@ def test_save_as_json():
     # test read because == is useless when value is mutable
     with open("sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
-    assert read_sample[-2]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample[-2]["a4"]["a5"]["c"][-1][-1] == 6
+    assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
