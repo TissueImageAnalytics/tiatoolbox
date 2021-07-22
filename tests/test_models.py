@@ -25,7 +25,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-ON_GPU = True
+ON_GPU = False
 
 
 def _get_temp_folder_path():
