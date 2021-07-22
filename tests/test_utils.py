@@ -1006,12 +1006,12 @@ def test_save_as_json():
     }
     sample = {
         "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
-        "b": ["a1", "b1", "c1", {"a3": [1, 1, 3, np.random.rand(2, 2, 2, 2)]}],
+        "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
         "c": {
-            "a4": {"a5": {"a6": "a7", "c": [1, 1, 3, np.array([4, 5, 6])]}},
+            "a4": {"a5": {"a6": "a7", "c": [1, 1, 3, np.array([4, 5, 6.0])]}},
             "b1": {},
             "c1": [],
-            True: False,
+            True: [False, None],
         },
         "d": [key_dict, np.random.rand(2, 2)],
         "e": np.random.rand(16, 2),
@@ -1028,6 +1028,7 @@ def test_save_as_json():
     with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
         misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
     # test complex nested dict
+    print(sample)
     misc.save_as_json(sample, "sample_json.json")
     with open("sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
