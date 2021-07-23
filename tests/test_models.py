@@ -109,7 +109,7 @@ def test_DatasetInfo():
         class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
-                self.label_name = "a"
+                self.label_names = "a"
 
         # intentionally create to check error
         Proto()  # skipcq
@@ -140,7 +140,7 @@ def test_DatasetInfo():
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
     assert dataset.inputs is not None
     assert dataset.labels is not None
-    assert dataset.label_name is not None
+    assert dataset.label_names is not None
     assert len(dataset.inputs) == len(dataset.labels)
 
     # to actually get the image, we feed it to PatchDataset
@@ -350,7 +350,6 @@ def test_WSIPatchDataset(_sample_wsi_dict):
         return reuse_init(mode="wsi", **kwargs)
 
     # test for ABC validate
-    # TODO: migrate to another file ?
     with pytest.raises(
         ValueError, match=r".*inputs should be a list of patch coordinates.*"
     ):
