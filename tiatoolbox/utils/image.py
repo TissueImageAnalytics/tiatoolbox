@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous utilities which operate on image data."""
+from tiatoolbox import utils
 import warnings
 from typing import Tuple, Union
 
@@ -26,7 +27,13 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from tiatoolbox.utils.transforms import bounds2locsize, imresize
+from tiatoolbox.utils.transforms import (
+    bounds2locsize,
+    imresize,
+    bounds2slices,
+    pad_bounds,
+    locsize2bounds,
+)
 from tiatoolbox.utils.misc import conv_out_size
 
 
@@ -75,6 +82,50 @@ def normalise_padding_size(padding):
     else:
         padding = np.array(padding)
     return padding
+
+
+def find_padding(read_location, read_size, image_size):
+    """Find the correct padding to add when reading a region of an image.
+
+    Args:
+      read_location (tuple(int)): The location of the region to read.
+      read_size (tuple(int)): The size of the location to read.
+      image_size (tuple(int)): The size of the image to read from.
+    """
+    read_location = np.array(read_location)
+    read_size = np.array(read_size)
+    image_size = np.array(image_size)
+
+    before_padding = np.maximum(-read_location, 0)
+    region_end = read_location + read_size
+    after_padding = np.maximum(region_end - image_size, 0)
+    return np.stack([before_padding[::-1], after_padding[::-1]], axis=1)
+
+
+def find_overlap(read_location, read_size, image_size, return_slices=False):
+    """Find the part of a region which overlaps the image area.
+
+    Args:
+      read_location (tuple(int)): The location of the region to read.
+      read_size (tuple(int)): The size of the location to read.
+      image_size (tuple(int)): The size of the image to read from.
+      return_slices (bool): Return the output as a tuple of slices.
+    """
+    read_location = np.array(read_location)
+    read_size = np.array(read_size)
+    image_size = np.array(image_size)
+
+    start = np.maximum(read_location, 0)
+    region_end = read_location + read_size
+    stop = np.minimum(region_end, image_size)
+
+    if return_slices:
+        slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
+        return tuple(slice(*x) for x in slice_array)
+
+    # Conctenate start and stop to make a bounds array (left, top, right, bottom)
+    bounds = np.concatenate([start, stop])
+    return bounds
 
 
 def make_bounds_size_positive(bounds):
@@ -151,6 +202,7 @@ def crop_and_pad_edges(
     """
     left, top, right, bottom = bounds
     _, (bounds_width, bounds_height) = bounds2locsize(bounds)
+    region_height, region_width = region.shape[:2]
     slide_width, slide_height = max_dimensions
 
     if slide_width < 0 or slide_height < 0:
@@ -159,17 +211,17 @@ def crop_and_pad_edges(
     if bounds_width <= 0 or bounds_height <= 0:
         raise ValueError("Bounds must have size (width and height) > 0.")
 
-    # Create value ranges across x and y coordinates
-    X, Y = np.arange(left, right), np.arange(top, bottom)
     # Find padding before (also the crop start index)
-    x_before = np.argmin(np.abs(X))
-    y_before = np.argmin(np.abs(Y))
+    x_before = abs(min(0, left))
+    y_before = abs(min(0, top))
     # Find the end index of the crop
-    x_end = np.argmin(np.abs(slide_width - 1 - X))
-    y_end = np.argmin(np.abs(slide_height - 1 - Y))
+    x_end = region_width - max(0, right - slide_width)
+    y_end = region_height - max(0, bottom - slide_height)
+    x_end = max(x_end, x_before)
+    y_end = max(y_end, y_before)
     # Find padding after the cropped sub-region
-    x_after = bounds_width - 1 - x_end
-    y_after = bounds_height - 1 - y_end
+    x_after = region_width - x_end
+    y_after = region_height - y_end
     # Full padding tuple for np.pad
     padding = (
         (y_before, y_after),
@@ -185,9 +237,9 @@ def crop_and_pad_edges(
         padding = padding + ((0, 0),)
 
     # Crop the region
-    crop = region[y_before : y_end + 1, x_before : x_end + 1, ...]
+    crop = region[y_before:y_end, x_before:x_end, ...]
 
-    # Return is pad_mode is None
+    # Return if pad_mode is None
     if pad_mode in ["none", None]:
         return crop
 
@@ -347,7 +399,7 @@ def safe_padded_read(
     return region
 
 
-def sub_pixel_read(
+def old_sub_pixel_read(
     image,
     bounds,
     output_size,
@@ -471,10 +523,19 @@ def sub_pixel_read(
         bounds_padding = padding / np.tile(scale_factor, 2)
         output_padding = padding
 
-    padded_output_size = np.round(output_size + output_padding.reshape(2, 2).sum(0))
+    # Padding to avoid boundary effects from interpolation at the edges
+    if interpolation == "none" or np.all(np.round(scale_factor, 2) == 1):
+        inter_padding = 0
+    else:
+        inter_padding = 2
+    # output_inter_padding = scale_factor * inter_padding
+
+    padded_output_size = np.round(
+        output_size + output_padding.reshape(2, 2).sum(0)
+    ).astype(int)
 
     # Find the pixel-aligned indexes to read the image at
-    padded_bounds = bounds + (bounds_padding * PADDING_TO_BOUNDS)
+    padded_bounds = bounds + ((bounds_padding + inter_padding) * PADDING_TO_BOUNDS)
 
     # The left/start_x and top/start_y values should usually be smaller
     # than the right/end_x and bottom/end_y values.
@@ -485,6 +546,7 @@ def sub_pixel_read(
     pixel_aligned_bounds = padded_bounds.copy()
     pixel_aligned_bounds[:2] = np.floor(pixel_aligned_bounds[:2])
     pixel_aligned_bounds[2:] = np.ceil(pixel_aligned_bounds[2:])
+    pixel_aligned_bounds += PADDING_TO_BOUNDS * inter_padding
     pixel_aligned_bounds = pixel_aligned_bounds.astype(int)
     # Keep the difference between pixel-aligned and original coordinates
     residuals = padded_bounds - pixel_aligned_bounds
@@ -553,3 +615,128 @@ def sub_pixel_read(
         result = np.fliplr(result)
 
     return result
+
+
+def sub_pixel_read(
+    image,
+    bounds,
+    output_size,
+    padding=0,
+    stride=1,
+    interpolation="nearest",
+    pad_at_baseline=False,
+    # pad_for_interpolation=False,
+    interpolation_padding=2,
+    read_func=None,
+    pad_mode="constant",
+    pad_constant_values=0,
+    read_kwargs=None,
+    pad_kwargs=None,
+):
+    # Handle inputs
+
+    # Normalise padding
+    padding = normalise_padding_size(padding)
+
+    # Check the bounds are valid or have a negative size
+    # The left/start_x and top/start_y values should usually be smaller
+    # than the right/end_x and bottom/end_y values.
+    bounds, hflip, vflip = make_bounds_size_positive(bounds)
+    if hflip or vflip:
+        warnings.warn("Bounds have a negative size, output will be flipped.")
+
+    image = np.array(image)
+
+    # Normalise none pad_mode to None
+    if pad_mode.lower() == "none":
+        pad_mode = None
+
+    # Initialise variables
+    image_size = np.flip(image.shape[:2])
+    scaling = np.array([1, 1])
+    _, bounds_size = bounds2locsize(bounds)
+    if output_size is not None and interpolation != "none":
+        scaling = np.array(output_size) / bounds_size / stride
+    read_bounds = bounds
+
+    overlap_bounds = find_overlap(*bounds2locsize(bounds), image_size=image_size)
+    if pad_mode is None:
+        read_bounds = overlap_bounds
+    pad_width = np.zeros((2, 2), int) + padding.reshape(2, 2).T
+    if not pad_at_baseline:
+        pad_width = pad_width * scaling
+    read_bounds = pad_bounds(read_bounds, interpolation_padding)
+    pad_width = pad_width + find_padding(*bounds2locsize(read_bounds), image_size)
+    read_bounds = find_overlap(*bounds2locsize(read_bounds), image_size)
+    # 0 Expand to integers and find residuals
+    start, end = np.split(np.array(read_bounds), 2)
+    int_read_bounds = np.concatenate(
+        [
+            np.maximum(np.floor(start), 0),
+            np.minimum(np.ceil(end), image_size),
+        ]
+    )
+    residuals = np.abs(int_read_bounds - read_bounds)
+    read_bounds = int_read_bounds
+    # 1 Read the region
+    region = image[bounds2slices(read_bounds, stride=stride)]
+    # 1.5 Pad the region
+    if pad_mode is not None:
+        pad_width = pad_width + find_padding(
+            *bounds2locsize(read_bounds), image_size=image_size
+        )
+    if len(image.shape) > 2:
+        pad_width = np.concatenate([pad_width, [(0, 0)]])
+        # 1.6 Apply stride
+        pad_width = pad_width / stride
+    if pad_mode == "constant":
+        region = np.pad(
+            region,
+            pad_width.astype(int),
+            mode=pad_mode or "constant",
+            constant_values=pad_constant_values,
+        )
+    else:
+        region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
+    # 2 Rescaling
+    if output_size is not None:
+        # region = cv2.resize(region, dsize=None, fx=scaling[0], fy=scaling[1])
+        if interpolation in [None, "none"]:
+            interpolation = "nearest"
+        region = utils.transforms.imresize(
+            region, scale_factor=scaling, interpolation=interpolation
+        )
+    # 3 Trim interpolation padding
+    # if pad_for_interpolation:
+    region_size = np.flip(region.shape[:2])
+    trimming = bounds2slices(
+        np.round(
+            pad_bounds(
+                locsize2bounds((0, 0), region_size),
+                (-(interpolation_padding + residuals) * np.tile(scaling, 2)),
+            )
+        )
+    )
+    region = region[trimming + (...,)]
+    region_size = region.shape[:2][::-1]
+    # 4 Ensure output is the correct size
+    if output_size is not None:
+        if pad_at_baseline:
+            output_size = np.round(
+                np.add(output_size, 2 * padding.reshape(2, 2).sum(axis=0) * scaling)
+            ).astype(int)
+        else:
+            output_size = np.add(output_size, 2 * padding.reshape(2, 2).sum(axis=0))
+        if output_size is not None and not np.array_equal(region_size, output_size):
+            # region = cv2.resize(region, tuple(output_size))
+            if interpolation in [None, "none"]:
+                interpolation = "nearest"
+            region = utils.transforms.imresize(
+                region, output_size=tuple(output_size), interpolation=interpolation
+            )
+    # 5 Apply flips to account for negative bounds
+    if hflip:
+        region = np.flipud(region)
+    if vflip:
+        region = np.fliplr(region)
+    return region

@@ -1390,7 +1390,10 @@ class VirtualWSIReader(WSIReader):
             size=image_read_size,
         )
 
-        output_size = size
+        if interpolation in [None, "none"]:
+            output_size = None
+        else:
+            output_size = size
 
         im_region = utils.image.sub_pixel_read(
             self.img,
@@ -1428,6 +1431,9 @@ class VirtualWSIReader(WSIReader):
             *utils.transforms.bounds2locsize(bounds)
         )
         image_bounds = utils.transforms.locsize2bounds(location, size)
+
+        if interpolation in [None, "none"]:
+            output_size = None
 
         im_region = utils.image.sub_pixel_read(
             self.img,

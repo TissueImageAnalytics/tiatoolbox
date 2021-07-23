@@ -207,3 +207,31 @@ def locsize2bounds(location, size):
         location[0] + size[0],
         location[1] + size[1],
     )
+
+
+def bounds2slices(bounds, stride=1):
+    if np.size(stride) == 1:
+        stride = np.tile(stride, 4)
+    elif np.size(stride) == 2:
+        stride = np.tile(stride, 2)
+    else:
+        raise ValueError("Invalid stride shape")
+    start, stop = np.split(bounds.astype(int), 2)
+    slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
+    return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
+
+
+def pad_bounds(bounds, padding):
+    if np.size(bounds) % 2 != 0:
+        raise ValueError("Bounds must have an even number of elements")
+    ndims = np.size(bounds) // 2
+    if np.size(padding) == 1:
+        pass
+    elif np.size(padding) == 2:
+        padding = np.tile(padding, ndims)
+    elif np.size(padding) == np.size(bounds):
+        pass
+    else:
+        raise ValueError("Invalid number of padding elements.")
+    signs = np.repeat([-1, 1], ndims)
+    return np.add(bounds, padding * signs)
