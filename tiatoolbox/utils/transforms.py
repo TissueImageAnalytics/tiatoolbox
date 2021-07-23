@@ -91,10 +91,15 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
+    if scale_factor is not None:
+        scale_factor = np.array(scale_factor)
+        if scale_factor.size == 1:
+            scale_factor = np.repeat(scale_factor, 2)
+
     # Handle None arguments
     if output_size is None:
-        width = int(img.shape[1] * scale_factor)
-        height = int(img.shape[0] * scale_factor)
+        width = int(img.shape[1] * scale_factor[0])
+        height = int(img.shape[0] * scale_factor[1])
         output_size = (width, height)
 
     if scale_factor is None:
