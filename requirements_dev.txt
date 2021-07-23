@@ -16,7 +16,7 @@ pytest-cov==2.9.0
 numpy
 pillow
 matplotlib
-pyyaml
+pyyaml>=5.1
 pandas
 glymur
 scikit-image
