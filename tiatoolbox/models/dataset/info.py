@@ -35,7 +35,7 @@ class DatasetInfoABC(ABC):
         inputs (list): A list of paths where each path points to a sample image.
         labels (list): A list of `int` where each is the label of the sample at
             the same index.
-        label_name (dict): A dict indicates the possible associate name of each label
+        label_names (dict): A dict indicates the possible associate name of each label
             value.
 
     """
