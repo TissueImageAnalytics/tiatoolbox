@@ -69,7 +69,7 @@ class KatherPatchDataset(DatasetInfoABC):
         inputs (list): A list of paths where each path points to a sample image.
         labels (list): A list of `int` where each is the label of the sample at
             the same index.
-        label_name (dict): A dict indicates the possible associate name of each label
+        label_names (dict): A dict indicates the possible associate name of each label
             value.
 
     """
@@ -77,13 +77,13 @@ class KatherPatchDataset(DatasetInfoABC):
     # We predefine to follow enforcement, actual initialization in init
     inputs = None
     labels = None
-    label_name = None
+    label_names = None
 
     def __init__(
         self,
         save_dir_path=None,
     ):
-        label_codes = [
+        label_names = [
             "01_TUMOR",
             "02_STROMA",
             "03_COMPLEX",
@@ -112,18 +112,18 @@ class KatherPatchDataset(DatasetInfoABC):
             raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
 
         # What will happen if downloaded data get corrupted?
-        label_name = {}
+        name_uid_map = {}
         all_paths = []
-        for label_id, label_code in enumerate(label_codes):
+        for label_id, label_name in enumerate(label_names):
             paths = grab_files_from_dir(
-                f"{save_dir_path}/{label_code}/", file_types="*.tif"
+                f"{save_dir_path}/{label_name}/", file_types="*.tif"
             )
             paths = [[v, label_id] for v in paths]
             paths.sort()
             all_paths.extend(paths)
-            label_name[label_id] = label_code
+            name_uid_map[label_id] = label_name
         inputs, labels = list(zip(*all_paths))
 
-        self.label_name = label_name
+        self.label_names = name_uid_map
         self.inputs = list(inputs)  # type casting to list
         self.labels = list(labels)  # type casting to list
