@@ -52,7 +52,7 @@ class DatasetInfoABC(ABC):
 
     @property
     @abstractmethod
-    def label_name(self):
+    def label_names(self):
         raise NotImplementedError
 
 
