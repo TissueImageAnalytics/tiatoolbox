@@ -112,7 +112,7 @@ class KatherPatchDataset(DatasetInfoABC):
             raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
 
         # What will happen if downloaded data get corrupted?
-        name_uid_map = {}
+        uid_name_map = {}
         all_paths = []
         for label_id, label_name in enumerate(label_names):
             paths = grab_files_from_dir(
@@ -121,9 +121,9 @@ class KatherPatchDataset(DatasetInfoABC):
             paths = [[v, label_id] for v in paths]
             paths.sort()
             all_paths.extend(paths)
-            name_uid_map[label_id] = label_name
+            uid_name_map[label_id] = label_name
         inputs, labels = list(zip(*all_paths))
 
-        self.label_names = name_uid_map
+        self.label_names = uid_name_map
         self.inputs = list(inputs)  # type casting to list
         self.labels = list(labels)  # type casting to list
