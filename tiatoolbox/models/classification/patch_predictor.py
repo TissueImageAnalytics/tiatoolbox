@@ -20,33 +20,51 @@
 
 """This module enables patch-level prediction."""
 
-import logging
-import tqdm
+import os
+import pathlib
+import warnings
+from collections import OrderedDict
+from typing import Callable, Tuple
+
 import numpy as np
 import torch
 import torch.nn as nn
-import os
-import pathlib
-import json
-import warnings
+import tqdm
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.abc import ModelBase
+from tiatoolbox.models.abc import IOConfigABC, ModelABC
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
+from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import (
     download_data,
-    imread,
-    save_json,
     get_pretrained_model_info,
+    save_as_json,
 )
-from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.utils.visualisation import overlay_patch_prediction
-from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-class CNNPatchModel(ModelBase):
+class _IOConfigPatchPredictor(IOConfigABC):
+    """Define a class to hold IO information for patch predictor."""
+
+    # We predefine to follow enforcement, actual initialization in init
+    patch_size = None
+    input_resolutions = None
+    output_resolutions = None
+
+    def __init__(
+        self, patch_size, input_resolutions, output_resolutions, stride_size, **kwargs
+    ):
+        self.patch_size = patch_size
+        self.stride_size = stride_size
+        self.input_resolutions = input_resolutions
+        self.output_resolutions = output_resolutions
+        for variable, value in kwargs.items():
+            self.__setattr__(variable, value)
+
+
+class CNNPatchModel(ModelABC):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
     Attributes:
@@ -69,8 +87,8 @@ class CNNPatchModel(ModelBase):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
-        self.preproc_func = None
-
+    # pylint: disable=W0221
+    # shut up pylint because abc is generic, this is actual definition
     def forward(self, imgs):
         """Pass input data through the model.
 
@@ -85,22 +103,13 @@ class CNNPatchModel(ModelBase):
         prob = torch.softmax(logit, -1)
         return prob
 
-    def set_preproc_func(self, func):
-        """To set function for preprocessing.
+    @staticmethod
+    def postproc(image):
+        """Define the post-processing of this class of model.
 
-        Set the `preproc_func` to this `func` if it is not None.
-        Else the `preproc_func` is reset to return source image.
-
-        `func` must behave in the following manner:
-
-        >>> transformed_img = func(img)
-
+        This simply applies argmax along last axis of the input.
         """
-        self.preproc_func = func if func is not None else lambda x: x
-
-    def get_preproc_func(self):
-        """Get preprocessing function."""
-        return self.preproc_func
+        return np.argmax(image, axis=-1)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -115,10 +124,7 @@ class CNNPatchModel(ModelBase):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        if on_gpu:
-            device = "cuda"
-        else:
-            device = "cpu"
+        device = misc.select_device(on_gpu)
 
         img_patches = batch_data
         img_patches_device = img_patches.to(device).type(torch.float32)  # to NCHW
@@ -185,6 +191,9 @@ class CNNPatchPredictor:
 
             pretrained_weight (str): Path to the weight of the corresponding
                 `pretrained_model`.
+                >>> predictor = CNNPatchPredictor(
+                ...    pretrained_model="resnet18-kather100k",
+                ...    pretrained_weight="resnet18_local_weight")
 
             batch_size (int) : Number of images fed into the model each time.
             num_loader_worker (int) : Number of workers to load the data.
@@ -194,265 +203,110 @@ class CNNPatchPredictor:
         """
         super().__init__()
 
-        self.img_list = None
-        self.output_list = None
+        self.imgs = None
+        self.outputs = None
         self.mode = None
-        self.patch_size = None
-        self.resolution = None
-        self.units = None
 
         if model is None and pretrained_model is None:
             raise ValueError("Must provide either of `model` or `pretrained_model`")
 
         if model is not None:
             self.model = model
+            iostate = None  # retrieve iostate from provided model ?
         else:
-            model, patch_size, resolution, units = get_pretrained_model(
-                pretrained_model, pretrained_weight
-            )
-            self.patch_size = patch_size
-            self.resolution = resolution
-            self.units = units
+            model, iostate = get_pretrained_model(pretrained_model, pretrained_weight)
 
-        self.model = model
+        self._iostate = iostate  # for storing original
+        self.iostate = None  # for runtime
+        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
         self.verbose = verbose
 
     @staticmethod
-    def _get_merge_info(img_path, output_model, mode, resolution, units):
-        """Get the scaling information needed for merging the predictions
-        at a lower resolution.
-
-        Args:
-            img_path (str): Path to the input image that was originally processed.
-            output_model (dict): Dictionary of results output by the model.
-            mode (str): Mode that was used for processing the data. This must be
-                either `tile` or `wsi`.
-            resolution (float): Resolution used when merging the predictions.
-            units (str): Units of resolution. Either `power`, `mpp`, `baseline`
-                or `level`.
-
-        Returns:
-            img_resize (ndarray): Resized input image at the defined resolution.
-            scale (float): The number of times smaller the resolution of the
-                merged prediction is than the resolution used during proessing.
-
-        """
-        # get the resolution and pretrained model used during duing training
-        process_resolution = output_model["resolution"]
-
-        if resolution is None:
-            # if resolution not supplied, default to saving merged predictions
-            # at the size of the image at the processed resolution.
-            logging.warning(
-                "No resolution provided for saving the merged predictions. Default to "
-                "saving at the size at the processed resolution. Consider using a "
-                "lower resolution than that used for processing to reduce processing "
-                "speed and to reduce the memory of the generated map."
-            )
-            resolution = process_resolution
-            scale = 1
-
-        else:
-            if units == "power":
-                scale = process_resolution / resolution
-            elif units == "mpp":
-                scale = process_resolution * resolution
-            elif units == "baseline":
-                scale = resolution
-
-        if mode == "wsi":
-            reader = get_wsireader(img_path)
-            img_resize = reader.slide_thumbnail(resolution=resolution, units=units)
-        else:
-            img = imread(img_path)
-            output_size = (img.shape[1] / scale), round(img.shape[0] / scale)
-            output_size = (int(round(output_size[0])), int(round(output_size[1])))
-            img_resize = imresize(img, output_size=output_size)
-
-        return img_resize, scale
-
-    @staticmethod
-    def _merge_patch_predictions(output_model, output_shape, scale=1):
-        """Merge patch level predictions.
-
-        Args:
-            output_model (dict): Output produced by CNNPatchPredictor, containing
-                predictions, patch coordinates and class probabilities (if requested).
-            output_shape (tuple): Size of merged 2-dimensional output array.
-            scale (float): How many times smaller the output array is than
-                original image.
-
-        Returns:
-            output (ndarray): 2D map of merged predictions.
-
-        """
-        coordinates = output_model["coordinates"]
-        predictions = output_model["predictions"]
-
-        patch_shape = (coordinates[0][2], coordinates[0][3])
-        coordinates_x1 = np.unique([v[0] for v in coordinates]).tolist()
-        coordinates_y1 = np.unique([v[1] for v in coordinates]).tolist()
-        stride_shape = (sorted(coordinates_x1)[1], sorted(coordinates_y1)[1])
-
-        if (
-            stride_shape[0] < patch_shape[0] or stride_shape[1] < patch_shape[1]
-        ) and "probabilities" not in output_model.keys():
-            warnings.warn(
-                "For a better result when using stride size < patch size, consider "
-                "returning the probabilities. This will result in a smoother output."
-            )
-
-        if stride_shape == patch_shape or "probabilities" not in output_model.keys():
-            output = np.full(output_shape, 0)
-            for idx, coords in enumerate(coordinates):
-                prediction = predictions[idx]
-                coords = np.round(np.array(coords) / scale).astype("int")
-                output[coords[1] : coords[3], coords[0] : coords[2]] = prediction
-        else:
-            probabilities = output_model["probabilities"]
-            num_classes = len(output_model["probabilities"][0])
-            output = np.full([output_shape[0], output_shape[1], num_classes], 0.0)
-            # used to merge overlapping patches
-            denominator = np.ones(np.array(output_shape))
-            for idx, coords in enumerate(coordinates):
-                probabilties_ = probabilities[idx]
-                coords = np.round(np.array(coords) / scale).astype("int")
-                output[coords[1] : coords[3], coords[0] : coords[2]] += probabilties_
-                denominator[coords[1] : coords[3], coords[0] : coords[2]] += 1
-            # deal with overlapping regions
-            output = output / np.expand_dims(denominator, -1)
-            selection = denominator >= 1
-            # convert raw probabilities to preditions
-            output = CNNPatchPredictor._postprocess(output)
-            # set the background to 0
-            output[~selection] = 0
-
-        return output
-
-    @staticmethod
     def merge_predictions(
-        img_list,
-        output_list,
-        mode,
+        img,
+        output,
         resolution=None,
         units=None,
-        return_overlay=False,
-        alpha=0.35,
-        save_dir=None,
+        postproc_func: Callable = None,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
         Args:
-            img_list (list): List of paths to the images that were originally processed.
-            output_list (list): List of outputs generated by the model.
-            mode (str): Mode used for processing the data, that determines the input
-                data type. This must be either `tile` or `wsi`.
+            img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
+                A HWC image or a path to WSI.
+            output (list): ouput generated by the model.
             resolution (float): Resolution of merged predictions.
             units (str): Units of resolution used when merging predictions. This
                 must be the same `units` used when processing the data.
-            return_overlay (bool): Whether to return an overlay of the merged patch
-                predictions on top of the original image.
-            alpha (float): Used to determine the transparency level of the overlay
-                between 0 and 1.
-            save_dir (str): Output directory when processing multiple tiles and
-                    whole-slide images.
+            postproc_func (callable): a function to post-process raw prediction
+                from model. Must be in the form
+                >>> value = postproc_func(predictions)
 
         Returns:
             prediction_map (ndarray): Merged predictions as a 2D array.
             overlay (ndarray): Overlaid output if return_overlay is set to True.
 
         """
-        if mode not in ["tile", "wsi"]:
-            raise ValueError(
-                "Only predictions generated using `tile` or `wsi` mode can be merged."
-            )
-
-        if len(img_list) > 1:
-            output_files = []  # generate a list of output file paths
+        reader = get_wsireader(img)
+        if isinstance(reader, VirtualWSIReader):
             warnings.warn(
-                "When providing multiple whole-slide images / tiles "
-                "we save the overlays and return the locations "
-                "to the corresponding files."
-            )
-
-        if len(img_list) > 1 and save_dir is None:
-            raise ValueError(
-                "If the number of input samples > 1, then a save_dir must be provided."
-            )
-
-        output = []
-        for idx, img_path in enumerate(img_list):
-            output_merged = []
-            output_files = []
-
-            img_path = pathlib.Path(img_path)
-            basename = img_path.stem
-
-            # prepare the directories for saving
-            if len(img_list) > 1:
-                save_dir_ = os.path.join(save_dir, basename)
-                if not os.path.exists(save_dir_):
-                    os.makedirs(save_dir_)
-
-            if len(img_list) > 1:
-                with open(output_list[idx]) as json_file:
-                    output_model = json.load(json_file)
-            else:
-                output_model = output_list[idx][0]
-
-            if resolution is not None and output_model["units"] != units:
-                raise ValueError(
-                    "Defined `units` of resolution must be the same that were used "
-                    "when processing the data (%s)." % output_model["units"]
+                " ".join(
+                    [
+                        "Image is not pyramidal hence read is forced to be",
+                        "at `units='baseline'` and `resolution=1.0`.",
+                    ]
                 )
-
-            # get the resolution and pretrained model used during duing training
-            read_img, scale = CNNPatchPredictor._get_merge_info(
-                img_path, output_model, mode, resolution, units
             )
-            # merge patch predictions to form a 2D array
-            merged_predictions = CNNPatchPredictor._merge_patch_predictions(
-                output_model, read_img.shape[:2], scale
-            )
-            output_merged.append(merged_predictions)
+            resolution = 1.0
+            units = "baseline"
 
-            if return_overlay:
-                pretrained_model = output_model["pretrained_model"]
-                # generate an overlay of the 2D array on the original image
-                overlay = overlay_patch_prediction(
-                    read_img,
-                    merged_predictions,
-                    pretrained_model,
-                    alpha,
-                )
-                output_merged.append(overlay)
+        canvas_shape = reader.slide_dimensions(resolution=resolution, units=units)
+        canvas_shape = canvas_shape[::-1]  # XY to YX
 
-            if len(img_list) > 1:
-                # save prediction map
-                np.save(save_dir_ + "prediction_map.npy", merged_predictions)
-                output_files.append(save_dir_ + "prediction_map.npy")
-                if return_overlay:
-                    output_files.append(save_dir_ + "overlay.npy")
-                # set output to return locations of saved files
-                output.append(output_files)
+        # may crash here, do we need to deal with this ?
+        output_shape = reader.slide_dimensions(
+            resolution=output["resolution"], units=output["units"]
+        )
+        output_shape = output_shape[::-1]  # XY to YX
+        fx = np.array(canvas_shape) / np.array(output_shape)
+
+        if "probabilities" not in output.keys():
+            coordinates = output["coordinates"]
+            predictions = output["predictions"]
+            denominator = None
+            output = np.zeros(list(canvas_shape), dtype=np.float32)
+        else:
+            coordinates = output["coordinates"]
+            predictions = output["probabilities"]
+            num_class = np.array(predictions[0]).shape[0]
+            denominator = np.zeros(canvas_shape)
+            output = np.zeros(list(canvas_shape) + [num_class], dtype=np.float32)
+
+        for idx, bound in enumerate(coordinates):
+            prediction = predictions[idx]
+            # assumed to be in XY
+            # top-left for output placement
+            tl = np.ceil(np.array(bound[:2]) * fx).astype(np.int32)
+            # bot-right for output placement
+            br = np.ceil(np.array(bound[2:]) * fx).astype(np.int32)
+            output[tl[1] : br[1], tl[0] : br[0]] = prediction
+            if denominator is not None:
+                denominator[tl[1] : br[1], tl[0] : br[0]] += 1
+
+        # deal with overlapping regions
+        if denominator is not None:
+            output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
+            # convert raw probabilities to preditions
+            if postproc_func is not None:
+                output = postproc_func(output)
             else:
-                output.append(output_merged)
-
+                output = np.argmax(output, axis=-1)
+            # to make sure background is 0 while class wil be 1..N
+            output[denominator > 0] += 1
         return output
-
-    @staticmethod
-    def _postprocess(probabilities):
-        """Apply post processing to output probablities. For classification, we apply
-        a simple method and simply take the class with the highest probability.
-
-        Args:
-            probabilities (ndarray): Model output probabilities.
-
-        """
-        return np.argmax(probabilities, axis=-1)
 
     def _predict_engine(
         self,
@@ -476,7 +330,7 @@ class CNNPatchPredictor:
             output (ndarray): Model predictions of the input dataset
 
         """
-        dataset.set_preproc_func(self.model.get_preproc_func())
+        dataset.preproc_func = self.model.preproc_func
 
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
@@ -492,12 +346,8 @@ class CNNPatchPredictor:
                 total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
             )
 
-        if on_gpu:
-            # DataParallel works only for cuda
-            model = torch.nn.DataParallel(self.model)
-            model = model.to("cuda")
-        else:
-            model = self.model.to("cpu")
+        # use external for testing
+        model = misc.model_to(on_gpu, self.model)
 
         cum_output = {
             "probabilities": [],
@@ -511,7 +361,10 @@ class CNNPatchPredictor:
                 model, batch_data["image"], on_gpu
             )
             # We get the index of the class with the maximum probability
-            batch_output_predictions = self._postprocess(batch_output_probabilities)
+            batch_output_predictions = self.model.postproc_func(
+                batch_output_probabilities
+            )
+
             # tolist may be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
@@ -538,37 +391,35 @@ class CNNPatchPredictor:
 
     def predict(
         self,
-        img_list,
-        mask_list=None,
-        label_list=None,
+        imgs,
+        masks=None,
+        labels=None,
         mode="patch",
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_size=None,
-        stride_size=None,
+        patch_size: Tuple[int, int] = None,
+        stride_size: Tuple[int, int] = None,
         resolution=None,
         units=None,
         merge_predictions=False,
-        merge_resolution=None,
-        return_overlay=False,
         save_dir=None,
     ):
         """Make a prediction for a list of input data.
 
         Args:
-            img_list (list, ndarray): List of inputs to process. When using `patch`
+            imgs (list, ndarray): List of inputs to process. When using `patch`
             mode, the input must be either a list of images, a list of image file paths
             or a numpy array of an image list. When using `tile` or `wsi` mode, the
             input must be a list of file paths.
 
-            mask_list (list): List of masks. Only utilised when processing image tiles
+            masks (list): List of masks. Only utilised when processing image tiles
             and whole-slide images. Patches are only processed if they are witin a
             masked area. If not provided, then a tissue mask will be automatically
             generated for whole-slide images or the entire image is processed for
             image tiles.
 
-            label_list: List of labels. If using `tile` or `wsi` mode, then only a
+            labels: List of labels. If using `tile` or `wsi` mode, then only a
             single label per image tile or whole-slide image is supported.
             mode (str): Type of input to process. Choose from either `patch`, `tile` or
                 `wsi`.
@@ -576,15 +427,16 @@ class CNNPatchPredictor:
             return_probabilities (bool): Whether to return per-class probabilities.
 
             return_labels (bool): Whether to return the labels with the predictions.
-            on_gpu (bool): Whether to run model on the GPU.
 
             on_gpu (bool): whether to run model on the GPU.
 
             patch_size (tuple): Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to level 0.
+                requested read resolution, not with respect to level 0, and must be
+                positive.
 
             stride_size (tuple): Stride using during tile and WSI processing. Stride
-                is at requested read resolution, not with respect to to level 0.
+                is at requested read resolution, not with respect to to level 0, and
+                must be positive. If not provided, `stride_size=patch_size`.
 
             resolution (float): Resolution used for reading the image.
 
@@ -592,78 +444,89 @@ class CNNPatchPredictor:
                 either `level`, `power` or `mpp`.
 
             merge_predictions (bool): Whether to merge the predictions to form
-            a 2-dimensional map.
-
-            merge_resolution (float): Resolution of the merged prediction map. If
-                this is different to the resolution used for processing the input,
-                then the predictions will be rescaled.
-
-            return_overlay (bool): Whether to return an overlay of the merged prediction
-                map on top of the original image.
+            a 2-dimensional map. This is only applicable for `mode='wsi'` or
+            `mode='tile'`.
 
             save_dir (str): Output directory when processing multiple tiles and
-                whole-slide images.
+                whole-slide images. By default, it is folder `output` where the
+                running script is invoked.
 
         Returns:
-            output (ndarray, pathlib.Path): Model predictions of the input dataset.
+            output (ndarray, dict): Model predictions of the input dataset.
                 If multiple image tiles or whole-slide images are provided as input,
-                then results are saved and the resulting file paths are returned.
+                then results are saved to `save_dir` and a dictionary indicating save
+                location for each input is return.
 
+                The dict has following format:
+                - img_path: path of the input image.
+                    - raw: path to save location for raw prediction, saved in .json.
+                    - merged: path to .npy contain merged predictions if
+                    `merge_predictions` is `True`.
+
+                For example
+                >>> wsis = ['wsi1.svs', 'wsi2.svs']
+                >>> predictor = CNNPatchPredictor(
+                ...                 pretrained_model="resnet18-kather100k")
+                >>> output = predictor.predict(wsis, mode='wsi)
+                >>> output.keys()
+                ['wsi1.svs', 'wsi2.svs']
+                >>> output['wsi1.svs']
+                {'raw': '0.raw.json', 'merged': '0.merged.npy}
+                >>> output['wsi2.svs']
+                {'raw': '1.raw.json', 'merged': '1.merged.npy}
 
         """
         if mode not in ["patch", "wsi", "tile"]:
             raise ValueError(
-                "%s is not a valid mode. Use either `patch`, `tile` or `wsi`" % mode
+                f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
-        if label_list is not None:
-            # if a label_list is provided, then return with the prediction
-            return_labels = bool(label_list)
-            if len(label_list) != len(img_list):
+        if mode == "patch" and labels is not None:
+            # if a labels is provided, then return with the prediction
+            return_labels = bool(labels)
+            if len(labels) != len(imgs):
                 raise ValueError(
-                    "len(label_list) != len(img_list) : %d != %d"
-                    % (len(label_list), len(img_list))
+                    f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
                 )
-
-        if patch_size is None:
-            patch_size = self.patch_size
-
-        if resolution is None:
-            # if not defined in arguments, pull parameters from dataset definition
-            resolution = self.resolution
-            units = self.units
+        if mode == "wsi" and masks is not None and len(masks) != len(imgs):
+            raise ValueError(
+                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
+            )
 
         if mode == "patch":
             # don't return coordinates if patches are already extracted
             return_coordinates = False
-            dataset = PatchDataset(img_list, label_list)
+            dataset = PatchDataset(imgs, labels)
             output = self._predict_engine(
                 dataset, return_probabilities, return_labels, return_coordinates, on_gpu
             )
 
         else:
-            if stride_size is None:
-                raise ValueError("`stride_size` must be provided.")
+            stride_size = stride_size if stride_size is not None else patch_size
 
-            if return_overlay and not merge_predictions:
-                raise ValueError(
-                    "merge_predictions must be used if return_overlay is set to True."
+            self.iostate = self._iostate
+            if patch_size is not None:
+                iostate = _IOConfigPatchPredictor(
+                    input_resolutions=[{"resolution": resolution, "units": units}],
+                    output_resolutions=[{"resolution": resolution, "units": units}],
+                    patch_size=patch_size,
+                    stride_size=stride_size,
                 )
+                self.iostate = iostate
 
-            if len(img_list) > 1:
+            if len(imgs) > 1:
                 warnings.warn(
                     "When providing multiple whole-slide images / tiles, "
                     "we save the outputs and return the locations "
                     "to the corresponding files."
                 )
-            if len(img_list) > 1 and save_dir is None:
-                warnings.warn(
-                    "> 1 WSIs detected but there is no save directory set."
-                    "All subsequent output will be saved to current runtime"
-                    "location under folder 'output'. Overwriting may happen!"
-                )
-                save_dir = os.path.join(os.getcwd(), "output")
+                if save_dir is None:
+                    warnings.warn(
+                        "> 1 WSIs detected but there is no save directory set."
+                        "All subsequent output will be saved to current runtime"
+                        "location under folder 'output'. Overwriting may happen!"
+                    )
+                    save_dir = os.path.join(os.getcwd(), "output")
 
-            if len(img_list) > 1 and save_dir is not None:
                 save_dir = pathlib.Path(save_dir)
                 if not save_dir.is_dir():
                     os.makedirs(save_dir)
@@ -672,27 +535,26 @@ class CNNPatchPredictor:
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
-            if not isinstance(img_list, list):
+            if not isinstance(imgs, list):
                 raise ValueError(
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
 
-            output = []
             # generate a list of output file paths if number of input images > 1
-            output_files = []
-            for idx, img_path in enumerate(img_list):
+            file_dict = OrderedDict()
+            for idx, img_path in enumerate(imgs):
                 img_path = pathlib.Path(img_path)
-                img_label = None if label_list is None else label_list[idx]
-                img_mask = None if mask_list is None else mask_list[idx]
+                img_label = None if labels is None else labels[idx]
+                img_mask = None if masks is None else masks[idx]
 
                 dataset = WSIPatchDataset(
                     img_path,
                     mode=mode,
                     mask_path=img_mask,
-                    patch_size=patch_size,
-                    stride_size=stride_size,
-                    resolution=resolution,
-                    units=units,
+                    patch_size=self.iostate.patch_size,
+                    stride_size=self.iostate.stride_size,
+                    resolution=self.iostate.input_resolutions[0]["resolution"],
+                    units=self.iostate.input_resolutions[0]["units"],
                 )
                 output_model = self._predict_engine(
                     dataset,
@@ -707,59 +569,34 @@ class CNNPatchPredictor:
                 output_model["resolution"] = resolution
                 output_model["units"] = units
 
-                output_list = [output_model]  # assign to a list
+                outputs = [output_model]  # assign to a list
                 if merge_predictions:
-                    # get the resolution and pretrained model used during duing training
-                    img_resize, scale = CNNPatchPredictor._get_merge_info(
-                        img_path, output_model, mode, merge_resolution, units
+                    merged_prediction = self.merge_predictions(
+                        img_path,
+                        output_model,
+                        resolution=resolution,
+                        units=units,
+                        postproc_func=self.model.postproc,
                     )
-                    merged_prediction = CNNPatchPredictor._merge_patch_predictions(
-                        output_model, img_resize.shape[:2], scale
+                    outputs.append(merged_prediction)
+
+                if len(imgs) > 1:
+                    img_code = "{number:0{width}d}".format(
+                        width=len(str(len(imgs))), number=idx
                     )
-                    output_list.append(merged_prediction)
-
-                if return_overlay:
-                    pretrained_model = output_model["pretrained_model"]
-                    # generate an overlay of the 2D array on the original image
-                    overlay = overlay_patch_prediction(
-                        img_resize,
-                        merged_prediction,
-                        pretrained_model,
-                    )
-                    output_list.append(overlay)
-
-                if len(img_list) > 1:
-                    basename = img_path.stem
-
-                    save_dir_ = os.path.join(save_dir, basename)
-                    if not os.path.exists(save_dir_):
-                        os.makedirs(save_dir_)
-
-                    results_file_path = save_dir_ + "/results.json"
-                    output_files.append(results_file_path)
-                    save_json(output_model, results_file_path)
+                    save_info = {}
+                    save_path = os.path.join(save_dir, img_code)
+                    raw_save_path = f"{save_path}.raw.json"
+                    save_info["raw"] = raw_save_path
+                    save_as_json(output_model, raw_save_path)
                     if merge_predictions:
-                        merged_file_path = save_dir_ + "/prediction_map.npy"
-                        output_files.append(merged_file_path)
+                        merged_file_path = f"{save_path}.merged.npy"
                         np.save(merged_file_path, merged_prediction)
-                    if return_overlay:
-                        overlay_file_path = save_dir_ + "/overlay.png"
-                        output_files.append(overlay_file_path)
-                        overlay.savefig(overlay_file_path)
-
-                    # set output to return locations of saved files
-                    output.append(output_files)
-
+                        save_info["merged"] = merged_file_path
+                    file_dict[img_path] = save_info
                 else:
-                    # return predictions if single example provided
-                    output_list = [output_model]
-                    if merge_predictions:
-                        output_list.append(merged_prediction)
-                    if return_overlay:
-                        output_list.append(overlay)
-
-                    # add image-level outputs to output_list
-                    output.append(output_list)
+                    output = outputs
+            output = file_dict if len(imgs) > 1 else output
 
         return output
 
@@ -821,16 +658,15 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     pretrained_models_dict = pretrained_info["models"]
 
     if backbone not in pretrained_models_dict.keys():
-        raise ValueError("Pretrained model `%s` does not exist." % pretrained_model)
+        raise ValueError(f"Pretrained model `{pretrained_model}` does not exist.")
 
     patch_size = pretrained_info["patch_size"]
     resolution = pretrained_info["resolution"]
     units = pretrained_info["units"]
     num_classes = pretrained_info["num_classes"]
 
-    preproc_func = predefined_preproc_func(dataset)
     model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
-    model.set_preproc_func(preproc_func)
+    model.preproc_func = predefined_preproc_func(dataset)
 
     if pretrained_weight is None:
         pretrained_weight_url = pretrained_models_dict[backbone]
@@ -846,4 +682,10 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
-    return model, patch_size, resolution, units
+    iostate = _IOConfigPatchPredictor(
+        patch_size=patch_size,
+        stride_size=patch_size,
+        input_resolutions=[{"resolution": resolution, "units": units}],
+        output_resolutions=[{"resolution": resolution, "units": units}],
+    )
+    return model, iostate
