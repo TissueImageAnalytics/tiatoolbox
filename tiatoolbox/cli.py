@@ -19,23 +19,19 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
+
 import numpy as np
+import sys
+import click
+import os
+import pathlib
+from PIL import Image
 
 from tiatoolbox import __version__
 from tiatoolbox import wsicore
 from tiatoolbox.tools import stainnorm as sn, tissuemask
 from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.models.classification.pretrained_info import _pretrained_model
-from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
-from tiatoolbox.models.dataset.classification import PatchDataset
-
-import json
-import sys
-import click
-import os
-import pathlib
-from PIL import Image
 
 
 def version_msg():
@@ -436,97 +432,6 @@ def tissue_mask(
                 output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
                 mask[0].astype(np.uint8) * 255,
             )
-
-
-@main.command()
-@click.option(
-    "--predefined_model",
-    help="Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
-    "is a resnet18 model trained on the kather dataset.",
-    default="resnet18-kather100K",
-)
-@click.option(
-    "--pretrained_weight",
-    help="Path to the model weight file. If not supplied, the default "
-    "pretrained weight will be used.",
-    default=None,
-)
-@click.option(
-    "--img_input",
-    help="Path to the input directory containing images to process or an "
-    "individual file.",
-)
-@click.option(
-    "--output_path",
-    help="Output directory where model predictions will be saved.",
-    default="patch_prediction",
-)
-@click.option(
-    "--batch_size",
-    help="Number of images to feed into the model each time.",
-    default=16,
-)
-@click.option(
-    "--return_probabilities",
-    help="Whether to return raw model probabilities.",
-    default=False,
-)
-@click.option(
-    "--file_types",
-    help="File types to capture from directory. "
-    "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
-    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
-)
-def patch_predictor(
-    predefined_model,
-    pretrained_weight,
-    img_input,
-    output_path,
-    batch_size,
-    return_probabilities,
-    file_types,
-):
-    """Process an image/directory of input images with a patch classification CNN."""
-    file_types = tuple(file_types.split(", "))
-    output_path = pathlib.Path(output_path)
-
-    if os.path.isdir(img_input):
-        img_files = utils.misc.grab_files_from_dir(
-            input_path=img_input, file_types=file_types
-        )
-    elif os.path.isfile(img_input):
-        img_files = [
-            img_input,
-        ]
-    else:
-        raise FileNotFoundError
-
-    if predefined_model.lower() not in _pretrained_model:
-        raise ValueError("Predefined model `%s` does not exist." % predefined_model)
-
-    if len(img_files) < batch_size:
-        batch_size = len(img_files)
-
-    dataset = PatchDataset(img_files)
-
-    predictor = CNNPatchPredictor(
-        predefined_model=predefined_model,
-        pretrained_weight=pretrained_weight,
-        batch_size=batch_size,
-    )
-
-    output = predictor.predict(
-        dataset, return_probabilities=return_probabilities, on_gpu=False
-    )
-
-    output_file_path = os.path.join(output_path, "results.json")
-    if not output_path.is_dir():
-        os.makedirs(output_path)
-    # convert output, otherwise can't dump via json
-    output = {k: v.tolist() for k, v in output.items()}
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
 
 
 if __name__ == "__main__":
