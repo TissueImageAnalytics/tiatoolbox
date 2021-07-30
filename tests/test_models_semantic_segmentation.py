@@ -1,7 +1,6 @@
 import os
 import pathlib
 import shutil
-import sys
 from time import time
 
 import numpy as np
@@ -10,14 +9,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-sys.path.append(".")
 from tiatoolbox import rcParam
-from tiatoolbox.models.segmentation import (
-    IOStateSegmentor,
-    SemanticSegmentor,
-    SerializeWSIReader,
-)
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
+from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.segmentation import IOConfigSegmentor, SemanticSegmentor
+from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = True
 # ----------------------------------------------------
@@ -56,7 +51,7 @@ def _crop_op(x, cropping, data_format="NCHW"):
     return x
 
 
-class _CNNTo1(nn.Module):
+class _CNNTo1(ModelABC):
     """Contain a convolution.
 
     Simple model to test functionality, this contains a single
@@ -68,11 +63,6 @@ class _CNNTo1(nn.Module):
         self.conv = nn.Conv2d(3, 1, 3, padding=1)
         self.conv.weight.data.fill_(0)
         self.conv.bias.data.fill_(1)
-
-    @staticmethod
-    def preproc(img):
-        """Placeholder preproc function."""
-        return img
 
     def forward(self, img):
         """Define how to use layer."""
@@ -117,7 +107,7 @@ class _CNNTo1(nn.Module):
 
 def test_segmentor_iostate():
     """Test for IOState"""
-    iostate = IOStateSegmentor(
+    ioconfig = IOConfigSegmentor(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
@@ -131,13 +121,13 @@ def test_segmentor_iostate():
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
-    assert iostate.highest_input_resolution == {"units": "mpp", "resolution": 0.25}
-    iostate.convert_to_baseline()
-    assert iostate.input_resolutions[0]["resolution"] == 1.0
-    assert iostate.input_resolutions[1]["resolution"] == 0.5
-    assert iostate.input_resolutions[2]["resolution"] == 1 / 3
+    assert ioconfig.highest_input_resolution == {"units": "mpp", "resolution": 0.25}
+    ioconfig.convert_to_baseline()
+    assert ioconfig.input_resolutions[0]["resolution"] == 1.0
+    assert ioconfig.input_resolutions[1]["resolution"] == 0.5
+    assert ioconfig.input_resolutions[2]["resolution"] == 1 / 3
 
-    iostate = IOStateSegmentor(
+    ioconfig = IOConfigSegmentor(
         input_resolutions=[
             {"units": "power", "resolution": 0.25},
             {"units": "power", "resolution": 0.50},
@@ -150,10 +140,10 @@ def test_segmentor_iostate():
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
-    assert iostate.highest_input_resolution == {"units": "power", "resolution": 0.50}
-    iostate.convert_to_baseline()
-    assert iostate.input_resolutions[0]["resolution"] == 0.5
-    assert iostate.input_resolutions[1]["resolution"] == 1.0
+    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 0.50}
+    ioconfig.convert_to_baseline()
+    assert ioconfig.input_resolutions[0]["resolution"] == 0.5
+    assert ioconfig.input_resolutions[1]["resolution"] == 1.0
 
 
 def test_functional_segmentor(_sample_wsi_dict):
@@ -200,7 +190,7 @@ def test_functional_segmentor(_sample_wsi_dict):
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
-    iostate = IOStateSegmentor(
+    ioconfig = IOConfigSegmentor(
         input_resolutions=[{"units": "baseline", "resolution": 2.0}],
         output_resolutions=[{"units": "baseline", "resolution": 2.0}],
         patch_input_shape=[2048, 2048],
@@ -217,7 +207,7 @@ def test_functional_segmentor(_sample_wsi_dict):
         file_list,
         mode="tile",
         on_gpu=ON_GPU,
-        iostate=iostate,
+        ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -232,7 +222,7 @@ def test_functional_segmentor(_sample_wsi_dict):
 
     # * test running with mask and svs
     # * also test mergin prediction at designated resolution
-    iostate = IOStateSegmentor(
+    ioconfig = IOConfigSegmentor(
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         save_resolution={"units": "baseline", "resolution": 0.25},
@@ -243,15 +233,15 @@ def test_functional_segmentor(_sample_wsi_dict):
     _rm_dir(save_dir)
     output_list = runner.predict(
         [_mini_wsi_svs],
-        mask_list=[_mini_wsi_msk],
+        masks=[_mini_wsi_msk],
         mode="wsi",
         on_gpu=ON_GPU,
-        iostate=iostate,
+        ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
     reader = get_wsireader(_mini_wsi_svs)
-    expected_shape = reader.slide_dimensions(**iostate.save_resolution)
+    expected_shape = reader.slide_dimensions(**ioconfig.save_resolution)
     expected_shape = np.array(expected_shape)[::-1]  # to YX
     pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
     saved_shape = np.array(pred_1.shape[:2])
@@ -263,10 +253,10 @@ def test_functional_segmentor(_sample_wsi_dict):
     runner = SemanticSegmentor(batch_size=32, model=model, auto_generate_mask=True)
     output_list = runner.predict(
         [_mini_wsi_svs],
-        mask_list=[_mini_wsi_msk],
+        masks=[_mini_wsi_msk],
         mode="wsi",
         on_gpu=ON_GPU,
-        iostate=iostate,
+        ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )

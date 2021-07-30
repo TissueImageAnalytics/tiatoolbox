@@ -23,7 +23,6 @@
 
 from tiatoolbox.models.segmentation.semantic_segmentor import (
     SemanticSegmentor,
-    SerializeWSIReader,
+    WSIStreamDataset,
+    IOConfigSegmentor,
 )
-from tiatoolbox.models.segmentation.abc import IOStateSegmentor 
-
