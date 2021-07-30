@@ -25,7 +25,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-ON_GPU = False
+ON_GPU = True
 
 
 def _get_temp_folder_path():
@@ -505,7 +505,6 @@ def test_WSIPatchDataset(_sample_wsi_dict):
 
 
 def test_PatchDataset_abc():
-    """Test for creating new dataset basing on ABC."""
     # test missing definition for abstract
     with pytest.raises(TypeError):
 
@@ -584,7 +583,6 @@ def test_model_abc():
             super().__init__()
 
         @staticmethod
-        # skipcq
         def postproc(image):
             return image - 2
 
@@ -716,7 +714,6 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     pretrained_weight_url = (
         "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
-    assert not os.path.isdir("special_dir_not_exist")
 
     save_dir_path = _get_temp_folder_path()
     # remove prev generated data
