@@ -25,4 +25,8 @@ from tiatoolbox.models.classification.patch_predictor import (
     CNNPatchPredictor,
     CNNPatchModel,
 )
+<<<<<<< HEAD
 from tiatoolbox.models.classification import patch_predictor, abc
+=======
+from tiatoolbox.models.classification import patch_predictor
+>>>>>>> 26d0a2006ca0fee58bb4b5901592a52aa2e2ae18

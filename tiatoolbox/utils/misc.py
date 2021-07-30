@@ -25,6 +25,7 @@ import pathlib
 import zipfile
 from typing import Union
 
+import copy
 import cv2
 import numpy as np
 import pandas as pd
@@ -576,6 +577,7 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
+<<<<<<< HEAD
 def save_dict_to_json(input_dict, save_path):
     """Save input dictionary to a json file.
 
@@ -597,6 +599,65 @@ def save_dict_to_json(input_dict, save_path):
             new_input[k] = v
     with open(save_path, "w") as handle:
         json.dump(new_input, handle)
+=======
+def save_as_json(data, save_path):
+    """Save data to a json file.
+
+    The function will deepcopy the `data` and then jsonify the content
+    in place. Support data types for jsonify consist of `str`, `int`, `float`,
+    `bool` and their np.ndarray respectively.
+
+    Args:
+        data (dict or list): Input data to save.
+        save_path (str): Output to save the json of `input`.
+
+    """
+    shadow_data = copy.deepcopy(data)
+
+    # make a copy of source input
+    def walk_list(lst):
+        """Recursive walk and jsonify in place."""
+        for i, v in enumerate(lst):
+            if isinstance(v, dict):
+                walk_dict(v)
+            elif isinstance(v, list):
+                walk_list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+                walk_list(v)
+            elif v is not None and not isinstance(v, (int, float, str, bool)):
+                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
+            if isinstance(v, np.generic):
+                v = v.item()
+            lst[i] = v
+
+    def walk_dict(dct):
+        """Recursive walk and jsonify in place."""
+        for k, v in dct.items():
+            if isinstance(v, dict):
+                walk_dict(v)
+            elif isinstance(v, list):
+                walk_list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+                walk_list(v)
+            elif v is not None and not isinstance(v, (int, float, str, bool)):
+                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
+            if not isinstance(k, (int, float, str, bool)):
+                raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+            if isinstance(v, np.generic):
+                v = v.item()
+            dct[k] = v
+
+    if isinstance(shadow_data, dict):
+        walk_dict(shadow_data)
+    elif isinstance(shadow_data, list):
+        walk_list(shadow_data)
+    else:
+        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+    with open(save_path, "w") as handle:
+        json.dump(shadow_data, handle)
+>>>>>>> 26d0a2006ca0fee58bb4b5901592a52aa2e2ae18
 
 
 def select_device(on_gpu):
