@@ -93,7 +93,6 @@ class IOConfigSegmentor(IOConfigABC):
 
     def _validate(self):
         """Validate the data format."""
-
         resolutions = self.input_resolutions + self.output_resolutions
         units = [v["units"] for v in resolutions]
         units = np.unique(units)
@@ -211,9 +210,7 @@ class WSIStreamDataset(torch_data.Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        """
-        Proto to handle reading exception
-        """
+        """Proto to handle reading exception."""
         batch = [v for v in batch if v is not None]
         return torch.utils.data.dataloader.default_collate(batch)
 

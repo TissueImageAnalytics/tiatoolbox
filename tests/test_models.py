@@ -505,6 +505,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
 
 
 def test_PatchDataset_abc():
+    """Test for creating new dataset basing on ABC."""
     # test missing definition for abstract
     with pytest.raises(TypeError):
 
@@ -583,6 +584,7 @@ def test_model_abc():
             super().__init__()
 
         @staticmethod
+        # skipcq
         def postproc(image):
             return image - 2
 
