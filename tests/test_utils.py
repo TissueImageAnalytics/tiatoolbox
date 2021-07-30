@@ -995,17 +995,51 @@ def test_model_to():
     assert isinstance(model, nn.Module)
 
 
-def test_save_dict_to_json():
-    """Test for placing model on device."""
-    # ! ideally, we should have a parser/jsonify
+def test_save_as_json():
+    """Test save data to json."""
     import json
 
-    sample = dict(
-        k1=1,
-        k2=np.array([1, 2, 3])
-    )
-    misc.save_dict_to_json(sample, 'sample_json.json')
-    with open('sample_json.json', 'r') as fptr:
+    # dict with nested dict, list, and np.array
+    key_dict = {
+        "a1": {"name": "John", "age": 23, "sex": "male"},
+        "a2": {"name": "John", "age": 23, "sex": "male"},
+    }
+    sample = {
+        "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
+        "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
+        "c": {
+            "a4": {"a5": {"a6": "a7", "c": [1, 1, 3, np.array([4, 5, 6.0])]}},
+            "b1": {},
+            "c1": [],
+            True: [False, None],
+        },
+        "d": [key_dict, np.random.rand(2, 2)],
+        "e": np.random.rand(16, 2),
+    }
+    not_jsonable = {"x86": lambda x: x}
+    not_jsonable.update(sample)
+    # should fail because key is not of primitive type [str, int, float, bool]
+    with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
+        misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(not_jsonable, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
+    with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
+        misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
+    # test complex nested dict
+    print(sample)
+    misc.save_as_json(sample, "sample_json.json")
+    with open("sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
-    assert read_sample['k1'] == sample['k1']
-    assert read_sample['k2'] == [1, 2, 3]
+    # test read because == is useless when value is mutable
+    assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
+
+    # test complex list of data
+    misc.save_as_json(list(sample.values()), "sample_json.json")
+    # test read because == is useless when value is mutable
+    with open("sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6

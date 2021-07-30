@@ -10,12 +10,12 @@ import pytest
 import torch
 
 from tiatoolbox import rcParam
+from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
-from tiatoolbox.models.classification.abc import ModelBase
 from tiatoolbox.models.dataset import (
-    ABCDatasetInfo,
-    ABCPatchDataset,
+    DatasetInfoABC,
+    PatchDatasetABC,
     KatherPatchDataset,
     PatchDataset,
     WSIPatchDataset,
@@ -25,7 +25,7 @@ from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-ON_GPU = True
+ON_GPU = False
 
 
 def _get_temp_folder_path():
@@ -38,7 +38,7 @@ def _get_temp_folder_path():
 
 def test_create_backbone():
     """Test for creating backbone."""
-    backbone_list = [
+    backbones = [
         "alexnet",
         "resnet18",
         "resnet34",
@@ -57,7 +57,7 @@ def test_create_backbone():
         "mobilenet_v3_large",
         "mobilenet_v3_small",
     ]
-    for backbone in backbone_list:
+    for backbone in backbones:
         try:
             get_model(backbone, pretrained=False)
         except ValueError:
@@ -76,47 +76,43 @@ def test_DatasetInfo():
 
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
                 self.a = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     with pytest.raises(TypeError):
 
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
-                self.input_list = "a"
+                self.inputs = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     with pytest.raises(TypeError):
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
-                self.input_list = "a"
-                self.label_list = "a"
+                self.inputs = "a"
+                self.labels = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     with pytest.raises(TypeError):
 
         # intentionally create to check error
         # skipcq
-        class Proto(ABCDatasetInfo):
+        class Proto(DatasetInfoABC):
             def __init__(self):
-                self.input_list = "a"
-                self.label_name = "a"
+                self.inputs = "a"
+                self.label_names = "a"
 
         # intentionally create to check error
-        # skipcq
-        Proto()
+        Proto()  # skipcq
     # test kather with default init
     dataset = KatherPatchDataset()
     # kather with default data path skip download
@@ -142,13 +138,13 @@ def test_DatasetInfo():
     unzip_data(save_zip_path, save_dir_path)
     extracted_dir = os.path.join(save_dir_path, "Kather_texture_2016_image_tiles_5000/")
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
-    assert dataset.input_list is not None
-    assert dataset.label_list is not None
-    assert dataset.label_name is not None
-    assert len(dataset.input_list) == len(dataset.label_list)
+    assert dataset.inputs is not None
+    assert dataset.labels is not None
+    assert dataset.label_names is not None
+    assert len(dataset.inputs) == len(dataset.labels)
 
     # to actually get the image, we feed it to PatchDataset
-    actual_ds = PatchDataset(dataset.input_list, dataset.label_list)
+    actual_ds = PatchDataset(dataset.inputs, dataset.labels)
     sample_patch = actual_ds[100]
     assert isinstance(sample_patch["image"], np.ndarray)
     assert sample_patch["label"] is not None
@@ -163,13 +159,6 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
     size = (224, 224, 3)
 
     dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
-
-    # test setter and getter
-    assert dataset.preproc(1) == 1
-    dataset.preproc = lambda x: x - 1
-    assert dataset.preproc(1) == 0
-    dataset.preproc = None
-    assert dataset.preproc(2) == 2
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -198,7 +187,7 @@ def test_PatchDatasetlist_imgs():
         )
 
     # test for changing to another preproc
-    dataset.preproc = lambda x: x - 10
+    dataset.preproc_func = lambda x: x - 10
     item = dataset[0]
     assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
@@ -211,16 +200,16 @@ def test_PatchDatasetlist_imgs():
     np.save(
         os.path.join(save_dir_path, "sample2.npy"), np.random.randint(0, 255, (4, 4, 3))
     )
-    img_list = [
+    imgs = [
         os.path.join(save_dir_path, "sample2.npy"),
     ]
-    _ = PatchDataset(img_list)
-    assert img_list[0] is not None
+    _ = PatchDataset(imgs)
+    assert imgs[0] is not None
     # test for path object
-    img_list = [
+    imgs = [
         pathlib.Path(os.path.join(save_dir_path, "sample2.npy")),
     ]
-    _ = PatchDataset(img_list)
+    _ = PatchDataset(imgs)
     shutil.rmtree(save_dir_path)
 
 
@@ -229,14 +218,14 @@ def test_PatchDatasetarray_imgs():
     size = (5, 5, 3)
     img = np.random.randint(0, 255, size=size)
     list_imgs = [img, img, img]
-    label_list = [1, 2, 3]
+    labels = [1, 2, 3]
     array_imgs = np.array(list_imgs)
 
     # test different setter for label
-    dataset = PatchDataset(array_imgs, label_list=label_list)
+    dataset = PatchDataset(array_imgs, labels=labels)
     an_item = dataset[2]
     assert an_item["label"] == 3
-    dataset = PatchDataset(array_imgs, label_list=None)
+    dataset = PatchDataset(array_imgs, labels=None)
     an_item = dataset[2]
     assert "label" not in an_item
 
@@ -255,57 +244,57 @@ def test_PatchDataset_crash():
     # all below examples below should fail when input to PatchDataset
 
     # not supported input type
-    img_list = {"a": np.random.randint(0, 255, (4, 4, 4))}
+    imgs = {"a": np.random.randint(0, 255, (4, 4, 4))}
     with pytest.raises(
         ValueError, match=r".*Input must be either a list/array of images.*"
     ):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # ndarray of mixed dtype
-    img_list = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
+    imgs = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # ndarrays of NHW images
-    img_list = np.random.randint(0, 255, (4, 4, 4))
+    imgs = np.random.randint(0, 255, (4, 4, 4))
     with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # list of ndarrays with different sizes
-    img_list = [
+    imgs = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 5, 3)),
     ]
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # list of ndarrays with HW and HWC mixed up
-    img_list = [
+    imgs = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 4)),
     ]
     with pytest.raises(
         ValueError, match="Each sample must be an array of the form HWC."
     ):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # list of mixed dtype
-    img_list = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
+    imgs = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
         match="Input must be either a list/array of images or a list of "
         "valid image paths.",
     ):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # list of mixed dtype
-    img_list = ["you_should_crash_here", 123, 456]
+    imgs = ["you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
         match="Input must be either a list/array of images or a list of "
         "valid image paths.",
     ):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
 
     # list not exist paths
     with pytest.raises(
@@ -326,7 +315,7 @@ def test_PatchDataset_crash():
         os.path.join(save_dir_path, "sample2.npy"), np.random.randint(0, 255, (4, 4, 3))
     )
 
-    img_list = [
+    imgs = [
         os.path.join(save_dir_path, "sample1.tar"),
         os.path.join(save_dir_path, "sample2.npy"),
     ]
@@ -334,7 +323,7 @@ def test_PatchDataset_crash():
         ValueError,
         match=r"Can not load data of .*",
     ):
-        _ = PatchDataset(img_list)
+        _ = PatchDataset(imgs)
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
     # preproc func for not defined dataset
@@ -361,21 +350,23 @@ def test_WSIPatchDataset(_sample_wsi_dict):
         return reuse_init(mode="wsi", **kwargs)
 
     # test for ABC validate
-    # TODO: migrate to another file ?
     with pytest.raises(
-        ValueError, match=r".*input_list should be a list of patch coordinates.*"
+        ValueError, match=r".*inputs should be a list of patch coordinates.*"
     ):
         # intentionally create to check error
         # skipcq
-        class Proto(ABCPatchDataset):
+        class Proto(PatchDatasetABC):
             def __init__(self):
                 super().__init__()
-                self.input_list = "CRASH"
+                self.inputs = "CRASH"
                 self._check_input_integrity("wsi")
 
+            # skipcq
+            def __getitem__(self, idx):
+                pass
+
         # intentionally create to check error
-        # skipcq
-        _ = Proto()
+        Proto()  # skipcq
 
     # invalid path input
     with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
@@ -513,14 +504,126 @@ def test_WSIPatchDataset(_sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
+def test_PatchDataset_abc():
+    # test missing definition for abstract
+    with pytest.raises(TypeError):
+
+        # intentionally create to check error
+        # skipcq
+        class Proto(PatchDatasetABC):
+            # skipcq
+            def __init__(self):
+                super().__init__()
+
+        # crash due to not define __getitem__
+        Proto()  # skipcq
+
+    # skipcq
+    class Proto(PatchDatasetABC):
+        # skipcq
+        def __init__(self):
+            super().__init__()
+
+        # skipcq
+        def __getitem__(self, idx):
+            pass
+
+    ds = Proto()  # skipcq
+
+    # test setter and getter
+    assert ds.preproc_func(1) == 1
+    ds.preproc_func = lambda x: x - 1
+    assert ds.preproc_func(1) == 0
+    assert ds.preproc(1) == 1, "Must be unchanged!"
+    ds.preproc_func = None
+    assert ds.preproc_func(2) == 2
+
+    # test assign uncallable to preproc_func/postproc_func
+    with pytest.raises(ValueError, match=r".*callable*"):
+        ds.preproc_func = 1
+
+
+def test_model_abc():
+    """Test API in model ABC."""
+    # test missing definition for abstract
+    with pytest.raises(TypeError):
+
+        # intentionally create to check error
+        # skipcq
+        class Proto(ModelABC):
+            # skipcq
+            def __init__(self):
+                super().__init__()
+
+        # crash due to not define forward and infer_batch
+        Proto()  # skipcq
+
+    with pytest.raises(TypeError):
+
+        # intentionally create to check error
+        # skipcq
+        class Proto(ModelABC):
+            # skipcq
+            def __init__(self):
+                super().__init__()
+
+            @staticmethod
+            # skipcq
+            def infer_batch():
+                pass
+
+        # crash due to not define forward
+        Proto()  # skipcq
+
+    # intentionally create to check error
+    # skipcq
+    class Proto(ModelABC):
+        # skipcq
+        def __init__(self):
+            super().__init__()
+
+        @staticmethod
+        def postproc(image):
+            return image - 2
+
+        # skipcq
+        def forward(self):
+            pass
+
+        @staticmethod
+        # skipcq
+        def infer_batch():
+            pass
+
+    model = Proto()  # skipcq
+    # test assign uncallable to preproc_func/postproc_func
+    with pytest.raises(ValueError, match=r".*callable*"):
+        model.postproc_func = 1
+    with pytest.raises(ValueError, match=r".*callable*"):
+        model.preproc_func = 1
+
+    # test setter/getter/inital of preproc_func/postproc_func
+    assert model.preproc_func(1) == 1
+    model.preproc_func = lambda x: x - 1
+    assert model.preproc_func(1) == 0
+    assert model.preproc(1) == 1, "Must be unchanged!"
+    assert model.postproc(1) == -1, "Must be unchanged!"
+    model.preproc_func = None
+    assert model.preproc_func(2) == 2
+
+    # repeat the setter test for postproc
+    assert model.postproc_func(2) == 0
+    model.postproc_func = lambda x: x - 1
+    assert model.postproc_func(1) == 0
+    assert model.preproc(1) == 1, "Must be unchanged!"
+    assert model.postproc(2) == 0, "Must be unchanged!"
+    # coverage setter check
+    model.postproc_func = None
+    assert model.postproc_func(2) == 0
+
+
 def test_predictor_crash():
     """Test for crash when making predictor."""
-    # test abc
-    with pytest.raises(NotImplementedError):
-        ModelBase()
-    with pytest.raises(NotImplementedError):
-        ModelBase.infer_batch(1, 2, 3)
-
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
         CNNPatchPredictor()
@@ -546,8 +649,10 @@ def test_predictor_crash():
     # remove previously generated data
     if os.path.exists("output"):
         shutil.rmtree("output", ignore_errors=True)
-    with pytest.raises(ValueError, match=r".*mask_list.*!=.*img_list.*"):
-        predictor.predict([1, 2, 3], mask_list=[1, 2], mode="wsi")
+    with pytest.raises(ValueError, match=r".*masks.*!=.*imgs.*"):
+        predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
+    with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
+        predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
     # remove previously generated data
     if os.path.exists("output"):
         shutil.rmtree("output", ignore_errors=True)
@@ -556,19 +661,19 @@ def test_predictor_crash():
 def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     """Helper function to get the model output using API 1."""
     # convert to pathlib Path to prevent reader complaint
-    input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+    inputs = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
-        input_list,
+        inputs,
         on_gpu=ON_GPU,
     )
     assert sorted(list(output.keys())) == ["predictions"]
     assert len(output["predictions"]) == 2
 
     output = predictor.predict(
-        input_list,
-        label_list=[1, "a"],
+        inputs,
+        labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
     )
@@ -577,7 +682,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert output["labels"] == [1, "a"]
 
     output = predictor.predict(
-        input_list,
+        inputs,
         return_probabilities=True,
         on_gpu=ON_GPU,
     )
@@ -585,9 +690,9 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output["predictions"]) == len(output["probabilities"])
 
     output = predictor.predict(
-        input_list,
+        inputs,
         return_probabilities=True,
-        label_list=[1, "a"],
+        labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
     )
@@ -599,7 +704,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
 
     # test saving output, should have no effect
     output = predictor.predict(
-        input_list,
+        inputs,
         on_gpu=ON_GPU,
         save_dir="special_dir_not_exist",
     )
@@ -609,6 +714,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     pretrained_weight_url = (
         "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
+    assert not os.path.isdir("special_dir_not_exist")
 
     save_dir_path = _get_temp_folder_path()
     # remove prev generated data
@@ -629,28 +735,13 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     )
 
     # --- test different using user model
-    # test setter/getter/inital of postproc/preproc
     model = CNNPatchModel(backbone="resnet18", num_classes=9)
-    assert model.preproc(1) == 1
-    model.preproc = lambda x: x - 1
-    assert model.preproc(1) == 0
-    model.preproc = None
-    assert model.preproc(2) == 2
-
-    # repeat the setter test for postproc
-    assert model.postproc(np.array([1, 2, 3])) == 2  # argmax by default
-    model.postproc = lambda x: x - 1
-    assert model.postproc(1) == 0
-    # coverage setter check
-    model.postproc = None
-    assert model.postproc(np.array([1, 2, 3])) == 2
-
     # test prediction
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
-        input_list,
+        inputs,
         return_probabilities=True,
-        label_list=[1, "a"],
+        labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
     )
@@ -685,14 +776,14 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
         [_mini_wsi_svs],
-        mask_list=[_mini_wsi_msk],
+        masks=[_mini_wsi_msk],
         mode="wsi",
         **kwargs,
     )
 
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
-        mask_list=[_mini_wsi_msk],
+        masks=[_mini_wsi_msk],
         mode="tile",
         **kwargs,
     )
@@ -727,7 +818,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     # test reading of multiple whole-slide images
     output = predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
-        mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+        masks=[_mini_wsi_msk, _mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
@@ -743,7 +834,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     # test reading of multiple whole-slide images
     output = predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
-        mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+        masks=[_mini_wsi_msk, _mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
@@ -751,7 +842,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
-            mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+            masks=[_mini_wsi_msk, _mini_wsi_msk],
             mode="wsi",
             **_kwargs,
         )
@@ -767,7 +858,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     _kwargs["return_probabilities"] = False
     output = predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
-        mask_list=[_mini_wsi_msk, _mini_wsi_msk],
+        masks=[_mini_wsi_msk, _mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
@@ -803,7 +894,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
         [_mini_wsi_svs],
-        mask_list=[_mini_wsi_msk],
+        masks=[_mini_wsi_msk],
         mode="wsi",
         **kwargs,
     )
@@ -814,7 +905,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     kwargs["merge_predictions"] = False
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
-        mask_list=[_mini_wsi_msk],
+        masks=[_mini_wsi_msk],
         mode="tile",
         **kwargs,
     )
@@ -844,7 +935,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
 
 
 def _test_predictor_output(
-    input_list,
+    inputs,
     pretrained_model,
     probabilities_check=None,
     predictions_check=None,
@@ -856,7 +947,7 @@ def _test_predictor_output(
     )
     # don't run test on GPU
     output = predictor.predict(
-        input_list,
+        inputs,
         return_probabilities=True,
         return_labels=False,
         on_gpu=ON_GPU,
@@ -879,7 +970,7 @@ def _test_predictor_output(
 
 def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     """Test the output of patch prediction models."""
-    input_list = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+    inputs = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     pretrained_info = {
         "alexnet-kather100k": [1.0, 0.9999735355377197],
         "resnet18-Kather100k": [1.0, 0.9999911785125732],
@@ -901,7 +992,7 @@ def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     }
     for pretrained_model, expected_prob in pretrained_info.items():
         _test_predictor_output(
-            input_list,
+            inputs,
             pretrained_model,
             probabilities_check=expected_prob,
             predictions_check=[6, 3],
