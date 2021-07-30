@@ -20,22 +20,11 @@
 
 """Contains dataset functionality for use with models in tiatoolbox."""
 
-<<<<<<< HEAD
-from tiatoolbox.models.dataset.abc import ABCPatchDataset
-=======
 from tiatoolbox.models.dataset.abc import PatchDatasetABC
->>>>>>> 26d0a2006ca0fee58bb4b5901592a52aa2e2ae18
 from tiatoolbox.models.dataset.classification import (
     PatchDataset,
     WSIPatchDataset,
     predefined_preproc_func,
 )
 
-<<<<<<< HEAD
-from tiatoolbox.models.dataset.info import (
-    ABCDatasetInfo,
-    KatherPatchDataset
-)
-=======
 from tiatoolbox.models.dataset.info import DatasetInfoABC, KatherPatchDataset
->>>>>>> 26d0a2006ca0fee58bb4b5901592a52aa2e2ae18
