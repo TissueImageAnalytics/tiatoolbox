@@ -176,7 +176,7 @@ def test_PatchDatasetlist_imgs():
     list_imgs = [img, img, img]
     dataset = PatchDataset(list_imgs)
 
-    dataset.preproc = lambda x: x
+    dataset.preproc_func = lambda x: x
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
