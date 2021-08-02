@@ -81,7 +81,7 @@ class _CNNTo1(ModelABC):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        device = "cuda" if on_gpu else "cpu"
+        device = "cuda" if ON_GPU else "cpu"
         ####
         model.eval()  # infer mode
 
