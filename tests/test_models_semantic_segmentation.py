@@ -71,8 +71,10 @@ class _CNNTo1(ModelABC):
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
-        """Run inference on an input batch. Contains logic for
-        forward operation as well as i/o aggregation.
+        """Run inference on an input batch.
+        
+        Contains logic for forward operation as well as i/o
+        aggregation for a single data batch.
 
         Args:
             model (nn.Module): PyTorch defined model.
@@ -105,8 +107,8 @@ class _CNNTo1(ModelABC):
 # ----------------------------------------------------
 
 
-def test_segmentor_iostate():
-    """Test for IOState"""
+def test_segmentor_ioconfig():
+    """Test for IOConfig"""
     ioconfig = IOConfigSegmentor(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
@@ -171,7 +173,7 @@ def test_functional_segmentor(_sample_wsi_dict):
             on_gpu=ON_GPU,
             patch_input_shape=[2048, 2048],
             resolution=1.0,
-            units="mpp",
+            units="baseline",
             crash_on_exception=True,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
@@ -185,7 +187,7 @@ def test_functional_segmentor(_sample_wsi_dict):
         on_gpu=ON_GPU,
         patch_input_shape=[2048, 2048],
         resolution=1.0,
-        units="mpp",
+        units="baseline",
         crash_on_exception=False,
     )
     _rm_dir("output")  # default output dir test

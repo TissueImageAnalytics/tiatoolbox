@@ -682,8 +682,8 @@ class SemanticSegmentor:
         patch_input_shape=None,
         patch_output_shape=None,
         stride_shape=None,  # at requested read resolution, not wrt to lv0
-        resolution=0.25,
-        units="mpp",
+        resolution=1.0,
+        units="baseline",
         save_dir=None,
         crash_on_exception=False,
     ):
