@@ -158,7 +158,7 @@ def test_functional_segmentor(_sample_wsi_dict):
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
     model = _CNNTo1()
-    runner = SemanticSegmentor(batch_size=32, model=model)
+    runner = SemanticSegmentor(batch_size=4, model=model)
 
     # * test basic crash
     _rm_dir("output")  # default output dir test
