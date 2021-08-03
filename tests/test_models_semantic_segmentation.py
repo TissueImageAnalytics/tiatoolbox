@@ -254,7 +254,7 @@ def test_functional_segmentor(_sample_wsi_dict):
     _rm_dir(save_dir)
 
     # check normal run with auto get mask
-    runner = SemanticSegmentor(batch_size=32, model=model, auto_generate_mask=True)
+    runner = SemanticSegmentor(batch_size=1, model=model, auto_generate_mask=True)
     output_list = runner.predict(
         [_mini_wsi_svs],
         masks=[_mini_wsi_msk],
