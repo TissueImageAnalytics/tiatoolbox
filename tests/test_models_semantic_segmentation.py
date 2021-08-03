@@ -173,7 +173,7 @@ def test_functional_segmentor(_sample_wsi_dict):
             on_gpu=ON_GPU,
             patch_input_shape=[2048, 2048],
             resolution=1.0,
-            units="baseline",
+            units="mpp",
             crash_on_exception=True,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
