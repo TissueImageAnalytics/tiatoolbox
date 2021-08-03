@@ -293,7 +293,8 @@ class PatchExtractor(ABC):
 
             stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
                 The stride that is used to calcualte the patch location during the patch
-                extraction.
+                extraction. If `patch_output_shape` is provided, next stride location
+                will base on the output rather than the input.
 
             input_within_bound (bool): Whether to include the patches where their
                 `input` location exceed the margins of mother image. If `True`, the
@@ -318,7 +319,7 @@ class PatchExtractor(ABC):
         if patch_output_shape is None:
             output_within_bound = False
             patch_output_shape = patch_input_shape
-        patch_output_shape = np.array(patch_input_shape)
+        patch_output_shape = np.array(patch_output_shape)
         stride_shape = np.array(stride_shape)
 
         def validate_shape(shape):
