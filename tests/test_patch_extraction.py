@@ -307,8 +307,11 @@ def test_get_coordinates():
         ]
     )
     output = PatchExtractor.get_coordinates(
-                image_shape=[9, 6], patch_input_shape=[4, 4],
-                stride_shape=[4, 4], input_within_bound=True)
+        image_shape=[9, 6],
+        patch_input_shape=[4, 4],
+        stride_shape=[4, 4],
+        input_within_bound=True,
+    )
     assert np.sum(expected_output - output) == 0
 
     expected_output = np.array(
@@ -322,57 +325,120 @@ def test_get_coordinates():
         ]
     )
     output = PatchExtractor.get_coordinates(
-                image_shape=[9, 6], patch_input_shape=[4, 4],
-                stride_shape=[4, 4], input_within_bound=False)
+        image_shape=[9, 6],
+        patch_input_shape=[4, 4],
+        stride_shape=[4, 4],
+        input_within_bound=False,
+    )
     assert np.sum(expected_output - output) == 0
     # test when patch shape is larger than image
     output = PatchExtractor.get_coordinates(
-                image_shape=[9, 6], patch_input_shape=[9, 9],
-                stride_shape=[9, 9], input_within_bound=False)
-    assert len(output) == 1
+        image_shape=[9, 6],
+        patch_input_shape=[9, 9],
+        stride_shape=[9, 9],
+        input_within_bound=False,
+    )
+    # test when output patch shape is out of bound
+    # but input is in bound
+    input_bounds, output_bounds = PatchExtractor.get_coordinates(
+        image_shape=[9, 6],
+        patch_input_shape=[5, 5],
+        patch_output_shape=[4, 4],
+        stride_shape=[4, 4],
+        output_within_bound=True,
+        input_within_bound=False,
+    )
+    assert len(input_bounds) == 2 and len(output_bounds) == 2
     # test when patch shape is larger than image
     output = PatchExtractor.get_coordinates(
-                image_shape=[9, 6], patch_input_shape=[9, 9],
-                stride_shape=[9, 8], input_within_bound=True)
+        image_shape=[9, 6],
+        patch_input_shape=[9, 9],
+        stride_shape=[9, 8],
+        input_within_bound=True,
+    )
     assert len(output) == 0
 
     # test error input form
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9j, 6], patch_input_shape=[4, 4],
-            stride_shape=[4, 4], input_within_bound=False)
+            image_shape=[9j, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6], patch_input_shape=[4, 4],
-            stride_shape=[4, 4j], input_within_bound=False)
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4j],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6], patch_input_shape=[4j, 4],
-            stride_shape=[4, 4], input_within_bound=False)
+            image_shape=[9, 6],
+            patch_input_shape=[4j, 4],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6], patch_input_shape=[4, -1],
-            stride_shape=[4, 4], input_within_bound=False)
+            image_shape=[9, 6],
+            patch_input_shape=[4, -1],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, -6], patch_input_shape=[4, -1],
-            stride_shape=[4, 4], input_within_bound=False)
+            image_shape=[9, -6],
+            patch_input_shape=[4, -1],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6, 3], patch_input_shape=[4, 4],
-            stride_shape=[4, 4], input_within_bound=False)
+            image_shape=[9, 6, 3],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6], patch_input_shape=[4, 4, 3],
-            stride_shape=[4, 4], input_within_bound=False)
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4, 3],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6], patch_input_shape=[4, 4],
-            stride_shape=[4, 4, 3], input_within_bound=False)
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4, 3],
+            input_within_bound=False,
+        )
     with pytest.raises(ValueError, match=r"stride.*> 1.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6], patch_input_shape=[4, 4],
-            stride_shape=[0, 0], input_within_bound=False)
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[0, 0],
+            input_within_bound=False,
+        )
+    # * invalid shape for output
+    with pytest.raises(ValueError, match=r".*input.*larger.*output.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            stride_shape=[4, 4],
+            patch_input_shape=[2, 2],
+            patch_output_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            stride_shape=[4, 4],
+            patch_input_shape=[4, 4],
+            patch_output_shape=[2, -2],
+            input_within_bound=False,
+        )
 
     # Tests for filter_coordinates method
     bbox_list = np.array(
