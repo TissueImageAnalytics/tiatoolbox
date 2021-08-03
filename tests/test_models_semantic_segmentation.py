@@ -168,6 +168,7 @@ def test_functional_segmentor(_sample_wsi_dict):
         runner.predict(
             [_mini_wsi_jpg],
             mode="tile",
+            on_gpu=ON_GPU,
             patch_input_shape=[2048, 2048],
             resolution=1.0,
             units="mpp",
@@ -181,6 +182,7 @@ def test_functional_segmentor(_sample_wsi_dict):
     runner.predict(
         [_mini_wsi_jpg],
         mode="tile",
+        on_gpu=ON_GPU,
         patch_input_shape=[2048, 2048],
         resolution=1.0,
         units="mpp",
