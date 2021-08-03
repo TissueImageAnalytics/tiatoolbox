@@ -72,7 +72,7 @@ class _CNNTo1(ModelABC):
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch.
-        
+
         Contains logic for forward operation as well as i/o
         aggregation for a single data batch.
 
