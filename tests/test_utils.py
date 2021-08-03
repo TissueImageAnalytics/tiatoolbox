@@ -740,7 +740,6 @@ def test_grab_files_from_dir(_sample_visual_fields):
     out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
     assert len(out) == 0
 
-@pytest.mark.skip(reason="no way of currently testing this")
 
 def test_download_unzip_data():
     """Test download and unzip data from utils.misc."""
@@ -764,7 +763,6 @@ def test_download_unzip_data():
 
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
-@pytest.mark.skip(reason="no way of currently testing this")
 
 def test_download_data():
     """Test download data from utils.misc."""
@@ -978,7 +976,6 @@ def test_select_device():
     device = misc.select_device(on_gpu=False)
     assert device == "cpu"
 
-@pytest.mark.skip(reason="no way of currently testing this")
 
 def test_model_to():
     """Test for placing model on device."""
