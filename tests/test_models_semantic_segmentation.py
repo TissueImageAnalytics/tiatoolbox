@@ -1,18 +1,23 @@
+import copy
 import os
 import pathlib
 import shutil
-import copy
 from time import time
 
 import numpy as np
 import pytest
 import torch
+import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.segmentation import IOConfigSegmentor, SemanticSegmentor
+from tiatoolbox.models.segmentation import (
+    IOConfigSegmentor,
+    SemanticSegmentor,
+    WSIStreamDataset,
+)
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
@@ -156,7 +161,7 @@ def test_segmentor_ioconfig():
         stride_shape=[512, 512],
     )
     assert ioconfig.highest_input_resolution == {"units": "mpp", "resolution": 0.25}
-    ioconfig.convert_to_baseline()
+    ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 1.0
     assert ioconfig.input_resolutions[1]["resolution"] == 0.5
     assert ioconfig.input_resolutions[2]["resolution"] == 1 / 3
@@ -175,9 +180,66 @@ def test_segmentor_ioconfig():
         stride_shape=[512, 512],
     )
     assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 0.50}
-    ioconfig.convert_to_baseline()
+    ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 0.5
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
+
+
+def test_functional_WSIStreamDataset(_sample_wsi_dict):
+    """Functional test for WSIStreamDataset."""
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+
+    ioconfig = IOConfigSegmentor(
+        input_resolutions=[
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.50},
+            {"units": "mpp", "resolution": 0.75},
+        ],
+        output_resolutions=[
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.50},
+        ],
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
+    )
+    mp_manager = torch_mp.Manager()
+    mp_shared_space = mp_manager.Namespace()
+
+    sds = WSIStreamDataset(ioconfig, [_mini_wsi_svs], mp_shared_space)
+    # loader = torch_data.DataLoader(
+    #     sds,
+    #     drop_last=False,
+    #     batch_size=1,
+    #     num_workers=0,
+    # )
+
+    # faking data injecttion
+    mp_shared_space.wsi_idx = torch.tensor(0)  # a scalar
+    mp_shared_space.patch_inputs = torch.from_numpy(
+        np.array(
+            [
+                # skipcq
+                [0, 0, 256, 256],
+                [256, 256, 512, 512],
+            ]
+        )
+    )
+    mp_shared_space.patch_outputs = torch.from_numpy(
+        np.array(
+            [
+                # skipcq
+                [0, 0, 256, 256],
+                [256, 256, 512, 512],
+            ]
+        )
+    )
+    # test read
+    for _, sample in enumerate(sds):
+        patch_data, _ = sample
+        (patch_resolution1, patch_resolution2, patch_resolution3) = patch_data
+        assert np.round(patch_resolution1.shape[0] / patch_resolution2.shape[0]) == 2
+        assert np.round(patch_resolution1.shape[0] / patch_resolution3.shape[0]) == 3
 
 
 def test_functional_segmentor(_sample_wsi_dict):

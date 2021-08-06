@@ -103,28 +103,48 @@ class IOConfigSegmentor(IOConfigABC):
         ]:
             raise ValueError("Invalid resolution units.")
 
-    def convert_to_baseline(self):
-        """Convert IO resolution to 'baseline'.
+    def scale_to_highest(self, resolutions, unit):
+        """Convert resolutions to scaling factor.
 
-        This will permanently alter the object values.
-        Actually return scale factor wrt highest resolution initially defined.
+        This will convert resolutions to scaling factor with repsect to
+        highest resolutions found in input list of resolutions.
+
+        Args:
+            resolutions (list): a list of resolutions where each defined
+                as `{'resolution': value, 'unit': value}`
+            unit (string): unit that the the resolutions are at
+        Return:
+            (np.ndarray): an 1D array of scaling factor having the same
+                length as `resolutions`
         """
+        old_val = [v["resolution"] for v in resolutions]
+        if unit == "baseline":
+            new_val = old_val
+        elif unit == "mpp":
+            new_val = np.min(old_val) / np.array(old_val)
+        else:
+            # when being power
+            new_val = np.array(old_val) / np.max(old_val)
+        return new_val
 
-        def _to_baseline(resolutions):
-            """Helper to convert to scale factor."""
-            old_val = [v["resolution"] for v in resolutions]
-            if self.resolution_unit == "baseline":
-                new_val = old_val
-            elif self.resolution_unit == "mpp":
-                new_val = np.min(old_val) / np.array(old_val)
-            else:
-                # when being power
-                new_val = np.array(old_val) / np.max(old_val)
-            resolutions = [{"units": "baseline", "resolution": v} for v in new_val]
-            return resolutions
+    def to_baseline(self):
+        """Convert IO to baseline form.
 
-        self.input_resolutions = _to_baseline(self.input_resolutions)
-        self.output_resolutions = _to_baseline(self.output_resolutions)
+        This will convert resolutions to baseline form with highest
+        possible resolution as reference. This will permanently alter
+        the object.
+
+        """
+        resolutions = self.input_resolutions + self.output_resolutions
+        scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
+        self.input_resolutions = [
+            {"units": "baseline", "resolution": v}
+            for v in scale_factors[: len(self.input_resolutions)]
+        ]
+        self.output_resolutions = [
+            {"units": "baseline", "resolution": v}
+            for v in scale_factors[len(self.input_resolutions) :]
+        ]
 
 
 class WSIStreamDataset(torch_data.Dataset):
@@ -157,9 +177,9 @@ class WSIStreamDataset(torch_data.Dataset):
 
     def __init__(
         self,
-        ioconfig: IOConfigSegmentor = None,
-        wsi_paths: List[Union[str, pathlib.Path]] = None,
-        mp_shared_space=None,  # context variable, how to type hint this?
+        ioconfig: IOConfigSegmentor,
+        wsi_paths: List[Union[str, pathlib.Path]],
+        mp_shared_space,  # context variable, how to type hint this?
         preproc: Callable[[np.ndarray], np.ndarray] = None,
         mode="wsi",
     ):
@@ -167,16 +187,18 @@ class WSIStreamDataset(torch_data.Dataset):
         self.mode = mode
         self.preproc = preproc
         self.ioconfig = copy.deepcopy(ioconfig)
+
         if mode == "tile":
             warnings.warn(
-                (
-                    "WSIPatchDataset only reads image tile at "
-                    '`units="baseline"`. Resolutios will be converted '
-                    "to baseline value."
+                " ".join(
+                    [
+                        "WSIPatchDataset only reads image tile at",
+                        '`units="baseline"`. Resolutions will be converted',
+                        "to baseline value.",
+                    ]
                 )
             )
-            # migrate to ioconfig?
-            self.ioconfig.convert_to_baseline()
+            self.ioconfig.to_baseline()
 
         self.mp_shared_space = mp_shared_space
         self.wsi_paths = wsi_paths
@@ -225,21 +247,28 @@ class WSIStreamDataset(torch_data.Dataset):
         bound = bound.numpy()  # expected to be torch.Tensor
 
         # be the same as bounds br-tl, unless bounds are of float
-        for resolution in self.ioconfig.input_resolutions:
-            # ! conversion for other resolution !
+        patch_data_ = []
+        scale_factors = self.ioconfig.scale_to_highest(
+            self.ioconfig.input_resolutions, self.ioconfig.resolution_unit
+        )
+        for idy, resolution in enumerate(self.ioconfig.input_resolutions):
+            resolution_bound = np.round(bound * scale_factors[idy])
             patch_data = self.reader.read_bounds(
-                bound.astype(np.int32),
+                resolution_bound.astype(np.int32),
                 coord_space="resolution",
                 pad_constant_values=0,  # expose this ?
                 **resolution,
             )
 
-        if self.preproc is not None:
-            patch_data = patch_data.copy()
-            patch_data = self.preproc(patch_data)
+            if self.preproc is not None:
+                patch_data = patch_data.copy()
+                patch_data = self.preproc(patch_data)
+            patch_data_.append(patch_data)
+        if len(patch_data_) == 1:
+            patch_data_ = patch_data_[0]
 
         bound = self.mp_shared_space.patch_outputs[idx]
-        return patch_data, bound
+        return patch_data_, bound
 
 
 class SemanticSegmentor:
