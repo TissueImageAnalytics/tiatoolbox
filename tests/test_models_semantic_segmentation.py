@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import copy
 from time import time
 
 import numpy as np
@@ -109,6 +110,37 @@ class _CNNTo1(ModelABC):
 
 def test_segmentor_ioconfig():
     """Test for IOConfig"""
+    default_config = dict(
+        input_resolutions=[
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.50},
+            {"units": "mpp", "resolution": 0.75},
+        ],
+        output_resolutions=[
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.50},
+        ],
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
+    )
+    # error when uniform resolution units are not uniform
+    with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
+        xconfig = copy.deepcopy(default_config)
+        xconfig["input_resolutions"] = [
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "power", "resolution": 0.50},
+        ]
+        ioconfig = IOConfigSegmentor(**xconfig)
+    # error when uniform resolution units are not supported
+    with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
+        xconfig = copy.deepcopy(default_config)
+        xconfig["input_resolutions"] = [
+            {"units": "alpha", "resolution": 0.25},
+            {"units": "alpha", "resolution": 0.50},
+        ]
+        ioconfig = IOConfigSegmentor(**xconfig)
+
     ioconfig = IOConfigSegmentor(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},

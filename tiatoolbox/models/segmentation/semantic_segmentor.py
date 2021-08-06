@@ -100,7 +100,6 @@ class IOConfigSegmentor(IOConfigABC):
             "power",
             "baseline",
             "mpp",
-            "level",
         ]:
             raise ValueError("Invalid resolution units.")
 
@@ -118,7 +117,8 @@ class IOConfigSegmentor(IOConfigABC):
                 new_val = old_val
             elif self.resolution_unit == "mpp":
                 new_val = np.min(old_val) / np.array(old_val)
-            elif self.resolution_unit == "power":
+            else:
+                # when being power
                 new_val = np.array(old_val) / np.max(old_val)
             resolutions = [{"units": "baseline", "resolution": v} for v in new_val]
             return resolutions
