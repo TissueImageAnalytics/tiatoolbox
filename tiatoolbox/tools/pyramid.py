@@ -46,16 +46,11 @@ class TilePyramidGenerator:
         tile_size: int = 256,
         downsample: int = 2,
         overlap: int = 0,
-        cache_size=1024,
     ):
         self.wsi = wsi
         self.tile_size = tile_size
         self.overlap = overlap
-        self.cache_size = cache_size
         self.downsample = downsample
-
-        # Set up LRU cache for the tiles
-        self.get_tile = lru_cache(maxsize=self.cache_size)(self.get_tile)
 
     @property
     def output_tile_size(self) -> int:
