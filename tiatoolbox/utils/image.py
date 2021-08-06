@@ -691,13 +691,14 @@ def sub_pixel_read(
     if read_func is None:
         region = image[bounds2slices(valid_int_bounds, stride=stride)]
     else:
-        region = read_func(image, valid_int_bounds, stride)
+        region = read_func(image, valid_int_bounds, stride, **read_kwargs)
         _, size = bounds2locsize(valid_int_bounds)
         region_size = region.shape[:2][::-1]
         if not np.array_equal(region_size, size):
             raise ValueError()
         if region is None or 0 in region.shape:
             raise ValueError()
+
     # 1.5 Pad the region
     if pad_mode is not None:
         pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
@@ -712,6 +713,7 @@ def sub_pixel_read(
             pad_width.astype(int),
             mode=pad_mode or "constant",
             constant_values=pad_constant_values,
+            **pad_kwargs,
         )
     else:
         region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
