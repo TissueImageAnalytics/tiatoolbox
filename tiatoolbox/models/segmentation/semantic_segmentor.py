@@ -232,7 +232,15 @@ class WSIStreamDataset(torch_data.Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        """Proto to handle reading exception."""
+        """Prototype to handle reading exception.
+
+        This will exclude any sample with `None` out from the
+        batch. As such, wrapping `__getitem__` with try-catch
+        and return `None` upon exceptions will prevent crashing the
+        entire programs. But as side effect, batch may not have size
+        as defined.
+
+        """
         batch = [v for v in batch if v is not None]
         return torch.utils.data.dataloader.default_collate(batch)
 

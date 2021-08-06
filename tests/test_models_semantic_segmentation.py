@@ -207,12 +207,9 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     mp_shared_space = mp_manager.Namespace()
 
     sds = WSIStreamDataset(ioconfig, [_mini_wsi_svs], mp_shared_space)
-    # loader = torch_data.DataLoader(
-    #     sds,
-    #     drop_last=False,
-    #     batch_size=1,
-    #     num_workers=0,
-    # )
+    # test for collate
+    out = sds.collate_fn([None, 1, 2, 3])
+    assert out == [1, 2, 3]
 
     # faking data injecttion
     mp_shared_space.wsi_idx = torch.tensor(0)  # a scalar
