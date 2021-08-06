@@ -633,6 +633,10 @@ def sub_pixel_read(
     pad_kwargs=None,
 ):
     # Handle inputs
+    if pad_kwargs is None:
+        pad_kwargs = {}
+    if read_kwargs is None:
+        read_kwargs = {}
 
     # Normalise padding
     padding = normalise_padding_size(padding)
