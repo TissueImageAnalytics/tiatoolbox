@@ -35,8 +35,6 @@ class TilePyramidGenerator:
             Default is 2.
         tile_overlap (int): The number of extra pixel to add to each
             edge of the tile. Default is 0.
-        cache_size (int): The maximum number of recent tiles to
-            cache. Default is 1024.
 
     """
 
@@ -242,9 +240,6 @@ class DeepZoomGenerator(TilePyramidGenerator):
         tile_overlap (int):
             The number of extra pixel to add to each edge of the tile.
             Default is 0.
-        cache_size (int):
-            The maximum number of recent tiles to
-            cache. Default is 1024.
 
     """
 
@@ -254,9 +249,8 @@ class DeepZoomGenerator(TilePyramidGenerator):
         tile_size: int = 254,
         downsample: int = 2,
         overlap: int = 1,
-        cache_size=1024,
     ):
-        super().__init__(wsi, tile_size, downsample, overlap, cache_size)
+        super().__init__(wsi, tile_size, downsample, overlap)
 
     def get_dzi(self) -> ElementTree:
         """Generate and return DeepZoom XML metadata (.dzi).
@@ -337,9 +331,6 @@ class ZoomifyGenerator(TilePyramidGenerator):
         tile_overlap (int):
             The number of extra pixel to add to each
             edge of the tile. Default is 0.
-        cache_size (int):
-            The maximum number of recent tiles to
-            cache. Default is 1024.
 
     """
 
