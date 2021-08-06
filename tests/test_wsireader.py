@@ -1008,7 +1008,7 @@ def test_VirtualWSIReader_read_bounds_virtual_baseline(_source_image):
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
-    region = wsi.read_bounds(bounds, pad_mode="constant", interpolation="cubic")
+    region = wsi.read_bounds(bounds, pad_mode="reflect", interpolation="cubic")
     target_size = tuple(np.round(np.array([25, 50]) * 2).astype(int))
     target = cv2.resize(
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
@@ -1030,7 +1030,7 @@ def test_VirtualWSIReader_read_rect_virtual_baseline():
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(slide_dimensions=double_size)
     wsi = wsireader.VirtualWSIReader(image_path, info=meta)
-    region = wsi.read_rect(location=(0, 0), size=(50, 100))
+    region = wsi.read_rect(location=(0, 0), size=(50, 100), pad_mode="reflect")
     target = cv2.resize(
         img_array[:50, :25, :], (50, 100), interpolation=cv2.INTER_CUBIC
     )
@@ -1056,12 +1056,12 @@ def test_VirtualWSIReader_read_rect_virtual_levels():
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
     target = img_array[:100, :50, :]
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=2, units="level")
     target = cv2.resize(img_array[:200, :100, :], (50, 100))
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
 
 def test_VirtualWSIReader_read_bounds_virtual_levels():
@@ -1086,7 +1086,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels():
     region = wsi.read_bounds(bounds, resolution=1, units="level")
     target = img_array[:50, :25, :]
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
     region = wsi.read_bounds(bounds, resolution=2, units="level")
     target_size = tuple(np.round(np.array([25, 50]) / 2).astype(int))
@@ -1094,7 +1094,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels():
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
     )
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
 
 def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
@@ -1118,13 +1118,13 @@ def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
     wsi = wsireader.VirtualWSIReader(image_path, info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=0.5, units="mpp")
     target = img_array[:100, :50, :]
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="mpp")
     target = cv2.resize(
         img_array[:200, :100, :], (50, 100), interpolation=cv2.INTER_CUBIC
     )
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
 
 def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
@@ -1151,7 +1151,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
     region = wsi.read_bounds(bounds, resolution=0.5, units="mpp")
     target = img_array[:50, :25, :]
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
     region = wsi.read_bounds(bounds, resolution=1, units="mpp")
     target_size = tuple(np.round(np.array([25, 50]) / 2).astype(int))
@@ -1159,7 +1159,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
     )
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
 
 def test_tissue_mask_otsu(_sample_svs):
@@ -1227,7 +1227,7 @@ def test_tissue_mask_read_bounds_none_interpolation(_sample_svs):
     mask = wsi.tissue_mask("otsu")
     mask_region = mask.read_bounds((0, 0, 512, 512), interpolation="none")
     assert mask_region.shape[0] == 32
-    assert mask_region.shape[1] == 33
+    assert mask_region.shape[1] == 32
 
 
 def test_tissue_mask_read_rect_none_interpolation(_sample_svs):
@@ -1236,7 +1236,7 @@ def test_tissue_mask_read_rect_none_interpolation(_sample_svs):
     mask = wsi.tissue_mask("otsu")
     mask_region = mask.read_rect((0, 0), (512, 512), interpolation="none")
     assert mask_region.shape[0] == 32
-    assert mask_region.shape[1] == 33
+    assert mask_region.shape[1] == 32
 
 
 def test_invalid_masker_method(_sample_svs):

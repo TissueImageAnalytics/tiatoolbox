@@ -528,7 +528,6 @@ def old_sub_pixel_read(
         inter_padding = 0
     else:
         inter_padding = 2
-    # output_inter_padding = scale_factor * inter_padding
 
     padded_output_size = np.round(
         output_size + output_padding.reshape(2, 2).sum(0)
@@ -662,33 +661,51 @@ def sub_pixel_read(
     overlap_bounds = find_overlap(*bounds2locsize(bounds), image_size=image_size)
     if pad_mode is None:
         read_bounds = overlap_bounds
-    pad_width = np.zeros((2, 2), int) + padding.reshape(2, 2).T
+    pad_width = np.zeros((2, 2), int)
+
+    baseline_padding = padding
     if not pad_at_baseline:
-        pad_width = pad_width * scaling
-    read_bounds = pad_bounds(read_bounds, interpolation_padding)
-    pad_width = pad_width + find_padding(*bounds2locsize(read_bounds), image_size)
-    read_bounds = find_overlap(*bounds2locsize(read_bounds), image_size)
+        baseline_padding = padding * np.tile(scaling, 2)
+
+    # Check the padded bounds do not have zero size
+    _, padded_bounds_size = bounds2locsize(pad_bounds(bounds, baseline_padding))
+    if 0 in padded_bounds_size:
+        raise ValueError()
+
+    read_bounds = pad_bounds(read_bounds, interpolation_padding + baseline_padding)
     # 0 Expand to integers and find residuals
     start, end = np.split(np.array(read_bounds), 2)
     int_read_bounds = np.concatenate(
         [
-            np.maximum(np.floor(start), 0),
-            np.minimum(np.ceil(end), image_size),
+            np.floor(start),
+            np.ceil(end),
         ]
     )
     residuals = np.abs(int_read_bounds - read_bounds)
     read_bounds = int_read_bounds
+    valid_int_bounds = find_overlap(
+        *bounds2locsize(int_read_bounds), image_size
+    ).astype(int)
     # 1 Read the region
-    region = image[bounds2slices(read_bounds, stride=stride)]
+
+    if read_func is None:
+        region = image[bounds2slices(valid_int_bounds, stride=stride)]
+    else:
+        region = read_func(image, valid_int_bounds, stride)
+        _, size = bounds2locsize(valid_int_bounds)
+        region_size = region.shape[:2][::-1]
+        if not np.array_equal(region_size, size):
+            raise ValueError()
+        if region is None or 0 in region.shape:
+            raise ValueError()
     # 1.5 Pad the region
     if pad_mode is not None:
-        pad_width = pad_width + find_padding(
-            *bounds2locsize(read_bounds), image_size=image_size
-        )
+        pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
     if len(image.shape) > 2:
         pad_width = np.concatenate([pad_width, [(0, 0)]])
-        # 1.6 Apply stride
-        pad_width = pad_width / stride
+    # 1.6 Apply stride
+    pad_width = pad_width / stride
+    # 1.7 Do the padding
     if pad_mode == "constant":
         region = np.pad(
             region,
@@ -723,11 +740,11 @@ def sub_pixel_read(
     if output_size is not None:
         if pad_at_baseline:
             output_size = np.round(
-                np.add(output_size, 2 * padding.reshape(2, 2).sum(axis=0) * scaling)
+                np.add(output_size, padding.reshape(2, 2).sum(axis=0) * scaling)
             ).astype(int)
         else:
-            output_size = np.add(output_size, 2 * padding.reshape(2, 2).sum(axis=0))
-        if output_size is not None and not np.array_equal(region_size, output_size):
+            output_size = np.add(output_size, padding.reshape(2, 2).sum(axis=0))
+        if not np.array_equal(region_size, output_size):
             # region = cv2.resize(region, tuple(output_size))
             if interpolation in [None, "none"]:
                 interpolation = "nearest"

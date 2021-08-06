@@ -280,8 +280,8 @@ def test_aligned_padded_sub_pixel_read(_source_image):
     h = 5
     padding = 1
     bounds = (x, y, x + w, y + h)
-    ow = 4 + 2 * padding
-    oh = 4 + 2 * padding
+    ow = 4
+    oh = 4
     output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
@@ -294,15 +294,17 @@ def test_non_aligned_padded_sub_pixel_read(_source_image):
 
     x = 0.5
     y = 0.5
-    w = 4.5
-    h = 4.5
-    padding = 1
-    bounds = (x, y, x + w, y + h)
-    ow = 4
-    oh = 4
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
+    w = 4
+    h = 4
+    for padding in [1, 2, 3]:
+        bounds = (x, y, x + w, y + h)
+        ow = 4
+        oh = 4
+        output = utils.image.sub_pixel_read(
+            test_image, bounds, (ow, oh), padding=padding
+        )
 
-    assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
+        assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
 def test_non_baseline_padded_sub_pixel_read(_source_image):
@@ -313,16 +315,18 @@ def test_non_baseline_padded_sub_pixel_read(_source_image):
 
     x = 0.5
     y = 0.5
-    w = 4.5
-    h = 4.5
-    padding = 1
-    bounds = (x, y, x + w, y + h)
-    ow = 8
-    oh = 8
-    output = utils.image.sub_pixel_read(
-        test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
-    )
-    assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(output.shape[:2][::-1])
+    w = 4
+    h = 4
+    for padding in [1, 2, 3]:
+        bounds = (x, y, x + w, y + h)
+        ow = 8
+        oh = 8
+        output = utils.image.sub_pixel_read(
+            test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
+        )
+        assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(
+            output.shape[:2][::-1]
+        )
 
 
 def test_sub_pixel_read_invalid_interpolation():
@@ -356,7 +360,7 @@ def test_sub_pixel_read_pad_at_baseline():
     bounds = (0, 0, 8, 8)
     for padding in range(3):
         region = utils.image.sub_pixel_read(
-            data, bounds, out_size, padding=padding, pad_at_baseline=True
+            data, bounds, output_size=out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
 
@@ -447,8 +451,8 @@ def test_fuzz_padded_sub_pixel_read(_source_image):
     for _ in range(10000):
         x = random.randint(-5, 32 - 5)
         y = random.randint(-5, 32 - 5)
-        w = random.random() * random.randint(1, 32)
-        h = random.random() * random.randint(1, 32)
+        w = 4 + random.random() * random.randint(1, 32)
+        h = 4 + random.random() * random.randint(1, 32)
         padding = random.randint(0, 2)
         bounds = (x, y, x + w, y + h)
         ow = random.randint(4, 128)
@@ -900,6 +904,7 @@ def test_crop_and_pad_edges():
 def test_fuzz_crop_and_pad_edges_output_size():
     """Fuzz test crop and pad util function output size."""
     random.seed(0)
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
 
     for _ in range(1000):
         slide_dimensions = (random.randint(0, 50), random.randint(0, 50))
@@ -907,7 +912,7 @@ def test_fuzz_crop_and_pad_edges_output_size():
         loc = tuple(random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2))
         size = (10, 10)
         bounds = utils.transforms.locsize2bounds(loc, size)
-        region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+
         output = utils.image.crop_and_pad_edges(
             bounds=bounds,
             max_dimensions=slide_dimensions,
@@ -915,7 +920,37 @@ def test_fuzz_crop_and_pad_edges_output_size():
             pad_mode="constant",
         )
 
-        assert output.shape == region.shape
+        assert output.shape == size
+
+
+def test_fuzz_crop_and_pad_edges_output_size_no_padding():
+    """Fuzz test crop and pad util function output size with no padding."""
+    random.seed(0)
+
+    for _ in range(1000):
+        slide_dimensions = np.array([random.randint(5, 50) for _ in range(2)])
+
+        loc = np.array(
+            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)]
+        )
+        size = np.array([10, 10])
+        expected = np.maximum(
+            size + np.minimum(loc, 0) - np.maximum(loc + size - slide_dimensions, 0),
+            0,
+        )
+        # if 0 in expected:
+        #     expected = [0, 0]
+        expected = tuple(expected[::-1])
+        bounds = utils.transforms.locsize2bounds(loc, size)
+        region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+        output = utils.image.crop_and_pad_edges(
+            bounds=bounds,
+            max_dimensions=slide_dimensions,
+            region=region,
+            pad_mode=random.choice(["none", None]),
+        )
+
+        assert output.shape == expected
 
 
 def test_crop_and_pad_edges_negative_max_dims():
