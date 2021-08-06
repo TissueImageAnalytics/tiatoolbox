@@ -351,8 +351,8 @@ def test_functional_segmentor(_sample_wsi_dict):
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
     ioconfig = IOConfigSegmentor(
-        input_resolutions=[{"units": "baseline", "resolution": 2.0}],
-        output_resolutions=[{"units": "baseline", "resolution": 2.0}],
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
