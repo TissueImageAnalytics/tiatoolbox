@@ -643,16 +643,28 @@ class SemanticSegmentor:
                 once processed. This is to save memory when assembling.
 
         """
-        out_ch = predictions[0].shape[-1]
+        canvas_shape = np.array(canvas_shape)
+
+        sample_prediction = predictions[0]
+
+        num_output_ch = 0
+        add_singleton = False
+        canvas_count_shape_ = tuple(canvas_shape)
+        canvas_cum_shape_ = tuple(canvas_shape)
+        if len(sample_prediction.shape) == 3:
+            num_output_ch = sample_prediction.shape[-1]
+            canvas_cum_shape_ += (num_output_ch,)
+            add_singleton = num_output_ch == 1
+
         cum_canvas = np.lib.format.open_memmap(
             save_path,
             mode="w+",
-            shape=tuple(canvas_shape) + (out_ch,),
+            shape=canvas_cum_shape_,
             dtype=np.float32,
         )
 
         # for pixel occurence counting
-        cnt_canvas = np.zeros(canvas_shape, dtype=np.float32)
+        count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
         patch_infos = list(zip(locations, predictions))
         for patch_idx, patch_info in enumerate(patch_infos):
@@ -665,16 +677,17 @@ class SemanticSegmentor:
 
             # need to do conversion
             patch_shape_in_wsi = tuple(br_in_wsi - tl_in_wsi)
+            # conversion to make cv2 happy
+            prediction = prediction.astype(np.float32)
             prediction = cv2.resize(prediction, patch_shape_in_wsi[::-1])
-
-            # insert singleton to align the shape when merging (which is HWC)
-            if len(prediction.shape) == 2:
+            # ! cv2 resize will remove singleton !
+            if add_singleton:
                 prediction = prediction[..., None]
 
             sel = tl_in_wsi < 0
             tl_in_wsi[sel] = 0
 
-            if np.any(tl_in_wsi > canvas_shape):
+            if np.any(tl_in_wsi >= canvas_shape):
                 continue
 
             sel = br_in_wsi > canvas_shape
@@ -700,13 +713,15 @@ class SemanticSegmentor:
             cum_canvas[
                 tl_in_wsi[0] : br_in_wsi[0], tl_in_wsi[1] : br_in_wsi[1]
             ] += patch_pred
-            cnt_canvas[
+            count_canvas[
                 tl_in_wsi[0] : br_in_wsi[0], tl_in_wsi[1] : br_in_wsi[1]
             ] += patch_count
             # remove prediction without altering list ordering or length
             if free_prediction:
                 patch_infos[patch_idx] = None
-        cum_canvas /= cnt_canvas[..., None] + 1.0e-6
+        if num_output_ch > 0:
+            count_canvas = count_canvas[..., None]
+        cum_canvas /= count_canvas + 1.0e-6
         return cum_canvas
 
     def predict(

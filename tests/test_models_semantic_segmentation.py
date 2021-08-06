@@ -209,7 +209,7 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     sds = WSIStreamDataset(ioconfig, [_mini_wsi_svs], mp_shared_space)
     # test for collate
     out = sds.collate_fn([None, 1, 2, 3])
-    assert out == [1, 2, 3]
+    assert np.sum(out.numpy() != np.array([1, 2, 3])) == 0
 
     # faking data injecttion
     mp_shared_space.wsi_idx = torch.tensor(0)  # a scalar
@@ -251,7 +251,58 @@ def test_functional_segmentor(_sample_wsi_dict):
     model = _CNNTo1()
     runner = SemanticSegmentor(batch_size=4, model=model)
 
+    # * test merging method
+    os.mkdir(save_dir)
+    # predictions with HW
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [np.full((2, 2), 1), np.full((2, 2), 2)],
+        [[0, 0, 2, 2], [2, 2, 4, 4]],
+        f"{save_dir}/_temp.py",
+        free_prediction=False,
+    )
+    _output = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 2, 2],
+            [0, 0, 2, 2],
+        ]
+    )
+    assert np.sum(canvas - _output) < 1.0e-8
+    # predictions with HWC
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
+        [[0, 0, 2, 2], [2, 2, 4, 4]],
+        f"{save_dir}/_temp.py",
+        free_prediction=False,
+    )
+    # with out of bound location
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [
+            np.full((2, 2), 1),
+            np.full((2, 2), 2),
+            np.full((2, 2), 3),
+            np.full((2, 2), 4),
+        ],
+        [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
+        f"{save_dir}/_temp.py",
+        free_prediction=False,
+    )
+    assert np.sum(canvas - _output) < 1.0e-8
+    _rm_dir(save_dir)
+
     # * test basic crash
+    with pytest.raises(ValueError, match=r".*`mask_reader`.*"):
+        runner.filter_coordinates(_mini_wsi_msk, np.array(["a", "b", "c"]))
+    with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
+        runner.filter_coordinates(get_wsireader(_mini_wsi_msk), np.array([1.0, 2.0]))
+    runner.get_reader(_mini_wsi_svs, None, "wsi", True)
+    with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
+        runner.get_reader(_mini_wsi_msk, "not_exist", "wsi", True)
+
     _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
         SemanticSegmentor()
@@ -267,9 +318,21 @@ def test_functional_segmentor(_sample_wsi_dict):
             units="mpp",
             crash_on_exception=True,
         )
+    _rm_dir("output")  # default output dir test
+    # should still run because we skip exception
+    runner.predict(
+        [_mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        patch_input_shape=[2048, 2048],
+        resolution=1.0,
+        units="mpp",
+        crash_on_exception=False,
+    )
     with pytest.raises(ValueError, match=r".*already exists.*"):
         runner.predict([], mode="tile")
     _rm_dir("output")  # default output dir test
+
     # * check exception bypass in the log
     # there should be no exception, but how to check the log?
     runner.predict(
@@ -277,6 +340,8 @@ def test_functional_segmentor(_sample_wsi_dict):
         mode="tile",
         on_gpu=ON_GPU,
         patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
