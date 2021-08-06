@@ -103,7 +103,8 @@ class IOConfigSegmentor(IOConfigABC):
         ]:
             raise ValueError("Invalid resolution units.")
 
-    def scale_to_highest(self, resolutions, unit):
+    @staticmethod
+    def scale_to_highest(resolutions, unit):
         """Convert resolutions to scaling factor.
 
         This will convert resolutions to scaling factor with repsect to
