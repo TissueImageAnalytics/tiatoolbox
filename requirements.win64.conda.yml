@@ -25,5 +25,6 @@ dependencies:
   - pytorch
   - tqdm
   - jupyterlab
+  - shapely
   - pip:
     - openslide-python
