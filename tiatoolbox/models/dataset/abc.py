@@ -39,6 +39,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         preprocs is a list of torchvision transforms for preprocessing the image.
         The transforms will be applied in the order that they are given in the list.
         https://pytorch.org/vision/stable/transforms.html.
+
     """
 
     def __init__(
@@ -55,6 +56,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         These check include:
             - Input is of a singular data type, such as a list of paths.
             - If it is list of images, all images are of the same height and width
+
         """
         if mode == "patch":
             self.data_is_npy_alike = False
@@ -124,6 +126,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """Load an image from a provided path.
         Args:
             path (str): Path to an image file.
+
         """
         path = pathlib.Path(path)
         if path.suffix in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
@@ -140,17 +143,21 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     @property
     def preproc_func(self):
         """Return the current pre-processing function of this instance.
+
         The returned function is expected to behave as follows:
         >>> transformed_img = func(img)
+
         """
         return self._preproc
 
     @preproc_func.setter
     def preproc_func(self, func):
         """Set the pre-processing function for this instance.
+
         If `func=None`, the method will default to `self.preproc`. Otherwise,
         `func` is expected to be callable and behave as follows:
         >>> transformed_img = func(img)
+
         """
         if func is None:
             self._preproc = self.preproc

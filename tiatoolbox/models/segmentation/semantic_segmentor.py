@@ -117,6 +117,7 @@ class IOConfigSegmentor(IOConfigABC):
         Return:
             (np.ndarray): an 1D array of scaling factor having the same
                 length as `resolutions`
+
         """
         old_val = [v["resolution"] for v in resolutions]
         if unit == "baseline":
@@ -174,6 +175,7 @@ class WSIStreamDataset(torch_data.Dataset):
 
         mode: either `wsi` or `tile` to indicate which form the input in
             `wsi_paths` is.
+
     """
 
     def __init__(
@@ -330,6 +332,7 @@ class SemanticSegmentor:
 
             auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
                 if is not provided.
+
         """
         super().__init__()
 
@@ -436,6 +439,7 @@ class SemanticSegmentor:
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
+
         """
         if not isinstance(mask_reader, VirtualWSIReader):
             raise ValueError("`mask_reader` should be VirtualWSIReader.")
@@ -505,6 +509,7 @@ class SemanticSegmentor:
             save_path (str): location to save output prediction as well as possible
                 intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
+
         """
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]

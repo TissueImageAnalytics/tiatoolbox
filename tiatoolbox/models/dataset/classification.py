@@ -37,10 +37,12 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 class _TorchPreprocCaller:
     """Wrapper for applying PyTorch transforms.
+
     Args:
         preprocs (list): List of torchvision transforms for preprocessing the image.
             The transforms will be applied in the order that they are
             given in the list. https://pytorch.org/vision/stable/transforms.html.
+
     """
 
     def __init__(self, preprocs):
@@ -55,11 +57,13 @@ class _TorchPreprocCaller:
 
 def predefined_preproc_func(dataset_name):
     """Get the preprocessing information used for the pretrained model.
+
     Args:
         dataset_name (str): Dataset name used to determine what preprocessing was used.
     Returns:
         preproc_func (_TorchPreprocCaller): Preprocessing function for transforming
             the input data.
+
     """
     preproc_dict = {
         "kather100k": [
@@ -79,6 +83,7 @@ def predefined_preproc_func(dataset_name):
 class PatchDataset(abc.PatchDatasetABC):
     """Defines a simple patch dataset, which inherits
     from the torch.utils.data.Dataset class.
+
     Attributes:
         inputs: Either a list of patches, where each patch is a ndarray or a list of
             valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
@@ -88,6 +93,7 @@ class PatchDataset(abc.PatchDatasetABC):
         preproc_func: Preprocessing function used to transform the input data.
             Expect to do:
             >>> transformed_img = func(img)
+
     """
 
     def __init__(self, inputs, labels=None):
@@ -123,24 +129,27 @@ class PatchDataset(abc.PatchDatasetABC):
 
 class WSIPatchDataset(abc.PatchDatasetABC):
     """Defines a WSI-level patch dataset.
+
     Attributes:
         reader (:class:`.WSIReader`): an WSI Reader or Virtual Reader
-        for reading pyramidal image or large tile in pyramidal way.
+            for reading pyramidal image or large tile in pyramidal way.
         inputs: List of coordinates to read from the `reader`,
-        each coordinate is of the form [start_x, start_y, end_x, end_y].
+            each coordinate is of the form [start_x, start_y, end_x, end_y].
         patch_size: a tuple(int, int) or ndarray of shape (2,).
-        Expected size to read from `reader` at requested `resolution` and `units`.
-        Expected to be (height, width).
+            Expected size to read from `reader` at requested `resolution`
+            and `units`. Expected to be (height, width).
         lv0_patch_size: a tuple (int, int) or ndarray of shape (2,).
-        `patch_size` at level 0 in `reader` at requested `resolution`
-        and `units`. Expected to be (height, width).
+            `patch_size` at level 0 in `reader` at requested `resolution`
+            and `units`. Expected to be (height, width).
         resolution: check (:class:`.WSIReader`) for details.
         units: check (:class:`.WSIReader`) for details.
-        preproc_func: Preprocessing function used to transform the input data. If
-        supplied, then torch.Compose will be used on the input preprocs.
-        preprocs is a list of torchvision transforms for preprocessing the image.
-        The transforms will be applied in the order that they are given in the list.
-        https://pytorch.org/vision/stable/transforms.html.
+        preproc_func: Preprocessing function used to transform the input data.
+            If supplied, then torch.Compose will be used on the input preprocs.
+            preprocs is a list of torchvision transforms for preprocessing the
+            image. The transforms will be applied in the order that they are
+            given in the list.
+            https://pytorch.org/vision/stable/transforms.html.
+
     """
 
     def __init__(
@@ -175,6 +184,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             preproc_func: Preprocessing function used to transform the input data.
                 Expect to do:
                 >>> transformed_img = func(img)
+
         """
         super().__init__()
 
