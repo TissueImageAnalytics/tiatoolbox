@@ -26,64 +26,58 @@ from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 
 
-class ABCDatasetInfo(ABC):
+class DatasetInfoABC(ABC):
     """Define an abstract class for holding a dataset information.
-
     Enforcing such that following attributes must always be defined by the subclass.
-
     Attributes
-        input_list (list): A list of paths where each path points to a sample image.
-        label_list (list): A list of `int` where each is the label of the sample at
+        inputs (list): A list of paths where each path points to a sample image.
+        labels (list): A list of `int` where each is the label of the sample at
             the same index.
-        label_name (dict): A dict indicates the possible associate name of each label
+        label_names (dict): A dict indicates the possible associate name of each label
             value.
-
     """
 
     @property
     @abstractmethod
-    def input_list(self):
+    def inputs(self):
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def label_list(self):
+    def labels(self):
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def label_name(self):
+    def label_names(self):
         raise NotImplementedError
 
 
-class KatherPatchDataset(ABCDatasetInfo):
+class KatherPatchDataset(DatasetInfoABC):
     """Define a class for holding the Kather dataset information.
-
     Args:
         save_dir_path (str or None): Path to directory containing the Kather dataset,
-                 assumed to be as is after extracted. If the argument is `None`,
-                 the dataset will be downloaded and extracted into the
-                 'run_dir/download/Kather'.
-
+            assumed to be as is after extracted. If the argument is `None`,
+            the dataset will be downloaded and extracted into the
+            'run_dir/download/Kather'.
     Attributes
-        input_list (list): A list of paths where each path points to a sample image.
-        label_list (list): A list of `int` where each is the label of the sample at
+        inputs (list): A list of paths where each path points to a sample image.
+        labels (list): A list of `int` where each is the label of the sample at
             the same index.
-        label_name (dict): A dict indicates the possible associate name of each label
+        label_names (dict): A dict indicates the possible associate name of each label
             value.
-
     """
 
-    # We predefine to follow enforcement, actual initialization in innit
-    input_list = None
-    label_list = None
-    label_name = None
+    # We predefine to follow enforcement, actual initialization in init
+    inputs = None
+    labels = None
+    label_names = None
 
     def __init__(
         self,
         save_dir_path=None,
     ):
-        label_code_list = [
+        label_names = [
             "01_TUMOR",
             "02_STROMA",
             "03_COMPLEX",
@@ -107,22 +101,23 @@ class KatherPatchDataset(ABCDatasetInfo):
             save_dir_path = os.path.join(
                 save_dir_path, "Kather_texture_2016_image_tiles_5000/"
             )
-        elif not os.path.exists(save_dir_path):
+        # bring outside to prevent case where download fail
+        if not os.path.exists(save_dir_path):
             raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
 
         # What will happen if downloaded data get corrupted?
-        label_name = {}
-        all_path_list = []
-        for label_id, label_code in enumerate(label_code_list):
-            path_list = grab_files_from_dir(
-                "%s/%s/" % (save_dir_path, label_code), file_types="*.tif"
+        uid_name_map = {}
+        all_paths = []
+        for label_id, label_name in enumerate(label_names):
+            paths = grab_files_from_dir(
+                f"{save_dir_path}/{label_name}/", file_types="*.tif"
             )
-            path_list = [[v, label_id] for v in path_list]
-            path_list.sort()
-            all_path_list.extend(path_list)
-            label_name[label_id] = label_code
-        input_list, label_list = list(zip(*all_path_list))
+            paths = [[v, label_id] for v in paths]
+            paths.sort()
+            all_paths.extend(paths)
+            uid_name_map[label_id] = label_name
+        inputs, labels = list(zip(*all_paths))
 
-        self.label_name = label_name
-        self.input_list = list(input_list)  # type casting to list
-        self.label_list = list(label_list)  # type casting to list
+        self.label_names = uid_name_map
+        self.inputs = list(inputs)  # type casting to list
+        self.labels = list(labels)  # type casting to list
