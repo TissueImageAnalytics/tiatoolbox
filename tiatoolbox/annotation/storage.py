@@ -700,7 +700,7 @@ class DictionaryStore(AnnotationStoreABC):
         return indexes
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Optional[dict]]:
-        columns = self.data.iloc[index]
+        columns = self.data.loc[index]
         geometry = columns[0]
         properties = columns[1:]
         return geometry, properties
