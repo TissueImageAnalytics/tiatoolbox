@@ -378,14 +378,6 @@ class SemanticSegmentor:
         assign your own function to this name. In either cases, the function must
         obey the API defined here.
 
-        Example:
-        >>> def func(image_shape, ioconfig):
-        >>>   patch_inputs = np.array([[0, 0, 256, 256]])
-        >>>   patch_outputs = np.array([[0, 0, 256, 256]])
-        >>>   return patch_inputs, patch_outputs
-        >>> segmentor = SemanticSegmentor(model='unet')
-        >>> segmentor.get_coordinates = func
-
         Args:
             image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
                 This argument specifies the shape of mother image (the image we want to)
@@ -395,13 +387,21 @@ class SemanticSegmentor:
                 placement of patches. Check `IOConfigSegmentor` for details about
                 available attributes.
 
-        Return:
+        Returns:
             patch_inputs: a list of corrdinates in
                 `[start_x, start_y, end_x, end_y]` format indicating the read location
                 of the patch in the mother image.
             patch_outputs: a list of corrdinates in
                 `[start_x, start_y, end_x, end_y]` format indicating the write location
                 of the patch in the mother image.
+
+        Example:
+        >>> def func(image_shape, ioconfig):
+        >>>   patch_inputs = np.array([[0, 0, 256, 256]])
+        >>>   patch_outputs = np.array([[0, 0, 256, 256]])
+        >>>   return patch_inputs, patch_outputs
+        >>> segmentor = SemanticSegmentor(model='unet')
+        >>> segmentor.get_coordinates = func
 
         """
         (patch_inputs, patch_outputs) = PatchExtractor.get_coordinates(
@@ -423,8 +423,9 @@ class SemanticSegmentor:
 
         To use your own approaches, either subclass to overwrite or directly
         assign your own function to this name. In either cases, the function must
-        obey the API defined here. Such as
+        obey the API defined here.
 
+        Example:
         >>> def func(image_shape, ioconfig):
         >>>   patch_inputs = np.array([[0, 0, 256, 256]])
         >>>   patch_outputs = np.array([[0, 0, 256, 256]])
