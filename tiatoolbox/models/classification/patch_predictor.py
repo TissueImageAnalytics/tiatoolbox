@@ -106,6 +106,7 @@ class CNNPatchModel(ModelABC):
     @staticmethod
     def postproc(image):
         """Define the post-processing of this class of model.
+
         This simply applies argmax along last axis of the input.
         """
         return np.argmax(image, axis=-1)
@@ -146,6 +147,7 @@ class CNNPatchPredictor:
         num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
         model (nn.Module): Defined PyTorch model.
         verbose (bool): Whether to output logging information.
+
     Usage:
         >>> data = [img1, img2]
         >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
@@ -398,15 +400,16 @@ class CNNPatchPredictor:
         """Make a prediction for a list of input data.
 
         Args:
-            imgs (list, ndarray): List of inputs to process. When using `patch`
-            mode, the input must be either a list of images, a list of image file paths
-            or a numpy array of an image list. When using `tile` or `wsi` mode, the
-            input must be a list of file paths.
-            masks (list): List of masks. Only utilised when processing image tiles
-            and whole-slide images. Patches are only processed if they are witin a
-            masked area. If not provided, then a tissue mask will be automatically
-            generated for whole-slide images or the entire image is processed for
-            image tiles.
+            imgs (list, ndarray): List of inputs to process. When using
+                `patch` mode, the input must be either a list of images,
+                a list of image file paths or a numpy array of an image
+                list. When using `tile` or `wsi` mode, the input must
+                be a list of file paths.
+            masks (list): List of masks. Only utilised when processing image
+                tiles and whole-slide images. Patches are only processed
+                if they are witin a masked area. If not provided, then a
+                tissue mask will be automatically generated for whole-slide
+                images or the entire image is processed for image tiles.
             labels: List of labels. If using `tile` or `wsi` mode, then only a
             single label per image tile or whole-slide image is supported.
             mode (str): Type of input to process. Choose from either `patch`, `tile` or
@@ -439,7 +442,7 @@ class CNNPatchPredictor:
                     - raw: path to save location for raw prediction, saved in .json.
                     - merged: path to .npy contain merged predictions if
                     `merge_predictions` is `True`.
-                For example
+                Example:
                 >>> wsis = ['wsi1.svs', 'wsi2.svs']
                 >>> predictor = CNNPatchPredictor(
                 ...                 pretrained_model="resnet18-kather100k")

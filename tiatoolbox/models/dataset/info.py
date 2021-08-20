@@ -27,7 +27,7 @@ from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 
 
 class DatasetInfoABC(ABC):
-    """Define an abstract class for holding a dataset information.
+    """Define an abstract class for holding dataset information.
 
     Enforcing such that following attributes must always be defined by the subclass.
     Attributes

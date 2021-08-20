@@ -91,7 +91,7 @@ class PatchDataset(abc.PatchDatasetABC):
         labels: List of label for sample at the same index in `inputs` .
             Default is `None`.
         preproc_func: Preprocessing function used to transform the input data.
-            Expect to do:
+            Example:
             >>> transformed_img = func(img)
 
     """
@@ -182,7 +182,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
                 value is fixed to be `resolution=1.0` and `units='baseline'`
                 units: check (:class:`.WSIReader`) for details.
             preproc_func: Preprocessing function used to transform the input data.
-                Expect to do:
+                Example:
                 >>> transformed_img = func(img)
 
         """

@@ -31,6 +31,7 @@ from tiatoolbox.utils.misc import imread
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
+
     Attributes:
         return_labels (bool, False): `__getitem__` will return both the img and
         its label. If `labels` is `None`, `None` is returned

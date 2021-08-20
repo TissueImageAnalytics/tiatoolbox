@@ -30,7 +30,7 @@ def _rm_dir(path):
 
 
 def _get_temp_folder_path():
-    """Return unique temp folder path"""
+    """Return unique temp folder path."""
     new_dir = os.path.join(
         rcParam["TIATOOLBOX_HOME"], f"test_model_patch_{int(time())}"
     )
@@ -41,8 +41,8 @@ def _crop_op(x, cropping, data_format="NCHW"):
     """Center crop image.
 
     Args:
-        x: input image
-        cropping: the substracted amount
+        x (torch.Tensor): input image
+        cropping (torch.Tensor): the substracted amount
         data_format: choose either `NCHW` or `NHWC`
 
     """
@@ -58,14 +58,14 @@ def _crop_op(x, cropping, data_format="NCHW"):
 
 
 class _CNNTo1(ModelABC):
-    """Contain a convolution.
+    """Contains a convolution.
 
     Simple model to test functionality, this contains a single
     convolution layer which has weight=0 and bias=1.
     """
 
     def __init__(self):
-        super(_CNNTo1, self).__init__()
+        super().__init__()
         self.conv = nn.Conv2d(3, 1, 3, padding=1)
         self.conv.weight.data.fill_(0)
         self.conv.bias.data.fill_(1)
@@ -114,7 +114,7 @@ class _CNNTo1(ModelABC):
 
 
 def test_segmentor_ioconfig():
-    """Test for IOConfig"""
+    """Test for IOConfig."""
     default_config = dict(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
@@ -211,12 +211,11 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     out = sds.collate_fn([None, 1, 2, 3])
     assert np.sum(out.numpy() != np.array([1, 2, 3])) == 0
 
-    # faking data injecttion
+    # artificial data injection
     mp_shared_space.wsi_idx = torch.tensor(0)  # a scalar
     mp_shared_space.patch_inputs = torch.from_numpy(
         np.array(
             [
-                # skipcq
                 [0, 0, 256, 256],
                 [256, 256, 512, 512],
             ]
@@ -225,7 +224,6 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     mp_shared_space.patch_outputs = torch.from_numpy(
         np.array(
             [
-                # skipcq
                 [0, 0, 256, 256],
                 [256, 256, 512, 512],
             ]

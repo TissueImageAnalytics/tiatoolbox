@@ -65,7 +65,7 @@ class ModelABC(ABC, nn.Module):
 
     @abstractmethod
     # pylint: disable=W0221
-    # shut up pylint because this is generic abc, else it will keep complain
+    # shut up pylint because this is generic abc, else it will keep complaining
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
         ...
@@ -100,6 +100,7 @@ class ModelABC(ABC, nn.Module):
         """Return the current pre-processing function of this instance.
 
         The returned function is expected to behave as follows:
+        Example:
         >>> transformed_img = func(img)
 
         """
@@ -111,6 +112,7 @@ class ModelABC(ABC, nn.Module):
 
         If `func=None`, the method will default to `self.preproc`. Otherwise,
         `func` is expected to be callable and behave as follows:
+        Example:
         >>> transformed_img = func(img)
 
         """
@@ -126,6 +128,7 @@ class ModelABC(ABC, nn.Module):
         """Return the current post-processing function of this instance.
 
         The returned function is expected to behave as follows:
+        Example:
         >>> transformed_img = func(img)
 
         """
@@ -137,6 +140,7 @@ class ModelABC(ABC, nn.Module):
 
         If `func=None`, the method will default to `self.postproc`. Otherwise,
         `func` is expected to be callable and behave as follows:
+        Example:
         >>> transformed_img = func(img)
 
         """
