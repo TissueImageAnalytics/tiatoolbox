@@ -1,10 +1,10 @@
 """Tests for tile pyramid generation."""
-
 import numpy as np
 
 from openslide import ImageSlide
 from openslide.deepzoom import DeepZoomGenerator as ODeepZoomGenerator
 from PIL import Image
+from skimage.metrics import mean_squared_error
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.tools import pyramid
@@ -17,13 +17,13 @@ def test_tilepyramidgenerator_overlap():
     dz = pyramid.DeepZoomGenerator(wsi)
     x0 = np.array(dz.get_tile(dz.level_count - 1, 0, 0))
     x1 = np.array(dz.get_tile(dz.level_count - 1, 1, 0))
-    # Check the overlapping pixel columns
-    assert np.all(x1[:, 0] == x0[:, -2])
-    assert np.all(x1[:, 1] == x0[:, -1])
+    # Check the overlapping pixel columns match
+    assert mean_squared_error(x1[:, 0], x0[:, -2]) < 1
+    assert mean_squared_error(x1[:, 1], x0[:, -1]) < 1
 
 
 def test_tilepyramidgenerator_openslide_consistency():
-    """"Check DeepZoomGenerator is consistent with OpenSlide."""
+    """ "Check DeepZoomGenerator is consistent with OpenSlide."""
     array = np.random.randint(0, 255, size=(256, 512), dtype=np.uint8)
 
     wsi = wsireader.VirtualWSIReader(array)
