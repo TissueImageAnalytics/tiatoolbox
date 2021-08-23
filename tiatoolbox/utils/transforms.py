@@ -210,13 +210,17 @@ def locsize2bounds(location, size):
 
 
 def bounds2slices(bounds, stride=1):
+    """Convert bounds to slices.
+
+    Create a tuple of slices for each pair
+    """
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
     elif np.size(stride) == 2:
         stride = np.tile(stride, 2)
     else:
         raise ValueError("Invalid stride shape")
-    start, stop = np.split(bounds.astype(int), 2)
+    start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
     return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
 
