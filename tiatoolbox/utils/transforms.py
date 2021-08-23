@@ -39,6 +39,7 @@ def background_composite(image, fill=255, alpha=False):
 
     Examples:
         >>> from tiatoolbox.utils import transforms
+        >>> import numpy as np
         >>> from matplotlib import pyplot as plt
         >>> img_with_alpha = np.zeros((2000, 2000, 4)).astype('uint8')
         >>> img_with_alpha[:1000, :, 3] = 255 # edit alpha channel

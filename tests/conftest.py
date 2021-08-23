@@ -186,6 +186,34 @@ def _norm_vahadane(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def _sample_visual_fields(
+    _source_image,
+    _norm_ruifrok,
+    _norm_reinhard,
+    _norm_macenko,
+    _norm_vahadane,
+    tmpdir_factory,
+):
+    """Sample visual fields(s) of all types supported by tiatoolbox."""
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(_source_image.basename).symlink_to(_source_image)
+        dir_path.joinpath(_norm_ruifrok.basename).symlink_to(_norm_ruifrok)
+        dir_path.joinpath(_norm_reinhard.basename).symlink_to(_norm_reinhard)
+        dir_path.joinpath(_norm_macenko.basename).symlink_to(_norm_macenko)
+        dir_path.joinpath(_norm_vahadane.basename).symlink_to(_norm_vahadane)
+    except OSError:
+        shutil.copy(_source_image, dir_path.joinpath(_source_image.basename))
+        shutil.copy(_norm_ruifrok, dir_path.joinpath(_norm_ruifrok.basename))
+        shutil.copy(_norm_reinhard, dir_path.joinpath(_norm_reinhard.basename))
+        shutil.copy(_norm_macenko, dir_path.joinpath(_norm_macenko.basename))
+        shutil.copy(_norm_vahadane, dir_path.joinpath(_norm_vahadane.basename))
+
+    return dir_path
+
+
+@pytest.fixture(scope="session")
 def _patch_extr_vf_image(tmpdir_factory):
     """Sample pytest fixture for a visual field image.
     Download TCGA-HE-7130-01Z-00-DX1 image for pytest.
@@ -535,7 +563,7 @@ def _sample_patch2(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
-    """Sample image patches for testing."""
+    """Directory of sample image patches for testing."""
     dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
 
     try:
@@ -546,3 +574,35 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
         shutil.copy(_sample_patch2, dir_path.joinpath(_sample_patch2.basename))
 
     return dir_path
+
+
+@pytest.fixture(scope="session")
+def _sample_wsi_dict(tmpdir_factory):
+    """Sample pytest fixture for torch wsi dataset.
+    Download svs image for pytest.
+
+    """
+    file_name_dict = {
+        "wsi1_8k_8k_svs": "wsi1_8k_8k.svs",
+        "wsi1_8k_8k_jp2": "wsi1_8k_8k.jp2",
+        "wsi1_8k_8k_jpg": "wsi1_8k_8k.jpg",
+        "wsi2_4k_4k_svs": "wsi2_4k_4k.svs",
+        "wsi2_4k_4k_jp2": "wsi2_4k_4k.jp2",
+        "wsi2_4k_4k_jpg": "wsi2_4k_4k.jpg",
+        "wsi2_4k_4k_msk": "wsi2_4k_4k.mask.png",
+        "wsi2_4k_4k_pred": "wsi2_4k_4k.pred.dat",
+    }
+
+    info_dict = {}
+    URL_HOME = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new"
+    for file_code, file_name in file_name_dict.items():
+        file_path = tmpdir_factory.mktemp("data").join(file_name)
+        if not pathlib.Path(file_path).is_file():
+            print("\nDownloading %s" % file_path)
+            r = requests.get("%s/%s" % (URL_HOME, file_name))
+            with open(file_path, "wb") as f:
+                f.write(r.content)
+        else:
+            print("\nSkipping %s" % file_path)
+        info_dict[file_code] = file_path
+    return info_dict
