@@ -109,7 +109,6 @@ class TilePyramidGenerator:
                 np.log2(np.divide(self.wsi.info.slide_dimensions, self.tile_size))
             ).max()
             + self.sub_tile_level_count
-            + 1
         )
 
     def get_tile_thumb(self) -> Image:
@@ -170,18 +169,18 @@ class TilePyramidGenerator:
         if level < 0:
             raise IndexError
         if level > self.level_count:
-            raise IndexError
+            raise IndexError("Invalid level")
 
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
         baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
         output_size = [self.output_tile_size] * 2
         coord = [baseline_x, baseline_y]
-        for n, value in enumerate(coord):
-            if value < 0:
-                output_size[n] = output_size[n] - int(np.floor(np.abs(value / scale)))
-                coord[n] = 0
-        if level <= self.sub_tile_level_count:
+        # for n, value in enumerate(coord):
+        #     if value < 0:
+        #         output_size[n] = output_size[n] - int(np.floor(np.abs(value / scale)))
+        #         coord[n] = 0
+        if level < self.sub_tile_level_count:
             output_size = [2 ** level] * 2
             thumb = self.get_tile_thumb()
             thumb.thumbnail(output_size)
@@ -271,7 +270,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
         larger than a single tile.
 
         """
-        return int(np.ceil(np.log2(self.output_tile_size))) - 1
+        return int(np.ceil(np.log2(self.output_tile_size)))
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
         """Generate the DeepZoom path for a specified tile.

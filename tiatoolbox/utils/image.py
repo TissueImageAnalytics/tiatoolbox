@@ -661,6 +661,11 @@ def sub_pixel_read(
     if output_size is not None and interpolation != "none":
         scaling = np.array(output_size) / bounds_size / stride
     read_bounds = bounds
+    if pad_mode is None:
+        output_size = np.round(
+            bounds2locsize(find_overlap(*bounds2locsize(bounds), image_size))[1]
+            * scaling
+        ).astype(int)
 
     overlap_bounds = find_overlap(*bounds2locsize(bounds), image_size=image_size)
     if pad_mode is None:
@@ -690,26 +695,28 @@ def sub_pixel_read(
     valid_int_bounds = find_overlap(
         *bounds2locsize(int_read_bounds), image_size
     ).astype(int)
-    # 1 Read the region
 
+    # 1 Read the region
+    _, valid_int_size = bounds2locsize(valid_int_bounds)
     if read_func is None:
         region = image[bounds2slices(valid_int_bounds, stride=stride)]
     else:
         region = read_func(image, valid_int_bounds, stride, **read_kwargs)
-        _, size = bounds2locsize(valid_int_bounds)
         region_size = region.shape[:2][::-1]
-        if not np.array_equal(region_size, size):
+        if not np.array_equal(region_size, valid_int_size):
             raise ValueError()
         if region is None or 0 in region.shape:
             raise ValueError()
 
     # 1.5 Pad the region
-    if pad_mode is not None:
-        pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
+    pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
+    if pad_mode is None:
+        pad_width -= find_padding(*bounds2locsize(overlap_bounds), image_size)
+    # Apply stride to padding
+    pad_width = pad_width / stride
+    # Add 0 padding to channels if required
     if len(image.shape) > 2:
         pad_width = np.concatenate([pad_width, [(0, 0)]])
-    # 1.6 Apply stride
-    pad_width = pad_width / stride
     # 1.7 Do the padding
     if pad_mode == "constant":
         region = np.pad(
@@ -723,7 +730,6 @@ def sub_pixel_read(
         region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
     # 2 Rescaling
     if output_size is not None:
-        # region = cv2.resize(region, dsize=None, fx=scaling[0], fy=scaling[1])
         if interpolation in [None, "none"]:
             interpolation = "nearest"
         region = utils.transforms.imresize(
@@ -743,7 +749,7 @@ def sub_pixel_read(
     region = region[trimming + (...,)]
     region_size = region.shape[:2][::-1]
     # 4 Ensure output is the correct size
-    if output_size is not None:
+    if output_size is not None:  # and pad_mode is not None:
         if pad_at_baseline:
             output_size = np.round(
                 np.add(output_size, padding.reshape(2, 2).sum(axis=0) * scaling)
@@ -751,7 +757,6 @@ def sub_pixel_read(
         else:
             output_size = np.add(output_size, padding.reshape(2, 2).sum(axis=0))
         if not np.array_equal(region_size, output_size):
-            # region = cv2.resize(region, tuple(output_size))
             if interpolation in [None, "none"]:
                 interpolation = "nearest"
             region = utils.transforms.imresize(
