@@ -212,7 +212,13 @@ def locsize2bounds(location, size):
 def bounds2slices(bounds, stride=1):
     """Convert bounds to slices.
 
-    Create a tuple of slices for each pair
+    Create a tuple of slices for each start/stop pair in bounds.
+
+    Arguments:
+        bounds (tuple(int)): Iterable of integer bounds. Must be even in
+            length with the dirst half as starting values and the second half
+            as end values, e.g. (start_x, start_y, stop_x, stop_y).
+        stride (int): Stride to apply when converting to slices.
     """
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
@@ -226,6 +232,18 @@ def bounds2slices(bounds, stride=1):
 
 
 def pad_bounds(bounds, padding):
+    """Add padding to bounds.
+
+    Arguments:
+        bounds (tuple(int)): Iterable of integer bounds. Must be even in
+            length with the dirst half as starting values and the second half
+            as end values, e.g. (start_x, start_y, stop_x, stop_y).
+        padding (int): Padding to add to bounds.
+
+    Examples:
+        >>> pad_bounds((0, 0, 0, 0), 1)
+        (-1, -1, 1, 1)
+    """
     if np.size(bounds) % 2 != 0:
         raise ValueError("Bounds must have an even number of elements")
     ndims = np.size(bounds) // 2
