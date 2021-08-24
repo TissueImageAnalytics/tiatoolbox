@@ -12,7 +12,7 @@ directly to disk.
 import warnings
 from functools import lru_cache
 from pathlib import Path
-from typing import Tuple, Union, Dict
+from typing import Tuple, Union, Dict, Iterable
 
 import numpy as np
 from PIL import Image
@@ -215,6 +215,14 @@ class TilePyramidGenerator:
 
         """
         raise NotImplementedError
+
+    def __len__(self) -> int:
+        return sum(np.prod(self.tile_grid_size(l)) for l in range(self.level_count))
+
+    def __iter__(self) -> Iterable:
+        for level in range(self.level_count):
+            for x, y in np.ndindex(self.tile_grid_size(level)):
+                yield self.get_tile(level=level, x=x, y=y)
 
 
 class DeepZoomGenerator(TilePyramidGenerator):

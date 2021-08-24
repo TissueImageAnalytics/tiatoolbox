@@ -110,3 +110,21 @@ def test_zoomify_tile_path():
     assert "TileGroup" in path.parts[0]
     assert re.match(pattern=r"TileGroup\d+", string=path.parts[0]) is not None
     assert re.match(pattern=r"\d+-\d+-\d+\.jpg", string=path.parts[1]) is not None
+
+
+def test_zoomify_len():
+    """Test __len__ for ZoomifyGenerator."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    assert len(dz) == (4 * 4) + (2 * 2)
+
+
+def test_zoomify_iter():
+    """Test __iter__ for ZoomifyGenerator."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    for tile in dz:
+        assert isinstance(tile, Image.Image)
+        assert tile.size == (256, 256)
