@@ -904,6 +904,20 @@ def test_crop_and_pad_edges():
     assert output.shape == region.shape
 
 
+def test_crop_and_pad_edges_common_fail_cases():
+    """"Test common fail cases for crop_and_pad_edges."""
+    bounds = (15, -5, 25, 5)
+    slide_dimensions = (10, 10)
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+    output = utils.image.crop_and_pad_edges(
+        bounds=bounds,
+        max_dimensions=slide_dimensions,
+        region=region,
+        pad_mode="constant",
+    )
+    assert output.shape == (10, 10)
+
+
 def test_fuzz_crop_and_pad_edges_output_size():
     """Fuzz test crop and pad util function output size."""
     random.seed(0)
@@ -941,8 +955,6 @@ def test_fuzz_crop_and_pad_edges_output_size_no_padding():
             size + np.minimum(loc, 0) - np.maximum(loc + size - slide_dimensions, 0),
             0,
         )
-        # if 0 in expected:
-        #     expected = [0, 0]
         expected = tuple(expected[::-1])
         bounds = utils.transforms.locsize2bounds(loc, size)
         region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)

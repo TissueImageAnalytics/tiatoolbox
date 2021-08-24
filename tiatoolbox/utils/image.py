@@ -96,7 +96,7 @@ def find_padding(read_location, read_size, image_size):
 
     before_padding = np.maximum(-read_location, 0)
     region_end = read_location + read_size
-    after_padding = np.maximum(region_end - image_size, 0)
+    after_padding = np.maximum(region_end - np.max([image_size, read_location], 0), 0)
     return np.stack([before_padding[::-1], after_padding[::-1]], axis=1)
 
 
@@ -198,44 +198,31 @@ def crop_and_pad_edges(
         :class:`numpy.ndarray`: The cropped and padded image.
 
     """
-    left, top, right, bottom = bounds
-    _, (bounds_width, bounds_height) = bounds2locsize(bounds)
-    region_height, region_width = region.shape[:2]
-    slide_width, slide_height = max_dimensions
+    loc, size = bounds2locsize(bounds)
 
-    if slide_width < 0 or slide_height < 0:
-        raise ValueError("max_dimensions must be >= 0.")
+    if np.min(max_dimensions) < 0:
+        raise ValueError("Max dimensions must be >= 0.")
 
-    if bounds_width <= 0 or bounds_height <= 0:
+    if np.min(size) <= 0:
         raise ValueError("Bounds must have size (width and height) > 0.")
 
-    # Find padding before (also the crop start index)
-    x_before = abs(min(0, left))
-    y_before = abs(min(0, top))
-    # Find the end index of the crop
-    x_end = region_width - max(0, right - slide_width)
-    y_end = region_height - max(0, bottom - slide_height)
-    x_end = max(x_end, x_before)
-    y_end = max(y_end, y_before)
-    # Find padding after the cropped sub-region
-    x_after = region_width - x_end
-    y_after = region_height - y_end
-    # Full padding tuple for np.pad
-    padding = (
-        (y_before, y_after),
-        (x_before, x_after),
-    )
+    padding = find_padding(loc, size, max_dimensions)
 
     # If no padding is required then return the original image unmodified
     if np.all(np.array(padding) == 0):
         return region
+
+    overlap = find_overlap(loc, size, max_dimensions)
+    overlap = np.maximum(overlap - np.tile(loc, 2), 0)
 
     # Add extra padding dimension for colour channels
     if len(region.shape) > 2:
         padding = padding + ((0, 0),)
 
     # Crop the region
-    crop = region[y_before:y_end, x_before:x_end, ...]
+    slices = bounds2slices(overlap)
+    slices += (...,)
+    crop = region[slices]
 
     # Return if pad_mode is None
     if pad_mode in ["none", None]:
