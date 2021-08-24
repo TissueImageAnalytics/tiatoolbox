@@ -276,7 +276,6 @@ class DeepZoomGenerator(TilePyramidGenerator):
                     Width="7026"/>
             </Image>
         """
-        # TODO: Add DZI metadata generation
         root = ET.Element(
             "Image",
             {
