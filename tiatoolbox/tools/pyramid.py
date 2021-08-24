@@ -317,6 +317,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
         """
         return int(np.ceil(np.log2(self.output_tile_size)))
 
+    @lru_cache(maxsize=None)
     def tile_path(self, level: int, x: int, y: int) -> Path:
         """Generate the DeepZoom path for a specified tile.
 
@@ -333,8 +334,8 @@ class DeepZoomGenerator(TilePyramidGenerator):
             Path: A pathlib path object with two parts.
 
         """
-        # TODO: Add DeepZoom path generation
-        raise NotImplementedError
+        path = Path(f"{level}") / "{x}-{y}.jpg"
+        return path
 
     def get_tile(
         self,
