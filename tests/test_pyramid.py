@@ -25,7 +25,6 @@ def test_tilepyramidgenerator_overlap():
 
 def test_tilepyramidgenerator_openslide_consistency():
     """ "Check DeepZoomGenerator is consistent with OpenSlide."""
-    # array = np.random.randint(0, 255, size=(256, 512), dtype=np.uint8)
     array = data.camera()
 
     wsi = wsireader.VirtualWSIReader(array)
@@ -48,4 +47,21 @@ def test_tilepyramidgenerator_openslide_consistency():
                 assert mean_squared_error(ox, x) < 15
 
 
-# %%
+def test_deepzoomgenerator_dzi():
+    """Test DeepZoom DZI XML generation."""
+    from xml.etree import ElementTree as ET
+    from defusedxml.ElementTree import fromstring
+
+    array = data.camera()
+
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.DeepZoomGenerator(wsi)
+    dzi = dz.get_dzi()
+    xml_string = ET.tostring(dzi, encoding="utf8")
+    # Check for the xml decleration
+    assert xml_string.startswith(b"<?xml")
+
+    namespaces = {"dzi": "http://schemas.microsoft.com/deepzoom/2008"}
+    parsed = fromstring(xml_string)
+    assert namespaces["dzi"] in parsed.tag
+    assert len(parsed.findall("dzi:Size", namespaces)) == 1

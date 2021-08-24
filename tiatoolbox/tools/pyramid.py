@@ -17,6 +17,7 @@ from typing import Tuple
 
 import numpy as np
 from PIL import Image
+from xml.etree import ElementTree as ET
 
 from tiatoolbox.wsicore.wsireader import WSIReader
 from tiatoolbox.utils.transforms import imresize
@@ -251,15 +252,43 @@ class DeepZoomGenerator(TilePyramidGenerator):
     ):
         super().__init__(wsi, tile_size, downsample, overlap)
 
-    def get_dzi(self) -> ElementTree:
+    def get_dzi(self, format="jpg") -> ElementTree:
         """Generate and return DeepZoom XML metadata (.dzi).
 
         Returns:
             ElementTree: XML DZI metadata.
 
+        Example:
+            >>> from xml.etree import ElementTree as ET
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> from tiatoolbox.tools.pyramid import DeepZoomGenerator
+            >>>
+            >>> slide = get_wsireader("CMU-1.svs")
+            >>> dz = DeepZoomGenerator(slide)
+            >>> dzi = dz.get_dzi()
+            >>> print(ET.tostring(dzi, encoding="utf8"))
+            <?xml version='1.0' encoding='utf8'?>
+            <Image xmlns="http://schemas.microsoft.com/deepzoom/2008"
+                Format="jpg"
+                Overlap="2"
+                TileSize="256" >
+                <Size Height="9221"
+                    Width="7026"/>
+            </Image>
         """
         # TODO: Add DZI metadata generation
-        raise NotImplementedError
+        root = ET.Element(
+            "Image",
+            {
+                "xmlns": "http://schemas.microsoft.com/deepzoom/2008",
+                "Format": "jpg",
+                "Overlap": str(self.overlap),
+                "TileSize": str(self.output_tile_size),
+            },
+        )
+        width, height = self.wsi.info.slide_dimensions
+        ET.SubElement(root, "Size", {"Height": str(width), "Width": str(height)})
+        return root
 
     @property
     def sub_tile_level_count(self) -> int:
