@@ -495,6 +495,8 @@ def sub_pixel_read(
         pad_kwargs = {}
     if read_kwargs is None:
         read_kwargs = {}
+    if interpolation is None:
+        interpolation = "none"
 
     # Normalise padding
     padding = normalise_padding_size(padding)
@@ -587,9 +589,7 @@ def sub_pixel_read(
     else:
         region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
     # 2 Rescaling
-    if output_size is not None:
-        if interpolation in [None, "none"]:
-            interpolation = "nearest"
+    if output_size is not None and interpolation != "none":
         region = imresize(region, scale_factor=scaling, interpolation=interpolation)
     # 3 Trim interpolation padding
     region_size = np.flip(region.shape[:2])
@@ -604,7 +604,7 @@ def sub_pixel_read(
     region = region[trimming + (...,)]
     region_size = region.shape[:2][::-1]
     # 4 Ensure output is the correct size
-    if output_size is not None:  # and pad_mode is not None:
+    if output_size is not None and interpolation != "none":
         if pad_at_baseline:
             output_size = np.round(
                 np.add(output_size, padding.reshape(2, 2).sum(axis=0) * scaling)
@@ -612,8 +612,6 @@ def sub_pixel_read(
         else:
             output_size = np.add(output_size, padding.reshape(2, 2).sum(axis=0))
         if not np.array_equal(region_size, output_size):
-            if interpolation in [None, "none"]:
-                interpolation = "nearest"
             region = imresize(
                 region, output_size=tuple(output_size), interpolation=interpolation
             )
