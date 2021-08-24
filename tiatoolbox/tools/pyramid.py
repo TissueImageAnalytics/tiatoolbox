@@ -11,9 +11,8 @@ directly to disk.
 
 import warnings
 from functools import lru_cache
-from defusedxml import ElementTree
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union, Dict
 
 import numpy as np
 from PIL import Image
@@ -248,8 +247,18 @@ class DeepZoomGenerator(TilePyramidGenerator):
     ):
         super().__init__(wsi, tile_size, downsample, overlap)
 
-    def get_dzi(self, format="jpg") -> ElementTree:
+    def get_dzi(
+        self, format="xml", tile_format="jpg"
+    ) -> Union[ET.Element, Dict[str, dict]]:
         """Generate and return DeepZoom XML metadata (.dzi).
+
+        Arguments:
+            format (str): Format of DZI file. Defaults to "XML" which
+                returns an instance of ElementTree. Specifying "json",
+                will return a dictionary which can be serialised to
+                a valid DZI JSON file.
+            tile_format (str): Image format file extension for tiles.
+                Defaults to "jpg".
 
         Returns:
             ElementTree: XML DZI metadata.
@@ -268,18 +277,34 @@ class DeepZoomGenerator(TilePyramidGenerator):
                 xmlns="http://schemas.microsoft.com/deepzoom/2008">
             <Size Height="512" Width="512" /></Image>
         """
-        root = ET.Element(
-            "Image",
-            {
-                "xmlns": "http://schemas.microsoft.com/deepzoom/2008",
-                "Format": "jpg",
-                "Overlap": str(self.overlap),
-                "TileSize": str(self.output_tile_size),
-            },
-        )
         width, height = self.wsi.info.slide_dimensions
-        ET.SubElement(root, "Size", {"Height": str(width), "Width": str(height)})
-        return root
+        if format == "xml":
+            root = ET.Element(
+                "Image",
+                {
+                    "xmlns": "http://schemas.microsoft.com/deepzoom/2008",
+                    "Format": tile_format,
+                    "Overlap": str(self.overlap),
+                    "TileSize": str(self.output_tile_size),
+                },
+            )
+            ET.SubElement(root, "Size", {"Height": str(width), "Width": str(height)})
+            return root
+        if format == "json":
+            json_dict = {
+                "Image": {
+                    "xmlns": "http://schemas.microsoft.com/deepzoom/2008",
+                    "Format": tile_format,
+                    "Overlap": str(self.overlap),
+                    "TileSize": str(self.output_tile_size),
+                    "Size": {
+                        "Height": str(width),
+                        "Width": str(height),
+                    },
+                }
+            }
+            return json_dict
+        raise ValueError("Invalid format.")
 
     @property
     def sub_tile_level_count(self) -> int:

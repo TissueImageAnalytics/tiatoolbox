@@ -47,7 +47,7 @@ def test_tilepyramidgenerator_openslide_consistency():
                 assert mean_squared_error(ox, x) < 15
 
 
-def test_deepzoomgenerator_dzi():
+def test_deepzoomgenerator_dzi_xml():
     """Test DeepZoom DZI XML generation."""
     from xml.etree import ElementTree as ET
     from defusedxml.ElementTree import fromstring
@@ -57,6 +57,7 @@ def test_deepzoomgenerator_dzi():
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.DeepZoomGenerator(wsi)
     dzi = dz.get_dzi()
+    assert isinstance(dzi, ET.Element)
     xml_string = ET.tostring(dzi, encoding="utf8")
     # Check for the xml decleration
     assert xml_string.startswith(b"<?xml")
@@ -65,3 +66,20 @@ def test_deepzoomgenerator_dzi():
     parsed = fromstring(xml_string)
     assert namespaces["dzi"] in parsed.tag
     assert len(parsed.findall("dzi:Size", namespaces)) == 1
+
+
+def test_deepzoomgenerator_dzi_json():
+    """Test DeepZoom DZI JSON generation."""
+    array = data.camera()
+
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.DeepZoomGenerator(wsi)
+    dzi = dz.get_dzi(format="json")
+
+    assert isinstance(dzi, dict)
+    assert len(dzi.keys()) == 1
+    assert "Image" in dzi
+    for key in ["Format", "Overlap", "TileSize", "xmlns", "Size"]:
+        assert key in dzi["Image"]
+    for key in ["Width", "Height"]:
+        assert key in dzi["Image"]["Size"]
