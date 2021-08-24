@@ -207,6 +207,8 @@ def crop_and_pad_edges(
         raise ValueError("Bounds must have size (width and height) > 0.")
 
     padding = find_padding(loc, size, max_dimensions)
+    if len(region.shape) > 2:
+        padding = np.concatenate([padding, [[0, 0]]])
 
     # If no padding is required then return the original image unmodified
     if np.all(np.array(padding) == 0):
