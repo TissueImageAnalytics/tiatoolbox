@@ -266,15 +266,11 @@ class DeepZoomGenerator(TilePyramidGenerator):
             >>> slide = get_wsireader("CMU-1.svs")
             >>> dz = DeepZoomGenerator(slide)
             >>> dzi = dz.get_dzi()
-            >>> print(ET.tostring(dzi, encoding="utf8"))
+            >>> print(ET.tostring(dzi, encoding="utf8").decode("utf8))
             <?xml version='1.0' encoding='utf8'?>
-            <Image xmlns="http://schemas.microsoft.com/deepzoom/2008"
-                Format="jpg"
-                Overlap="2"
-                TileSize="256" >
-                <Size Height="9221"
-                    Width="7026"/>
-            </Image>
+            <Image Format="jpg" Overlap="1" TileSize="256"
+                xmlns="http://schemas.microsoft.com/deepzoom/2008">
+            <Size Height="512" Width="512" /></Image>
         """
         root = ET.Element(
             "Image",
