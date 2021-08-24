@@ -177,10 +177,6 @@ class TilePyramidGenerator:
         baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
         output_size = [self.output_tile_size] * 2
         coord = [baseline_x, baseline_y]
-        # for n, value in enumerate(coord):
-        #     if value < 0:
-        #         output_size[n] = output_size[n] - int(np.floor(np.abs(value / scale)))
-        #         coord[n] = 0
         if level < self.sub_tile_level_count:
             output_size = [2 ** level] * 2
             thumb = self.get_tile_thumb()
