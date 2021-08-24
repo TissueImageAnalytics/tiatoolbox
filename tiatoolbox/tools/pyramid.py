@@ -334,7 +334,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
             Path: A pathlib path object with two parts.
 
         """
-        path = Path(f"{level}") / "{x}-{y}.jpg"
+        path = Path(f"{level}") / f"{x}_{y}.jpg"
         return path
 
     def get_tile(

@@ -1,6 +1,8 @@
 """Tests for tile pyramid generation."""
-import numpy as np
+from pathlib import Path
+import re
 
+import numpy as np
 from openslide import ImageSlide
 from openslide.deepzoom import DeepZoomGenerator as ODeepZoomGenerator
 from PIL import Image
@@ -83,3 +85,28 @@ def test_deepzoomgenerator_dzi_json():
         assert key in dzi["Image"]
     for key in ["Width", "Height"]:
         assert key in dzi["Image"]["Size"]
+
+
+def test_deepzoom_tile_path():
+    """Test DeepZooom tile path generation."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.DeepZoomGenerator(wsi)
+    path = dz.tile_path(0, 1, 2)
+    assert isinstance(path, Path)
+    assert len(path.parts) == 2
+    assert re.match(pattern=r"\d+", string=path.parts[0]) is not None
+    assert re.match(pattern=r"\d+_\d+\.jpg", string=path.parts[1]) is not None
+
+
+def test_zoomify_tile_path():
+    """Test Zoomify tile path generation."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi)
+    path = dz.tile_path(0, 0, 1)
+    assert isinstance(path, Path)
+    assert len(path.parts) == 2
+    assert "TileGroup" in path.parts[0]
+    assert re.match(pattern=r"TileGroup\d+", string=path.parts[0]) is not None
+    assert re.match(pattern=r"\d+-\d+-\d+\.jpg", string=path.parts[1]) is not None
