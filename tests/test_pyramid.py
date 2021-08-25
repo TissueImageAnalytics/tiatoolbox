@@ -117,7 +117,7 @@ def test_zoomify_tile_path():
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.ZoomifyGenerator(wsi)
-    path = dz.tile_path(0, 0, 1)
+    path = dz.tile_path(0, 0, 0)
     assert isinstance(path, Path)
     assert len(path.parts) == 2
     assert "TileGroup" in path.parts[0]
@@ -130,7 +130,7 @@ def test_zoomify_len():
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
-    assert len(dz) == (4 * 4) + (2 * 2)
+    assert len(dz) == (4 * 4) + (2 * 2) + 1
 
 
 def test_zoomify_iter():
@@ -187,3 +187,62 @@ def test_zoomify_tile_group_index_error():
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
     with pytest.raises(IndexError):
         dz.tile_group(0, 100, 100)
+
+
+def test_zoomify_dump_options_combinations(tmp_path):
+    """Test for no fatal errors on all option combinations for dump."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
+
+    for container in [None, "zip", "tar"]:
+        compression_methods = [None, "deflate", "gzip", "bz2", "lzma"]
+        if container == "zip":
+            compression_methods.remove("gzip")
+        if container == "tar":
+            compression_methods.remove("deflate")
+        if container is None:
+            compression_methods = [None]
+        for compression in compression_methods:
+            out_path = tmp_path / f"{compression}-pyramid"
+            if container is not None:
+                out_path = out_path.with_suffix(f".{container}")
+            dz.dump(out_path, container=container, compression=compression)
+            assert out_path.exists()
+
+
+def test_zoomify_dump_compression_error(tmp_path):
+    """Test ValueError is raised on invalid compression modes."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
+    out_path = tmp_path / "pyramid_dump"
+
+    with pytest.raises(ValueError):
+        dz.dump(out_path, container="zip", compression="gzip")
+
+    with pytest.raises(ValueError):
+        dz.dump(out_path, container="tar", compression="deflate")
+
+
+def test_zoomify_dump_container_error(tmp_path):
+    """Test ValueError is raised on invalid containers."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
+    out_path = tmp_path / "pyramid_dump"
+
+    with pytest.raises(ValueError):
+        dz.dump(out_path, container="foo")
+
+
+def test_zoomify_dump(tmp_path):
+    """Test dumping to directory."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
+    out_path = tmp_path / "pyramid_dump"
+    dz.dump(out_path)
+    assert out_path.exists()
+    assert len(list((out_path / "TileGroup0").glob("0-*"))) == 1
+    assert Image.open(out_path / "TileGroup0" / "0-0-0.jpg").size == (64, 64)

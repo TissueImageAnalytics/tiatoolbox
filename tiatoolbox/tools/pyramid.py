@@ -9,10 +9,14 @@ be easily serialised via the use of an io.BytesIO object or saved
 directly to disk.
 """
 
+from io import BytesIO
 import warnings
 from functools import lru_cache
 from pathlib import Path
 from typing import Tuple, Union, Dict, Iterable
+import zipfile
+import tarfile
+import time
 
 import numpy as np
 from PIL import Image
@@ -111,6 +115,7 @@ class TilePyramidGenerator:
             np.ceil(
                 np.log2(np.divide(self.wsi.info.slide_dimensions, self.tile_size))
             ).max()
+            + 1
             + self.sub_tile_level_count
         )
 
@@ -219,6 +224,76 @@ class TilePyramidGenerator:
         """
         raise NotImplementedError
 
+    def dump(self, path: Union[str, Path], container=None, compression=None):
+        """Write all tiles to disk.
+
+        Arguments:
+            path (str or Path)
+            container (str): Container to use. Defaults to None which
+                saves to a directory. Possible values are "zip", "tar".
+            compression (str): Compression method. Defaults to None.
+                Possible values are None, "deflate", "gzip",
+                "bz2", "lzma". Note that tar does not support deflate
+                and zip does not support gzip.
+        """
+        path = Path(path)
+        if container == "zip":
+            compression2enum = {
+                None: zipfile.ZIP_STORED,
+                "deflate": zipfile.ZIP_DEFLATED,
+                "bz2": zipfile.ZIP_BZIP2,
+                "lzma": zipfile.ZIP_LZMA,
+            }
+            if compression not in compression2enum:
+                raise ValueError("Unsupported compression for zip")
+            archive = zipfile.ZipFile(
+                path, mode="w", compression=compression2enum[compression]
+            )
+        elif container == "tar":
+            compression2mode = {
+                None: "w",
+                "gzip": "w:gz",
+                "bz2": "w:bz2",
+                "lzma": "w:xz",
+            }
+            if compression not in compression2mode:
+                raise ValueError("Unsupported compression for tar")
+
+            archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
+        elif container is None:
+            path.mkdir(parents=False)
+            if compression is not None:
+                raise ValueError("Unsupported compression for container None")
+        else:
+            raise ValueError("Unsupported container")
+        for level in range(self.level_count):
+            for x, y in np.ndindex(self.tile_grid_size(level)):
+                tile = self.get_tile(level=level, x=x, y=y)
+                tile_path = self.tile_path(level, x, y)
+                full_path = path / tile_path
+                if container is None:
+                    full_path.parent.mkdir(parents=True, exist_ok=True)
+                if container is None:
+                    tile.save(full_path)
+                else:
+                    bio = BytesIO()
+                    tile.save(bio, format="jpeg")
+                    bio.seek(0)
+                    if container == "tar":
+                        tar_info = tarfile.TarInfo(name=str(tile_path))
+                        tar_info.mtime = time.time()
+                        tar_info.size = bio.tell()
+                        archive.addfile(tarinfo=tar_info, fileobj=bio)
+                    if container == "zip":
+                        data = bio.read()
+                        archive.writestr(
+                            str(tile_path),
+                            data,
+                            compress_type=compression2enum[compression],
+                        )
+        if container is not None:
+            archive.close()
+
     def __len__(self) -> int:
         return sum(
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
@@ -259,6 +334,10 @@ class DeepZoomGenerator(TilePyramidGenerator):
         overlap: int = 1,
     ):
         super().__init__(wsi, tile_size, downsample, overlap)
+
+    @property
+    def level_count(self) -> int:
+        return super().level_count - 1
 
     def dzi(
         self, dzi_format="xml", tile_format="jpg"
