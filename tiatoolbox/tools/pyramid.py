@@ -220,7 +220,9 @@ class TilePyramidGenerator:
         raise NotImplementedError
 
     def __len__(self) -> int:
-        return sum(np.prod(self.tile_grid_size(l)) for l in range(self.level_count))
+        return sum(
+            np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
+        )
 
     def __iter__(self) -> Iterable:
         for level in range(self.level_count):
