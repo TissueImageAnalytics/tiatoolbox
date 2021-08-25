@@ -2,6 +2,7 @@
 from pathlib import Path
 import re
 
+import pytest
 import numpy as np
 from openslide import ImageSlide
 from openslide.deepzoom import DeepZoomGenerator as ODeepZoomGenerator
@@ -130,3 +131,21 @@ def test_zoomify_iter():
     for tile in dz:
         assert isinstance(tile, Image.Image)
         assert tile.size == (256, 256)
+
+
+def test_get_tile_negative_level():
+    """Test for IndexError on negative levels."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    with pytest.raises(IndexError):
+        dz.get_tile(-1, 0, 0)
+
+
+def test_get_tile_large_level():
+    """Test for IndexError on too large a level."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    with pytest.raises(IndexError):
+        dz.get_tile(100, 0, 0)
