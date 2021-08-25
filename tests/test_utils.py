@@ -383,6 +383,24 @@ def test_sub_pixel_read_pad_at_baseline():
     assert region.shape == (16, 16)
 
 
+def test_sub_pixel_read_bad_read_func():
+    """Test sub_pixel_read with read_func returning None."""
+    data = np.zeros((16, 16))
+    out_size = data.shape
+    bounds = (0, 0, 8, 8)
+
+    def bad_read_func(img, bounds, *kwargs):
+        return None
+
+    with pytest.raises(ValueError):
+        utils.image.sub_pixel_read(
+            data,
+            bounds,
+            out_size,
+            read_func=bad_read_func,
+        )
+
+
 def test_sub_pixel_read_padding_formats():
     """Test sub_pixel_read with different padding argument formats."""
     data = np.zeros((16, 16))

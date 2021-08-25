@@ -557,10 +557,10 @@ def sub_pixel_read(
         region = image[bounds2slices(valid_int_bounds, stride=stride)]
     else:
         region = read_func(image, valid_int_bounds, stride, **read_kwargs)
+        if region is None or 0 in region.shape:
+            raise ValueError()
         region_size = region.shape[:2][::-1]
         if not np.array_equal(region_size, valid_int_size):
-            raise ValueError()
-        if region is None or 0 in region.shape:
             raise ValueError()
 
     # 1.5 Pad the region
