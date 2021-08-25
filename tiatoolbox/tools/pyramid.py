@@ -17,9 +17,12 @@ from typing import Tuple, Union, Dict, Iterable
 import numpy as np
 from PIL import Image
 from xml.etree import ElementTree as ET
+import defusedxml
 
 from tiatoolbox.wsicore.wsireader import WSIReader
 from tiatoolbox.utils.transforms import imresize
+
+defusedxml.defuse_stdlib()
 
 
 class TilePyramidGenerator:

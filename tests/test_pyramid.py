@@ -52,7 +52,9 @@ def test_tilepyramidgenerator_openslide_consistency():
 def test_deepzoomgenerator_dzi_xml():
     """Test DeepZoom DZI XML generation."""
     from xml.etree import ElementTree as ET
-    from defusedxml.ElementTree import fromstring
+    import defusedxml
+
+    defusedxml.defuse_stdlib()
 
     array = data.camera()
 
@@ -65,7 +67,7 @@ def test_deepzoomgenerator_dzi_xml():
     assert xml_string.startswith(b"<?xml")
 
     namespaces = {"dzi": "http://schemas.microsoft.com/deepzoom/2008"}
-    parsed = fromstring(xml_string)
+    parsed = ET.fromstring(xml_string)
     assert namespaces["dzi"] in parsed.tag
     assert len(parsed.findall("dzi:Size", namespaces)) == 1
 
