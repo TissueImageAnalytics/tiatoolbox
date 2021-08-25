@@ -23,8 +23,10 @@ install:
 
 # Command to run tests, e.g. python setup.py test
 script:
+    - set -e # Exit on first failure (errexit)
     - tox -e flake8
     - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
+    - set +e
 
 # Upload test coverage reports (codecov and deepsource)
 after_success:
