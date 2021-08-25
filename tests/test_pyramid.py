@@ -90,6 +90,16 @@ def test_deepzoomgenerator_dzi_json():
         assert key in dzi["Image"]["Size"]
 
 
+def test_deepzoomgenerator_dzi_invalid():
+    """Test DeepZoom DZI invalid format."""
+    array = data.camera()
+
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.DeepZoomGenerator(wsi)
+    with pytest.raises(ValueError):
+        dz.dzi(dzi_format="foo")
+
+
 def test_deepzoom_tile_path():
     """Test DeepZooom tile path generation."""
     array = np.ones((1024, 1024))
@@ -149,3 +159,31 @@ def test_get_tile_large_level():
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
     with pytest.raises(IndexError):
         dz.get_tile(100, 0, 0)
+
+
+def test_get_tile_large_xy():
+    """Test for IndexError on too large an xy index."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    with pytest.raises(IndexError):
+        dz.get_tile(0, 100, 100)
+
+
+def test_get_tile_sub_tile_levels():
+    """Test sub_tile levels for DeepZoom."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.DeepZoomGenerator(wsi, tile_size=256)
+    for level in range(dz.sub_tile_level_count):
+        tile = dz.get_tile(level, 0, 0)
+        assert all(np.array(tile.size) <= 256)
+
+
+def test_zoomify_tile_group_index_error():
+    """Test IndexError for Zoomify tile groups."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    with pytest.raises(IndexError):
+        dz.tile_group(0, 100, 100)
