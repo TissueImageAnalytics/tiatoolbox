@@ -570,6 +570,34 @@ def test_bounds2size_value_error():
         utils.transforms.bounds2locsize((0, 0, 1, 1), origin="middle")
 
 
+def test_bounds2slices_invalid_stride():
+    """Test bounds2slices raises ValueError with invalid stride."""
+    bounds = (0, 0, 10, 10)
+    with pytest.raises(ValueError):
+        utils.transforms.bounds2slices(bounds, stride=(1, 1, 1))
+
+
+def test_pad_bounds_sample_cases():
+    """Test sample inputs for pad_bounds."""
+    output = utils.transforms.pad_bounds([0] * 4, 1)
+    assert np.array_equal(output, (-1, -1, 1, 1))
+
+    output = utils.transforms.pad_bounds((0, 0, 10, 10), (1, 2))
+    assert np.array_equal(output, (-1, -2, 11, 12))
+
+
+def test_pad_bounds_invalid_inputs():
+    """Test invalid inputs for pad_bounds."""
+    with pytest.raises(ValueError):
+        utils.transforms.pad_bounds(bounds=(0, 0, 10), padding=1)
+
+    with pytest.raises(ValueError):
+        utils.transforms.pad_bounds(bounds=(0, 0, 10, 10), padding=(1, 1, 1))
+
+    # Normal case for control
+    utils.transforms.pad_bounds(bounds=(0, 0, 10, 10), padding=1)
+
+
 def test_contrast_enhancer():
     """Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
@@ -905,7 +933,7 @@ def test_crop_and_pad_edges():
 
 
 def test_crop_and_pad_edges_common_fail_cases():
-    """"Test common fail cases for crop_and_pad_edges."""
+    """ "Test common fail cases for crop_and_pad_edges."""
     bounds = (15, -5, 25, 5)
     slide_dimensions = (10, 10)
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)

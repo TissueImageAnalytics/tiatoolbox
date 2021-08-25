@@ -100,14 +100,13 @@ def find_padding(read_location, read_size, image_size):
     return np.stack([before_padding[::-1], after_padding[::-1]], axis=1)
 
 
-def find_overlap(read_location, read_size, image_size, return_slices=False):
+def find_overlap(read_location, read_size, image_size):
     """Find the part of a region which overlaps the image area.
 
     Args:
       read_location (tuple(int)): The location of the region to read.
       read_size (tuple(int)): The size of the location to read.
       image_size (tuple(int)): The size of the image to read from.
-      return_slices (bool): Return the output as a tuple of slices.
     """
     read_location = np.array(read_location)
     read_size = np.array(read_size)
@@ -116,10 +115,6 @@ def find_overlap(read_location, read_size, image_size, return_slices=False):
     start = np.maximum(read_location, 0)
     region_end = read_location + read_size
     stop = np.minimum(region_end, image_size)
-
-    if return_slices:
-        slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
-        return tuple(slice(*x) for x in slice_array)
 
     # Conctenate start and stop to make a bounds array (left, top, right, bottom)
     bounds = np.concatenate([start, stop])

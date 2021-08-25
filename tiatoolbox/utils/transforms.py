@@ -250,8 +250,8 @@ def pad_bounds(bounds, padding):
     ndims = np.size(bounds) // 2
     if np.size(padding) == 1:
         pass
-    elif np.size(padding) == 2:
-        padding = np.tile(padding, ndims)
+    elif np.size(padding) == ndims:
+        padding = np.tile(padding, 2)
     elif np.size(padding) == np.size(bounds):
         pass
     else:
