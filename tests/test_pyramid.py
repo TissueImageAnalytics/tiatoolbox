@@ -58,7 +58,7 @@ def test_deepzoomgenerator_dzi_xml():
 
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.DeepZoomGenerator(wsi)
-    dzi = dz.get_dzi()
+    dzi = dz.dzi()
     assert isinstance(dzi, ET.Element)
     xml_string = ET.tostring(dzi, encoding="utf8")
     # Check for the xml decleration
@@ -76,7 +76,7 @@ def test_deepzoomgenerator_dzi_json():
 
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.DeepZoomGenerator(wsi)
-    dzi = dz.get_dzi(dzi_format="json")
+    dzi = dz.dzi(dzi_format="json")
 
     assert isinstance(dzi, dict)
     assert len(dzi.keys()) == 1

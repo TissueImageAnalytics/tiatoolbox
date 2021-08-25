@@ -255,7 +255,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
     ):
         super().__init__(wsi, tile_size, downsample, overlap)
 
-    def get_dzi(
+    def dzi(
         self, dzi_format="xml", tile_format="jpg"
     ) -> Union[ET.Element, Dict[str, dict]]:
         """Generate and return DeepZoom XML metadata (.dzi).
