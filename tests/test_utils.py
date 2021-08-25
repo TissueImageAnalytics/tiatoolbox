@@ -128,6 +128,14 @@ def test_safe_padded_read_negative_padding():
         utils.image.safe_padded_read(data, bounds, padding=-1)
 
 
+def test_safe_padded_read_pad_mode_none():
+    """Test safe_padded_read with pad_mode=None."""
+    data = np.zeros((16, 16))
+    bounds = (-5, -5, 5, 5)
+    region = utils.image.safe_padded_read(data, bounds, pad_mode=None)
+    assert region.shape == (5, 5)
+
+
 def test_safe_padded_read_padding_formats():
     """Test safe_padded_read with different padding argument formats."""
     data = np.zeros((16, 16))
