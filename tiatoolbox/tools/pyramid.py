@@ -256,7 +256,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
         super().__init__(wsi, tile_size, downsample, overlap)
 
     def get_dzi(
-        self, format="xml", tile_format="jpg"
+        self, dzi_format="xml", tile_format="jpg"
     ) -> Union[ET.Element, Dict[str, dict]]:
         """Generate and return DeepZoom XML metadata (.dzi).
 
@@ -286,7 +286,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
             <Size Height="512" Width="512" /></Image>
         """
         width, height = self.wsi.info.slide_dimensions
-        if format == "xml":
+        if dzi_format == "xml":
             root = ET.Element(
                 "Image",
                 {
@@ -298,7 +298,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
             )
             ET.SubElement(root, "Size", {"Height": str(width), "Width": str(height)})
             return root
-        if format == "json":
+        if dzi_format == "json":
             json_dict = {
                 "Image": {
                     "xmlns": "http://schemas.microsoft.com/deepzoom/2008",

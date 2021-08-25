@@ -76,7 +76,7 @@ def test_deepzoomgenerator_dzi_json():
 
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.DeepZoomGenerator(wsi)
-    dzi = dz.get_dzi(format="json")
+    dzi = dz.get_dzi(dzi_format="json")
 
     assert isinstance(dzi, dict)
     assert len(dzi.keys()) == 1
