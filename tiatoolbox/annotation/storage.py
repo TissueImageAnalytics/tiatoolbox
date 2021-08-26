@@ -305,9 +305,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             self._make_token(
                 geometry=geometry,
                 class_=class_,
-                properties={
-                    k: v for k, v in zip(extra_properties.keys(), self._iterfy(props))
-                },
+                properties=dict(zip(extra_properties.keys(), self._iterfy(props))),
             )
             for geometry, class_, props in zip_longest(
                 geometries_iter, classes_iter, property_values_iter
