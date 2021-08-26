@@ -648,7 +648,7 @@ class DictionaryStore(AnnotationStoreABC):
         self.data = self.data.astype(self.dtypes)
 
     @classmethod
-    def open(cls, io: Union[Path, str, IO], dtypes: dict = None) -> "DictionaryStore":
+    def open(cls, io: Union[Path, str, IO], dtypes: Dict = None) -> "DictionaryStore":
         store = cls(dtypes=dtypes)
         feature_collection = cls._load(io)
         features = feature_collection["features"]
@@ -785,8 +785,8 @@ class PickleDictStore(DictionaryStore):
 
 class TableStore(DictionaryStore):
     @classmethod
-    def open(cls, io: Union[Path, str, IO]) -> "TableStore":
-        df = cls._load(io)
+    def open(cls, io: Union[Path, str, IO], dtypes: Dict = None) -> "TableStore":
+        df = cls._load(io, dtypes=dtypes)
         store = cls().from_dataframe(df)
         return store
 
