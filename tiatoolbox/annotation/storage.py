@@ -98,6 +98,7 @@ class AnnotationStoreABC(ABC):
         - Passing None returns a zero length iterable.
         - Passing an interable returns the passed iterable unchanged.
         - Passing a non-iterable (e.g. and int) returns a single element iterator.
+
         """
         if obj is None:
             return iter(())
@@ -142,6 +143,7 @@ class AnnotationStoreABC(ABC):
         """Update an annotation at given index.
 
         Extra key-word arguments are used to update properties.
+
         """
         raise NotImplementedError()
 
@@ -621,6 +623,7 @@ class DictionaryStore(AnnotationStoreABC):
     - https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics-dtypes
     - https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
     - https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+
     """
 
     def __init__(
