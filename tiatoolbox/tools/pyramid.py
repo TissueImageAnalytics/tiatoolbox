@@ -93,8 +93,8 @@ class TilePyramidGenerator:
             level (int): The level to calculate the grid size for.
 
         """
-        if level >= self.level_count:
-            raise IndexError
+        if level < 0 or level >= self.level_count:
+            raise IndexError("Invalid level")
         return tuple(
             np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(int)
         )

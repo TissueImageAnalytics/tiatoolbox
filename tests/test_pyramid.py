@@ -143,6 +143,18 @@ def test_zoomify_iter():
         assert tile.size == (256, 256)
 
 
+def test_tile_grid_size_invalid_level():
+    """Test tile_grid_size for IndexError on invalid levels."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=256)
+    with pytest.raises(IndexError):
+        dz.tile_grid_size(level=-1)
+    with pytest.raises(IndexError):
+        dz.tile_grid_size(level=100)
+    dz.tile_grid_size(level=0)
+
+
 def test_get_tile_negative_level():
     """Test for IndexError on negative levels."""
     array = np.ones((1024, 1024))
@@ -217,6 +229,9 @@ def test_zoomify_dump_compression_error(tmp_path):
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
     out_path = tmp_path / "pyramid_dump"
+
+    with pytest.raises(ValueError):
+        dz.dump(out_path, container=None, compression="deflate")
 
     with pytest.raises(ValueError):
         dz.dump(out_path, container="zip", compression="gzip")
