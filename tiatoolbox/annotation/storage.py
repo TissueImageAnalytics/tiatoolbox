@@ -442,7 +442,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         )
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        for index, kwarg_values in zip_longest(index_iter, kwarg_values_iter):
+        for i, kwarg_values in zip_longest(index_iter, kwarg_values_iter):
             properties = dict(
                 (k, v) for k, v in zip(kwargs.keys(), kwarg_values) if v is not ...
             )
@@ -460,7 +460,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                     """,
                     dict(
                         xy,
-                        index=index,
+                        index=i,
                         boundary=self.serialise_geometry(geometry),
                     ),
                 )
@@ -472,7 +472,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                     """,
                     dict(
                         bounds,
-                        index=index,
+                        index=i,
                     ),
                 )
             if len(properties) > 0:
@@ -483,7 +483,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                     WHERE id = :index
                     """,
                     dict(
-                        index=index,
+                        index=i,
                         properties=json.dumps(properties, separators=(",", ":")),
                     ),
                 )
@@ -682,15 +682,15 @@ class DictionaryStore(AnnotationStoreABC):
         properties_iters = {(k, self._iterfy(v)) for k, v in extra_properties.items()}
         indexes = []
 
-        for geometry in geometrys_iter:
-            key = self.geometry_hash(geometry)
+        for geom in geometrys_iter:
+            key = self.geometry_hash(geom)
             properties = dict((k, next(it)) for k, it in properties_iters)
             if "class" in properties or "class_" in properties:
                 raise Exception("Class may only be specified once.")
             cls = next(clses_iter, None)
             if cls is not None:
                 properties.update({"class": cls})
-            row = pd.DataFrame(dict(geometry=geometry, **properties), index=[key])
+            row = pd.DataFrame(dict(geometry=geom, **properties), index=[key])
             self.data = self.data.append(row)
             indexes.append(key)
 
