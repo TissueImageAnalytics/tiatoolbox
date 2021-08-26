@@ -86,9 +86,6 @@ class AnnotationStoreABC(ABC):
         """Load a store object from a path or file-like object."""
         raise NotImplementedError()
 
-    def __init__(self) -> None:
-        raise NotImplementedError()
-
     def __len__(self) -> int:
         """Return the number of annotations in the store."""
         raise NotImplementedError()
@@ -182,6 +179,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         return store
 
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
+        super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
         if not all(
@@ -629,6 +627,7 @@ class DictionaryStore(AnnotationStoreABC):
         self,
         dtypes: dict = None,
     ):
+        super().__init__()
         self.data = pd.DataFrame()
         if dtypes is None:
             dtypes = {"class": "Int8"}
