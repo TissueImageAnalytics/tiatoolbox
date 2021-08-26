@@ -189,9 +189,7 @@ def test_SQLite3RTreeStore_to_features(fill_store, tmp_path):
     assert isinstance(features, list)
     assert len(features) == FILLED_LEN
     assert isinstance(features[0], dict)
-    assert all(
-        set(["type", "geometry", "properties"]) == set(f.keys()) for f in features
-    )
+    assert all({"type", "geometry", "properties"} == set(f.keys()) for f in features)
 
 
 def test_SQLite3RTreeStore_to_geodict(fill_store, tmp_path):
