@@ -639,7 +639,7 @@ class DictionaryStore(AnnotationStoreABC):
 
     @property
     def dtypes(self) -> Optional[dict]:
-        """ "A dictionary mapping columns to data types."""
+        """A dictionary mapping columns to data types."""
         return self._dtypes
 
     @dtypes.setter
