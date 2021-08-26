@@ -12,7 +12,7 @@ from typing import (
 )
 from numbers import Number
 import pickle
-import io
+from io import StringIO
 import sqlite3
 from itertools import zip_longest
 from pathlib import Path
@@ -821,7 +821,7 @@ class CSVStore(TableStore):
 
     @staticmethod
     def _dumps(df: pd.DataFrame) -> str:
-        string_io = io.StringIO()
+        string_io = StringIO()
         df.to_csv(string_io, index_label=df.index.name)
         string_io.seek(0)
         return string_io.read()
@@ -870,7 +870,7 @@ class ADTStore(TableStore):
 
     @staticmethod
     def _dumps(df: pd.DataFrame) -> str:
-        string_io = io.StringIO()
+        string_io = StringIO()
         df.to_csv(string_io, index_label=df.index.name)
         string_io.seek(0)
         return string_io.read()
