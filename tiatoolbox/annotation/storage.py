@@ -685,7 +685,7 @@ class DictionaryStore(AnnotationStoreABC):
 
         for geom in geometrys_iter:
             key = self.geometry_hash(geom)
-            properties = {k: next(it) for k, it in properties_iters}
+            properties = {k: next(it, {}) for k, it in properties_iters}
             if "class" in properties or "class_" in properties:
                 raise Exception("Class may only be specified once.")
             cls = next(clses_iter, None)
