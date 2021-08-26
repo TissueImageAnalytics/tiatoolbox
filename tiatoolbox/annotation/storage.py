@@ -358,7 +358,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             ),
         )
         boundaries = cur.fetchall()
-        return list([index for index, in boundaries])
+        return [index for index, in boundaries]
 
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         cur = self.con.cursor()
