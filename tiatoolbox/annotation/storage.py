@@ -303,9 +303,9 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             self._make_token(
                 geometry=geometry,
                 class_=class_,
-                properties=dict(
-                    (k, v) for k, v in zip(extra_properties.keys(), self._iterfy(props))
-                ),
+                properties={
+                    k: v for k, v in zip(extra_properties.keys(), self._iterfy(props))
+                },
             )
             for geometry, class_, props in zip_longest(
                 geometries_iter, classes_iter, property_values_iter
@@ -368,7 +368,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             minX, minY, maxX, maxY = query_geometry.bounds
         cur.execute(
             """
-        SELECT geometry.boundary FROM geometry, rtree
+        SELECT geometry.boundary, class, properties FROM geometry, rtree
         WHERE rtree.id=geometry.id
         AND rtree.minX>=:minX AND rtree.maxX<=:maxX
         AND rtree.minY>=:minY AND rtree.maxY<=:maxY
@@ -443,9 +443,9 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute("BEGIN")
         for i, kwarg_values in zip_longest(index_iter, kwarg_values_iter):
-            properties = dict(
-                (k, v) for k, v in zip(kwargs.keys(), kwarg_values) if v is not ...
-            )
+            properties = {
+                k: v for k, v in zip(kwargs.keys(), kwarg_values) if v is not ...
+            }
             geometry = properties.get("geometry")
             if "geometry" in properties:
                 del properties["geometry"]
@@ -684,7 +684,7 @@ class DictionaryStore(AnnotationStoreABC):
 
         for geom in geometrys_iter:
             key = self.geometry_hash(geom)
-            properties = dict((k, next(it)) for k, it in properties_iters)
+            properties = {k: next(it) for k, it in properties_iters}
             if "class" in properties or "class_" in properties:
                 raise Exception("Class may only be specified once.")
             cls = next(clses_iter, None)
@@ -1019,11 +1019,11 @@ class PyTablesStore(AnnotationStoreABC):
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(self.geometry_table.read())
-        dtypes = dict(
-            (name, type)
-            for name, type in RESERVED_PROPERTIES.items()
+        dtypes = {
+            name: type_
+            for name, type_ in RESERVED_PROPERTIES.items()
             if name in df.columns
-        )
+        }
         df = df.astype(dtypes)
         df.set_index("index", inplace=True)
         df.rename(columns={"class_": "class", "boundary": "geometry"}, inplace=True)
