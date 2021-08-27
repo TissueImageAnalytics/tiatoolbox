@@ -89,6 +89,10 @@ def find_padding(read_location, read_size, image_size):
       read_location (tuple(int)): The location of the region to read.
       read_size (tuple(int)): The size of the location to read.
       image_size (tuple(int)): The size of the image to read from.
+
+    Returns:
+        tuple: Tuple of padding to apply in the format expect by np.pad.
+            i.e. ((before_x, after_x), (before_y, after_y)).
     """
     read_location = np.array(read_location)
     read_size = np.array(read_size)
@@ -107,6 +111,9 @@ def find_overlap(read_location, read_size, image_size):
       read_location (tuple(int)): The location of the region to read.
       read_size (tuple(int)): The size of the location to read.
       image_size (tuple(int)): The size of the image to read from.
+
+    Returns:
+        tuple: Bounds of the overlapping region.
     """
     read_location = np.array(read_location)
     read_size = np.array(read_size)
@@ -445,7 +452,8 @@ def sub_pixel_read(
             result in no padding being applied.
         **read_kwargs (dict):
             Arbitrary keyword arguments passed through to `read_func`.
-    Return:
+
+    Returns:
         :class:`numpy.ndimage`: Output image region.
 
     Raises:
