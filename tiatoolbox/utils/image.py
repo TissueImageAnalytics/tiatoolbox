@@ -139,19 +139,19 @@ def make_bounds_size_positive(bounds):
             - :py:obj:`bool` - Vertical flip
 
     """
-    hflip, vflip = False, False
+    fliplr, flipud = False, False
     _, (width, height) = bounds2locsize(bounds)
     if width >= 0 and height >= 0:
-        return bounds, hflip, vflip
+        return bounds, fliplr, flipud
     l, t, r, b = bounds
     if width < 0:
         l, r = r, l
-        hflip = True
+        fliplr = True
     if height < 0:
         t, b = b, t
-        vflip = True
+        flipud = True
     bounds = np.array([l, t, r, b])
-    return (bounds, hflip, vflip)
+    return (bounds, fliplr, flipud)
 
 
 def crop_and_pad_edges(
@@ -499,8 +499,8 @@ def sub_pixel_read(
     # Check the bounds are valid or have a negative size
     # The left/start_x and top/start_y values should usually be smaller
     # than the right/end_x and bottom/end_y values.
-    bounds, hflip, vflip = make_bounds_size_positive(bounds)
-    if hflip or vflip:
+    bounds, fliplr, flipud = make_bounds_size_positive(bounds)
+    if fliplr or flipud:
         warnings.warn("Bounds have a negative size, output will be flipped.")
 
     image = np.array(image)
@@ -611,8 +611,8 @@ def sub_pixel_read(
                 region, output_size=tuple(output_size), interpolation=interpolation
             )
     # 5 Apply flips to account for negative bounds
-    if hflip:
+    if fliplr:
         region = np.flipud(region)
-    if vflip:
+    if flipud:
         region = np.fliplr(region)
     return region

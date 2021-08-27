@@ -883,33 +883,33 @@ def test_make_bounds_size_positive():
     """Test make_bounds_size_positive outputs positive bounds."""
     # Horizontal only
     bounds = (0, 0, -10, 10)
-    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    pos_bounds, fliplr, flipud = utils.image.make_bounds_size_positive(bounds)
     _, size = utils.transforms.bounds2locsize(pos_bounds)
     assert len(size) == 2
     assert size[0] > 0
     assert size[1] > 0
-    assert hflip is True
-    assert vflip is False
+    assert fliplr is True
+    assert flipud is False
 
     # Vertical only
     bounds = (0, 0, 10, -10)
-    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    pos_bounds, fliplr, flipud = utils.image.make_bounds_size_positive(bounds)
     _, size = utils.transforms.bounds2locsize(pos_bounds)
     assert len(size) == 2
     assert size[0] > 0
     assert size[1] > 0
-    assert hflip is False
-    assert vflip is True
+    assert fliplr is False
+    assert flipud is True
 
     # Both
     bounds = (0, 0, -10, -10)
-    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    pos_bounds, fliplr, flipud = utils.image.make_bounds_size_positive(bounds)
     _, size = utils.transforms.bounds2locsize(pos_bounds)
     assert len(size) == 2
     assert size[0] > 0
     assert size[1] > 0
-    assert hflip is True
-    assert vflip is True
+    assert fliplr is True
+    assert flipud is True
 
 
 def test_crop_and_pad_edges():
