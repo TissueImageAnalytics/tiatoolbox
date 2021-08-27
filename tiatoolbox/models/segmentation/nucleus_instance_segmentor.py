@@ -20,25 +20,18 @@
 
 """This module enables nucleus instance segmentation."""
 
-# replace with the sql database once the PR in place
-import pygeos
-import asyncio
 import uuid
-import logging
-import os
-import pathlib
-import warnings
-import copy
-from typing import Callable, List, Tuple, Union
+from typing import List, Union
 
 import numpy as np
+
+# replace with the sql database once the PR in place
+import pygeos
 import torch
-import torch.multiprocessing as torch_mp
-import torch.utils.data as torch_data
 import tqdm
 
-from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.models.segmentation import IOConfigSegmentor, SemanticSegmentor
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 
@@ -46,13 +39,18 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 # the only way to passing function is top-level or may be
 # static instance method
 def _process_tile_predictions(
-        ioconfig,
-        tile_bound, tile_flag, tile_mode, tile_output,
-        # these two would be replaced by annotation store
-        # in the future
-        ref_inst_dict, ref_inst_rtree,
-        postproc, merge_predictions,
-        ):
+    ioconfig,
+    tile_bound,
+    tile_flag,
+    tile_mode,
+    tile_output,
+    # these two would be replaced by annotation store
+    # in the future
+    ref_inst_dict,
+    ref_inst_rtree,
+    postproc,
+    merge_predictions,
+):
     locations, predictions = list(zip(*tile_output))
 
     # convert from WSI space to Tile space
@@ -69,7 +67,7 @@ def _process_tile_predictions(
     # within input, the output will need to re-calibrate if it is at different
     # resolution than the input
     ioconfig = ioconfig.to_baseline()
-    fx_list = [v['resolution'] for v in ioconfig.output_resolutions]
+    fx_list = [v["resolution"] for v in ioconfig.output_resolutions]
 
     head_raws = []
     for idx, fx in enumerate(fx_list):
@@ -77,10 +75,11 @@ def _process_tile_predictions(
         head_locations = np.ceil(locations_in_tile * fx).astype(np.int32)
         head_predictions = [v[idx][0] for v in predictions]
         head_raw = merge_predictions(
-                        head_tile_shape[::-1],
-                        head_predictions,
-                        head_locations,
-                        free_prediction=True)
+            head_tile_shape[::-1],
+            head_predictions,
+            head_locations,
+            free_prediction=True,
+        )
         head_raws.append(head_raw)
     inst_img, inst_dict = postproc(head_raws)
 
@@ -92,34 +91,35 @@ def _process_tile_predictions(
     # annotation store
     m = ioconfig.margin
     w, h = tile_shape
-    inst_boxes = [v['box'] for v in inst_dict.values()]
+    inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
     tile_rtree = pygeos.STRtree(
         pygeos.box(
-            inst_boxes[:, 0], inst_boxes[:, 1],
-            inst_boxes[:, 2], inst_boxes[:, 3]))
+            inst_boxes[:, 0], inst_boxes[:, 1], inst_boxes[:, 2], inst_boxes[:, 3]
+        )
+    )
     #
 
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        pygeos.box(  0,   0, w, 1),  # noqa top egde
-        pygeos.box(  0, h-1, w, h),  # noqa bottom edge
-        pygeos.box(  0,   0, 1, h),  # noqa left
-        pygeos.box(w-1,   0, w, h),  # noqa right
+        pygeos.box(0, 0, w, 1),  # noqa top egde
+        pygeos.box(0, h - 1, w, h),  # noqa bottom edge
+        pygeos.box(0, 0, 1, h),  # noqa left
+        pygeos.box(w - 1, 0, w, h),  # noqa right
     ]
     margin_boxes = [
-        pygeos.box(  0,   0, w, m),  # noqa top egde
-        pygeos.box(  0, h-m, w, h),  # noqa bottom edge
-        pygeos.box(  0,   0, m, h),  # noqa left
-        pygeos.box(w-m,   0, w, h),  # noqa right
+        pygeos.box(0, 0, w, m),  # noqa top egde
+        pygeos.box(0, h - m, w, h),  # noqa bottom edge
+        pygeos.box(0, 0, m, h),  # noqa left
+        pygeos.box(w - m, 0, w, h),  # noqa right
     ]
     # ! this is wrt to WSI coord space, not Tile
     margin_lines = [
-        [[  m,   m], [w-m,   m]],  # noqa top egde
-        [[  m, h-m], [w-m, h-m]],  # noqa bottom edge
-        [[  m,   m], [  m, h-m]],  # noqa left
-        [[w-m,   m], [w-m, h-m]],  # noqa right
+        [[m, m], [w - m, m]],  # noqa top egde
+        [[m, h - m], [w - m, h - m]],  # noqa bottom edge
+        [[m, m], [m, h - m]],  # noqa left
+        [[w - m, m], [w - m, h - m]],  # noqa right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
     print(margin_lines)
@@ -131,13 +131,13 @@ def _process_tile_predictions(
         # for `full grid` tiles `cross section` tiles
         # -- extend from the boundary by the margin size, remove
         #    nuclei whose entire contours lie within the margin area
-        sel_boxes = (
-            [box for idx, box in enumerate(margin_boxes)
-                if tile_flag[idx] or tile_mode == 3]
-        )
+        sel_boxes = [
+            box
+            for idx, box in enumerate(margin_boxes)
+            if tile_flag[idx] or tile_mode == 3
+        ]
         sel_indices = [
-            tile_rtree.query(bound, predicate='contains')
-            for bound in sel_boxes
+            tile_rtree.query(bound, predicate="contains") for bound in sel_boxes
         ]
     elif tile_mode in [1, 2]:
         # for `horizontal/vertical strip` tiles
@@ -146,13 +146,12 @@ def _process_tile_predictions(
         #    area (including on the margin line)
         # -- remove all nuclei on the boundary also
 
-        sel_boxes = ([
+        sel_boxes = [
             margin_boxes[idx] if flag else boundary_lines[idx]
             for idx, flag in enumerate(tile_flag)
-        ])
+        ]
         sel_indices = [
-            tile_rtree.query(bound, predicate='intersects')
-            for bound in sel_boxes
+            tile_rtree.query(bound, predicate="intersects") for bound in sel_boxes
         ]
 
     def retrieve_sel_uids(sel_indices, inst_dict):
@@ -160,8 +159,7 @@ def _process_tile_predictions(
         if len(sel_indices) > 0:
             # not sure how costly this is in large dict
             inst_uids = list(inst_dict.keys())
-            sel_indices = [
-                idx for sub_sel in sel_indices for idx in sub_sel]
+            sel_indices = [idx for sub_sel in sel_indices for idx in sub_sel]
             sel_uids = [inst_uids[idx] for idx in sel_indices]
         return sel_uids
 
@@ -174,7 +172,7 @@ def _process_tile_predictions(
         # remove existings insts in old prediction that intersect
         # with the margin lines
         sel_indices = [
-            ref_inst_rtree.query(bound, predicate='intersects')
+            ref_inst_rtree.query(bound, predicate="intersects")
             for bound in margin_lines
         ]
         remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
@@ -184,9 +182,9 @@ def _process_tile_predictions(
     new_inst_dict = {}
     for inst_uid, inst_info in inst_dict.items():
         if inst_uid not in remove_insts_in_tile:
-            inst_info['box'] += np.concatenate([tile_tl] * 2)
-            inst_info['centroid'] += tile_tl
-            inst_info['contour'] += tile_tl
+            inst_info["box"] += np.concatenate([tile_tl] * 2)
+            inst_info["centroid"] += tile_tl
+            inst_info["contour"] += tile_tl
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
 
@@ -197,11 +195,34 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     """Nucleus Instance Segmentor."""
 
     def _get_tile_info(
-                self,
-                image_shape: Union[List[int], np.ndarray],
-                ioconfig: IOConfigSegmentor,
-            ):
+        self,
+        image_shape: Union[List[int], np.ndarray],
+        ioconfig: IOConfigSegmentor,
+    ):
+        """Generating tile information.
 
+        To avoid out of memory problem when processing WSI-scale in general,
+        the predictor will perform the inference and assemble on a large
+        image tiles (each may have size of 4000x4000 compared to patch
+        output of 256x256) first before sticthing every tiles at the end
+        to complete the WSI output. For nuclei instance segmentation,
+        the stiching process will require removal of predictions within
+        some bounding areas. This function generates both the tile placement
+        as well as the flag to indicate how the removal should be done to
+        achieve the goal above.
+
+        Args:
+            image_shape (:class:`numpy.ndarray`, list(int)): the shape of WSI
+                to extract the tile from, assumed to be in [width, height].
+            ioconfig (:obj:IOConfigSegmentor): the input and output
+                configuration objects.
+        Returns:
+            grid_tiles, removal_flags: ndarray
+            vertical_strip_tiles, removal_flags: ndarray
+            horizontal_strip_tiles, removal_flags: ndarray
+            cross_section_tiles, removal_flags: ndarray
+
+        """
         margin = np.array(ioconfig.margin)
         tile_shape = np.array(ioconfig.tile_shape)
         tile_shape = (
@@ -224,9 +245,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # unset for those lie within the selection
         def unset_removal_flag(boxes, sel_boxes, removal_flag):
             spatial_indexer = pygeos.STRtree(
-                pygeos.box(
-                    boxes[:, 0], boxes[:, 1],
-                    boxes[:, 2], boxes[:, 3]))
+                pygeos.box(boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3])
+            )
             for idx, sel_box in enumerate(sel_boxes):
                 if sel_box is None:
                     continue
@@ -237,7 +257,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         h, w = image_shape
         boxes = tile_outputs
         #  expand to full four corners
-        boxes_tl = boxes[:, :2]
+        # boxes_tl = boxes[:, :2]
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
         boxes_bl = np.dstack([boxes[:, 0], boxes[:, 3]])[0]
@@ -253,9 +273,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         ]
         flag = np.ones([boxes.shape[0], 4], dtype=np.int32)
         flag = unset_removal_flag(boxes, sel_boxes, flag)
-        info.append([
-            boxes, flag
-        ])
+        info.append([boxes, flag])
 
         # * create vertical boxes at tile boundary and
         # * flag top and bottom removal, excluding those
@@ -275,10 +293,13 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # -------------------
         # only select boxes having right edges removed
         sel_indices = np.nonzero(flag[..., 3])
-        _boxes = np.concatenate([
-            boxes_tr[sel_indices] - np.array([margin, 0])[None],
-            boxes_br[sel_indices] + np.array([margin, 0])[None],
-        ], axis=-1)
+        _boxes = np.concatenate(
+            [
+                boxes_tr[sel_indices] - np.array([margin, 0])[None],
+                boxes_br[sel_indices] + np.array([margin, 0])[None],
+            ],
+            axis=-1,
+        )
         _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
         _flag[:, [0, 1]] = 1
         _flag = unset_removal_flag(_boxes, sel_boxes, _flag)
@@ -299,10 +320,13 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # only select boxes having bottom edges removed
         sel_indices = np.nonzero(flag[..., 1])
         # top bottom left right
-        _boxes = np.concatenate([
-            boxes_bl[sel_indices] - np.array([0, margin])[None],
-            boxes_br[sel_indices] + np.array([0, margin])[None],
-        ], axis=-1)
+        _boxes = np.concatenate(
+            [
+                boxes_bl[sel_indices] - np.array([0, margin])[None],
+                boxes_br[sel_indices] + np.array([0, margin])[None],
+            ],
+            axis=-1,
+        )
         _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
         _flag[:, [2, 3]] = 1
         _flag = unset_removal_flag(_boxes, sel_boxes, _flag)
@@ -325,14 +349,15 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # only select boxes having both right and bottom edges removed
         sel_indices = np.nonzero(np.prod(flag[:, [1, 3]], axis=-1))
-        _boxes = np.concatenate([
-            boxes_br[sel_indices] - np.array([2 * margin, 2 * margin])[None],
-            boxes_br[sel_indices] + np.array([2 * margin, 2 * margin])[None],
-        ], axis=-1)
+        _boxes = np.concatenate(
+            [
+                boxes_br[sel_indices] - np.array([2 * margin, 2 * margin])[None],
+                boxes_br[sel_indices] + np.array([2 * margin, 2 * margin])[None],
+            ],
+            axis=-1,
+        )
         flag = np.full([_boxes.shape[0], 4], 1, dtype=np.int32)
-        info.append([
-            _boxes, flag
-        ])
+        info.append([_boxes, flag])
 
         return info
 
@@ -350,9 +375,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         patch_outputs = torch.from_numpy(patch_outputs).share_memory_()
         self._mp_shared_space.patch_inputs = patch_inputs
         self._mp_shared_space.patch_outputs = patch_outputs
-        self._mp_shared_space.wsi_idx = (
-            torch.Tensor([wsi_idx]).share_memory_()
-        )
+        self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
     def _infer_once(self):
         num_steps = len(self._loader)
@@ -441,8 +464,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # assume to be in [topleft_x, topleft_y, botright_x, botright_y]
         spatial_indexer = pygeos.STRtree(
             pygeos.box(
-                patch_outputs[:, 0], patch_outputs[:, 1],
-                patch_outputs[:, 2], patch_outputs[:, 3]))
+                patch_outputs[:, 0],
+                patch_outputs[:, 1],
+                patch_outputs[:, 2],
+                patch_outputs[:, 3],
+            )
+        )
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
@@ -461,54 +488,58 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 sel_indices = spatial_indexer.query(pygeos.box(*tile_bound))
                 tile_patch_inputs = patch_inputs[sel_indices]
                 tile_patch_outputs = patch_outputs[sel_indices]
-                self._to_shared_space(
-                    wsi_idx, tile_patch_inputs, tile_patch_outputs)
+                self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
 
                 # tile_infer_output = self._infer_once()
                 import joblib
-                dump_path = f'local/test_output/tile_set={set_idx}_tile={tile_idx}.dat'
+
+                dump_path = f"local/test_output/tile_set={set_idx}_tile={tile_idx}.dat"
                 # joblib.dump(tile_infer_output, dump_path)
                 tile_infer_output = joblib.load(dump_path)
 
                 self._process_tile_predictions(
-                    ioconfig,
-                    tile_bound, tile_flag, set_idx,
-                    tile_infer_output)
+                    ioconfig, tile_bound, tile_flag, set_idx, tile_infer_output
+                )
 
             self._merge_post_process_results()
 
             # DEPRECATION: will be deprecated upon finalizing
             # annotation store
-            # inst_boxes = [v['box'] for v in self._wsi_inst_info.values()]
-            # inst_boxes = np.array(inst_boxes)
-            # self._wsi_inst_rtree = pygeos.STRtree(
-            #     pygeos.box(
-            #         inst_boxes[:, 0], inst_boxes[:, 1],
-            #         inst_boxes[:, 2], inst_boxes[:, 3]))
-            # #
+            inst_boxes = [v["box"] for v in self._wsi_inst_info.values()]
+            inst_boxes = np.array(inst_boxes)
+            self._wsi_inst_rtree = pygeos.STRtree(
+                pygeos.box(
+                    inst_boxes[:, 0],
+                    inst_boxes[:, 1],
+                    inst_boxes[:, 2],
+                    inst_boxes[:, 3],
+                )
+            )
 
-            # from .utils import visualize_instances_dict
-            # thumb = wsi_reader.slide_thumbnail(resolution=0.25, units='mpp')
-            # thumb = visualize_instances_dict(thumb, self._wsi_inst_info)
-            # from tiatoolbox.utils.misc import imwrite
-            # imwrite(f'dump{set_idx}.png', thumb)
+        print(save_path)
+        # from .utils import visualize_instances_dict
+        # thumb = wsi_reader.slide_thumbnail(resolution=0.25, units='mpp')
+        # thumb = visualize_instances_dict(thumb, self._wsi_inst_info)
+        # from tiatoolbox.utils.misc import imwrite
+        # imwrite(f'dump{set_idx}.png', thumb)
 
     def _process_tile_predictions(
-            self,
-            ioconfig,
-            tile_bound, tile_flag, tile_mode,
-            tile_output):
+        self, ioconfig, tile_bound, tile_flag, tile_mode, tile_output
+    ):
 
         args = [
             ioconfig,
-            tile_bound, tile_flag, tile_mode, tile_output,
-            self._wsi_inst_info, self._wsi_inst_rtree,
+            tile_bound,
+            tile_flag,
+            tile_mode,
+            tile_output,
+            self._wsi_inst_info,
+            self._wsi_inst_rtree,
             self.model.postproc_func,
-            self.merge_prediction
+            self.merge_prediction,
         ]
         if self._postproc_workers is not None:
-            future = self._postproc_workers.submit(
-                        _process_tile_predictions, *args)
+            future = self._postproc_workers.submit(_process_tile_predictions, *args)
         else:
             future = _process_tile_predictions(*args)
         self._futures.append(future)
