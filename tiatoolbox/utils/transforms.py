@@ -19,6 +19,8 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
+from typing import Tuple, Union
+
 import numpy as np
 from PIL import Image
 import cv2
@@ -175,6 +177,15 @@ def bounds2locsize(bounds, origin="upper"):
         origin (str): Upper (Top-left) or lower (bottom-left) origin.
             Defaults to upper.
 
+    Returns:
+        tuple: A 2-tuple containing integer 2-tuples for location and size.
+          - :py:obj:`tuple` - location tuple
+            - :py:obj:`int` - x
+            - :py:obj:`int` - y
+          - :py:obj:`size` - size tuple
+            - :py:obj:`int` - width
+            - :py:obj:`int` - height
+
     """
     left, top, right, bottom = bounds
     origin = origin.lower()
@@ -210,7 +221,10 @@ def locsize2bounds(location, size):
     )
 
 
-def bounds2slices(bounds, stride=1):
+def bounds2slices(
+    bounds: Tuple[int, int, int, int],
+    stride: Union[int, Tuple[int, int, Tuple[int, int]]] = 1,
+) -> Tuple[slice]:
     """Convert bounds to slices.
 
     Create a tuple of slices for each start/stop pair in bounds.
@@ -220,6 +234,10 @@ def bounds2slices(bounds, stride=1):
             length with the dirst half as starting values and the second half
             as end values, e.g. (start_x, start_y, stop_x, stop_y).
         stride (int): Stride to apply when converting to slices.
+
+    Returns:
+        tuple(slice): Tuple of slices in image read order (y, x, channels).
+
     """
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
@@ -232,7 +250,10 @@ def bounds2slices(bounds, stride=1):
     return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
 
 
-def pad_bounds(bounds, padding):
+def pad_bounds(
+    bounds: Tuple[int, int, int, int],
+    padding: Union[int, Tuple[int, int], Tuple[int, int, int, int]],
+) -> Tuple[int, int, int, int]:
     """Add padding to bounds.
 
     Arguments:
@@ -244,6 +265,10 @@ def pad_bounds(bounds, padding):
     Examples:
         >>> pad_bounds((0, 0, 0, 0), 1)
         (-1, -1, 1, 1)
+
+    Returns:
+        tuple(int): Tuple of bounds with padding to the edges.
+
     """
     if np.size(bounds) % 2 != 0:
         raise ValueError("Bounds must have an even number of elements")
