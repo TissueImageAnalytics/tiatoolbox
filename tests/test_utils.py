@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
+import torch.cuda
 from PIL import Image
 from pytest import approx
 
@@ -983,11 +984,62 @@ def test_model_to():
 
     # test on GPU
     # no GPU on Travis so this will crash
-    with pytest.raises(RuntimeError):
-        model = torch_models.resnet18()
-        model = misc.model_to(on_gpu=True, model=model)
+    if not torch.cuda.is_available():
+        with pytest.raises(RuntimeError):
+            model = torch_models.resnet18()
+            _ = misc.model_to(on_gpu=True, model=model)
 
     # test on CPU
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
+
+
+def test_save_as_json():
+    """Test save data to json."""
+    import json
+
+    # dict with nested dict, list, and np.array
+    key_dict = {
+        "a1": {"name": "John", "age": 23, "sex": "male"},
+        "a2": {"name": "John", "age": 23, "sex": "male"},
+    }
+    sample = {
+        "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
+        "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
+        "c": {
+            "a4": {"a5": {"a6": "a7", "c": [1, 1, 3, np.array([4, 5, 6.0])]}},
+            "b1": {},
+            "c1": [],
+            True: [False, None],
+        },
+        "d": [key_dict, np.random.rand(2, 2)],
+        "e": np.random.rand(16, 2),
+    }
+    not_jsonable = {"x86": lambda x: x}
+    not_jsonable.update(sample)
+    # should fail because key is not of primitive type [str, int, float, bool]
+    with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
+        misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(not_jsonable, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
+    with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
+        misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
+    # test complex nested dict
+    print(sample)
+    misc.save_as_json(sample, "sample_json.json")
+    with open("sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    # test read because == is useless when value is mutable
+    assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
+
+    # test complex list of data
+    misc.save_as_json(list(sample.values()), "sample_json.json")
+    # test read because == is useless when value is mutable
+    with open("sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
