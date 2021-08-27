@@ -598,11 +598,11 @@ def _sample_wsi_dict(tmpdir_factory):
     for file_code, file_name in file_name_dict.items():
         file_path = tmpdir_factory.mktemp("data").join(file_name)
         if not pathlib.Path(file_path).is_file():
-            print("\nDownloading %s" % file_path)
+            print(f"\nDownloading {file_path}")
             r = requests.get("%s/%s" % (URL_HOME, file_name))
             with open(file_path, "wb") as f:
                 f.write(r.content)
         else:
-            print("\nSkipping %s" % file_path)
+            print(f"\nSkipping {file_path}")
         info_dict[file_code] = file_path
     return info_dict

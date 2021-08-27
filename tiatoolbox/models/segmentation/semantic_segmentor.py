@@ -29,6 +29,7 @@ import os
 import pathlib
 import warnings
 from typing import Callable, List, Tuple, Union
+from concurrent.futures import ProcessPoolExecutor
 
 import cv2
 import numpy as np
@@ -113,10 +114,12 @@ class IOConfigSegmentor(IOConfigABC):
         Args:
             resolutions (list): a list of resolutions where each defined
                 as `{'resolution': value, 'unit': value}`
-            unit (string): unit that the the resolutions are at
+            unit (string): unit that the the resolutions are at.
+
         Return:
             (np.ndarray): an 1D array of scaling factor having the same
                 length as `resolutions`
+
         """
         old_val = [v["resolution"] for v in resolutions]
         if unit == "baseline":
@@ -136,16 +139,18 @@ class IOConfigSegmentor(IOConfigABC):
         the object.
 
         """
-        resolutions = self.input_resolutions + self.output_resolutions
-        scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        self.input_resolutions = [
+        _self = copy.deepcopy(self)
+        resolutions = _self.input_resolutions + _self.output_resolutions
+        scale_factors = _self.scale_to_highest(resolutions, _self.resolution_unit)
+        _self.input_resolutions = [
             {"units": "baseline", "resolution": v}
-            for v in scale_factors[: len(self.input_resolutions)]
+            for v in scale_factors[: len(_self.input_resolutions)]
         ]
-        self.output_resolutions = [
+        _self.output_resolutions = [
             {"units": "baseline", "resolution": v}
-            for v in scale_factors[len(self.input_resolutions) :]
+            for v in scale_factors[len(_self.input_resolutions) :]
         ]
+        return _self
 
 
 class WSIStreamDataset(torch_data.Dataset):
@@ -199,7 +204,7 @@ class WSIStreamDataset(torch_data.Dataset):
                     ]
                 )
             )
-            self.ioconfig.to_baseline()
+            self.ioconfig = self.ioconfig.to_baseline()
 
         self.mp_shared_space = mp_shared_space
         self.wsi_paths = wsi_paths
@@ -490,7 +495,6 @@ class SemanticSegmentor:
         self,
         wsi_idx: int,
         ioconfig: IOConfigSegmentor,
-        loader,
         save_path: str,
         mode: str,
     ):
@@ -543,14 +547,14 @@ class SemanticSegmentor:
         pbar = tqdm.tqdm(
             desc=pbar_desc,
             leave=True,
-            total=int(len(loader)),
+            total=int(len(self._loader)),
             ncols=80,
             ascii=True,
             position=0,
         )
 
         cum_output = []
-        for _, batch_data in enumerate(loader):
+        for _, batch_data in enumerate(self._loader):
             sample_datas, sample_infos = batch_data
             batch_size = sample_infos.shape[0]
             # ! depending on the protocol of the output within infer_batch
@@ -657,14 +661,21 @@ class SemanticSegmentor:
             canvas_cum_shape_ += (num_output_ch,)
             add_singleton = num_output_ch == 1
 
-        cum_canvas = np.lib.format.open_memmap(
-            save_path,
-            mode="w+",
-            shape=canvas_cum_shape_,
-            dtype=np.float32,
-        )
+        if save_path is not None:
+            cum_canvas = np.lib.format.open_memmap(
+                save_path,
+                mode="w+",
+                shape=canvas_cum_shape_,
+                dtype=np.float32,
+            )
+        else:
+            cum_canvas = np.zeros(
+                shape=canvas_cum_shape_,
+                dtype=np.float32,
+            )
 
         # for pixel occurence counting
+        # ! this may be expensive
         count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
         patch_infos = list(zip(locations, predictions))
@@ -821,6 +832,14 @@ class SemanticSegmentor:
         self._on_gpu = on_gpu
         self._model = misc.model_to(on_gpu, self.model)
 
+        # workers should be > 0 else Value Error will be thrown
+        self._postproc_workers = None
+        if self.num_postproc_worker > 0:
+            self._postproc_workers = (
+                ProcessPoolExecutor(
+                    max_workers=self.num_postproc_worker)
+            )
+
         mp_manager = torch_mp.Manager()
         mp_shared_space = mp_manager.Namespace()
         self._mp_shared_space = mp_shared_space
@@ -854,6 +873,7 @@ class SemanticSegmentor:
             num_workers=self.num_loader_worker,
             persistent_workers=self.num_loader_worker > 0,
         )
+        self._loader = loader
 
         self.imgs = imgs
         self.masks = masks
@@ -865,7 +885,7 @@ class SemanticSegmentor:
         for wsi_idx, img_path in enumerate(imgs):
             try:
                 wsi_save_path = os.path.join(save_dir, f"{wsi_idx}")
-                self._predict_one_wsi(wsi_idx, ioconfig, loader, wsi_save_path, mode)
+                self._predict_one_wsi(wsi_idx, ioconfig, wsi_save_path, mode)
 
                 # dont use dict as mapping, because can overwrite, if that is
                 # user intention to provide same path twice
@@ -895,6 +915,11 @@ class SemanticSegmentor:
         self.imgs = None
         self.masks = None
         self._model = None
+        self._loader = None
         self._on_gpu = None
+        self._futures = None
         self._mp_shared_space = None
+        if self._postproc_workers is not None:
+            self._postproc_workers.shutdown()
+        self._postproc_workers = None
         return outputs

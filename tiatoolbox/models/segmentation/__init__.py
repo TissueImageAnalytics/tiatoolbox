@@ -26,3 +26,7 @@ from tiatoolbox.models.segmentation.semantic_segmentor import (
     WSIStreamDataset,
     IOConfigSegmentor,
 )
+
+from tiatoolbox.models.segmentation.nucleus_instance_segmentor import (
+    NucleusInstanceSegmentor
+)
