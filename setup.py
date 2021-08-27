@@ -23,6 +23,8 @@ requirements = [
     "scikit-learn==0.23.2",
     "scikit-image>=0.17",
     "tqdm==4.60.0",
+    "torchvision>=0.9.1",
+    "torch>=1.8.1",
 ]
 
 setup_requirements = [
