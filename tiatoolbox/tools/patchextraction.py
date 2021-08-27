@@ -20,11 +20,7 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
-# from matplotlib.pyplot import flag
 import numpy as np
-import math
-
-# from numpy.lib.arraysetops import isin
 
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -39,6 +35,13 @@ class PatchExtractor(ABC):
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
           patch extraction.
         patch_size(int or tuple(int)): patch size tuple (width, height).
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+          input mask that is used for position filtering when extracting patches
+          i.e., patches will only be extracted based on the highlighted regions in
+          the input_mask. input_mask can be either path to the mask, a numpy
+          array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
+          options. In case of 'otsu' or 'morphological', a tissue mask is generated
+          for the input_image using tiatoolbox :class:`TissueMasker` functionality.
         resolution (int or float or tuple of float): resolution at
           which to read the image, default = 0. Either a single
           number or a sequence of two numbers for x and y are
@@ -57,6 +60,12 @@ class PatchExtractor(ABC):
         pad_constant_values (int or tuple(int)): Values to use with
           constant padding. Defaults to 0. See :func:`numpy.pad` for
           more.
+        within_bound (bool): whether to extract patches beyond the
+          input_image size limits. If False, extracted patches at margins
+          will be padded appropriately based on `pad_constant_values` and
+          `pad_mode`. If False, patches at the margin that their bounds
+          exceed the mother image dimensions would be neglected.
+          Default is False.
 
     Attributes:
         wsi(WSIReader): input image for patch extraction of type :obj:`WSIReader`.
@@ -64,7 +73,11 @@ class PatchExtractor(ABC):
         resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
-        locations_df(pd.DataFrame): A table containing location and/or type of patch.
+        locations_df(pd.DataFrame): A table containing location and/or type of patces
+          in `(x_start, y_start, class)` format.
+        coord_list(:class:`numpy.ndarray`): An array containing coordinates of patches
+          in `(x_start, y_start, x_end, y_end)` format to be used for `slidingwindow`
+          patch extraction.
         pad_mode (str): Method for padding at edges of the WSI.
           See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
@@ -79,10 +92,12 @@ class PatchExtractor(ABC):
         self,
         input_img,
         patch_size,
+        input_mask=None,
         resolution=0,
         units="level",
         pad_mode="constant",
         pad_constant_values=0,
+        within_bound=False,
     ):
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
@@ -95,7 +110,22 @@ class PatchExtractor(ABC):
         self.n = 0
         self.wsi = wsireader.get_wsireader(input_img=input_img)
         self.locations_df = None
+        self.coord_list = None
         self.stride = None
+        if input_mask is None:
+            self.mask = None
+        elif isinstance(input_mask, str) and input_mask in {"otsu", "morphological"}:
+            if isinstance(self.wsi, wsireader.VirtualWSIReader):
+                self.mask = None
+            else:
+                self.mask = self.wsi.tissue_mask(
+                    method=input_mask, resolution=1.25, units="power"
+                )
+        else:
+            self.mask = wsireader.VirtualWSIReader(
+                input_mask, info=self.wsi.info, mode="bool"
+            )
+        self.within_bound = within_bound
 
     def __iter__(self):
         self.n = 0
@@ -130,112 +160,6 @@ class PatchExtractor(ABC):
 
         return data
 
-    @staticmethod
-    def filter_coordinates(
-        mask_reader, coordinates_list, func=None, resolution=None, units=None
-    ):
-        """Return list of flags to indicate which coordinate is valid.
-
-        Args:
-            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader.
-
-            coordinates_list (ndarray and np.int32): Coordinates to be checked
-            via the `func`. They must be in the same resolution as requested
-            `resolution` and `units`. Must be of shape (N,K) with N is the
-            number of coordinate sets while K varies depending on information form.
-            Such as centroid is K=2 while bounding box is K=4. When using with default
-            `func=None`, `K` is expected to be bounding box of form
-            [start_x, start_y, end_x, end_y].
-
-            func: A function which taking `reader` and `coordinate` as arguments
-                and return True or False to indicate if the coordinate is valid.
-
-        Returns:
-            ndarray: list of flags to indicate which coordinate is valid.
-
-        """
-
-        def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
-            """Accept coord as long as its box contains bits of mask."""
-            roi = reader.read_bounds(
-                coord,
-                resolution=reader.info.mpp if resolution is None else resolution,
-                units="mpp" if units is None else units,
-                interpolation='nearest'
-            )
-            return np.sum(roi > 0) > 0
-
-        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
-        if not isinstance(coordinates_list, np.ndarray) and np.issubdtype(
-            coordinates_list.dtype, np.integer
-        ):
-            raise ValueError("`coordinates_list` should be ndarray.")
-        if func is None and coordinates_list.shape[-1] != 4:
-            raise ValueError(
-                "`func=None` does not support"
-                "`coordinates_list` of shape %s." % coordinates_list.shape
-            )
-        func = default_sel_func if func is None else func
-        flag_list = [func(mask_reader, coord) for coord in coordinates_list]
-        return np.array(flag_list)
-
-    @staticmethod
-    def get_coordinates(
-        image_shape=None,
-        patch_shape=None,
-        stride_shape=None,
-        within_bound=True,
-    ):
-        """Calculate patch tiling coordinates.
-
-        Args:
-            image_shape: a tuple(int, int) or ndarray of shape (2,).
-            Expected image shape at requested `resolution` and `units`.
-            Expected to be (height, width).
-
-            patch_shape: a tuple(int, int) or ndarray of shape (2,).
-            Expected shape to read from `reader` at requested `resolution` and `units`.
-            Expected to be (height, width).
-
-            stride_shape: a tuple(int, int) or ndarray of shape (2,).
-            Expected stride shape to read at requested `resolution` and `units`.
-            Expected to be (height, width).
-
-        """
-        image_shape = np.array(image_shape)
-        patch_shape = np.array(patch_shape)
-        stride_shape = np.array(stride_shape)
-        if not np.issubdtype(image_shape.dtype, np.integer) or \
-                np.size(image_shape) > 2 or np.any(image_shape < 0):
-            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if not np.issubdtype(patch_shape.dtype, np.integer) or \
-                np.size(patch_shape) > 2 or np.any(patch_shape < 0):
-            raise ValueError('Invalid `patch_shape` value %s.' % patch_shape)
-        if not np.issubdtype(stride_shape.dtype, np.integer) or \
-                np.size(stride_shape) > 2 or np.any(stride_shape < 0):
-            raise ValueError('Invalid `stride_shape` value %s.' % stride_shape)
-        if np.any(stride_shape < 1):
-            raise ValueError('`stride_shape` value %s must > 1.' % stride_shape)
-
-        def flat_mesh_grid_coord(x, y):
-            """Helper function to obtain coordinate grid."""
-            x, y = np.meshgrid(x, y)
-            return np.stack([y.flatten(), x.flatten()], axis=-1)
-
-        patch_shape = np.array(patch_shape)
-        y_list = np.arange(0, image_shape[0], stride_shape[0])
-        x_list = np.arange(0, image_shape[1], stride_shape[1])
-        if within_bound:  # to check compatible with shan portion
-            sel = y_list + patch_shape[0] <= image_shape[0]
-            y_list = y_list[sel]
-            sel = x_list + patch_shape[1] <= image_shape[1]
-            x_list = x_list[sel]
-        top_left_list = flat_mesh_grid_coord(x_list, y_list)
-        bot_right_list = top_left_list + patch_shape[None]
-        coord_list = np.concatenate([top_left_list, bot_right_list], axis=-1)
-        return coord_list
-
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
         The slide dimension is calculated using units and resolution.
@@ -255,35 +179,166 @@ class PatchExtractor(ABC):
         img_h = slide_dimension[1]
         img_patch_w = baseline_read_size[0]
         img_patch_h = baseline_read_size[1]
-        stride_w = self.stride[0] * level_downsample
-        stride_h = self.stride[1] * level_downsample
+        stride_w = int(self.stride[0] * level_downsample)
+        stride_h = int(self.stride[1] * level_downsample)
 
-        data = []
-        for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
-            for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
-                start_h = h * stride_h
-                start_w = w * stride_w
-                data.append([start_w, start_h, None])
+        self.coord_list = self.get_coordinates(
+            image_shape=(img_w, img_h),
+            patch_shape=(img_patch_w, img_patch_h),
+            stride_shape=(stride_w, stride_h),
+            within_bound=self.within_bound,
+        )
+
+        if self.mask is not None:
+            selected_coord_idxs = self.filter_coordinates(
+                self.mask,
+                self.coord_list,
+                resolution=self.resolution,
+                units=self.units,
+            )
+            self.coord_list = self.coord_list[selected_coord_idxs]
+
+            if len(self.coord_list) == 0:
+                raise ValueError(
+                    "No candidate coordinates left after "
+                    "filtering by input_mask positions."
+                )
+
+        data = self.coord_list[:, :2]  # only use the x_start and y_start
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
         return self
 
-    def merge_patches(self, patches):
-        """Merge the patch-level results to get the overall image-level prediction.
+    @staticmethod
+    def filter_coordinates(
+        mask_reader, coordinates_list, func=None, resolution=None, units=None
+    ):
+        """
+        Indicates which coordinate is valid for mask-based patch extraction.
+        Locations are being validated by a custom or build-in `func`.
 
         Args:
-            patches: patch-level predictions
+            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
+                mask related to the WSI from which we want to extract the patches.
+            coordinates_list (ndarray and np.int32): Coordinates to be checked
+                via the `func`. They must be in the same resolution as requested
+                `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+                where N is the number of coordinate sets and K is either 2 for centroids
+                or 4 for bounding boxes. When using the default `func=None`, K should be
+                4, as we expect the `coordinates_list` to be refer to bounding boxes in
+                `[start_x, start_y, end_x, end_y]` format.
+            func: The coordinate validator function. A function that takes `reader` and
+                `coordinate` as arguments and return True or False as indication of
+                coordinate validity.
 
         Returns:
-            image: merged prediction
+            ndarray: list of flags to indicate which coordinate is valid.
+        """
+
+        def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
+            """Accept coord as long as its box contains bits of mask."""
+            roi = reader.read_bounds(
+                coord,
+                resolution=reader.info.mpp if resolution is None else resolution,
+                units="mpp" if units is None else units,
+                interpolation="nearest",
+            )
+            return np.sum(roi > 0) > 0
+
+        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
+            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
+        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
+            coordinates_list.dtype, np.integer
+        ):
+            raise ValueError("`coordinates_list` should be ndarray of integer type.")
+        if func is None and coordinates_list.shape[-1] != 4:
+            raise ValueError(
+                "Default `func` does not support "
+                "`coordinates_list` of shape {}.".format(coordinates_list.shape)
+            )
+        func = default_sel_func if func is None else func
+        flag_list = [func(mask_reader, coord) for coord in coordinates_list]
+        return np.array(flag_list)
+
+    @staticmethod
+    def get_coordinates(
+        image_shape=None,
+        patch_shape=None,
+        stride_shape=None,
+        within_bound=True,
+    ):
+        """Calculate patch tiling coordinates.
+
+        Args:
+            image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                This argument specifies the shape of mother image (the image we want to)
+                extract patches from) at requested `resolution` and `units` and it is
+                expected to be in (width, height) format.
+            patch_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                Specifies the shape of requested patches to be extracted from mother
+                image at desired `resolution` and `units`. This argument is also
+                expected to be in (width, height) format.
+            stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+                The stride that is used to calcualte the patch location during the patch
+                extraction.
+            within_bound (bool): Whether to include the patches on the right and bottom
+                margins of mother image. If `True`, the patches that their location
+                exceeds the `image_shape` would be neglected. Otherwise, those patches
+                would be extracted with `Reader` function and appropriate padding.
+
+        Return:
+            coord_list: a list of corrdinates in `[start_x, start_y, end_x, end_y]`
+            format to be used for patch extraction.
 
         """
-        raise NotImplementedError
+        image_shape = np.array(image_shape)
+        patch_shape = np.array(patch_shape)
+        stride_shape = np.array(stride_shape)
+        if (
+            not np.issubdtype(image_shape.dtype, np.integer)
+            or np.size(image_shape) > 2
+            or np.any(image_shape < 0)
+        ):
+            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
+        if (
+            not np.issubdtype(patch_shape.dtype, np.integer)
+            or np.size(patch_shape) > 2
+            or np.any(patch_shape < 0)
+        ):
+            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
+        if (
+            not np.issubdtype(stride_shape.dtype, np.integer)
+            or np.size(stride_shape) > 2
+            or np.any(stride_shape < 0)
+        ):
+            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
+        if np.any(stride_shape < 1):
+            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
+
+        def flat_mesh_grid_coord(x, y):
+            """Helper function to obtain coordinate grid."""
+            x, y = np.meshgrid(x, y)
+            return np.stack([x.flatten(), y.flatten()], axis=-1)
+
+        patch_shape = np.array(patch_shape)
+        x_list = np.arange(0, image_shape[0], stride_shape[0])
+        y_list = np.arange(0, image_shape[1], stride_shape[1])
+
+        if within_bound:
+            sel = x_list + patch_shape[0] <= image_shape[0]
+            x_list = x_list[sel]
+            sel = y_list + patch_shape[1] <= image_shape[1]
+            y_list = y_list[sel]
+
+        top_left_list = flat_mesh_grid_coord(x_list, y_list)
+        bot_right_list = top_left_list + patch_shape[None]
+        coord_list = np.concatenate([top_left_list, bot_right_list], axis=-1)
+        return coord_list
 
 
-class FixedWindowPatchExtractor(PatchExtractor):
-    """Extract and merge patches using fixed sized windows for images and labels.
+class SlidingWindowPatchExtractor(PatchExtractor):
+    """Extract patches using sliding fixed sized window for images and labels.
 
     Args:
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
@@ -298,19 +353,23 @@ class FixedWindowPatchExtractor(PatchExtractor):
         self,
         input_img,
         patch_size,
+        input_mask=None,
         resolution=0,
         units="level",
         stride=None,
         pad_mode="constant",
         pad_constant_values=0,
+        within_bound=False,
     ):
         super().__init__(
             input_img=input_img,
+            input_mask=input_mask,
             patch_size=patch_size,
             resolution=resolution,
             units=units,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
+            within_bound=within_bound,
         )
         if stride is None:
             self.stride = self.patch_size
@@ -321,51 +380,6 @@ class FixedWindowPatchExtractor(PatchExtractor):
                 self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
-
-    def merge_patches(self, patches):
-        raise NotImplementedError
-
-
-class VariableWindowPatchExtractor(PatchExtractor):
-    """Extract and merge patches using variable sized windows for images and labels.
-
-    Args:
-        stride(tuple(int)): stride in (x, y) direction for patch extraction.
-        label_patch_size(tuple(int)): network output label (width, height).
-
-    Attributes:
-        stride(tuple(int)): stride in (x, y) direction for patch extraction.
-        label_patch_size(tuple(int)): network output label (width, height).
-
-    """
-
-    def __init__(
-        self,
-        input_img,
-        patch_size,
-        resolution=0,
-        units="level",
-        stride=(1, 1),
-        pad_mode="constant",
-        pad_constant_values=0,
-        label_patch_size=None,
-    ):
-        super().__init__(
-            input_img=input_img,
-            patch_size=patch_size,
-            resolution=resolution,
-            units=units,
-            pad_mode=pad_mode,
-            pad_constant_values=pad_constant_values,
-        )
-        self.stride = stride
-        self.label_patch_size = label_patch_size
-
-    def __next__(self):
-        raise NotImplementedError
-
-    def merge_patches(self, patches):
-        raise NotImplementedError
 
 
 class PointsPatchExtractor(PatchExtractor):
@@ -388,6 +402,7 @@ class PointsPatchExtractor(PatchExtractor):
         units="level",
         pad_mode="constant",
         pad_constant_values=0,
+        within_bound=False,
     ):
         super().__init__(
             input_img=input_img,
@@ -396,6 +411,7 @@ class PointsPatchExtractor(PatchExtractor):
             units=units,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
+            within_bound=within_bound,
         )
 
         self.locations_df = misc.read_locations(input_table=locations_list)
@@ -406,23 +422,13 @@ class PointsPatchExtractor(PatchExtractor):
             (self.patch_size[1] - 1) / 2
         )
 
-    def merge_patches(self, patches=None):
-        """Merge patch is not supported by :obj:`PointsPatchExtractor`.
-        Calling this function for :obj:`PointsPatchExtractor` will raise an error. This
-        overrides the merge_patches function in the base class :obj:`PatchExtractor`
-
-        """
-        raise MethodNotSupported(
-            message="Merge patches not supported for PointsPatchExtractor"
-        )
-
 
 def get_patch_extractor(method_name, **kwargs):
     """Return a patch extractor object as requested.
 
     Args:
-        method_name (str): name of patch extraction method, must be one of "point",
-          "fixedwindow", "variablewindow".
+        method_name (str): name of patch extraction method, must be one of "point" or
+          "slidingwindow".
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
@@ -437,10 +443,8 @@ def get_patch_extractor(method_name, **kwargs):
     """
     if method_name.lower() == "point":
         patch_extractor = PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "fixedwindow":
-        patch_extractor = FixedWindowPatchExtractor(**kwargs)
-    elif method_name.lower() == "variablewindow":
-        patch_extractor = VariableWindowPatchExtractor(**kwargs)
+    elif method_name.lower() == "slidingwindow":
+        patch_extractor = SlidingWindowPatchExtractor(**kwargs)
     else:
         raise MethodNotSupported
 

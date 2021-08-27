@@ -25,6 +25,7 @@ import pathlib
 import zipfile
 from typing import Union
 
+import copy
 import cv2
 import numpy as np
 import pandas as pd
@@ -33,6 +34,7 @@ import torch
 import yaml
 from skimage import exposure
 
+from tiatoolbox import rcParam
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
@@ -134,14 +136,14 @@ def imwrite(image_path, img):
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path):
+def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension) to read image
+        image_path (str or pathlib.Path): File path (including extension) to read image.
 
     Returns:
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -150,8 +152,14 @@ def imread(image_path):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
-    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-    return image.astype("uint8")
+    if pathlib.Path(image_path).suffix == ".npy":
+        image = np.load(image_path)
+    else:
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    if as_uint8:
+        image = image.astype(np.uint8)
+    return image
 
 
 def load_stain_matrix(stain_matrix_input):
@@ -541,6 +549,13 @@ def download_data(url, save_path, overwrite=False):
         return
 
     r = requests.get(url)
+    request_response = requests.head(url)
+    status_code = request_response.status_code
+    url_exists = status_code == 200
+
+    if not url_exists:
+        raise ConnectionError("Could not find URL at %s" % url)
+
     with open(save_path, "wb") as f:
         f.write(r.content)
 
@@ -562,22 +577,63 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_json(output, output_path):
-    """Convert output to a format supported by json.dumps.
+def save_as_json(data, save_path):
+    """Save data to a json file.
+
+    The function will deepcopy the `data` and then jsonify the content
+    in place. Support data types for jsonify consist of `str`, `int`, `float`,
+    `bool` and their np.ndarray respectively.
 
     Args:
-        output (dict): Output dictionary to save.
-        output_path (str): Output path for dictionary.
+        data (dict or list): Input data to save.
+        save_path (str): Output to save the json of `input`.
 
     """
-    new_output = {}
-    for k, v in output.items():
-        if isinstance(v, np.ndarray):
-            new_output[k] = v.tolist()
-        else:
-            new_output[k] = v
-    with open(output_path, "w") as handle:
-        json.dump(output, handle)
+    shadow_data = copy.deepcopy(data)
+
+    # make a copy of source input
+    def walk_list(lst):
+        """Recursive walk and jsonify in place."""
+        for i, v in enumerate(lst):
+            if isinstance(v, dict):
+                walk_dict(v)
+            elif isinstance(v, list):
+                walk_list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+                walk_list(v)
+            elif v is not None and not isinstance(v, (int, float, str, bool)):
+                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
+            if isinstance(v, np.generic):
+                v = v.item()
+            lst[i] = v
+
+    def walk_dict(dct):
+        """Recursive walk and jsonify in place."""
+        for k, v in dct.items():
+            if isinstance(v, dict):
+                walk_dict(v)
+            elif isinstance(v, list):
+                walk_list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+                walk_list(v)
+            elif v is not None and not isinstance(v, (int, float, str, bool)):
+                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
+            if not isinstance(k, (int, float, str, bool)):
+                raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+            if isinstance(v, np.generic):
+                v = v.item()
+            dct[k] = v
+
+    if isinstance(shadow_data, dict):
+        walk_dict(shadow_data)
+    elif isinstance(shadow_data, list):
+        walk_list(shadow_data)
+    else:
+        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+    with open(save_path, "w") as handle:
+        json.dump(shadow_data, handle)
 
 
 def select_device(on_gpu):
@@ -616,3 +672,20 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def get_pretrained_model_info():
+    """Get the pretrained model information from yml file."""
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+
+    return pretrained_yml
