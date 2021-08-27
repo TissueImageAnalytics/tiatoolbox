@@ -173,6 +173,9 @@ class TilePyramidGenerator:
                 area, optimise.
                 Linear most closely matches OpenSlide.
 
+        Returns:
+            Image: Pillow image of the tile.
+
         """
         if level < 0:
             raise IndexError
@@ -405,6 +408,9 @@ class DeepZoomGenerator(TilePyramidGenerator):
         Deepzoom levels start at 0 with a 1x1 pixel representing the
         whole image. The levels double in size until the region size is
         larger than a single tile.
+
+        Returns:
+            int: The number of levels at a sub-tile resolution.
 
         """
         return int(np.ceil(np.log2(self.output_tile_size)))

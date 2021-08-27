@@ -959,7 +959,7 @@ def test_crop_and_pad_edges():
 
 
 def test_crop_and_pad_edges_common_fail_cases():
-    """ "Test common fail cases for crop_and_pad_edges."""
+    """Test common failure cases for crop_and_pad_edges."""
     bounds = (15, -5, 25, 5)
     slide_dimensions = (10, 10)
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)

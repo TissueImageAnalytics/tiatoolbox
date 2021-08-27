@@ -27,7 +27,7 @@ def test_tilepyramidgenerator_overlap():
 
 
 def test_tilepyramidgenerator_openslide_consistency():
-    """ "Check DeepZoomGenerator is consistent with OpenSlide."""
+    """Check DeepZoomGenerator is consistent with OpenSlide."""
     array = data.camera()
 
     wsi = wsireader.VirtualWSIReader(array)
