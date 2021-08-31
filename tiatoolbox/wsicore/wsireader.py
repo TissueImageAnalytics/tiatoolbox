@@ -1535,12 +1535,19 @@ class TIFFWSIReader(WSIReader):
         """Get the axes order for the TIFF."""
         return self.tiff.pages[0].axes
 
-    def _shape_channels_last(self, x):
-        """Make a level shape tuple in YXS order."""
+    def _shape_channels_last(self, shape):
+        """Make a level shape tuple in YXS order.
+
+        Args:
+            shape (tuple(int)): Input shape tuple.
+
+        Returns:
+            Shape in YXS order.
+        """
         if self.axes == "YXS":
-            return x
+            return shape
         if self.axes == "SYX":
-            return np.roll(x, -1)
+            return np.roll(shape, -1)
         raise Exception("Unsupported axes")
 
     def _parse_svs_metadata(self) -> dict:
