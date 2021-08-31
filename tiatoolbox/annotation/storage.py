@@ -1,40 +1,47 @@
-from abc import ABC
-from typing import (
-    Union,
-    Tuple,
-    List,
-    Dict,
-    Iterable,
-    Optional,
-    Any,
-    IO,
-    Callable,
-)
-from numbers import Number
-import pickle
-from io import StringIO
-import sqlite3
-from itertools import zip_longest
-from pathlib import Path
+"""
+This module contains a collection of classes for handling storage of
+annotations in memeory in addition to serialisation/deserialisaion
+to/from disk.
+
+Definitions
+-----------
+
+For the sake of clarity it is helpful to define a few terms used
+throught this documentation.
+
+Annotation
+    A geometry and associated properties.
+Geometry
+    One of: a point, a polygon, or a line string.
+    .. image: images/geometries.png
+Properties
+    Key-value pairs associated with a geometry.
+
+"""
 import hashlib
+import pickle
+import sqlite3
+from abc import ABC
+from io import StringIO
+from itertools import zip_longest
+from numbers import Number
+from pathlib import Path
+from typing import IO, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
-
-from shapely import speedups
-from shapely.geometry import Point, Polygon, LineString
-from shapely.geometry import mapping as geometry2feature
-from shapely.geometry import shape as feature2geometry
-
-from shapely import wkt
 import numpy as np
 import pandas as pd
+from shapely import speedups, wkt
+from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import mapping as geometry2feature
 
 try:
     import ujson as json  # pyright: reportMissingModuleSource=false
 except ImportError:
     import json
+
 import msgpack
-import yaml
 import tables
+import yaml
 
 if speedups.available:
     speedups.enable()
@@ -51,10 +58,10 @@ RESERVED_PROPERTIES = {
     "index": int,
     "x": int,
     "y": int,
-    "minX": int,
-    "minY": int,
-    "maxX": int,
-    "maxY": int,
+    "min_x": int,
+    "min_y": int,
+    "max_x": int,
+    "max_y": int,
     "type": int,
     "type_": int,
 }
@@ -70,18 +77,33 @@ ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 class AnnotationStoreABC(ABC):
     @staticmethod
     def geometry_hash(geometry: Geometry) -> int:
-        """Create a 64 bit integer hash of a geometry object."""
+        """Create a 64 bit integer hash of a geometry object.
+
+        Args:
+            geometry (Geometry): Shapely geometry object to hash.
+
+        Returns:
+            int: 64 bit hash
+        """
         return int.from_bytes(
             hashlib.md5(geometry.wkb).digest()[:8], "big", signed=True
         )
 
     @staticmethod
-    def _int_feature(feature: dict) -> Dict:
-        """Convert feature coordinates to integers."""
+    def _int_feature(feature: Dict) -> Dict:
+        """Convert feature coordinates to integers.
+
+        Args:
+            feature (dict): GeoJSON style feature dictionary with
+                keys: 'type', 'coordinates', an optionally 'properties'.
+
+        Returns:
+            dict: Feature dictionary with coordinates as integers.
+        """
         feature["coordinates"] = np.array(feature["coordinates"]).astype(int).tolist()
         return feature
 
-    @classmethod
+    @classmethod  # noqa: A003
     def open(cls, io: Union[Path, str, IO]) -> "AnnotationStoreABC":
         """Load a store object from a path or file-like object."""
         raise NotImplementedError()
@@ -175,10 +197,9 @@ class AnnotationStoreABC(ABC):
 
 
 class SQLite3RTreeStore(AnnotationStoreABC):
-    @classmethod
+    @classmethod  # noqa: A003
     def open(cls, io: Union[Path, str]) -> "SQLite3RTreeStore":
-        store = SQLite3RTreeStore(io)
-        return store
+        return SQLite3RTreeStore(io)
 
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
         super().__init__()
@@ -203,8 +224,8 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             CREATE VIRTUAL TABLE rtree
             USING rtree_i32(
                 id,      -- Integer primary key
-                minX, maxX, -- 1st dimension min, max
-                minY, maxY  -- 2nd dimension min, max
+                min_x, max_x, -- 1st dimension min, max
+                min_y, max_y  -- 2nd dimension min, max
             )
             """
         )
@@ -275,20 +296,19 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             boundary = None
         else:
             boundary = self.serialise_geometry(geometry)
-        datum = {
+        return {
             "index": key,
             "boundary": boundary,
             "cx": int(geometry.centroid.x),
             "cy": int(geometry.centroid.y),
-            "minX": geometry.bounds[0],
-            "minY": geometry.bounds[1],
-            "maxX": geometry.bounds[2],
-            "maxY": geometry.bounds[3],
+            "min_x": geometry.bounds[0],
+            "min_y": geometry.bounds[1],
+            "max_x": geometry.bounds[2],
+            "max_y": geometry.bounds[3],
             "class": class_,
             "geom_type": geometry.geom_type,
             "properties": json.dumps(properties, separators=(",", ":")),
         }
-        return datum
 
     def append(
         self,
@@ -323,7 +343,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         cur.executemany(
             """
             INSERT INTO rtree VALUES(
-                :index, :minX, :maxX, :minY, :maxY
+                :index, :min_x, :max_x, :min_y, :max_y
             )
             """,
             tokens,
@@ -337,25 +357,25 @@ class SQLite3RTreeStore(AnnotationStoreABC):
     def query_index(self, query_geometry: QueryGeometry) -> List[int]:
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
-            minX, minY, maxX, maxY = query_geometry
+            min_x, min_y, max_x, max_y = query_geometry
         else:
-            minX, minY, maxX, maxY = query_geometry.bounds
+            min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
             """
-        SELECT geometry.id FROM geometry, rtree
-        WHERE rtree.id=geometry.id
-        AND rtree.minX>=:minX AND rtree.maxX<=:maxX
-        AND rtree.minY>=:minY AND rtree.maxY<=:maxY
-        -- AND contained_in(geometry.boundary, :boundary)
-        -- uncomment to do full polygon queries
-        """,
-            dict(
-                # boundary=query_geometry,
-                minX=minX,
-                maxX=maxX,
-                minY=minY,
-                maxY=maxY,
-            ),
+            SELECT geometry.id
+              FROM geometry, rtree
+             WHERE rtree.id = geometry.id
+               AND rtree.min_x >= :min_x
+               AND rtree.max_x <= :max_x
+               AND rtree.min_y >= :min_y
+               AND rtree.max_y <= :max_y
+            """,
+            {
+                "min_x": min_x,
+                "max_x": max_x,
+                "min_y": min_y,
+                "max_y": max_y,
+            },
         )
         boundaries = cur.fetchall()
         return [index for index, in boundaries]
@@ -363,32 +383,32 @@ class SQLite3RTreeStore(AnnotationStoreABC):
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
-            minX, minY, maxX, maxY = query_geometry
+            min_x, min_y, max_x, max_y = query_geometry
         else:
-            minX, minY, maxX, maxY = query_geometry.bounds
+            min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
             """
-        SELECT geometry.boundary, class, properties FROM geometry, rtree
-        WHERE rtree.id=geometry.id
-        AND rtree.minX>=:minX AND rtree.maxX<=:maxX
-        AND rtree.minY>=:minY AND rtree.maxY<=:maxY
-        -- AND contained_in(geometry.boundary, :boundary)
-        -- uncomment to do full polygon queries
-        """,
-            dict(
-                # boundary=query_geometry.wkb,
-                minX=minX,
-                maxX=maxX,
-                minY=minY,
-                maxY=maxY,
-            ),
+            SELECT geometry.boundary, [class], properties
+              FROM geometry, rtree
+             WHERE rtree.id = geometry.id
+               AND rtree.min_x >= :min_x
+               AND rtree.max_x <= :max_x
+               AND rtree.min_y >= :min_y
+               AND rtree.max_y <= :max_y
+            """,
+            {
+                "min_x": min_x,
+                "max_x": max_x,
+                "min_y": min_y,
+                "max_y": max_y,
+            },
         )
         boundaries = cur.fetchall()
         return [self.deserialise_geometry(blob) for blob, in boundaries]
 
     def __len__(self) -> int:
         cur = self.con.cursor()
-        cur.execute("SELECT Count(*) FROM geometry")
+        cur.execute("SELECT COUNT(*) FROM geometry")
         (count,) = cur.fetchone()
         return count
 
@@ -396,10 +416,11 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT boundary, class, properties FROM geometry
-            WHERE geometry.id = :index
+            SELECT boundary, [class], properties
+              FROM geometry
+             WHERE geometry.id = :index
             """,
-            dict(index=index),
+            {"index": index},
         )
         boundary, class_, properties = cur.fetchone()
         if properties is None:
@@ -415,7 +436,8 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT id, class, x, y, boundary, properties FROM geometry
+            SELECT id, [class], x, y, boundary, properties
+              FROM geometry
             """
         )
         while True:
@@ -450,13 +472,15 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             if "geometry" in properties:
                 del properties["geometry"]
             if geometry is not None:
-                bounds = dict(zip(("minX", "minY", "maxX", "maxY"), geometry.bounds))
+                bounds = dict(
+                    zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds)
+                )
                 xy = dict(zip("xy", np.array(geometry.centroid)))
                 cur.execute(
                     """
                     UPDATE geometry
-                    SET x = :x, y = :y, boundary = :boundary
-                    WHERE id = :index
+                       SET x = :x, y = :y, boundary = :boundary
+                     WHERE id = :index
                     """,
                     dict(
                         xy,
@@ -467,8 +491,9 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 cur.execute(
                     """
                     UPDATE rtree
-                    SET minX = :minX, minY = :minY, maxX = :maxX, maxY = :maxY
-                    WHERE id = :index
+                       SET min_x = :min_x, min_y = :min_y,
+                           max_x = :max_x, max_y = :max_y
+                     WHERE id = :index
                     """,
                     dict(
                         bounds,
@@ -479,13 +504,13 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 cur.execute(
                     """
                     UPDATE geometry
-                    SET properties = json_patch(properties, :properties)
-                    WHERE id = :index
+                       SET properties = json_patch(properties, :properties)
+                     WHERE id = :index
                     """,
-                    dict(
-                        index=i,
-                        properties=json.dumps(properties, separators=(",", ":")),
-                    ),
+                    {
+                        "index": i,
+                        "properties": json.dumps(properties, separators=(",", ":")),
+                    },
                 )
         self.con.commit()
 
@@ -498,13 +523,13 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         class_ = properties.get("class")
         if "class" in properties:
             del properties["class"]
-        bounds = dict(zip(("minX", "minY", "maxX", "maxY"), geometry.bounds))
+        bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
         xy = dict(zip("xy", geometry.centroid.xy))
         cur.execute(
             """
             UPDATE geometry
-            SET x = :x, y = :y, boundary = :boundary, class = :class_
-            WHERE id = :index
+               SET x = :x, y = :y, boundary = :boundary, [class] = :class_
+             WHERE id = :index
             """,
             dict(
                 xy,
@@ -516,8 +541,8 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         cur.execute(
             """
             UPDATE rtree
-            SET minX = :minX, minY = :minY, maxX = :maxX, maxY = :maxY
-            WHERE id = :index
+               SET min_x = :min_x, min_y = :min_y, max_x = :max_x, max_y = :max_y
+             WHERE id = :index
             """,
             dict(
                 bounds,
@@ -528,22 +553,20 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             cur.execute(
                 """
                 UPDATE geometry
-                SET properties = json_patch(properties, :properties)
-                WHERE id = :index
+                   SET properties = json_patch(properties, :properties)
+                 WHERE id = :index
                 """,
-                dict(
-                    index=index,
-                    properties=json.dumps(properties, separators=(",", ":")),
-                ),
+                {
+                    "index": index,
+                    "properties": json.dumps(properties, separators=(",", ":")),
+                },
             )
         self.con.commit()
 
     def __delitem__(self, index: int) -> None:
         cur = self.con.cursor()
         cur.execute(
-            """
-            DELETE FROM geometry WHERE id = ?
-            """,
+            "DELETE FROM geometry WHERE id = ?",
             (index,),
         )
         self.con.commit()
@@ -551,7 +574,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame()
         cur = self.con.cursor()
-        cur.execute("SELECT id, boundary, class, properties FROM geometry")
+        cur.execute("SELECT id, boundary, [class], properties FROM geometry")
         while True:
             rows = cur.fetchmany(1000)
             if len(rows) == 0:
@@ -564,36 +587,52 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 for geometry, properties in iter(self)
             ]
             df = df.append(rows)
-        df = df.set_index("index")
-        return df
+        return df.set_index("index")
 
     def to_features(self, int_coords: bool = True) -> List:
-        features = [
-            dict(
-                type="Feature",
-                geometry=self._int_feature(geometry2feature(geometry))
+        return [
+            {
+                "type": "Feature",
+                "geometry": self._int_feature(geometry2feature(geometry))
                 if int_coords
                 else geometry2feature(geometry),
-                properties=properties,
-            )
+                "properties": properties,
+            }
             for geometry, properties in iter(self)
         ]
-        return features
 
     def to_geodict(self, int_coords: bool = True) -> Dict:
         features = self.to_features(int_coords=int_coords)
-        geodict = {
+        return {
             "type": "FeatureCollection",
             "features": features,
         }
-        return geodict
-
-
-class DataFrameStore(AnnotationStoreABC):
-    pass
 
 
 class DictionaryStore(AnnotationStoreABC):
+    def __init__(self) -> None:
+        super().__init__()
+        self.features = {}
+
+    @classmethod  # noqa: A003
+    def open(cls, io: Union[Path, str, IO], dtypes: Dict = None) -> "DictionaryStore":
+        store = cls(dtypes=dtypes)
+        feature_collection = cls._load(io)
+        store.features = feature_collection["features"]
+        return store
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
+        store = cls()
+        if no_copy:
+            store.data = df
+        else:
+            store.data = df.copy()
+        store.dtypes = dict(df.dtypes)
+        return store
+
+
+class DataFrameStore(AnnotationStoreABC):
     """Dictionary based annotation store.
 
     A dictionary store serialises to and from a dictionary based file
@@ -648,22 +687,13 @@ class DictionaryStore(AnnotationStoreABC):
         self._dtypes = value
         self.data = self.data.astype(self.dtypes)
 
-    @classmethod
-    def open(cls, io: Union[Path, str, IO], dtypes: Dict = None) -> "DictionaryStore":
-        store = cls(dtypes=dtypes)
-        feature_collection = cls._load(io)
-        features = feature_collection["features"]
-        for feat in features:
-            geometry = feature2geometry(feat)
-            properties = feat.get("properties", {})
-            key = cls.geometry_hash(geometry)
-            row = pd.DataFrame(properties, index=[key])
-            row["geometry"] = geometry
-            store.data = store.data.append(row)
-        return store
+    @classmethod  # noqa: A003
+    def open(cls, io: Union[Path, str, IO], dtypes: Dict = None) -> "DataFrameStore":
+        df = cls._load(io, dtypes=dtypes)
+        return cls().from_dataframe(df)
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
+    def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DataFrameStore":
         store = cls()
         if no_copy:
             store.data = df
@@ -709,11 +739,10 @@ class DictionaryStore(AnnotationStoreABC):
         del self.data[index]
 
     def to_geodict(self, int_coords: bool = True, drop_na: bool = True) -> Dict:
-        feature_collection = {
+        return {
             "type": "FeatureCollection",
             "features": self.to_features(int_coords=int_coords, drop_na=drop_na),
         }
-        return feature_collection
 
     def to_features(self, int_coords: bool = True, drop_na: bool = True) -> List[Dict]:
         return [
@@ -724,7 +753,7 @@ class DictionaryStore(AnnotationStoreABC):
                 properties=dict(
                     columns[1:].dropna()
                     if drop_na
-                    else columns[1:].where(pd.notnull(columns[1:]), None)
+                    else columns[1:].where(pd.notna(columns[1:]), None)
                 ),
             )
             for _, columns in self.data.iterrows()
@@ -750,46 +779,11 @@ class DictionaryStore(AnnotationStoreABC):
         )
 
 
-class GeoJSONStore(DictionaryStore):
-    _load: Callable = staticmethod(json.load)
-    _loads: Callable = staticmethod(json.loads)
-    _dump: Callable = staticmethod(json.dump)
-    _dumps: Callable = staticmethod(json.dumps)
-
-
-class YAMLStore(DictionaryStore):
-    _load: Callable = staticmethod(yaml.safe_load)
-    _loads: Callable = staticmethod(yaml.safe_load)
-
-    @staticmethod
-    def _dump(dictionary: dict, io: IO):
-        return yaml.safe_dump(dictionary, io, default_flow_style=None)
-
-    @staticmethod
-    def _dumps(dictionary: dict):
-        return yaml.safe_dump(dictionary, default_flow_style=None)
-
-
-class MsgPackStore(DictionaryStore):
-    _load: Callable = staticmethod(msgpack.load)
-    _loads: Callable = staticmethod(msgpack.loads)
-    _dump: Callable = staticmethod(msgpack.dump)
-    _dumps: Callable = staticmethod(msgpack.dumps)
-
-
-class PickleDictStore(DictionaryStore):
-    _load: Callable = staticmethod(pickle.load)
-    _loads: Callable = staticmethod(pickle.loads)
-    _dump: Callable = staticmethod(pickle.dump)
-    _dumps: Callable = staticmethod(pickle.dumps)
-
-
-class TableStore(DictionaryStore):
-    @classmethod
+class TableStore(DataFrameStore):
+    @classmethod  # noqa: A003
     def open(cls, io: Union[Path, str, IO], dtypes: Dict = None) -> "TableStore":
         df = cls._load(io, dtypes=dtypes)
-        store = cls().from_dataframe(df)
-        return store
+        return cls().from_dataframe(df)
 
     def dump(self, io: IO) -> None:
         data = self.data.copy()
@@ -804,6 +798,40 @@ class TableStore(DictionaryStore):
     @staticmethod
     def _dump(df: pd.DataFrame, io: IO):
         raise NotImplementedError()
+
+
+class GeoJSONStore(DataFrameStore):
+    _load: Callable = staticmethod(json.load)
+    _loads: Callable = staticmethod(json.loads)
+    _dump: Callable = staticmethod(json.dump)
+    _dumps: Callable = staticmethod(json.dumps)
+
+
+class YAMLStore(DataFrameStore):
+    _load: Callable = staticmethod(yaml.safe_load)
+    _loads: Callable = staticmethod(yaml.safe_load)
+
+    @staticmethod
+    def _dump(dictionary: dict, io: IO):
+        return yaml.safe_dump(dictionary, io, default_flow_style=None)
+
+    @staticmethod
+    def _dumps(dictionary: dict):
+        return yaml.safe_dump(dictionary, default_flow_style=None)
+
+
+class MsgPackStore(DataFrameStore):
+    _load: Callable = staticmethod(msgpack.load)
+    _loads: Callable = staticmethod(msgpack.loads)
+    _dump: Callable = staticmethod(msgpack.dump)
+    _dumps: Callable = staticmethod(msgpack.dumps)
+
+
+class PickleDictStore(DataFrameStore):
+    _load: Callable = staticmethod(pickle.load)
+    _loads: Callable = staticmethod(pickle.loads)
+    _dump: Callable = staticmethod(pickle.dump)
+    _dumps: Callable = staticmethod(pickle.dumps)
 
 
 class CSVStore(TableStore):
@@ -828,7 +856,7 @@ class CSVStore(TableStore):
 class ADTStore(TableStore):
     @staticmethod
     def _load(io: IO) -> pd.DataFrame:
-        return pd.read_table(
+        return pd.read_csv(
             io,
             sep=ASCII_UNIT_SEP,
             na_values=[ASCII_NULL],
@@ -840,7 +868,7 @@ class ADTStore(TableStore):
 
     @staticmethod
     def _loads(string: str) -> pd.DataFrame:
-        return pd.read_table(
+        return pd.read_csv(
             string,
             sep=ASCII_UNIT_SEP,
             na_values=[ASCII_NULL],
@@ -878,8 +906,7 @@ class FeatherStore(TableStore):
     @staticmethod
     def _load(io: IO) -> pd.DataFrame:
         df = pd.read_feather(io)
-        df = df.set_index("index")
-        return df
+        return df.set_index("index")
 
     @staticmethod
     def _dump(df: pd.DataFrame, io: IO):
@@ -901,10 +928,10 @@ class PyTablesStore(AnnotationStoreABC):
             class_ = tables.Int8Col()
             x = tables.Int32Col()
             y = tables.Int32Col()
-            minX = tables.Int32Col()
-            minY = tables.Int32Col()
-            maxX = tables.Int32Col()
-            maxY = tables.Int32Col()
+            min_x = tables.Int32Col()
+            min_y = tables.Int32Col()
+            max_x = tables.Int32Col()
+            max_y = tables.Int32Col()
             properties = tables.StringCol(self.max_boundary_len)
 
         self.geometry_table = self.file_handle.create_table(
@@ -935,7 +962,7 @@ class PyTablesStore(AnnotationStoreABC):
             if len(boundary) > self.max_boundary_len:
                 raise ValueError("Boundary > TablesStore.max_boundary_len")
             row["boundary"] = boundary
-            row["minX"], row["minY"], row["maxX"], row["maxY"] = geom.bounds
+            row["min_x"], row["min_y"], row["max_x"], row["max_y"] = geom.bounds
             row["x"], row["y"] = np.array(geom.centroid)
             if cls is not None:
                 row["class_"] = cls
@@ -962,26 +989,30 @@ class PyTablesStore(AnnotationStoreABC):
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
-        minX, minY, maxX, maxY = query_geometry.bounds
+        min_x, min_y, max_x, max_y = query_geometry.bounds
         query = self.geometry_table.where(
-            f"(minX <= {maxX}) & (minY <= {maxY}) & (maxX >= {minX}) & (maxY >= {minY})"
+            f"  (min_x <= {max_x})"
+            f"& (min_y <= {max_y})"
+            f"& (max_x >= {min_x})"
+            f"& (max_y >= {min_y})"
         )
         results = []
         for row in query:
             geometry = self.deserialise_geometry(bytes.decode(row["boundary"]))
             if not query_geometry.intersects(geometry):
                 continue
-            # properties = json.loads(row["properties"])
-            # properties.update({"class": row["class_"], "index": row["index"]})
             results.append(geometry)
         return results
 
     def query_index(self, query_geometry: QueryGeometry) -> List[int]:
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
-        minX, minY, maxX, maxY = query_geometry.bounds
+        min_x, min_y, max_x, max_y = query_geometry.bounds
         query = self.geometry_table.where(
-            f"(minX <= {maxX}) & (minY <= {maxY}) & (maxX >= {minX}) & (maxY >= {minY})"
+            f"  (min_x <= {max_x})"
+            f"& (min_y <= {max_y})"
+            f"& (max_x >= {min_x})"
+            f"& (max_y >= {min_y})"
         )
         results = []
         for row in query:
