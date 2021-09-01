@@ -299,17 +299,11 @@ def test_functionality():
     score = f1_detection(inst_coords_B, inst_coords_A, radius=1.0)
     assert score > 0.9, "Heavy loss of precision!"
 
-    # this is for manual debugging
+    # # this is for manual debugging
     # from tiatoolbox.utils.visualization import overlay_instance_prediction
     # from tiatoolbox.utils.misc import imwrite
     # from tiatoolbox.wsicore.wsireader import get_wsireader
     # wsi_reader = get_wsireader(sample_wsi)
     # thumb = wsi_reader.slide_thumbnail(resolution=0.25, units='mpp')
-    # thumb = overlay_instance_prediction(thumb, inst_dict)
-
-
-test_get_tile_info()
-
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
-# test_functionality()
-# print("here")
+    # thumb = overlay_instance_prediction(thumb, inst_dictB)
+    # imwrite('dump.png', thumb)
