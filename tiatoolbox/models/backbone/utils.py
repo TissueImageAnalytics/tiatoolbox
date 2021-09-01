@@ -23,7 +23,7 @@ import torch
 from typing import Union
 
 
-def crop_op(
+def center_crop(
     img: Union[np.ndarray, torch.tensor],
     crop_shape: Union[np.ndarray, torch.tensor],
     data_format: str = "NCHW",
@@ -32,9 +32,9 @@ def crop_op(
 
     Args:
         img (ndarray, torch.tensor): input image, should be of 3 channels
-        crop_shape: the substracted amount in the form of
+        crop_shape (ndarray, torch.tensor): the substracted amount in the form of
             [substracted height, substracted width].
-        data_format: choose either `NCHW` or `NHWC`
+        data_format (str): choose either `NCHW` or `NHWC`
 
     """
     crop_t = crop_shape[0] // 2
@@ -48,7 +48,7 @@ def crop_op(
     return img
 
 
-def crop_to_shape(
+def center_crop_to_shape(
     x: Union[np.ndarray, torch.tensor],
     y: Union[np.ndarray, torch.tensor],
     data_format: str = "NCHW",
@@ -59,8 +59,8 @@ def crop_to_shape(
     be smaller than `x` heigh width.
 
     Args:
-        x (ndarray, torch.tensor): image to be cropped, should be of 3 channels.
-        y (ndarray, torch.tensor): reference image for getting crop shap,
+        x (ndarray, torch.tensor): image to be cropped.
+        y (ndarray, torch.tensor): reference image for getting cropping shape,
             should be of 3 channels.
         data_format: choose either `NCHW` or `NHWC`
 
@@ -71,12 +71,19 @@ def crop_to_shape(
         x: input array
         y: array with desired shape.
     """
-    if not (y.shape[0] <= x.shape[0] and y.shape[1] <= x.shape[1]):
+    if data_format == "NCHW":
+        _, _, h1, w1 = x.shape
+        _, _, h2, w2 = y.shape
+    else:
+        _, h1, w1, _ = x.shape
+        _, h2, w2, _ = y.shape
+
+    if h1 <= h2 or w1 <= w2:
         raise ValueError(
             " ".join(
                 [
                     f"Height width of `x` is smaller than `y`",
-                    f"{x.shape[:2]} vs {y.shape[:2]}",
+                    f"{[h1, w1]} vs {[h2, w2]}",
                 ]
             )
         )
@@ -88,4 +95,4 @@ def crop_to_shape(
     else:
         crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
 
-    return crop_op(x, crop_shape, data_format)
+    return center_crop(x, crop_shape, data_format)

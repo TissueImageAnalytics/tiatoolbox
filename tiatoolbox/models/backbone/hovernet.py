@@ -34,7 +34,7 @@ from skimage.segmentation import watershed
 
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.utils.misc import get_bounding_box
-from tiatoolbox.models.backbone.utils import crop_op, crop_to_shape
+from tiatoolbox.models.backbone.utils import center_crop, center_crop_to_shape
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -150,7 +150,7 @@ class DenseBlock(nn.Module):
     def forward(self, prev_feat: torch.Tensor):
         for idx in range(self.nr_unit):
             new_feat = self.units[idx](prev_feat)
-            prev_feat = crop_to_shape(prev_feat, new_feat)
+            prev_feat = center_crop_to_shape(prev_feat, new_feat)
             prev_feat = torch.cat([prev_feat, new_feat], dim=1)
         prev_feat = self.blk_bna(prev_feat)
 
@@ -418,11 +418,11 @@ class HoVerNet(ModelABC):
         d = [d0, d1, d2, d3]
 
         if self.mode == "original":
-            d[0] = crop_op(d[0], [184, 184])
-            d[1] = crop_op(d[1], [72, 72])
+            d[0] = center_crop(d[0], [184, 184])
+            d[1] = center_crop(d[1], [72, 72])
         else:
-            d[0] = crop_op(d[0], [92, 92])
-            d[1] = crop_op(d[1], [36, 36])
+            d[0] = center_crop(d[0], [92, 92])
+            d[1] = center_crop(d[1], [36, 36])
 
         out_dict = OrderedDict()
         for branch_name, branch_desc in self.decoder.items():
