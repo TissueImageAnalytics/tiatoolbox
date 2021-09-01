@@ -1,4 +1,3 @@
-
 # ***** BEGIN GPL LICENSE BLOCK *****
 #
 # This program is free software; you can redistribute it and/or
@@ -21,7 +20,7 @@
 
 
 from collections import OrderedDict
-from typing import Union
+from typing import List
 
 import cv2
 import numpy as np
@@ -35,88 +34,23 @@ from skimage.segmentation import watershed
 
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.utils.misc import get_bounding_box
+from tiatoolbox.models.backbone.utils import crop_op, crop_to_shape
 
 
-def crop_op(
-        img: Union[np.ndarray, torch.tensor],
-        crop_shape: Union[np.ndarray, torch.tensor],
-        data_format: str = "NCHW"):
-    """A function to center crop image with given crop shape.
-
-    Args:
-        img (ndarray, torch.tensor): input image, should be of 3 channels
-        crop_shape: the substracted amount in the form of
-            [substracted height, substracted width].
-        data_format: choose either `NCHW` or `NHWC`
-
-    """
-    crop_t = crop_shape[0] // 2
-    crop_b = crop_shape[0] - crop_t
-    crop_l = crop_shape[1] // 2
-    crop_r = crop_shape[1] - crop_l
-    if data_format == "NCHW":
-        img = img[:, :, crop_t:-crop_b, crop_l:-crop_r]
-    else:
-        img = img[:, crop_t:-crop_b, crop_l:-crop_r, :]
-    return img
-
-
-def crop_to_shape(
-        x: Union[np.ndarray, torch.tensor],
-        y: Union[np.ndarray, torch.tensor],
-        data_format: str = "NCHW"):
-    """A function to center crop image to shape.
-
-    Centre crop `x` so that `x` has shape of `y` and `y` height and width must
-    be smaller than `x` heigh width.
-
-    Args:
-        x (ndarray, torch.tensor): image to be cropped, should be of 3 channels.
-        y (ndarray, torch.tensor): reference image for getting crop shap,
-            should be of 3 channels.
-        data_format: choose either `NCHW` or `NHWC`
-
-    """
-
-    """Centre crop x so that x has shape of y. y dims must be smaller than x dims.
-    Args:
-        x: input array
-        y: array with desired shape.
-    """
-    if not (
-        y.shape[0] <= x.shape[0] and y.shape[1] <= x.shape[1]
-    ):
-        raise ValueError(
-            ' '.join([
-                f'Height width of `x` is smaller than `y`',
-                f'{x.shape[:2]} vs {y.shape[:2]}'
-            ]))
-
-    x_shape = x.shape
-    y_shape = y.shape
-    if data_format == "NCHW":
-        crop_shape = (x_shape[2] - y_shape[2], x_shape[3] - y_shape[3])
-    else:
-        crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
-
-    return crop_op(x, crop_shape, data_format)
-
-
-# a private class to mimic how padding is done in Tensorflow 1.12
-# (the version which HoVerNet was initially created on)
 class TFSamepaddingLayer(nn.Module):
     """To align with tf `same` padding.
 
-    Putting this before any conv layer that need padding
-    Assuming kernel has Height == Width for simplicity
+    Putting this before any conv layer that needs padding
+    Assuming kernel has Height == Width for simplicity.
+
     """
 
-    def __init__(self, ksize, stride):
+    def __init__(self, ksize: int, stride: int):
         super().__init__()
         self.ksize = ksize
         self.stride = stride
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         if x.shape[2] % self.stride == 0:
             pad = max(self.ksize - self.stride, 0)
         else:
@@ -146,55 +80,63 @@ class DenseBlock(nn.Module):
 
     """
 
-    def __init__(self, in_ch, unit_ksize, unit_ch, unit_count, split=1):
+    def __init__(
+        self,
+        in_ch: int,
+        unit_ksizes: List[int],
+        unit_chs: List[int],
+        unit_count: int,
+        split: int = 1,
+    ):
         super().__init__()
-        if len(unit_ksize) != len(unit_ch):
+        if len(unit_ksizes) != len(unit_chs):
             raise ValueError("Unbalance Unit Info")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
-        self.unit_ch = unit_ch
 
         # ! For inference only so init values for batchnorm may not match
         # ! tensorflow
         def get_unit_block(unit_in_ch):
             """Helper function to make it less long."""
-            layers = OrderedDict([
-                ("preact_bna/bn", nn.BatchNorm2d(unit_in_ch, eps=1e-5)),
-                ("preact_bna/relu", nn.ReLU(inplace=True)),
-                (
-                    "conv1",
-                    nn.Conv2d(
-                        unit_in_ch,
-                        unit_ch[0],
-                        unit_ksize[0],
-                        stride=1,
-                        padding=0,
-                        bias=False,
+            layers = OrderedDict(
+                [
+                    ("preact_bna/bn", nn.BatchNorm2d(unit_in_ch, eps=1e-5)),
+                    ("preact_bna/relu", nn.ReLU(inplace=True)),
+                    (
+                        "conv1",
+                        nn.Conv2d(
+                            unit_in_ch,
+                            unit_chs[0],
+                            unit_ksizes[0],
+                            stride=1,
+                            padding=0,
+                            bias=False,
+                        ),
                     ),
-                ),
-                ("conv1/bn", nn.BatchNorm2d(unit_ch[0], eps=1e-5)),
-                ("conv1/relu", nn.ReLU(inplace=True)),
-                (
-                    "conv2",
-                    nn.Conv2d(
-                        unit_ch[0],
-                        unit_ch[1],
-                        unit_ksize[1],
-                        groups=split,
-                        stride=1,
-                        padding=0,
-                        bias=False,
+                    ("conv1/bn", nn.BatchNorm2d(unit_chs[0], eps=1e-5)),
+                    ("conv1/relu", nn.ReLU(inplace=True)),
+                    (
+                        "conv2",
+                        nn.Conv2d(
+                            unit_chs[0],
+                            unit_chs[1],
+                            unit_ksizes[1],
+                            groups=split,
+                            stride=1,
+                            padding=0,
+                            bias=False,
+                        ),
                     ),
-                ),
-            ])
+                ]
+            )
             return nn.Sequential(layers)
 
         unit_in_ch = in_ch
         self.units = nn.ModuleList()
-        for idx in range(unit_count):
+        for _ in range(unit_count):
             self.units.append(get_unit_block(unit_in_ch))
-            unit_in_ch += unit_ch[1]
+            unit_in_ch += unit_chs[1]
 
         self.blk_bna = nn.Sequential(
             OrderedDict(
@@ -205,10 +147,7 @@ class DenseBlock(nn.Module):
             )
         )
 
-    def out_ch(self):
-        return self.in_ch + self.nr_unit * self.unit_ch[-1]
-
-    def forward(self, prev_feat):
+    def forward(self, prev_feat: torch.Tensor):
         for idx in range(self.nr_unit):
             new_feat = self.units[idx](prev_feat)
             prev_feat = crop_to_shape(prev_feat, new_feat)
@@ -229,13 +168,20 @@ class ResidualBlock(nn.Module):
 
     """
 
-    def __init__(self, in_ch, unit_ksize, unit_ch, unit_count, stride=1):
-        super(ResidualBlock, self).__init__()
-        assert len(unit_ksize) == len(unit_ch), "Unbalance Unit Info"
+    def __init__(
+        self,
+        in_ch: int,
+        unit_ksizes: List[int],
+        unit_chs: List[int],
+        unit_count: int,
+        stride: int = 1,
+    ):
+        super().__init__()
+        if len(unit_ksizes) != len(unit_chs):
+            raise ValueError("Unbalance Unit Info")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
-        self.unit_ch = unit_ch
 
         # ! For inference only so init values for batchnorm may not match tensorflow
         unit_in_ch = in_ch
@@ -248,40 +194,40 @@ class ResidualBlock(nn.Module):
                     "conv1",
                     nn.Conv2d(
                         unit_in_ch,
-                        unit_ch[0],
-                        unit_ksize[0],
+                        unit_chs[0],
+                        unit_ksizes[0],
                         stride=1,
                         padding=0,
                         bias=False,
                     ),
                 ),
-                ("conv1/bn", nn.BatchNorm2d(unit_ch[0], eps=1e-5)),
+                ("conv1/bn", nn.BatchNorm2d(unit_chs[0], eps=1e-5)),
                 ("conv1/relu", nn.ReLU(inplace=True)),
                 (
                     "conv2/pad",
                     TFSamepaddingLayer(
-                        ksize=unit_ksize[1], stride=stride if idx == 0 else 1
+                        ksize=unit_ksizes[1], stride=stride if idx == 0 else 1
                     ),
                 ),
                 (
                     "conv2",
                     nn.Conv2d(
-                        unit_ch[0],
-                        unit_ch[1],
-                        unit_ksize[1],
+                        unit_chs[0],
+                        unit_chs[1],
+                        unit_ksizes[1],
                         stride=stride if idx == 0 else 1,
                         padding=0,
                         bias=False,
                     ),
                 ),
-                ("conv2/bn", nn.BatchNorm2d(unit_ch[1], eps=1e-5)),
+                ("conv2/bn", nn.BatchNorm2d(unit_chs[1], eps=1e-5)),
                 ("conv2/relu", nn.ReLU(inplace=True)),
                 (
                     "conv3",
                     nn.Conv2d(
-                        unit_ch[1],
-                        unit_ch[2],
-                        unit_ksize[2],
+                        unit_chs[1],
+                        unit_chs[2],
+                        unit_ksizes[2],
                         stride=1,
                         padding=0,
                         bias=False,
@@ -292,10 +238,10 @@ class ResidualBlock(nn.Module):
             # * must not put preact for the first unit of this block
             unit_layer = unit_layer if idx != 0 else unit_layer[2:]
             self.units.append(nn.Sequential(OrderedDict(unit_layer)))
-            unit_in_ch = unit_ch[-1]
+            unit_in_ch = unit_chs[-1]
 
-        if in_ch != unit_ch[-1] or stride != 1:
-            self.shortcut = nn.Conv2d(in_ch, unit_ch[-1], 1, stride=stride, bias=False)
+        if in_ch != unit_chs[-1] or stride != 1:
+            self.shortcut = nn.Conv2d(in_ch, unit_chs[-1], 1, stride=stride, bias=False)
         else:
             self.shortcut = None
 
@@ -308,14 +254,7 @@ class ResidualBlock(nn.Module):
             )
         )
 
-        # print(self.units[0])
-        # print(self.units[1])
-        # exit()
-
-    def out_ch(self):
-        return self.unit_ch[-1]
-
-    def forward(self, prev_feat, freeze=False):
+    def forward(self, prev_feat: torch.Tensor):
         if self.shortcut is None:
             shortcut = prev_feat
         else:
@@ -323,11 +262,7 @@ class ResidualBlock(nn.Module):
 
         for idx in range(0, len(self.units)):
             new_feat = prev_feat
-            if self.training:
-                with torch.set_grad_enabled(not freeze):
-                    new_feat = self.units[idx](new_feat)
-            else:
-                new_feat = self.units[idx](new_feat)
+            new_feat = self.units[idx](new_feat)
             prev_feat = new_feat + shortcut
             shortcut = prev_feat
         feat = self.blk_bna(prev_feat)
@@ -342,14 +277,14 @@ class UpSample2x(nn.Module):
     """
 
     def __init__(self):
-        super(UpSample2x, self).__init__()
+        super().__init__()
         # correct way to create constant within module
         self.register_buffer(
             "unpool_mat", torch.from_numpy(np.ones((2, 2), dtype="float32"))
         )
         self.unpool_mat.unsqueeze(0)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         input_shape = list(x.shape)
         # unsqueeze is expand_dims equivalent
         # permute is transpose equivalent
@@ -365,31 +300,34 @@ class UpSample2x(nn.Module):
 class HoVerNet(ModelABC):
     """Initialise HoVer-Net."""
 
-    def __init__(self, input_ch=3, num_types=None, freeze=False, mode='original'):
+    def __init__(
+        self, num_input_channels: int = 3, num_types: int = None, mode: str = "original"
+    ):
         super().__init__()
         self.mode = mode
-        self.freeze = freeze
         self.num_types = num_types
 
-        if mode not in ['original', 'fast']:
+        if mode not in ["original", "fast"]:
             raise ValueError(
-                ' '.join([
-                    f'Unknown mode {mode} for HoVerNet.',
-                    f'Only support `original` or `fast`.'
-                ])
+                " ".join(
+                    [
+                        f"Invalid mode {mode} for HoVerNet.",
+                        f"Only support `original` or `fast`.",
+                    ]
+                )
             )
 
         modules = [
-            ("/", nn.Conv2d(input_ch, 64, 7, stride=1, padding=0, bias=False)),
+            (
+                "/",
+                nn.Conv2d(num_input_channels, 64, 7, stride=1, padding=0, bias=False),
+            ),
             ("bn", nn.BatchNorm2d(64, eps=1e-5)),
             ("relu", nn.ReLU(inplace=True)),
         ]
         # prepend the padding for `fast` mode
-        if mode == 'fast':
-            modules = [
-                ("pad", TFSamepaddingLayer(ksize=7, stride=1)),
-                *modules
-            ]
+        if mode == "fast":
+            modules = [("pad", TFSamepaddingLayer(ksize=7, stride=1)), *modules]
 
         self.conv0 = nn.Sequential(OrderedDict(modules))
         self.d0 = ResidualBlock(64, [1, 3, 1], [64, 64, 256], 3, stride=1)
@@ -397,40 +335,45 @@ class HoVerNet(ModelABC):
         self.d2 = ResidualBlock(512, [1, 3, 1], [256, 256, 1024], 6, stride=2)
         self.d3 = ResidualBlock(1024, [1, 3, 1], [512, 512, 2048], 3, stride=2)
 
-        self.conv_bot = nn.Conv2d(
-            2048, 1024, 1, stride=1, padding=0, bias=False)
+        self.conv_bot = nn.Conv2d(2048, 1024, 1, stride=1, padding=0, bias=False)
 
         def create_decoder_branch(out_ch=2, ksize=5):
             modules = [
-                ("conva", nn.Conv2d(
-                    1024, 256, ksize, stride=1, padding=0, bias=False)),
+                ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
                 ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
-                ("convf", nn.Conv2d(
-                    512, 512, 1, stride=1, padding=0, bias=False),),
+                (
+                    "convf",
+                    nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
+                ),
             ]
             u3 = nn.Sequential(OrderedDict(modules))
 
             modules = [
-                ("conva", nn.Conv2d(
-                    512, 128, ksize, stride=1, padding=0, bias=False)),
+                ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
                 ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
-                ("convf", nn.Conv2d(
-                    256, 256, 1, stride=1, padding=0, bias=False),),
+                (
+                    "convf",
+                    nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
+                ),
             ]
             u2 = nn.Sequential(OrderedDict(modules))
 
             modules = [
                 ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
-                ("conva", nn.Conv2d(
-                    256, 64, ksize, stride=1, padding=0, bias=False),),
+                (
+                    "conva",
+                    nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
+                ),
             ]
             u1 = nn.Sequential(OrderedDict(modules))
 
             modules = [
                 ("bn", nn.BatchNorm2d(64, eps=1e-5)),
                 ("relu", nn.ReLU(inplace=True)),
-                ("conv", nn.Conv2d(
-                    64, out_ch, 1, stride=1, padding=0, bias=True),),
+                (
+                    "conv",
+                    nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
+                ),
             ]
             u0 = nn.Sequential(OrderedDict(modules))
 
@@ -439,44 +382,42 @@ class HoVerNet(ModelABC):
             )
             return decoder
 
-        ksize = 5 if mode == 'original' else 3
+        ksize = 5 if mode == "original" else 3
         if num_types is None:
-            self.decoder = nn.ModuleDict(OrderedDict([
-                ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
-            ]))
+            self.decoder = nn.ModuleDict(
+                OrderedDict(
+                    [
+                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                    ]
+                )
+            )
         else:
-            self.decoder = nn.ModuleDict(OrderedDict([
-                ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
-                ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
-            ]))
+            self.decoder = nn.ModuleDict(
+                OrderedDict(
+                    [
+                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
+                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                    ]
+                )
+            )
 
         self.upsample2x = UpSample2x()
 
-    def forward(self, imgs):
+    def forward(self, imgs: torch.Tensor):
 
         imgs = imgs / 255.0  # to 0-1 range to match XY
 
-        if self.training:
-            d0 = self.conv0(imgs)
-            d0 = self.d0(d0, self.freeze)
-            with torch.set_grad_enabled(not self.freeze):
-                d1 = self.d1(d0)
-                d2 = self.d2(d1)
-                d3 = self.d3(d2)
-            d3 = self.conv_bot(d3)
-            d = [d0, d1, d2, d3]
-        else:
-            d0 = self.conv0(imgs)
-            d0 = self.d0(d0)
-            d1 = self.d1(d0)
-            d2 = self.d2(d1)
-            d3 = self.d3(d2)
-            d3 = self.conv_bot(d3)
-            d = [d0, d1, d2, d3]
+        d0 = self.conv0(imgs)
+        d0 = self.d0(d0)
+        d1 = self.d1(d0)
+        d2 = self.d2(d1)
+        d3 = self.d3(d2)
+        d3 = self.conv_bot(d3)
+        d = [d0, d1, d2, d3]
 
-        if self.mode == 'original':
+        if self.mode == "original":
             d[0] = crop_op(d[0], [184, 184])
             d[1] = crop_op(d[1], [72, 72])
         else:
@@ -500,7 +441,7 @@ class HoVerNet(ModelABC):
         return out_dict
 
     @staticmethod
-    def __proc_np_hv(np_map, hv_map):
+    def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
         """Extract Nuclei Instance with NP and HV Map.
 
         Args:
@@ -519,12 +460,20 @@ class HoVerNet(ModelABC):
         blb[blb > 0] = 1  # background is 0 already
 
         h_dir = cv2.normalize(
-            h_dir_raw, None, alpha=0, beta=1,
-            norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F
+            h_dir_raw,
+            None,
+            alpha=0,
+            beta=1,
+            norm_type=cv2.NORM_MINMAX,
+            dtype=cv2.CV_32F,
         )
         v_dir = cv2.normalize(
-            v_dir_raw, None, alpha=0, beta=1,
-            norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F
+            v_dir_raw,
+            None,
+            alpha=0,
+            beta=1,
+            norm_type=cv2.NORM_MINMAX,
+            dtype=cv2.CV_32F,
         )
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=21)
@@ -532,14 +481,22 @@ class HoVerNet(ModelABC):
 
         sobelh = 1 - (
             cv2.normalize(
-                sobelh, None, alpha=0, beta=1,
-                norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F
+                sobelh,
+                None,
+                alpha=0,
+                beta=1,
+                norm_type=cv2.NORM_MINMAX,
+                dtype=cv2.CV_32F,
             )
         )
         sobelv = 1 - (
             cv2.normalize(
-                sobelv, None, alpha=0, beta=1,
-                norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F
+                sobelv,
+                None,
+                alpha=0,
+                beta=1,
+                norm_type=cv2.NORM_MINMAX,
+                dtype=cv2.CV_32F,
             )
         )
 
@@ -566,14 +523,13 @@ class HoVerNet(ModelABC):
         return proced_pred
 
     @staticmethod
-    def postproc(raw_maps, return_centroids=True):
+    def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
 
         Args:
             raw_maps (list(ndarray)): list of prediction output of each head and
                 assumed to be in the order of [np, hv, tp] (match with the output
                 of `infer_batch`).
-            return_centroids (boolean): to return nuclei centroids or not.
 
         Returns:
             inst_map (ndarray): pixel-wise nuclear instance segmentation
@@ -604,46 +560,45 @@ class HoVerNet(ModelABC):
         pred_inst = HoVerNet.__proc_np_hv(np_map, hv_map)
 
         inst_info_dict = None
-        if return_centroids or pred_type is not None:
-            inst_id_list = np.unique(pred_inst)[1:]  # exlcude background
-            inst_info_dict = {}
-            for inst_id in inst_id_list:
-                inst_map = pred_inst == inst_id
-                inst_box = get_bounding_box(inst_map)
-                inst_box_tl = inst_box[:2]
-                inst_map = inst_map[
-                    inst_box[1] : inst_box[3],
-                    inst_box[0] : inst_box[2]
-                ]
-                inst_map = inst_map.astype(np.uint8)
-                inst_moment = cv2.moments(inst_map)
-                inst_contour = cv2.findContours(
-                    inst_map, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-                )
-                # * opencv protocol format may break
-                inst_contour = inst_contour[0][0].astype(np.int32)
-                inst_contour = np.squeeze(inst_contour)
-                # < 3 points dont make a contour, so skip, likely artifact too
-                # as the contours obtained via approximation => too small
-                if inst_contour.shape[0] < 3:
-                    continue
-                # ! check for trickery shape
-                if len(inst_contour.shape) != 2:
-                    continue
-                inst_centroid = [
-                    (inst_moment["m10"] / inst_moment["m00"]),
-                    (inst_moment["m01"] / inst_moment["m00"]),
-                ]
-                inst_centroid = np.array(inst_centroid)
-                inst_contour += inst_box_tl[None]
-                inst_centroid += inst_box_tl  # X
-                inst_info_dict[inst_id] = {  # inst_id should start at 1
-                    "box": inst_box,
-                    "centroid": inst_centroid,
-                    "contour": inst_contour,
-                    "prob": None,
-                    "type": None,
-                }
+
+        inst_id_list = np.unique(pred_inst)[1:]  # exlcude background
+        inst_info_dict = {}
+        for inst_id in inst_id_list:
+            inst_map = pred_inst == inst_id
+            inst_box = get_bounding_box(inst_map)
+            inst_box_tl = inst_box[:2]
+            inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
+            inst_map = inst_map.astype(np.uint8)
+            inst_moment = cv2.moments(inst_map)
+            inst_contour = cv2.findContours(
+                inst_map, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            )
+            # * opencv protocol format may break
+            inst_contour = inst_contour[0][0].astype(np.int32)
+            inst_contour = np.squeeze(inst_contour)
+
+            # < 3 points dont make a contour, so skip, likely artifact too
+            # as the contours obtained via approximation => too small
+            if inst_contour.shape[0] < 3:  # pragma: no cover
+                continue
+            # ! check for trickery shape
+            if len(inst_contour.shape) != 2:  # pragma: no cover
+                continue
+
+            inst_centroid = [
+                (inst_moment["m10"] / inst_moment["m00"]),
+                (inst_moment["m01"] / inst_moment["m00"]),
+            ]
+            inst_centroid = np.array(inst_centroid)
+            inst_contour += inst_box_tl[None]
+            inst_centroid += inst_box_tl  # X
+            inst_info_dict[inst_id] = {  # inst_id should start at 1
+                "box": inst_box,
+                "centroid": inst_centroid,
+                "contour": inst_contour,
+                "prob": None,
+                "type": None,
+            }
 
         if pred_type is not None:
             # * Get class of each instance id, stored at index id-1
@@ -655,22 +610,18 @@ class HoVerNet(ModelABC):
                 inst_map_crop = inst_map_crop == inst_id
                 inst_type = inst_type_crop[inst_map_crop]
 
-                (
-                    type_list, type_pixels
-                ) = np.unique(inst_type, return_counts=True)
+                (type_list, type_pixels) = np.unique(inst_type, return_counts=True)
                 type_list = list(zip(type_list, type_pixels))
                 type_list = sorted(type_list, key=lambda x: x[1], reverse=True)
 
                 inst_type = type_list[0][0]
+
                 # ! pick the 2nd most dominant if it exists
-                if inst_type == 0:
-                    if len(type_list) > 1:
-                        inst_type = type_list[1][0]
+                if inst_type == 0 and len(type_list) > 1:  # pragma: no cover
+                    inst_type = type_list[1][0]
 
                 type_dict = {v[0]: v[1] for v in type_list}
-                type_prob = (
-                    type_dict[inst_type] / (np.sum(inst_map_crop) + 1.0e-6)
-                )
+                type_prob = type_dict[inst_type] / (np.sum(inst_map_crop) + 1.0e-6)
 
                 inst_info_dict[inst_id]["type"] = int(inst_type)
                 inst_info_dict[inst_id]["prob"] = float(type_prob)
@@ -694,7 +645,7 @@ class HoVerNet(ModelABC):
         patch_imgs = batch_data
 
         # TODO: change device to any valid device, not just cuda/cpu
-        device = 'cuda' if on_gpu else 'cpu'
+        device = "cuda" if on_gpu else "cpu"
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 
@@ -703,10 +654,9 @@ class HoVerNet(ModelABC):
         # --------------------------------------------------------------
         with torch.no_grad():  # dont compute gradient
             pred_dict = model(patch_imgs_gpu)
-            pred_dict = OrderedDict([
-                [k, v.permute(0, 2, 3, 1).contiguous()]
-                for k, v in pred_dict.items()
-            ])
+            pred_dict = OrderedDict(
+                [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()]
+            )
             pred_dict["np"] = F.softmax(pred_dict["np"], dim=-1)[..., 1:]
             if "tp" in pred_dict:
                 type_map = F.softmax(pred_dict["tp"], dim=-1)
@@ -715,7 +665,7 @@ class HoVerNet(ModelABC):
                 pred_dict["tp"] = type_map
             pred_dict = {k: v.cpu().numpy() for k, v in pred_dict.items()}
 
-        if 'tp' in pred_dict:
-            return pred_dict['np'], pred_dict['hv'], pred_dict['tp']
+        if "tp" in pred_dict:
+            return pred_dict["np"], pred_dict["hv"], pred_dict["tp"]
         else:
-            return pred_dict['np'], pred_dict['hv']
+            return pred_dict["np"], pred_dict["hv"]
