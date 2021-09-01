@@ -45,6 +45,29 @@ def _sample_svs(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def _sample_ome_tiff(tmpdir_factory):
+    """Sample pytest fixture for ome-tiff (brightfield pyramid) images.
+    Download ome-tiff image for pytest.
+
+    """
+    ome_tiff_file_path = tmpdir_factory.mktemp("data").join(
+        "CMU-1-Small-Region.ome.tiff"
+    )
+    if not pathlib.Path(ome_tiff_file_path).is_file():
+        print("\nDownloading OME-TIFF (Brightfield Pyramid)")
+        r = requests.get(
+            "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/"
+            "CMU-1-Small-Region.ome.tiff"
+        )
+        with open(ome_tiff_file_path, "wb") as f:
+            f.write(r.content)
+    else:
+        print("\nSkipping OME-TIFF")
+
+    return ome_tiff_file_path
+
+
+@pytest.fixture(scope="session")
 def _sample_jp2(tmpdir_factory):
     """Sample pytest fixture for JP2 images.
     Download jp2 image for pytest.
