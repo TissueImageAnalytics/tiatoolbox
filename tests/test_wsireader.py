@@ -515,6 +515,18 @@ def test_read_rect_jp2_baseline(_sample_jp2):
     assert im_region.shape == (*size[::-1], 3)
 
 
+def test_read_rect_tiffreader_svs_baseline(_sample_svs):
+    """Test TIFFWSIReader.read_rect with an SVS file at baseline."""
+    wsi = wsireader.TIFFWSIReader(_sample_svs)
+    location = SVS_TEST_TISSUE_LOCATION
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+
 def test_read_rect_openslide_levels(_sample_ndpi):
     """Test openslide read rect with resolution in levels.
 

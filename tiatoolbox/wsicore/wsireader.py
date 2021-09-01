@@ -1563,7 +1563,6 @@ class TIFFWSIReader(WSIReader):
 
         description = self.tiff.pages[0].description
         raw["Description"] = description
-        raw["TIFF Tags"] = self.tiff.pages[0].tags.items()
         parts = description.split("|")
         description_headers, key_value_pairs = parts[0], parts[1:]
         description_headers = description_headers.split(";")
@@ -1589,6 +1588,7 @@ class TIFFWSIReader(WSIReader):
                 raise ValueError
             key, value_string = pair
             key = key.strip()
+            value_string = value_string.strip()
             value = value_string.strip()
 
             def us_date(string: str) -> datetime:
@@ -1692,11 +1692,24 @@ class TIFFWSIReader(WSIReader):
         ]
         slide_dimensions = level_dimensions[0]
         level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
+        # The tags attribute object will not pickle or deepcopy,
+        # so a copy with only python values or tiffile enums is made.
+        tiff_tags = {
+            code: {
+                "code": code,
+                "value": tag.value,
+                "name": tag.name,
+                "count": tag.count,
+                "type": tag.dtype,
+            }
+            for code, tag in self.tiff.pages[0].tags.items()
+        }
 
         if self.tiff.is_svs:
             filetype_params = self._parse_svs_metadata()
         if self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
+        filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         param = WSIMeta(
             file_path=self.input_path,
