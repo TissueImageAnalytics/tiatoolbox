@@ -19,20 +19,22 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Visualisation and overlay functions used in tiatoolbox."""
+import colorsys
+import random
 
-import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import numpy as np
 
 
 def overlay_patch_prediction(
-            img : np.ndarray,
-            prediction : np.ndarray,
-            alpha : float = 0.35,
-            label_info : dict = None,
-            ax=None,
-        ):
+    img: np.ndarray,
+    prediction: np.ndarray,
+    alpha: float = 0.35,
+    label_info: dict = None,
+    ax=None,
+):
     """Generate an overlay, given a 2D prediction map.
 
     Args:
@@ -47,13 +49,14 @@ def overlay_patch_prediction(
     """
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
-            'Mismatch shape `img` {0} vs `prediction` {1}.'.format(
+            "Mismatch shape `img` {0} vs `prediction` {1}.".format(
                 img.shape[:2], prediction.shape[:2]
-            ))
+            )
+        )
 
     if np.issubdtype(img.dtype, np.floating):
         if not (img.max() <= 1.0 and img.min() >= 0):
-            raise ValueError('Not support float `img` outside [0, 1].')
+            raise ValueError("Not support float `img` outside [0, 1].")
         img = np.array(img * 255, dtype=np.uint8)
 
     overlay = img.copy()
@@ -73,20 +76,32 @@ def overlay_patch_prediction(
             if label_uid in check_uid_list:
                 check_uid_list.remove(label_uid)
             if not isinstance(label_uid, int):
-                raise ValueError('Wrong `label_info` format: label_uid {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_uid {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
             if not isinstance(label_name, str):
-                raise ValueError('Wrong `label_info` format: label_name {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_name {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
             if not isinstance(label_colour, (tuple, list, np.ndarray)):
-                raise ValueError('Wrong `label_info` format: label_colour {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_colour {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
             if len(label_colour) != 3:
-                raise ValueError('Wrong `label_info` format: label_colour {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_colour {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
         #
         if len(check_uid_list) != 0:
-            raise ValueError('Missing label for: {0}'.format(check_uid_list))
+            raise ValueError("Missing label for: {0}".format(check_uid_list))
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
@@ -124,3 +139,54 @@ def overlay_patch_prediction(
     cbar.ax.tick_params(labelsize=12)
 
     return ax
+
+
+def random_colors(num_colors, bright=True):
+    """Generate a number of random colors.
+
+    To get visually distinct colors, generate them in HSV space then
+    convert to RGB.
+
+    """
+    brightness = 1.0 if bright else 0.7
+    hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
+    colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+    random.shuffle(colors)
+    return colors
+
+
+def overlay_instance_prediction(
+    canvas, inst_dict, draw_dot=False, type_colour=None, line_thickness=2
+):
+    """Overlaying instance contours on image.
+
+    Args:
+        canvas (ndarray): image to be drawn upon.
+        inst_dict (dict): dict of instances.
+        draw_dot: to draw a dot for each centroid
+        type_colour: a dict of {type_id : (type_name, colour)},
+            `type_id` is from 0-N and `colour` is a tuple of (R, G, B)
+        line_thickness: line thickness of contours
+
+    Return:
+
+    """
+    overlay = np.copy((canvas))
+
+    inst_rng_colors = random_colors(len(inst_dict))
+    inst_rng_colors = np.array(inst_rng_colors) * 255
+    inst_rng_colors = inst_rng_colors.astype(np.uint8)
+
+    for idx, [_, inst_info] in enumerate(inst_dict.items()):
+        inst_contour = inst_info["contour"]
+        if "type" in inst_info and type_colour is not None:
+            inst_colour = type_colour[inst_info["type"]][1]
+        else:
+            inst_colour = (inst_rng_colors[idx]).tolist()
+        cv2.drawContours(overlay, [inst_contour], -1, inst_colour, line_thickness)
+
+        if draw_dot:
+            inst_centroid = inst_info["centroid"]
+            inst_centroid = tuple([int(v) for v in inst_centroid])
+            overlay = cv2.circle(overlay, inst_centroid, 3, (255, 0, 0), -1)
+    return overlay

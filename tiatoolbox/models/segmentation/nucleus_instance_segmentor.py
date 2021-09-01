@@ -26,7 +26,9 @@ from typing import List, Union
 import numpy as np
 
 # replace with the sql database once the PR in place
+import joblib
 import pygeos
+
 import torch
 import tqdm
 
@@ -44,10 +46,9 @@ def _process_tile_predictions(
     tile_flag,
     tile_mode,
     tile_output,
-    # these two would be replaced by annotation store
+    # this would be replaced by annotation store
     # in the future
     ref_inst_dict,
-    ref_inst_rtree,
     postproc,
     merge_predictions,
 ):
@@ -87,8 +88,8 @@ def _process_tile_predictions(
     if len(inst_dict) == 0:
         return {}, []
 
-    # DEPRECATION: will be deprecated upon finalizing
-    # annotation store
+    # ! DEPRECATION:
+    # !     will be deprecated upon finalization of SQL annotation store
     m = ioconfig.margin
     w, h = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
@@ -98,7 +99,7 @@ def _process_tile_predictions(
             inst_boxes[:, 0], inst_boxes[:, 1], inst_boxes[:, 2], inst_boxes[:, 3]
         )
     )
-    #
+    # !
 
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
@@ -122,7 +123,6 @@ def _process_tile_predictions(
         [[w - m, m], [w - m, h - m]],  # noqa right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
-    print(margin_lines)
     margin_lines = [pygeos.box(*v.flatten().tolist()) for v in margin_lines]
 
     # the ids within this match with those within `inst_map`, not UUID
@@ -169,6 +169,20 @@ def _process_tile_predictions(
     # this one should contain UUID with the reference database
     remove_insts_in_orig = []
     if tile_mode == 3:
+        # ! DEPRECATION:
+        # !     will be deprecated upon finalization of SQL annotation store
+        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
+        inst_boxes = np.array(inst_boxes)
+        ref_inst_rtree = pygeos.STRtree(
+            pygeos.box(
+                inst_boxes[:, 0],
+                inst_boxes[:, 1],
+                inst_boxes[:, 2],
+                inst_boxes[:, 3],
+            )
+        )
+        # !
+
         # remove existings insts in old prediction that intersect
         # with the margin lines
         sel_indices = [
@@ -243,13 +257,21 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # * remove all sides for boxes
         # unset for those lie within the selection
-        def unset_removal_flag(boxes, sel_boxes, removal_flag):
+        def unset_removal_flag(boxes, removal_flag):
+            """Unset removal flags for tiles intersecting image boundaries."""
+            # ! DEPRECATION:
+            # !     will be deprecated upon finalization of SQL annotation store
+            sel_boxes = [
+                pygeos.box(0, 0, w, 0),  # top egde
+                pygeos.box(0, h, w, h),  # bottom edge
+                pygeos.box(0, 0, 0, h),  # left
+                pygeos.box(w, 0, w, h),  # right
+            ]
             spatial_indexer = pygeos.STRtree(
                 pygeos.box(boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3])
             )
+            # !
             for idx, sel_box in enumerate(sel_boxes):
-                if sel_box is None:
-                    continue
                 sel_indices = spatial_indexer.query(sel_box)
                 removal_flag[sel_indices, idx] = 0
             return removal_flag
@@ -264,15 +286,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         info = []
         # * remove edges on all sides, excluding edges at on WSI boundary
-        # ! TODO: to be replaced with SQL Store from John PR
-        sel_boxes = [
-            pygeos.box(0, 0, w, 0),  # top egde
-            pygeos.box(0, h, w, h),  # bottom edge
-            pygeos.box(0, 0, 0, h),  # left
-            pygeos.box(w, 0, w, h),  # right
-        ]
         flag = np.ones([boxes.shape[0], 4], dtype=np.int32)
-        flag = unset_removal_flag(boxes, sel_boxes, flag)
+        flag = unset_removal_flag(boxes, flag)
         info.append([boxes, flag])
 
         # * create vertical boxes at tile boundary and
@@ -302,7 +317,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         )
         _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
         _flag[:, [0, 1]] = 1
-        _flag = unset_removal_flag(_boxes, sel_boxes, _flag)
+        _flag = unset_removal_flag(_boxes, _flag)
         info.append([_boxes, _flag])
 
         # * create horizontal boxes at tile boundary and
@@ -329,7 +344,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         )
         _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
         _flag[:, [2, 3]] = 1
-        _flag = unset_removal_flag(_boxes, sel_boxes, _flag)
+        _flag = unset_removal_flag(_boxes, _flag)
         info.append([_boxes, _flag])
 
         # * create boxes at tile cross-section and all sides
@@ -462,6 +477,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             patch_inputs = patch_inputs[sel]
 
         # assume to be in [topleft_x, topleft_y, botright_x, botright_y]
+        # ! DEPRECATION:
+        # !     will be deprecated upon finalization of SQL annotation store
         spatial_indexer = pygeos.STRtree(
             pygeos.box(
                 patch_outputs[:, 0],
@@ -470,6 +487,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 patch_outputs[:, 3],
             )
         )
+        # !
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
@@ -477,8 +495,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # ! running order of each set matters !
         self._futures = []
+
+        # ! DEPRECATION:
+        # !     will be deprecated upon finalization of SQL annotation store
         self._wsi_inst_info = {}
-        self._wsi_inst_rtree = None
+        # !
+
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
             for tile_idx, tile_bound in enumerate(set_bounds):
                 tile_flag = set_flags[tile_idx]
@@ -490,43 +512,27 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 tile_patch_outputs = patch_outputs[sel_indices]
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
 
-                # tile_infer_output = self._infer_once()
-                import joblib
+                tile_infer_output = self._infer_once()
 
-                dump_path = f"local/test_output/tile_set={set_idx}_tile={tile_idx}.dat"
-                # joblib.dump(tile_infer_output, dump_path)
-                tile_infer_output = joblib.load(dump_path)
+                # dump_path = (
+                #     f"local/test_output/tile_set={set_idx}_tile={tile_idx}.dat"
+                # )
+                # # joblib.dump(tile_infer_output, dump_path)
+                # tile_infer_output = joblib.load(dump_path)
 
                 self._process_tile_predictions(
                     ioconfig, tile_bound, tile_flag, set_idx, tile_infer_output
                 )
 
             self._merge_post_process_results()
-
-            # DEPRECATION: will be deprecated upon finalizing
-            # annotation store
-            inst_boxes = [v["box"] for v in self._wsi_inst_info.values()]
-            inst_boxes = np.array(inst_boxes)
-            self._wsi_inst_rtree = pygeos.STRtree(
-                pygeos.box(
-                    inst_boxes[:, 0],
-                    inst_boxes[:, 1],
-                    inst_boxes[:, 2],
-                    inst_boxes[:, 3],
-                )
-            )
-
-        print(save_path)
-        # from .utils import visualize_instances_dict
-        # thumb = wsi_reader.slide_thumbnail(resolution=0.25, units='mpp')
-        # thumb = visualize_instances_dict(thumb, self._wsi_inst_info)
-        # from tiatoolbox.utils.misc import imwrite
-        # imwrite(f'dump{set_idx}.png', thumb)
+        joblib.dump(self._wsi_inst_info, f"{save_path}.dat")
+        # may need to chain it with parents
+        self._wsi_inst_info = None  # clean up
 
     def _process_tile_predictions(
         self, ioconfig, tile_bound, tile_flag, tile_mode, tile_output
     ):
-
+        """Function to dispatch parallel post processing."""
         args = [
             ioconfig,
             tile_bound,
@@ -534,7 +540,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             tile_mode,
             tile_output,
             self._wsi_inst_info,
-            self._wsi_inst_rtree,
             self.model.postproc_func,
             self.merge_prediction,
         ]
@@ -546,11 +551,16 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         return
 
     def _merge_post_process_results(self):
+        """"Helper to aggregate results from parallel workers."""
+
         def callback(new_inst_dict, remove_uuid_list):
+            """Helper to aggregate worker's results."""
+            # ! DEPRECATION:
+            # !     will be deprecated upon finalization of SQL annotation store
             self._wsi_inst_info.update(new_inst_dict)
             for inst_uuid in remove_uuid_list:
-                print(inst_uuid)
                 self._wsi_inst_info.pop(inst_uuid, None)
+            # !
 
         for future in self._futures:
 
