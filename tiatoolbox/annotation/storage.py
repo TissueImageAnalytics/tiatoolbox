@@ -19,10 +19,10 @@ Properties
 
 """
 import hashlib
+import itertools
 import sqlite3
 from abc import ABC
 from io import StringIO
-from itertools import zip_longest
 from numbers import Number
 from pathlib import Path
 from typing import IO, Any, Dict, Iterable, List, Optional, Tuple, Union
@@ -148,24 +148,44 @@ class AnnotationStoreABC(ABC):
 
     def append(
         self,
-        geometry: Union[Geometry, Iterable[Geometry]],
-        class_: Optional[Union[int, Iterable[int]]] = None,
-        **extra_properties: Dict[str, Union[Any, Iterable[Any]]],
+        geometry: Geometry,
+        properties: Dict[str, Any] = None,
     ) -> int:
         """Insert a new annotation, returning the index."""
-        raise NotImplementedError()
+        if properties is None:
+            properties = {}
+        return self.append_many([geometry], [properties])[0]
 
-    def update(self, index: int, **keys_and_values: Dict[str, Any]) -> None:
-        """Update an annotation at given index.
+    def append_many(
+        self,
+        geometries: Iterable[Geometry],
+        properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+    ) -> List[int]:
+        indexes = []
+        if properties_iter is None:
+            properties_iter = itertools.repeat({})
+        for geometry, properties in zip(geometries, properties_iter):
+            key = self.append(geometry, properties)
+            indexes.append(key)
+        return indexes
 
-        Extra key-word arguments are used to update properties.
+    def update(self, index: int, update: Dict[str, Any]) -> None:
+        """Update an annotation at given index."""
+        return self.update_many([index], [update])
 
-        """
-        raise NotImplementedError()
+    def update_many(
+        self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
+    ) -> None:
+        for index, update in zip(indexes, updates):
+            self.update(index, update)
 
-    def remove(self, index: Union[int, Iterable[int]]) -> None:
-        """Remove annotation(s) by index."""
-        raise NotImplementedError()
+    def remove(self, index: int) -> None:
+        """Remove annotation by index."""
+        self.remove_many([index])
+
+    def remove_many(self, indexes: Iterable[int]) -> None:
+        for index in indexes:
+            self.remove(index)
 
     def __len__(self) -> int:
         """Return the number of annotations in the store."""
@@ -180,7 +200,7 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
     def __delitem__(self, index: int) -> None:
-        raise NotImplementedError()
+        self.remove(index)
 
     def __iter__(self) -> Iterable:
         raise NotImplementedError()
@@ -328,15 +348,17 @@ class SQLite3RTreeStore(AnnotationStoreABC):
     def __del__(self) -> None:
         self.con.close()
 
-    def _make_token(
-        self, geometry, class_: int, properties: Dict, save_boundary: bool = True
-    ) -> Dict:
+    def _make_token(self, geometry: Geometry, properties: Dict) -> Dict:
         """Create token data dict for tokenised SQL transaction."""
         key = self.geometry_hash(geometry)
-        if not save_boundary or geometry.geom_type == "Point":
+        if geometry.geom_type == "Point":
             boundary = None
         else:
             boundary = self.serialise_geometry(geometry)
+        class_ = properties.get("class")
+        if "class" in properties:
+            properties = copy.copy(properties)
+            del properties["class"]
         return {
             "index": key,
             "boundary": boundary,
@@ -351,26 +373,19 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             "properties": json.dumps(properties, separators=(",", ":")),
         }
 
-    def append(
+    def append_many(
         self,
-        geometry: Union[Geometry, Iterable[Geometry]],
-        class_: Optional[Union[int, Iterable[int]]] = None,
-        **extra_properties: Dict[str, Union[Any, Iterable[Any]]],
-    ) -> int:
-        geometries_iter = self._iterfy(geometry)
-        classes_iter = self._iterfy(class_)
-        property_values_iter = iter(
-            zip_longest(*(self._iterfy(x) for x in extra_properties.values()))
-        )
+        geometries: Iterable[Geometry],
+        properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+    ) -> List[int]:
+        if properties_iter is None:
+            properties_iter = itertools.repeat({})
         tokens = [
             self._make_token(
                 geometry=geometry,
-                class_=class_,
-                properties=dict(zip(extra_properties.keys(), self._iterfy(props))),
+                properties=properties,
             )
-            for geometry, class_, props in zip_longest(
-                geometries_iter, classes_iter, property_values_iter
-            )
+            for geometry, properties in zip(geometries, properties_iter)
         ]
         cur = self.con.cursor()
         cur.executemany(
@@ -390,10 +405,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             tokens,
         )
         self.con.commit()
-        indexes = [token["index"] for token in tokens]
-        if not isinstance(geometry, Iterable):
-            return indexes[0]
-        return indexes
+        return [token["index"] for token in tokens]
 
     def query_index(self, query_geometry: QueryGeometry) -> List[int]:
         cur = self.con.cursor()
@@ -494,24 +506,14 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             properties.update({"class": class_, "index": index})
             yield geometry, properties
 
-    def update(
-        self,
-        index: Union[int, List[int]],
-        **kwargs: Union[pd.DataFrame, Dict[str, Union[Any, List[Any]]]],
+    def update_many(
+        self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
-        index_iter = self._iterfy(index)
-        kwarg_values_iter = iter(
-            zip_longest(*(self._iterfy(x) for x in kwargs.values()), fillvalue=...)
-        )
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        for i, kwarg_values in zip_longest(index_iter, kwarg_values_iter):
-            properties = {
-                k: v for k, v in zip(kwargs.keys(), kwarg_values) if v is not ...
-            }
-            geometry = properties.get("geometry")
-            if "geometry" in properties:
-                del properties["geometry"]
+        for index, update in zip(indexes, updates):
+            update = copy.copy(update)
+            geometry = update.pop("geometry", None)
             if geometry is not None:
                 bounds = dict(
                     zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds)
@@ -525,7 +527,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                     """,
                     dict(
                         xy,
-                        index=i,
+                        index=index,
                         boundary=self.serialise_geometry(geometry),
                     ),
                 )
@@ -538,10 +540,10 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                     """,
                     dict(
                         bounds,
-                        index=i,
+                        index=index,
                     ),
                 )
-            if len(properties) > 0:
+            if len(update) > 0:
                 cur.execute(
                     """
                     UPDATE geometry
@@ -549,18 +551,17 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                      WHERE id = :index
                     """,
                     {
-                        "index": i,
-                        "properties": json.dumps(properties, separators=(",", ":")),
+                        "index": index,
+                        "properties": json.dumps(update, separators=(",", ":")),
                     },
                 )
         self.con.commit()
 
-    def remove(self, index: Union[int, Iterable[int]]) -> None:
-        index = self._iterfy(index)
+    def remove_many(self, indexes: Iterable[int]) -> None:
         cur = self.con.cursor()
         cur.executemany(
             "DELETE FROM geometry WHERE id = ?",
-            ((i,) for i in index),
+            ((i,) for i in indexes),
         )
         self.con.commit()
 
@@ -671,6 +672,16 @@ class DictionaryStore(AnnotationStoreABC):
         feature_collection = cls._load(fp)
         store.features = feature_collection["features"]
         return store
+
+    def append(
+        self, geometry: Union[Geometry, Iterable[Geometry]], properties: Dict[str, Any]
+    ) -> int:
+        key = self.geometry_hash(geometry)
+        self.features[key] = {
+            "geometry": geometry,
+            "properties": properties,
+        }
+        return key
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
@@ -899,53 +910,33 @@ class PyTablesStore(AnnotationStoreABC):
             self.root, "geometry", TablesGeometry
         )
 
-    def append(
+    def append_many(
         self,
-        geometry: Union[Geometry, Iterable[Geometry]],
-        class_: Optional[Union[int, Iterable[int]]] = None,
-        **extra_properties: Dict[str, Union[Any, Iterable[Any]]],
-    ) -> int:
-        geometry_iter = self._iterfy(geometry)
-        class_iter = self._iterfy(class_)
-        property_values_iter = iter(
-            zip_longest(
-                *(self._iterfy(x) for x in extra_properties.values()), fillvalue=...
-            )
-        )
-
+        geometries: Iterable[Geometry],
+        properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+    ) -> List[int]:
         indexes = []
-        for geom, cls, property_values in zip_longest(
-            geometry_iter, class_iter, property_values_iter
-        ):
+        if properties_iter is None:
+            properties_iter = itertools.repeat({})
+        for geometry, properties in zip(geometries, properties_iter):
             row = self.geometry_table.row
-            row["index"] = self.geometry_hash(geom)
-            boundary = self.serialise_geometry(geom)
+            row["index"] = self.geometry_hash(geometry)
+            boundary = self.serialise_geometry(geometry)
             if len(boundary) > self.max_boundary_len:
                 raise ValueError("Boundary > TablesStore.max_boundary_len")
             row["boundary"] = boundary
-            row["min_x"], row["min_y"], row["max_x"], row["max_y"] = geom.bounds
-            row["x"], row["y"] = np.array(geom.centroid)
-            if cls is not None:
-                row["class_"] = cls
-            if property_values is not None:
-                properties = json.dumps(
-                    {
-                        (k, v)
-                        for k, v in zip(extra_properties.keys(), property_values)
-                        if v is not ...
-                    }
-                )
-                if len(properties) > self.max_properties_len:
-                    raise ValueError("Properties > TablesStore.max_properties_len")
-                row["properties"] = properties
+            row["min_x"], row["min_y"], row["max_x"], row["max_y"] = geometry.bounds
+            row["x"], row["y"] = np.array(geometry.centroid)
+            row["class_"] = properties.pop("class", -1)
+            properties = json.dumps(properties, separators=(",", ":"))
+            if len(properties) > self.max_properties_len:
+                raise ValueError("Properties > TablesStore.max_properties_len")
+            row["properties"] = properties
             indexes.append(row["index"])
             row.append()
 
         self.geometry_table.flush()
-
-        if isinstance(geometry, Iterable):
-            return indexes
-        return indexes[0]
+        return indexes
 
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         if isinstance(query_geometry, Iterable):

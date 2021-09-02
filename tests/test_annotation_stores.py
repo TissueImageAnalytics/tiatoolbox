@@ -92,21 +92,25 @@ def fill_store(cell_grid):
         path: Union[str, Path],
     ):
         store = store_class(path)
-        indexes = store.append(cell_grid)
+        indexes = store.append_many(cell_grid)
         return indexes, store
 
     return _fill_store
 
 
-def test_SQLite3RTreeStore_append(cell_grid, tmp_path):
+def test_SQLite3RTreeStore_append_many(cell_grid, tmp_path):
     store = SQLite3RTreeStore(tmp_path / "polygons.db")
-    indexes = store.append(cell_grid, class_=np.random.randint(0, 7, len(cell_grid)))
+    indexes = store.append_many(
+        cell_grid, ({"class": x} for x in np.random.randint(0, 7, len(cell_grid)))
+    )
     assert len(indexes) == len(cell_grid)
 
 
-def test_PyTablesStore_append(cell_grid, tmp_path):
+def test_PyTablesStore_append_many(cell_grid, tmp_path):
     store = PyTablesStore(tmp_path / "polygons.h5")
-    indexes = store.append(cell_grid, class_=np.random.randint(0, 7, len(cell_grid)))
+    indexes = store.append_many(
+        cell_grid, ({"class": x} for x in np.random.randint(0, 7, len(cell_grid)))
+    )
     assert len(indexes) == len(cell_grid)
 
 
@@ -115,10 +119,10 @@ def test_SQLite3RTreeStore_update(fill_store, tmp_path):
     index = indexes[0]
     new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
     # Geometry update
-    store.update(index, geometry=new_geometry)
+    store.update(index, {"geometry": new_geometry})
     assert store[index][0] == new_geometry
     # Properties update
-    store.update(index, abc=123)
+    store.update(index, {"abc": 123})
     assert store[index][1]["abc"] == 123
 
 
@@ -131,7 +135,7 @@ def test_SQLite3RTreeStore_remove(fill_store, tmp_path):
 
 def test_SQLite3RTreeStore_remove_many(fill_store, tmp_path):
     indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    store.remove(indexes)
+    store.remove_many(indexes)
     assert len(store) == 0
 
 
@@ -150,7 +154,7 @@ def test_PytablesStore_getitem(fill_store, tmp_path, sample_triangle):
     index = store.append(sample_triangle)
     geometry, properties = store[index]
     assert geometry == sample_triangle
-    assert properties == {"class": 0}
+    assert properties == {"class": -1}
 
 
 def test_SQLite3RTreeStore_getitem(fill_store, tmp_path, sample_triangle):
@@ -179,7 +183,7 @@ def test_SQLite3RTreeStore_delitem(fill_store, tmp_path, sample_triangle):
 
 def test_SQLite3RTreeStore_getitem_setitem_cycle(fill_store, tmp_path, sample_triangle):
     _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    index = store.append(sample_triangle, class_=0)
+    index = store.append(sample_triangle, {"class": 0})
     geometry, properties = store[index]
     store[index] = (geometry, properties)
     assert store[index] == (geometry, properties)
