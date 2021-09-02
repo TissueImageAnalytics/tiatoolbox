@@ -149,6 +149,12 @@ def test_SQLite3RTreeStore_len(fill_store, tmp_path):
     assert len(store) == FILLED_LEN
 
 
+def test_SQLite3RTreeStore_in(fill_store, tmp_path):
+    indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    for index in indexes:
+        assert index in store
+
+
 def test_PytablesStore_getitem(fill_store, tmp_path, sample_triangle):
     _, store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
     index = store.append(sample_triangle)
