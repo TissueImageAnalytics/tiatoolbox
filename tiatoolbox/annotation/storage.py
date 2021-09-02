@@ -770,7 +770,7 @@ class DataFrameStore(AnnotationStoreABC):
             if cls is not None:
                 properties.update({"class": cls})
             row = pd.DataFrame(dict(geometry=geom, **properties), index=[key])
-            self.dataframe = self.dataframe.append(row)
+            self.dataframe = self.dataframe.append(row, verify_integrity=True)
             indexes.append(key)
 
         if not isinstance(geometry, Iterable) and len(indexes) == 1:
