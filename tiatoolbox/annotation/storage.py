@@ -213,7 +213,7 @@ class AnnotationStoreABC(ABC):
         """Query with a geometry and return a list of annotation geometries."""
         raise NotImplementedError()
 
-    def to_features(self, int_coords: bool = True, drop_na: bool = True) -> List[Dict]:
+    def to_features(self, int_coords: bool = False, drop_na: bool = True) -> List[Dict]:
         """Return anotations as a list of geoJSON features.
 
         Args:
@@ -228,7 +228,7 @@ class AnnotationStoreABC(ABC):
         """
         raise NotImplementedError()
 
-    def to_geodict(self, int_coords: bool = True, drop_na: bool = True) -> Dict:
+    def to_geodict(self, int_coords: bool = False, drop_na: bool = True) -> Dict:
         """Return annotations as a dictionary in geoJSON format.
 
         Args:
@@ -241,7 +241,10 @@ class AnnotationStoreABC(ABC):
             dict: Dictionary of annotations in geoJSON format.
 
         """
-        raise NotImplementedError()
+        return {
+            "type": "FeatureCollection",
+            "features": self.to_features(int_coords=int_coords, drop_na=drop_na),
+        }
 
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise the store to geoJSON.
@@ -254,7 +257,10 @@ class AnnotationStoreABC(ABC):
             None or str: None if writing to file or the geoJSON string.
 
         """
-        raise NotImplementedError()
+        if fp is not None:
+            json.dump(self.to_geodict(), fp)
+            return
+        return json.dumps(self.to_geodict())
 
 
 class SQLite3RTreeStore(AnnotationStoreABC):
@@ -681,6 +687,16 @@ class DictionaryStore(AnnotationStoreABC):
         }
         return key
 
+    def update(self, index: int, update: Dict[str, Any]) -> None:
+        feature = self[index]
+        update = copy.copy(update)
+        if "geometry" in update:
+            feature["geometry"]
+        feature["properties"] = update
+
+    def remove(self, index: int) -> None:
+        del self.features[index]
+
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
         store = cls()
@@ -693,6 +709,20 @@ class DictionaryStore(AnnotationStoreABC):
             }
             store.features[index] = feature
         return store
+
+    def to_features(self, int_coords: bool = False, drop_na: bool = True) -> List[Dict]:
+        return [{"type": "Feature", **feature} for feature in self.features]
+
+    def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
+        feature = self.features[index]
+        return feature["geometry"], feature["properties"]
+
+    def __contains__(self, key: int) -> bool:
+        return key in self.features
+
+    def __iter__(self):
+        for value in self.features.values():
+            yield value["geometry"], value["propeties"]
 
 
 class DataFrameStore(AnnotationStoreABC):
@@ -809,18 +839,6 @@ class DataFrameStore(AnnotationStoreABC):
             )
             for _, columns in self.dataframe.iterrows()
         ]
-
-    def to_geodict(self, int_coords: bool = True, drop_na: bool = True) -> Dict:
-        return {
-            "type": "FeatureCollection",
-            "features": self.to_features(int_coords=int_coords, drop_na=drop_na),
-        }
-
-    def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
-        if fp is not None:
-            json.dump(self.to_geodict(), fp)
-            return
-        return json.dumps(self.to_geodict())
 
     def to_dataframe(self) -> pd.DataFrame:
         return self.dataframe.copy()
