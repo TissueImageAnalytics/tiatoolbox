@@ -19,14 +19,14 @@ Properties
 
 """
 import hashlib
-import pickle
 import sqlite3
 from abc import ABC
 from io import StringIO
 from itertools import zip_longest
 from numbers import Number
 from pathlib import Path
-from typing import IO, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import IO, Any, Dict, Iterable, List, Optional, Tuple, Union
+import copy
 
 import numpy as np
 import pandas as pd
@@ -39,9 +39,7 @@ try:
 except ImportError:
     import json
 
-import msgpack
 import tables
-import yaml
 
 if speedups.available:
     speedups.enable()
@@ -557,10 +555,20 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 )
         self.con.commit()
 
+    def remove(self, index: Union[int, Iterable[int]]) -> None:
+        index = self._iterfy(index)
+        cur = self.con.cursor()
+        cur.executemany(
+            "DELETE FROM geometry WHERE id = ?",
+            ((i,) for i in index),
+        )
+        self.con.commit()
+
     def __setitem__(
         self, index: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
         geometry, properties = record
+        properties = copy.deepcopy(properties)
         cur = self.con.cursor()
         cur.execute("BEGIN")
         class_ = properties.get("class")
@@ -667,28 +675,25 @@ class DictionaryStore(AnnotationStoreABC):
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
         store = cls()
-        if no_copy:
-            store.data = df
-        else:
-            store.data = df.copy()
-        store.dtypes = dict(df.dtypes)
+        for index, row in df.iterrows():
+            geometry = row["geometry"]
+            properties = dict(row.loc[:, row.columns != "geometry"])
+            feature = {
+                "geometry": geometry,
+                "properties": properties,
+            }
+            store.features[index] = feature
         return store
 
 
 class DataFrameStore(AnnotationStoreABC):
     """DataFrame backed annotation store.
 
-    A dictionary store serialises to and from a dictionary based file
-    format such as JSON, YAML, and MessagePack. The GeoJSON layout for
-    data is used with a top level "FeatureCollection" element
-    containing and array of features, and each feature containing one
-    geometry along with associated properties.
-
     Geometries are assumed to be unique and a hash of the
-    well-known binary (WKB) representation is used as an index.
+    well-known binary (WKB) representation is used as the index.
 
-    All dictionary like stores hold an internal dataframe of annotations
-    and associated properties. This can be accesse with the `data`
+    A DataFrameStore holds an internal dataframe of annotations
+    and associated properties. This can be accesse with the `data_frame`
     attribute.
 
     Attributes:
@@ -711,10 +716,10 @@ class DataFrameStore(AnnotationStoreABC):
         dtypes: dict = None,
     ):
         super().__init__()
-        self.data = pd.DataFrame()
+        self.data_frame = pd.DataFrame()
         if dtypes is None:
             dtypes = {"class": "Int8"}
-        self.data = pd.DataFrame(
+        self.data_frame = pd.DataFrame(
             columns=["geometry", *dtypes.keys()],
         )
         self.dtypes = dtypes
@@ -728,20 +733,20 @@ class DataFrameStore(AnnotationStoreABC):
     @dtypes.setter
     def dtypes(self, value: dict) -> None:
         self._dtypes = value
-        self.data = self.data.astype(self.dtypes)
+        self.data_frame = self.data_frame.astype(self.dtypes)
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO], dtypes: Dict = None) -> "DataFrameStore":
         df = cls._load(fp, dtypes=dtypes)
-        return cls().from_dataframe(df)
+        return cls().from_data_frame(df)
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DataFrameStore":
+    def from_data_frame(cls, df: pd.DataFrame, no_copy=False) -> "DataFrameStore":
         store = cls()
         if no_copy:
-            store.data = df
+            store.data_frame = df
         else:
-            store.data = df.copy()
+            store.data_frame = df.copy()
         store.dtypes = dict(df.dtypes)
         return store
 
@@ -765,7 +770,7 @@ class DataFrameStore(AnnotationStoreABC):
             if cls is not None:
                 properties.update({"class": cls})
             row = pd.DataFrame(dict(geometry=geom, **properties), index=[key])
-            self.data = self.data.append(row)
+            self.data_frame = self.data_frame.append(row)
             indexes.append(key)
 
         if not isinstance(geometry, Iterable) and len(indexes) == 1:
@@ -773,13 +778,13 @@ class DataFrameStore(AnnotationStoreABC):
         return indexes
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Optional[dict]]:
-        columns = self.data.loc[index]
+        columns = self.data_frame.loc[index]
         geometry = columns[0]
         properties = columns[1:]
         return geometry, properties
 
     def __delitem__(self, index: int) -> None:
-        del self.data[index]
+        del self.data_frame[index]
 
     def to_features(self, int_coords: bool = True, drop_na: bool = True) -> List[Dict]:
         return [
@@ -793,7 +798,7 @@ class DataFrameStore(AnnotationStoreABC):
                     else columns[1:].where(pd.notna(columns[1:]), None)
                 ),
             )
-            for _, columns in self.data.iterrows()
+            for _, columns in self.data_frame.iterrows()
         ]
 
     def to_geodict(self, int_coords: bool = True, drop_na: bool = True) -> Dict:
@@ -809,10 +814,52 @@ class DataFrameStore(AnnotationStoreABC):
         return json.dumps(self.to_geodict())
 
     def to_dataframe(self) -> pd.DataFrame:
-        return self.data.copy()
+        return self.data_frame.copy()
+
+    @classmethod
+    def from_csv(cls, fp: Union[IO, str]) -> "DataFrameStore":
+        if isinstance(fp, str):
+            fp = StringIO(fp)
+        store = cls().from_data_frame(pd.read_csv(fp))
+        return store
+
+    def to_csv(self, fp: Optional[IO] = None) -> Union[str, None]:
+        return self.data_frame.to_csv(fp)
+
+    @classmethod
+    def from_adt(cls, fp: Union[IO, str]) -> "DataFrameStore":
+        if isinstance(fp, str):
+            fp = StringIO(fp)
+        store = cls().from_data_frame(
+            pd.read_csv(
+                fp,
+                sep=ASCII_UNIT_SEP,
+                na_values=[ASCII_NULL],
+                encoding="utf-8",
+                compression="infer",
+                lineterminator=ASCII_RECORD_SEP,
+                decimal=".",
+            )
+        )
+        return store
+
+    def to_adt(self, fp: Optional[IO] = None) -> Union[str, None]:
+        """Serialise to ASCII Delimited Text (ADT)."""
+        return self.data_frame.to_csv(
+            fp,
+            sep=ASCII_UNIT_SEP,
+            na_rep=ASCII_NULL,
+            header=True,
+            index=True,
+            encoding="utf-8",
+            compression="infer",
+            line_terminator=ASCII_RECORD_SEP,
+            date_format=ISO_8601_DATE_FORMAT,
+            decimal=".",
+        )
 
     def __iter__(self):
-        for index, row in self.data.iterrows():
+        for index, row in self.data_frame.iterrows():
             yield index, dict(row.dropna())
 
     def dumps(self, int_coords: bool = True, drop_na: bool = True, **kwargs) -> str:
@@ -826,141 +873,6 @@ class DataFrameStore(AnnotationStoreABC):
         self._dump(
             self.to_geodict(int_coords=int_coords, drop_na=drop_na), fp, **kwargs
         )
-
-
-class TableStore(DataFrameStore):
-    @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str, IO], dtypes: Dict = None) -> "TableStore":
-        df = cls._load(fp, dtypes=dtypes)
-        return cls().from_dataframe(df)
-
-    def dump(self, fp: IO) -> None:
-        data = self.data.copy()
-        data.geometry = data["geometry"].apply(self.serialise_geometry)
-        self._dump(data, fp)
-
-    def dumps(self) -> str:
-        data = self.data.copy()
-        data.geometry = data["geometry"].apply(self.serialise_geometry)
-        return self._dumps(data)
-
-    @staticmethod
-    def _dump(df: pd.DataFrame, fp: IO):
-        raise NotImplementedError()
-
-
-class GeoJSONStore(DataFrameStore):
-    _load: Callable = staticmethod(json.load)
-    _loads: Callable = staticmethod(json.loads)
-    _dump: Callable = staticmethod(json.dump)
-    _dumps: Callable = staticmethod(json.dumps)
-
-
-class YAMLStore(DataFrameStore):
-    _load: Callable = staticmethod(yaml.safe_load)
-    _loads: Callable = staticmethod(yaml.safe_load)
-
-    @staticmethod
-    def _dump(dictionary: dict, fp: IO):
-        return yaml.safe_dump(dictionary, fp, default_flow_style=None)
-
-    @staticmethod
-    def _dumps(dictionary: dict):
-        return yaml.safe_dump(dictionary, default_flow_style=None)
-
-
-class MsgPackStore(DataFrameStore):
-    _load: Callable = staticmethod(msgpack.load)
-    _loads: Callable = staticmethod(msgpack.loads)
-    _dump: Callable = staticmethod(msgpack.dump)
-    _dumps: Callable = staticmethod(msgpack.dumps)
-
-
-class PickleDictStore(DataFrameStore):
-    _load: Callable = staticmethod(pickle.load)
-    _loads: Callable = staticmethod(pickle.loads)
-    _dump: Callable = staticmethod(pickle.dump)
-    _dumps: Callable = staticmethod(pickle.dumps)
-
-
-class CSVStore(TableStore):
-    _load: Callable = staticmethod(pd.read_csv)
-
-    @staticmethod
-    def _loads(string: str) -> pd.DataFrame:
-        return pd.read_csv(string)
-
-    @staticmethod
-    def _dump(df: pd.DataFrame, fp: IO):
-        df.to_csv(fp)
-
-    @staticmethod
-    def _dumps(df: pd.DataFrame) -> str:
-        string_io = StringIO()
-        df.to_csv(string_io, index_label=df.index.name)
-        string_io.seek(0)
-        return string_io.read()
-
-
-class ADTStore(TableStore):
-    @staticmethod
-    def _load(fp: IO) -> pd.DataFrame:
-        return pd.read_csv(
-            fp,
-            sep=ASCII_UNIT_SEP,
-            na_values=[ASCII_NULL],
-            encoding="utf-8",
-            compression="infer",
-            lineterminator=ASCII_RECORD_SEP,
-            decimal=".",
-        )
-
-    @staticmethod
-    def _loads(string: str) -> pd.DataFrame:
-        return pd.read_csv(
-            string,
-            sep=ASCII_UNIT_SEP,
-            na_values=[ASCII_NULL],
-            encoding="utf-8",
-            compression="infer",
-            lineterminator=ASCII_RECORD_SEP,
-            decimal=".",
-        )
-
-    @staticmethod
-    def _dump(df: pd.DataFrame, fp: IO):
-        df.to_csv(
-            fp,
-            sep=ASCII_UNIT_SEP,
-            na_rep=ASCII_NULL,
-            header=True,
-            index=True,
-            index_label=True,
-            encoding="utf-8",
-            compression="infer",
-            line_terminator=ASCII_RECORD_SEP,
-            date_format=ISO_8601_DATE_FORMAT,
-            decimal=".",
-        )
-
-    @staticmethod
-    def _dumps(df: pd.DataFrame) -> str:
-        string_io = StringIO()
-        df.to_csv(string_io, index_label=df.index.name)
-        string_io.seek(0)
-        return string_io.read()
-
-
-class FeatherStore(TableStore):
-    @staticmethod
-    def _load(fp: IO) -> pd.DataFrame:
-        df = pd.read_feather(fp)
-        return df.set_index("index")
-
-    @staticmethod
-    def _dump(df: pd.DataFrame, fp: IO):
-        df = df.reset_index()
-        df.to_feather(fp)
 
 
 class PyTablesStore(AnnotationStoreABC):

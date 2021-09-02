@@ -15,7 +15,7 @@ from tiatoolbox.annotation.storage import (
 )
 
 GRID_SIZE = (10, 10)
-FILLED_LEN = (GRID_SIZE[0] * GRID_SIZE[1]) + 1
+FILLED_LEN = GRID_SIZE[0] * GRID_SIZE[1]
 
 
 def cell_polygon(
@@ -78,13 +78,13 @@ def cell_grid() -> List[Polygon]:
 
 
 @pytest.fixture(scope="session")
-def probe_triangle() -> Polygon:
+def sample_triangle() -> Polygon:
     """Simple traingle polygon used for testing."""
     return Polygon([(0, 0), (1, 1), (2, 0)])
 
 
 @pytest.fixture
-def fill_store(cell_grid, probe_triangle):
+def fill_store(cell_grid):
     """Factory fixture to cache and return filled stores."""
 
     def _fill_store(
@@ -92,9 +92,8 @@ def fill_store(cell_grid, probe_triangle):
         path: Union[str, Path],
     ):
         store = store_class(path)
-        store.append(cell_grid)
-        store.append(probe_triangle)
-        return store
+        indexes = store.append(cell_grid)
+        return indexes, store
 
     return _fill_store
 
@@ -111,9 +110,9 @@ def test_PyTablesStore_append(cell_grid, tmp_path):
     assert len(indexes) == len(cell_grid)
 
 
-def test_SQLite3RTreeStore_update(fill_store, tmp_path, probe_triangle):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    index = store.geometry_hash(probe_triangle)
+def test_SQLite3RTreeStore_update(fill_store, tmp_path):
+    indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    index = indexes[0]
     new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
     # Geometry update
     store.update(index, geometry=new_geometry)
@@ -123,58 +122,71 @@ def test_SQLite3RTreeStore_update(fill_store, tmp_path, probe_triangle):
     assert store[index][1]["abc"] == 123
 
 
+def test_SQLite3RTreeStore_remove(fill_store, tmp_path):
+    indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    index = indexes[0]
+    store.remove(index)
+    assert len(store) == FILLED_LEN - 1
+
+
+def test_SQLite3RTreeStore_remove_many(fill_store, tmp_path):
+    indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    store.remove(indexes)
+    assert len(store) == 0
+
+
 def test_PytablesStore_len(fill_store, tmp_path):
-    store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
+    _, store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
     assert len(store) == FILLED_LEN
 
 
 def test_SQLite3RTreeStore_len(fill_store, tmp_path):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     assert len(store) == FILLED_LEN
 
 
-def test_PytablesStore_getitem(fill_store, tmp_path, probe_triangle):
-    store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
-    index = store.geometry_hash(probe_triangle)
+def test_PytablesStore_getitem(fill_store, tmp_path, sample_triangle):
+    _, store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
+    index = store.append(sample_triangle)
     geometry, properties = store[index]
-    assert geometry == probe_triangle
+    assert geometry == sample_triangle
     assert properties == {"class": 0}
 
 
-def test_SQLite3RTreeStore_getitem(fill_store, tmp_path, probe_triangle):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    index = store.geometry_hash(probe_triangle)
+def test_SQLite3RTreeStore_getitem(fill_store, tmp_path, sample_triangle):
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    index = store.append(sample_triangle)
     geometry, properties = store[index]
-    assert geometry == probe_triangle
+    assert geometry == sample_triangle
     assert properties == {}
 
 
-def test_SQLite3RTreeStore_setitem(fill_store, tmp_path, probe_triangle):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    index = store.geometry_hash(probe_triangle)
+def test_SQLite3RTreeStore_setitem(fill_store, tmp_path, sample_triangle):
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    index = store.append(sample_triangle)
     new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
     new_properties = {"abc": 123}
     store[index] = (new_geometry, new_properties)
     assert store[index] == (new_geometry, new_properties)
 
 
-def test_SQLite3RTreeStore_delitem(fill_store, tmp_path, probe_triangle):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    index = store.geometry_hash(probe_triangle)
+def test_SQLite3RTreeStore_delitem(fill_store, tmp_path, sample_triangle):
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    index = store.append(sample_triangle)
     del store[index]
-    assert len(store) == FILLED_LEN - 1
+    assert len(store) == FILLED_LEN
 
 
-def test_SQLite3RTreeStore_getitem_setitem_cycle(fill_store, tmp_path, probe_triangle):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    index = store.geometry_hash(probe_triangle)
+def test_SQLite3RTreeStore_getitem_setitem_cycle(fill_store, tmp_path, sample_triangle):
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    index = store.append(sample_triangle, class_=0)
     geometry, properties = store[index]
     store[index] = (geometry, properties)
     assert store[index] == (geometry, properties)
 
 
 def test_SQLite3RTreeStore_to_dataframe(fill_store, tmp_path):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     df = store.to_dataframe()
     assert isinstance(df, pd.DataFrame)
     assert len(df) == FILLED_LEN
@@ -184,7 +196,7 @@ def test_SQLite3RTreeStore_to_dataframe(fill_store, tmp_path):
 
 
 def test_SQLite3RTreeStore_to_features(fill_store, tmp_path):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     features = store.to_features()
     assert isinstance(features, list)
     assert len(features) == FILLED_LEN
@@ -193,7 +205,7 @@ def test_SQLite3RTreeStore_to_features(fill_store, tmp_path):
 
 
 def test_SQLite3RTreeStore_to_geodict(fill_store, tmp_path):
-    store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     geodict = store.to_geodict()
     assert isinstance(geodict, dict)
     assert "features" in geodict
