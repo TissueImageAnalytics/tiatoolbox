@@ -693,7 +693,7 @@ class DataFrameStore(AnnotationStoreABC):
     well-known binary (WKB) representation is used as the index.
 
     A DataFrameStore holds an internal dataframe of annotations
-    and associated properties. This can be accesse with the `data_frame`
+    and associated properties. This can be accesse with the `dataframe`
     attribute.
 
     Attributes:
@@ -716,10 +716,10 @@ class DataFrameStore(AnnotationStoreABC):
         dtypes: dict = None,
     ):
         super().__init__()
-        self.data_frame = pd.DataFrame()
+        self.dataframe = pd.DataFrame()
         if dtypes is None:
             dtypes = {"class": "Int8"}
-        self.data_frame = pd.DataFrame(
+        self.dataframe = pd.DataFrame(
             columns=["geometry", *dtypes.keys()],
         )
         self.dtypes = dtypes
@@ -733,20 +733,20 @@ class DataFrameStore(AnnotationStoreABC):
     @dtypes.setter
     def dtypes(self, value: dict) -> None:
         self._dtypes = value
-        self.data_frame = self.data_frame.astype(self.dtypes)
+        self.dataframe = self.dataframe.astype(self.dtypes)
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO], dtypes: Dict = None) -> "DataFrameStore":
         df = cls._load(fp, dtypes=dtypes)
-        return cls().from_data_frame(df)
+        return cls().from_dataframe(df)
 
     @classmethod
-    def from_data_frame(cls, df: pd.DataFrame, no_copy=False) -> "DataFrameStore":
+    def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DataFrameStore":
         store = cls()
         if no_copy:
-            store.data_frame = df
+            store.dataframe = df
         else:
-            store.data_frame = df.copy()
+            store.dataframe = df.copy()
         store.dtypes = dict(df.dtypes)
         return store
 
@@ -770,7 +770,7 @@ class DataFrameStore(AnnotationStoreABC):
             if cls is not None:
                 properties.update({"class": cls})
             row = pd.DataFrame(dict(geometry=geom, **properties), index=[key])
-            self.data_frame = self.data_frame.append(row)
+            self.dataframe = self.dataframe.append(row)
             indexes.append(key)
 
         if not isinstance(geometry, Iterable) and len(indexes) == 1:
@@ -778,13 +778,13 @@ class DataFrameStore(AnnotationStoreABC):
         return indexes
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Optional[dict]]:
-        columns = self.data_frame.loc[index]
+        columns = self.dataframe.loc[index]
         geometry = columns[0]
         properties = columns[1:]
         return geometry, properties
 
     def __delitem__(self, index: int) -> None:
-        del self.data_frame[index]
+        del self.dataframe[index]
 
     def to_features(self, int_coords: bool = True, drop_na: bool = True) -> List[Dict]:
         return [
@@ -798,7 +798,7 @@ class DataFrameStore(AnnotationStoreABC):
                     else columns[1:].where(pd.notna(columns[1:]), None)
                 ),
             )
-            for _, columns in self.data_frame.iterrows()
+            for _, columns in self.dataframe.iterrows()
         ]
 
     def to_geodict(self, int_coords: bool = True, drop_na: bool = True) -> Dict:
@@ -814,23 +814,23 @@ class DataFrameStore(AnnotationStoreABC):
         return json.dumps(self.to_geodict())
 
     def to_dataframe(self) -> pd.DataFrame:
-        return self.data_frame.copy()
+        return self.dataframe.copy()
 
     @classmethod
     def from_csv(cls, fp: Union[IO, str]) -> "DataFrameStore":
         if isinstance(fp, str):
             fp = StringIO(fp)
-        store = cls().from_data_frame(pd.read_csv(fp))
+        store = cls().from_dataframe(pd.read_csv(fp))
         return store
 
     def to_csv(self, fp: Optional[IO] = None) -> Union[str, None]:
-        return self.data_frame.to_csv(fp)
+        return self.dataframe.to_csv(fp)
 
     @classmethod
     def from_adt(cls, fp: Union[IO, str]) -> "DataFrameStore":
         if isinstance(fp, str):
             fp = StringIO(fp)
-        store = cls().from_data_frame(
+        store = cls().from_dataframe(
             pd.read_csv(
                 fp,
                 sep=ASCII_UNIT_SEP,
@@ -845,7 +845,7 @@ class DataFrameStore(AnnotationStoreABC):
 
     def to_adt(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise to ASCII Delimited Text (ADT)."""
-        return self.data_frame.to_csv(
+        return self.dataframe.to_csv(
             fp,
             sep=ASCII_UNIT_SEP,
             na_rep=ASCII_NULL,
@@ -859,7 +859,7 @@ class DataFrameStore(AnnotationStoreABC):
         )
 
     def __iter__(self):
-        for index, row in self.data_frame.iterrows():
+        for index, row in self.dataframe.iterrows():
             yield index, dict(row.dropna())
 
     def dumps(self, int_coords: bool = True, drop_na: bool = True, **kwargs) -> str:
