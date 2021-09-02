@@ -671,6 +671,18 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             "features": features,
         }
 
+    def commit(self) -> None:
+        return self.con.commit()
+
+    def dump(self, fp: Union[Path, str, IO]) -> None:
+        if isinstance(fp, IO):
+            fp = fp.name
+        target = sqlite3.connect(fp)
+        self.con.backup(target)
+
+    def dumps(self) -> str:
+        raise NotImplementedError()
+
 
 class DictionaryStore(AnnotationStoreABC):
     def __init__(self) -> None:
@@ -716,6 +728,13 @@ class DictionaryStore(AnnotationStoreABC):
     def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
         feature = self.features[index]
         return feature["geometry"], feature["properties"]
+
+    def __setitem__(
+        self, index: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
+    ) -> None:
+        geometry, properties = record
+        properties = dict(properties)
+        self.features[index] = {"geometry": geometry, "properties": properties}
 
     def __contains__(self, key: int) -> bool:
         return key in self.features
