@@ -465,6 +465,11 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         (count,) = cur.fetchone()
         return count
 
+    def __contains__(self, key: int) -> bool:
+        cur = self.con.cursor()
+        cur.execute("SELECT EXISTS(SELECT 1 FROM geometry WHERE id = ?)", (key,))
+        return cur.fetchone()[0] == 1
+
     def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
         cur = self.con.cursor()
         cur.execute(
@@ -665,13 +670,6 @@ class DictionaryStore(AnnotationStoreABC):
     def __init__(self) -> None:
         super().__init__()
         self.features = {}
-
-    @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str, IO], dtypes: Dict = None) -> "DictionaryStore":
-        store = cls(dtypes=dtypes)
-        feature_collection = cls._load(fp)
-        store.features = feature_collection["features"]
-        return store
 
     def append(
         self, geometry: Union[Geometry, Iterable[Geometry]], properties: Dict[str, Any]
