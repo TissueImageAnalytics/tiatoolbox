@@ -169,7 +169,7 @@ class AnnotationStoreABC(ABC):
         """
         raise NotImplementedError()
 
-    def remove(self, indexes: Union[int, Iterable[int]]) -> None:
+    def remove(self, index: Union[int, Iterable[int]]) -> None:
         """Remove annotation(s) by index."""
         raise NotImplementedError()
 
