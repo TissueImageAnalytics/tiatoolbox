@@ -666,13 +666,6 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             for geometry, properties in iter(self)
         ]
 
-    def to_geodict(self, int_coords: bool = True) -> Dict:
-        features = self.to_features(int_coords=int_coords)
-        return {
-            "type": "FeatureCollection",
-            "features": features,
-        }
-
     def commit(self) -> None:
         return self.con.commit()
 
