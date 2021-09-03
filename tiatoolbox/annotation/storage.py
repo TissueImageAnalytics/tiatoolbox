@@ -882,7 +882,9 @@ class DataFrameStore(AnnotationStoreABC):
     def from_csv(cls, fp: Union[IO, str]) -> "DataFrameStore":
         if isinstance(fp, str):
             fp = StringIO(fp)
-        store = cls().from_dataframe(pd.read_csv(fp))
+        dataframe = pd.read_csv(fp)
+        dataframe["geometry"] = dataframe["geometry"].apply(cls.deserialise_geometry)
+        store = cls().from_dataframe(dataframe)
         return store
 
     def to_csv(self, fp: Optional[IO] = None) -> Union[str, None]:
@@ -892,17 +894,17 @@ class DataFrameStore(AnnotationStoreABC):
     def from_adt(cls, fp: Union[IO, str]) -> "DataFrameStore":
         if isinstance(fp, str):
             fp = StringIO(fp)
-        store = cls().from_dataframe(
-            pd.read_csv(
-                fp,
-                sep=ASCII_UNIT_SEP,
-                na_values=[ASCII_NULL],
-                encoding="utf-8",
-                compression="infer",
-                lineterminator=ASCII_RECORD_SEP,
-                decimal=".",
-            )
+        dataframe = pd.read_csv(
+            fp,
+            sep=ASCII_UNIT_SEP,
+            na_values=[ASCII_NULL],
+            encoding="utf-8",
+            compression="infer",
+            lineterminator=ASCII_RECORD_SEP,
+            decimal=".",
         )
+        dataframe["geometry"] = dataframe["geometry"].apply(cls.deserialise_geometry)
+        store = cls().from_dataframe(dataframe)
         return store
 
     def to_adt(self, fp: Optional[IO] = None) -> Union[str, None]:
