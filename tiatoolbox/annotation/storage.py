@@ -216,13 +216,23 @@ class AnnotationStoreABC(ABC):
     def __iter__(self) -> Iterable[int]:
         raise NotImplementedError()
 
-    def query_index(self, query_geometry: QueryGeometry) -> List[int]:
-        """Query with a geometry and return a list of annotation indexes."""
-        raise NotImplementedError()
-
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
-        """Query with a geometry and return a list of annotation geometries."""
-        raise NotImplementedError()
+        if isinstance(query_geometry, tuple):
+            query_geometry = Polygon.from_bounds(*query_geometry)
+        return [
+            (geometry, properties)
+            for geometry, properties in self.values()
+            if geometry.intersects(query_geometry)
+        ]
+
+    def query_index(self, query_geometry: QueryGeometry) -> List[int]:
+        if isinstance(query_geometry, tuple):
+            query_geometry = Polygon.from_bounds(*query_geometry)
+        return [
+            index
+            for index, (geometry, _) in self.items()
+            if geometry.intersects(query_geometry)
+        ]
 
     def features(
         self, int_coords: bool = False, drop_na: bool = True
