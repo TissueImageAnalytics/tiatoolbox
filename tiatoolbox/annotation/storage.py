@@ -737,8 +737,7 @@ class DictionaryStore(AnnotationStoreABC):
     def update(self, index: int, update: Dict[str, Any]) -> None:
         feature = self[index]
         update = copy.copy(update)
-        if "geometry" in update:
-            feature["geometry"]
+        feature["geometry"] = update.pop("geometry", feature["geometry"])
         feature["properties"] = update
 
     def remove(self, index: int) -> None:
@@ -1036,6 +1035,13 @@ class PyTablesStore(AnnotationStoreABC):
 
         self.geometry_table.flush()
         return indexes
+
+    def update_many(
+        self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
+    ) -> None:
+        for index in indexes:
+            self.geometry_table[index]
+        self.geometry_table.flush()
 
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         if isinstance(query_geometry, Iterable):
