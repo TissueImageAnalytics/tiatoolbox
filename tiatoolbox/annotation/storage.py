@@ -849,10 +849,7 @@ class DataFrameStore(AnnotationStoreABC):
 
     def update(self, index: int, update: Dict[str, Any]) -> None:
         update = copy.copy(update)
-        row = self.dataframe.loc[index]
-        if "geometry" in update:
-            row.geometry = update.pop("geometry")
-        row[update.keys()] = update.values()
+        self.dataframe.loc[index, list(update.keys())] = update.values()
 
     def remove(self, index: int) -> None:
         del self.dataframe[index]
