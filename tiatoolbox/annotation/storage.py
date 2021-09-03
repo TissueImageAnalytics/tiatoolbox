@@ -189,10 +189,12 @@ class AnnotationStoreABC(ABC):
         self.remove(index)
 
     def keys(self) -> Iterable[int]:
-        raise NotImplementedError()
+        for key, _ in self.items():
+            yield key
 
     def values(self) -> Iterable[Tuple[Geometry, Dict[str, Any]]]:
-        raise NotImplementedError()
+        for _, value in self.items():
+            yield value
 
     def items(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
         raise NotImplementedError()
