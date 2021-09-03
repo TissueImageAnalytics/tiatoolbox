@@ -20,6 +20,7 @@ Properties
 """
 import hashlib
 import itertools
+from json.decoder import JSONDecodeError
 import sqlite3
 from abc import ABC
 from io import StringIO
@@ -33,6 +34,7 @@ import pandas as pd
 from shapely import speedups, wkt
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
+from shapely.geometry import shape as feature2geometry
 
 try:
     import ujson as json  # pyright: reportMissingModuleSource=false
@@ -723,7 +725,14 @@ class DictionaryStore(AnnotationStoreABC):
         return store
 
     def to_features(self, int_coords: bool = False, drop_na: bool = True) -> List[Dict]:
-        return [{"type": "Feature", **feature} for feature in self.features]
+        return [
+            {
+                "type": "Feature",
+                "geometry": geometry2feature(feature["geometry"]),
+                "properties": feature["properties"],
+            }
+            for feature in self.features
+        ]
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
         feature = self.features[index]
@@ -742,6 +751,30 @@ class DictionaryStore(AnnotationStoreABC):
     def __iter__(self):
         for value in self.features.values():
             yield value["geometry"], value["propeties"]
+
+    def __len__(self) -> int:
+        return len(self.features)
+
+    @classmethod
+    def from_geojson(cls, fp: Union[IO, str]) -> "DictionaryStore":
+        try:
+            geojson = json.loads(fp)
+        except JSONDecodeError:
+            geojson = json.load(fp)
+        features = [
+            {
+                "geometry": feature2geometry(feature["geometry"]),
+                "properties": feature["properties"],
+            }
+            for feature in geojson["features"]
+        ]
+        store = cls()
+        store.features = features
+        return store
+
+    @classmethod
+    def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
+        return cls.from_geojson(fp)
 
 
 class DataFrameStore(AnnotationStoreABC):
@@ -808,41 +841,27 @@ class DataFrameStore(AnnotationStoreABC):
         store.dtypes = dict(df.dtypes)
         return store
 
-    def append(
-        self,
-        geometry: Union[Geometry, Iterable[Geometry]],
-        class_: Optional[Union[int, Iterable[int]]] = None,
-        **extra_properties: Optional[Dict[str, Union[Any, Iterable[Any]]]],
-    ) -> int:
-        geometrys_iter = self._iterfy(geometry)
-        clses_iter = self._iterfy(class_)
-        properties_iters = {(k, self._iterfy(v)) for k, v in extra_properties.items()}
-        indexes = []
+    def append(self, geometry: Geometry, properties: Dict[str, Any]) -> int:
+        index = self.geometry_hash(geometry)
+        row = pd.DataFrame({"geometry": geometry, **properties}, index=[index])
+        self.dataframe = self.dataframe.append(row, verify_integrity=True)
+        return index
 
-        for geom in geometrys_iter:
-            key = self.geometry_hash(geom)
-            properties = {k: next(it, {}) for k, it in properties_iters}
-            if "class" in properties or "class_" in properties:
-                raise Exception("Class may only be specified once.")
-            cls = next(clses_iter, None)
-            if cls is not None:
-                properties.update({"class": cls})
-            row = pd.DataFrame(dict(geometry=geom, **properties), index=[key])
-            self.dataframe = self.dataframe.append(row, verify_integrity=True)
-            indexes.append(key)
+    def update(self, index: int, update: Dict[str, Any]) -> None:
+        update = copy.copy(update)
+        row = self.dataframe.loc[index]
+        if "geometry" in update:
+            row.geometry = update.pop("geometry")
+        row[update.keys()] = update.values()
 
-        if not isinstance(geometry, Iterable) and len(indexes) == 1:
-            return indexes[0]
-        return indexes
+    def remove(self, index: int) -> None:
+        del self.dataframe[index]
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Optional[dict]]:
         columns = self.dataframe.loc[index]
         geometry = columns[0]
         properties = columns[1:]
         return geometry, properties
-
-    def __delitem__(self, index: int) -> None:
-        del self.dataframe[index]
 
     def to_features(self, int_coords: bool = True, drop_na: bool = True) -> List[Dict]:
         return [
