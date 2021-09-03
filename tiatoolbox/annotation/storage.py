@@ -109,22 +109,6 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
     @staticmethod
-    def _iterfy(obj: Union[Any, Iterable[Any]]) -> Iterable[Any]:
-        """Make passed objects into an iterable.
-
-        Expected behaviour:
-        - Passing None returns a zero length iterable.
-        - Passing an interable returns the passed iterable unchanged.
-        - Passing a non-iterable (e.g. and int) returns a single element iterator.
-
-        """
-        if obj is None:
-            return iter(())
-        if isinstance(obj, Iterable):
-            return obj
-        return iter((obj,))
-
-    @staticmethod
     def serialise_geometry(geometry: Geometry) -> Union[str, bytes]:
         """Serialise a geometry to a string or bytes."""
         return geometry.wkt
