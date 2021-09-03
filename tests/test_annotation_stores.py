@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, Union, List
+from typing import Generator, Tuple, Union, List
 from numbers import Number
 
 import pytest
@@ -205,10 +205,11 @@ def test_SQLite3RTreeStore_to_dataframe(fill_store, tmp_path):
     assert isinstance(df.geometry.iloc[0], Polygon)
 
 
-def test_SQLite3RTreeStore_to_features(fill_store, tmp_path):
+def test_SQLite3RTreeStore_features(fill_store, tmp_path):
     _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-    features = store.to_features()
-    assert isinstance(features, list)
+    features = store.features()
+    assert isinstance(features, Generator)
+    features = list(features)
     assert len(features) == FILLED_LEN
     assert isinstance(features[0], dict)
     assert all({"type", "geometry", "properties"} == set(f.keys()) for f in features)
@@ -221,7 +222,7 @@ def test_SQLite3RTreeStore_to_geodict(fill_store, tmp_path):
     assert "features" in geodict
     assert "type" in geodict
     assert geodict["type"] == "FeatureCollection"
-    assert geodict["features"] == store.to_features()
+    assert geodict["features"] == list(store.features())
 
 
 def test_SQLite3RTreeStore_compile_options():

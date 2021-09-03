@@ -222,7 +222,7 @@ class AnnotationStoreABC(ABC):
 
     def features(
         self, int_coords: bool = False, drop_na: bool = True
-    ) -> Generator[Dict[str, Any]]:
+    ) -> Generator[Dict[str, Any], None, None]:
         """Return anotations as a list of geoJSON features.
 
         Args:
@@ -252,7 +252,7 @@ class AnnotationStoreABC(ABC):
         """
         return {
             "type": "FeatureCollection",
-            "features": self.to_features(int_coords=int_coords, drop_na=drop_na),
+            "features": list(self.features(int_coords=int_coords, drop_na=drop_na)),
         }
 
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
@@ -625,9 +625,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         properties = copy.deepcopy(properties)
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        class_ = properties.get("class")
-        if "class" in properties:
-            del properties["class"]
+        class_ = properties.pop("class", None)
         bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
         xy = dict(zip("xy", geometry.centroid.xy))
         cur.execute(
@@ -686,15 +684,18 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 break
             rows = [
                 dict(
+                    index=index,
                     geometry=geometry,
                     **properties,
                 )
-                for geometry, properties in iter(self)
+                for index, (geometry, properties) in self.items()
             ]
             df = df.append(rows)
         return df.set_index("index")
 
-    def features(self, int_coords: bool = True) -> Generator[Dict[str, Any]]:
+    def features(
+        self, int_coords: bool = False, drop_na: bool = True
+    ) -> Generator[Dict[str, Any], None, None]:
         return (
             {
                 "type": "Feature",
@@ -703,7 +704,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 else geometry2feature(geometry),
                 "properties": properties,
             }
-            for geometry, properties in iter(self)
+            for geometry, properties in self.values()
         )
 
     def commit(self) -> None:
@@ -758,7 +759,7 @@ class DictionaryStore(AnnotationStoreABC):
 
     def features(
         self, int_coords: bool = False, drop_na: bool = True
-    ) -> Generator[Dict]:
+    ) -> Generator[Dict[str, Any], None, None]:
         return (
             {
                 "type": "Feature",
@@ -905,7 +906,7 @@ class DataFrameStore(AnnotationStoreABC):
 
     def features(
         self, int_coords: bool = True, drop_na: bool = True
-    ) -> Generator[Dict[str, Any]]:
+    ) -> Generator[Dict[str, Any], None, None]:
         return (
             dict(
                 self._int_feature(geometry2feature(columns[0]))
