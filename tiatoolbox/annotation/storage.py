@@ -278,8 +278,7 @@ class AnnotationStoreABC(ABC):
         )
         if not fp:
             return "\n".join(string_lines_generator)
-        else:
-            fp.writelines(string_lines_generator)
+        fp.writelines(string_lines_generator)
 
 
 class SQLite3RTreeStore(AnnotationStoreABC):
