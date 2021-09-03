@@ -26,7 +26,7 @@ from abc import ABC
 from io import StringIO
 from numbers import Number
 from pathlib import Path
-from typing import IO, Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import IO, Any, Dict, Generator, Iterable, List, Optional, Tuple, Union
 import copy
 
 import numpy as np
@@ -204,7 +204,16 @@ class AnnotationStoreABC(ABC):
     def __delitem__(self, index: int) -> None:
         self.remove(index)
 
-    def __iter__(self) -> Iterable:
+    def keys(self) -> Iterable[int]:
+        raise NotImplementedError()
+
+    def values(self) -> Iterable[Tuple[Geometry, Dict[str, Any]]]:
+        raise NotImplementedError()
+
+    def items(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
+        raise NotImplementedError()
+
+    def __iter__(self) -> Iterable[int]:
         raise NotImplementedError()
 
     def query_index(self, query_geometry: QueryGeometry) -> List[int]:
@@ -215,7 +224,9 @@ class AnnotationStoreABC(ABC):
         """Query with a geometry and return a list of annotation geometries."""
         raise NotImplementedError()
 
-    def to_features(self, int_coords: bool = False, drop_na: bool = True) -> List[Dict]:
+    def features(
+        self, int_coords: bool = False, drop_na: bool = True
+    ) -> Generator[Dict[str, Any]]:
         """Return anotations as a list of geoJSON features.
 
         Args:
@@ -263,6 +274,16 @@ class AnnotationStoreABC(ABC):
             json.dump(self.to_geodict(), fp)
             return
         return json.dumps(self.to_geodict())
+
+    def to_ldjson(self, fp: Optional[IO] = None) -> Union[str, None]:
+        """Serialise to Line-Delimited (Geo)JSON."""
+        string_lines_generator = (
+            json.dumps(line, separators=(",", ":")) for line in self.features()
+        )
+        if not fp:
+            return "\n".join(string_lines_generator)
+        else:
+            fp.writelines(string_lines_generator)
 
 
 class SQLite3RTreeStore(AnnotationStoreABC):
@@ -498,7 +519,30 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         geometry = self.deserialise_geometry(boundary)
         return geometry, properties
 
-    def __iter__(self) -> Iterable:
+    def keys(self) -> Iterable[int]:
+        for key in self:
+            yield key
+
+    def __iter__(self) -> Iterable[int]:
+        cur = self.con.cursor()
+        cur.execute(
+            """
+            SELECT id
+              FROM geometry
+            """
+        )
+        while True:
+            row = cur.fetchone()
+            if row is None:
+                break
+            index = row
+            yield index
+
+    def values(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
+        for _, value in self.items():
+            yield value
+
+    def items(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
         cur = self.con.cursor()
         cur.execute(
             """
@@ -516,8 +560,8 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             else:
                 geometry = Point(x, y)
             properties = json.loads(properties)
-            properties.update({"class": class_, "index": index})
-            yield geometry, properties
+            properties.update({"class": class_})
+            yield index, (geometry, properties)
 
     def update_many(
         self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
@@ -654,8 +698,8 @@ class SQLite3RTreeStore(AnnotationStoreABC):
             df = df.append(rows)
         return df.set_index("index")
 
-    def to_features(self, int_coords: bool = True) -> List:
-        return [
+    def features(self, int_coords: bool = True) -> Generator[Dict[str, Any]]:
+        return (
             {
                 "type": "Feature",
                 "geometry": self._int_feature(geometry2feature(geometry))
@@ -664,7 +708,7 @@ class SQLite3RTreeStore(AnnotationStoreABC):
                 "properties": properties,
             }
             for geometry, properties in iter(self)
-        ]
+        )
 
     def commit(self) -> None:
         return self.con.commit()
@@ -717,15 +761,17 @@ class DictionaryStore(AnnotationStoreABC):
             store.features[index] = feature
         return store
 
-    def to_features(self, int_coords: bool = False, drop_na: bool = True) -> List[Dict]:
-        return [
+    def features(
+        self, int_coords: bool = False, drop_na: bool = True
+    ) -> Generator[Dict]:
+        return (
             {
                 "type": "Feature",
                 "geometry": geometry2feature(feature["geometry"]),
                 "properties": feature["properties"],
             }
             for feature in self.features
-        ]
+        )
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
         feature = self.features[index]
@@ -741,9 +787,12 @@ class DictionaryStore(AnnotationStoreABC):
     def __contains__(self, key: int) -> bool:
         return key in self.features
 
-    def __iter__(self):
-        for value in self.features.values():
-            yield value["geometry"], value["propeties"]
+    def __iter__(self) -> Iterable[int]:
+        return self.features.keys()
+
+    def items(self):
+        for index, value in self.features.items():
+            yield index, (value["geometry"], value["propeties"])
 
     def __len__(self) -> int:
         return len(self.features)
@@ -859,8 +908,10 @@ class DataFrameStore(AnnotationStoreABC):
         properties = columns[1:]
         return geometry, properties
 
-    def to_features(self, int_coords: bool = True, drop_na: bool = True) -> List[Dict]:
-        return [
+    def features(
+        self, int_coords: bool = True, drop_na: bool = True
+    ) -> Generator[Dict[str, Any]]:
+        return (
             dict(
                 self._int_feature(geometry2feature(columns[0]))
                 if int_coords
@@ -872,7 +923,7 @@ class DataFrameStore(AnnotationStoreABC):
                 ),
             )
             for _, columns in self.dataframe.iterrows()
-        ]
+        )
 
     def to_dataframe(self) -> pd.DataFrame:
         return self.dataframe.copy()
