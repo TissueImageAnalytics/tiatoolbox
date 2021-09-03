@@ -776,6 +776,12 @@ class DictionaryStore(AnnotationStoreABC):
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
         return cls.from_geojson(fp)
 
+    def dump(self, fp: Union[Path, str, IO]) -> None:
+        return self.to_geojson(fp)
+
+    def dumps(self) -> str:
+        return self.to_geojson()
+
 
 class DataFrameStore(AnnotationStoreABC):
     """DataFrame backed annotation store.
