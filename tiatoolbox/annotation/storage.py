@@ -994,7 +994,7 @@ class PyTablesStore(AnnotationStoreABC):
 
         class TablesGeometry(tables.IsDescription):
             index = tables.Int64Col()
-            boundary = tables.StringCol(self.max_boundary_len)
+            geometry = tables.StringCol(self.max_boundary_len)
             class_ = tables.Int8Col()
             x = tables.Int32Col()
             y = tables.Int32Col()
@@ -1021,8 +1021,8 @@ class PyTablesStore(AnnotationStoreABC):
             row["index"] = self.geometry_hash(geometry)
             boundary = self.serialise_geometry(geometry)
             if len(boundary) > self.max_boundary_len:
-                raise ValueError("Boundary > TablesStore.max_boundary_len")
-            row["boundary"] = boundary
+                raise ValueError("Geometry > TablesStore.max_geometry_len")
+            row["geometry"] = boundary
             row["min_x"], row["min_y"], row["max_x"], row["max_y"] = geometry.bounds
             row["x"], row["y"] = np.array(geometry.centroid)
             row["class_"] = properties.pop("class", -1)
@@ -1055,7 +1055,7 @@ class PyTablesStore(AnnotationStoreABC):
         )
         results = []
         for row in query:
-            geometry = self.deserialise_geometry(bytes.decode(row["boundary"]))
+            geometry = self.deserialise_geometry(bytes.decode(row["geometry"]))
             if not query_geometry.intersects(geometry):
                 continue
             results.append(geometry)
@@ -1073,7 +1073,7 @@ class PyTablesStore(AnnotationStoreABC):
         )
         results = []
         for row in query:
-            geometry = self.deserialise_geometry(bytes.decode(row["boundary"]))
+            geometry = self.deserialise_geometry(bytes.decode(row["geometry"]))
             if not query_geometry.intersects(geometry):
                 continue
             index = row["index"]
@@ -1087,7 +1087,7 @@ class PyTablesStore(AnnotationStoreABC):
         if len(rows) > 1:
             raise Exception("Index collision. Multiple rows with matching index.")
         row = rows[0]
-        geometry = self.deserialise_geometry(bytes.decode(row["boundary"]))
+        geometry = self.deserialise_geometry(bytes.decode(row["geometry"]))
         properties_str = row["properties"]
         if len(properties_str) == 0:
             properties_str = "{}"
@@ -1100,7 +1100,7 @@ class PyTablesStore(AnnotationStoreABC):
 
     def __iter__(self) -> Iterable:
         for row in self.geometry_table.iterrows():
-            geometry = self.deserialise_geometry(bytes.decode(row["boundary"]))
+            geometry = self.deserialise_geometry(bytes.decode(row["geometry"]))
             properties = json.loads(row["properties"] or "{}")
             class_ = row["class_"]
             properties.update({"class": class_})
@@ -1115,7 +1115,7 @@ class PyTablesStore(AnnotationStoreABC):
         }
         df = df.astype(dtypes)
         df.set_index("index", inplace=True)
-        df.rename(columns={"class_": "class", "boundary": "geometry"}, inplace=True)
+        df.rename(columns={"class_": "class"}, inplace=True)
         df.loc[:, "geometry"] = df.geometry.str.decode("utf-8")
         df.loc[:, "properties"] = df.properties.str.decode("utf-8")
         df.loc[:, "geometry"] = df.geometry.apply(self.deserialise_geometry)
