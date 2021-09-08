@@ -10,7 +10,6 @@ from shapely import affinity
 
 from tiatoolbox.annotation.storage import (
     AnnotationStoreABC,
-    PyTablesStore,
     SQLite3RTreeStore,
 )
 
@@ -106,14 +105,6 @@ def test_SQLite3RTreeStore_append_many(cell_grid, tmp_path):
     assert len(indexes) == len(cell_grid)
 
 
-def test_PyTablesStore_append_many(cell_grid, tmp_path):
-    store = PyTablesStore(tmp_path / "polygons.h5")
-    indexes = store.append_many(
-        cell_grid, ({"class": x} for x in np.random.randint(0, 7, len(cell_grid)))
-    )
-    assert len(indexes) == len(cell_grid)
-
-
 def test_SQLite3RTreeStore_update(fill_store, tmp_path):
     indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     index = indexes[0]
@@ -124,26 +115,6 @@ def test_SQLite3RTreeStore_update(fill_store, tmp_path):
     # Properties update
     store.update(index, {"abc": 123})
     assert store[index][1]["abc"] == 123
-
-
-def test_PyTablesStore_update(fill_store, tmp_path):
-    indexes, store = fill_store(PyTablesStore, tmp_path / "polygon.db")
-    index = indexes[0]
-    new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
-    # Geometry update
-    store.update(index, {"geometry": new_geometry})
-    assert store.geometry_hash(store[index][0]) == store.geometry_hash(new_geometry)
-    # Properties update
-    store.update(index, {"abc": 123})
-    assert store[index][1]["abc"] == 123
-
-
-def test_PyTablesStore_remove(fill_store, tmp_path):
-    indexes, store = fill_store(PyTablesStore, tmp_path / "polygon.db")
-    assert len(store) == FILLED_LEN
-    index = indexes[0]
-    store.remove(index)
-    assert len(store) == FILLED_LEN - 1
 
 
 def test_SQLite3RTreeStore_remove(fill_store, tmp_path):
@@ -159,17 +130,6 @@ def test_SQLite3RTreeStore_remove_many(fill_store, tmp_path):
     assert len(store) == 0
 
 
-def test_PyTablesStore_remove_many(fill_store, tmp_path):
-    indexes, store = fill_store(PyTablesStore, tmp_path / "polygon.db")
-    store.remove_many(indexes)
-    assert len(store) == 0
-
-
-def test_PytablesStore_len(fill_store, tmp_path):
-    _, store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
-    assert len(store) == FILLED_LEN
-
-
 def test_SQLite3RTreeStore_len(fill_store, tmp_path):
     _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     assert len(store) == FILLED_LEN
@@ -179,14 +139,6 @@ def test_SQLite3RTreeStore_in(fill_store, tmp_path):
     indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     for index in indexes:
         assert index in store
-
-
-def test_PytablesStore_getitem(fill_store, tmp_path, sample_triangle):
-    _, store = fill_store(PyTablesStore, tmp_path / "polygon.h5")
-    index = store.append(sample_triangle)
-    geometry, properties = store[index]
-    assert geometry == sample_triangle
-    assert properties == {"class": -1}
 
 
 def test_SQLite3RTreeStore_getitem(fill_store, tmp_path, sample_triangle):
