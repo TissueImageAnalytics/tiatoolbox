@@ -684,18 +684,18 @@ class SQLite3RTreeStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute("SELECT id, boundary, [class], properties FROM geometry")
         while True:
-            rows = cur.fetchmany(1000)
+            rows = cur.fetchmany(100)
             if len(rows) == 0:
                 break
-            rows = [
-                dict(
-                    index=index,
-                    geometry=geometry,
-                    **properties,
-                )
+            rows = (
+                {
+                    "index": index,
+                    "geometry": geometry,
+                    "properties": properties,
+                }
                 for index, (geometry, properties) in self.items()
-            ]
-            df = df.append(rows)
+            )
+            df = df.append(pd.json_normalize(rows))
         return df.set_index("index")
 
     def features(
@@ -773,7 +773,7 @@ class DictionaryStore(AnnotationStoreABC):
             {"index": index, "geometry": geometry, "properties": properties}
             for index, (geometry, properties) in self.items()
         )
-        return pd.DataFrame(pd.json_normalize(features)).set_index("index")
+        return pd.json_normalize(features).set_index("index")
 
     def features(
         self, int_coords: bool = False, drop_na: bool = True
