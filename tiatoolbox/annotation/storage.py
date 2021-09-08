@@ -1039,8 +1039,40 @@ class PyTablesStore(AnnotationStoreABC):
     def update_many(
         self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
-        for index in indexes:
-            self.geometry_table[index]
+        for index, update in zip(indexes, updates):
+            for row in self.geometry_table.where(f"index=={index}"):
+                if "geometry" in update:
+                    row["geometry"] = self.serialise_geometry(update.pop("geometry"))
+                row["class_"] = update.pop("class", -1)
+                properties = json.loads(bytes.decode(row["properties"], "utf-8"))
+                properties.update(update)
+                row["properties"] = json.dumps(properties, separators=(",", ":"))
+                row.update()
+        self.geometry_table.flush()
+
+    def remove_many(self, indexes: Iterable[int]) -> None:
+        where_sub_lists = [
+            self.geometry_table.get_where_list(f"index=={index}") for index in indexes
+        ]
+        # Check there is should be exactly one where index for each query index.
+        if any(len(x) != 1 for x in where_sub_lists):
+            raise IndexError(
+                "Each element in indexes must occur exactly once in the table."
+            )
+        # Combine into one sorted list
+        where_list = np.unique(np.concatenate(where_sub_lists))
+        where_list.sort()
+        # Sort into sub-lists of consecutive table indexes for removal.
+        # Adapted from the Python docs examples which can be found
+        # at https://docs.python.org/2.6/library/itertools.html#examples.
+        # The gist is that it groups elements where the differnce between their
+        # value and their index in the list is the same.
+        for _, group in itertools.groupby(
+            enumerate(where_list), lambda ix: ix[0] - ix[1]
+        ):
+            consecutive_indexes = [ix[1] for ix in group]
+            start, stop = min(consecutive_indexes), max(consecutive_indexes) + 1
+            self.geometry_table.remove_rows(start, stop)
         self.geometry_table.flush()
 
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
@@ -1120,3 +1152,6 @@ class PyTablesStore(AnnotationStoreABC):
         df.loc[:, "properties"] = df.properties.str.decode("utf-8")
         df.loc[:, "geometry"] = df.geometry.apply(self.deserialise_geometry)
         return df
+
+    def __delete__(self):
+        self.file_handle.close()

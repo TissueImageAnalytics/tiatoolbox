@@ -126,6 +126,26 @@ def test_SQLite3RTreeStore_update(fill_store, tmp_path):
     assert store[index][1]["abc"] == 123
 
 
+def test_PyTablesStore_update(fill_store, tmp_path):
+    indexes, store = fill_store(PyTablesStore, tmp_path / "polygon.db")
+    index = indexes[0]
+    new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
+    # Geometry update
+    store.update(index, {"geometry": new_geometry})
+    assert store.geometry_hash(store[index][0]) == store.geometry_hash(new_geometry)
+    # Properties update
+    store.update(index, {"abc": 123})
+    assert store[index][1]["abc"] == 123
+
+
+def test_PyTablesStore_remove(fill_store, tmp_path):
+    indexes, store = fill_store(PyTablesStore, tmp_path / "polygon.db")
+    assert len(store) == FILLED_LEN
+    index = indexes[0]
+    store.remove(index)
+    assert len(store) == FILLED_LEN - 1
+
+
 def test_SQLite3RTreeStore_remove(fill_store, tmp_path):
     indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
     index = indexes[0]
@@ -135,6 +155,12 @@ def test_SQLite3RTreeStore_remove(fill_store, tmp_path):
 
 def test_SQLite3RTreeStore_remove_many(fill_store, tmp_path):
     indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    store.remove_many(indexes)
+    assert len(store) == 0
+
+
+def test_PyTablesStore_remove_many(fill_store, tmp_path):
+    indexes, store = fill_store(PyTablesStore, tmp_path / "polygon.db")
     store.remove_many(indexes)
     assert len(store) == 0
 
