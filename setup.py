@@ -25,6 +25,7 @@ requirements = [
     "torchvision==0.9.1",
     "torch==1.8.1",
     "tqdm==4.60.0",
+    "requests",
 ]
 
 setup_requirements = [
