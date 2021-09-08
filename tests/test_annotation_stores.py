@@ -141,19 +141,19 @@ def test_SQLite3RTreeStore_compile_options():
 
 class TestStore:
     scenarios = [
-        ("Dictionary", {"store": DictionaryStore}),
-        ("SQLite", {"store": SQLite3RTreeStore}),
+        ("Dictionary", {"Store": DictionaryStore}),
+        ("SQLite", {"Store": SQLite3RTreeStore}),
     ]
 
-    def test_append_many(self, cell_grid, tmp_path, store):
-        store = store()
+    def test_append_many(self, cell_grid, tmp_path, Store):
+        store = Store(tmp_path / "polygons")
         indexes = store.append_many(
             cell_grid, ({"class": x} for x in np.random.randint(0, 7, len(cell_grid)))
         )
         assert len(indexes) == len(cell_grid)
 
-    def test_update(self, fill_store, tmp_path, store):
-        indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_update(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
         index = indexes[0]
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         # Geometry update
@@ -163,56 +163,56 @@ class TestStore:
         store.update(index, {"abc": 123})
         assert store[index][1]["abc"] == 123
 
-    def test_remove(self, fill_store, tmp_path, store):
-        indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_remove(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
         index = indexes[0]
         store.remove(index)
         assert len(store) == FILLED_LEN - 1
 
-    def test_remove_many(self, fill_store, tmp_path, store):
-        indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_delitem(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+        index = indexes[0]
+        del store[index]
+        assert len(store) == FILLED_LEN - 1
+
+    def test_remove_many(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
         store.remove_many(indexes)
         assert len(store) == 0
 
-    def test_len(self, fill_store, tmp_path, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_len(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         assert len(store) == FILLED_LEN
 
-    def test_in(self, fill_store, tmp_path, store):
-        indexes, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_in(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
         for index in indexes:
             assert index in store
 
-    def test_getitem(self, fill_store, tmp_path, sample_triangle, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_getitem(self, fill_store, tmp_path, sample_triangle, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         index = store.append(sample_triangle)
         geometry, properties = store[index]
         assert geometry == sample_triangle
         assert properties == {}
 
-    def test_setitem(self, fill_store, tmp_path, sample_triangle, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_setitem(self, fill_store, tmp_path, sample_triangle, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         index = store.append(sample_triangle)
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         new_properties = {"abc": 123}
         store[index] = (new_geometry, new_properties)
         assert store[index] == (new_geometry, new_properties)
 
-    def test_delitem(self, fill_store, tmp_path, sample_triangle, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
-        index = store.append(sample_triangle)
-        del store[index]
-        assert len(store) == FILLED_LEN
-
-    def test_getitem_setitem_cycle(self, fill_store, tmp_path, sample_triangle, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_getitem_setitem_cycle(self, fill_store, tmp_path, sample_triangle, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         index = store.append(sample_triangle, {"class": 0})
         geometry, properties = store[index]
         store[index] = (geometry, properties)
         assert store[index] == (geometry, properties)
 
-    def test_to_dataframe(self, fill_store, tmp_path, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_to_dataframe(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         df = store.to_dataframe()
         assert isinstance(df, pd.DataFrame)
         assert len(df) == FILLED_LEN
@@ -220,8 +220,8 @@ class TestStore:
         assert df.index.name == "index"
         assert isinstance(df.geometry.iloc[0], Polygon)
 
-    def test_features(self, fill_store, tmp_path, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_features(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         features = store.features()
         assert isinstance(features, Generator)
         features = list(features)
@@ -231,8 +231,8 @@ class TestStore:
             {"type", "geometry", "properties"} == set(f.keys()) for f in features
         )
 
-    def test_to_geodict(self, fill_store, tmp_path, store):
-        _, store = fill_store(SQLite3RTreeStore, tmp_path / "polygon.db")
+    def test_to_geodict(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
         geodict = store.to_geodict()
         assert isinstance(geodict, dict)
         assert "features" in geodict

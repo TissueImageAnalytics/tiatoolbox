@@ -133,7 +133,7 @@ class AnnotationStoreABC(ABC):
     def append(
         self,
         geometry: Geometry,
-        properties: Dict[str, Any] = None,
+        properties: Optional[Dict[str, Any]] = None,
     ) -> int:
         """Insert a new annotation, returning the index."""
         if properties is None:
@@ -277,6 +277,14 @@ class AnnotationStoreABC(ABC):
         if not fp:
             return "\n".join(string_lines_generator)
         fp.writelines(string_lines_generator)
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """Create a copy of the store as a Pandas DataFrame.
+
+        Returns:
+            pd.DataFrame: The resulting dataframe.
+        """
+        raise NotImplementedError()
 
 
 class SQLite3RTreeStore(AnnotationStoreABC):
@@ -718,15 +726,20 @@ class SQLite3RTreeStore(AnnotationStoreABC):
 
 
 class DictionaryStore(AnnotationStoreABC):
-    def __init__(self) -> None:
+    def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
         super().__init__()
-        self.features = {}
+        self._features = {}
+        self.connection = connection
 
     def append(
-        self, geometry: Union[Geometry, Iterable[Geometry]], properties: Dict[str, Any]
+        self,
+        geometry: Union[Geometry, Iterable[Geometry]],
+        properties: Optional[Dict[str, Any]] = None,
     ) -> int:
+        if properties is None:
+            properties = {}
         key = self.geometry_hash(geometry)
-        self.features[key] = {
+        self._features[key] = {
             "geometry": geometry,
             "properties": properties,
         }
@@ -735,11 +748,12 @@ class DictionaryStore(AnnotationStoreABC):
     def update(self, index: int, update: Dict[str, Any]) -> None:
         feature = self[index]
         update = copy.copy(update)
-        feature["geometry"] = update.pop("geometry", feature["geometry"])
-        feature["properties"] = update
+        geometry = update.pop("geometry", feature[0])
+        feature[1].update(update)
+        self[index] = (geometry, feature[1])
 
     def remove(self, index: int) -> None:
-        del self.features[index]
+        del self._features[index]
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
@@ -751,8 +765,15 @@ class DictionaryStore(AnnotationStoreABC):
                 "geometry": geometry,
                 "properties": properties,
             }
-            store.features[index] = feature
+            store._features[index] = feature
         return store
+
+    def to_dataframe(self) -> pd.DataFrame:
+        features = (
+            {"index": index, "geometry": geometry, "properties": properties}
+            for index, (geometry, properties) in self.items()
+        )
+        return pd.DataFrame(pd.json_normalize(features)).set_index("index")
 
     def features(
         self, int_coords: bool = False, drop_na: bool = True
@@ -763,11 +784,11 @@ class DictionaryStore(AnnotationStoreABC):
                 "geometry": geometry2feature(feature["geometry"]),
                 "properties": feature["properties"],
             }
-            for feature in self.features
+            for feature in self._features.values()
         )
 
     def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
-        feature = self.features[index]
+        feature = self._features[index]
         return feature["geometry"], feature["properties"]
 
     def __setitem__(
@@ -775,20 +796,20 @@ class DictionaryStore(AnnotationStoreABC):
     ) -> None:
         geometry, properties = record
         properties = dict(properties)
-        self.features[index] = {"geometry": geometry, "properties": properties}
+        self._features[index] = {"geometry": geometry, "properties": properties}
 
     def __contains__(self, key: int) -> bool:
-        return key in self.features
+        return key in self._features
 
     def __iter__(self) -> Iterable[int]:
-        return self.features.keys()
+        return self._features.keys()
 
     def items(self):
-        for index, value in self.features.items():
-            yield index, (value["geometry"], value["propeties"])
+        for index, value in self._features.items():
+            yield index, (value["geometry"], value["properties"])
 
     def __len__(self) -> int:
-        return len(self.features)
+        return len(self._features)
 
     @classmethod
     def from_geojson(cls, fp: Union[IO, str]) -> "DictionaryStore":
@@ -804,7 +825,7 @@ class DictionaryStore(AnnotationStoreABC):
             for feature in geojson["features"]
         ]
         store = cls()
-        store.features = features
+        store._features = features
         return store
 
     @classmethod
