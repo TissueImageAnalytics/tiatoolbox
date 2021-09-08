@@ -287,10 +287,10 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
 
-class SQLite3RTreeStore(AnnotationStoreABC):
+class SQLiteStore(AnnotationStoreABC):
     @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str]) -> "SQLite3RTreeStore":
-        return SQLite3RTreeStore(fp)
+    def open(cls, fp: Union[Path, str]) -> "SQLiteStore":
+        return SQLiteStore(fp)
 
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
         super().__init__()

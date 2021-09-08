@@ -11,7 +11,7 @@ from shapely import affinity
 from tiatoolbox.annotation.storage import (
     AnnotationStoreABC,
     DictionaryStore,
-    SQLite3RTreeStore,
+    SQLiteStore,
 )
 
 # Constants
@@ -132,7 +132,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_SQLite3RTreeStore_compile_options():
-    options = SQLite3RTreeStore.compile_options()
+    options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
@@ -142,7 +142,7 @@ def test_SQLite3RTreeStore_compile_options():
 class TestStore:
     scenarios = [
         ("Dictionary", {"Store": DictionaryStore}),
-        ("SQLite", {"Store": SQLite3RTreeStore}),
+        ("SQLite", {"Store": SQLiteStore}),
     ]
 
     def test_append_many(self, cell_grid, tmp_path, Store):
