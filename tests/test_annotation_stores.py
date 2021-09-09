@@ -284,3 +284,24 @@ class TestStore:
         assert "type" in geodict
         assert geodict["type"] == "FeatureCollection"
         assert len(geodict["features"]) == len(list(store.features()))
+
+    def test_to_geojson_file(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        with open(tmp_path / "polygons.json", "w") as fh:
+            geojson = store.to_geojson(fp=fh)
+        assert geojson is None
+        with open(tmp_path / "polygons.json", "r") as fh:
+            geodict = json.load(fh)
+        assert "features" in geodict
+        assert "type" in geodict
+        assert geodict["type"] == "FeatureCollection"
+        assert len(geodict["features"]) == len(list(store.features()))
+
+    def test_to_ldjson(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        ldjson = store.to_ldjson()
+        for line in ldjson.split():
+            assert isinstance(line, str)
+            dictionary = json.loads(line)
+            assert "geometry" in dictionary
+            assert "properties" in dictionary
