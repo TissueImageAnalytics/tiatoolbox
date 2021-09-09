@@ -18,6 +18,13 @@ formats:
   - pdf
   - epub
 
+# Install apt packages
+build:
+  apt_packages:
+    - openslide-tools
+    - libopenjp2-7-dev
+    - libopenjp2-tools
+
 # Optionally set the version of Python and requirements required to build your docs
 python:
   version: "3.7"
