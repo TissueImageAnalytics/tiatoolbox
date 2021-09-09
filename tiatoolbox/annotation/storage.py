@@ -251,10 +251,10 @@ class AnnotationStoreABC(ABC):
     def to_ldjson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise to Line-Delimited (Geo)JSON."""
         string_lines_generator = (
-            json.dumps(line, separators=(",", ":")) for line in self.features()
+            json.dumps(line, separators=(",", ":")) + "\n" for line in self.features()
         )
         if not fp:
-            return "\n".join(string_lines_generator)
+            return "".join(string_lines_generator)
         fp.writelines(string_lines_generator)
 
     def to_dataframe(self) -> pd.DataFrame:
