@@ -72,35 +72,37 @@ class IOConfigSegmentor(IOConfigABC):
             save_resolution: resolution to save all output.
 
         Examples:
+
             >>> # Defining io for a network having 1 input and 1 output at the
             >>> # same resolution
             >>> ioconfig = IOConfigSegmentor(
-            >>>     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-            >>>     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-            >>>     patch_input_shape=[2048, 2048],
-            >>>     patch_output_shape=[1024, 1024],
-            >>>     stride_shape=[512, 512],
-            >>> )
+            ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+            ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+            ...     patch_input_shape=[2048, 2048],
+            ...     patch_output_shape=[1024, 1024],
+            ...     stride_shape=[512, 512],
+            ... )
 
         Examples:
+
             >>> # Defining io for a network having 3 input and 2 output at the
             >>> # at the same resolution, the output is then merged at another
             >>> # different resolution.
             >>> ioconfig = IOConfigSegmentor(
-            >>>     input_resolutions=[
-            >>>         {"units": "mpp", "resolution": 0.25},
-            >>>         {"units": "mpp", "resolution": 0.50},
-            >>>         {"units": "mpp", "resolution": 0.75},
-            >>>     ],
-            >>>     output_resolutions=[
-            >>>         {"units": "mpp", "resolution": 0.25},
-            >>>         {"units": "mpp", "resolution": 0.50},
-            >>>     ],
-            >>>     patch_input_shape=[2048, 2048],
-            >>>     patch_output_shape=[1024, 1024],
-            >>>     stride_shape=[512, 512],
-            >>>     save_resolution={"units": "mpp", "resolution": 4.0},
-            >>> )
+            ...     input_resolutions=[
+            ...         {"units": "mpp", "resolution": 0.25},
+            ...         {"units": "mpp", "resolution": 0.50},
+            ...         {"units": "mpp", "resolution": 0.75},
+            ...     ],
+            ...     output_resolutions=[
+            ...         {"units": "mpp", "resolution": 0.25},
+            ...         {"units": "mpp", "resolution": 0.50},
+            ...     ],
+            ...     patch_input_shape=[2048, 2048],
+            ...     patch_output_shape=[1024, 1024],
+            ...     stride_shape=[512, 512],
+            ...     save_resolution={"units": "mpp", "resolution": 4.0},
+            ... )
 
         """
         self.patch_input_shape = patch_input_shape
@@ -207,13 +209,14 @@ class WSIStreamDataset(torch_data.Dataset):
             `wsi_paths` is.
 
     Examples:
+
         >>> ioconfig = IOConfigSegmentor(
-        >>>     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        >>>     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        >>>     patch_input_shape=[2048, 2048],
-        >>>     patch_output_shape=[1024, 1024],
-        >>>     stride_shape=[512, 512],
-        >>> )
+        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     patch_input_shape=[2048, 2048],
+        ...     patch_output_shape=[1024, 1024],
+        ...     stride_shape=[512, 512],
+        ... )
         >>> mp_manager = torch_mp.Manager()
         >>> mp_shared_space = mp_manager.Namespace()
         >>> mp_shared_space.signal = 1  # adding variable to the shared space
@@ -423,11 +426,12 @@ class SemanticSegmentor:
                 of the patch in the mother image.
 
         Examples:
+
             >>> # API of function expected to overwrite `get_coordinates`
             >>> def func(image_shape, ioconfig):
-            >>>   patch_inputs = np.array([[0, 0, 256, 256]])
-            >>>   patch_outputs = np.array([[0, 0, 256, 256]])
-            >>>   return patch_inputs, patch_outputs
+            ...   patch_inputs = np.array([[0, 0, 256, 256]])
+            ...   patch_outputs = np.array([[0, 0, 256, 256]])
+            ...   return patch_inputs, patch_outputs
             >>> segmentor = SemanticSegmentor(model='unet')
             >>> segmentor.get_coordinates = func
 
@@ -471,10 +475,11 @@ class SemanticSegmentor:
             ndarray: list of flags to indicate which coordinate is valid.
 
         Examples:
+
             >>> # API of function expected to overwrite `filter_coordinates`
             >>> def func(reader, bounds, resolution, units):
-            >>>   # as example, only select first bound
-            >>>   return np.array([1, 0])
+            ...   # as example, only select first bound
+            ...   return np.array([1, 0])
             >>> coords = [[0, 0, 256, 256], [128, 128, 384, 384]]
             >>> segmentor = SemanticSegmentor(model='unet')
             >>> segmentor.filter_coordinates = func
@@ -547,6 +552,7 @@ class SemanticSegmentor:
             save_path (str): location to save output prediction as well as possible
                 intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
+
         """
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
@@ -680,6 +686,24 @@ class SemanticSegmentor:
             free_prediction (bool): If this is `True`, `predictions` will
                 be modified in place and each patch will be replace with `None`
                 once processed. This is to save memory when assembling.
+
+        Examples:
+
+        >>> SemanticSegmentor.merge_prediction(
+        ...     canvas_shape=[4, 4],
+        ...     predictions=[
+        ...         np.full((2, 2), 1),
+        ...         np.full((2, 2), 2)],
+        ...     locations=[
+        ...         [0, 0, 2, 2],
+        ...         [2, 2, 4, 4]],
+        ...     save_path=None,
+        ...     free_prediction=False,
+        ... )
+        array([[1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 2, 2],
+            [0, 0, 2, 2]])
 
         """
         canvas_shape = np.array(canvas_shape)
@@ -824,10 +848,17 @@ class SemanticSegmentor:
         Returns:
             output (list): A list of tuple(input_path, save_path) where
                 `input_path` is the path of the input wsi while `save_path`
-                corresponds to the output predictions. However, `save_path`
-                is a path prefix contain the `stem` of `input_path`, not the
-                full path of output files because one model can generate multiple
-                outputs.
+                corresponds to the output predictions.
+
+        Examples:
+            >>> # Sample output of a network
+            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
+            >>> predictor = SemanticSegmentor(model='unet')
+            >>> output = predictor.predict(wsis, mode='wsi')
+            >>> output.keys()
+            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+            >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
+            >>> # will be respectively stored as 'output/0.raw.0', 'output/0.raw.1'
 
         """
         if mode not in ["wsi", "tile"]:

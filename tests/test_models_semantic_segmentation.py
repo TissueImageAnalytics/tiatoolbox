@@ -161,7 +161,7 @@ def test_segmentor_ioconfig():
         stride_shape=[512, 512],
     )
     assert ioconfig.highest_input_resolution == {"units": "mpp", "resolution": 0.25}
-    ioconfig.to_baseline()
+    ioconfig = ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 1.0
     assert ioconfig.input_resolutions[1]["resolution"] == 0.5
     assert ioconfig.input_resolutions[2]["resolution"] == 1 / 3
@@ -180,7 +180,7 @@ def test_segmentor_ioconfig():
         stride_shape=[512, 512],
     )
     assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 0.50}
-    ioconfig.to_baseline()
+    ioconfig = ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 0.5
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
 
