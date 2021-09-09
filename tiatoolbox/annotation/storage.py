@@ -199,7 +199,9 @@ class AnnotationStoreABC(ABC):
     def __iter__(self) -> Iterable[int]:
         raise NotImplementedError()
 
-    def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
+    def query(
+        self, query_geometry: QueryGeometry
+    ) -> List[Tuple[Geometry, Dict[str, Any]]]:
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
@@ -447,10 +449,10 @@ class SQLiteStore(AnnotationStoreABC):
             SELECT geometry.id
               FROM geometry, rtree
              WHERE rtree.id = geometry.id
-               AND rtree.min_x >= :min_x
-               AND rtree.max_x <= :max_x
-               AND rtree.min_y >= :min_y
-               AND rtree.max_y <= :max_y
+               AND rtree.max_x >= :min_x
+               AND rtree.min_x <= :max_x
+               AND rtree.max_y >= :min_y
+               AND rtree.min_y <= :max_y
             """,
             {
                 "min_x": min_x,
@@ -473,10 +475,10 @@ class SQLiteStore(AnnotationStoreABC):
             SELECT geometry.boundary, [class], properties
               FROM geometry, rtree
              WHERE rtree.id = geometry.id
-               AND rtree.min_x >= :min_x
-               AND rtree.max_x <= :max_x
-               AND rtree.min_y >= :min_y
-               AND rtree.max_y <= :max_y
+               AND rtree.max_x >= :min_x
+               AND rtree.min_x <= :max_x
+               AND rtree.max_y >= :min_y
+               AND rtree.min_y <= :max_y
             """,
             {
                 "min_x": min_x,
@@ -485,8 +487,15 @@ class SQLiteStore(AnnotationStoreABC):
                 "max_y": max_y,
             },
         )
-        boundaries = cur.fetchall()
-        return [self.deserialise_geometry(blob) for blob, in boundaries]
+        rows = cur.fetchall()
+
+        return [
+            (
+                self.deserialise_geometry(blob),
+                {"class": class_, **json.loads(properties)},
+            )
+            for blob, class_, properties in rows
+        ]
 
     def __len__(self) -> int:
         cur = self.con.cursor()
