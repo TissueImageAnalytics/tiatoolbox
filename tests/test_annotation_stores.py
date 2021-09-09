@@ -163,6 +163,12 @@ class TestStore:
         assert len(results) == 4
         assert all(isinstance(index, int) for index in results)
 
+    def test_iquery_polygon(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        results = store.iquery(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
+        assert len(results) == 3
+        assert all(isinstance(index, int) for index in results)
+
     def test_update(self, fill_store, tmp_path, Store):
         indexes, store = fill_store(Store, tmp_path / "polygon.db")
         index = indexes[0]

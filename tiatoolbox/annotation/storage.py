@@ -30,7 +30,7 @@ import copy
 
 import numpy as np
 import pandas as pd
-from shapely import speedups, wkt
+from shapely import speedups, wkt, wkb
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
@@ -115,7 +115,7 @@ class AnnotationStoreABC(ABC):
         """Deserialise a geometry from a string or bytes."""
         if isinstance(data, str):
             return wkt.loads(data)
-        return wkt.load(data)
+        return wkb.loads(data)
 
     def commit(self) -> None:
         """Commit any in-memory changes to disk."""
@@ -306,6 +306,22 @@ class SQLiteStore(AnnotationStoreABC):
         path = Path(connection)
         exists = path.exists() and path.is_file()
         self.con = sqlite3.connect(connection, isolation_level="DEFERRED")
+
+        # Register custom functions
+        def wkb_contains(candidate: Union[bytes, str], geometry_wkb: bytes) -> bool:
+            """Check if one WKB/WKT is contained in a geometry."""
+            candidate = self.deserialise_geometry(candidate)
+            return wkb.loads(geometry_wkb).contains(candidate)
+
+        self.con.create_function("contains", 2, wkb_contains)
+
+        def wkb_intersects(candidate: Union[bytes, str], geometry_wkb: bytes) -> bool:
+            """Check if one WKB/WKT intersects a geometry."""
+            candidate = self.deserialise_geometry(candidate)
+            return wkb.loads(geometry_wkb).intersects(candidate)
+
+        self.con.create_function("intersects", 2, wkb_intersects)
+
         if exists:
             return
         cur = self.con.cursor()
@@ -453,12 +469,14 @@ class SQLiteStore(AnnotationStoreABC):
                AND rtree.min_x <= :max_x
                AND rtree.max_y >= :min_y
                AND rtree.min_y <= :max_y
+               AND intersects(boundary, :intersector)
             """,
             {
                 "min_x": min_x,
                 "max_x": max_x,
                 "min_y": min_y,
                 "max_y": max_y,
+                "intersector": query_geometry.wkb,
             },
         )
         boundaries = cur.fetchall()
@@ -472,19 +490,21 @@ class SQLiteStore(AnnotationStoreABC):
             min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
             """
-            SELECT geometry.boundary, [class], properties
+            SELECT boundary, [class], properties
               FROM geometry, rtree
              WHERE rtree.id = geometry.id
                AND rtree.max_x >= :min_x
                AND rtree.min_x <= :max_x
                AND rtree.max_y >= :min_y
                AND rtree.min_y <= :max_y
+               AND intersects(boundary, :intersector)
             """,
             {
                 "min_x": min_x,
                 "max_x": max_x,
                 "min_y": min_y,
                 "max_y": max_y,
+                "intersector": query_geometry.wkb,
             },
         )
         rows = cur.fetchall()
