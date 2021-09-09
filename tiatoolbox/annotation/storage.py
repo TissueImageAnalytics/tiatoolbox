@@ -208,12 +208,6 @@ class AnnotationStoreABC(ABC):
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return anotations as a list of geoJSON features.
 
-        Args:
-            int_coords(bool): Make coordinates intergers. Defaults to
-                True.
-            drop_na(bool): Don't include keys for None/NaN values.
-                Defaults to True.
-
         Returns:
             list: List of features as dictionaries.
 
@@ -235,7 +229,7 @@ class AnnotationStoreABC(ABC):
         """
         return {
             "type": "FeatureCollection",
-            "features": list(self.features(int_coords=int_coords, drop_na=drop_na)),
+            "features": list(self.features()),
         }
 
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
