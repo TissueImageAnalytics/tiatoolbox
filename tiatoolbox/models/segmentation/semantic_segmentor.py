@@ -29,6 +29,7 @@ import os
 import pathlib
 import warnings
 from typing import Callable, List, Tuple, Union
+from concurrent.futures import ProcessPoolExecutor
 
 import cv2
 import numpy as np
@@ -45,50 +46,61 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireade
 
 
 class IOConfigSegmentor(IOConfigABC):
-    """Define a class to hold IO information for the predictor."""
+    """Define a class to hold IO information for patch predictor."""
 
-    # We predefine to follow enforcement, initialisation is done in __init__
+    # We predefine to follow enforcement, actual initialization in init
     patch_size = None
     input_resolutions = None
     output_resolutions = None
 
     def __init__(
         self,
-        input_resolutions,
-        output_resolutions,
-        save_resolution=None,
-        patch_input_shape=None,
-        patch_output_shape=None,
+        input_resolutions: List[dict],
+        output_resolutions: List[dict],
+        patch_input_shape: Union[List[int], np.ndarray],
+        patch_output_shape: Union[List[int], np.ndarray],
+        save_resolution: dict = None,
         **kwargs,
     ):
         """Define IO placement for patch input and output.
 
         Args:
-
             input_resolutions: resolution of each input head of model
                 inference, must be in the same order as target model.forward().
             output_resolutions: resolution of each output head from model
                 inference, must be in the same order as target model.infer_batch().
             save_resolution: resolution to save all output.
 
-        Example:
-        >>> # a config for 3 head input and 2 head output, each of
-        >>> # different resolution, and expected to save at another resolution
-        >>> ioconfig = IOConfigSegmentor(
-        >>>     input_resolutions=[
-        >>>         {"units": "mpp", "resolution": 0.25},
-        >>>         {"units": "mpp", "resolution": 0.50},
-        >>>         {"units": "mpp", "resolution": 0.75},
-        >>>     ],
-        >>>     output_resolutions=[
-        >>>         {"units": "mpp", "resolution": 0.25},
-        >>>         {"units": "mpp", "resolution": 0.50},
-        >>>     ],
-        >>>     save_resolution={"units": "mpp", "resolution": 4.0},
-        >>>     patch_input_shape=[2048, 2048],
-        >>>     patch_output_shape=[1024, 1024],
-        >>>     stride_shape=[512, 512],
-        >>> )
+        Examples:
+            >>> # Defining io for a network having 1 input and 1 output at the
+            >>> # same resolution
+            >>> ioconfig = IOConfigSegmentor(
+            >>>     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+            >>>     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+            >>>     patch_input_shape=[2048, 2048],
+            >>>     patch_output_shape=[1024, 1024],
+            >>>     stride_shape=[512, 512],
+            >>> )
+
+        Examples:
+            >>> # Defining io for a network having 3 input and 2 output at the
+            >>> # at the same resolution, the output is then merged at another
+            >>> # different resolution.
+            >>> ioconfig = IOConfigSegmentor(
+            >>>     input_resolutions=[
+            >>>         {"units": "mpp", "resolution": 0.25},
+            >>>         {"units": "mpp", "resolution": 0.50},
+            >>>         {"units": "mpp", "resolution": 0.75},
+            >>>     ],
+            >>>     output_resolutions=[
+            >>>         {"units": "mpp", "resolution": 0.25},
+            >>>         {"units": "mpp", "resolution": 0.50},
+            >>>     ],
+            >>>     patch_input_shape=[2048, 2048],
+            >>>     patch_output_shape=[1024, 1024],
+            >>>     stride_shape=[512, 512],
+            >>>     save_resolution={"units": "mpp", "resolution": 4.0},
+            >>> )
 
         """
         self.patch_input_shape = patch_input_shape
@@ -127,16 +139,17 @@ class IOConfigSegmentor(IOConfigABC):
             raise ValueError("Invalid resolution units.")
 
     @staticmethod
-    def scale_to_highest(resolutions, unit):
-        """Convert resolutions to scaling factor.
+    def scale_to_highest(resolutions: List[dict], unit: str):
+        """Get scaling factor from input resolutions.
 
         This will convert resolutions to scaling factor with repsect to
-        highest resolutions found in input list of resolutions.
+        highest resolutions found in the input list of resolutions.
 
         Args:
             resolutions (list): a list of resolutions where each defined
                 as `{'resolution': value, 'unit': value}`
-            unit (string): unit that the the resolutions are at
+            unit (string): unit that the the resolutions are at.
+
         Return:
             (np.ndarray): an 1D array of scaling factor having the same
                 length as `resolutions`
@@ -155,21 +168,23 @@ class IOConfigSegmentor(IOConfigABC):
     def to_baseline(self):
         """Convert IO to baseline form.
 
-        This will convert resolutions to baseline form with highest
-        possible resolution as reference. This will permanently alter
-        the object.
+        This will return a new IO holder where resolutions have been converted
+        to baseline form with highest possible resolution found in both input
+        and output as reference.
 
         """
-        resolutions = self.input_resolutions + self.output_resolutions
-        scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        self.input_resolutions = [
+        _self = copy.deepcopy(self)
+        resolutions = _self.input_resolutions + _self.output_resolutions
+        scale_factors = _self.scale_to_highest(resolutions, _self.resolution_unit)
+        _self.input_resolutions = [
             {"units": "baseline", "resolution": v}
-            for v in scale_factors[: len(self.input_resolutions)]
+            for v in scale_factors[: len(_self.input_resolutions)]
         ]
-        self.output_resolutions = [
+        _self.output_resolutions = [
             {"units": "baseline", "resolution": v}
-            for v in scale_factors[len(self.input_resolutions) :]
+            for v in scale_factors[len(_self.input_resolutions) :]
         ]
+        return _self
 
 
 class WSIStreamDataset(torch_data.Dataset):
@@ -184,16 +199,26 @@ class WSIStreamDataset(torch_data.Dataset):
     information.
 
     Args:
-
-        mp_shared_space: must be from torch.multiprocessing.
-            Example:
-        >>> mp_manager = torch_mp.Manager()
-        >>> mp_shared_space = mp_manager.Namespace()
+        mp_shared_space: must be from torch.multiprocessing, for example
         ioconfig: object which contains I/O placement for patches.
         wsi_paths: List of paths pointing to a WSI or tiles.
         preproc: pre-processing function to be applied on a patch.
         mode: either `wsi` or `tile` to indicate which form the input in
             `wsi_paths` is.
+
+    Examples:
+        >>> ioconfig = IOConfigSegmentor(
+        >>>     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        >>>     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        >>>     patch_input_shape=[2048, 2048],
+        >>>     patch_output_shape=[1024, 1024],
+        >>>     stride_shape=[512, 512],
+        >>> )
+        >>> mp_manager = torch_mp.Manager()
+        >>> mp_shared_space = mp_manager.Namespace()
+        >>> mp_shared_space.signal = 1  # adding variable to the shared space
+        >>> wsi_paths = ['A.svs', 'B.svs']
+        >>> ds = WSIStreamDataset(ioconfig, wsi_paths, mp_shared_space)
 
     """
 
@@ -220,7 +245,7 @@ class WSIStreamDataset(torch_data.Dataset):
                     ]
                 )
             )
-            self.ioconfig.to_baseline()
+            self.ioconfig = self.ioconfig.to_baseline()
 
         self.mp_shared_space = mp_shared_space
         self.wsi_paths = wsi_paths
@@ -266,7 +291,7 @@ class WSIStreamDataset(torch_data.Dataset):
         batch = [v for v in batch if v is not None]
         return torch.utils.data.dataloader.default_collate(batch)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         # ! no need to lock as we dont modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
@@ -306,14 +331,14 @@ class SemanticSegmentor:
 
     def __init__(
         self,
-        batch_size=8,
-        num_loader_worker=0,
-        num_postproc_worker=0,
-        model=None,
-        pretrained_model=None,
-        pretrained_weight=None,
-        verbose=True,
-        auto_generate_mask=False,
+        batch_size: int = 8,
+        num_loader_worker: int = 0,
+        num_postproc_worker: int = 0,
+        model: torch.nn.Module = None,
+        pretrained_model: str = None,
+        pretrained_weight: str = None,
+        verbose: bool = True,
+        auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ):
         """Initialise the Semantic Segmentor.
@@ -383,25 +408,28 @@ class SemanticSegmentor:
                 This argument specifies the shape of mother image (the image we want to)
                 extract patches from) at requested `resolution` and `units` and it is
                 expected to be in (width, height) format.
+
             ioconfig (object): object that contains information about input and ouput
                 placement of patches. Check `IOConfigSegmentor` for details about
                 available attributes.
 
-        Returns:
+        Return:
             patch_inputs: a list of corrdinates in
                 `[start_x, start_y, end_x, end_y]` format indicating the read location
                 of the patch in the mother image.
+
             patch_outputs: a list of corrdinates in
                 `[start_x, start_y, end_x, end_y]` format indicating the write location
                 of the patch in the mother image.
 
-        Example:
-        >>> def func(image_shape, ioconfig):
-        >>>   patch_inputs = np.array([[0, 0, 256, 256]])
-        >>>   patch_outputs = np.array([[0, 0, 256, 256]])
-        >>>   return patch_inputs, patch_outputs
-        >>> segmentor = SemanticSegmentor(model='unet')
-        >>> segmentor.get_coordinates = func
+        Examples:
+            >>> # API of function expected to overwrite `get_coordinates`
+            >>> def func(image_shape, ioconfig):
+            >>>   patch_inputs = np.array([[0, 0, 256, 256]])
+            >>>   patch_outputs = np.array([[0, 0, 256, 256]])
+            >>>   return patch_inputs, patch_outputs
+            >>> segmentor = SemanticSegmentor(model='unet')
+            >>> segmentor.get_coordinates = func
 
         """
         (patch_inputs, patch_outputs) = PatchExtractor.get_coordinates(
@@ -415,29 +443,23 @@ class SemanticSegmentor:
     @staticmethod
     def filter_coordinates(
         mask_reader: VirtualWSIReader,
-        coordinatess: np.ndarray,
+        bounds: np.ndarray,
         resolution: Union[float, int] = None,
         units: str = None,
     ):
-        """Indicates which coordinate is valid basing on the mask.
+        """
+        Indicates which coordinate is valid basing on the mask.
 
         To use your own approaches, either subclass to overwrite or directly
         assign your own function to this name. In either cases, the function must
         obey the API defined here.
 
-        Example:
-        >>> def func(image_shape, ioconfig):
-        >>>   patch_inputs = np.array([[0, 0, 256, 256]])
-        >>>   patch_outputs = np.array([[0, 0, 256, 256]])
-        >>>   return patch_inputs, patch_outputs
-        >>> segmentor = SemanticSegmentor(model='unet')
-        >>> segmentor.get_coordinates = func
-
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal
                 reader of the mask related to the WSI from which we want
                 to extract the patches.
-            coordinatess (ndarray and np.int32): Coordinates to be checked
+
+            bounds (ndarray and np.int32): Coordinates to be checked
                 via the `func`. They must be in the same resolution as requested
                 `resolution` and `units`. The shape of `coordinatess` is (N, K)
                 where N is the number of coordinate sets and K is either 2 for centroids
@@ -448,11 +470,20 @@ class SemanticSegmentor:
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
 
+        Examples:
+            >>> # API of function expected to overwrite `filter_coordinates`
+            >>> def func(reader, bounds, resolution, units):
+            >>>   # as example, only select first bound
+            >>>   return np.array([1, 0])
+            >>> coords = [[0, 0, 256, 256], [128, 128, 384, 384]]
+            >>> segmentor = SemanticSegmentor(model='unet')
+            >>> segmentor.filter_coordinates = func
+
         """
         if not isinstance(mask_reader, VirtualWSIReader):
             raise ValueError("`mask_reader` should be VirtualWSIReader.")
-        if not isinstance(coordinatess, np.ndarray) or not np.issubdtype(
-            coordinatess.dtype, np.integer
+        if not isinstance(bounds, np.ndarray) or not np.issubdtype(
+            bounds.dtype, np.integer
         ):
             raise ValueError("`coordinatess` should be ndarray of integer type.")
 
@@ -472,7 +503,7 @@ class SemanticSegmentor:
             roi = mask_reader.img[tl_y:br_y, tl_x:br_x]
             return np.sum(roi > 0) > 0
 
-        flags = [sel_func(coord) for coord in coordinatess]
+        flags = [sel_func(bound) for bound in bounds]
         return np.array(flags)
 
     @staticmethod
@@ -502,7 +533,6 @@ class SemanticSegmentor:
         self,
         wsi_idx: int,
         ioconfig: IOConfigSegmentor,
-        loader,
         save_path: str,
         mode: str,
     ):
@@ -517,7 +547,6 @@ class SemanticSegmentor:
             save_path (str): location to save output prediction as well as possible
                 intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
-
         """
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
@@ -556,28 +585,27 @@ class SemanticSegmentor:
         pbar = tqdm.tqdm(
             desc=pbar_desc,
             leave=True,
-            total=int(len(loader)),
+            total=int(len(self._loader)),
             ncols=80,
             ascii=True,
             position=0,
         )
 
         cum_output = []
-        for _, batch_data in enumerate(loader):
+        for _, batch_data in enumerate(self._loader):
             sample_datas, sample_infos = batch_data
             batch_size = sample_infos.shape[0]
             # ! depending on the protocol of the output within infer_batch
             # ! this may change, how to enforce/document/expose this in a
             # ! sensible way?
 
-            # assume to return a list with K items,
+            # assume to return a list of L output,
             # each of shape N x etc. (N=batch size)
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
                 self._on_gpu,
             )
-
             # repackage so that its a N list, each contains
             # L x etc. output
             sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
@@ -667,14 +695,21 @@ class SemanticSegmentor:
             canvas_cum_shape_ += (num_output_ch,)
             add_singleton = num_output_ch == 1
 
-        cum_canvas = np.lib.format.open_memmap(
-            save_path,
-            mode="w+",
-            shape=canvas_cum_shape_,
-            dtype=np.float32,
-        )
+        if save_path is not None:
+            cum_canvas = np.lib.format.open_memmap(
+                save_path,
+                mode="w+",
+                shape=canvas_cum_shape_,
+                dtype=np.float32,
+            )
+        else:
+            cum_canvas = np.zeros(
+                shape=canvas_cum_shape_,
+                dtype=np.float32,
+            )
 
         # for pixel occurence counting
+        # ! this may be expensive
         count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
         patch_infos = list(zip(locations, predictions))
@@ -816,14 +851,6 @@ class SemanticSegmentor:
         else:
             raise ValueError(f"`save_dir` already exists! {save_dir}")
 
-        # use external for testing
-        self._on_gpu = on_gpu
-        self._model = misc.model_to(on_gpu, self.model)
-
-        mp_manager = torch_mp.Manager()
-        mp_shared_space = mp_manager.Namespace()
-        self._mp_shared_space = mp_shared_space
-
         if patch_output_shape is None:
             patch_output_shape = patch_input_shape
         if stride_shape is None:
@@ -837,6 +864,21 @@ class SemanticSegmentor:
                 patch_output_shape=patch_output_shape,
                 stride_shape=stride_shape,
             )
+
+        # use external for testing
+        self._on_gpu = on_gpu
+        self._model = misc.model_to(on_gpu, self.model)
+
+        # workers should be > 0 else Value Error will be thrown
+        self._postproc_workers = None
+        if self.num_postproc_worker > 0:
+            self._postproc_workers = ProcessPoolExecutor(
+                max_workers=self.num_postproc_worker
+            )
+
+        mp_manager = torch_mp.Manager()
+        mp_shared_space = mp_manager.Namespace()
+        self._mp_shared_space = mp_shared_space
 
         ds = self.dataset_class(
             ioconfig=ioconfig,
@@ -853,6 +895,7 @@ class SemanticSegmentor:
             num_workers=self.num_loader_worker,
             persistent_workers=self.num_loader_worker > 0,
         )
+        self._loader = loader
 
         self.imgs = imgs
         self.masks = masks
@@ -864,7 +907,7 @@ class SemanticSegmentor:
         for wsi_idx, img_path in enumerate(imgs):
             try:
                 wsi_save_path = os.path.join(save_dir, f"{wsi_idx}")
-                self._predict_one_wsi(wsi_idx, ioconfig, loader, wsi_save_path, mode)
+                self._predict_one_wsi(wsi_idx, ioconfig, wsi_save_path, mode)
 
                 # dont use dict as mapping, because can overwrite, if that is
                 # user intention to provide same path twice
@@ -894,6 +937,11 @@ class SemanticSegmentor:
         self.imgs = None
         self.masks = None
         self._model = None
+        self._loader = None
         self._on_gpu = None
+        self._futures = None
         self._mp_shared_space = None
+        if self._postproc_workers is not None:
+            self._postproc_workers.shutdown()
+        self._postproc_workers = None
         return outputs
