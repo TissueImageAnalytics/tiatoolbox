@@ -380,9 +380,12 @@ class SemanticSegmentor:
         # TODO: add pretrained model
 
         # for runtime, such as after wrapping with nn.DataParallel
+        self._loader = None
         self._model = None
         self._on_gpu = None
         self._mp_shared_space = None
+        self._postproc_workers = None
+        self._futures = None
         self.imgs = None
         self.masks = None
 
@@ -858,7 +861,7 @@ class SemanticSegmentor:
             >>> output.keys()
             [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
             >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
-            >>> # will be respectively stored as 'output/0.raw.0', 'output/0.raw.1'
+            >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
 
         """
         if mode not in ["wsi", "tile"]:

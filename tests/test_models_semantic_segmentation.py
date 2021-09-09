@@ -62,6 +62,7 @@ class _CNNTo1(ModelABC):
 
     Simple model to test functionality, this contains a single
     convolution layer which has weight=0 and bias=1.
+
     """
 
     def __init__(self):
