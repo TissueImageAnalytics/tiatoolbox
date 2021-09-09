@@ -210,7 +210,7 @@ class AnnotationStoreABC(ABC):
             if geometry.intersects(query_geometry)
         ]
 
-    def query_index(self, query_geometry: QueryGeometry) -> List[int]:
+    def iquery(self, query_geometry: QueryGeometry) -> List[int]:
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
@@ -438,7 +438,7 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.commit()
         return [token["index"] for token in tokens]
 
-    def query_index(self, query_geometry: QueryGeometry) -> List[int]:
+    def iquery(self, query_geometry: QueryGeometry) -> List[int]:
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
             min_x, min_y, max_x, max_y = query_geometry

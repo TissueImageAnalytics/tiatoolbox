@@ -159,7 +159,7 @@ class TestStore:
 
     def test_iquery_bbox(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
-        results = store.query_index((0, 0, 25, 25))
+        results = store.iquery((0, 0, 25, 25))
         assert len(results) == 4
         assert all(isinstance(index, int) for index in results)
 
