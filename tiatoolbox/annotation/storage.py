@@ -457,9 +457,8 @@ class SQLiteStore(AnnotationStoreABC):
     def iquery(self, query_geometry: QueryGeometry) -> List[int]:
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
-            min_x, min_y, max_x, max_y = query_geometry
-        else:
-            min_x, min_y, max_x, max_y = query_geometry.bounds
+            query_geometry = Polygon.from_bounds(*query_geometry)
+        min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
             """
             SELECT geometry.id
@@ -485,9 +484,8 @@ class SQLiteStore(AnnotationStoreABC):
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
-            min_x, min_y, max_x, max_y = query_geometry
-        else:
-            min_x, min_y, max_x, max_y = query_geometry.bounds
+            query_geometry = Polygon.from_bounds(*query_geometry)
+        min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
             """
             SELECT boundary, [class], properties
