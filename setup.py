@@ -20,11 +20,12 @@ requirements = [
     "pyyaml>=5.1",
     "pandas",
     "glymur",
-    "scikit-learn==0.23.2",
+    "scikit-learn>=0.23.2",
     "scikit-image>=0.17",
     "torchvision==0.9.1",
     "torch==1.8.1",
     "tqdm==4.60.0",
+    "requests",
 ]
 
 setup_requirements = [
@@ -37,16 +38,16 @@ test_requirements = [
 
 setup(
     author="TIA Lab",
-    author_email="tialab@dcs.warwick.ac.uk",
-    python_requires=">=3.6",
+    author_email="tia@dcs.warwick.ac.uk",
+    python_requires=">=3.7",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
     description="Computational pathology toolbox developed by TIA Lab.",
     entry_points={
