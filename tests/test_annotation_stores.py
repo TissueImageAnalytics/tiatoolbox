@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Generator, Tuple, Union, List
 from numbers import Number
+import json
 
 import pytest
 import numpy as np
@@ -273,3 +274,13 @@ class TestStore:
         assert "type" in geodict
         assert geodict["type"] == "FeatureCollection"
         assert geodict["features"] == list(store.features())
+
+    def test_to_geojson_str(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        geojson = store.to_geojson()
+        assert isinstance(geojson, str)
+        geodict = json.loads(geojson)
+        assert "features" in geodict
+        assert "type" in geodict
+        assert geodict["type"] == "FeatureCollection"
+        assert len(geodict["features"]) == len(list(store.features()))
