@@ -180,6 +180,23 @@ class TestStore:
         store.update(index, {"abc": 123})
         assert store[index][1]["abc"] == 123
 
+    def test_update_many(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+        for n, index in enumerate(indexes[:10]):
+            new_geometry = Polygon([(0, 0), (1, 1), (n, n)])
+            # Geometry update
+            store.update(index, {"geometry": new_geometry})
+            assert store[index][0] == new_geometry
+            # Properties update
+            store.update(index, {"abc": 123})
+            assert store[index][1]["abc"] == 123
+
+    def test_keys(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+        indexes = list(indexes)
+        assert len(list(store.keys())) == len(indexes)
+        assert isinstance(list(store.keys())[0], type(indexes[0]))
+
     def test_remove(self, fill_store, tmp_path, Store):
         indexes, store = fill_store(Store, tmp_path / "polygon.db")
         index = indexes[0]

@@ -540,7 +540,7 @@ class SQLiteStore(AnnotationStoreABC):
             row = cur.fetchone()
             if row is None:
                 break
-            index = row
+            index = row[0]
             yield index
 
     def values(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
