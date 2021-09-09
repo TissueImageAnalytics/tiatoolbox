@@ -184,7 +184,7 @@ class TestStore:
         _, store = fill_store(Store, tmp_path / "polygon.db")
         assert len(store) == FILLED_LEN
 
-    def test_in(self, fill_store, tmp_path, Store):
+    def test_contains(self, fill_store, tmp_path, Store):
         indexes, store = fill_store(Store, tmp_path / "polygon.db")
         for index in indexes:
             assert index in store
