@@ -86,20 +86,6 @@ class AnnotationStoreABC(ABC):
             hashlib.md5(geometry.wkb).digest()[:8], "big", signed=True
         )
 
-    @staticmethod
-    def _int_feature(feature: Dict) -> Dict:
-        """Convert feature coordinates to integers.
-
-        Args:
-            feature (dict): GeoJSON style feature dictionary with
-                keys: 'type', 'coordinates', an optionally 'properties'.
-
-        Returns:
-            dict: Feature dictionary with coordinates as integers.
-        """
-        feature["coordinates"] = np.array(feature["coordinates"]).astype(int).tolist()
-        return feature
-
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStoreABC":
         """Load a store object from a path or file-like object."""
@@ -219,9 +205,7 @@ class AnnotationStoreABC(ABC):
             if geometry.intersects(query_geometry)
         ]
 
-    def features(
-        self, int_coords: bool = False, drop_na: bool = True
-    ) -> Generator[Dict[str, Any], None, None]:
+    def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return anotations as a list of geoJSON features.
 
         Args:
@@ -724,15 +708,11 @@ class SQLiteStore(AnnotationStoreABC):
             df = df.append(pd.json_normalize(rows))
         return df.set_index("index")
 
-    def features(
-        self, int_coords: bool = False, drop_na: bool = True
-    ) -> Generator[Dict[str, Any], None, None]:
+    def features(self) -> Generator[Dict[str, Any], None, None]:
         return (
             {
                 "type": "Feature",
-                "geometry": self._int_feature(geometry2feature(geometry))
-                if int_coords
-                else geometry2feature(geometry),
+                "geometry": geometry2feature(geometry),
                 "properties": properties,
             }
             for geometry, properties in self.values()
@@ -801,9 +781,7 @@ class DictionaryStore(AnnotationStoreABC):
         )
         return pd.json_normalize(features).set_index("index")
 
-    def features(
-        self, int_coords: bool = False, drop_na: bool = True
-    ) -> Generator[Dict[str, Any], None, None]:
+    def features(self) -> Generator[Dict[str, Any], None, None]:
         return (
             {
                 "type": "Feature",
