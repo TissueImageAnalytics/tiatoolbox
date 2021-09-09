@@ -30,7 +30,3 @@ python:
   version: "3.7"
   install:
       - requirements: requirements.txt
-
-# Use conda to to manage environment
-# conda:
-#  environment: requirements.dev.conda.yml
