@@ -348,6 +348,12 @@ class TestStore:
         store.dump(tmp_path / "dump_test.db")
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
+    def test_dump_file_handle(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, ":memory:")
+        with open(tmp_path / "dump_test.db", "w") as fh:
+            store.dump(fh)
+        assert (tmp_path / "dump_test.db").stat().st_size > 0
+
     def test_dumps(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, ":memory:")
         string = store.dumps()

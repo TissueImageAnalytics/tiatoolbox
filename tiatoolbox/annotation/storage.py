@@ -744,7 +744,7 @@ class SQLiteStore(AnnotationStoreABC):
         return self.con.commit()
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
-        if isinstance(fp, IO):
+        if hasattr(fp, "write"):
             fp = fp.name
         target = sqlite3.connect(fp)
         self.con.backup(target)
