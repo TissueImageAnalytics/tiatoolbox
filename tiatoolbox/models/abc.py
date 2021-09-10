@@ -28,7 +28,7 @@ class IOConfigABC(ABC):
 
     Enforcing such that following attributes must always be defined by the subclass.
 
-    Attributes
+    Attributes:
         patch_size (tuple(height, width)): Define the size of input patch.
         input_resolutions (list): Define the resolution of each input, incase the
           predictor receives variable input. Must be in the same order as network
