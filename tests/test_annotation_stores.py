@@ -137,6 +137,12 @@ def test_SQLiteStore_compile_options():
     assert all(isinstance(x, str) for x in options)
 
 
+def test_SQLiteStore_multiple_connection(tmp_path):
+    store = SQLiteStore(tmp_path / "annotations.db")
+    store2 = SQLiteStore(tmp_path / "annotations.db")
+    assert len(store) == len(store2)
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 
