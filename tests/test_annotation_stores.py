@@ -132,7 +132,7 @@ def pytest_generate_tests(metafunc):
 # Class Specific Tests
 
 
-def test_SQLite3RTreeStore_compile_options():
+def test_SQLiteStore_compile_options():
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
@@ -287,10 +287,21 @@ class TestStore:
 
     def test_to_geojson_file(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
-        with open(tmp_path / "polygons.json", "w") as fh:
+        with open(tmp_path / "polygon.json", "w") as fh:
             geojson = store.to_geojson(fp=fh)
         assert geojson is None
-        with open(tmp_path / "polygons.json", "r") as fh:
+        with open(tmp_path / "polygon.json", "r") as fh:
+            geodict = json.load(fh)
+        assert "features" in geodict
+        assert "type" in geodict
+        assert geodict["type"] == "FeatureCollection"
+        assert len(geodict["features"]) == len(list(store.features()))
+
+    def test_to_geojson_path(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        geojson = store.to_geojson(fp=tmp_path / "polygon.json")
+        assert geojson is None
+        with open(tmp_path / "polygon.json", "r") as fh:
             geodict = json.load(fh)
         assert "features" in geodict
         assert "type" in geodict
@@ -309,13 +320,35 @@ class TestStore:
 
     def test_to_ldjson_file(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
-        with open(tmp_path / "polygons.ldjson", "w") as fh:
+        with open(tmp_path / "polygon.ldjson", "w") as fh:
             ldjson = store.to_ldjson(fp=fh)
         assert ldjson is None
-        with open(tmp_path / "polygons.ldjson", "r") as fh:
+        with open(tmp_path / "polygon.ldjson", "r") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
                 assert "type" in feature
                 assert "geometry" in feature
                 assert "properties" in feature
+
+    def test_to_ldjson_path(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        ldjson = store.to_ldjson(fp=tmp_path / "polygon.ldjson")
+        assert ldjson is None
+        with open(tmp_path / "polygon.ldjson", "r") as fh:
+            for line in fh.readlines():
+                assert isinstance(line, str)
+                feature = json.loads(line)
+                assert "type" in feature
+                assert "geometry" in feature
+                assert "properties" in feature
+
+    def test_dump(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, ":memory:")
+        store.dump(tmp_path / "dump_test.db")
+        assert (tmp_path / "dump_test.db").stat().st_size > 0
+
+    def test_dumps(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, ":memory:")
+        string = store.dumps()
+        assert isinstance(string, str)

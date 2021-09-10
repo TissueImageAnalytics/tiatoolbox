@@ -25,7 +25,18 @@ import sqlite3
 from abc import ABC
 from numbers import Number
 from pathlib import Path
-from typing import IO, Any, Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    Callable,
+)
+from typing.io import IO
 import copy
 
 import numpy as np
@@ -232,6 +243,22 @@ class AnnotationStoreABC(ABC):
             "features": list(self.features()),
         }
 
+    @staticmethod
+    def _dump_cases(
+        fp: Union[IO, str, Path, None],
+        file_fn: Callable[[IO], None],
+        none_fn: Callable[[], str],
+    ) -> Union[None, Any]:
+        if fp is not None:
+            if hasattr(fp, "write"):  # fp is a file handle, write to it
+                file_fn(fp)
+            else:  # Get a file handle from fp, then write to it
+                with open(fp, "w", encoding="utf-8") as file_handle:
+                    file_fn(file_handle)
+            return
+        # Return as an object (str or bytes) if no fp is given
+        return none_fn()
+
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise the store to geoJSON.
 
@@ -243,19 +270,22 @@ class AnnotationStoreABC(ABC):
             None or str: None if writing to file or the geoJSON string.
 
         """
-        if fp is not None:
-            json.dump(self.to_geodict(), fp)
-            return
-        return json.dumps(self.to_geodict())
+        return self._dump_cases(
+            fp=fp,
+            file_fn=lambda fp: json.dump(self.to_geodict(), fp),
+            none_fn=lambda: json.dumps(self.to_geodict()),
+        )
 
     def to_ldjson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise to Line-Delimited (Geo)JSON."""
         string_lines_generator = (
             json.dumps(line, separators=(",", ":")) + "\n" for line in self.features()
         )
-        if not fp:
-            return "".join(string_lines_generator)
-        fp.writelines(string_lines_generator)
+        return self._dump_cases(
+            fp=fp,
+            file_fn=lambda fp: fp.writelines(string_lines_generator),
+            none_fn=lambda: "".join(string_lines_generator),
+        )
 
     def to_dataframe(self) -> pd.DataFrame:
         """Create a copy of the store as a Pandas DataFrame.
@@ -720,7 +750,7 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.backup(target)
 
     def dumps(self) -> str:
-        raise NotImplementedError()
+        return "\n".join(self.con.iterdump())
 
 
 class DictionaryStore(AnnotationStoreABC):
