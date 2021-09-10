@@ -74,7 +74,7 @@ class IOConfigSegmentor(IOConfigABC):
         Examples:
 
             >>> # Defining io for a network having 1 input and 1 output at the
-            >>> # same resolution
+            >>> #  same resolution
             >>> ioconfig = IOConfigSegmentor(
             ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
             ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
