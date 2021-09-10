@@ -71,7 +71,8 @@ class CNNPatchModel(ModelABC):
         num_classes (int): Number of classes output by the model.
         feat_extract (nn.Module): Backbone CNN model.
         pool (nn.Module): Type of pooling applied after feature extraction.
-        classifier (nn.Module): Linear classifier module used to map the features to the output.
+        classifier (nn.Module): Linear classifier module used to map the features
+          to the output.
 
     """
 
