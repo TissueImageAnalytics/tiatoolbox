@@ -20,7 +20,6 @@ Properties
 """
 import hashlib
 import itertools
-from json.decoder import JSONDecodeError
 import sqlite3
 from abc import ABC
 from numbers import Number
@@ -259,12 +258,28 @@ class AnnotationStoreABC(ABC):
         # Return as an object (str or bytes) if no fp is given
         return none_fn()
 
-    @classmethod
-    def from_geojson(cls, fp: Union[IO, str]) -> "DictionaryStore":
+    @staticmethod
+    def _load_cases(
+        fp: Union[IO, str, Path],
+        string_fn: Callable[[Union[str, bytes]], Any],
+        file_fn: Callable[[IO], Any],
+    ) -> Any:
         try:
-            geojson = json.loads(fp)
-        except JSONDecodeError:
-            geojson = json.load(fp)
+            return string_fn(fp)
+        except TypeError:
+            if hasattr(fp, "read"):
+                return file_fn(fp)
+            else:
+                with open(fp) as file_handle:
+                    return file_fn(file_handle)
+
+    @classmethod
+    def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStoreABC":
+        geojson = cls._load_cases(
+            fp=fp,
+            string_fn=json.loads,
+            file_fn=json.load,
+        )
         store = cls()
         for feature in geojson["features"]:
             geometry = feature2geometry(feature["geometry"])
@@ -300,13 +315,21 @@ class AnnotationStoreABC(ABC):
             none_fn=lambda: "".join(string_lines_generator),
         )
 
-    def to_dataframe(self) -> pd.DataFrame:
-        """Create a copy of the store as a Pandas DataFrame.
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame) -> "AnnotationStoreABC":
+        store = cls()
+        for _, row in df.iterrows():
+            geometry = row["geometry"]
+            properties = dict(row.filter(regex="^(?!geometry|index).*$"))
+            store.append(geometry, properties)
+        return store
 
-        Returns:
-            pd.DataFrame: The resulting dataframe.
-        """
-        raise NotImplementedError()
+    def to_dataframe(self) -> pd.DataFrame:
+        features = (
+            {"index": index, "geometry": geometry, "properties": properties}
+            for index, (geometry, properties) in self.items()
+        )
+        return pd.json_normalize(features).set_index("index")
 
 
 class SQLiteStore(AnnotationStoreABC):
@@ -795,26 +818,6 @@ class DictionaryStore(AnnotationStoreABC):
 
     def remove(self, index: int) -> None:
         del self._features[index]
-
-    @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, no_copy=False) -> "DictionaryStore":
-        store = cls()
-        for index, row in df.iterrows():
-            geometry = row["geometry"]
-            properties = dict(row.loc[:, row.columns != "geometry"])
-            feature = {
-                "geometry": geometry,
-                "properties": properties,
-            }
-            store._features[index] = feature
-        return store
-
-    def to_dataframe(self) -> pd.DataFrame:
-        features = (
-            {"index": index, "geometry": geometry, "properties": properties}
-            for index, (geometry, properties) in self.items()
-        )
-        return pd.json_normalize(features).set_index("index")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         return (

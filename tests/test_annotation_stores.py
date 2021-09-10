@@ -246,6 +246,21 @@ class TestStore:
         store[index] = (geometry, properties)
         assert store[index] == (geometry, properties)
 
+    def test_from_dataframe(self, cell_grid, Store):
+        df = pd.DataFrame.from_records(
+            [
+                {
+                    "geometry": cell,
+                    "row_id": n,
+                }
+                for n, cell in enumerate(cell_grid)
+            ]
+        )
+        store = Store.from_dataframe(df)
+        keys = list(store.keys())
+        _, properties = store[keys[0]]
+        assert "row_id" in properties
+
     def test_to_dataframe(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
         df = store.to_dataframe()
@@ -275,10 +290,23 @@ class TestStore:
         assert geodict["type"] == "FeatureCollection"
         assert geodict["features"] == list(store.features())
 
-    def test_fromgeojson(self, fill_store, tmp_path, Store):
+    def test_from_geojson_str(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
         store2 = Store.from_geojson(geojson)
+        assert len(store) == len(store2)
+
+    def test_from_geojson_file(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        store.to_geojson(tmp_path / "polygon.json")
+        with open(tmp_path / "polygon.json", "r") as file_handle:
+            store2 = Store.from_geojson(file_handle)
+        assert len(store) == len(store2)
+
+    def test_from_geojson_path(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        store.to_geojson(tmp_path / "polygon.json")
+        store2 = Store.from_geojson(tmp_path / "polygon.json")
         assert len(store) == len(store2)
 
     def test_to_geojson_str(self, fill_store, tmp_path, Store):
@@ -360,7 +388,7 @@ class TestStore:
             store.dump(fh)
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
-    def test_dumps(self, fill_store, tmp_path, Store):
+    def test_dumps(self, fill_store, Store):
         _, store = fill_store(Store, ":memory:")
         string = store.dumps()
         assert isinstance(string, str)
