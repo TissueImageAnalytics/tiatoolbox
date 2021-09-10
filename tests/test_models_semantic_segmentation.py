@@ -20,7 +20,7 @@ from tiatoolbox.models.segmentation import (
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 # ----------------------------------------------------
 
 
@@ -287,7 +287,7 @@ def test_functional_segmentor(_sample_wsi_dict):
             np.full((2, 2), 4),
         ],
         [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
-        f"{save_dir}/_temp.py",
+        save_path=None,
         free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
@@ -417,5 +417,35 @@ def test_functional_segmentor(_sample_wsi_dict):
         on_gpu=ON_GPU,
         ioconfig=ioconfig,
         crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+
+
+def test_subclass(_sample_wsi_dict):
+    """Create subclass and test parallel processing setup."""
+
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+
+    model = _CNNTo1()
+
+    class XSegmentor(SemanticSegmentor):
+        def __init__(self):
+            super().__init__(model=model)
+            self.num_postproc_worker = 2
+
+    save_dir = _get_temp_folder_path()
+    save_dir = pathlib.Path(save_dir)
+    runner = XSegmentor()
+    _rm_dir(save_dir)  # default output dir test
+    runner.predict(
+        [_mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
+        resolution=1.0,
+        units="baseline",
+        crash_on_exception=False,
         save_dir=f"{save_dir}/raw/",
     )

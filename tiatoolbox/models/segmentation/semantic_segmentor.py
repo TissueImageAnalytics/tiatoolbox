@@ -394,7 +394,7 @@ class SemanticSegmentor:
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_worker
-        self.num_postproc_worker = num_postproc_worker
+        self.num_postproc_worker = None
         self.verbose = verbose
         self.auto_generate_mask = auto_generate_mask
 
@@ -905,7 +905,7 @@ class SemanticSegmentor:
 
         # workers should be > 0 else Value Error will be thrown
         self._postproc_workers = None
-        if self.num_postproc_worker > 0:
+        if self.num_postproc_worker is not None:
             self._postproc_workers = ProcessPoolExecutor(
                 max_workers=self.num_postproc_worker
             )
