@@ -46,7 +46,51 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireade
 
 
 class IOConfigSegmentor(IOConfigABC):
-    """Define a class to hold IO information for patch predictor."""
+    """Define IO placement for patch input and output.
+
+    Args:
+        input_resolutions (list): resolution of each input head of model
+            inference, must be in the same order as target model.forward().
+        output_resolutions (list): resolution of each output head from model
+            inference, must be in the same order as target model.infer_batch().
+        patch_input_shape (:class:`numpy.ndarray`, list(int)): shape of the
+            largest input in height width.
+        patch_output_shape (:class:`numpy.ndarray`, list(int)): shape of the
+            largest output in height width.
+        save_resolution  (dict): resolution to save all output.
+
+    Examples:
+        >>> # Defining io for a network having 1 input and 1 output at the
+        >>> # same resolution
+        >>> ioconfig = IOConfigSegmentor(
+        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     patch_input_shape=[2048, 2048],
+        ...     patch_output_shape=[1024, 1024],
+        ...     stride_shape=[512, 512],
+        ... )
+
+    Examples:
+        >>> # Defining io for a network having 3 input and 2 output at the
+        >>> # at the same resolution, the output is then merged at another
+        >>> # different resolution.
+        >>> ioconfig = IOConfigSegmentor(
+        ...     input_resolutions=[
+        ...         {"units": "mpp", "resolution": 0.25},
+        ...         {"units": "mpp", "resolution": 0.50},
+        ...         {"units": "mpp", "resolution": 0.75},
+        ...     ],
+        ...     output_resolutions=[
+        ...         {"units": "mpp", "resolution": 0.25},
+        ...         {"units": "mpp", "resolution": 0.50},
+        ...     ],
+        ...     patch_input_shape=[2048, 2048],
+        ...     patch_output_shape=[1024, 1024],
+        ...     stride_shape=[512, 512],
+        ...     save_resolution={"units": "mpp", "resolution": 4.0},
+        ... )
+
+    """
 
     # We predefine to follow enforcement, actual initialization in init
     patch_size = None
@@ -62,49 +106,6 @@ class IOConfigSegmentor(IOConfigABC):
         save_resolution: dict = None,
         **kwargs,
     ):
-        """Define IO placement for patch input and output.
-
-        Args:
-            input_resolutions: resolution of each input head of model
-                inference, must be in the same order as target model.forward().
-            output_resolutions: resolution of each output head from model
-                inference, must be in the same order as target model.infer_batch().
-            save_resolution: resolution to save all output.
-
-        Examples:
-
-            >>> # Defining io for a network having 1 input and 1 output at the
-            >>> # same resolution
-            >>> ioconfig = IOConfigSegmentor(
-            ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-            ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-            ...     patch_input_shape=[2048, 2048],
-            ...     patch_output_shape=[1024, 1024],
-            ...     stride_shape=[512, 512],
-            ... )
-
-        Examples:
-
-            >>> # Defining io for a network having 3 input and 2 output at the
-            >>> # at the same resolution, the output is then merged at another
-            >>> # different resolution.
-            >>> ioconfig = IOConfigSegmentor(
-            ...     input_resolutions=[
-            ...         {"units": "mpp", "resolution": 0.25},
-            ...         {"units": "mpp", "resolution": 0.50},
-            ...         {"units": "mpp", "resolution": 0.75},
-            ...     ],
-            ...     output_resolutions=[
-            ...         {"units": "mpp", "resolution": 0.25},
-            ...         {"units": "mpp", "resolution": 0.50},
-            ...     ],
-            ...     patch_input_shape=[2048, 2048],
-            ...     patch_output_shape=[1024, 1024],
-            ...     stride_shape=[512, 512],
-            ...     save_resolution={"units": "mpp", "resolution": 4.0},
-            ... )
-
-        """
         self.patch_input_shape = patch_input_shape
         self.patch_output_shape = patch_output_shape
         self.stride_shape = None
@@ -150,10 +151,10 @@ class IOConfigSegmentor(IOConfigABC):
         Args:
             resolutions (list): a list of resolutions where each defined
                 as `{'resolution': value, 'unit': value}`
-            unit (string): unit that the the resolutions are at.
+            unit (str): unit that the the resolutions are at.
 
-        Return:
-            (np.ndarray): an 1D array of scaling factor having the same
+        Returns:
+            :class:`numpy.ndarray`: an 1D array of scaling factor having the same
                 length as `resolutions`
 
         """
@@ -170,9 +171,9 @@ class IOConfigSegmentor(IOConfigABC):
     def to_baseline(self):
         """Convert IO to baseline form.
 
-        This will return a new IO holder where resolutions have been converted
-        to baseline form with highest possible resolution found in both input
-        and output as reference.
+        This will return a new :class:`IOConfigSegmentor` where resolutions have
+        been converted to baseline form with highest possible resolution found
+        in both input and output as reference.
 
         """
         _self = copy.deepcopy(self)
@@ -201,11 +202,13 @@ class WSIStreamDataset(torch_data.Dataset):
     information.
 
     Args:
-        mp_shared_space: must be from torch.multiprocessing, for example
-        ioconfig: object which contains I/O placement for patches.
-        wsi_paths: List of paths pointing to a WSI or tiles.
-        preproc: pre-processing function to be applied on a patch.
-        mode: either `wsi` or `tile` to indicate which form the input in
+        mp_shared_space (object): shared multiprocessing space, must be from
+            torch.multiprocessing.
+        ioconfig (:class:`IOConfigSegmentor`): object which contains I/O placement
+            for patches.
+        wsi_paths (list): List of paths pointing to a WSI or tiles.
+        preproc (Callable): pre-processing function to be applied on a patch.
+        mode (str): either `wsi` or `tile` to indicate which form the input in
             `wsi_paths` is.
 
     Examples:
@@ -410,26 +413,24 @@ class SemanticSegmentor:
         obey the API defined here.
 
         Args:
-            image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
+            image_shape (tuple(int), :class:`numpy.ndarray`):
                 This argument specifies the shape of mother image (the image we want to)
                 extract patches from) at requested `resolution` and `units` and it is
                 expected to be in (width, height) format.
+            ioconfig (:class:`IOConfigSegmentor`): object that contains information
+                about input and ouput placement of patches. Check `IOConfigSegmentor`
+                for details about available attributes.
 
-            ioconfig (object): object that contains information about input and ouput
-                placement of patches. Check `IOConfigSegmentor` for details about
-                available attributes.
-
-        Return:
-            patch_inputs: a list of corrdinates in
-                `[start_x, start_y, end_x, end_y]` format indicating the read location
-                of the patch in the mother image.
-
-            patch_outputs: a list of corrdinates in
-                `[start_x, start_y, end_x, end_y]` format indicating the write location
-                of the patch in the mother image.
+        Returns:
+            (tuple): tuple containing:
+                patch_inputs (list): a list of corrdinates in
+                    `[start_x, start_y, end_x, end_y]` format indicating the read
+                    location of the patch in the mother image.
+                patch_outputs (list): a list of corrdinates in
+                    `[start_x, start_y, end_x, end_y]` format indicating the write
+                    location of the patch in the mother image.
 
         Examples:
-
             >>> # API of function expected to overwrite `get_coordinates`
             >>> def func(image_shape, ioconfig):
             ...   patch_inputs = np.array([[0, 0, 256, 256]])
@@ -465,7 +466,6 @@ class SemanticSegmentor:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal
                 reader of the mask related to the WSI from which we want
                 to extract the patches.
-
             bounds (ndarray and np.int32): Coordinates to be checked
                 via the `func`. They must be in the same resolution as requested
                 `resolution` and `units`. The shape of `coordinatess` is (N, K)
@@ -478,7 +478,6 @@ class SemanticSegmentor:
             ndarray: list of flags to indicate which coordinate is valid.
 
         Examples:
-
             >>> # API of function expected to overwrite `filter_coordinates`
             >>> def func(reader, bounds, resolution, units):
             ...   # as example, only select first bound
@@ -548,8 +547,8 @@ class SemanticSegmentor:
 
         Args:
             wsi_idx (int): index of the tile/wsi to be processed within `self`.
-            ioconfig (IOConfigSegmentor): object which defines I/O placement during
-                inference and when assembling back to full tile/wsi.
+            ioconfig (:class:`IOConfigSegmentor`): object which defines I/O placement
+                during inference and when assembling back to full tile/wsi.
             loader (torch.Dataloader): loader object which return batch of data
                 to be input to model.
             save_path (str): location to save output prediction as well as possible
@@ -690,6 +689,9 @@ class SemanticSegmentor:
                 be modified in place and each patch will be replace with `None`
                 once processed. This is to save memory when assembling.
 
+        Returns:
+            :class:`numpy.ndarray` : an image contains merged data.
+
         Examples:
 
         >>> SemanticSegmentor.merge_prediction(
@@ -825,11 +827,12 @@ class SemanticSegmentor:
                 generated for whole-slide images or the entire image is processed for
                 image tiles.
             mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (object): object that define information about input and ouput
-                placement of patches. When provided, `patch_input_shape`,
-                `patch_output_shape`, `stride_shape`, `resolution`, and `units`
+            ioconfig (:class:`IOConfigSegmentor`): object that define information about
+                input and ouput placement of patches. When provided,
+                 `patch_input_shape`, `patch_output_shape`, `stride_shape`,
+                 `resolution`, and `units`
                 arguments are ignore. Otherwise, those arguments will be internally
-                converted to an ioconfig object.
+                converted to a :class:`IOConfigSegmentor` object.
             on_gpu (bool): whether to run model on the GPU.
             patch_input_shape (tuple): Size of patches input to the model. The value
                 are at requested read resolution and must be positive.
@@ -858,7 +861,7 @@ class SemanticSegmentor:
             >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
             >>> predictor = SemanticSegmentor(model='unet')
             >>> output = predictor.predict(wsis, mode='wsi')
-            >>> output.keys()
+            >>> list(output.keys())
             [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
             >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
             >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'

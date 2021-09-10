@@ -128,6 +128,25 @@ Classification
 .. automodule:: tiatoolbox.models.classification.pretrained_info
     :members:
 
+------------
+Segmentation
+------------
+
+.. automodule:: tiatoolbox.models.segmentation
+    :members:
+
+.. autoclass:: IOConfigSegmentor
+    :show-inheritance:
+    :members:
+
+.. autoclass:: WSIStreamDataset
+    :show-inheritance:
+    :members:
+
+.. autoclass:: SemanticSegmentor
+    :show-inheritance:
+    :members:
+
 -------
 DataSet
 -------

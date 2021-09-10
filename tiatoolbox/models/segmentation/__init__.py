@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
-"""Package where patch-level classification models are stored."""
+"""Package where segmentation models are stored."""
 
 from tiatoolbox.models.segmentation.semantic_segmentor import (
     SemanticSegmentor,
