@@ -291,7 +291,12 @@ class SQLiteStore(AnnotationStoreABC):
             candidate = self.deserialise_geometry(candidate)
             return wkb.loads(geometry_wkb).intersects(candidate)
 
-        self.con.create_function("intersects", 2, wkb_intersects)
+        try:
+            self.con.create_function(
+                "intersects", 2, wkb_intersects, deterministic=True
+            )
+        except TypeError:  # only Python >= 3.8 supports deterministic
+            self.con.create_function("intersects", 2, wkb_intersects)
 
         if exists:
             return
