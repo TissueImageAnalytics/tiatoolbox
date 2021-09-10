@@ -2,7 +2,7 @@
 
 """The setup script."""
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md") as readme_file:
     readme = readme_file.read()
@@ -20,11 +20,9 @@ requirements = [
     "pyyaml>=5.1",
     "pandas",
     "glymur",
-    "scikit-learn>=0.23.2",
-    "scikit-image>=0.17",
+    "torch==1.8.2+cu102",
+    "torchvision==0.9.2+cu102",
     "tqdm==4.60.0",
-    "torchvision>=0.9.1",
-    "torch>=1.8.1",
 ]
 
 setup_requirements = [
