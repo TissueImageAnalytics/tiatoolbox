@@ -333,7 +333,34 @@ class WSIStreamDataset(torch_data.Dataset):
 
 
 class SemanticSegmentor:
-    """Pixel-wise segmentation predictor."""
+    """Pixel-wise segmentation predictor.
+
+    Note, if model is supplied in the arguments, it will override the backbone.
+
+    Args:
+        model (nn.Module): Use externally defined PyTorch model for prediction with.
+            weights already loaded. Default is `None`. If provided,
+            `pretrained_model` argument is ignored.
+        pretrained_model (str): Name of the existing models support by tiatoolbox
+            for processing the data. Refer to
+            `tiatoolbox.models.classification.get_pretrained_model` for details.
+            By default, the corresponding pretrained weights will also be
+            downloaded. However, you can override with your own set of weights
+            via the `pretrained_weight` argument. Argument is case insensitive.
+        pretrained_weight (str): Path to the weight of the corresponding
+            `pretrained_model`.
+        batch_size (int) : Number of images fed into the model each time.
+        num_loader_worker (int) : Number of workers to load the data.
+            Take note that they will also perform preprocessing.
+        num_postproc_worker (int) : This value is there to maintain input
+            compatibility with `tiatoolbox.models.classification` and is
+            not used.
+        verbose (bool): Whether to output logging information.
+        dataset_class (obj): Dataset class to be used instead of default.
+        auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
+            if is not provided.
+
+    """
 
     def __init__(
         self,
@@ -347,34 +374,6 @@ class SemanticSegmentor:
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ):
-        """Initialise the Semantic Segmentor.
-
-        Note, if model is supplied in the arguments, it will override the backbone.
-
-        Args:
-            model (nn.Module): Use externally defined PyTorch model for prediction with.
-                weights already loaded. Default is `None`. If provided,
-                `pretrained_model` argument is ignored.
-            pretrained_model (str): Name of the existing models support by tiatoolbox
-                for processing the data. Refer to
-                `tiatoolbox.models.classification.get_pretrained_model` for details.
-                By default, the corresponding pretrained weights will also be
-                downloaded. However, you can override with your own set of weights
-                via the `pretrained_weight` argument. Argument is case insensitive.
-            pretrained_weight (str): Path to the weight of the corresponding
-                `pretrained_model`.
-            batch_size (int) : Number of images fed into the model each time.
-            num_loader_worker (int) : Number of workers to load the data.
-                Take note that they will also perform preprocessing.
-            num_postproc_worker (int) : This value is there to maintain input
-                compatibility with `tiatoolbox.models.classification` and is
-                not used.
-            verbose (bool): Whether to output logging information.
-            dataset_class (obj): Dataset class to be used instead of default.
-            auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
-                if is not provided.
-
-        """
         super().__init__()
 
         if model is None and pretrained_model is None:
