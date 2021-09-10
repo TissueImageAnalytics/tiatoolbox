@@ -20,7 +20,7 @@ from tiatoolbox.models.segmentation import (
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = True
+ON_GPU = False
 # ----------------------------------------------------
 
 
