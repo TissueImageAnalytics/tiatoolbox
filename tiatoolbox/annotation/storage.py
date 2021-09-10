@@ -286,13 +286,6 @@ class SQLiteStore(AnnotationStoreABC):
         self.con = sqlite3.connect(connection, isolation_level="DEFERRED")
 
         # Register custom functions
-        def wkb_contains(candidate: Union[bytes, str], geometry_wkb: bytes) -> bool:
-            """Check if one WKB/WKT is contained in a geometry."""
-            candidate = self.deserialise_geometry(candidate)
-            return wkb.loads(geometry_wkb).contains(candidate)
-
-        self.con.create_function("contains", 2, wkb_contains)
-
         def wkb_intersects(candidate: Union[bytes, str], geometry_wkb: bytes) -> bool:
             """Check if one WKB/WKT intersects a geometry."""
             candidate = self.deserialise_geometry(candidate)
