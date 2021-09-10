@@ -259,6 +259,19 @@ class AnnotationStoreABC(ABC):
         # Return as an object (str or bytes) if no fp is given
         return none_fn()
 
+    @classmethod
+    def from_geojson(cls, fp: Union[IO, str]) -> "DictionaryStore":
+        try:
+            geojson = json.loads(fp)
+        except JSONDecodeError:
+            geojson = json.load(fp)
+        store = cls()
+        for feature in geojson["features"]:
+            geometry = feature2geometry(feature["geometry"])
+            properties = feature["properties"]
+            store.append(geometry, properties)
+        return store
+
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise the store to geoJSON.
 
@@ -836,23 +849,6 @@ class DictionaryStore(AnnotationStoreABC):
 
     def __len__(self) -> int:
         return len(self._features)
-
-    @classmethod
-    def from_geojson(cls, fp: Union[IO, str]) -> "DictionaryStore":
-        try:
-            geojson = json.loads(fp)
-        except JSONDecodeError:
-            geojson = json.load(fp)
-        features = [
-            {
-                "geometry": feature2geometry(feature["geometry"]),
-                "properties": feature["properties"],
-            }
-            for feature in geojson["features"]
-        ]
-        store = cls()
-        store._features = features
-        return store
 
     @classmethod
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":

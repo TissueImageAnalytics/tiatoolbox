@@ -275,6 +275,12 @@ class TestStore:
         assert geodict["type"] == "FeatureCollection"
         assert geodict["features"] == list(store.features())
 
+    def test_fromgeojson(self, fill_store, tmp_path, Store):
+        _, store = fill_store(Store, tmp_path / "polygon.db")
+        geojson = store.to_geojson()
+        store2 = Store.from_geojson(geojson)
+        assert len(store) == len(store2)
+
     def test_to_geojson_str(self, fill_store, tmp_path, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
