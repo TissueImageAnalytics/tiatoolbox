@@ -331,6 +331,9 @@ class AnnotationStoreABC(ABC):
         )
         return pd.json_normalize(features).set_index("index")
 
+    def __del__(self) -> None:
+        self.close()
+
 
 class SQLiteStore(AnnotationStoreABC):
     @classmethod  # noqa: A003
@@ -434,7 +437,7 @@ class SQLiteStore(AnnotationStoreABC):
             options = conn.execute("pragma compile_options").fetchall()
         return [opt for opt, in options]
 
-    def __del__(self) -> None:
+    def close(self) -> None:
         self.con.close()
 
     def _make_token(self, geometry: Geometry, properties: Dict) -> Dict:
@@ -862,3 +865,6 @@ class DictionaryStore(AnnotationStoreABC):
 
     def dumps(self) -> str:
         return self.to_geojson()
+
+    def close(self) -> None:
+        pass
