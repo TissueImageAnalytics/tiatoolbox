@@ -9,8 +9,8 @@ pandas
 glymur
 scikit-learn>=0.23.2
 scikit-image
-torchvision==0.9.1
-torch==1.8.1
+torch==1.8.2+cu102
+torchvision==0.9.2+cu102
 tqdm==4.60.0
 jupyterlab
 requests
