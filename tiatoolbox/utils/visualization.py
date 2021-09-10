@@ -46,6 +46,7 @@ def overlay_patch_prediction(
             By default, integer will be taken as label and color will be random.
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
+
     """
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(

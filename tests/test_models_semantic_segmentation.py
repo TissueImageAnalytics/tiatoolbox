@@ -30,7 +30,7 @@ def _rm_dir(path):
 
 
 def _get_temp_folder_path():
-    """Return unique temp folder path"""
+    """Return unique temp folder path."""
     new_dir = os.path.join(
         rcParam["TIATOOLBOX_HOME"], f"test_model_patch_{int(time())}"
     )
@@ -41,8 +41,8 @@ def _crop_op(x, cropping, data_format="NCHW"):
     """Center crop image.
 
     Args:
-        x: input image
-        cropping: the substracted amount
+        x (torch.Tensor): input image
+        cropping (torch.Tensor): the substracted amount
         data_format: choose either `NCHW` or `NHWC`
 
     """
@@ -58,14 +58,15 @@ def _crop_op(x, cropping, data_format="NCHW"):
 
 
 class _CNNTo1(ModelABC):
-    """Contain a convolution.
+    """Contains a convolution.
 
     Simple model to test functionality, this contains a single
     convolution layer which has weight=0 and bias=1.
+
     """
 
     def __init__(self):
-        super(_CNNTo1, self).__init__()
+        super().__init__()
         self.conv = nn.Conv2d(3, 1, 3, padding=1)
         self.conv.weight.data.fill_(0)
         self.conv.bias.data.fill_(1)
@@ -114,7 +115,7 @@ class _CNNTo1(ModelABC):
 
 
 def test_segmentor_ioconfig():
-    """Test for IOConfig"""
+    """Test for IOConfig."""
     default_config = dict(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
@@ -211,12 +212,11 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     out = sds.collate_fn([None, 1, 2, 3])
     assert np.sum(out.numpy() != np.array([1, 2, 3])) == 0
 
-    # faking data injecttion
+    # artificial data injection
     mp_shared_space.wsi_idx = torch.tensor(0)  # a scalar
     mp_shared_space.patch_inputs = torch.from_numpy(
         np.array(
             [
-                # skipcq
                 [0, 0, 256, 256],
                 [256, 256, 512, 512],
             ]
@@ -225,7 +225,6 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     mp_shared_space.patch_outputs = torch.from_numpy(
         np.array(
             [
-                # skipcq
                 [0, 0, 256, 256],
                 [256, 256, 512, 512],
             ]
@@ -288,7 +287,7 @@ def test_functional_segmentor(_sample_wsi_dict):
             np.full((2, 2), 4),
         ],
         [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
-        f"{save_dir}/_temp.py",
+        save_path=None,
         free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
@@ -418,5 +417,35 @@ def test_functional_segmentor(_sample_wsi_dict):
         on_gpu=ON_GPU,
         ioconfig=ioconfig,
         crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+
+
+def test_subclass(_sample_wsi_dict):
+    """Create subclass and test parallel processing setup."""
+
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+
+    model = _CNNTo1()
+
+    class XSegmentor(SemanticSegmentor):
+        def __init__(self):
+            super().__init__(model=model)
+            self.num_postproc_worker = 2
+
+    save_dir = _get_temp_folder_path()
+    save_dir = pathlib.Path(save_dir)
+    runner = XSegmentor()
+    _rm_dir(save_dir)  # default output dir test
+    runner.predict(
+        [_mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        patch_input_shape=[2048, 2048],
+        patch_output_shape=[1024, 1024],
+        stride_shape=[512, 512],
+        resolution=1.0,
+        units="baseline",
+        crash_on_exception=False,
         save_dir=f"{save_dir}/raw/",
     )

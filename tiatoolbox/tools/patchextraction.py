@@ -277,31 +277,26 @@ class PatchExtractor(ABC):
                 This argument specifies the shape of mother image (the image we want to)
                 extract patches from) at requested `resolution` and `units` and it is
                 expected to be in (width, height) format.
-
             patch_input_shape (a tuple (int, int) or
                                 :class:`numpy.ndarray`of shape (2,)):
                 Specifies the input shape of requested patches to be extracted from
                 mother image at desired `resolution` and `units`. This argument is also
                 expected to be in (width, height) format.
-
             patch_output_shape (a tuple (int, int) or
                                 :class:`numpy.ndarray`of shape (2,)):
                 Specifies the output shape of requested patches to be extracted from
                 mother image at desired `resolution` and `units`. This argument is also
                 expected to be in (width, height) format. If this is not provided,
                 `patch_output_shape` will be the same as `patch_input_shape`.
-
             stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
                 The stride that is used to calcualte the patch location during the patch
                 extraction. If `patch_output_shape` is provided, next stride location
                 will base on the output rather than the input.
-
             input_within_bound (bool): Whether to include the patches where their
                 `input` location exceed the margins of mother image. If `True`, the
                 patches with input location exceeds the `image_shape` would be
                 neglected. Otherwise, those patches would be extracted with `Reader`
                 function and appropriate padding.
-
             output_within_bound (bool): Whether to include the patches where their
                 `output` location exceed the margins of mother image. If `True`, the
                 patches with output location exceeds the `image_shape` would be
