@@ -34,12 +34,13 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     Attributes:
         return_labels (bool, False): `__getitem__` will return both the img and
-        its label. If `labels` is `None`, `None` is returned
+          its label. If `labels` is `None`, `None` is returned
         preproc_func: Preprocessing function used to transform the input data. If
-        supplied, then torch.Compose will be used on the input preprocs.
-        preprocs is a list of torchvision transforms for preprocessing the image.
-        The transforms will be applied in the order that they are given in the list.
-        https://pytorch.org/vision/stable/transforms.html.
+          supplied, then torch.Compose will be used on the input preprocs.
+          preprocs is a list of torchvision transforms for preprocessing the
+          image. The transforms will be applied in the order that they are given in
+          the list. For more information, use the following link:
+          https://pytorch.org/vision/stable/transforms.html.
 
     """
 
@@ -54,7 +55,8 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     def _check_input_integrity(self, mode):
         """Perform check to make sure variables received during init are valid.
-        These check include:
+
+        These checks include:
             - Input is of a singular data type, such as a list of paths.
             - If it is list of images, all images are of the same height and width
 
@@ -125,6 +127,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     @staticmethod
     def load_img(path):
         """Load an image from a provided path.
+
         Args:
             path (str): Path to an image file.
 
@@ -156,7 +159,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """Set the pre-processing function for this instance.
 
         If `func=None`, the method will default to `self.preproc`. Otherwise,
-        `func` is expected to be callable and behave as follows:
+          `func` is expected to be callable and behave as follows:
         >>> transformed_img = func(img)
 
         """
