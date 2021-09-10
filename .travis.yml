@@ -2,9 +2,9 @@
 
 language: python
 python:
+  - 3.9
   - 3.8
   - 3.7
-  - 3.6
 
 if: type != push OR branch = master OR branch = develop OR branch = pre-release OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
@@ -52,7 +52,7 @@ deploy:
     on:
       branch: pre-release
       repo: TIA-Lab/tiatoolbox
-      python: 3.8
+      python: 3.9
   - provider: pypi
     distributions: sdist bdist_wheel
     user: __token__
@@ -62,4 +62,4 @@ deploy:
       branch: master
       tags: true
       repo: TIA-Lab/tiatoolbox
-      python: 3.8
+      python: 3.9
