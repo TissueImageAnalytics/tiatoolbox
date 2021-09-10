@@ -20,9 +20,12 @@ requirements = [
     "pyyaml>=5.1",
     "pandas",
     "glymur",
-    "torch==1.8.2+cu102",
-    "torchvision==0.9.2+cu102",
+    "scikit-learn>=0.23.2",
+    "scikit-image>=0.17",
+    "torchvision==0.9.1",
+    "torch==1.8.1",
     "tqdm==4.60.0",
+    "requests",
 ]
 
 setup_requirements = [
