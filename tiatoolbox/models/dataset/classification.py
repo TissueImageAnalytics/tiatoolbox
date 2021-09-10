@@ -91,8 +91,16 @@ class PatchDataset(abc.PatchDatasetABC):
         labels: List of label for sample at the same index in `inputs` .
             Default is `None`.
         preproc_func: Preprocessing function used to transform the input data.
-            Example:
-            >>> transformed_img = func(img)
+
+    Examples:
+        >>> # an user defined preproc func and expected behavior
+        >>> preproc_func = lambda img: img/2  # reduce intensity by half
+        >>> transformed_img = preproc_func(img)
+        >>> # create a dataset to get patches preprocessed by the above function
+        >>> ds = PatchDataset(
+        ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
+        ...     preproc_func=preproc_func
+        ... )
 
     """
 
@@ -182,8 +190,21 @@ class WSIPatchDataset(abc.PatchDatasetABC):
                 value is fixed to be `resolution=1.0` and `units='baseline'`
                 units: check (:class:`.WSIReader`) for details.
             preproc_func: Preprocessing function used to transform the input data.
-                Example:
-                >>> transformed_img = func(img)
+
+        Examples:
+            >>> # an user defined preproc func and expected behavior
+            >>> preproc_func = lambda img: img/2  # reduce intensity by half
+            >>> transformed_img = preproc_func(img)
+            >>> # create a dataset to get patches from WSI with above
+            >>> # preprocessing function
+            >>> ds = WSIPatchDataset(
+            ...     img_path='/A/B/C/wsi.svs',
+            ...     mode="wsi",
+            ...     patch_size=[512, 512],
+            ...     stride_size=[256, 256],
+            ...     auto_get_mask=False,
+            ...     preproc_func=preproc_func
+            ... )
 
         """
         super().__init__()

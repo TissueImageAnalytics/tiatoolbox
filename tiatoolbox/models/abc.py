@@ -97,13 +97,7 @@ class ModelABC(ABC, nn.Module):
 
     @property
     def preproc_func(self):
-        """Return the current pre-processing function of this instance.
-
-        The returned function is expected to behave as follows:
-        Example:
-        >>> transformed_img = func(img)
-
-        """
+        """Return the current pre-processing function of this instance."""
         return self._preproc
 
     @preproc_func.setter
@@ -111,9 +105,13 @@ class ModelABC(ABC, nn.Module):
         """Set the pre-processing function for this instance.
 
         If `func=None`, the method will default to `self.preproc`. Otherwise,
-        `func` is expected to be callable and behave as follows:
-        Example:
-        >>> transformed_img = func(img)
+        `func` is expected to be callable.
+
+        Examples:
+            >>> # expected usage
+            >>> # model is a subclass object of this ModelABC
+            >>> model.preproc_func = func  # `func` is an user defined function
+            >>> transformed_img = model.preproc_func(img)
 
         """
         if func is None:
@@ -125,13 +123,7 @@ class ModelABC(ABC, nn.Module):
 
     @property
     def postproc_func(self):
-        """Return the current post-processing function of this instance.
-
-        The returned function is expected to behave as follows:
-        Example:
-        >>> transformed_img = func(img)
-
-        """
+        """Return the current post-processing function of this instance."""
         return self._postproc
 
     @postproc_func.setter
@@ -140,8 +132,12 @@ class ModelABC(ABC, nn.Module):
 
         If `func=None`, the method will default to `self.postproc`. Otherwise,
         `func` is expected to be callable and behave as follows:
-        Example:
-        >>> transformed_img = func(img)
+
+        Examples:
+            >>> # expected usage
+            >>> # model is a subclass object of this ModelABC
+            >>> model.postproc_func = func  # `func` is an user defined function
+            >>> transformed_img = model.postproc_func(img)
 
         """
         if func is None:
