@@ -35,6 +35,7 @@ from typing import (
     Union,
     Callable,
 )
+import warnings
 from typing.io import IO
 import copy
 
@@ -847,7 +848,8 @@ class DictionaryStore(AnnotationStoreABC):
         return key in self._features
 
     def __iter__(self) -> Iterable[int]:
-        return self._features.keys()
+        for key in self.keys():
+            yield key
 
     def items(self):
         for index, value in self._features.items():
@@ -860,6 +862,12 @@ class DictionaryStore(AnnotationStoreABC):
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
         return cls.from_geojson(fp)
 
+    def commit(self) -> None:
+        if self.connection == ":memory:":
+            warnings.warn("In-memory store. Nothing to commit.")
+            return
+        self.dump(self.connection)
+
     def dump(self, fp: Union[Path, str, IO]) -> None:
         return self.to_geojson(fp)
 
@@ -867,4 +875,6 @@ class DictionaryStore(AnnotationStoreABC):
         return self.to_geojson()
 
     def close(self) -> None:
-        pass
+        warnings.simplefilter("ignore")
+        self.commit()
+        warnings.resetwarnings()

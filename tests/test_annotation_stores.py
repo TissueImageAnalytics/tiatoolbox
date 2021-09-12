@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Generator, Tuple, Union, List
 from numbers import Number
 import json
+from itertools import repeat
 
 import pytest
 import numpy as np
@@ -137,6 +138,12 @@ def test_SQLiteStore_compile_options():
     assert all(isinstance(x, str) for x in options)
 
 
+def test_SQLiteStore_compile_options_exception(monkeypatch):
+    monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
+    with pytest.raises(Exception):
+        SQLiteStore()
+
+
 def test_SQLiteStore_multiple_connection(tmp_path):
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
@@ -151,6 +158,14 @@ class TestStore:
         ("Dictionary", {"Store": DictionaryStore}),
         ("SQLite", {"Store": SQLiteStore}),
     ]
+
+    def test_open_close(self, fill_store, tmp_path, Store):
+        path = tmp_path / "polygons"
+        indexes, store = fill_store(Store, path)
+        store.close()
+        del store
+        store = Store.open(path)
+        assert len(store) == len(indexes)
 
     def test_append_many(self, cell_grid, tmp_path, Store):
         store = Store(tmp_path / "polygons")
@@ -189,13 +204,14 @@ class TestStore:
 
     def test_update_many(self, fill_store, tmp_path, Store):
         indexes, store = fill_store(Store, tmp_path / "polygon.db")
-        for n, index in enumerate(indexes[:10]):
-            new_geometry = Polygon([(0, 0), (1, 1), (n, n)])
-            # Geometry update
-            store.update(index, {"geometry": new_geometry})
+        # Geometry update
+        new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
+        store.update_many(indexes, repeat({"geometry": new_geometry}))
+        # Properties update
+        store.update_many(indexes, repeat({"abc": 123}))
+
+        for _, index in enumerate(indexes[:10]):
             assert store[index][0] == new_geometry
-            # Properties update
-            store.update(index, {"abc": 123})
             assert store[index][1]["abc"] == 123
 
     def test_keys(self, fill_store, tmp_path, Store):
@@ -229,6 +245,11 @@ class TestStore:
         indexes, store = fill_store(Store, tmp_path / "polygon.db")
         for index in indexes:
             assert index in store
+
+    def test_iter(self, fill_store, tmp_path, Store):
+        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+        for index in store:
+            assert index in indexes
 
     def test_getitem(self, fill_store, tmp_path, sample_triangle, Store):
         _, store = fill_store(Store, tmp_path / "polygon.db")
