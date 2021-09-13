@@ -35,8 +35,8 @@ from typing import (
     Union,
     Callable,
 )
-import warnings
 from typing.io import IO
+import warnings
 import copy
 
 import numpy as np
