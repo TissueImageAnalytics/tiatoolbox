@@ -251,11 +251,10 @@ class AnnotationStoreABC(ABC):
     ) -> Union[None, Any]:
         if fp is not None:
             if hasattr(fp, "write"):  # fp is a file handle, write to it
-                file_fn(fp)
-            else:  # Get a file handle from fp, then write to it
-                with open(fp, "w", encoding="utf-8") as file_handle:
-                    file_fn(file_handle)
-            return
+                return file_fn(fp)
+            # Get a file handle from fp, then write to it
+            with open(fp, "w", encoding="utf-8") as file_handle:
+                return file_fn(file_handle)
         # Return as an object (str or bytes) if no fp is given
         return none_fn()
 
@@ -270,9 +269,8 @@ class AnnotationStoreABC(ABC):
         except TypeError:
             if hasattr(fp, "read"):
                 return file_fn(fp)
-            else:
-                with open(fp) as file_handle:
-                    return file_fn(file_handle)
+            with open(fp) as file_handle:
+                return file_fn(file_handle)
 
     @classmethod
     def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStoreABC":
