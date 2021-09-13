@@ -225,7 +225,7 @@ class AnnotationStoreABC(ABC):
         """
         raise NotImplementedError()
 
-    def to_geodict(self, int_coords: bool = False, drop_na: bool = True) -> Dict:
+    def to_geodict(self) -> Dict[str, Any]:
         """Return annotations as a dictionary in geoJSON format.
 
         Args:
