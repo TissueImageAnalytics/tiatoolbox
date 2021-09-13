@@ -163,9 +163,8 @@ class TestStore:
         path = tmp_path / "polygons"
         indexes, store = fill_store(Store, path)
         store.close()
-        del store
-        store = Store.open(path)
-        assert len(store) == len(indexes)
+        store2 = Store.open(path)
+        assert len(store2) == len(indexes)
 
     def test_append_many(self, cell_grid, tmp_path, Store):
         store = Store(tmp_path / "polygons")
