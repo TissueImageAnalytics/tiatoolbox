@@ -482,6 +482,7 @@ def tissue_mask(
     "within a masked area. If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
     "processed for image tiles. Supported file types are jpg, png and npy.",
+    default=None,
 )
 @click.option(
     "--mode",
@@ -496,7 +497,7 @@ def tissue_mask(
 @click.option(
     "--batch_size",
     help="Number of images to feed into the model each time.",
-    default=16,
+    default=1,
 )
 @click.option(
     "--resolution",
@@ -525,7 +526,7 @@ def tissue_mask(
 @click.option(
     "--merge_predictions",
     type=bool,
-    default=False,
+    default=True,
     help="Whether to merge the predictions to form a 2-dimensional map. "
     "default=False",
 )
@@ -534,7 +535,7 @@ def tissue_mask(
     help="Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     type=int,
-    default=2,
+    default=0,
 )
 @click.option(
     "--on_gpu",
@@ -570,6 +571,7 @@ def patch_predictor(
 
     output_path = pathlib.Path(output_path)
     file_types = string_to_tuple(file_types=file_types)
+    print(mode)
 
     if not os.path.exists(img_input):
         raise FileNotFoundError
@@ -606,7 +608,7 @@ def patch_predictor(
         verbose=verbose,
     )
 
-    predictor.predict(
+    output = predictor.predict(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
@@ -618,7 +620,10 @@ def patch_predictor(
         units=units,
         on_gpu=on_gpu,
         save_dir=output_path,
+        save_output=True,
     )
+
+    utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))
 
 
 if __name__ == "__main__":

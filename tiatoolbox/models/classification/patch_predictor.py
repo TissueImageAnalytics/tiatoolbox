@@ -400,6 +400,7 @@ class CNNPatchPredictor:
         units=None,
         merge_predictions=False,
         save_dir=None,
+        save_output=False,
     ):
         """Make a prediction for a list of input data.
 
@@ -448,6 +449,8 @@ class CNNPatchPredictor:
             save_dir (str, pathlib.Path): Output directory when processing multiple
                 tiles and whole-slide images. By default, it is folder `output` where
                 the running script is invoked.
+
+            save_output (bool): Whether to save output for a single file. default=False
 
         Returns:
             output (ndarray, dict): Model predictions of the input dataset.
@@ -536,6 +539,9 @@ class CNNPatchPredictor:
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
 
+            # None if no output
+            outputs = None
+
             # generate a list of output file paths if number of input images > 1
             file_dict = OrderedDict()
             for idx, img_path in enumerate(imgs):
@@ -566,6 +572,7 @@ class CNNPatchPredictor:
                 output_model["units"] = units
 
                 outputs = [output_model]  # assign to a list
+                merged_prediction = None
                 if merge_predictions:
                     merged_prediction = self.merge_predictions(
                         img_path,
@@ -576,12 +583,12 @@ class CNNPatchPredictor:
                     )
                     outputs.append(merged_prediction)
 
-                if len(imgs) > 1:
+                if len(imgs) > 1 or save_output:
                     img_code = "{number:0{width}d}".format(
                         width=len(str(len(imgs))), number=idx
                     )
                     save_info = {}
-                    save_path = os.path.join(save_dir, img_code)
+                    save_path = os.path.join(str(save_dir), img_code)
                     raw_save_path = f"{save_path}.raw.json"
                     save_info["raw"] = raw_save_path
                     save_as_json(output_model, raw_save_path)
@@ -589,10 +596,9 @@ class CNNPatchPredictor:
                         merged_file_path = f"{save_path}.merged.npy"
                         np.save(merged_file_path, merged_prediction)
                         save_info["merged"] = merged_file_path
-                    file_dict[img_path] = save_info
-                else:
-                    output = outputs
-            output = file_dict if len(imgs) > 1 else output
+                    file_dict[str(img_path)] = save_info
+
+            output = file_dict if len(imgs) > 1 or save_output else outputs
 
         return output
 

@@ -1047,3 +1047,25 @@ def test_command_line_models_incorrect_mode(_sample_svs, tmp_path):
     assert mode_not_in_wsi_tile_result.output == ""
     assert mode_not_in_wsi_tile_result.exit_code == 1
     assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
+
+
+def test_command_line_model_single_file(_sample_svs, tmp_path):
+    """Test for models CLI single file."""
+    runner = CliRunner()
+    models_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(_sample_svs),
+            "--mode",
+            "wsi",
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert models_tiles_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()
