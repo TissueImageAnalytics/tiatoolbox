@@ -501,8 +501,16 @@ def tissue_mask(
 )
 @click.option(
     "--return_probabilities",
+    type=bool,
     help="Whether to return raw model probabilities.",
     default=False,
+)
+@click.option(
+    "--merge_predictions",
+    type=bool,
+    default=False,
+    help="Whether to merge the predictions to form a 2-dimensional map. "
+    "default=False",
 )
 @click.option(
     "--num_loader_worker",
@@ -533,6 +541,7 @@ def patch_predictor(
     output_path,
     batch_size,
     return_probabilities,
+    merge_predictions,
     num_loader_worker,
     on_gpu,
     verbose,
@@ -579,6 +588,7 @@ def patch_predictor(
         masks=masks_all,
         mode=mode,
         return_probabilities=return_probabilities,
+        merge_predictions=merge_predictions,
         on_gpu=on_gpu,
     )
 
