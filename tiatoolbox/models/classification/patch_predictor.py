@@ -128,7 +128,7 @@ class CNNPatchModel(ModelABC):
 
         # Inference mode
         model.eval()
-        # Dont compute the gradient (not training)
+        # Do not compute the gradient (not training)
         with torch.no_grad():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
@@ -295,12 +295,12 @@ class CNNPatchPredictor:
         # deal with overlapping regions
         if denominator is not None:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
-            # convert raw probabilities to preditions
+            # convert raw probabilities to predictions
             if postproc_func is not None:
                 output = postproc_func(output)
             else:
                 output = np.argmax(output, axis=-1)
-            # to make sure background is 0 while class wil be 1..N
+            # to make sure background is 0 while class will be 1..N
             output[denominator > 0] += 1
         return output
 
@@ -328,7 +328,7 @@ class CNNPatchPredictor:
         """
         dataset.preproc_func = self.model.preproc_func
 
-        # preprocessing must be defined with the dataset
+        # preprocessing must be defined with the data set
         dataloader = torch.utils.data.DataLoader(
             dataset,
             num_workers=self.num_loader_worker,
@@ -361,13 +361,13 @@ class CNNPatchPredictor:
                 batch_output_probabilities
             )
 
-            # tolist may be very expensive
+            # tolist might be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
             if return_coordinates:
                 cum_output["coordinates"].extend(batch_data["coords"].tolist())
             if return_labels:  # be careful of `s`
-                # We dont use tolist here because label may be of mixed types
+                # We do not use tolist here because label may be of mixed types
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
 
@@ -445,9 +445,9 @@ class CNNPatchPredictor:
             a 2-dimensional map. This is only applicable for `mode='wsi'` or
             `mode='tile'`.
 
-            save_dir (str, pathlib.Path): Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output` where the
-                running script is invoked.
+            save_dir (str, pathlib.Path): Output directory when processing multiple
+                tiles and whole-slide images. By default, it is folder `output` where
+                the running script is invoked.
 
         Returns:
             output (ndarray, dict): Model predictions of the input dataset.

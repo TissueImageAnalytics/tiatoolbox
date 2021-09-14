@@ -4,3 +4,11 @@ GPL
 MERCHANTABILITY
 cuda
 CUDA
+NCHW
+XY
+YX
+preprocessing
+iostate
+runtime
+nn
+tolist
