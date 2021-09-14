@@ -482,7 +482,7 @@ def tissue_mask(
     "image tiles and whole-slide images. Patches are only processed if they are "
     "within a masked area. If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
-    "processed for image tiles.",
+    "processed for image tiles. Supported file types are jpg, png and npy.",
 )
 @click.option(
     "--mode",
@@ -552,9 +552,18 @@ def patch_predictor(
         img_input,
     ]
 
+    masks_all = [
+        masks,
+    ]
+
     if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
+        )
+
+    if os.path.isdir(masks):
+        masks_all = utils.misc.grab_files_from_dir(
+            input_path=masks, file_types=("jpg", "png", "npy")
         )
 
     predictor = CNNPatchPredictor(
@@ -567,7 +576,7 @@ def patch_predictor(
 
     output = predictor.predict(
         imgs=files_all,
-        masks=masks,
+        masks=masks_all,
         mode=mode,
         return_probabilities=return_probabilities,
         on_gpu=on_gpu,
