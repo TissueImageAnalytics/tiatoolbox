@@ -513,8 +513,14 @@ def tissue_mask(
 @click.option(
     "--return_probabilities",
     type=bool,
-    help="Whether to return raw model probabilities.",
+    help="Whether to return raw model probabilities. default=False",
     default=False,
+)
+@click.option(
+    "--return_labels",
+    type=bool,
+    help="Whether to return raw model output as labels. default=True",
+    default=True,
 )
 @click.option(
     "--merge_predictions",
@@ -554,6 +560,7 @@ def patch_predictor(
     resolution,
     units,
     return_probabilities,
+    return_labels,
     merge_predictions,
     num_loader_worker,
     on_gpu,
@@ -602,6 +609,8 @@ def patch_predictor(
         mode=mode,
         return_probabilities=return_probabilities,
         merge_predictions=merge_predictions,
+        labels=None,
+        return_labels=return_labels,
         resolution=resolution,
         units=units,
         on_gpu=on_gpu,
