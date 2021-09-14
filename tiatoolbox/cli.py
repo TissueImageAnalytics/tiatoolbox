@@ -485,6 +485,11 @@ def tissue_mask(
     "processed for image tiles.",
 )
 @click.option(
+    "--mode",
+    help="Type of input to process. Choose from either patch, tile or wsi. Default=wsi",
+    default="wsi",
+)
+@click.option(
     "--output_path",
     help="Output directory where model predictions will be saved.",
     default="patch_prediction",
@@ -524,6 +529,7 @@ def patch_predictor(
     img_input,
     file_types,
     masks,
+    mode,
     output_path,
     batch_size,
     return_probabilities,
@@ -538,6 +544,9 @@ def patch_predictor(
 
     if not os.path.exists(img_input):
         raise FileNotFoundError
+
+    if mode not in ["wsi", "tile"]:
+        raise ValueError("Please select wsi or tile mode.")
 
     files_all = [
         img_input,
@@ -559,6 +568,7 @@ def patch_predictor(
     output = predictor.predict(
         imgs=files_all,
         masks=masks,
+        mode=mode,
         return_probabilities=return_probabilities,
         on_gpu=on_gpu,
     )
