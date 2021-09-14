@@ -449,7 +449,7 @@ def tissue_mask(
 
 @main.command()
 @click.option(
-    "--predefined_model",
+    "--pretrained_model",
     help="Predefined model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
     "resnet18 model trained on the kather dataset. For a detailed list of "
@@ -581,9 +581,12 @@ def patch_predictor(
         img_input,
     ]
 
-    masks_all = [
-        masks,
-    ]
+    if masks is None:
+        masks_all = None
+    else:
+        masks_all = [
+            masks,
+        ]
 
     if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
