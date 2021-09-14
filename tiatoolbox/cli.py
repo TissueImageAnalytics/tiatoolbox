@@ -19,21 +19,20 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
-import numpy as np
-
-from tiatoolbox import __version__
-from tiatoolbox import wsicore
-from tiatoolbox.tools import stainnorm as sn, tissuemask
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
-
 import json
-import sys
-import click
 import os
 import pathlib
+import sys
+
+import click
+import numpy as np
 from PIL import Image
+
+from tiatoolbox import __version__, utils, wsicore
+from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
+from tiatoolbox.tools import stainnorm as sn
+from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.exceptions import MethodNotSupported
 
 
 def version_msg():
@@ -474,7 +473,26 @@ def tissue_mask(
     "--file_types",
     help="File types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
-    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff",
+    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
+)
+@click.option(
+    "--num_loader_worker",
+    help="Number of workers to load the data. Please note that they will "
+    "also perform preprocessing.",
+    type=int,
+    default=1,
+)
+@click.option(
+    "--on_gpu",
+    type=bool,
+    default=False,
+    help="Run the model on GPU, default=False",
+)
+@click.option(
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )
 def patch_predictor(
     pretrained_model,
@@ -484,6 +502,9 @@ def patch_predictor(
     batch_size,
     return_probabilities,
     file_types,
+    num_loader_worker,
+    on_gpu,
+    verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     file_types = tuple(file_types.split(", "))
@@ -504,10 +525,12 @@ def patch_predictor(
         pretrained_model=pretrained_model,
         pretrained_weight=pretrained_weight,
         batch_size=batch_size,
+        num_loader_worker=num_loader_worker,
+        verbose=verbose,
     )
 
     output = predictor.predict(
-        img_files, return_probabilities=return_probabilities, on_gpu=False
+        img_files, return_probabilities=return_probabilities, on_gpu=on_gpu
     )
 
     output_file_path = os.path.join(output_path, "results.json")
