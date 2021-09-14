@@ -84,10 +84,10 @@ def slide_info(img_input, output_dir, file_types, mode, verbose):
 
     if not os.path.exists(img_input):
         raise FileNotFoundError
-    else:
-        files_all = [
-            img_input,
-        ]
+
+    files_all = [
+        img_input,
+    ]
 
     if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
@@ -248,16 +248,17 @@ def save_tiles(
 ):
     """Display or save WSI metadata."""
     file_types = tuple(file_types.split(", "))
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    files_all = [
+        img_input,
+    ]
+
     if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(img_input):
-        files_all = [
-            img_input,
-        ]
-    else:
-        raise FileNotFoundError
 
     print(files_all)
 
@@ -306,16 +307,18 @@ def stain_norm(
 ):
     """Stain normalise an input image/directory of input images."""
     file_types = tuple(file_types.split(", "))
+
+    if not os.path.exists(source_input):
+        raise FileNotFoundError
+
+    files_all = [
+        source_input,
+    ]
+
     if os.path.isdir(source_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=source_input, file_types=file_types
         )
-    elif os.path.isfile(source_input):
-        files_all = [
-            source_input,
-        ]
-    else:
-        raise FileNotFoundError
 
     if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise MethodNotSupported
