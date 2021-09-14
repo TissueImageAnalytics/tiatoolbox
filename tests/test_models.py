@@ -1,9 +1,10 @@
 """Tests for code related to model usage."""
 
-from time import time
 import os
 import pathlib
 import shutil
+from time import time
+
 import cv2
 import numpy as np
 import pytest
@@ -15,15 +16,14 @@ from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.dataset import (
     DatasetInfoABC,
-    PatchDatasetABC,
     KatherPatchDataset,
     PatchDataset,
+    PatchDatasetABC,
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
+from tiatoolbox.utils.misc import download_data, imread, imwrite, unzip_data
 from tiatoolbox.wsicore.wsireader import get_wsireader
-
 
 ON_GPU = False
 
@@ -255,12 +255,12 @@ def test_PatchDataset_crash():
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
 
-    # ndarrays of NHW images
+    # ndarray(s) of NHW images
     imgs = np.random.randint(0, 255, (4, 4, 4))
     with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
         _ = PatchDataset(imgs)
 
-    # list of ndarrays with different sizes
+    # list of ndarray(s) with different sizes
     imgs = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 5, 3)),
@@ -268,7 +268,7 @@ def test_PatchDataset_crash():
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
         _ = PatchDataset(imgs)
 
-    # list of ndarrays with HW and HWC mixed up
+    # list of ndarray(s) with HW and HWC mixed up
     imgs = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 4)),
@@ -303,7 +303,7 @@ def test_PatchDataset_crash():
     ):
         _ = PatchDataset(["img.npy"])
 
-    # ** test different extenstion parser
+    # ** test different extension parser
     # save dummy data to temporary location
     save_dir_path = _get_temp_folder_path()
     # remove prev generated data
@@ -602,7 +602,7 @@ def test_model_abc():
     with pytest.raises(ValueError, match=r".*callable*"):
         model.preproc_func = 1
 
-    # test setter/getter/inital of preproc_func/postproc_func
+    # test setter/getter/initial of preproc_func/postproc_func
     assert model.preproc_func(1) == 1
     model.preproc_func = lambda x: x - 1
     assert model.preproc_func(1) == 0
@@ -831,13 +831,13 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
-    output = predictor.predict(
+    predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
         masks=[_mini_wsi_msk, _mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
-    with pytest.raises(ValueError, match=r".*save_dir.*exist.*"):
+    with pytest.raises(FileExistsError, match=r".*save_dir.*exist.*"):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
@@ -900,7 +900,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
 
     # mockup to change the preproc func and
     # force to use the default in merge function
-    # stil should have the same resuls
+    # still should have the same results
     kwargs["merge_predictions"] = False
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
@@ -925,7 +925,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
 
     merged_wsi = wsi_output[1]
     merged_tile = tile_output[1]
-    # enure shape of merged predictions of tile and wsi input are the same
+    # ensure shape of merged predictions of tile and wsi input are the same
     assert merged_wsi.shape == merged_tile.shape
     # ensure consistent predictions between tile and wsi mode
     diff = merged_tile == merged_wsi

@@ -12,3 +12,16 @@ iostate
 runtime
 nn
 tolist
+wsi
+wsireader
+pathlib
+func
+postproc
+preproc
+dataset
+Dataset
+ndarray
+dtype
+kather
+pretrained
+getitem
