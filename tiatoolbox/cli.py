@@ -596,7 +596,7 @@ def patch_predictor(
 
     if os.path.isdir(str(masks)):
         masks_all = utils.misc.grab_files_from_dir(
-            input_path=masks, file_types=("jpg", "png", "npy")
+            input_path=masks, file_types=("*.jpg", "*.png", "*.npy")
         )
 
     predictor = CNNPatchPredictor(

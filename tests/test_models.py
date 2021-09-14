@@ -1049,10 +1049,10 @@ def test_command_line_models_incorrect_mode(_sample_svs, tmp_path):
     assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
 
 
-def test_command_line_model_single_file(_sample_svs, tmp_path):
+def test_cli_model_single_file(_sample_svs, tmp_path):
     """Test for models CLI single file."""
     runner = CliRunner()
-    models_tiles_result = runner.invoke(
+    models_wsi_result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
@@ -1065,7 +1065,97 @@ def test_command_line_model_single_file(_sample_svs, tmp_path):
         ],
     )
 
+    assert models_wsi_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()
+
+
+def test_cli_model_single_file_mask(_sample_wsi_dict, tmp_path):
+    """Test for models CLI single file with mask."""
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    runner = CliRunner()
+    models_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(_mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(_mini_wsi_msk),
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
     assert models_tiles_result.exit_code == 0
     assert tmp_path.joinpath("0.merged.npy").exists()
     assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()
+
+
+def test_cli_model_multiple_file_mask(_sample_wsi_dict, tmp_path):
+    """Test for models CLI multiple file with mask."""
+    _mini_wsi_svs = _sample_wsi_dict["wsi2_4k_4k_svs"]
+    _mini_wsi_msk = _sample_wsi_dict["wsi2_4k_4k_msk"]
+
+    # Make multiple copies for test
+    dir_path = tmp_path.joinpath("new_copies")
+    dir_path.mkdir()
+
+    dir_path_masks = tmp_path.joinpath("new_copies_masks")
+    dir_path_masks.mkdir()
+
+    try:
+        dir_path.joinpath("1_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("2_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("3_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+    except OSError:
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.basename))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.basename))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.basename))
+
+    try:
+        dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+    except OSError:
+        shutil.copy(
+            _mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename)
+        )
+        shutil.copy(
+            _mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename)
+        )
+        shutil.copy(
+            _mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename)
+        )
+
+    tmp_path = tmp_path.joinpath("output")
+
+    runner = CliRunner()
+    models_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(dir_path),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(dir_path_masks),
+            "--output_path",
+            str(tmp_path),
+        ],
+    )
+
+    assert models_tiles_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("1.merged.npy").exists()
+    assert tmp_path.joinpath("1.raw.json").exists()
+    assert tmp_path.joinpath("2.merged.npy").exists()
+    assert tmp_path.joinpath("2.raw.json").exists()
     assert tmp_path.joinpath("results.json").exists()
