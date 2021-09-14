@@ -837,7 +837,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         mode="wsi",
         **_kwargs,
     )
-    with pytest.raises(FileExistsError, match=r".*save_dir.*exist.*"):
+    with pytest.raises(FileExistsError):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
@@ -938,7 +938,7 @@ def _test_predictor_output(
     pretrained_model,
     probabilities_check=None,
     predictions_check=None,
-    on_gpu=ON_GPU,
+    on_gpu=False,
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = CNNPatchPredictor(
@@ -949,7 +949,7 @@ def _test_predictor_output(
         inputs,
         return_probabilities=True,
         return_labels=False,
-        on_gpu=ON_GPU,
+        on_gpu=on_gpu,
     )
     predictions = output["predictions"]
     probabilities = output["probabilities"]
@@ -995,4 +995,5 @@ def test_patch_predictor_output(_sample_patch1, _sample_patch2):
             pretrained_model,
             probabilities_check=expected_prob,
             predictions_check=[6, 3],
+            on_gpu=ON_GPU,
         )

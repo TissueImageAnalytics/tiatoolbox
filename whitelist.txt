@@ -25,3 +25,8 @@ dtype
 kather
 pretrained
 getitem
+skipcq
+npy
+NHW
+HW
+HWC
