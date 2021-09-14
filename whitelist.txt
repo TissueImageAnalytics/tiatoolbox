@@ -2,3 +2,5 @@
 pyright
 GPL
 MERCHANTABILITY
+cuda
+CUDA

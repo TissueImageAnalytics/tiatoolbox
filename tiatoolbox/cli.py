@@ -43,7 +43,12 @@ def version_msg():
     return message.format(location, python_version)
 
 
-@click.group(context_settings=dict(help_option_names=["-h", "--help"]))
+def string_to_tuple(file_types):
+    """Split file_types string to tuple."""
+    return tuple(file_types.split(", "))
+
+
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(
     __version__, "--version", "-V", help="Version", message=version_msg()
 )
@@ -77,7 +82,7 @@ def main():
 )
 def slide_info(img_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
-    file_types = tuple(file_types.split(", "))
+    file_types = string_to_tuple(file_types=file_types)
 
     if isinstance(output_dir, str):
         output_dir = pathlib.Path(output_dir)
@@ -247,7 +252,8 @@ def save_tiles(
     verbose=True,
 ):
     """Display or save WSI metadata."""
-    file_types = tuple(file_types.split(", "))
+    file_types = string_to_tuple(file_types=file_types)
+
     if not os.path.exists(img_input):
         raise FileNotFoundError
 
@@ -306,7 +312,7 @@ def stain_norm(
     source_input, target_input, method, stain_matrix, output_path, file_types
 ):
     """Stain normalise an input image/directory of input images."""
-    file_types = tuple(file_types.split(", "))
+    file_types = string_to_tuple(file_types=file_types)
 
     if not os.path.exists(source_input):
         raise FileNotFoundError
@@ -387,38 +393,44 @@ def tissue_mask(
 ):
     """Generate tissue mask for a WSI."""
 
-    file_types = tuple(file_types.split(", "))
+    file_types = string_to_tuple(file_types=file_types)
     output_path = pathlib.Path(output_path)
+
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    files_all = [
+        img_input,
+    ]
+
     if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(img_input):
-        files_all = [
-            img_input,
-        ]
-    else:
-        raise FileNotFoundError
 
     if mode == "save" and not output_path.is_dir():
         os.makedirs(output_path)
 
+    if method not in ["Otsu", "Morphological"]:
+        raise MethodNotSupported
+
+    masker = None
+
     if method == "Otsu":
         masker = tissuemask.OtsuTissueMasker()
-    elif method == "Morphological":
+
+    if method == "Morphological":
         if not kernel_size:
-            if units == "mpp":
-                masker = tissuemask.MorphologicalMasker(mpp=resolution)
-            elif units == "power":
-                masker = tissuemask.MorphologicalMasker(power=resolution)
-            else:
+            if units not in ["mpp", "power"]:
                 raise MethodNotSupported(
                     "Specified units not supported for tissue masking."
                 )
+            if units == "mpp":
+                masker = tissuemask.MorphologicalMasker(mpp=resolution)
+            if units == "power":
+                masker = tissuemask.MorphologicalMasker(power=resolution)
         else:
             masker = tissuemask.MorphologicalMasker(kernel_size=kernel_size)
-    else:
-        raise MethodNotSupported
 
     for curr_file in files_all:
         wsi = wsicore.wsireader.get_wsireader(input_img=curr_file)
@@ -440,8 +452,11 @@ def tissue_mask(
 @click.option(
     "--predefined_model",
     help="Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` "
-    "is a resnet18 model trained on the kather dataset.",
+    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
+    "resnet18 model trained on the kather dataset. For a detailed list of "
+    "available pretrained models please see "
+    "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
+    "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
     default="resnet18-kather100K",
 )
 @click.option(
@@ -508,19 +523,21 @@ def patch_predictor(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
-    file_types = tuple(file_types.split(", "))
+
     output_path = pathlib.Path(output_path)
+    file_types = string_to_tuple(file_types=file_types)
+
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    files_all = [
+        img_input,
+    ]
 
     if os.path.isdir(img_input):
-        img_files = utils.misc.grab_files_from_dir(
+        files_all = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
         )
-    elif os.path.isfile(img_input):
-        img_files = [
-            img_input,
-        ]
-    else:
-        raise FileNotFoundError
 
     predictor = CNNPatchPredictor(
         pretrained_model=pretrained_model,
@@ -531,7 +548,7 @@ def patch_predictor(
     )
 
     output = predictor.predict(
-        img_files, return_probabilities=return_probabilities, on_gpu=on_gpu
+        files_all, return_probabilities=return_probabilities, on_gpu=on_gpu
     )
 
     output_file_path = os.path.join(output_path, "results.json")
