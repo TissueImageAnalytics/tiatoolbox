@@ -57,7 +57,7 @@ def main():
     return 0
 
 
-@main.command()
+@main.command()  # noqa: CCR001
 @click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
@@ -345,7 +345,7 @@ def stain_norm(
         utils.misc.imwrite(os.path.join(output_path, basename), transform)
 
 
-@main.command()
+@main.command()  # noqa: CCR001
 @click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
