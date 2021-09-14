@@ -82,23 +82,21 @@ def slide_info(img_input, output_dir, file_types, mode, verbose):
     if isinstance(output_dir, str):
         output_dir = pathlib.Path(output_dir)
 
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+    else:
+        files_all = [
+            img_input,
+        ]
+
     if os.path.isdir(img_input):
         files_all = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
         )
-        if output_dir is None and mode == "save":
-            input_dir = pathlib.Path(img_input).parent
-            output_dir = input_dir / "meta"
 
-    elif os.path.isfile(img_input):
-        files_all = [
-            img_input,
-        ]
-        if output_dir is None and mode == "save":
-            input_dir = pathlib.Path(img_input).parent
-            output_dir = input_dir.parent / "meta"
-    else:
-        raise FileNotFoundError
+    if output_dir is None and mode == "save":
+        input_dir = pathlib.Path(img_input).parent
+        output_dir = input_dir / "meta"
 
     print(files_all)
 

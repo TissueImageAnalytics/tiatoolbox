@@ -1,2 +1,4 @@
 # Spell checking whitelist for flake8-spellcheck
 pyright
+GPL
+MERCHANTABILITY
