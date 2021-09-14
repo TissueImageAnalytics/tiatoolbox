@@ -501,12 +501,12 @@ def tissue_mask(
 @click.option(
     "--resolution",
     type=float,
-    default=0,
+    default=0.5,
     help="resolution to read the image at, default=0",
 )
 @click.option(
     "--units",
-    default="level",
+    default="mpp",
     type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
     help="resolution units, default=level",
 )
@@ -534,7 +534,7 @@ def tissue_mask(
     help="Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     type=int,
-    default=1,
+    default=2,
 )
 @click.option(
     "--on_gpu",
@@ -593,7 +593,7 @@ def patch_predictor(
             input_path=img_input, file_types=file_types
         )
 
-    if os.path.isdir(masks):
+    if os.path.isdir(str(masks)):
         masks_all = utils.misc.grab_files_from_dir(
             input_path=masks, file_types=("jpg", "png", "npy")
         )
