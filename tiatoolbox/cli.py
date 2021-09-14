@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Console script for tiatoolbox."""
-import json
 import os
 import pathlib
 import sys
