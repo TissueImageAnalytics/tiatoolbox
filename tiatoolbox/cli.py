@@ -500,6 +500,18 @@ def tissue_mask(
     default=16,
 )
 @click.option(
+    "--resolution",
+    type=float,
+    default=0,
+    help="resolution to read the image at, default=0",
+)
+@click.option(
+    "--units",
+    default="level",
+    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
+    help="resolution units, default=level",
+)
+@click.option(
     "--return_probabilities",
     type=bool,
     help="Whether to return raw model probabilities.",
@@ -540,6 +552,8 @@ def patch_predictor(
     mode,
     output_path,
     batch_size,
+    resolution,
+    units,
     return_probabilities,
     merge_predictions,
     num_loader_worker,
@@ -589,6 +603,8 @@ def patch_predictor(
         mode=mode,
         return_probabilities=return_probabilities,
         merge_predictions=merge_predictions,
+        resolution=resolution,
+        units=units,
         on_gpu=on_gpu,
         save_dir=output_path,
     )

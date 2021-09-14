@@ -434,10 +434,12 @@ class CNNPatchPredictor:
                 is at requested read resolution, not with respect to to level 0, and
                 must be positive. If not provided, `stride_size=patch_size`.
 
-            resolution (float): Resolution used for reading the image.
+            resolution (float): Resolution used for reading the image. Please see
+                :obj:`WSIReader` for details.
 
             units (str): Units of resolution used for reading the image. Choose from
-                either `level`, `power` or `mpp`.
+                either `level`, `power` or `mpp`. Please see :obj:`WSIReader` for
+                details.
 
             merge_predictions (bool): Whether to merge the predictions to form
             a 2-dimensional map. This is only applicable for `mode='wsi'` or
