@@ -471,6 +471,20 @@ def tissue_mask(
     "individual file.",
 )
 @click.option(
+    "--file_types",
+    help="File types to capture from directory. "
+    "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
+    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
+)
+@click.option(
+    "--masks",
+    help="Path to the input directory containing masks to process corresponding to "
+    "image tiles and whole-slide images. Patches are only processed if they are "
+    "within a masked area. If masks are not provided, then a tissue mask will be "
+    "automatically generated for whole-slide images or the entire image is "
+    "processed for image tiles.",
+)
+@click.option(
     "--output_path",
     help="Output directory where model predictions will be saved.",
     default="patch_prediction",
@@ -484,12 +498,6 @@ def tissue_mask(
     "--return_probabilities",
     help="Whether to return raw model probabilities.",
     default=False,
-)
-@click.option(
-    "--file_types",
-    help="File types to capture from directory. "
-    "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
-    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
 @click.option(
     "--num_loader_worker",
@@ -514,10 +522,11 @@ def patch_predictor(
     pretrained_model,
     pretrained_weight,
     img_input,
+    file_types,
+    masks,
     output_path,
     batch_size,
     return_probabilities,
-    file_types,
     num_loader_worker,
     on_gpu,
     verbose,
@@ -548,7 +557,10 @@ def patch_predictor(
     )
 
     output = predictor.predict(
-        files_all, return_probabilities=return_probabilities, on_gpu=on_gpu
+        imgs=files_all,
+        masks=masks,
+        return_probabilities=return_probabilities,
+        on_gpu=on_gpu,
     )
 
     output_file_path = os.path.join(output_path, "results.json")
