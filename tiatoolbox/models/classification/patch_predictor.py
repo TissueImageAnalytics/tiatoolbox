@@ -37,11 +37,7 @@ from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import (
-    download_data,
-    get_pretrained_model_info,
-    save_as_json,
-)
+from tiatoolbox.utils.misc import download_data, get_pretrained_model_info, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
@@ -447,7 +443,7 @@ class CNNPatchPredictor:
             a 2-dimensional map. This is only applicable for `mode='wsi'` or
             `mode='tile'`.
 
-            save_dir (str): Output directory when processing multiple tiles and
+            save_dir (str, pathlib.Path): Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output` where the
                 running script is invoked.
 
@@ -525,13 +521,11 @@ class CNNPatchPredictor:
                         "All subsequent output will be saved to current runtime"
                         "location under folder 'output'. Overwriting may happen!"
                     )
-                    save_dir = os.path.join(os.getcwd(), "output")
+                    save_dir = pathlib.Path(os.getcwd()).joinpath("output")
 
                 save_dir = pathlib.Path(save_dir)
-                if not save_dir.is_dir():
-                    os.makedirs(save_dir)
-                else:
-                    raise ValueError("`save_dir` already exists!")
+
+                save_dir.mkdir(parents=True, exist_ok=False)
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True

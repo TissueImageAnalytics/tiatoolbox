@@ -583,22 +583,15 @@ def patch_predictor(
         verbose=verbose,
     )
 
-    output = predictor.predict(
+    predictor.predict(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
         return_probabilities=return_probabilities,
         merge_predictions=merge_predictions,
         on_gpu=on_gpu,
+        save_dir=output_path,
     )
-
-    output_file_path = os.path.join(output_path, "results.json")
-    if not output_path.is_dir():
-        os.makedirs(output_path)
-    # convert output, otherwise can't dump via json
-    output = {k: v.tolist() for k, v in output.items()}
-    with open(output_file_path, "w") as handle:
-        json.dump(output, handle)
 
 
 if __name__ == "__main__":
