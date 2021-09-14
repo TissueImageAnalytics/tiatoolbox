@@ -571,7 +571,6 @@ def patch_predictor(
 
     output_path = pathlib.Path(output_path)
     file_types = string_to_tuple(file_types=file_types)
-    print(mode)
 
     if not os.path.exists(img_input):
         raise FileNotFoundError
