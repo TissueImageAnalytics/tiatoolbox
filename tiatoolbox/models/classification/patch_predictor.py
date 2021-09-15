@@ -67,6 +67,10 @@ class _IOConfigPatchPredictor(IOConfigABC):
 class CNNPatchModel(ModelABC):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
+    Args:
+        backbone (str): Model name.
+        num_classes (int): Number of classes output by model.
+
     Attributes:
         num_classes (int): Number of classes output by the model.
         feat_extract (nn.Module): Backbone CNN model.
@@ -88,7 +92,7 @@ class CNNPatchModel(ModelABC):
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
     # pylint: disable=W0221
-    # shut up pylint because abc is generic, this is actual definition
+    # because abc is generic, this is actual definition
     def forward(self, imgs):
         """Pass input data through the model.
 
@@ -132,7 +136,7 @@ class CNNPatchModel(ModelABC):
 
         # Inference mode
         model.eval()
-        # Dont compute the gradient (not training)
+        # Don't compute the gradient (not training)
         with torch.no_grad():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
@@ -142,22 +146,48 @@ class CNNPatchModel(ModelABC):
 class CNNPatchPredictor:
     """Patch-level predictor.
 
+    Args:
+        model (nn.Module): Use externally defined PyTorch model for prediction with.
+          weights already loaded. Default is `None`. If provided,
+          `pretrained_model` argument is ignored.
+        pretrained_model (str): Name of the existing models support by tiatoolbox
+          for processing the data. Refer to
+          `tiatoolbox.models.classification.get_pretrained_model` for details.
+          By default, the corresponding pretrained weights will also be
+          downloaded. However, you can override with your own set of weights
+          via the `pretrained_weight` argument. Argument is case insensitive.
+        pretrained_weight (str): Path to the weight of the corresponding
+          `pretrained_model`.
+          >>> predictor = CNNPatchPredictor(
+          ...    pretrained_model="resnet18-kather100k",
+          ...    pretrained_weight="resnet18_local_weight")
+        batch_size (int) : Number of images fed into the model each time.
+        num_loader_worker (int) : Number of workers to load the data.
+          Take note that they will also perform preprocessing.
+        verbose (bool): Whether to output logging information.
+
     Attributes:
         batch_size (int): Number of images fed into the model each time.
         num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
         model (nn.Module): Defined PyTorch model.
         verbose (bool): Whether to output logging information.
 
-    Usage:
+    Examples:
         >>> data = [img1, img2]
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
-        >>> output = predictor.predict(data, mode='patch')
+        ... predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        ... output = predictor.predict(data, mode='patch')
         >>> data = np.array([img1, img2])
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
-        >>> output = predictor.predict(data, mode='patch')
+        ... predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        ... output = predictor.predict(data, mode='patch')
+        >>> data = [img.png, img.png]
+        ... predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        ... output = predictor.predict(data, mode='patch')
+        >>> tile_file = 'path/tile.png'
+        ... predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
+        ... output = predictor.predict(tile_file, mode='tile')
         >>> wsi_file = 'path/wsi.svs'
-        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
-        >>> output = predictor.predict(wsi_file, mode='wsi')
+        ... predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
+        ... output = predictor.predict(wsi_file, mode='wsi')
 
     """
 
@@ -170,31 +200,6 @@ class CNNPatchPredictor:
         pretrained_weight=None,
         verbose=True,
     ):
-        """Initialise the Patch Predictor.
-
-        Note, if model is supplied in the arguments, it will override the backbone.
-
-        Args:
-            model (nn.Module): Use externally defined PyTorch model for prediction with.
-              weights already loaded. Default is `None`. If provided,
-              `pretrained_model` argument is ignored.
-            pretrained_model (str): Name of the existing models support by tiatoolbox
-              for processing the data. Refer to
-              `tiatoolbox.models.classification.get_pretrained_model` for details.
-              By default, the corresponding pretrained weights will also be
-              downloaded. However, you can override with your own set of weights
-              via the `pretrained_weight` argument. Argument is case insensitive.
-            pretrained_weight (str): Path to the weight of the corresponding
-                `pretrained_model`.
-                >>> predictor = CNNPatchPredictor(
-                ...    pretrained_model="resnet18-kather100k",
-                ...    pretrained_weight="resnet18_local_weight")
-            batch_size (int) : Number of images fed into the model each time.
-            num_loader_worker (int) : Number of workers to load the data.
-              Take note that they will also perform preprocessing.
-            verbose (bool): Whether to output logging information.
-
-        """
         super().__init__()
 
         self.imgs = None
