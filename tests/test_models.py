@@ -939,7 +939,7 @@ def _test_predictor_output(
     pretrained_model,
     probabilities_check=None,
     predictions_check=None,
-    on_gpu=False,
+    on_gpu=ON_GPU,
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = CNNPatchPredictor(
