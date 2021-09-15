@@ -167,9 +167,21 @@ class CNNPatchPredictor:
         verbose (bool): Whether to output logging information.
 
     Attributes:
-        batch_size (int): Number of images fed into the model each time.
-        num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
+        img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
+          A HWC image or a path to WSI.
+        outputs ():
+        mode (str): Type of input to process. Choose from either `patch`, `tile`
+          or `wsi`.
         model (nn.Module): Defined PyTorch model.
+        pretrained_model (str): Name of the existing models support by tiatoolbox
+          for processing the data. Refer to
+          `tiatoolbox.models.classification.get_pretrained_model` for details.
+          By default, the corresponding pretrained weights will also be
+          downloaded. However, you can override with your own set of weights
+          via the `pretrained_weight` argument. Argument is case insensitive.
+        batch_size (int) : Number of images fed into the model each time.
+        num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
+        iostate ():
         verbose (bool): Whether to output logging information.
 
     Examples:
