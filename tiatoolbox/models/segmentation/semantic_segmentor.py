@@ -50,13 +50,13 @@ class IOConfigSegmentor(IOConfigABC):
 
     Args:
         input_resolutions (list): resolution of each input head of model
-            inference, must be in the same order as target model.forward().
+          inference, must be in the same order as target model.forward().
         output_resolutions (list): resolution of each output head from model
-            inference, must be in the same order as target model.infer_batch().
+          inference, must be in the same order as target model.infer_batch().
         patch_input_shape (:class:`numpy.ndarray`, list(int)): shape of the
-            largest input in height width.
+          largest input in height width.
         patch_output_shape (:class:`numpy.ndarray`, list(int)): shape of the
-            largest output in height width.
+          largest output in height width.
         save_resolution  (dict): resolution to save all output.
 
     Examples:
@@ -150,12 +150,12 @@ class IOConfigSegmentor(IOConfigABC):
 
         Args:
             resolutions (list): a list of resolutions where each defined
-                as `{'resolution': value, 'unit': value}`
+              as `{'resolution': value, 'unit': value}`
             unit (str): unit that the the resolutions are at.
 
         Returns:
             :class:`numpy.ndarray`: an 1D array of scaling factor having the same
-                length as `resolutions`
+              length as `resolutions`
 
         """
         old_val = [v["resolution"] for v in resolutions]
@@ -203,13 +203,13 @@ class WSIStreamDataset(torch_data.Dataset):
 
     Args:
         mp_shared_space (object): shared multiprocessing space, must be from
-            torch.multiprocessing.
+          torch.multiprocessing.
         ioconfig (:class:`IOConfigSegmentor`): object which contains I/O placement
-            for patches.
+          for patches.
         wsi_paths (list): List of paths pointing to a WSI or tiles.
         preproc (Callable): pre-processing function to be applied on a patch.
         mode (str): either `wsi` or `tile` to indicate which form the input in
-            `wsi_paths` is.
+          `wsi_paths` is.
 
     Examples:
 
@@ -412,22 +412,22 @@ class SemanticSegmentor:
         obey the API defined here.
 
         Args:
-            image_shape (tuple(int), :class:`numpy.ndarray`):
-                This argument specifies the shape of mother image (the image we want to)
-                extract patches from) at requested `resolution` and `units` and it is
-                expected to be in (width, height) format.
+            image_shape (tuple(int), :class:`numpy.ndarray`): This argument
+              specifies the shape of mother image (the image we want to) extract
+              patches from) at requested `resolution` and `units` and it is
+              expected to be in (width, height) format.
             ioconfig (:class:`IOConfigSegmentor`): object that contains information
-                about input and ouput placement of patches. Check `IOConfigSegmentor`
-                for details about available attributes.
+              about input and ouput placement of patches. Check
+              `IOConfigSegmentor` for details about available attributes.
 
         Returns:
             (tuple): tuple containing:
                 patch_inputs (list): a list of corrdinates in
-                    `[start_x, start_y, end_x, end_y]` format indicating the read
-                    location of the patch in the mother image.
+                  `[start_x, start_y, end_x, end_y]` format indicating the read
+                  location of the patch in the mother image.
                 patch_outputs (list): a list of corrdinates in
-                    `[start_x, start_y, end_x, end_y]` format indicating the write
-                    location of the patch in the mother image.
+                  `[start_x, start_y, end_x, end_y]` format indicating the write
+                  location of the patch in the mother image.
 
         Examples:
             >>> # API of function expected to overwrite `get_coordinates`
@@ -463,15 +463,15 @@ class SemanticSegmentor:
 
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal
-                reader of the mask related to the WSI from which we want
-                to extract the patches.
+              reader of the mask related to the WSI from which we want
+              to extract the patches.
             bounds (ndarray and np.int32): Coordinates to be checked
-                via the `func`. They must be in the same resolution as requested
-                `resolution` and `units`. The shape of `coordinatess` is (N, K)
-                where N is the number of coordinate sets and K is either 2 for centroids
-                or 4 for bounding boxes. When using the default `func=None`, K should be
-                4, as we expect the `coordinatess` to be refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
+              via the `func`. They must be in the same resolution as requested
+              `resolution` and `units`. The shape of `coordinatess` is (N, K)
+              where N is the number of coordinate sets and K is either 2 for
+              centroids or 4 for bounding boxes. When using the default
+              `func=None`, K should be 4, as we expect the `coordinatess` to be
+              refer to bounding boxes in `[start_x, start_y, end_x, end_y]` format.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
@@ -546,12 +546,12 @@ class SemanticSegmentor:
 
         Args:
             wsi_idx (int): index of the tile/wsi to be processed within `self`.
-            ioconfig (:class:`IOConfigSegmentor`): object which defines I/O placement
-                during inference and when assembling back to full tile/wsi.
+            ioconfig (:class:`IOConfigSegmentor`): object which defines I/O
+              placement during inference and when assembling back to full tile/wsi.
             loader (torch.Dataloader): loader object which return batch of data
-                to be input to model.
+              to be input to model.
             save_path (str): location to save output prediction as well as possible
-                intermediat results.
+              intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
 
         """
@@ -633,7 +633,7 @@ class SemanticSegmentor:
     ):
         """Define how the aggregated predictions are processed.
 
-        This includes merging the prediction if necessary and also saving afterward.
+        This includes merging the prediction if necessary and also saving afterwards.
 
         """
         # assume predictions is N, each item has L output element
@@ -678,15 +678,15 @@ class SemanticSegmentor:
         Args:
             canvas_shape (:class:`numpy.ndarray`): HW of the supposed assembled image.
             predictions (list): List of nd.array, each item is a prediction of
-                a patch, assuming to be of shape HWC.
+              a patch, assuming to be of shape HWC.
             locations (list): List of nd.array, each item is the location of
-                the patch at the same index within `predictions`. The location
-                is in the to be assembled canvas and of the form
-                (top_left_x, top_left_y, bottom_right_x, bottom_right_x).
+              the patch at the same index within `predictions`. The location
+              is in the to be assembled canvas and of the form
+              (top_left_x, top_left_y, bottom_right_x, bottom_right_x).
             save_path (str): Location to save the assembled image.
             free_prediction (bool): If this is `True`, `predictions` will
-                be modified in place and each patch will be replace with `None`
-                once processed. This is to save memory when assembling.
+              be modified in place and each patch will be replace with `None`
+              once processed. This is to save memory when assembling.
 
         Returns:
             :class:`numpy.ndarray` : an image contains merged data.
@@ -817,43 +817,43 @@ class SemanticSegmentor:
 
         Args:
             imgs (list, ndarray): List of inputs to process. When using `patch`
-                mode, the input must be either a list of images, a list of image file
-                paths or a numpy array of an image list. When using `tile` or `wsi`
-                mode, the input must be a list of file paths.
+              mode, the input must be either a list of images, a list of image
+              file paths or a numpy array of an image list. When using `tile` or
+              `wsi` mode, the input must be a list of file paths.
             masks (list): List of masks. Only utilised when processing image tiles
-                and whole-slide images. Patches are only processed if they are witin a
-                masked area. If not provided, then a tissue mask will be automatically
-                generated for whole-slide images or the entire image is processed for
-                image tiles.
+              and whole-slide images. Patches are only processed if they are
+              within a masked area. If not provided, then a tissue mask will be
+              automatically generated for whole-slide images or the entire image
+              is processed for image tiles.
             mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (:class:`IOConfigSegmentor`): object that define information about
-                input and ouput placement of patches. When provided,
-                 `patch_input_shape`, `patch_output_shape`, `stride_shape`,
-                 `resolution`, and `units`
-                arguments are ignore. Otherwise, those arguments will be internally
-                converted to a :class:`IOConfigSegmentor` object.
+            ioconfig (:class:`IOConfigSegmentor`): object that define information
+              about input and ouput placement of patches. When provided,
+              `patch_input_shape`, `patch_output_shape`, `stride_shape`,
+              `resolution`, and `units` arguments are ignored. Otherwise,
+              those arguments will be internally converted to a
+              :class:`IOConfigSegmentor` object.
             on_gpu (bool): whether to run model on the GPU.
             patch_input_shape (tuple): Size of patches input to the model. The value
-                are at requested read resolution and must be positive.
-            patch_output_shape (tuple): Size of patches output by the model. The value
-                are at requested read resolution and must be positive.
-            stride_shape (tuple): Stride using during tile and WSI processing. The value
-                are at requested read resolution and must be positive.
-                If not provided, `stride_shape=patch_input_shape`.
+              are at requested read resolution and must be positive.
+            patch_output_shape (tuple): Size of patches output by the model. The
+              values are at the requested read resolution and must be positive.
+            stride_shape (tuple): Stride using during tile and WSI processing. The
+              values are at requested read resolution and must be positive.
+              If not provided, `stride_shape=patch_input_shape` is used.
             resolution (float): Resolution used for reading the image.
             units (str): Units of resolution used for reading the image. Choose from
-                either `level`, `power` or `mpp`.
+              either `level`, `power` or `mpp`.
             save_dir (str): Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output` where the
-                running script is invoked.
+              whole-slide images. By default, it is folder `output` where the
+              running script is invoked.
             crash_on_exception (bool): If `True`, the running loop will crash
-                if there is any error during processing a WSI. Otherwise, the loop
-                will move on to the next wsi for processing.
+              if there is any error during processing a WSI. Otherwise, the loop
+              will move on to the next wsi for processing.
 
         Returns:
             output (list): A list of tuple(input_path, save_path) where
-                `input_path` is the path of the input wsi while `save_path`
-                corresponds to the output predictions.
+              `input_path` is the path of the input wsi while `save_path`
+              corresponds to the output predictions.
 
         Examples:
             >>> # Sample output of a network

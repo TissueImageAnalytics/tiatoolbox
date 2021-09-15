@@ -35,8 +35,8 @@ class PatchExtractor(ABC):
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
           patch extraction.
         patch_size(int or tuple(int)): patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
-          input mask that is used for position filtering when extracting patches
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`): input
+          mask that is used for position filtering when extracting patches
           i.e., patches will only be extracted based on the highlighted regions in
           the input_mask. input_mask can be either path to the mask, a numpy
           array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'

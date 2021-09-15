@@ -358,42 +358,31 @@ def sub_pixel_read(
             :alt: Illustration for reading a region with fractional
                 coordinates (sub-pixel).
     Args:
-        image (:class:`numpy.ndarray`):
-            Image to read from.
-        bounds (tuple(float)):
-            Bounds of the image to read in
-            (left, top, right, bottom) format.
-        output_size (tuple(int)):
-            The desired output size.
-        padding (int or tuple(int)):
-            Amount of padding to apply to the image region in pixels.
-            Defaults to 0.
-        stride (int or tuple(int)):
-            Stride when reading from img. Defaults to 1. A tuple is
-            interpreted as stride in x and y (axis 1 and 0 respectively).
-        interpolation (str):
-            Method of interpolation. Possible values are: nearest,
-            linear, cubic, lanczos, area. Defaults to nearest.
-        pad_at_baseline (bool):
-            Apply padding in terms of baseline
-            pixels. Defaults to False, meaning padding is added to the
-            output image size in pixels.
-        read_func (collections.abc.Callable):
-            Custom read function. Defaults to
-            :func:`safe_padded_read`. A function which recieves
-            two positional args of the image object and a set of
-            integer bounds in addition to padding key word arguments
-            for reading a pixel-aligned bounding region. This function
-            should return a numpy array with 2 or 3 dimensions. See
-            examples for more.
-        pad_mode (str):
-            Method for padding when reading areas outside of
-            the input image. Default is constant (0 padding). This is
-            passed to `read_func` which defaults to
-            :func:`safe_padded_read`. See :func:`safe_padded_read`
-            for supported pad modes.
-        **read_kwargs (dict):
-            Arbitrary keyword arguments passed through to `read_func`.
+        image (:class:`numpy.ndarray`): Image to read from.
+        bounds (tuple(float)): Bounds of the image to read in
+          (left, top, right, bottom) format.
+        output_size (tuple(int)): The desired output size.
+        padding (int or tuple(int)): Amount of padding to apply to the
+          image region in pixels. Defaults to 0.
+        stride (int or tuple(int)): Stride when reading from img.
+          Defaults to 1. A tuple is interpreted as stride in
+          x and y (axis 1 and 0 respectively).
+        interpolation (str): Method of interpolation. Possible values
+          are: nearest, linear, cubic, lanczos, area. Defaults to nearest.
+        pad_at_baseline (bool): Apply padding in terms of baseline pixels. Defaults
+          to False, meaning padding is added to the output image size in pixels.
+        read_func (collections.abc.Callable): Custom read function. Defaults to
+          :func:`safe_padded_read`. A function which recieves two positional args
+          of the image object and a set of integer bounds in addition to padding
+          key word arguments for reading a pixel-aligned bounding region. This function
+          should return a numpy array with 2 or 3 dimensions. See examples for
+          more information.
+        pad_mode (str): Method for padding when reading areas outside of the input
+          image. Default is constant (0 padding). This is passed to `read_func`
+          which defaults to :func:`safe_padded_read`.
+          See :func:`safe_padded_read` for supported pad modes.
+        **read_kwargs (dict): Arbitrary keyword arguments passed through
+          to `read_func`.
     Return:
         :class:`numpy.ndimage`: Output image region.
 
