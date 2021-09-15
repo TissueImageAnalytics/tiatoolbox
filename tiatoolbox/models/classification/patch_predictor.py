@@ -173,21 +173,30 @@ class CNNPatchPredictor:
         verbose (bool): Whether to output logging information.
 
     Examples:
+        >>> # list of 2 image patches as input
         >>> data = [img1, img2]
-        ... predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
-        ... output = predictor.predict(data, mode='patch')
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> output = predictor.predict(data, mode='patch')
+
+        >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
-        ... predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
-        ... output = predictor.predict(data, mode='patch')
-        >>> data = [img.png, img.png]
-        ... predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
-        ... output = predictor.predict(data, mode='patch')
-        >>> tile_file = 'path/tile.png'
-        ... predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
-        ... output = predictor.predict(tile_file, mode='tile')
-        >>> wsi_file = 'path/wsi.svs'
-        ... predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
-        ... output = predictor.predict(wsi_file, mode='wsi')
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> output = predictor.predict(data, mode='patch')
+
+        >>> # list of 2 image patch files as input
+        >>> data = ['path/img.png', 'path/img.png']
+        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> output = predictor.predict(data, mode='patch')
+
+        >>> # list of 2 image tile files as input
+        >>> tile_file = ['path/tile1.png', 'path/tile2.png']
+        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> output = predictor.predict(tile_file, mode='tile')
+
+        >>> # list of 2 wsi files as input
+        >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
+        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> output = predictor.predict(wsi_file, mode='wsi')
 
     """
 
