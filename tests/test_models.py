@@ -838,9 +838,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         mode="wsi",
         **_kwargs,
     )
-    with pytest.raises(
-        FileExistsError, match=r"Cannot create a file when that file already exists*"
-    ):
+    with pytest.raises(FileExistsError):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
