@@ -278,12 +278,12 @@ class PatchExtractor(ABC):
               extract patches from) at requested `resolution` and `units` and it is
               expected to be in (width, height) format.
             patch_input_shape (a tuple (int, int) or
-              :class:`numpy.ndarray`of shape (2,)): Specifies the input shape of
+              :class:`numpy.ndarray` of shape (2,)): Specifies the input shape of
               requested patches to be extracted from mother image at desired
               `resolution` and `units`. This argument is also expected to be in
               (width, height) format.
             patch_output_shape (a tuple (int, int) or
-              :class:`numpy.ndarray`of shape (2,)): Specifies the output shape of
+              :class:`numpy.ndarray` of shape (2,)): Specifies the output shape of
               requested patches to be extracted from mother image at desired
               `resolution` and `units`. This argument is also expected to be in
               (width, height) format. If this is not provided, `patch_output_shape`
