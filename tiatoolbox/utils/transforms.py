@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -39,6 +39,7 @@ def background_composite(image, fill=255, alpha=False):
 
     Examples:
         >>> from tiatoolbox.utils import transforms
+        >>> import numpy as np
         >>> from matplotlib import pyplot as plt
         >>> img_with_alpha = np.zeros((2000, 2000, 4)).astype('uint8')
         >>> img_with_alpha[:1000, :, 3] = 255 # edit alpha channel

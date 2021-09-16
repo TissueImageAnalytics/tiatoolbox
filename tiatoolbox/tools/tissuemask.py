@@ -17,7 +17,7 @@
 # This file contains code inspired by StainTools
 # [https://github.com/Peter554/StainTools] written by Peter Byfield.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -114,9 +114,9 @@ class OtsuTissueMasker(TissueMasker):
 
         Args:
             images (:class:`numpy.ndarray`): List of images with a
-                length 4 shape (N, height, width, channels).
+              length 4 shape (N, height, width, channels).
             masks (:class:`numpy.ndarray`): Unused here, for API
-                consistency.
+              consistency.
 
         """
         images_shape = np.shape(images)
@@ -146,11 +146,11 @@ class OtsuTissueMasker(TissueMasker):
 
         Args:
             images (:class:`numpy.ndarray`): List of images with a
-                length 4 shape (N, height, width, channels).
+              length 4 shape (N, height, width, channels).
 
         Returns:
             :class:`numpy.ndarray`: List of images with a length 4
-                shape (N, height, width, channels).
+              shape (N, height, width, channels).
 
         """
         super().transform(images)
@@ -208,18 +208,16 @@ class MorphologicalMasker(OtsuTissueMasker):
         """Initialise a morphological masker.
 
         Args:
-            mpp (float or tuple(float)):
-                The microns per-pixel of the image to be masked. Used to
-                calculate kernel_size a 64/mpp, optional.
-            power (float or tuple(float)):
-                The objective power of the image to be masked. Used to
-                calculate kernel_size as 64/objective_power2mpp(power),
-                optional.
+            mpp (float or tuple(float)): The microns per-pixel of the
+              image to be masked. Used to calculate kernel_size a 64/mpp, optional.
+            power (float or tuple(float)): The objective power of the image to be
+              masked. Used to calculate kernel_size as
+              64/objective_power2mpp(power), optional.
             kernel_size (int or tuple(int)):
-                Size of elliptical kernel in x and y, optional.
+              Size of elliptical kernel in x and y, optional.
             min_region_size (int):
-                Minimum region size in pixels to consider as foreground.
-                Defaults to area of the kernel.
+              Minimum region size in pixels to consider as foreground.
+              Defaults to area of the kernel.
 
         """
         super().__init__()
@@ -267,11 +265,11 @@ class MorphologicalMasker(OtsuTissueMasker):
 
         Args:
             images (:class:`numpy.ndarray`): List of images with a
-                length 4 shape (N, height, width, channels).
+              length 4 shape (N, height, width, channels).
 
         Returns:
             :class:`numpy.ndarray`: List of images with a length 4
-                shape (N, height, width, channels).
+              shape (N, height, width, channels).
 
         """
         super().transform(images)

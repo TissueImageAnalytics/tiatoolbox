@@ -14,20 +14,28 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
-from typing import Union
-from tiatoolbox.utils.exceptions import FileNotSupported
-
-import cv2
+import json
+import os
 import pathlib
-import yaml
-import pandas as pd
+import zipfile
+from typing import Union
+
+import copy
+import cv2
 import numpy as np
+import pandas as pd
+import requests
+import torch
+import yaml
 from skimage import exposure
+
+from tiatoolbox import rcParam
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
@@ -57,11 +65,12 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
     Args:
         input_path (str or pathlib.Path): Path to the directory where files
-            need to be searched
-        file_types (str or tuple(str)): File types (extensions) to be searched
+            need to be searched.
+        file_types (str or tuple(str)): File types (extensions) to be searched.
 
     Returns:
-        list: File paths as a python list
+        list: File paths as a python list. It has been sorted to ensure
+            same ordering across platforms.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -81,7 +90,8 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     files_grabbed = []
     for files in file_types:
         files_grabbed.extend(input_path.glob(files))
-
+    # Ensure same ordering
+    files_grabbed.sort()
     return list(files_grabbed)
 
 
@@ -126,14 +136,14 @@ def imwrite(image_path, img):
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path):
+def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension) to read image
+        image_path (str or pathlib.Path): File path (including extension) to read image.
 
     Returns:
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
+        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -142,8 +152,14 @@ def imread(image_path):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
-    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-    return image.astype("uint8")
+    if pathlib.Path(image_path).suffix == ".npy":
+        image = np.load(image_path)
+    else:
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    if as_uint8:
+        image = image.astype(np.uint8)
+    return image
 
 
 def load_stain_matrix(stain_matrix_input):
@@ -511,3 +527,165 @@ def assert_dtype_int(input_var, message="Input must be integer."):
     """
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
         raise AssertionError(message)
+
+
+def download_data(url, save_path, overwrite=False):
+    """Download data from a given URL to location. Can overwrite data if demanded
+    else no action is taken
+
+    Args:
+        url (path): URL from where to download the data.
+        save_path (str): Location to unzip the data.
+        overwrite (bool): True to force overwriting of existing data, default=False
+
+    """
+    print("Download from %s" % url)
+    print("Save to %s" % save_path)
+    save_dir = pathlib.Path(save_path).parent
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    if not overwrite and os.path.exists(save_path):
+        return
+
+    r = requests.get(url)
+    request_response = requests.head(url)
+    status_code = request_response.status_code
+    url_exists = status_code == 200
+
+    if not url_exists:
+        raise ConnectionError("Could not find URL at %s" % url)
+
+    with open(save_path, "wb") as f:
+        f.write(r.content)
+
+
+def unzip_data(zip_path, save_path, del_zip=True):
+    """Extract data from zip file.
+
+    Args:
+        zip_path (str): Path where the zip file is located.
+        save_path (str): Path where to save extracted files.
+        del_zip (bool): Whether to delete initial zip file after extraction.
+
+    """
+    # Extract data from zip file
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(save_path)
+    if del_zip:
+        # Remove zip file
+        os.remove(zip_path)
+
+
+def save_as_json(data, save_path):
+    """Save data to a json file.
+
+    The function will deepcopy the `data` and then jsonify the content
+    in place. Support data types for jsonify consist of `str`, `int`, `float`,
+    `bool` and their np.ndarray respectively.
+
+    Args:
+        data (dict or list): Input data to save.
+        save_path (str): Output to save the json of `input`.
+
+    """
+    shadow_data = copy.deepcopy(data)
+
+    # make a copy of source input
+    def walk_list(lst):
+        """Recursive walk and jsonify in place."""
+        for i, v in enumerate(lst):
+            if isinstance(v, dict):
+                walk_dict(v)
+            elif isinstance(v, list):
+                walk_list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+                walk_list(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
+            elif v is not None and not isinstance(v, (int, float, str, bool)):
+                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
+            lst[i] = v
+
+    def walk_dict(dct):
+        """Recursive walk and jsonify in place."""
+        for k, v in dct.items():
+            if isinstance(v, dict):
+                walk_dict(v)
+            elif isinstance(v, list):
+                walk_list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+                walk_list(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
+            elif v is not None and not isinstance(v, (int, float, str, bool)):
+                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
+            if not isinstance(k, (int, float, str, bool)):
+                raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+            dct[k] = v
+
+    if isinstance(shadow_data, dict):
+        walk_dict(shadow_data)
+    elif isinstance(shadow_data, list):
+        walk_list(shadow_data)
+    else:
+        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+    with open(save_path, "w") as handle:
+        json.dump(shadow_data, handle)
+
+
+def select_device(on_gpu):
+    """Selects the appropriate device as requested.
+
+    Args:
+        on_gpu (bool): Selects gpu if True.
+
+    Returns:
+        device (str): "gpu" if on_gpu is True otherwise returns "cpu"
+
+    """
+    if on_gpu:
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    return device
+
+
+def model_to(on_gpu, model):
+    """Transfers model to cpu/gpu.
+
+    Args:
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu
+        model (torch.nn.Module): PyTorch defined model.
+
+    Returns:
+        model (torch.nn.Module):
+
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        model = model.to("cuda")
+    else:
+        model = model.to("cpu")
+
+    return model
+
+
+def get_pretrained_model_info():
+    """Get the pretrained model information from yml file."""
+    pretrained_yml_path = os.path.join(
+        rcParam["TIATOOLBOX_HOME"],
+        "models/pretrained.yml",
+    )
+    if not os.path.exists(pretrained_yml_path):
+        download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
+            pretrained_yml_path,
+        )
+    with open(pretrained_yml_path) as fptr:
+        pretrained_yml = yaml.full_load(fptr)
+
+    return pretrained_yml

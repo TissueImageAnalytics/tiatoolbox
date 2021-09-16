@@ -1,6 +1,37 @@
 History
 =======
 
+0.7.0 (2021-09-16)
+------------------
+### Major and Feature Improvements
+- Drops support for python 3.6
+- Update minimum requirement to python 3.7
+- Adds support for python 3.9
+- Adds `models` base to the repository. Currently, PyTorch models are supported. New custom models can be added. The tiatoolbox also supports using custom weights to pre-existing built-in models.
+  - Adds `classification` package and CNNPatchPredictor which takes predefined model architecture and pre-trained weights as input. The pre-trained weights for classification using kather100k data set is automatically downloaded if no weights are provided as input.
+- Adds mask-based patch extraction functionality to extract patches based on the regions that are highlighted in the `input_mask`. If `'auto'` option is selected, a tissue mask is automatically generated for the `input_image` using tiatoolbox `TissueMasker` functionality.
+- Adds visualisation module to overlay the results of an algorithm.
+
+### Changes to API
+- Command line interface for stain normalisation can be called using the keyword `stain-norm` instead of `stainnorm`
+- Replaces `FixedWindowPatchExtractor` with `SlidingWindowPatchExtractor` .
+- get_patchextractor takes the `slidingwindow` as an argument.
+- Depreciates `VariableWindowPatchExtractor`
+
+### Bug Fixes and Other Changes
+- Significantly improved python notebook documentation for clarity, consistency and ease of use for non-experts.
+- Adds detailed installation instructions for Windows, Linux and Mac
+
+### Development related changes
+- Moves flake8 above pytest in the `travis.yml` script stage.
+- Adds `set -e` at the start of the script stage in `travis.yml` to cause it to exit on error and (hopefully) not run later parts of the stage.
+- Readthedocs related changes
+  - Uses `requirements.txt` in `.readthedocs.yml`
+  - Uses apt-get installation for openjpeg and openslide
+  - Removes conda build on readthedocs build
+- Adds extra checks to pre-commit, e.g., import sorting, spellcheck etc. Detailed list can be found on this [commit](https://github.com/TIA-Lab/tiatoolbox/commit/662a143e915fa55416badd992d8e7358211730a6).
+
+
 0.6.0 (2021-05-11)
 ------------------
 ### Major and Feature Improvements

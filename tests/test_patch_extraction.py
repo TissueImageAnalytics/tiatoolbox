@@ -1,4 +1,7 @@
+"""Tests for code related to patch extraction."""
+
 from tiatoolbox.tools import patchextraction
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.exceptions import MethodNotSupported, FileNotSupported
 from tiatoolbox.utils import misc
 from tiatoolbox.wsicore.wsireader import (
@@ -10,7 +13,6 @@ from tiatoolbox.wsicore.wsireader import (
 import pytest
 import pathlib
 import numpy as np
-import math
 
 
 def read_points_patches(
@@ -83,24 +85,13 @@ def test_get_patch_extractor(_source_image, _patch_extr_csv):
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
 
-    with pytest.raises(MethodNotSupported):
-        points.merge_patches()
-
-    fixed_window = patchextraction.get_patch_extractor(
+    sliding_window = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=(200, 200),
     )
 
-    assert isinstance(fixed_window, patchextraction.FixedWindowPatchExtractor)
-
-    variable_window = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="variablewindow",
-        patch_size=(200, 200),
-    )
-
-    assert isinstance(variable_window, patchextraction.VariableWindowPatchExtractor)
+    assert isinstance(sliding_window, patchextraction.SlidingWindowPatchExtractor)
 
     with pytest.raises(MethodNotSupported):
         patchextraction.get_patch_extractor("unknown")
@@ -121,9 +112,6 @@ def test_points_patch_extractor_image_format(
     )
 
     assert isinstance(points.wsi, VirtualWSIReader)
-
-    with pytest.raises(MethodNotSupported):
-        points.merge_patches(patches=None)
 
     points = patchextraction.get_patch_extractor(
         input_img=pathlib.Path(_sample_svs),
@@ -231,51 +219,44 @@ def test_points_patch_extractor_jp2(
     assert np.all(data == saved_data)
 
 
-def test_fixed_window_patch_extractor(_patch_extr_vf_image):
-    """Test FixedWindowPatchExtractor for VF."""
+def test_sliding_window_patch_extractor(_patch_extr_vf_image):
+    """Test SlidingWindowPatchExtractor for VF."""
     input_img = pathlib.Path(_patch_extr_vf_image)
 
     stride = (20, 20)
     patch_size = (200, 200)
     img = misc.imread(input_img)
 
-    img_h = img.shape[1]
-    img_w = img.shape[0]
+    img_h = img.shape[0]
+    img_w = img.shape[1]
 
-    num_patches_img_h = int(math.ceil((img_h - patch_size[1]) / stride[1] + 1))
-    num_patches_img_w = int(math.ceil(((img_w - patch_size[0]) / stride[0] + 1)))
-    num_patches_img = num_patches_img_h * num_patches_img_w
+    coord_list = PatchExtractor.get_coordinates(
+        image_shape=(img_w, img_h),
+        patch_input_shape=patch_size,
+        stride_shape=stride,
+        input_within_bound=True,
+    )
+
+    num_patches_img = len(coord_list)
     iter_tot = 0
 
     img_patches = np.zeros(
         (num_patches_img, patch_size[1], patch_size[0], 3), dtype=img.dtype
     )
 
-    for h in range(num_patches_img_h):
-        for w in range(num_patches_img_w):
-            start_h = h * stride[1]
-            end_h = (h * stride[1]) + patch_size[1]
-            start_w = w * stride[0]
-            end_w = (w * stride[0]) + patch_size[0]
-            if end_h > img_h:
-                start_h = img_h - patch_size[1]
-                end_h = img_h
-
-            if end_w > img_w:
-                start_w = img_w - patch_size[0]
-                end_w = img_w
-
-            img_patches[iter_tot, :, :, :] = img[start_h:end_h, start_w:end_w, :]
-
-            iter_tot += 1
+    for coord in coord_list:
+        start_w, start_h, end_w, end_h = coord
+        img_patches[iter_tot, :, :, :] = img[start_h:end_h, start_w:end_w, :]
+        iter_tot += 1
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=patch_size,
         resolution=0,
         units="level",
         stride=stride,
+        within_bound=True,
     )
 
     assert np.all(img_patches[0] == patches[0])
@@ -285,39 +266,18 @@ def test_fixed_window_patch_extractor(_patch_extr_vf_image):
         img_patches_test.append(patch)
 
     img_patches_test = np.array(img_patches_test)
-
-    assert np.all(img_patches == img_patches_test)
-
-    # Test for integer (single) patch_size and stride input
-    patches = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="fixedwindow",
-        patch_size=patch_size[0],
-        resolution=0,
-        units="level",
-        stride=stride[0],
-    )
-
-    assert np.all(img_patches[0] == patches[0])
-
-    img_patches_test = []
-    for patch in patches:
-        img_patches_test.append(patch)
-
-    img_patches_test = np.array(img_patches_test)
-
     assert np.all(img_patches == img_patches_test)
 
 
-def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
-    """Test FixedWindowPatchExtractor for ndpi image."""
+def test_sliding_patch_extractor_ndpi(_sample_ndpi):
+    """Test SlidingWindowPatchExtractor for ndpi image."""
     stride = (40, 20)
     patch_size = (400, 200)
     input_img = pathlib.Path(_sample_ndpi)
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        method_name="fixedwindow",
+        method_name="slidingwindow",
         patch_size=patch_size,
         resolution=1,
         units="level",
@@ -336,3 +296,267 @@ def test_fixedwindow_patch_extractor_ndpi(_sample_ndpi):
 
     assert np.all(patches[10] == patch)
     assert patches[0].shape == (200, 400, 3)
+
+
+def test_get_coordinates():
+    """Test get tile cooordinates functionality."""
+    expected_output = np.array(
+        [
+            [0, 0, 4, 4],
+            [4, 0, 8, 4],
+        ]
+    )
+    output = PatchExtractor.get_coordinates(
+        image_shape=[9, 6],
+        patch_input_shape=[4, 4],
+        stride_shape=[4, 4],
+        input_within_bound=True,
+    )
+    assert np.sum(expected_output - output) == 0
+
+    expected_output = np.array(
+        [
+            [0, 0, 4, 4],
+            [0, 4, 4, 8],
+            [4, 0, 8, 4],
+            [4, 4, 8, 8],
+            [8, 0, 12, 4],
+            [8, 4, 12, 8],
+        ]
+    )
+    output = PatchExtractor.get_coordinates(
+        image_shape=[9, 6],
+        patch_input_shape=[4, 4],
+        stride_shape=[4, 4],
+        input_within_bound=False,
+    )
+    assert np.sum(expected_output - output) == 0
+    # test when patch shape is larger than image
+    output = PatchExtractor.get_coordinates(
+        image_shape=[9, 6],
+        patch_input_shape=[9, 9],
+        stride_shape=[9, 9],
+        input_within_bound=False,
+    )
+    # test when output patch shape is out of bound
+    # but input is in bound
+    input_bounds, output_bounds = PatchExtractor.get_coordinates(
+        image_shape=[9, 6],
+        patch_input_shape=[5, 5],
+        patch_output_shape=[4, 4],
+        stride_shape=[4, 4],
+        output_within_bound=True,
+        input_within_bound=False,
+    )
+    assert len(input_bounds) == 2 and len(output_bounds) == 2
+    # test when patch shape is larger than image
+    output = PatchExtractor.get_coordinates(
+        image_shape=[9, 6],
+        patch_input_shape=[9, 9],
+        stride_shape=[9, 8],
+        input_within_bound=True,
+    )
+    assert len(output) == 0
+
+    # test error input form
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9j, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4j],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            patch_input_shape=[4j, 4],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            patch_input_shape=[4, -1],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, -6],
+            patch_input_shape=[4, -1],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6, 3],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4, 3],
+            stride_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[4, 4, 3],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"stride.*> 1.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            patch_input_shape=[4, 4],
+            stride_shape=[0, 0],
+            input_within_bound=False,
+        )
+    # * invalid shape for output
+    with pytest.raises(ValueError, match=r".*input.*larger.*output.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            stride_shape=[4, 4],
+            patch_input_shape=[2, 2],
+            patch_output_shape=[4, 4],
+            input_within_bound=False,
+        )
+    with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
+        PatchExtractor.get_coordinates(
+            image_shape=[9, 6],
+            stride_shape=[4, 4],
+            patch_input_shape=[4, 4],
+            patch_output_shape=[2, -2],
+            input_within_bound=False,
+        )
+
+    # Tests for filter_coordinates method
+    bbox_list = np.array(
+        [
+            [0, 0, 4, 4],
+            [0, 4, 4, 8],
+            [4, 0, 8, 4],
+            [4, 4, 8, 8],
+            [8, 0, 12, 4],
+            [8, 4, 12, 8],
+        ]
+    )
+    mask = np.zeros([9, 6])
+    mask[0:4, 3:8] = 1  # will flag first 2
+    mask_reader = VirtualWSIReader(mask)
+    flag_list = PatchExtractor.filter_coordinates(
+        mask_reader, bbox_list, resolution=1.0, units="baseline"
+    )
+    assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
+
+    # Test for bad mask input
+    with pytest.raises(ValueError):
+        PatchExtractor.filter_coordinates(
+            mask, bbox_list, resolution=1.0, units="baseline"
+        )
+
+    # Test for bad bbox coordinate list in the input
+    with pytest.raises(ValueError):
+        PatchExtractor.filter_coordinates(
+            mask_reader, bbox_list.tolist(), resolution=1.0, units="baseline"
+        )
+
+    # Test for incomplete coordinate list
+    with pytest.raises(ValueError):
+        PatchExtractor.filter_coordinates(
+            mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
+        )
+
+
+def test_mask_based_patch_extractor_ndpi(_sample_ndpi):
+    """Test SlidingWindowPatchExtractor with mask for ndpi image."""
+    res = 0
+    patch_size = stride = (400, 400)
+    input_img = pathlib.Path(_sample_ndpi)
+    wsi = OpenSlideWSIReader(input_img=input_img)
+    slide_dimensions = wsi.info.slide_dimensions
+
+    # Generating a test mask to read patches from
+    mask_dim = (int(slide_dimensions[0] / 10), int(slide_dimensions[1] / 10))
+    wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+    # masking two column to extract patch from
+    wsi_mask[:, :2] = 255
+
+    # patch extraction based on the column mask
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=wsi_mask,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=None,
+    )
+
+    # read the patch from the second row (y) in the first column
+    patch = wsi.read_rect(
+        location=(0, int(patch_size[1])),
+        size=patch_size,
+        resolution=res,
+        units="level",
+    )
+
+    # because we are using column mask to extract patches, we can expect
+    # that the patches[1] is the from the second row (y) in the first column.
+    assert np.all(patches[1] == patch)
+    assert patches[0].shape == (patch_size[0], patch_size[1], 3)
+
+    # Test None option for mask
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=None,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride[0],
+    )
+
+    # Test `otsu` option for mask
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask="otsu",
+        method_name="slidingwindow",
+        patch_size=patch_size[0],
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+
+    patches = patchextraction.get_patch_extractor(
+        input_img=wsi_mask,  # a numpy array to build VirtualSlideReader
+        input_mask="morphological",
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+
+    # Test passing an empty mask
+    with pytest.raises(ValueError):
+        wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+        patches = patchextraction.get_patch_extractor(
+            input_img=input_img,
+            input_mask=wsi_mask,
+            method_name="slidingwindow",
+            patch_size=patch_size,
+            resolution=res,
+            units="level",
+            stride=stride,
+        )

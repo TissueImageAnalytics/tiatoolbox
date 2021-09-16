@@ -23,7 +23,7 @@ Computational Pathology Toolbox developed at the TIA Centre
 
 ### All Users
 
-This package is for those interested in digital pathology: including graduate students, medical staff, members of the TIA Centre and of PathLAKE, and anyone, anywhere, who may find it useful. We will continue to improve this package, taking account of developments in pathology, microscopy, computing and related disciplines. Please send comments and criticisms to **[tia@dcs.warwick.ac.uk](mailto:tia@dcs.warwick.ac.uk)**.
+This package is for those interested in digital pathology: including graduate students, medical staff, members of the TIA Centre and of PathLAKE, and anyone, anywhere, who may find it useful. We will continue to improve this package, taking account of developments in pathology, microscopy, computing and related disciplines. Please send comments and criticisms to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
 
 **`tiatoolbox`** is a multipurpose name that we use for 1) a certain computer program, 2) a Python package of related programs, created by us at the TIA Centre to help people get started in Digital Pathology, 3) this repository, 4) a certain virtual environment.
 
@@ -51,7 +51,8 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 
 ### Install Python package
 
-If you wish to use our programs, perhaps without developing them further, run the command `pip install tiatoolbox`.
+If you wish to use our programs, perhaps without developing them further, run the command `pip install tiatoolbox` or `pip install --ignore-installed --upgrade tiatoolbox` to upgrade from an existing installation.
+Detailed installation instructions can be found in the [documentation](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
 
 To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**.
 

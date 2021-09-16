@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -43,7 +43,7 @@ def slide_info(input_path, verbose=True):
         >>> for curr_file in files_all:
         ...     slide_param = slide_info(input_path=curr_file)
         ...     utils.misc.save_yaml(slide_param.as_dict(),
-        ...           str(slide_param.file_name) + ".yaml")
+        ...           str(slide_param.file_path) + ".yaml")
         ...     print(slide_param.as_dict())
 
     """

@@ -1,17 +1,24 @@
+"""Tests for utils."""
+
+import os
 import random
+import shutil
 from pathlib import Path
 from typing import Tuple
-from tiatoolbox.utils.transforms import locsize2bounds
+import hashlib
 
-import pytest
-from pytest import approx
+import cv2
 import numpy as np
 import pandas as pd
-
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
+import pytest
+import torch.cuda
 from PIL import Image
-import cv2
+from pytest import approx
+
+from tiatoolbox import rcParam, utils
+from tiatoolbox.utils import misc
+from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.transforms import locsize2bounds
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
@@ -711,15 +718,17 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(["a", "b", "c"])
 
 
-def test_grab_files_from_dir():
+def test_grab_files_from_dir(_sample_visual_fields):
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
     input_path = file_parent_dir.joinpath("data")
 
     file_types = "*.tif, *.png, *.jpg"
 
-    out = utils.misc.grab_files_from_dir(input_path=input_path, file_types=file_types)
-    assert len(out) == 6
+    out = utils.misc.grab_files_from_dir(
+        input_path=_sample_visual_fields, file_types=file_types
+    )
+    assert len(out) == 5
 
     out = utils.misc.grab_files_from_dir(
         input_path=input_path.parent, file_types="test_utils*"
@@ -730,6 +739,72 @@ def test_grab_files_from_dir():
 
     out = utils.misc.grab_files_from_dir(input_path=input_path, file_types="*.py")
     assert len(out) == 0
+
+
+def test_download_unzip_data():
+    """Test download and unzip data from utils.misc."""
+    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    os.makedirs(save_dir_path)
+    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    misc.download_data(url, save_zip_path)
+    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
+    misc.unzip_data(save_zip_path, save_dir_path, del_zip=False)  # not remove
+    assert os.path.exists(save_zip_path)
+    misc.unzip_data(save_zip_path, save_dir_path)
+
+    extracted_path = os.path.join(save_dir_path, "test_directory")
+    # to avoid hidden files in case of MAC-OS or Windows (?)
+    extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
+    extracted_dirs.sort()  # ensure same ordering
+    assert extracted_dirs == ["dir1", "dir2", "dir3"]
+
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+
+
+def test_download_data():
+    """Test download data from utils.misc."""
+    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
+    if os.path.exists(save_dir_path):
+        shutil.rmtree(save_dir_path, ignore_errors=True)
+    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+
+    misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
+    old_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    # modify the content
+    with open(save_zip_path, "wb") as fptr:
+        fptr.write("dataXXX".encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    assert old_hash != bad_hash
+    misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
+    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    assert new_hash == old_hash
+
+    # test not overiting
+    # modify the content
+    with open(save_zip_path, "wb") as fptr:
+        fptr.write("dataXXX".encode())  # random data
+    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    assert old_hash != bad_hash
+    misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
+    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    assert new_hash == bad_hash
+
+    shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
+    misc.download_data(url, save_zip_path)  # to test skip download
+    assert os.path.exists(save_zip_path)
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+
+    # URL not valid
+    with pytest.raises(ConnectionError):
+        # shouldn't use save_path if test runs correctly
+        save_path = os.path.join(save_dir_path, "temp")
+        misc.download_data(
+            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
+        )
 
 
 def test_parse_cv2_interpolaton():
@@ -891,3 +966,85 @@ def test_normalise_padding_input_dims():
     """Test that normalise padding error with input dimensions > 1."""
     with pytest.raises(ValueError):
         utils.image.normalise_padding_size(((0, 0), (0, 0)))
+
+
+def test_select_device():
+    """Test if correct device is selected for models."""
+    device = misc.select_device(on_gpu=True)
+    assert device == "cuda"
+
+    device = misc.select_device(on_gpu=False)
+    assert device == "cpu"
+
+
+def test_model_to():
+    """Test for placing model on device."""
+    import torch.nn as nn
+    import torchvision.models as torch_models
+
+    # test on GPU
+    # no GPU on Travis so this will crash
+    if not torch.cuda.is_available():
+        with pytest.raises(RuntimeError):
+            model = torch_models.resnet18()
+            _ = misc.model_to(on_gpu=True, model=model)
+
+    # test on CPU
+    model = torch_models.resnet18()
+    model = misc.model_to(on_gpu=False, model=model)
+    assert isinstance(model, nn.Module)
+
+
+def test_save_as_json():
+    """Test save data to json."""
+    import json
+
+    # dict with nested dict, list, and np.array
+    key_dict = {
+        "a1": {"name": "John", "age": 23, "sex": "male"},
+        "a2": {"name": "John", "age": 23, "sex": "male"},
+    }
+    sample = {
+        "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
+        "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
+        "c": {
+            "a4": {"a5": {"a6": "a7", "c": [1, 1, 3, np.array([4, 5, 6.0])]}},
+            "b1": {},
+            "c1": [],
+            True: [False, None],
+        },
+        "d": [key_dict, np.random.rand(2, 2)],
+        "e": np.random.rand(16, 2),
+    }
+    not_jsonable = {"x86": lambda x: x}
+    not_jsonable.update(sample)
+    # should fail because key is not of primitive type [str, int, float, bool]
+    with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
+        misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(not_jsonable, "sample_json.json")
+    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
+    with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
+        misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
+    # test complex nested dict
+    print(sample)
+    misc.save_as_json(sample, "sample_json.json")
+    with open("sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    # test read because == is useless when value is mutable
+    assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
+
+    # test complex list of data
+    misc.save_as_json(list(sample.values()), "sample_json.json")
+    # test read because == is useless when value is mutable
+    with open("sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
+
+    # test numpy generic
+    misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
+    misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
+    os.remove("sample_json.json")
