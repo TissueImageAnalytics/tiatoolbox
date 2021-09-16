@@ -37,11 +37,7 @@ from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import (
-    download_data,
-    get_pretrained_model_info,
-    save_as_json,
-)
+from tiatoolbox.utils.misc import download_data, get_pretrained_model_info, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
@@ -132,7 +128,7 @@ class CNNPatchModel(ModelABC):
 
         # Inference mode
         model.eval()
-        # Dont compute the gradient (not training)
+        # Do not compute the gradient (not training)
         with torch.no_grad():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
@@ -299,12 +295,12 @@ class CNNPatchPredictor:
         # deal with overlapping regions
         if denominator is not None:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
-            # convert raw probabilities to preditions
+            # convert raw probabilities to predictions
             if postproc_func is not None:
                 output = postproc_func(output)
             else:
                 output = np.argmax(output, axis=-1)
-            # to make sure background is 0 while class wil be 1..N
+            # to make sure background is 0 while class will be 1..N
             output[denominator > 0] += 1
         return output
 
@@ -332,7 +328,7 @@ class CNNPatchPredictor:
         """
         dataset.preproc_func = self.model.preproc_func
 
-        # preprocessing must be defined with the dataset
+        # preprocessing must be defined with the data set
         dataloader = torch.utils.data.DataLoader(
             dataset,
             num_workers=self.num_loader_worker,
@@ -365,13 +361,13 @@ class CNNPatchPredictor:
                 batch_output_probabilities
             )
 
-            # tolist may be very expensive
+            # tolist might be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
             cum_output["predictions"].extend(batch_output_predictions.tolist())
             if return_coordinates:
                 cum_output["coordinates"].extend(batch_data["coords"].tolist())
             if return_labels:  # be careful of `s`
-                # We dont use tolist here because label may be of mixed types
+                # We do not use tolist here because label may be of mixed types
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
 
@@ -404,6 +400,7 @@ class CNNPatchPredictor:
         units=None,
         merge_predictions=False,
         save_dir=None,
+        save_output=False,
     ):
         """Make a prediction for a list of input data.
 
@@ -438,18 +435,22 @@ class CNNPatchPredictor:
                 is at requested read resolution, not with respect to to level 0, and
                 must be positive. If not provided, `stride_size=patch_size`.
 
-            resolution (float): Resolution used for reading the image.
+            resolution (float): Resolution used for reading the image. Please see
+                :obj:`WSIReader` for details.
 
             units (str): Units of resolution used for reading the image. Choose from
-                either `level`, `power` or `mpp`.
+                either `level`, `power` or `mpp`. Please see :obj:`WSIReader` for
+                details.
 
             merge_predictions (bool): Whether to merge the predictions to form
             a 2-dimensional map. This is only applicable for `mode='wsi'` or
             `mode='tile'`.
 
-            save_dir (str): Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output` where the
-                running script is invoked.
+            save_dir (str, pathlib.Path): Output directory when processing multiple
+                tiles and whole-slide images. By default, it is folder `output` where
+                the running script is invoked.
+
+            save_output (bool): Whether to save output for a single file. default=False
 
         Returns:
             output (ndarray, dict): Model predictions of the input dataset.
@@ -525,13 +526,11 @@ class CNNPatchPredictor:
                         "All subsequent output will be saved to current runtime"
                         "location under folder 'output'. Overwriting may happen!"
                     )
-                    save_dir = os.path.join(os.getcwd(), "output")
+                    save_dir = pathlib.Path(os.getcwd()).joinpath("output")
 
                 save_dir = pathlib.Path(save_dir)
-                if not save_dir.is_dir():
-                    os.makedirs(save_dir)
-                else:
-                    raise ValueError("`save_dir` already exists!")
+
+                save_dir.mkdir(parents=True, exist_ok=False)
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
@@ -539,6 +538,9 @@ class CNNPatchPredictor:
                 raise ValueError(
                     "Input to `tile` and `wsi` mode must be a list of file paths."
                 )
+
+            # None if no output
+            outputs = None
 
             # generate a list of output file paths if number of input images > 1
             file_dict = OrderedDict()
@@ -570,6 +572,7 @@ class CNNPatchPredictor:
                 output_model["units"] = units
 
                 outputs = [output_model]  # assign to a list
+                merged_prediction = None
                 if merge_predictions:
                     merged_prediction = self.merge_predictions(
                         img_path,
@@ -580,12 +583,12 @@ class CNNPatchPredictor:
                     )
                     outputs.append(merged_prediction)
 
-                if len(imgs) > 1:
+                if len(imgs) > 1 or save_output:
                     img_code = "{number:0{width}d}".format(
                         width=len(str(len(imgs))), number=idx
                     )
                     save_info = {}
-                    save_path = os.path.join(save_dir, img_code)
+                    save_path = os.path.join(str(save_dir), img_code)
                     raw_save_path = f"{save_path}.raw.json"
                     save_info["raw"] = raw_save_path
                     save_as_json(output_model, raw_save_path)
@@ -593,10 +596,9 @@ class CNNPatchPredictor:
                         merged_file_path = f"{save_path}.merged.npy"
                         np.save(merged_file_path, merged_prediction)
                         save_info["merged"] = merged_file_path
-                    file_dict[img_path] = save_info
-                else:
-                    output = outputs
-            output = file_dict if len(imgs) > 1 else output
+                    file_dict[str(img_path)] = save_info
+
+            output = file_dict if len(imgs) > 1 or save_output else outputs
 
         return output
 
