@@ -45,7 +45,7 @@ class StainNormaliser:
         extractor (CustomExtractor,RuifrokExtractor): method specific stain extractor.
         stain_matrix_target (:class:`numpy.ndarray`): stain matrix of target.
         target_concentrations (:class:`numpy.ndarray`): stain concentration
-         matrix of target.
+          matrix of target.
         maxC_target (:class:`numpy.ndarray`): 99th percentile of each stain.
         stain_matrix_target_RGB (:class:`numpy.ndarray`): target stain matrix in RGB.
 
@@ -65,7 +65,7 @@ class StainNormaliser:
         Args:
             img (:class:`numpy.ndarray`): input image.
             stain_matrix (:class:`numpy.ndarray`): stain matrix for haematoxylin and
-             eosin stains.
+              eosin stains.
 
         Returns:
             numpy.ndarray: stain concentrations of input image.
@@ -80,7 +80,7 @@ class StainNormaliser:
 
         Args:
             target (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
-             target/reference image.
+              target/reference image.
 
         """
         self.stain_matrix_target = self.extractor.get_stain_matrix(target)
@@ -127,7 +127,7 @@ class CustomNormaliser(StainNormaliser):
 
     Args:
         stain_matrix (:class:`numpy.ndarray`): user-defined stain matrix. Must be
-         either 2x3 or 3x3.
+          either 2x3 or 3x3.
 
     Examples:
         >>> from tiatoolbox.tools.stainnorm import CustomNormaliser
@@ -264,7 +264,7 @@ class ReinhardNormaliser:
 
         Returns:
             :class:`numpy.ndarray` of type :class:`numpy.float`: colour normalised RGB
-             image.
+              image.
 
         """
         chan1, chan2, chan3 = self.lab_split(img)
@@ -347,10 +347,10 @@ def get_normaliser(method_name, stain_matrix=None):
 
     Args:
         method_name (str) : name of stain norm method, must be one of "reinhard",
-         "custom", "ruifrok", "macenko" or "vahadane".
+          "custom", "ruifrok", "macenko" or "vahadane".
         stain_matrix (:class:`numpy.ndarray` or str or pathlib.Path) : user-defined
-         stain matrix. This must either be a numpy array or a path to either a .csv or
-         .npy file. This is only utilised if using "custom" method name.
+          stain matrix. This must either be a numpy array or a path to either a .csv or
+          .npy file. This is only utilised if using "custom" method name.
 
     Returns:
         StainNormaliser : an object with base :class:'.StainNormaliser' as base class.

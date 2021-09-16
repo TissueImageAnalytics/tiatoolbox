@@ -27,16 +27,16 @@ from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 
 
 class DatasetInfoABC(ABC):
-    """Define an abstract class for holding a dataset information.
+    """Define an abstract class for holding dataset information.
 
     Enforcing such that following attributes must always be defined by the subclass.
 
-    Attributes
+    Attributes:
         inputs (list): A list of paths where each path points to a sample image.
         labels (list): A list of `int` where each is the label of the sample at
-            the same index.
-        label_names (dict): A dict indicates the possible associate name of each label
-            value.
+          the same index.
+        label_names (dict): A dict indicates the possible associate name of each
+          label value.
 
     """
 
@@ -60,17 +60,16 @@ class KatherPatchDataset(DatasetInfoABC):
     """Define a class for holding the Kather dataset information.
 
     Args:
-        save_dir_path (str or None): Path to directory containing the Kather dataset,
-            assumed to be as is after extracted. If the argument is `None`,
-            the dataset will be downloaded and extracted into the
-            'run_dir/download/Kather'.
-
+        save_dir_path (str or None): Path to directory containing the Kather
+          dataset. This is assumed to be the same form after the data is initially
+          downloaded. If the argument is `None`, the dataset will be downloaded
+          and extracted into the 'run_dir/download/Kather'.
     Attributes
         inputs (list): A list of paths where each path points to a sample image.
         labels (list): A list of `int` where each is the label of the sample at
-            the same index.
-        label_names (dict): A dict indicates the possible associate name of each label
-            value.
+          the same index.
+        label_names (dict): A dict indicates the possible associate name of each
+          label value.
 
     """
 

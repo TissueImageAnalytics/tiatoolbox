@@ -22,7 +22,6 @@
 import warnings
 from typing import Tuple, Union
 
-import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import (
@@ -32,8 +31,11 @@ from tiatoolbox.utils.transforms import (
     pad_bounds,
     locsize2bounds,
 )
-from tiatoolbox.utils.misc import conv_out_size
+import numpy as np
+from PIL import Image
 
+from tiatoolbox.utils.misc import conv_out_size
+from tiatoolbox.utils.transforms import bounds2locsize, imresize
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
@@ -460,10 +462,11 @@ def sub_pixel_read(
         ValueError: Invalid arguments.
         AssertionError: Internal errors, possibly due to invalid values.
     Examples:
-        Simple read:
+        >>> # Simple read
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> sub_pixel_read(image, bounds)
-        Read with padding applied to bounds before reading:
+
+        >>> # Read with padding applied to bounds before reading:
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> region = sub_pixel_read(
         ...     image,
@@ -471,18 +474,20 @@ def sub_pixel_read(
         ...     padding=2,
         ...     pad_mode="reflect",
         ... )
-        Read with padding applied after reading:
+
+        >>> # Read with padding applied after reading:
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> region = sub_pixel_read(image, bounds)
         >>> region = np.pad(region, padding=2, mode="reflect")
 
-        Custom read function which generates a diagonal gradient:
+        >>> # Custom read function which generates a diagonal gradient:
         >>> bounds = (0, 0, 10.5, 10.5)
         >>> def gradient(_, b, **kw):
         ...     width, height = (b[2] - b[0], b[3] - b[1])
         ...     return np.mgrid[:height, :width].sum(0)
         >>> sub_pixel_read(bounds, read_func=gradient)
-        Custom read function which gets pixel data from a custom object:
+
+        >>> # Custom read function which gets pixel data from a custom object:
         >>> bounds = (0, 0, 10, 10)
         >>> def openslide_read(image, bounds, **kwargs):
         ...     # Note that bounds may contain negative integers
