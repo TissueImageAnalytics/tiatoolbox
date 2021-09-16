@@ -169,7 +169,6 @@ class CNNPatchPredictor:
     Attributes:
         img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
           A HWC image or a path to WSI.
-        outputs ():
         mode (str): Type of input to process. Choose from either `patch`, `tile`
           or `wsi`.
         model (nn.Module): Defined PyTorch model.
@@ -181,7 +180,6 @@ class CNNPatchPredictor:
           via the `pretrained_weight` argument. Argument is case insensitive.
         batch_size (int) : Number of images fed into the model each time.
         num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
-        iostate ():
         verbose (bool): Whether to output logging information.
 
     Examples:
