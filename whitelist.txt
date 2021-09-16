@@ -30,3 +30,6 @@ npy
 NHW
 HW
 HWC
+coords
+img
+resampling

@@ -879,6 +879,22 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
+    # blind test
+    # pseudo output dict from model with 2 patches
+    output = {
+        "resolution": 1.0,
+        "units": "baseline",
+        "probabilities": [[0.45, 0.55], [0.90, 0.10]],
+        "predictions": [1, 0],
+        "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
+    }
+    merged = CNNPatchPredictor.merge_predictions(
+        np.zeros([4, 4]), output, resolution=1.0, units="baseline"
+    )
+    _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
+    assert np.sum(merged - _merged) == 0
+
+    # integration test
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
     kwargs = dict(

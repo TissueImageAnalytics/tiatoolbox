@@ -35,7 +35,7 @@ class PatchExtractor(ABC):
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
           patch extraction.
         patch_size(int or tuple(int)): patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
           input mask that is used for position filtering when extracting patches
           i.e., patches will only be extracted based on the highlighted regions in
           the input_mask. input_mask can be either path to the mask, a numpy
@@ -184,9 +184,9 @@ class PatchExtractor(ABC):
 
         self.coord_list = self.get_coordinates(
             image_shape=(img_w, img_h),
-            patch_shape=(img_patch_w, img_patch_h),
+            patch_input_shape=(img_patch_w, img_patch_h),
             stride_shape=(stride_w, stride_h),
-            within_bound=self.within_bound,
+            input_within_bound=self.within_bound,
         )
 
         if self.mask is not None:
@@ -220,17 +220,17 @@ class PatchExtractor(ABC):
 
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
-                mask related to the WSI from which we want to extract the patches.
+              mask related to the WSI from which we want to extract the patches.
             coordinates_list (ndarray and np.int32): Coordinates to be checked
-                via the `func`. They must be in the same resolution as requested
-                `resolution` and `units`. The shape of `coordinates_list` is (N, K)
-                where N is the number of coordinate sets and K is either 2 for centroids
-                or 4 for bounding boxes. When using the default `func=None`, K should be
-                4, as we expect the `coordinates_list` to be refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
+              via the `func`. They must be in the same resolution as requested
+              `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+              where N is the number of coordinate sets and K is either 2 for centroids
+              or 4 for bounding boxes. When using the default `func=None`, K should be
+              4, as we expect the `coordinates_list` to be refer to bounding boxes in
+              `[start_x, start_y, end_x, end_y]` format.
             func: The coordinate validator function. A function that takes `reader` and
-                `coordinate` as arguments and return True or False as indication of
-                coordinate validity.
+              `coordinate` as arguments and return True or False as indication of
+              coordinate validity.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
@@ -264,77 +264,122 @@ class PatchExtractor(ABC):
     @staticmethod
     def get_coordinates(
         image_shape=None,
-        patch_shape=None,
+        patch_input_shape=None,
+        patch_output_shape=None,
         stride_shape=None,
-        within_bound=True,
+        input_within_bound=False,
+        output_within_bound=False,
     ):
         """Calculate patch tiling coordinates.
 
         Args:
             image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                This argument specifies the shape of mother image (the image we want to)
-                extract patches from) at requested `resolution` and `units` and it is
-                expected to be in (width, height) format.
-            patch_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                Specifies the shape of requested patches to be extracted from mother
-                image at desired `resolution` and `units`. This argument is also
-                expected to be in (width, height) format.
+              This argument specifies the shape of mother image (the image we want to)
+              extract patches from) at requested `resolution` and `units` and it is
+              expected to be in (width, height) format.
+            patch_input_shape (a tuple (int, int) or
+              :class:`numpy.ndarray` of shape (2,)): Specifies the input shape of
+              requested patches to be extracted from mother image at desired
+              `resolution` and `units`. This argument is also expected to be in
+              (width, height) format.
+            patch_output_shape (a tuple (int, int) or
+              :class:`numpy.ndarray` of shape (2,)): Specifies the output shape of
+              requested patches to be extracted from mother image at desired
+              `resolution` and `units`. This argument is also expected to be in
+              (width, height) format. If this is not provided, `patch_output_shape`
+              will be the same as `patch_input_shape`.
             stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                The stride that is used to calcualte the patch location during the patch
-                extraction.
-            within_bound (bool): Whether to include the patches on the right and bottom
-                margins of mother image. If `True`, the patches that their location
-                exceeds the `image_shape` would be neglected. Otherwise, those patches
-                would be extracted with `Reader` function and appropriate padding.
+              The stride that is used to calcualte the patch location during the patch
+              extraction. If `patch_output_shape` is provided, next stride location
+              will base on the output rather than the input.
+            input_within_bound (bool): Whether to include the patches where their
+              `input` location exceed the margins of mother image. If `True`, the
+              patches with input location exceeds the `image_shape` would be
+              neglected. Otherwise, those patches would be extracted with `Reader`
+              function and appropriate padding.
+            output_within_bound (bool): Whether to include the patches where their
+              `output` location exceed the margins of mother image. If `True`, the
+              patches with output location exceeds the `image_shape` would be
+              neglected. Otherwise, those patches would be extracted with `Reader`
+              function and appropriate padding.
 
         Return:
             coord_list: a list of corrdinates in `[start_x, start_y, end_x, end_y]`
             format to be used for patch extraction.
 
         """
+        return_output_bound = patch_output_shape is not None
         image_shape = np.array(image_shape)
-        patch_shape = np.array(patch_shape)
+        patch_input_shape = np.array(patch_input_shape)
+        if patch_output_shape is None:
+            output_within_bound = False
+            patch_output_shape = patch_input_shape
+        patch_output_shape = np.array(patch_output_shape)
         stride_shape = np.array(stride_shape)
-        if (
-            not np.issubdtype(image_shape.dtype, np.integer)
-            or np.size(image_shape) > 2
-            or np.any(image_shape < 0)
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if (
-            not np.issubdtype(patch_shape.dtype, np.integer)
-            or np.size(patch_shape) > 2
-            or np.any(patch_shape < 0)
-        ):
-            raise ValueError("Invalid `patch_shape` value %s." % patch_shape)
-        if (
-            not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2
-            or np.any(stride_shape < 0)
-        ):
-            raise ValueError("Invalid `stride_shape` value %s." % stride_shape)
+
+        def validate_shape(shape):
+            return (
+                not np.issubdtype(shape.dtype, np.integer)
+                or np.size(shape) > 2
+                or np.any(shape < 0)
+            )
+
+        if validate_shape(image_shape):
+            raise ValueError(f"Invalid `image_shape` value {image_shape}.")
+        if validate_shape(patch_input_shape):
+            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
+        if validate_shape(patch_output_shape):
+            raise ValueError(
+                f"Invalid `patch_output_shape` value {patch_output_shape}."
+            )
+        if validate_shape(stride_shape):
+            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
+        if np.any(patch_input_shape < patch_output_shape):
+            raise ValueError(
+                (
+                    f"`patch_input_shape` must larger than `patch_output_shape`"
+                    f" {patch_input_shape} must > {patch_output_shape}."
+                )
+            )
         if np.any(stride_shape < 1):
-            raise ValueError("`stride_shape` value %s must > 1." % stride_shape)
+            raise ValueError(f"`stride_shape` value {stride_shape} must > 1.")
 
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
-        patch_shape = np.array(patch_shape)
-        x_list = np.arange(0, image_shape[0], stride_shape[0])
-        y_list = np.arange(0, image_shape[1], stride_shape[1])
+        output_x_end = (
+            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0]
+        )
+        output_x_list = np.arange(0, int(output_x_end), stride_shape[0])
+        output_y_end = (
+            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1]
+        )
+        output_y_list = np.arange(0, int(output_y_end), stride_shape[1])
+        output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
+        output_br_list = output_tl_list + patch_output_shape[None]
 
-        if within_bound:
-            sel = x_list + patch_shape[0] <= image_shape[0]
-            x_list = x_list[sel]
-            sel = y_list + patch_shape[1] <= image_shape[1]
-            y_list = y_list[sel]
+        io_diff = patch_input_shape - patch_output_shape
+        input_tl_list = output_tl_list - (io_diff // 2)[None]
+        input_br_list = input_tl_list + patch_input_shape[None]
 
-        top_left_list = flat_mesh_grid_coord(x_list, y_list)
-        bot_right_list = top_left_list + patch_shape[None]
-        coord_list = np.concatenate([top_left_list, bot_right_list], axis=-1)
-        return coord_list
+        sel = np.zeros(input_tl_list.shape[0], dtype=bool)
+        if output_within_bound:
+            sel |= np.any(output_br_list > image_shape[None], axis=1)
+        if input_within_bound:
+            sel |= np.any(input_br_list > image_shape[None], axis=1)
+            sel |= np.any(input_tl_list < 0, axis=1)
+        ####
+        input_bound_list = np.concatenate(
+            [input_tl_list[~sel], input_br_list[~sel]], axis=-1
+        )
+        output_bound_list = np.concatenate(
+            [output_tl_list[~sel], output_br_list[~sel]], axis=-1
+        )
+        if return_output_bound:
+            return input_bound_list, output_bound_list
+        return input_bound_list
 
 
 class SlidingWindowPatchExtractor(PatchExtractor):
@@ -342,7 +387,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     Args:
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
-         default = patch_size
+          default = patch_size
 
     Attributes:
         stride(tuple(int)): stride in (x, y) direction for patch extraction.
@@ -387,9 +432,9 @@ class PointsPatchExtractor(PatchExtractor):
 
     Args:
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
-         and/or type of patch. Input can be path to a csv or json file.
-         classification, default=9 (centre of patch and all the eight neighbours as
-         centre).
+          and/or type of patch. Input can be path to a csv or json file.
+          classification, default=9 (centre of patch and all the eight neighbours as
+          centre).
 
     """
 

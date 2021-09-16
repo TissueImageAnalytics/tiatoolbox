@@ -1043,3 +1043,8 @@ def test_save_as_json():
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
+
+    # test numpy generic
+    misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
+    misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
+    os.remove("sample_json.json")
