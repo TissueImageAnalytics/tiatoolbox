@@ -222,7 +222,6 @@ class CNNPatchPredictor:
         super().__init__()
 
         self.imgs = None
-        self.outputs = None
         self.mode = None
 
         if model is None and pretrained_model is None:
