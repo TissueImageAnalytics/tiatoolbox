@@ -65,7 +65,7 @@ class ModelABC(ABC, nn.Module):
 
     @abstractmethod
     # pylint: disable=W0221
-    # shut up pylint because this is generic abc, else it will keep complaining
+    # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
         ...

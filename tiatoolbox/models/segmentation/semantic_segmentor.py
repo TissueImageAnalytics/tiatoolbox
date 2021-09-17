@@ -142,7 +142,7 @@ class IOConfigSegmentor(IOConfigABC):
             raise ValueError("Invalid resolution units.")
 
     @staticmethod
-    def scale_to_highest(resolutions: List[dict], unit: str):
+    def scale_to_highest(resolutions: List[dict], units: str):
         """Get scaling factor from input resolutions.
 
         This will convert resolutions to scaling factor with repsect to
@@ -151,7 +151,7 @@ class IOConfigSegmentor(IOConfigABC):
         Args:
             resolutions (list): a list of resolutions where each defined
               as `{'resolution': value, 'unit': value}`
-            unit (str): unit that the the resolutions are at.
+            units (str): unit that the the resolutions are at.
 
         Returns:
             :class:`numpy.ndarray`: an 1D array of scaling factor having the same
@@ -159,9 +159,9 @@ class IOConfigSegmentor(IOConfigABC):
 
         """
         old_val = [v["resolution"] for v in resolutions]
-        if unit == "baseline":
+        if units == "baseline":
             new_val = old_val
-        elif unit == "mpp":
+        elif units == "mpp":
             new_val = np.min(old_val) / np.array(old_val)
         else:
             # when being power
