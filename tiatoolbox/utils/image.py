@@ -22,18 +22,17 @@
 import warnings
 from typing import Tuple, Union
 
-import numpy as np
 import cv2
+import numpy as np
 
+from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.utils.transforms import (
     bounds2locsize,
-    imresize,
     bounds2slices,
-    pad_bounds,
+    imresize,
     locsize2bounds,
+    pad_bounds,
 )
-from tiatoolbox.utils.misc import conv_out_size
-
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
@@ -74,12 +73,11 @@ def normalise_padding_size(padding):
         raise ValueError("Padding has invalid size 3. Valid sizes are 1, 2, or 4.")
 
     if padding_size == 1:
-        padding = np.repeat(padding, 4)
+        return np.repeat(padding, 4)
     elif padding_size == 2:
-        padding = np.tile(padding, 2)
+        return np.tile(padding, 2)
     else:
-        padding = np.array(padding)
-    return padding
+        return np.array(padding)
 
 
 def find_padding(read_location, read_size, image_size):
@@ -123,9 +121,8 @@ def find_overlap(read_location, read_size, image_size):
     region_end = read_location + read_size
     stop = np.minimum(region_end, image_size)
 
-    # Conctenate start and stop to make a bounds array (left, top, right, bottom)
-    bounds = np.concatenate([start, stop])
-    return bounds
+    # Concatenate start and stop to make a bounds array (left, top, right, bottom)
+    return np.concatenate([start, stop])
 
 
 def make_bounds_size_positive(bounds):
@@ -357,18 +354,13 @@ def safe_padded_read(
         img_size = conv_out_size(img_size, stride=stride)
 
     # Return without padding if pad_mode is none
-    # TODO: Add test for this!
     if pad_mode in ["none", None]:
         return region
 
     # Find how much padding needs to be applied to fill the edge gaps
-    # edge_padding = np.abs(padded_bounds - clamped_bounds)
-    edge_padding = padded_bounds - np.array(
-        [
-            *np.min([[0, 0], padded_bounds[2:]], axis=0),
-            *np.max([img_size, padded_bounds[:2] - img_size], axis=0),
-        ]
-    )
+    before_padding = np.min([[0, 0], padded_bounds[2:]], axis=0)
+    after_padding = np.max([img_size, padded_bounds[:2] - img_size], axis=0)
+    edge_padding = padded_bounds - np.concatenate([before_padding, after_padding])
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
     edge_padding[2:] = np.max([edge_padding[2:], [0, 0]], axis=0)
     edge_padding = np.abs(edge_padding)
@@ -384,7 +376,7 @@ def safe_padded_read(
         **pad_kwargs,
     )
     if region.shape[:2] != out_size[::-1]:
-        region = cv2.resize(region, out_size, interpolation=cv2.INTER_LINEAR)
+        return cv2.resize(region, out_size, interpolation=cv2.INTER_LINEAR)
     return region
 
 
@@ -594,7 +586,7 @@ def sub_pixel_read(
         )
     else:
         region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
-    # 2 Rescaling
+    # 2 Re-scaling
     if output_size is not None and interpolation != "none":
         region = imresize(region, scale_factor=scaling, interpolation=interpolation)
     # 3 Trim interpolation padding
@@ -611,12 +603,13 @@ def sub_pixel_read(
     region_size = region.shape[:2][::-1]
     # 4 Ensure output is the correct size
     if output_size is not None and interpolation != "none":
+        total_padding_per_axis = padding.reshape(2, 2).sum(axis=0)
         if pad_at_baseline:
             output_size = np.round(
-                np.add(output_size, padding.reshape(2, 2).sum(axis=0) * scaling)
+                np.add(output_size, total_padding_per_axis * scaling)
             ).astype(int)
         else:
-            output_size = np.add(output_size, padding.reshape(2, 2).sum(axis=0))
+            output_size = np.add(output_size, total_padding_per_axis)
         if not np.array_equal(region_size, output_size):
             region = imresize(
                 region, output_size=tuple(output_size), interpolation=interpolation
@@ -626,4 +619,4 @@ def sub_pixel_read(
         region = np.flipud(region)
     if flipud:
         region = np.fliplr(region)
-    return region
+    return region  # noqa: R504
