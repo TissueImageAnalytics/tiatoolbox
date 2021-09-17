@@ -24,7 +24,7 @@ import os
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
@@ -54,7 +54,7 @@ else:
 # runtime context parameters
 rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
 
-from tiatoolbox import tiatoolbox, wsicore, utils, tools, models
+from tiatoolbox import models, tiatoolbox, tools, utils, wsicore
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))

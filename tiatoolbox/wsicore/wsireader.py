@@ -1629,7 +1629,7 @@ class VirtualWSIReader(WSIReader):
         baseline_size = np.array(self.info.slide_dimensions)
         image_size = np.array(self.img.shape[:2][::-1])
         size_ratio = image_size / baseline_size
-        image_location = np.array(location, dtype=np.float) * size_ratio
+        image_location = np.array(location, dtype=np.float32) * size_ratio
         read_size = np.array(baseline_read_size) * size_ratio
         return image_location, read_size
 
@@ -1783,7 +1783,11 @@ def get_wsireader(input_img):
     if isinstance(input_img, (str, pathlib.Path)):
         _, _, suffix = utils.misc.split_path_name_ext(input_img)
 
-        if suffix in (".jpg", ".png", ".tif"):
+        if suffix in (".npy",):
+            input_img = np.load(input_img)
+            wsi = VirtualWSIReader(input_img)
+
+        elif suffix in (".jpg", ".png", ".tif"):
             wsi = VirtualWSIReader(input_img)
 
         elif suffix in (".svs", ".ndpi", ".mrxs"):

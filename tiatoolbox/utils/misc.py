@@ -602,10 +602,10 @@ def save_as_json(data, save_path):
             elif isinstance(v, np.ndarray):
                 v = v.tolist()
                 walk_list(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
             elif v is not None and not isinstance(v, (int, float, str, bool)):
                 raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            if isinstance(v, np.generic):
-                v = v.item()
             lst[i] = v
 
     def walk_dict(dct):
@@ -618,12 +618,12 @@ def save_as_json(data, save_path):
             elif isinstance(v, np.ndarray):
                 v = v.tolist()
                 walk_list(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
             elif v is not None and not isinstance(v, (int, float, str, bool)):
                 raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
             if not isinstance(k, (int, float, str, bool)):
                 raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
-            if isinstance(v, np.generic):
-                v = v.item()
             dct[k] = v
 
     if isinstance(shadow_data, dict):

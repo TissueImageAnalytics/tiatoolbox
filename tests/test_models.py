@@ -1,29 +1,30 @@
 """Tests for code related to model usage."""
 
-from time import time
 import os
 import pathlib
 import shutil
+from time import time
+
 import cv2
 import numpy as np
 import pytest
 import torch
+from click.testing import CliRunner
 
-from tiatoolbox import rcParam
+from tiatoolbox import cli, rcParam
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.backbone import get_model
 from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
 from tiatoolbox.models.dataset import (
     DatasetInfoABC,
-    PatchDatasetABC,
     KatherPatchDataset,
     PatchDataset,
+    PatchDatasetABC,
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, unzip_data, imread, imwrite
+from tiatoolbox.utils.misc import download_data, imread, imwrite, unzip_data
 from tiatoolbox.wsicore.wsireader import get_wsireader
-
 
 ON_GPU = False
 
@@ -255,12 +256,12 @@ def test_PatchDataset_crash():
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
 
-    # ndarrays of NHW images
+    # ndarray(s) of NHW images
     imgs = np.random.randint(0, 255, (4, 4, 4))
     with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
         _ = PatchDataset(imgs)
 
-    # list of ndarrays with different sizes
+    # list of ndarray(s) with different sizes
     imgs = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 5, 3)),
@@ -268,7 +269,7 @@ def test_PatchDataset_crash():
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
         _ = PatchDataset(imgs)
 
-    # list of ndarrays with HW and HWC mixed up
+    # list of ndarray(s) with HW and HWC mixed up
     imgs = [
         np.random.randint(0, 255, (4, 4, 3)),
         np.random.randint(0, 255, (4, 4)),
@@ -303,7 +304,7 @@ def test_PatchDataset_crash():
     ):
         _ = PatchDataset(["img.npy"])
 
-    # ** test different extenstion parser
+    # ** test different extension parser
     # save dummy data to temporary location
     save_dir_path = _get_temp_folder_path()
     # remove prev generated data
@@ -602,7 +603,7 @@ def test_model_abc():
     with pytest.raises(ValueError, match=r".*callable*"):
         model.preproc_func = 1
 
-    # test setter/getter/inital of preproc_func/postproc_func
+    # test setter/getter/initial of preproc_func/postproc_func
     assert model.preproc_func(1) == 1
     model.preproc_func = lambda x: x - 1
     assert model.preproc_func(1) == 0
@@ -831,13 +832,13 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
-    output = predictor.predict(
+    predictor.predict(
         [_mini_wsi_svs, _mini_wsi_svs],
         masks=[_mini_wsi_msk, _mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
-    with pytest.raises(ValueError, match=r".*save_dir.*exist.*"):
+    with pytest.raises(FileExistsError):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [_mini_wsi_svs, _mini_wsi_svs],
@@ -878,6 +879,22 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
+    # blind test
+    # pseudo output dict from model with 2 patches
+    output = {
+        "resolution": 1.0,
+        "units": "baseline",
+        "probabilities": [[0.45, 0.55], [0.90, 0.10]],
+        "predictions": [1, 0],
+        "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
+    }
+    merged = CNNPatchPredictor.merge_predictions(
+        np.zeros([4, 4]), output, resolution=1.0, units="baseline"
+    )
+    _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
+    assert np.sum(merged - _merged) == 0
+
+    # integration test
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
     kwargs = dict(
@@ -900,7 +917,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
 
     # mockup to change the preproc func and
     # force to use the default in merge function
-    # stil should have the same resuls
+    # still should have the same results
     kwargs["merge_predictions"] = False
     tile_output = predictor.predict(
         [_mini_wsi_jpg],
@@ -925,7 +942,7 @@ def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
 
     merged_wsi = wsi_output[1]
     merged_tile = tile_output[1]
-    # enure shape of merged predictions of tile and wsi input are the same
+    # ensure shape of merged predictions of tile and wsi input are the same
     assert merged_wsi.shape == merged_tile.shape
     # ensure consistent predictions between tile and wsi mode
     diff = merged_tile == merged_wsi
@@ -949,7 +966,7 @@ def _test_predictor_output(
         inputs,
         return_probabilities=True,
         return_labels=False,
-        on_gpu=ON_GPU,
+        on_gpu=on_gpu,
     )
     predictions = output["predictions"]
     probabilities = output["probabilities"]
@@ -995,4 +1012,166 @@ def test_patch_predictor_output(_sample_patch1, _sample_patch2):
             pretrained_model,
             probabilities_check=expected_prob,
             predictions_check=[6, 3],
+            on_gpu=ON_GPU,
         )
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_command_line_models_file_not_found(_sample_svs, tmp_path):
+    """Test for models CLI file not found error."""
+    runner = CliRunner()
+    model_file_not_found_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(_sample_svs)[:-1],
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert model_file_not_found_result.output == ""
+    assert model_file_not_found_result.exit_code == 1
+    assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
+
+
+def test_command_line_models_incorrect_mode(_sample_svs, tmp_path):
+    """Test for models CLI mode not in wsi, tile."""
+    runner = CliRunner()
+    mode_not_in_wsi_tile_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(_sample_svs),
+            "--file_types",
+            '"*.ndpi, *.svs"',
+            "--mode",
+            '"patch"',
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert mode_not_in_wsi_tile_result.output == ""
+    assert mode_not_in_wsi_tile_result.exit_code == 1
+    assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
+
+
+def test_cli_model_single_file(_sample_svs, tmp_path):
+    """Test for models CLI single file."""
+    runner = CliRunner()
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(_sample_svs),
+            "--mode",
+            "wsi",
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()
+
+
+def test_cli_model_single_file_mask(_sample_wsi_dict, tmp_path):
+    """Test for models CLI single file with mask."""
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    runner = CliRunner()
+    models_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(_mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(_mini_wsi_msk),
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert models_tiles_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()
+
+
+def test_cli_model_multiple_file_mask(_sample_wsi_dict, tmp_path):
+    """Test for models CLI multiple file with mask."""
+    _mini_wsi_svs = _sample_wsi_dict["wsi2_4k_4k_svs"]
+    _mini_wsi_msk = _sample_wsi_dict["wsi2_4k_4k_msk"]
+
+    # Make multiple copies for test
+    dir_path = tmp_path.joinpath("new_copies")
+    dir_path.mkdir()
+
+    dir_path_masks = tmp_path.joinpath("new_copies_masks")
+    dir_path_masks.mkdir()
+
+    try:
+        dir_path.joinpath("1_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("2_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("3_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+    except OSError:
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.basename))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.basename))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.basename))
+
+    try:
+        dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+    except OSError:
+        shutil.copy(
+            _mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename)
+        )
+        shutil.copy(
+            _mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename)
+        )
+        shutil.copy(
+            _mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename)
+        )
+
+    tmp_path = tmp_path.joinpath("output")
+
+    runner = CliRunner()
+    models_tiles_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(dir_path),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(dir_path_masks),
+            "--output_path",
+            str(tmp_path),
+        ],
+    )
+
+    assert models_tiles_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("1.merged.npy").exists()
+    assert tmp_path.joinpath("1.raw.json").exists()
+    assert tmp_path.joinpath("2.merged.npy").exists()
+    assert tmp_path.joinpath("2.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()

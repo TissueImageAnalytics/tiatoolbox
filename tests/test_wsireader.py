@@ -1,6 +1,9 @@
 """Tests for reading whole-slide images."""
 
+import os
 import pathlib
+import shutil
+from time import time
 
 import cv2
 import numpy as np
@@ -10,7 +13,7 @@ from pytest import approx
 from skimage.filters import threshold_otsu
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 
-from tiatoolbox import cli, utils
+from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
@@ -40,6 +43,12 @@ JP2_TEST_TISSUE_SIZE = (1024, 1024)
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
+
+
+def _get_temp_folder_path(prefix="temp"):
+    """Return unique temp folder path"""
+    new_dir = os.path.join(rcParam["TIATOOLBOX_HOME"], f"{prefix}-{int(time())}")
+    return new_dir
 
 
 def strictly_increasing(seq):
@@ -1279,6 +1288,15 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     wsi_type = type(wsi)
     wsi_out = wsireader.get_wsireader(input_img=wsi)
     assert isinstance(wsi_out, wsi_type)
+
+    # test loading .npy
+    temp_dir = _get_temp_folder_path()
+    os.mkdir(temp_dir)
+    temp_file = f"{temp_dir}/sample.npy"
+    np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
+    wsi_out = wsireader.get_wsireader(temp_file)
+    assert isinstance(wsi_out, VirtualWSIReader)
+    shutil.rmtree(temp_dir)
 
 
 def test_jp2_missing_cod(_sample_jp2):
