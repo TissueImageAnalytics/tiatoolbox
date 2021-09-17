@@ -350,9 +350,9 @@ class SemanticSegmentor:
         pretrained_weight (str): Path to the weight of the corresponding
             `pretrained_model`.
         batch_size (int) : Number of images fed into the model each time.
-        num_loader_worker (int) : Number of workers to load the data.
+        num_loader_workers (int) : Number of workers to load the data.
             Take note that they will also perform preprocessing.
-        num_postproc_worker (int) : This value is there to maintain input
+        num_postproc_workers (int) : This value is there to maintain input
             compatibility with `tiatoolbox.models.classification` and is
             not used.
         verbose (bool): Whether to output logging information.
@@ -365,8 +365,8 @@ class SemanticSegmentor:
     def __init__(
         self,
         batch_size: int = 8,
-        num_loader_worker: int = 0,
-        num_postproc_worker: int = 0,
+        num_loader_workers: int = 0,
+        num_postproc_workers: int = 0,
         model: torch.nn.Module = None,
         pretrained_model: str = None,
         pretrained_weight: str = None,
@@ -395,8 +395,8 @@ class SemanticSegmentor:
         self.model = model  # original copy
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
-        self.num_loader_worker = num_loader_worker
-        self.num_postproc_worker = None
+        self.num_loader_workers = num_loader_workers
+        self.num_postproc_workers = None
         self.verbose = verbose
         self.auto_generate_mask = auto_generate_mask
 
@@ -907,9 +907,9 @@ class SemanticSegmentor:
 
         # workers should be > 0 else Value Error will be thrown
         self._postproc_workers = None
-        if self.num_postproc_worker is not None:
+        if self.num_postproc_workers is not None:
             self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_worker
+                max_workers=self.num_postproc_workers
             )
 
         mp_manager = torch_mp.Manager()
@@ -928,8 +928,8 @@ class SemanticSegmentor:
             ds,
             drop_last=False,
             batch_size=self.batch_size,
-            num_workers=self.num_loader_worker,
-            persistent_workers=self.num_loader_worker > 0,
+            num_workers=self.num_loader_workers,
+            persistent_workers=self.num_loader_workers > 0,
         )
         self._loader = loader
 
