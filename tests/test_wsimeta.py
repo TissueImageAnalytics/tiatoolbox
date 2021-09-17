@@ -16,11 +16,12 @@ def test_wsimeta_init_fail():
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_fail():
     """Test failure cases for WSIMeta validation."""
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS", level_dimensions=[])
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_dimensions=[(512, 512), (256, 256)],
         level_count=3,
     )
@@ -28,21 +29,23 @@ def test_wsimeta_validate_fail():
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_downsamples=[1, 2],
     )
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_downsamples=[1, 2],
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     meta.level_dimensions = None
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     meta.level_downsamples = None
     assert meta.validate() is False
 
@@ -50,11 +53,12 @@ def test_wsimeta_validate_fail():
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
     """Test WSIMeta validation."""
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     assert meta.validate()
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_dimensions=[(512, 512), (256, 256)],
         level_downsamples=[1, 2],
     )

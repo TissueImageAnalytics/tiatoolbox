@@ -19,28 +19,29 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This module defines classes which can read image data from WSI formats."""
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.tools import tissuemask
-from tiatoolbox.wsicore.wsimeta import WSIMeta
-
-import pathlib
-import warnings
 import copy
-import numpy as np
-import openslide
-import glymur
 import math
-import pandas as pd
-import re
 import numbers
 import os
-from typing import Tuple, Union
-from numbers import Number
+import pathlib
+import re
+import warnings
 from datetime import datetime
+from numbers import Number
+from typing import Tuple, Union
+from xml.etree import ElementTree
+
+import glymur
+import numpy as np
+import openslide
+import pandas as pd
 import tifffile
 import zarr
-from xml.etree import ElementTree
+
+from tiatoolbox import utils
+from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 
@@ -1326,6 +1327,7 @@ class OpenSlideWSIReader(WSIReader):
 
         param = WSIMeta(
             file_path=self.input_path,
+            axes="YXS",
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,
@@ -1533,6 +1535,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         param = WSIMeta(
             file_path=self.input_path,
+            axes="YXS",
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,
@@ -1611,6 +1614,7 @@ class VirtualWSIReader(WSIReader):
         """
         param = WSIMeta(
             file_path=self.input_path,
+            axes="YSX",
             objective_power=None,
             # align to XY to match with OpenSlide
             slide_dimensions=self.img.shape[:2][::-1],
@@ -1812,7 +1816,8 @@ class ArrayView:
 class TIFFWSIReader(WSIReader):
     def __init__(self, input_img, series="auto", cache_size=2 ** 28):
         super().__init__(input_img=input_img)
-        self.tiff = tifffile.TiffFile(input_img)
+        self.tiff = tifffile.TiffFile(self.input_path)
+        self._axes = self.tiff.pages[0].axes
         if not any([self.tiff.is_svs, self.tiff.is_ome]):
             raise ValueError("Unsupported TIFF WSI format.")
 
@@ -1825,7 +1830,9 @@ class TIFFWSIReader(WSIReader):
             ]
             self.series_n = np.argmax(series_areas)
         self._tiff_series = self.tiff.series[self.series_n]
-        self._zarr_store = tifffile.imread(input_img, series=self.series_n, aszarr=True)
+        self._zarr_store = tifffile.imread(
+            self.input_path, series=self.series_n, aszarr=True
+        )
         self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
         self._zarr_group = zarr.open(self._zarr_lru_cache)
         if not isinstance(self._zarr_group, zarr.hierarchy.Group):
@@ -1833,18 +1840,13 @@ class TIFFWSIReader(WSIReader):
             group[0] = self._zarr_group
             self._zarr_group = group
         self.level_arrays = dict(
-            (int(key), ArrayView(array, axes=self.axes))
+            (int(key), ArrayView(array, axes=self.info.axes))
             for key, array in self._zarr_group.items()
         )
         # Using the zarr array view method gives a ValueError
         # self.zarr_views = zarr.hierarchy.group()
         # for key, array in self.zarr_group.items():
         #     self.zarr_views[key] = array.view(self._shape_channels_last(array.shape))
-
-    @property
-    def axes(self) -> str:
-        """Get the axes order for the TIFF."""
-        return self.tiff.pages[0].axes
 
     def _shape_channels_last(self, shape):
         """Make a level shape tuple in YXS order.
@@ -1855,9 +1857,9 @@ class TIFFWSIReader(WSIReader):
         Returns:
             Shape in YXS order.
         """
-        if self.axes == "YXS":
+        if self._axes == "YXS":
             return shape
-        if self.axes == "SYX":
+        if self._axes == "SYX":
             return np.roll(shape, -1)
         raise Exception("Unsupported axes")
 
@@ -2025,6 +2027,7 @@ class TIFFWSIReader(WSIReader):
         param = WSIMeta(
             file_path=self.input_path,
             slide_dimensions=slide_dimensions,
+            axes=self._axes,
             level_count=level_count,
             level_dimensions=level_dimensions,
             level_downsamples=level_downsamples,
