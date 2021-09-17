@@ -1,11 +1,11 @@
 """Tests for utils."""
 
+import hashlib
 import os
 import random
 import shutil
 from pathlib import Path
 from typing import Tuple
-import hashlib
 
 import cv2
 import numpy as np
@@ -1149,3 +1149,9 @@ def test_save_as_json():
     misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
     misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
     os.remove("sample_json.json")
+
+
+def test_imread_none_args():
+    img = np.zeros((10, 10, 3))
+    with pytest.raises(TypeError):
+        utils.misc.imread(img)

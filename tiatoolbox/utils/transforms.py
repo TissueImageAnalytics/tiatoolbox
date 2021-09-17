@@ -19,11 +19,11 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
-from typing import Tuple, Union
+from typing import Tuple, Type, Union
 
+import cv2
 import numpy as np
 from PIL import Image
-import cv2
 
 from tiatoolbox import utils
 
@@ -94,6 +94,8 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
+    if scale_factor is None and output_size is None:
+        raise TypeError("One of scale_factor and output_size must be not None.")
     if scale_factor is not None:
         scale_factor = np.array(scale_factor)
         if scale_factor.size == 1:
