@@ -1,18 +1,28 @@
 """Tests for reading whole-slide images."""
 
-from tiatoolbox.wsicore import wsireader
-from tiatoolbox import utils
-from tiatoolbox import cli
-from tiatoolbox.utils.exceptions import FileNotSupported
-
-import pytest
-from pytest import approx
+import os
 import pathlib
-import numpy as np
+import shutil
+from time import time
+
 import cv2
+import numpy as np
+import pytest
 from click.testing import CliRunner
+from pytest import approx
 from skimage.filters import threshold_otsu
-from skimage.morphology import disk, binary_dilation, remove_small_objects
+from skimage.morphology import binary_dilation, disk, remove_small_objects
+
+from tiatoolbox import cli, rcParam, utils
+from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import (
+    OmnyxJP2WSIReader,
+    OpenSlideWSIReader,
+    VirtualWSIReader,
+)
 
 # -------------------------------------------------------------------------------------
 # Constants
@@ -33,6 +43,12 @@ JP2_TEST_TISSUE_SIZE = (1024, 1024)
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
+
+
+def _get_temp_folder_path(prefix="temp"):
+    """Return unique temp folder path"""
+    new_dir = os.path.join(rcParam["TIATOOLBOX_HOME"], f"{prefix}-{int(time())}")
+    return new_dir
 
 
 def strictly_increasing(seq):
@@ -1041,19 +1057,18 @@ def test_VirtualWSIReader_read_bounds_virtual_baseline(_source_image):
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
 
 
-def test_VirtualWSIReader_read_rect_virtual_baseline():
+def test_VirtualWSIReader_read_rect_virtual_baseline(_source_image):
     """Test VirtualWSIReader read rect with virtual baseline.
 
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image.
+
     """
-    file_parent_dir = pathlib.Path(__file__).parent
-    image_path = file_parent_dir.joinpath("data/source_image.png")
-    img_array = utils.misc.imread(image_path)
+    img_array = utils.misc.imread(pathlib.Path(_source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(slide_dimensions=double_size)
-    wsi = wsireader.VirtualWSIReader(image_path, info=meta)
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100))
     target = cv2.resize(
         img_array[:50, :25, :], (50, 100), interpolation=cv2.INTER_CUBIC
@@ -1062,21 +1077,20 @@ def test_VirtualWSIReader_read_rect_virtual_baseline():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-def test_VirtualWSIReader_read_rect_virtual_levels():
+def test_VirtualWSIReader_read_rect_virtual_levels(_source_image):
     """Test VirtualWSIReader read rect with vritual levels.
 
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels.
 
     Checks that the regions read at each level line up with expected values.
+
     """
-    file_parent_dir = pathlib.Path(__file__).parent
-    image_path = file_parent_dir.joinpath("data/source_image.png")
-    img_array = utils.misc.imread(image_path)
+    img_array = utils.misc.imread(pathlib.Path(_source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
-    wsi = wsireader.VirtualWSIReader(image_path, info=meta)
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
     target = img_array[:100, :50, :]
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
@@ -1088,21 +1102,20 @@ def test_VirtualWSIReader_read_rect_virtual_levels():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-def test_VirtualWSIReader_read_bounds_virtual_levels():
+def test_VirtualWSIReader_read_bounds_virtual_levels(_source_image):
     """Test VirtualWSIReader read bounds with vritual levels.
 
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels.
 
     Checks that the regions read at each level line up with expected values.
+
     """
-    file_parent_dir = pathlib.Path(__file__).parent
-    image_path = file_parent_dir.joinpath("data/source_image.png")
-    img_array = utils.misc.imread(image_path)
+    img_array = utils.misc.imread(pathlib.Path(_source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
-    wsi = wsireader.VirtualWSIReader(image_path, info=meta)
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1121,7 +1134,7 @@ def test_VirtualWSIReader_read_bounds_virtual_levels():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
+def test_VirtualWSIReader_read_rect_virtual_levels_mpp(_source_image):
     """Test VirtualWSIReader read rect with vritual levels and MPP.
 
     Creates a virtual slide with a virtualbaseline size which is twice
@@ -1131,15 +1144,13 @@ def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
     Checks that the regions read with specified MPP for each level lines up
     with expected values.
     """
-    file_parent_dir = pathlib.Path(__file__).parent
-    image_path = file_parent_dir.joinpath("data/source_image.png")
-    img_array = utils.misc.imread(image_path)
+    img_array = utils.misc.imread(pathlib.Path(_source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
         slide_dimensions=double_size, level_downsamples=[1, 2, 4], mpp=(0.25, 0.25)
     )
-    wsi = wsireader.VirtualWSIReader(image_path, info=meta)
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=0.5, units="mpp")
     target = img_array[:100, :50, :]
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
@@ -1151,23 +1162,22 @@ def test_VirtualWSIReader_read_rect_virtual_levels_mpp():
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-def test_VirtualWSIReader_read_bounds_virtual_levels_mpp():
+def test_VirtualWSIReader_read_bounds_virtual_levels_mpp(_source_image):
     """Test VirtualWSIReader read bounds with vritual levels and MPP.
 
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels.
 
     Checks that the regions read at each level line up with expected values.
+
     """
-    file_parent_dir = pathlib.Path(__file__).parent
-    image_path = file_parent_dir.joinpath("data/source_image.png")
-    img_array = utils.misc.imread(image_path)
+    img_array = utils.misc.imread(pathlib.Path(_source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
         slide_dimensions=double_size, level_downsamples=[1, 2, 4], mpp=(0.25, 0.25)
     )
-    wsi = wsireader.VirtualWSIReader(image_path, info=meta)
+    wsi = wsireader.VirtualWSIReader(pathlib.Path(_source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1303,6 +1313,15 @@ def test_get_wsireader(_sample_svs, _sample_ndpi, _sample_jp2, _source_image):
     wsi_out = wsireader.get_wsireader(input_img=wsi)
     assert isinstance(wsi_out, wsi_type)
 
+    # test loading .npy
+    temp_dir = _get_temp_folder_path()
+    os.mkdir(temp_dir)
+    temp_file = f"{temp_dir}/sample.npy"
+    np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
+    wsi_out = wsireader.get_wsireader(temp_file)
+    assert isinstance(wsi_out, VirtualWSIReader)
+    shutil.rmtree(temp_dir)
+
 
 def test_jp2_missing_cod(_sample_jp2):
     """Test for warning if JP2 is missing COD segment."""
@@ -1310,6 +1329,171 @@ def test_jp2_missing_cod(_sample_jp2):
     wsi.glymur_wsi.codestream.segment = []
     with pytest.warns(UserWarning, match="missing COD"):
         _ = wsi.info
+
+
+def test_read_rect_at_resolution(_sample_wsi_dict):
+    """Test for read rect using location at requested."""
+    _mini_wsi2_svs = pathlib.Path(_sample_wsi_dict["wsi1_8k_8k_svs"])
+    _mini_wsi2_jpg = pathlib.Path(_sample_wsi_dict["wsi1_8k_8k_jpg"])
+    _mini_wsi2_jp2 = pathlib.Path(_sample_wsi_dict["wsi1_8k_8k_jp2"])
+
+    # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
+    reader_list = [
+        VirtualWSIReader(_mini_wsi2_jpg),
+        OpenSlideWSIReader(_mini_wsi2_svs),
+        OmnyxJP2WSIReader(_mini_wsi2_jp2),
+    ]
+
+    for reader_idx, reader in enumerate(reader_list):
+        roi1 = reader.read_rect(
+            np.array([500, 500]),
+            np.array([2000, 2000]),
+            coord_space="baseline",
+            resolution=1.00,
+            units="baseline",
+        )
+        roi2 = reader.read_rect(
+            np.array([1000, 1000]),
+            np.array([4000, 4000]),
+            coord_space="resolution",
+            resolution=2.00,
+            units="baseline",
+        )
+        roi2 = imresize(roi2, output_size=[2000, 2000])
+        cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
+        # this control the harshness of similarity test, how much should be?
+        assert np.min(cc) > 0.90, reader_idx
+
+
+def test_read_bounds_location_in_requested_resolution(_sample_wsi_dict):
+    """Actually a duel test for sync read and read at requested."""
+    # """Test synchronize read for VirtualReader"""
+    # convert to pathlib Path to prevent wsireader complaint
+    _mini_wsi1_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi2_svs = pathlib.Path(_sample_wsi_dict["wsi1_8k_8k_svs"])
+    _mini_wsi2_jpg = pathlib.Path(_sample_wsi_dict["wsi1_8k_8k_jpg"])
+    _mini_wsi2_jp2 = pathlib.Path(_sample_wsi_dict["wsi1_8k_8k_jp2"])
+
+    def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
+        """Correlation test to compare output of 2 readers."""
+        requested_size = read_coord[2:] - read_coord[:2]
+        requested_size = requested_size[::-1]  # XY to YX
+        roi1 = reader1.read_bounds(
+            read_coord,
+            coord_space="resolution",
+            pad_constant_values=255,
+            **read_cfg,
+        )
+        roi2 = reader2.read_bounds(
+            read_coord,
+            coord_space="resolution",
+            pad_constant_values=255,
+            **read_cfg,
+        )
+        # using only reader 1 because it is reference reader
+        shape1 = reader1.slide_dimensions(**read_cfg)
+        # shape2 = reader2.slide_dimensions(**read_cfg)
+        # print(read_cfg, shape1, shape2)
+        assert roi1.shape[0] == requested_size[0], (
+            read_cfg,
+            requested_size,
+            roi1.shape,
+        )
+        assert roi1.shape[1] == requested_size[1], (
+            read_cfg,
+            requested_size,
+            roi1.shape,
+        )
+        assert roi1.shape[0] == roi2.shape[0], (read_cfg, roi1.shape, roi2.shape)
+        assert roi1.shape[1] == roi2.shape[1], (read_cfg, roi1.shape, roi2.shape)
+        if check_content:
+            cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
+            # this control the harshness of similarity test, how much should be?
+            assert np.min(cc) > 0.90, (cc, read_cfg, read_coord, shape1)
+
+    # * now check sync read by comparing the RoI with different base
+    # the output should be at same resolution even if source is of different base
+    msk = imread(_mini_wsi1_msk)
+    msk_reader = VirtualWSIReader(msk)
+
+    bigger_msk = cv2.resize(
+        msk, (0, 0), fx=4.0, fy=4.0, interpolation=cv2.INTER_NEAREST
+    )
+    bigger_msk_reader = VirtualWSIReader(bigger_msk)
+    # * must set mpp metadata to not None else wont work
+    ref_metadata = bigger_msk_reader.info
+    ref_metadata.mpp = np.array([1.0, 1.0])
+    ref_metadata.objective_power = 1.0
+    msk_reader.info = ref_metadata
+
+    shape2 = bigger_msk_reader.slide_dimensions(resolution=0.75, units="mpp")
+    shape1 = msk_reader.slide_dimensions(resolution=0.75, units="mpp")
+    assert shape1[0] - shape2[0] < 10  # offset may happen if shape is not multiple
+    assert shape1[1] - shape2[1] < 10  # offset may happen if shape is not multiple
+    shape2 = bigger_msk_reader.slide_dimensions(resolution=0.75, units="power")
+    shape1 = msk_reader.slide_dimensions(resolution=0.75, units="power")
+    assert shape1[0] - shape2[0] < 10  # offset may happen if shape is not multiple
+    assert shape1[1] - shape2[1] < 10  # offset may happen if shape is not multiple
+
+    # * check sync read between Virtual Reader
+    requested_coords = np.array([3500, 3000, 5500, 7000])  # XY, manually pick
+    # baseline value can be think of as scaling factor wrt baseline
+    read_cfg_list = [
+        # read at strange resolution value so that if it fails,
+        # normal scale will also fail
+        ({"resolution": 0.75, "units": "mpp"}, np.array([10000, 10000, 15000, 15000])),
+        (
+            {"resolution": 1.56, "units": "power"},
+            np.array([10000, 10000, 15000, 15000]),
+        ),
+        ({"resolution": 3.00, "units": "mpp"}, np.array([2500, 2500, 4000, 4000])),
+        ({"resolution": 0.30, "units": "baseline"}, np.array([2000, 2000, 3000, 3000])),
+    ]
+    for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
+        read_coord = requested_coords if read_coord is None else read_coord
+        compare_reader(msk_reader, bigger_msk_reader, read_coord, read_cfg)
+
+    # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
+    requested_coords = np.array([3500, 3000, 4500, 4000])  # XY, manually pick
+    read_cfg_list = [
+        # read at strange resolution value so that if it fails,
+        # it means normal scale will also fail
+        ({"resolution": 0.35, "units": "mpp"}, np.array([1000, 1000, 2000, 2000])),
+        ({"resolution": 23.5, "units": "power"}, None),
+        ({"resolution": 0.35, "units": "baseline"}, np.array([1000, 1000, 2000, 2000])),
+        ({"resolution": 1.35, "units": "baseline"}, np.array([8000, 8000, 9000, 9000])),
+        ({"resolution": 1.00, "units": "level"}, np.array([1000, 1000, 2000, 2000])),
+    ]
+
+    wsi_reader = OpenSlideWSIReader(_mini_wsi2_svs)
+    tile = imread(_mini_wsi2_jpg)
+    tile = imresize(tile, scale_factor=0.76)
+    vrt_reader = VirtualWSIReader(tile)
+    vrt_reader.info = wsi_reader.info
+
+    for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
+        read_coord = requested_coords if read_coord is None else read_coord
+        compare_reader(wsi_reader, vrt_reader, read_coord, read_cfg, check_content=True)
+
+    # * check sync read between Virtual Reader and WSIReader (jp2) (reference)
+    requested_coords = np.array([2500, 2500, 4000, 4000])  # XY, manually pick
+    read_cfg_list = [
+        # read at strange resolution value so that if it fails,
+        # normal scale will also fail
+        ({"resolution": 0.35, "units": "mpp"}, None),
+        ({"resolution": 23.5, "units": "power"}, None),
+        ({"resolution": 0.65, "units": "baseline"}, np.array([3000, 3000, 4000, 4000])),
+        ({"resolution": 1.35, "units": "baseline"}, np.array([4000, 4000, 5000, 5000])),
+        ({"resolution": 1.00, "units": "level"}, np.array([1500, 1500, 2000, 2000])),
+    ]
+    wsi_reader = OmnyxJP2WSIReader(_mini_wsi2_jp2)
+    wsi_thumb = wsi_reader.slide_thumbnail(resolution=0.85, units="mpp")
+    vrt_reader = VirtualWSIReader(wsi_thumb)
+    vrt_reader.info = wsi_reader.info
+
+    for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
+        read_coord = requested_coords if read_coord is None else read_coord
+        compare_reader(wsi_reader, vrt_reader, read_coord, read_cfg)
 
 
 # -------------------------------------------------------------------------------------
