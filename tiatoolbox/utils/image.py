@@ -22,6 +22,7 @@
 import warnings
 from typing import Tuple, Union
 
+import numpy as np
 import cv2
 
 from tiatoolbox.utils.transforms import (
@@ -31,11 +32,8 @@ from tiatoolbox.utils.transforms import (
     pad_bounds,
     locsize2bounds,
 )
-import numpy as np
-from PIL import Image
-
 from tiatoolbox.utils.misc import conv_out_size
-from tiatoolbox.utils.transforms import bounds2locsize, imresize
+
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
