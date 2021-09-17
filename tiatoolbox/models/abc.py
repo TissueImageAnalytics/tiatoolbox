@@ -19,8 +19,9 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
-import torch.nn as nn
 from abc import ABC, abstractmethod
+
+import torch.nn as nn
 
 
 class IOConfigABC(ABC):
@@ -64,7 +65,7 @@ class ModelABC(ABC, nn.Module):
         self._preproc = self.preproc
 
     @abstractmethod
-    # pylint: disable=W0221
+    # noqa
     # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
@@ -114,12 +115,13 @@ class ModelABC(ABC, nn.Module):
             >>> transformed_img = model.preproc_func(img)
 
         """
+        if func is not None and not callable(func):
+            raise ValueError(f"{func} is not callable!")
+
         if func is None:
             self._preproc = self.preproc
-        elif callable(func):
-            self._preproc = func
         else:
-            raise ValueError(f"{func} is not callable!")
+            self._preproc = func
 
     @property
     def postproc_func(self):
@@ -140,9 +142,10 @@ class ModelABC(ABC, nn.Module):
             >>> transformed_img = model.postproc_func(img)
 
         """
+        if func is not None and not callable(func):
+            raise ValueError(f"{func} is not callable!")
+
         if func is None:
             self._postproc = self.postproc
-        elif callable(func):
-            self._postproc = func
         else:
-            raise ValueError(f"{func} is not callable!")
+            self._postproc = func
