@@ -9,22 +9,22 @@ be easily serialised via the use of an io.BytesIO object or saved
 directly to disk.
 """
 
-from io import BytesIO
-import warnings
-from functools import lru_cache
-from pathlib import Path
-from typing import Tuple, Union, Dict, Iterable
-import zipfile
 import tarfile
 import time
+import warnings
+import zipfile
+from functools import lru_cache
+from io import BytesIO
+from pathlib import Path
+from typing import Dict, Iterable, Tuple, Union
+from xml.etree import ElementTree as ET
 
+import defusedxml
 import numpy as np
 from PIL import Image
-from xml.etree import ElementTree as ET
-import defusedxml
 
-from tiatoolbox.wsicore.wsireader import WSIReader
 from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 defusedxml.defuse_stdlib()
 
@@ -276,7 +276,6 @@ class TilePyramidGenerator:
                 full_path = path / tile_path
                 if container is None:
                     full_path.parent.mkdir(parents=True, exist_ok=True)
-                if container is None:
                     tile.save(full_path)
                 else:
                     bio = BytesIO()
