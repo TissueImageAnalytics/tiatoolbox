@@ -35,8 +35,8 @@ class PatchExtractor(ABC):
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
           patch extraction.
         patch_size(int or tuple(int)): patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`): input
-          mask that is used for position filtering when extracting patches
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
+          input mask that is used for position filtering when extracting patches
           i.e., patches will only be extracted based on the highlighted regions in
           the input_mask. input_mask can be either path to the mask, a numpy
           array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
@@ -220,17 +220,17 @@ class PatchExtractor(ABC):
 
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
-                mask related to the WSI from which we want to extract the patches.
+              mask related to the WSI from which we want to extract the patches.
             coordinates_list (ndarray and np.int32): Coordinates to be checked
-                via the `func`. They must be in the same resolution as requested
-                `resolution` and `units`. The shape of `coordinates_list` is (N, K)
-                where N is the number of coordinate sets and K is either 2 for centroids
-                or 4 for bounding boxes. When using the default `func=None`, K should be
-                4, as we expect the `coordinates_list` to be refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
+              via the `func`. They must be in the same resolution as requested
+              `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+              where N is the number of coordinate sets and K is either 2 for centroids
+              or 4 for bounding boxes. When using the default `func=None`, K should be
+              4, as we expect the `coordinates_list` to be refer to bounding boxes in
+              `[start_x, start_y, end_x, end_y]` format.
             func: The coordinate validator function. A function that takes `reader` and
-                `coordinate` as arguments and return True or False as indication of
-                coordinate validity.
+              `coordinate` as arguments and return True or False as indication of
+              coordinate validity.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
@@ -274,34 +274,34 @@ class PatchExtractor(ABC):
 
         Args:
             image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                This argument specifies the shape of mother image (the image we want to)
-                extract patches from) at requested `resolution` and `units` and it is
-                expected to be in (width, height) format.
+              This argument specifies the shape of mother image (the image we want to)
+              extract patches from) at requested `resolution` and `units` and it is
+              expected to be in (width, height) format.
             patch_input_shape (a tuple (int, int) or
-                                :class:`numpy.ndarray`of shape (2,)):
-                Specifies the input shape of requested patches to be extracted from
-                mother image at desired `resolution` and `units`. This argument is also
-                expected to be in (width, height) format.
+              :class:`numpy.ndarray` of shape (2,)): Specifies the input shape of
+              requested patches to be extracted from mother image at desired
+              `resolution` and `units`. This argument is also expected to be in
+              (width, height) format.
             patch_output_shape (a tuple (int, int) or
-                                :class:`numpy.ndarray`of shape (2,)):
-                Specifies the output shape of requested patches to be extracted from
-                mother image at desired `resolution` and `units`. This argument is also
-                expected to be in (width, height) format. If this is not provided,
-                `patch_output_shape` will be the same as `patch_input_shape`.
+              :class:`numpy.ndarray` of shape (2,)): Specifies the output shape of
+              requested patches to be extracted from mother image at desired
+              `resolution` and `units`. This argument is also expected to be in
+              (width, height) format. If this is not provided, `patch_output_shape`
+              will be the same as `patch_input_shape`.
             stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                The stride that is used to calcualte the patch location during the patch
-                extraction. If `patch_output_shape` is provided, next stride location
-                will base on the output rather than the input.
+              The stride that is used to calcualte the patch location during the patch
+              extraction. If `patch_output_shape` is provided, next stride location
+              will base on the output rather than the input.
             input_within_bound (bool): Whether to include the patches where their
-                `input` location exceed the margins of mother image. If `True`, the
-                patches with input location exceeds the `image_shape` would be
-                neglected. Otherwise, those patches would be extracted with `Reader`
-                function and appropriate padding.
+              `input` location exceed the margins of mother image. If `True`, the
+              patches with input location exceeds the `image_shape` would be
+              neglected. Otherwise, those patches would be extracted with `Reader`
+              function and appropriate padding.
             output_within_bound (bool): Whether to include the patches where their
-                `output` location exceed the margins of mother image. If `True`, the
-                patches with output location exceeds the `image_shape` would be
-                neglected. Otherwise, those patches would be extracted with `Reader`
-                function and appropriate padding.
+              `output` location exceed the margins of mother image. If `True`, the
+              patches with output location exceeds the `image_shape` would be
+              neglected. Otherwise, those patches would be extracted with `Reader`
+              function and appropriate padding.
 
         Return:
             coord_list: a list of corrdinates in `[start_x, start_y, end_x, end_y]`
@@ -387,7 +387,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     Args:
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
-         default = patch_size
+          default = patch_size
 
     Attributes:
         stride(tuple(int)): stride in (x, y) direction for patch extraction.
@@ -432,9 +432,9 @@ class PointsPatchExtractor(PatchExtractor):
 
     Args:
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
-         and/or type of patch. Input can be path to a csv or json file.
-         classification, default=9 (centre of patch and all the eight neighbours as
-         centre).
+          and/or type of patch. Input can be path to a csv or json file.
+          classification, default=9 (centre of patch and all the eight neighbours as
+          centre).
 
     """
 
