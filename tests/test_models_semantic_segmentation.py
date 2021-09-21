@@ -428,7 +428,6 @@ def test_functional_segmentor(_sample_wsi_dict):
 
 def test_subclass(_sample_wsi_dict):
     """Create subclass and test parallel processing setup."""
-
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
 
     model = _CNNTo1()

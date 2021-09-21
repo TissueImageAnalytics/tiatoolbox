@@ -894,8 +894,7 @@ class SemanticSegmentor:
         save_dir = pathlib.Path(save_dir)
         if save_dir.is_dir():
             raise ValueError(f"`save_dir` already exists! {save_dir}")
-        else:
-            os.makedirs(save_dir)
+        os.makedirs(save_dir)
 
         if patch_output_shape is None:
             patch_output_shape = patch_input_shape
