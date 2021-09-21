@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.segmentation import (
-    IOConfigSegmentor,
+    IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
 )
@@ -101,7 +101,7 @@ class _CNNTo1(ModelABC):
         img_list = img_list.permute(0, 3, 1, 2)  # to NCHW
 
         hw = np.array(img_list.shape[2:])
-        with torch.no_grad():  # dont compute gradient
+        with torch.no_grad():  # do not compute gradient
             logit_list = model(img_list)
             logit_list = _crop_op(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
@@ -137,7 +137,7 @@ def test_segmentor_ioconfig():
             {"units": "mpp", "resolution": 0.25},
             {"units": "power", "resolution": 0.50},
         ]
-        ioconfig = IOConfigSegmentor(**xconfig)
+        ioconfig = IOSegmentorConfig(**xconfig)
     # error when uniform resolution units are not supported
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
         xconfig = copy.deepcopy(default_config)
@@ -145,9 +145,9 @@ def test_segmentor_ioconfig():
             {"units": "alpha", "resolution": 0.25},
             {"units": "alpha", "resolution": 0.50},
         ]
-        ioconfig = IOConfigSegmentor(**xconfig)
+        ioconfig = IOSegmentorConfig(**xconfig)
 
-    ioconfig = IOConfigSegmentor(
+    ioconfig = IOSegmentorConfig(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
@@ -167,7 +167,7 @@ def test_segmentor_ioconfig():
     assert ioconfig.input_resolutions[1]["resolution"] == 0.5
     assert ioconfig.input_resolutions[2]["resolution"] == 1 / 3
 
-    ioconfig = IOConfigSegmentor(
+    ioconfig = IOSegmentorConfig(
         input_resolutions=[
             {"units": "power", "resolution": 0.25},
             {"units": "power", "resolution": 0.50},
@@ -190,7 +190,7 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
     """Functional test for WSIStreamDataset."""
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
 
-    ioconfig = IOConfigSegmentor(
+    ioconfig = IOSegmentorConfig(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
@@ -349,7 +349,7 @@ def test_functional_segmentor(_sample_wsi_dict):
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
-    ioconfig = IOConfigSegmentor(
+    ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=[2048, 2048],
@@ -380,8 +380,8 @@ def test_functional_segmentor(_sample_wsi_dict):
     _rm_dir(save_dir)
 
     # * test running with mask and svs
-    # * also test mergin prediction at designated resolution
-    ioconfig = IOConfigSegmentor(
+    # * also test merging prediction at designated resolution
+    ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         save_resolution={"units": "baseline", "resolution": 0.25},

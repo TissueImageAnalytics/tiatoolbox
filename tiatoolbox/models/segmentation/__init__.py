@@ -22,7 +22,7 @@
 """Package where segmentation models are stored."""
 
 from tiatoolbox.models.segmentation.semantic_segmentor import (
+    IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
-    IOConfigSegmentor,
 )

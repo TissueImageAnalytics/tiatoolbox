@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""This module enables semantic segmentation."""
+"""This module implements semantic segmentation."""
 
 
 import copy
@@ -28,6 +28,7 @@ import pathlib
 import shutil
 import warnings
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing.managers import Namespace
 from typing import Callable, List, Tuple, Union
 
 import cv2
@@ -45,8 +46,8 @@ from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
 
 
-class IOConfigSegmentor(IOConfigABC):
-    """Define IO placement for patch input and output.
+class IOSegmentorConfig(IOConfigABC):
+    """Contain semantic segmentor input and output information.
 
     Args:
         input_resolutions (list): resolution of each input head of model
@@ -54,15 +55,15 @@ class IOConfigSegmentor(IOConfigABC):
         output_resolutions (list): resolution of each output head from model
           inference, must be in the same order as target model.infer_batch().
         patch_input_shape (:class:`numpy.ndarray`, list(int)): shape of the
-          largest input in height width.
+          largest input in (height, width).
         patch_output_shape (:class:`numpy.ndarray`, list(int)): shape of the
-          largest output in height width.
+          largest output in (height, width).
         save_resolution  (dict): resolution to save all output.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
         >>> # same resolution
-        >>> ioconfig = IOConfigSegmentor(
+        >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     patch_input_shape=[2048, 2048],
@@ -74,7 +75,7 @@ class IOConfigSegmentor(IOConfigABC):
         >>> # Defining io for a network having 3 input and 2 output at the
         >>> # at the same resolution, the output is then merged at another
         >>> # different resolution.
-        >>> ioconfig = IOConfigSegmentor(
+        >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[
         ...         {"units": "mpp", "resolution": 0.25},
         ...         {"units": "mpp", "resolution": 0.50},
@@ -169,9 +170,9 @@ class IOConfigSegmentor(IOConfigABC):
         return new_val
 
     def to_baseline(self):
-        """Convert IO to baseline form.
+        """Return a new config object converted to baseline form.
 
-        This will return a new :class:`IOConfigSegmentor` where resolutions have
+        This will return a new :class:`IOSegmentorConfig` where resolutions have
         been converted to baseline form with highest possible resolution found
         in both input and output as reference.
 
@@ -202,18 +203,18 @@ class WSIStreamDataset(torch_data.Dataset):
     information.
 
     Args:
-        mp_shared_space (object): shared multiprocessing space, must be from
-          torch.multiprocessing.
-        ioconfig (:class:`IOConfigSegmentor`): object which contains I/O placement
+        mp_shared_space (:class:`Namespace`): A shared multiprocessing space, must be
+          from `torch.multiprocessing`.
+        ioconfig (:class:`IOSegmentorConfig`): An object which contains I/O placement
           for patches.
         wsi_paths (list): List of paths pointing to a WSI or tiles.
-        preproc (Callable): pre-processing function to be applied on a patch.
+        preproc (Callable): Pre-processing function to be applied on a patch.
         mode (str): either `wsi` or `tile` to indicate which form the input in
           `wsi_paths` is.
 
     Examples:
 
-        >>> ioconfig = IOConfigSegmentor(
+        >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     patch_input_shape=[2048, 2048],
@@ -230,9 +231,9 @@ class WSIStreamDataset(torch_data.Dataset):
 
     def __init__(
         self,
-        ioconfig: IOConfigSegmentor,
+        ioconfig: IOSegmentorConfig,
         wsi_paths: List[Union[str, pathlib.Path]],
-        mp_shared_space,  # context variable, how to type hint this?
+        mp_shared_space: Namespace,
         preproc: Callable[[np.ndarray], np.ndarray] = None,
         mode="wsi",
     ):
@@ -402,7 +403,7 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[List[int], np.ndarray], ioconfig: IOConfigSegmentor
+        image_shape: Union[List[int], np.ndarray], ioconfig: IOSegmentorConfig
     ):
         """Calculate patch tiling coordinates.
 
@@ -416,16 +417,16 @@ class SemanticSegmentor:
               specifies the shape of mother image (the image we want to) extract
               patches from) at requested `resolution` and `units` and it is
               expected to be in (width, height) format.
-            ioconfig (:class:`IOConfigSegmentor`): object that contains information
+            ioconfig (:class:`IOSegmentorConfig`): Object that contains information
               about input and ouput placement of patches. Check
-              `IOConfigSegmentor` for details about available attributes.
+              `IOSegmentorConfig` for details about available attributes.
 
         Returns:
             (tuple): tuple containing:
-                patch_inputs (list): a list of corrdinates in
+                patch_inputs (list): A list of corrdinates in
                   `[start_x, start_y, end_x, end_y]` format indicating the read
                   location of the patch in the mother image.
-                patch_outputs (list): a list of corrdinates in
+                patch_outputs (list): A list of corrdinates in
                   `[start_x, start_y, end_x, end_y]` format indicating the write
                   location of the patch in the mother image.
 
@@ -538,7 +539,7 @@ class SemanticSegmentor:
     def _predict_one_wsi(
         self,
         wsi_idx: int,
-        ioconfig: IOConfigSegmentor,
+        ioconfig: IOSegmentorConfig,
         save_path: str,
         mode: str,
     ):
@@ -546,7 +547,7 @@ class SemanticSegmentor:
 
         Args:
             wsi_idx (int): index of the tile/wsi to be processed within `self`.
-            ioconfig (:class:`IOConfigSegmentor`): object which defines I/O
+            ioconfig (:class:`IOSegmentorConfig`): object which defines I/O
               placement during inference and when assembling back to full tile/wsi.
             loader (torch.Dataloader): loader object which return batch of data
               to be input to model.
@@ -634,6 +635,15 @@ class SemanticSegmentor:
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also saving afterwards.
+
+        Args:
+            cum_batch_predictions (list): List of batch predictions. Each item
+              within the list should be of (location, patch_predictions).
+            wsi_reader (:class:`WSIReader`): A reader for the image where the
+              predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`): A configuration object contains
+             input and output information.
+            save_path (str): Root path to save current WSI predictions.
 
         """
         # assume predictions is N, each item has L output element
@@ -826,13 +836,13 @@ class SemanticSegmentor:
               automatically generated for whole-slide images or the entire image
               is processed for image tiles.
             mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (:class:`IOConfigSegmentor`): object that define information
+            ioconfig (:class:`IOSegmentorConfig`): object that define information
               about input and ouput placement of patches. When provided,
               `patch_input_shape`, `patch_output_shape`, `stride_shape`,
               `resolution`, and `units` arguments are ignored. Otherwise,
               those arguments will be internally converted to a
-              :class:`IOConfigSegmentor` object.
-            on_gpu (bool): whether to run model on the GPU.
+              :class:`IOSegmentorConfig` object.
+            on_gpu (bool): Whether to run model on the GPU.
             patch_input_shape (tuple): Size of patches input to the model. The value
               are at requested read resolution and must be positive.
             patch_output_shape (tuple): Size of patches output by the model. The
@@ -882,10 +892,10 @@ class SemanticSegmentor:
 
         save_dir = os.path.abspath(save_dir)
         save_dir = pathlib.Path(save_dir)
-        if not save_dir.is_dir():
-            os.makedirs(save_dir)
-        else:
+        if save_dir.is_dir():
             raise ValueError(f"`save_dir` already exists! {save_dir}")
+        else:
+            os.makedirs(save_dir)
 
         if patch_output_shape is None:
             patch_output_shape = patch_input_shape
@@ -893,7 +903,7 @@ class SemanticSegmentor:
             stride_shape = patch_output_shape
 
         if ioconfig is None:
-            ioconfig = IOConfigSegmentor(
+            ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
                 output_resolutions=[{"resolution": resolution, "units": units}],
                 patch_input_shape=patch_input_shape,
