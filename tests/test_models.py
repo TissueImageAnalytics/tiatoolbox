@@ -712,7 +712,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert not os.path.isdir("special_dir_not_exist")
 
     # test loading user weight
-    pretrained_weight_url = (
+    pretrained_weights_url = (
         "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
 
@@ -721,16 +721,16 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     os.makedirs(save_dir_path)
-    pretrained_weight = os.path.join(
+    pretrained_weights = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
         "tmp_pretrained_weigths",
         "resnet18-kather100k.pth",
     )
-    download_data(pretrained_weight_url, pretrained_weight)
+    download_data(pretrained_weights_url, pretrained_weights)
 
     predictor = CNNPatchPredictor(
         pretrained_model="resnet18-kather100k",
-        pretrained_weight=pretrained_weight,
+        pretrained_weights=pretrained_weights,
         batch_size=1,
     )
 
