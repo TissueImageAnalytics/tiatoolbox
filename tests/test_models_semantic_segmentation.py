@@ -249,6 +249,11 @@ def test_functional_segmentor(_sample_wsi_dict):
 
     model = _CNNTo1()
     runner = SemanticSegmentor(batch_size=1, model=model)
+    # fake injection to trigger Segmentor to create parallel
+    # post processing workers because baseline Semantic Segmentor does not support
+    # post processing out of the box. It only contains condition to create it
+    # for any subclass
+    runner.num_postproc_workers = 1
 
     # * test merging method
     os.mkdir(save_dir)
