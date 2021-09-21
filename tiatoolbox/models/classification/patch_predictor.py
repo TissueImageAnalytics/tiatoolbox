@@ -44,7 +44,7 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 class _IOConfigPatchPredictor(IOConfigABC):
     """Define a class to hold IO information for patch predictor."""
 
-    # We predefine to follow enforcement, actual initialization in init
+    # We pre-define to follow enforcement, actual initialization in init
     patch_size = None
     input_resolutions = None
     output_resolutions = None
@@ -151,12 +151,12 @@ class CNNPatchPredictor:
           `tiatoolbox.models.classification.get_pretrained_model` for details.
           By default, the corresponding pretrained weights will also be
           downloaded. However, you can override with your own set of weights
-          via the `pretrained_weight` argument. Argument is case insensitive.
-        pretrained_weight (str): Path to the weight of the corresponding
+          via the `pretrained_weights` argument. Argument is case insensitive.
+        pretrained_weights (str): Path to the weight of the corresponding
           `pretrained_model`.
           >>> predictor = CNNPatchPredictor(
           ...    pretrained_model="resnet18-kather100k",
-          ...    pretrained_weight="resnet18_local_weight")
+          ...    pretrained_weights="resnet18_local_weight")
         batch_size (int) : Number of images fed into the model each time.
         num_loader_worker (int) : Number of workers to load the data.
           Take note that they will also perform preprocessing.
@@ -173,7 +173,7 @@ class CNNPatchPredictor:
           `tiatoolbox.models.classification.get_pretrained_model` for details.
           By default, the corresponding pretrained weights will also be
           downloaded. However, you can override with your own set of weights
-          via the `pretrained_weight` argument. Argument is case insensitive.
+          via the `pretrained_weights` argument. Argument is case insensitive.
         batch_size (int) : Number of images fed into the model each time.
         num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
         verbose (bool): Whether to output logging information.
@@ -212,7 +212,7 @@ class CNNPatchPredictor:
         num_loader_worker=0,
         model=None,
         pretrained_model=None,
-        pretrained_weight=None,
+        pretrained_weights=None,
         verbose=True,
     ):
         super().__init__()
@@ -227,7 +227,7 @@ class CNNPatchPredictor:
             self.model = model
             iostate = None  # retrieve iostate from provided model ?
         else:
-            model, iostate = get_pretrained_model(pretrained_model, pretrained_weight)
+            model, iostate = get_pretrained_model(pretrained_model, pretrained_weights)
 
         self._iostate = iostate  # for storing original
         self.iostate = None  # for runtime
@@ -627,7 +627,7 @@ class CNNPatchPredictor:
         return output
 
 
-def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
+def get_pretrained_model(pretrained_model=None, pretrained_weights=None):
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
@@ -664,8 +664,8 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
 
           By default, the corresponding pretrained weights will also be
           downloaded. However, you can override with your own set of weights via
-          the `pretrained_weight` argument. Argument is case insensitive.
-        pretrained_weight (str): Path to the weight of the
+          the `pretrained_weights` argument. Argument is case insensitive.
+        pretrained_weights (str): Path to the weight of the
           corresponding `pretrained_model`.
 
     Examples:
@@ -674,7 +674,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
         >>> # get mobilenet defined by TIA team but loaded with user weight
         >>> model = get_pretrained_model(
         ...     pretrained_model='mobilenet_v2-kather100k'
-        ...     pretrained_weight='/A/B/C/my_weights.tar'
+        ...     pretrained_weights='/A/B/C/my_weights.tar'
         ... )
 
     """
@@ -701,18 +701,18 @@ def get_pretrained_model(pretrained_model=None, pretrained_weight=None):
     model = CNNPatchModel(backbone=backbone, num_classes=num_classes)
     model.preproc_func = predefined_preproc_func(dataset)
 
-    if pretrained_weight is None:
-        pretrained_weight_url = pretrained_models_dict[backbone]
-        pretrained_weight_url_split = pretrained_weight_url.split("/")
-        pretrained_weight = os.path.join(
-            rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weight_url_split[-1]
+    if pretrained_weights is None:
+        pretrained_weights_url = pretrained_models_dict[backbone]
+        pretrained_weights_url_split = pretrained_weights_url.split("/")
+        pretrained_weights = os.path.join(
+            rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weights_url_split[-1]
         )
-        if not os.path.exists(pretrained_weight):
-            download_data(pretrained_weight_url, pretrained_weight)
+        if not os.path.exists(pretrained_weights):
+            download_data(pretrained_weights_url, pretrained_weights)
 
     # ! assume to be saved in single GPU mode
     # always load on to the CPU
-    saved_state_dict = torch.load(pretrained_weight, map_location="cpu")
+    saved_state_dict = torch.load(pretrained_weights, map_location="cpu")
     model.load_state_dict(saved_state_dict, strict=True)
 
     iostate = _IOConfigPatchPredictor(

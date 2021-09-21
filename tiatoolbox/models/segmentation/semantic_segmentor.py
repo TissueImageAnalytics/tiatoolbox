@@ -21,17 +21,17 @@
 """This module enables semantic segmentation."""
 
 
-import shutil
-import joblib
 import copy
 import logging
 import os
 import pathlib
+import shutil
 import warnings
-from typing import Callable, List, Tuple, Union
 from concurrent.futures import ProcessPoolExecutor
+from typing import Callable, List, Tuple, Union
 
 import cv2
+import joblib
 import numpy as np
 import torch
 import torch.multiprocessing as torch_mp
@@ -92,7 +92,7 @@ class IOConfigSegmentor(IOConfigABC):
 
     """
 
-    # We predefine to follow enforcement, actual initialization in init
+    # We pre-define to follow enforcement, actual initialization in init
     patch_size = None
     input_resolutions = None
     output_resolutions = None
@@ -298,7 +298,7 @@ class WSIStreamDataset(torch_data.Dataset):
         return torch.utils.data.dataloader.default_collate(batch)
 
     def __getitem__(self, idx: int):
-        # ! no need to lock as we dont modify source value in shared space
+        # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
             self.reader = self._get_reader(self.wsi_paths[self.wsi_idx])
@@ -346,8 +346,8 @@ class SemanticSegmentor:
             `tiatoolbox.models.classification.get_pretrained_model` for details.
             By default, the corresponding pretrained weights will also be
             downloaded. However, you can override with your own set of weights
-            via the `pretrained_weight` argument. Argument is case insensitive.
-        pretrained_weight (str): Path to the weight of the corresponding
+            via the `pretrained_weights` argument. Argument is case insensitive.
+        pretrained_weights (str): Path to the weight of the corresponding
             `pretrained_model`.
         batch_size (int) : Number of images fed into the model each time.
         num_loader_workers (int) : Number of workers to load the data.
@@ -369,7 +369,7 @@ class SemanticSegmentor:
         num_postproc_workers: int = 0,
         model: torch.nn.Module = None,
         pretrained_model: str = None,
-        pretrained_weight: str = None,
+        pretrained_weights: str = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
@@ -646,7 +646,7 @@ class SemanticSegmentor:
             # assume resolution idx to be in the same order as L
             merged_resolution = ioconfig.highest_input_resolution
             merged_locations = locations
-            # ! location is wrt highest resolution, hence still need conversion
+            # ! location is w.r.t highest resolution, hence still need conversion
             if ioconfig.save_resolution is not None:
                 merged_resolution = ioconfig.save_resolution
                 output_shape = wsi_reader.slide_dimensions(**output_resolution)
@@ -654,7 +654,7 @@ class SemanticSegmentor:
                 fx = merged_shape[0] / output_shape[0]
                 merged_locations = np.ceil(locations * fx).astype(np.int64)
             merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
-            # 0 idx is to remove singleton wihout removing other axes singleton
+            # 0 idx is to remove singleton without removing other axes singleton
             to_merge_predictions = [v[idx][0] for v in predictions]
             sub_save_path = f"{save_path}.raw.{idx}.npy"
             self.merge_prediction(
@@ -736,7 +736,7 @@ class SemanticSegmentor:
                 dtype=np.float32,
             )
 
-        # for pixel occurence counting
+        # for pixel occurrence counting
         # ! this may be expensive
         count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
@@ -767,7 +767,7 @@ class SemanticSegmentor:
             sel = br_in_wsi > canvas_shape
             br_in_wsi[sel] = canvas_shape[sel]
 
-            # recalibrate the position in case patch passing the image bound
+            # re-calibrate the position in case patch passing the image bound
             br_in_patch = br_in_wsi - old_tl_in_wsi
             patch_actual_shape = br_in_wsi - tl_in_wsi
             tl_in_patch = br_in_patch - patch_actual_shape
@@ -778,7 +778,7 @@ class SemanticSegmentor:
             #     raise RuntimeError(
             #             '[BUG] Locations should not be negative at this stage!')
 
-            # now croping the prediction region
+            # now cropping the prediction region
             patch_pred = prediction[
                 tl_in_patch[0] : br_in_patch[0], tl_in_patch[1] : br_in_patch[1]
             ]
@@ -807,7 +807,7 @@ class SemanticSegmentor:
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
-        stride_shape=None,  # at requested read resolution, not wrt to lv0
+        stride_shape=None,
         resolution=1.0,
         units="baseline",
         save_dir=None,
@@ -936,7 +936,7 @@ class SemanticSegmentor:
         self.imgs = imgs
         self.masks = masks
 
-        # contain input / ouput prediction mapping
+        # contain input / output prediction mapping
         outputs = []
         # ? what will happen if this crash midway?
         # => may not be able to retrieve the result dict
@@ -945,11 +945,12 @@ class SemanticSegmentor:
                 wsi_save_path = os.path.join(save_dir, f"{wsi_idx}")
                 self._predict_one_wsi(wsi_idx, ioconfig, wsi_save_path, mode)
 
-                # dont use dict as mapping, because can overwrite, if that is
-                # user intention to provide same path twice
+                # Do not use dict with file name as key, because it can overwrite.
+                # We it is user intention to provide same file name twice
+                # (may be having different root path)
                 outputs.append([img_path, wsi_save_path])
 
-                # will this corrupt old version if ctrl-c midway?
+                # will this corrupt old version if Ctrl-c midway?
                 map_file_path = os.path.join(save_dir, "file_map.dat")
                 # backup old version first
                 if os.path.exists(map_file_path):
