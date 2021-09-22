@@ -459,7 +459,7 @@ def tissue_mask(
     default="resnet18-kather100K",
 )
 @click.option(
-    "--pretrained_weight",
+    "--pretrained_weights",
     help="Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default=None,
@@ -551,7 +551,7 @@ def tissue_mask(
 )
 def patch_predictor(
     pretrained_model,
-    pretrained_weight,
+    pretrained_weights,
     img_input,
     file_types,
     masks,
@@ -601,7 +601,7 @@ def patch_predictor(
 
     predictor = CNNPatchPredictor(
         pretrained_model=pretrained_model,
-        pretrained_weight=pretrained_weight,
+        pretrained_weights=pretrained_weights,
         batch_size=batch_size,
         num_loader_worker=num_loader_worker,
         verbose=verbose,
