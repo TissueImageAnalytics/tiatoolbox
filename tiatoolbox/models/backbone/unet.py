@@ -142,9 +142,10 @@ class UnetEncoder(nn.Module):
 class UNetModel(ModelABC):
     """Generate families of UNet model.
 
-    This supports different encoders. However, decoder is relatively simple,
+    This supports different encoders. However, the decoder is relatively simple,
     each upsampling block contains a single 3x3 Convolution Layer and is
-    not customizable.
+    not customizable. Additionally, the aggregation between down-sampling and
+    up-sampling is addition, not concatenation.
 
     Args:
         num_input_channels (int): Number of channels in input images.
