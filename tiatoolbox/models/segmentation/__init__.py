@@ -19,7 +19,11 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
-"""Package where segmentation models are stored."""
+"""
+This package implements segmentation algorithms in the tiatoolbox.
+Examples of subpackages include semantic segmentation and instance
+segmentation e.g., UNet, HoVerNet, and MicroNet.
+"""
 
 from tiatoolbox.models.segmentation.semantic_segmentor import (
     IOSegmentorConfig,
