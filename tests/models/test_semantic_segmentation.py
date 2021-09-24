@@ -111,7 +111,7 @@ class _CNNTo1(ModelABC):
         return [prob_list]
 
 
-# ----------------------------------------------------
+# Test Segmentor And Loader =========================
 
 
 def test_segmentor_ioconfig():

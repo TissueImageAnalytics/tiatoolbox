@@ -1,9 +1,10 @@
 """pytest fixtures."""
 
+import pathlib
+import shutil
+
 import pytest
 import requests
-import shutil
-import pathlib
 
 
 @pytest.fixture(scope="session")
@@ -577,12 +578,38 @@ def _dir_sample_patches(_sample_patch1, _sample_patch2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def _sample_pretrained_dict(tmpdir_factory):
+    """Sample pytest fixture for torch wsi pretrained weights.
+    Download pretrained weights for pytest.
+
+    """
+    file_name_dict = {
+        "fcn-tissue_mask": "seg/fcn-tissue_mask.pth",
+    }
+
+    info_dict = {}
+    URL_HOME = "https://tiatoolbox.dcs.warwick.ac.uk/models/"
+    for file_code, file_name in file_name_dict.items():
+        file_path = tmpdir_factory.mktemp("data").join(file_name.replace("/", "-"))
+        if not pathlib.Path(file_path).is_file():
+            print(f"\nDownloading {URL_HOME}/{file_name}")
+            r = requests.get(f"{URL_HOME}/{file_name}")
+            with open(file_path, "wb") as f:
+                f.write(r.content)
+        else:
+            print("\nSkipping {file_path}")
+        info_dict[file_code] = file_path
+    return info_dict
+
+
+@pytest.fixture(scope="session")
 def _sample_wsi_dict(tmpdir_factory):
     """Sample pytest fixture for torch wsi dataset.
     Download svs image for pytest.
 
     """
     file_name_dict = {
+        "CMU-mini": "CMU-mini.svs",
         "wsi1_8k_8k_svs": "wsi1_8k_8k.svs",
         "wsi1_8k_8k_jp2": "wsi1_8k_8k.jp2",
         "wsi1_8k_8k_jpg": "wsi1_8k_8k.jpg",
@@ -598,11 +625,11 @@ def _sample_wsi_dict(tmpdir_factory):
     for file_code, file_name in file_name_dict.items():
         file_path = tmpdir_factory.mktemp("data").join(file_name)
         if not pathlib.Path(file_path).is_file():
-            print("\nDownloading %s" % file_path)
-            r = requests.get("%s/%s" % (URL_HOME, file_name))
+            print(f"\nDownloading {file_path}")
+            r = requests.get(f"{URL_HOME}/{file_name}")
             with open(file_path, "wb") as f:
                 f.write(r.content)
         else:
-            print("\nSkipping %s" % file_path)
+            print("\nSkipping {file_path}")
         info_dict[file_code] = file_path
     return info_dict
