@@ -199,6 +199,7 @@ class UNetModel(ModelABC):
         self.upsample2x = UpSample2x()
         return
 
+    # noqa
     def forward(self, img_list):
         # scale to 0-1
         img_list = img_list / 255.0
@@ -231,7 +232,7 @@ class UNetModel(ModelABC):
         imgs = imgs.to(device).type(torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
 
-        n, c, h, w = imgs.shape
+        _, _, h, w = imgs.shape
         crop_shape = [h // 2, w // 2]
         with torch.no_grad():
             logits = model(imgs)
