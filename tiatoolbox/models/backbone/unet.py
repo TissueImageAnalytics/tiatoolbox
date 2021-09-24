@@ -199,6 +199,8 @@ class UNetModel(ModelABC):
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
+    # pylint: disable=W0221
+    # because abc is generic, this is actual definition
     def forward(self, img_list, *args, **kwargs):
         # scale to 0-1
         img_list = img_list / 255.0

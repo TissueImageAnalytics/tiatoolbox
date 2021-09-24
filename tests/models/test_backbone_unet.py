@@ -33,6 +33,7 @@ from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
 def test_functional_unet(_sample_wsi_dict, _sample_pretrained_dict):
+    """Tests for unet."""
     # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["CMU-mini"])
     _pretrained_path = str(_sample_pretrained_dict["fcn-tissue_mask"])
