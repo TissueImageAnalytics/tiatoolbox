@@ -142,7 +142,20 @@ class UnetEncoder(nn.Module):
 class UNetModel(ModelABC):
     """Generate families of UNet model.
 
-    This supports different encoder
+    This supports different encoders. However, decoder is relatively simple,
+    each upsampling block contains a single 3x3 Convolution Layer and is
+    not customizable.
+
+    Args:
+        num_input_channels (int): Number of channels in input images.
+        num_output_channels (list): Number of channels in output images.
+        encoder (str): Name of the encoder, currently support:
+            - "resnet50": The well-known ResNet50, this is not pre-activation
+              model.
+            - "unet": The vanilla UNet encoder where each down-sampling level
+              contains 2 blocks of Convolution-BatchNorm-ReLu.
+    Returns:
+        model (torch.nn.Module): a pytorch model.
 
     """
 
