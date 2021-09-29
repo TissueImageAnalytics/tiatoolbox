@@ -1,11 +1,11 @@
 """Tests for utils."""
 
+import hashlib
 import os
 import random
 import shutil
 from pathlib import Path
 from typing import Tuple
-import hashlib
 
 import cv2
 import numpy as np
@@ -72,7 +72,7 @@ def test_background_composite():
     assert np.all(im[:, :, 3] == 255)
 
 
-def test_mpp2common_objective_power(_sample_svs):
+def test_mpp2common_objective_power(sample_svs):
     """Test approximate conversion of mpp to objective power."""
     mapping = [
         (0.05, 100),
@@ -143,9 +143,9 @@ def test_safe_padded_read_padding_formats():
         assert region.shape == (8 + 2, 8 + 2)
 
 
-def test_safe_padded_read_pad_kwargs(_source_image):
+def test_safe_padded_read_pad_kwargs(source_image):
     """Test passing extra kwargs to safe_padded_read for np.pad."""
-    data = utils.misc.imread(str(_source_image))
+    data = utils.misc.imread(str(source_image))
     bounds = (0, 0, 8, 8)
     padding = 2
     region = utils.image.safe_padded_read(
@@ -241,9 +241,9 @@ def test_safe_padded_read_stride_shape():
         utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
 
 
-def test_sub_pixel_read(_source_image):
+def test_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with known tricky parameters."""
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
     pillow_test_image = Image.fromarray(test_image)
@@ -269,9 +269,9 @@ def test_sub_pixel_read(_source_image):
     sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
-def test_aligned_padded_sub_pixel_read(_source_image):
+def test_aligned_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with pixel-aligned bounds."""
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -287,9 +287,9 @@ def test_aligned_padded_sub_pixel_read(_source_image):
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_aligned_padded_sub_pixel_read(_source_image):
+def test_non_aligned_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -306,9 +306,9 @@ def test_non_aligned_padded_sub_pixel_read(_source_image):
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_baseline_padded_sub_pixel_read(_source_image):
+def test_non_baseline_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with baseline padding."""
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -385,9 +385,9 @@ def test_sub_pixel_read_padding_formats():
         assert region.shape == (16 + 2, 16 + 2)
 
 
-def test_sub_pixel_read_negative_size_bounds(_source_image):
+def test_sub_pixel_read_negative_size_bounds(source_image):
     """Test sub_pixel_read with different padding argument formats."""
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -412,11 +412,11 @@ def test_sub_pixel_read_negative_size_bounds(_source_image):
     assert np.all(np.fliplr(np.flipud(flipped_output)) == output)
 
 
-def test_fuzz_sub_pixel_read(_source_image):
+def test_fuzz_sub_pixel_read(source_image):
     """Fuzz test for numpy sub-pixel image reads."""
     random.seed(0)
 
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -437,11 +437,11 @@ def test_fuzz_sub_pixel_read(_source_image):
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_fuzz_padded_sub_pixel_read(_source_image):
+def test_fuzz_padded_sub_pixel_read(source_image):
     """Fuzz test for numpy sub-pixel image reads with padding."""
     random.seed(0)
 
-    image_path = Path(_source_image)
+    image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.misc.imread(image_path)
 
@@ -625,16 +625,16 @@ def test_get_luminosity_tissue_mask():
 
 def test_read_point_annotations(
     tmp_path,
-    _patch_extr_csv,
-    _patch_extr_csv_noheader,
-    _patch_extr_svs_csv,
-    _patch_extr_svs_header,
-    _patch_extr_npy,
-    _patch_extr_json,
-    _patch_extr_2col_json,
+    patch_extr_csv,
+    patch_extr_csv_noheader,
+    patch_extr_svs_csv,
+    patch_extr_svs_header,
+    patch_extr_npy,
+    patch_extr_json,
+    patch_extr_2col_json,
 ):
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
-    labels = Path(_patch_extr_csv)
+    labels = Path(patch_extr_csv)
 
     labels_table = pd.read_csv(labels)
 
@@ -644,21 +644,21 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test csv read without header
-    labels = Path(_patch_extr_csv_noheader)
+    labels = Path(patch_extr_csv_noheader)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
-    labels = Path(_patch_extr_svs_csv)
+    labels = Path(patch_extr_svs_csv)
     out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
-    labels = Path(_patch_extr_svs_header)
+    labels = Path(patch_extr_svs_header)
     out_table = utils.misc.read_locations(labels)
     assert out_table.shape[1] == 3
 
     # Test npy read
-    labels = Path(_patch_extr_npy)
+    labels = Path(patch_extr_npy)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
@@ -674,13 +674,13 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test json read
-    labels = Path(_patch_extr_json)
+    labels = Path(patch_extr_json)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
 
     # Test json read 2 columns
-    labels = Path(_patch_extr_2col_json)
+    labels = Path(patch_extr_2col_json)
     out_table = utils.misc.read_locations(labels)
     assert all(labels_table == out_table)
     assert out_table.shape[1] == 3
@@ -711,14 +711,14 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(labels_table.drop(["y", "class"], axis=1))
 
     with pytest.raises(FileNotSupported):
-        labels = Path("./sample_patch_extraction.test")
+        labels = Path("./samplepatch_extraction.test")
         _ = utils.misc.read_locations(labels)
 
     with pytest.raises(TypeError):
         _ = utils.misc.read_locations(["a", "b", "c"])
 
 
-def test_grab_files_from_dir(_sample_visual_fields):
+def test_grab_files_from_dir(sample_visual_fields):
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
     input_path = file_parent_dir.joinpath("data")
@@ -726,7 +726,7 @@ def test_grab_files_from_dir(_sample_visual_fields):
     file_types = "*.tif, *.png, *.jpg"
 
     out = utils.misc.grab_files_from_dir(
-        input_path=_sample_visual_fields, file_types=file_types
+        input_path=sample_visual_fields, file_types=file_types
     )
     assert len(out) == 5
 
