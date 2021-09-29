@@ -1,16 +1,16 @@
 """Tests for code related to tissue mask generation."""
 
+import pathlib
+
+import cv2
 import numpy as np
 import pytest
-import cv2
-import pathlib
 from click.testing import CliRunner
 
-from tiatoolbox.wsicore import wsireader
-from tiatoolbox.tools import tissuemask
 from tiatoolbox import cli
+from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.exceptions import MethodNotSupported
-
+from tiatoolbox.wsicore import wsireader
 
 # -------------------------------------------------------------------------------------
 # Tests
@@ -226,7 +226,7 @@ def test_cli_tissue_mask_Otsu(_sample_svs):
 
     assert tissue_mask_result.exit_code == 0
 
-    output_path = str(pathlib.Path(_sample_svs.dirname).joinpath("tissue_mask"))
+    output_path = str(pathlib.Path(_sample_svs.parent).joinpath("tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -287,7 +287,7 @@ def test_cli_tissue_mask_Morphological(_sample_svs):
 
     assert tissue_mask_result.exit_code == 0
 
-    output_path = str(pathlib.Path(_sample_svs.dirname).joinpath("tissue_mask"))
+    output_path = str(pathlib.Path(_sample_svs.parent).joinpath("tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [

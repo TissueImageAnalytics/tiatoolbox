@@ -1126,28 +1126,22 @@ def test_cli_model_multiple_file_mask(_sample_wsi_dict, tmp_path):
     dir_path_masks.mkdir()
 
     try:
-        dir_path.joinpath("1_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
-        dir_path.joinpath("2_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
-        dir_path.joinpath("3_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("1_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("2_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("3_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
     except OSError:
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.basename))
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.basename))
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.basename))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.name))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.name))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.name))
 
     try:
-        dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
-        dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
-        dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("1_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("2_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("3_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
     except OSError:
-        shutil.copy(
-            _mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename)
-        )
-        shutil.copy(
-            _mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename)
-        )
-        shutil.copy(
-            _mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename)
-        )
+        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.name))
+        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.name))
+        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.name))
 
     tmp_path = tmp_path.joinpath("output")
 
