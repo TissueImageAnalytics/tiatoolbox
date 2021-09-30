@@ -40,28 +40,32 @@ def test_overlay_patch_prediction(sample_wsi_dict):
     with pytest.raises(ValueError, match=r".*float `img` outside.*"):
         _ = overlay_patch_prediction(thumb.astype(np.float32), merged)
 
+    label_info_fail = copy.deepcopy(label_info_full)
+    del label_info_fail[1]
     with pytest.raises(ValueError, match=r".*Missing label.*"):
-        label_info_fail = copy.deepcopy(label_info_full)
-        del label_info_fail[1]
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        label_info_fail = copy.deepcopy(label_info_full)
-        label_info_fail[1] = (1, (255, 255, 255))
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        label_info_fail = copy.deepcopy(label_info_full)
-        label_info_fail["ABC"] = ("ABC", (255, 255, 255))
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        label_info_fail = copy.deepcopy(label_info_full)
-        label_info_fail[1] = ("ABC", "ABC")
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        label_info_fail = copy.deepcopy(label_info_full)
-        label_info_fail[1] = ("ABC", (255, 255))
         _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
 
-    # test normal run, should not crash
+    label_info_fail = copy.deepcopy(label_info_full)
+    label_info_fail[1] = (1, (255, 255, 255))
+    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+
+    label_info_fail = copy.deepcopy(label_info_full)
+    label_info_fail["ABC"] = ("ABC", (255, 255, 255))
+    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+
+    label_info_fail = copy.deepcopy(label_info_full)
+    label_info_fail[1] = ("ABC", "ABC")
+    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+
+    label_info_fail = copy.deepcopy(label_info_full)
+    label_info_fail[1] = ("ABC", (255, 255))
+    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+
+    # Test normal run, should not crash.
     thumb_float = thumb / 255.0
     _ = overlay_patch_prediction(thumb_float, merged, label_info=label_info_full)
     _ = overlay_patch_prediction(thumb, merged, label_info=label_info_full)

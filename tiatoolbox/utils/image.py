@@ -68,12 +68,10 @@ def normalise_padding_size(padding):
         raise ValueError("Padding has invalid size 3. Valid sizes are 1, 2, or 4.")
 
     if padding_size == 1:
-        padding = np.repeat(padding, 4)
+        return np.repeat(padding, 4)
     elif padding_size == 2:
-        padding = np.tile(padding, 2)
-    else:
-        padding = np.array(padding)
-    return padding
+        return np.tile(padding, 2)
+    return np.array(padding)
 
 
 def make_bounds_size_positive(bounds):
@@ -158,13 +156,13 @@ def crop_and_pad_edges(
         raise ValueError("Bounds must have size (width and height) > 0.")
 
     # Create value ranges across x and y coordinates
-    X, Y = np.arange(left, right), np.arange(top, bottom)
+    x, y = np.arange(left, right), np.arange(top, bottom)
     # Find padding before (also the crop start index)
-    x_before = np.argmin(np.abs(X))
-    y_before = np.argmin(np.abs(Y))
+    x_before = np.argmin(np.abs(x))
+    y_before = np.argmin(np.abs(y))
     # Find the end index of the crop
-    x_end = np.argmin(np.abs(slide_width - 1 - X))
-    y_end = np.argmin(np.abs(slide_height - 1 - Y))
+    x_end = np.argmin(np.abs(slide_width - 1 - x))
+    y_end = np.argmin(np.abs(slide_height - 1 - y))
     # Find padding after the cropped sub-region
     x_after = bounds_width - 1 - x_end
     y_after = bounds_height - 1 - y_end
@@ -309,7 +307,6 @@ def safe_padded_read(
         padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
         img_size = conv_out_size(img_size, stride=stride)
     # Find how much padding needs to be applied to fill the edge gaps
-    # edge_padding = np.abs(padded_bounds - clamped_bounds)
     edge_padding = padded_bounds - np.array(
         [
             *np.min([[0, 0], padded_bounds[2:]], axis=0),
@@ -331,7 +328,7 @@ def safe_padded_read(
         **pad_kwargs,
     )
     if region.shape[:2] != out_size[::-1]:
-        region = cv2.resize(region, out_size, interpolation=cv2.INTER_LINEAR)
+        return cv2.resize(region, out_size, interpolation=cv2.INTER_LINEAR)
     return region
 
 
@@ -388,6 +385,7 @@ def sub_pixel_read(
     Raises:
         ValueError: Invalid arguments.
         AssertionError: Internal errors, possibly due to invalid values.
+
     Examples:
         >>> # Simple read
         >>> bounds = (0, 0, 10.5, 10.5)
@@ -529,4 +527,4 @@ def sub_pixel_read(
     if vflip:
         result = np.fliplr(result)
 
-    return result
+    return result  # noqa: R504

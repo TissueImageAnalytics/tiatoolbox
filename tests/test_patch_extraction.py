@@ -49,12 +49,9 @@ def read_points_patches(
 
     data[2] = patches[item]
 
+    patches.n = 1870
     with pytest.raises(StopIteration):
-        patches.n = 1870
-        try:
-            next(patches)
-        except StopIteration:
-            raise StopIteration("Index out of bounds.")
+        next(patches)
 
     with pytest.raises(IndexError):
         print(patches[1870])
@@ -132,8 +129,8 @@ def test_pointspatch_extractor_image_format(
 
     assert isinstance(points.wsi, OmnyxJP2WSIReader)
 
+    false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
     with pytest.raises(FileNotSupported):
-        false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
         _ = patchextraction.get_patch_extractor(
             input_img=false_image,
             locations_list=locations_list,
@@ -237,16 +234,13 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
     )
 
     num_patches_img = len(coord_list)
-    iter_tot = 0
-
     img_patches = np.zeros(
         (num_patches_img, patch_size[1], patch_size[0], 3), dtype=img.dtype
     )
 
-    for coord in coord_list:
+    for i, coord in enumerate(coord_list):
         start_w, start_h, end_w, end_h = coord
-        img_patches[iter_tot, :, :, :] = img[start_h:end_h, start_w:end_w, :]
-        iter_tot += 1
+        img_patches[i, :, :, :] = img[start_h:end_h, start_w:end_w, :]
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
@@ -347,7 +341,8 @@ def test_get_coordinates():
         output_within_bound=True,
         input_within_bound=False,
     )
-    assert len(input_bounds) == 2 and len(output_bounds) == 2
+    assert len(input_bounds) == 2
+    assert len(output_bounds) == 2
     # test when patch shape is larger than image
     output = PatchExtractor.get_coordinates(
         image_shape=[9, 6],
@@ -459,19 +454,21 @@ def test_get_coordinates():
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
 
     # Test for bad mask input
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
+    ):
         PatchExtractor.filter_coordinates(
             mask, bbox_list, resolution=1.0, units="baseline"
         )
 
     # Test for bad bbox coordinate list in the input
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
         PatchExtractor.filter_coordinates(
             mask_reader, bbox_list.tolist(), resolution=1.0, units="baseline"
         )
 
     # Test for incomplete coordinate list
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r".*`coordinates_list` of shape.*"):
         PatchExtractor.filter_coordinates(
             mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
         )
@@ -548,8 +545,10 @@ def test_mask_basedpatch_extractor_ndpi(sample_ndpi):
     )
 
     # Test passing an empty mask
-    with pytest.raises(ValueError):
-        wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+    wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+    with pytest.raises(
+        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
+    ):
         patches = patchextraction.get_patch_extractor(
             input_img=input_img,
             input_mask=wsi_mask,

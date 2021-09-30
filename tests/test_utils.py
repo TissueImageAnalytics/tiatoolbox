@@ -13,7 +13,6 @@ import pandas as pd
 import pytest
 import torch.cuda
 from PIL import Image
-from pytest import approx
 
 from tiatoolbox import rcParam, utils
 from tiatoolbox.utils import misc
@@ -115,16 +114,16 @@ def test_safe_padded_read_non_int_bounds():
     data = np.zeros((16, 16))
 
     bounds = (1.5, 1, 5, 5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="integer"):
         utils.image.safe_padded_read(data, bounds)
 
 
 def test_safe_padded_read_negative_padding():
-    """Test safe_padded_read with non-integer bounds."""
+    """Test safe_padded_read with negative bounds."""
     data = np.zeros((16, 16))
 
     bounds = (1, 1, 5, 5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="negative"):
         utils.image.safe_padded_read(data, bounds, padding=-1)
 
 
@@ -224,20 +223,20 @@ def test_fuzz_safe_padded_read_edge_padding():
 
 
 def test_safe_padded_read_padding_shape():
-    """Test safe_padded_read for padding shape."""
+    """Test safe_padded_read for invalid padding shape."""
     data = np.zeros((16, 16))
 
     bounds = (1, 1, 5, 5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="size 3"):
         utils.image.safe_padded_read(data, bounds, padding=(1, 1, 1))
 
 
 def test_safe_padded_read_stride_shape():
-    """Test safe_padded_read for padding size."""
+    """Test safe_padded_read for invalid stride size."""
     data = np.zeros((16, 16))
 
     bounds = (1, 1, 5, 5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="size 1 or 2"):
         utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
 
 
@@ -332,7 +331,7 @@ def test_sub_pixel_read_invalid_interpolation():
     out_size = data.shape
 
     bounds = (1.5, 1, 5, 5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="interpolation"):
         utils.image.sub_pixel_read(data, bounds, out_size, interpolation="fizz")
 
 
@@ -342,11 +341,11 @@ def test_sub_pixel_read_invalid_bounds():
     out_size = data.shape
 
     bounds = (0, 0, 0, 0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Bounds must have non-zero size"):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
     bounds = (1.5, 1, 1.5, 0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Bounds must have non-zero size"):
         utils.image.sub_pixel_read(data, bounds, out_size)
 
 
@@ -482,7 +481,7 @@ def test_sub_pixel_read_incorrect_read_func_return():
     def read_func(*args, **kwargs):
         return np.ones((5, 5))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="incorrect size"):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -499,7 +498,7 @@ def test_sub_pixel_read_empty_read_func_return():
     def read_func(*args, **kwargs):
         return np.ones((0, 0))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="is empty"):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -513,7 +512,9 @@ def test_sub_pixel_read_empty_bounds():
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Bounds have zero size after padding and integer alignment."
+    ):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -529,7 +530,7 @@ def test_fuzz_bounds2locsize():
         size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
         bounds = (*location, *(sum(x) for x in zip(size, location)))
-        assert utils.transforms.bounds2locsize(bounds)[1] == approx(size)
+        assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
 def test_fuzz_bounds2locsize_lower():
@@ -546,7 +547,7 @@ def test_fuzz_bounds2locsize_lower():
 
         _, s = utils.transforms.bounds2locsize(bounds, origin="lower")
 
-        assert s == approx(size)
+        assert s == pytest.approx(size)
 
 
 def test_fuzz_roundtrip_bounds2size():
@@ -562,7 +563,7 @@ def test_fuzz_roundtrip_bounds2size():
 
 def test_bounds2size_value_error():
     """Test bounds to size ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid origin"):
         utils.transforms.bounds2locsize((0, 0, 1, 1), origin="middle")
 
 
@@ -589,12 +590,12 @@ def test_contrast_enhancer():
     )
 
     with pytest.raises(AssertionError):
-        # contrast_enhancer requires image input to be of dtype uint18
+        # Contrast_enhancer requires image input to be of dtype uint8
         utils.misc.contrast_enhancer(np.float32(input_array), low_p=2, high_p=98)
 
-    # calculating the contrast enhanced version of input_array
+    # Calculating the contrast enhanced version of input_array
     output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
-    # the out_put array should be equal to expected seult_array
+    # The out_put array should be equal to expected result_array
     assert np.all(result_array == output_array)
 
 
@@ -619,7 +620,7 @@ def test_load_stain_matrix(tmp_path):
 
 def test_get_luminosity_tissue_mask():
     """Test get luminosity tissue mask."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Empty tissue mask"):
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
 
@@ -695,7 +696,7 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test if input array does not have 2 or 3 columns
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Input array must have 2 or 3 columns"):
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
@@ -703,15 +704,15 @@ def test_read_point_annotations(
     with open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="numpy table should be of format"):
         _ = utils.misc.read_locations(labels)
 
     # Test if input pd DataFrame does not have 2 or 3 columns
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Input table must have 2 or 3 columns"):
         _ = utils.misc.read_locations(labels_table.drop(["y", "class"], axis=1))
 
+    labels = Path("./samplepatch_extraction.test")
     with pytest.raises(FileNotSupported):
-        labels = Path("./samplepatch_extraction.test")
         _ = utils.misc.read_locations(labels)
 
     with pytest.raises(TypeError):
@@ -773,24 +774,29 @@ def test_download_data():
     save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    old_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    with open(save_zip_path, "rb") as handle:
+        old_hash = hashlib.md5(handle.read()).hexdigest()
     # modify the content
     with open(save_zip_path, "wb") as fptr:
-        fptr.write("dataXXX".encode())  # random data
-    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+        fptr.write(b"dataXXX")  # random data
+    with open(save_zip_path, "rb") as handle:
+        bad_hash = hashlib.md5(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    with open(save_zip_path, "rb") as handle:
+        new_hash = hashlib.md5(handle.read()).hexdigest()
     assert new_hash == old_hash
 
-    # test not overiting
-    # modify the content
-    with open(save_zip_path, "wb") as fptr:
-        fptr.write("dataXXX".encode())  # random data
-    bad_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    # Test not overwriting
+    # Modify the content
+    with open(save_zip_path, "wb") as handle:
+        handle.write(b"dataXXX")  # random data
+    with open(save_zip_path, "rb") as handle:
+        bad_hash = hashlib.md5(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
-    new_hash = hashlib.md5(open(save_zip_path, "rb").read()).hexdigest()
+    with open(save_zip_path, "rb") as handle:
+        new_hash = hashlib.md5(handle.read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
@@ -799,9 +805,9 @@ def test_download_data():
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # URL not valid
+    # shouldn't use save_path if test runs correctly
+    save_path = os.path.join(save_dir_path, "temp")
     with pytest.raises(ConnectionError):
-        # shouldn't use save_path if test runs correctly
-        save_path = os.path.join(save_dir_path, "temp")
         misc.download_data(
             "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
         )
@@ -817,7 +823,7 @@ def test_parse_cv2_interpolaton():
             assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
             assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="interpolation"):
         assert utils.misc.parse_cv2_interpolaton(1337)
 
 
@@ -862,9 +868,9 @@ def test_crop_and_pad_edges():
         """Produce a mask of regions outside of the slide dimensions."""
         l, t, r, b = bounds
         slide_width, slide_height = slide_dimensions
-        X, Y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
-        under = np.logical_or(X < 0, Y < 0).astype(np.int)
-        over = np.logical_or(X >= slide_width, Y >= slide_height).astype(np.int)
+        x, y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
+        under = np.logical_or(x < 0, y < 0).astype(np.int)
+        over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int)
         return under, over
 
     loc = (-5, -5)
@@ -924,7 +930,7 @@ def test_fuzz_crop_and_pad_edges_output_size():
 def test_crop_and_pad_edges_negative_max_dims():
     """Test crop and pad edges for negative max dims."""
     for max_dims in [(-1, 1), (1, -1), (-1, -1)]:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must be >= 0"):
             utils.image.crop_and_pad_edges(
                 bounds=(0, 0, 1, 1),
                 max_dimensions=max_dims,
@@ -943,7 +949,7 @@ def test_crop_and_pad_edges_negative_max_dims():
 
 def test_crop_and_pad_edges_non_positive_bounds_size():
     """Test crop and pad edges for non positive bound size."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, -1, -1),
@@ -952,7 +958,7 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
             pad_mode="constant",
         )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="ounds.*must be >= 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, 0, 0),
@@ -964,7 +970,7 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
 
 def test_normalise_padding_input_dims():
     """Test that normalise padding error with input dimensions > 1."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="1 dimensional"):
         utils.image.normalise_padding_size(((0, 0), (0, 0)))
 
 
@@ -985,8 +991,8 @@ def test_model_to():
     # test on GPU
     # no GPU on Travis so this will crash
     if not torch.cuda.is_available():
+        model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
-            model = torch_models.resnet18()
             _ = misc.model_to(on_gpu=True, model=model)
 
     # test on CPU
