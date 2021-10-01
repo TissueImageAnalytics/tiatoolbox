@@ -51,7 +51,7 @@ def read_points_patches(
 
     patches.n = 1870
     with pytest.raises(StopIteration):
-        next(patches)
+        next(patches)  # skipqc: PTC-W0063
 
     with pytest.raises(IndexError):
         print(patches[1870])
