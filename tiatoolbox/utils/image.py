@@ -69,7 +69,7 @@ def normalise_padding_size(padding):
 
     if padding_size == 1:
         return np.repeat(padding, 4)
-    elif padding_size == 2:
+    if padding_size == 2:
         return np.tile(padding, 2)
     return np.array(padding)
 
