@@ -11,11 +11,11 @@ import yaml
 from tiatoolbox.utils.misc import imread
 
 # Load a dictionary of sample files data (names and urls)
-SAMPLE_FILE_PATH = pkg_resources.resource_filename(
+SAMPLE_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
     "tiatoolbox", "data/remote_samples.yaml"
 )
-with open(SAMPLE_FILE_PATH) as handle:
-    SAMPLE_FILES = yaml.safe_load(handle)["files"]
+with open(SAMPLE_FILES_REGISTRY_PATH) as registry_handle:
+    SAMPLE_FILES = yaml.safe_load(registry_handle)["files"]
 
 __all__ = ["stainnorm_target"]
 
