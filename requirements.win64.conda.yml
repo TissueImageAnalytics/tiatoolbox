@@ -1,4 +1,4 @@
-name: tiatoolbox
+name: tiatoolbox5
 channels:
   - conda
   - conda-forge
@@ -13,6 +13,7 @@ dependencies:
   - numpy
   - opencv>=4.0
   - pillow
+  - openjpeg>=2.3.0
   - pip
   - pyyaml>=5.1
   - requests
