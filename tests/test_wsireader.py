@@ -1805,19 +1805,3 @@ class TestReader:
             region = wsi.read_bounds(bounds, resolution=0, units="level")
             assert region.shape[:2][::-1] == size
 
-    @staticmethod
-    def test_region_dump(_sample_ome_tiff, reader_class):
-        from matplotlib import pyplot as plt
-
-        wsi = reader_class(_sample_ome_tiff)
-        _, axs = plt.subplots(
-            nrows=1,
-            ncols=wsi.info.level_count,
-            figsize=(wsi.info.level_count, 3),
-            squeeze=False,
-        )
-        for level, ax in zip(range(wsi.info.level_count), axs[0]):
-            bounds = (0, 0, 1024, 1024)
-            region = wsi.read_bounds(bounds, resolution=level, units="level")
-            ax.imshow(region)
-        plt.savefig("tiff_level_check.png")
