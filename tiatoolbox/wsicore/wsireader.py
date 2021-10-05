@@ -1790,7 +1790,7 @@ class ArrayView:
         """
         self.array = array
         self.axes = axes
-        self._shape = {k: v for k, v in zip(self.axes, self.array.shape)}
+        self._shape = dict(zip(self.axes, self.array.shape))
 
     @property
     def shape(self):
@@ -1838,8 +1838,10 @@ class TIFFWSIReader(WSIReader):
             group = zarr.hierarchy.group()
             group[0] = self._zarr_group
             self._zarr_group = group
-        self.level_arrays = {int(key): ArrayView(array, axes=self.info.axes)
-            for key, array in self._zarr_group.items()}
+        self.level_arrays = {
+            int(key): ArrayView(array, axes=self.info.axes)
+            for key, array in self._zarr_group.items()
+        }
         # Using the zarr array view method gives a ValueError
         # self.zarr_views = zarr.hierarchy.group()
         # for key, array in self.zarr_group.items():
@@ -1962,11 +1964,15 @@ class TIFFWSIReader(WSIReader):
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
         instrument_ref_id = instrument_ref.attrib["ID"]
         objective_settings_id = objective_settings.attrib["ID"]
-        instruments = {instrument.attrib["ID"]: instrument
-            for instrument in xml.findall("ome:Instrument", namespaces)}
-        objectives = {(instrument_id, objective.attrib["ID"]): objective
+        instruments = {
+            instrument.attrib["ID"]: instrument
+            for instrument in xml.findall("ome:Instrument", namespaces)
+        }
+        objectives = {
+            (instrument_id, objective.attrib["ID"]): objective
             for instrument_id, instrument in instruments.items()
-            for objective in instrument.findall("ome:Objective", namespaces)}
+            for objective in instrument.findall("ome:Objective", namespaces)
+        }
 
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
