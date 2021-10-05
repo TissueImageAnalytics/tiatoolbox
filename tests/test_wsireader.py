@@ -1742,7 +1742,7 @@ def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
 
 class TestReader:
     scenarios = [
-        ("TIFFReader", {"reader_class": wsireader.TIFFWSIReader}),
+        ("TIFFReader", {"reader_class": TIFFWSIReader}),
     ]
 
     @staticmethod
