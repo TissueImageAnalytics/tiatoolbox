@@ -1779,6 +1779,7 @@ class ArrayView:
     orders such as SYX. Currently supported axes are:
     - YXS
     - SYX
+
     """
 
     def __init__(self, array: zarr.Array, axes: str):
@@ -1787,6 +1788,7 @@ class ArrayView:
         Args:
             array (zarr.Array): Zarr Array to read from.
             axes (str): Axes ordering string. Allowed values are YXS and SYX.
+
         """
         self.array = array
         self.axes = axes
@@ -1855,6 +1857,7 @@ class TIFFWSIReader(WSIReader):
 
         Returns:
             Shape in YXS order.
+
         """
         if self._axes == "YXS":
             return shape
