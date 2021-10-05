@@ -29,7 +29,6 @@ import warnings
 from datetime import datetime
 from numbers import Number
 from typing import Tuple, Union
-from xml.etree import ElementTree
 
 import glymur
 import numpy as np
@@ -37,6 +36,7 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
+from defusedxml.ElementTree import fromstring as et_from_string
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
@@ -1941,7 +1941,7 @@ class TIFFWSIReader(WSIReader):
         # present in the first IFD. We simply get the description from
         # the first IFD.
         description = self.tiff.pages[0].description
-        xml = ElementTree.fromstring(description)
+        xml = et_from_string(description)
         namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
         xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
 
