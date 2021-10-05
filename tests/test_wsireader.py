@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import random
 import shutil
 from time import time
 
@@ -9,18 +10,18 @@ import cv2
 import numpy as np
 import pytest
 from click.testing import CliRunner
-from pytest import approx
 from skimage.filters import threshold_otsu
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 
 from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
+    TIFFWSIReader,
     VirtualWSIReader,
 )
 
@@ -41,6 +42,30 @@ JP2_TEST_TISSUE_LOCATION = (32768, 42880)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
 # -------------------------------------------------------------------------------------
+# Generate Parameterized Tests
+# -------------------------------------------------------------------------------------
+
+
+def pytest_generate_tests(metafunc):
+    """Generate (parameterize) test scenarios.
+    Adapted from pytest documentation. For more information on
+    parameterized tests see:
+    https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+    """
+    # Return if the test is not part of a class
+    if metafunc.cls is None:
+        return
+    idlist = []
+    argvalues = []
+    for scenario in metafunc.cls.scenarios:
+        idlist.append(scenario[0])
+        items = scenario[1].items()
+        argnames = [x[0] for x in items]
+        argvalues.append([x[1] for x in items])
+    metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
+
+
+# -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
 
@@ -51,29 +76,29 @@ def _get_temp_folder_path(prefix="temp"):
     return new_dir
 
 
-def strictly_increasing(seq):
+def strictly_increasing(sequence):
     """Return True if sequence is strictly increasing.
 
     Args:
-        seq: Sequence to check.
+        sequence: Sequence to check.
 
     Returns:
         bool: True if strictly increasing.
     """
-    return all(a < b for a, b in zip(seq, seq[1:]))
+    return all(a < b for a, b in zip(sequence, sequence[1:]))
 
 
-def strictly_decreasing(seq):
+def strictly_decreasing(sequence):
     """Return True if sequence is strictly decreasing.
 
     Args:
-        seq: Sequence to check.
+        sequence: Sequence to check.
 
 
     Returns:
         bool: True if strictly decreasing.
     """
-    return all(a > b for a, b in zip(seq, seq[1:]))
+    return all(a > b for a, b in zip(sequence, sequence[1:]))
 
 
 def read_rect_objective_power(wsi, location, size):
@@ -103,7 +128,7 @@ def read_bounds_mpp(wsi, bounds, size, jp2=False):
             np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         if jp2:
-            assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
+            assert im_region.shape[:2] == pytest.approx(expected_output_shape, abs=1)
         else:
             assert im_region.shape[:2] == expected_output_shape
         assert im_region.shape[2] == 3
@@ -126,19 +151,31 @@ def read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False):
             np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         if jp2:
-            assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
+            assert im_region.shape[:2] == pytest.approx(
+                expected_output_shape[:2], abs=1
+            )
         else:
             assert im_region.shape[:2] == expected_output_shape
         assert im_region.shape[2] == 3
 
 
 def read_bounds_level_consistency(wsi, bounds):
-    """Read bounds level consistency helper."""
+    """Read bounds level consistency helper.
+
+    Reads the same region at each stored resolution level and compares
+    the resulting image using phase cross correlation to check that they
+    are aligned.
+    """
     from skimage.registration import phase_cross_correlation
 
-    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10, 5]]
+    imgs = [
+        wsi.read_bounds(bounds, level, "level") for level in range(wsi.info.level_count)
+    ]
     smallest_size = imgs[-1].shape[:2][::-1]
     resized = [cv2.resize(img, smallest_size) for img in imgs]
+    # Some blurring applied to account for changes in sharpness arising
+    # from interpolation when calculating the downsampled levels. This
+    # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
     as_float = [img.astype(np.float) for img in blurred]
 
@@ -317,7 +354,7 @@ def relative_level_scales_float(wsi):
     """Calculation of relative level scales for fractional level."""
     level_scales = wsi._relative_level_scales(1.5, "level")
     level_scales = np.array(level_scales)
-    assert level_scales[0] == approx([1 / 3, 1 / 3])
+    assert level_scales[0] == pytest.approx([1 / 3, 1 / 3])
     downsamples = np.array(wsi.info.level_downsamples)
     expected = downsamples / downsamples[0] * (1 / 3)
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
@@ -424,7 +461,7 @@ def test_find_optimal_level_and_downsample_mpp(_sample_ndpi):
         )
 
         assert read_level == expected_level
-        assert post_read_scale_factor == approx(expected_scale)
+        assert post_read_scale_factor == pytest.approx(expected_scale)
 
 
 def test_find_optimal_level_and_downsample_power(_sample_ndpi):
@@ -586,7 +623,7 @@ def test_read_rect_jp2_levels(_sample_jp2):
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert approx(
+        assert pytest.approx(
             im_region.shape,
             (
                 min(height, level_height),
@@ -724,7 +761,7 @@ def test_read_bounds_jp2_levels(_sample_jp2):
         expected_output_shape = tuple(
             np.round([height / downsample, width / downsample])
         )
-        assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
+        assert im_region.shape[:2] == pytest.approx(expected_output_shape, abs=1)
         assert im_region.shape[2] == 3
 
 
@@ -1701,3 +1738,86 @@ def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     region = wsi.read_bounds((-64, -64, 64, 64), pad_mode="reflect")
     assert 0 not in region.min(axis=-1)
+
+
+class TestReader:
+    scenarios = [
+        ("TIFFReader", {"reader_class": wsireader.TIFFWSIReader}),
+    ]
+
+    @staticmethod
+    def test_wsimeta_attrs(_sample_ome_tiff, reader_class):
+        """Check for expected attrs in .info / WSIMeta.
+
+        Checks for existence of expected attrs but not their contents.
+        """
+        wsi = reader_class(_sample_ome_tiff)
+        info = wsi.info
+        expected_attrs = [
+            "slide_dimensions",
+            "axes",
+            "level_dimensions",
+            "level_count",
+            "level_downsamples",
+            "vendor",
+            "mpp",
+            "objective_power",
+            "file_path",
+        ]
+        for attr in expected_attrs:
+            assert hasattr(info, attr)
+
+    @staticmethod
+    def test_read_bounds_level_consistency(_sample_ome_tiff, reader_class):
+        """Compare the same region at each stored resolution level.
+
+        Read the same region at each stored resolution level and compare
+        the resulting image using phase cross correlation to check that
+        they are aligned.
+
+        """
+        wsi = reader_class(_sample_ome_tiff)
+        bounds = (0, 0, 1024, 1024)
+        # This logic can be moved from the helper to here when other
+        # reader classes have been parameterised into scenarios also.
+        read_bounds_level_consistency(wsi, bounds)
+
+    @staticmethod
+    def test_fuzz_read_region_baseline_size(_sample_ome_tiff, reader_class):
+        """Fuzz test for `read_bounds` output size at level 0 (baseline).
+
+        - Tests that the output image size matches the input bounds size.
+        - 50 random seeded reads are performed.
+        - All test bounds are within the the slide dimensions.
+        - Bounds sizes are randomised between 1 and 512 in width and height.
+        """
+        random.seed(123)
+        wsi = reader_class(_sample_ome_tiff)
+        width, height = wsi.info.slide_dimensions
+        iterations = 50
+        for _ in range(iterations):
+            size = (random.randint(1, 512), random.randint(1, 512))
+            location = (
+                random.randint(0, width - size[0]),
+                random.randint(0, height - size[1]),
+            )
+            bounds = locsize2bounds(location, size)
+            region = wsi.read_bounds(bounds, resolution=0, units="level")
+            assert region.shape[:2][::-1] == size
+
+    @staticmethod
+    def test_region_dump(_sample_ome_tiff, reader_class):
+        from matplotlib import pyplot as plt
+
+        wsi = reader_class(_sample_ome_tiff)
+        _, axs = plt.subplots(
+            nrows=1,
+            ncols=wsi.info.level_count,
+            figsize=(wsi.info.level_count, 3),
+            squeeze=False,
+        )
+        for level, ax in zip(range(wsi.info.level_count), axs[0]):
+            bounds = (0, 0, 1024, 1024)
+            region = wsi.read_bounds(bounds, resolution=level, units="level")
+            ax.imshow(region)
+        plt.savefig("tiff_level_check.png")
