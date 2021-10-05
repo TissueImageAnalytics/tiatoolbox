@@ -10,6 +10,7 @@ from tiatoolbox.wsicore import wsimeta, wsireader
 def test_wsimeta_init_fail():
     """Test incorrect init for WSIMeta raises TypeError."""
     with pytest.raises(TypeError):
+        # skipcq: PYL-E1120
         wsimeta.WSIMeta(slide_dimensions=(None, None))
 
 
