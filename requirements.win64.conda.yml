@@ -18,6 +18,7 @@ dependencies:
   - opencv>=4.0
   - pandas
   - pillow
+  - openjpeg>=2.3.0
   - pip
   - pixman<0.38.0
   - pytorch
