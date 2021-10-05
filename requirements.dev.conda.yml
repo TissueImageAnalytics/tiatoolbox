@@ -18,6 +18,7 @@ dependencies:
   - requests
   - pixman<0.38.0
   - openslide
+  - openjpeg>=2.3.0
   - recommonmark
   - pandas
   - glymur
