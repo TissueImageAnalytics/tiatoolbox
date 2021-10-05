@@ -2043,8 +2043,21 @@ class TIFFWSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        coord_space="baseline",
         **kwargs,
     ):
+        if coord_space == "resolution":
+            region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return region
+
         # Find parameters for optimal read
         (
             read_level,
@@ -2087,35 +2100,55 @@ class TIFFWSIReader(WSIReader):
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
+        coord_space="baseline",
         **kwargs,
     ):
-        # Find parameters for optimal read
-        (
-            read_level,
-            level_bounds,
-            output_size,
-            post_read_scale,
-        ) = self._find_read_bounds_params(
-            bounds,
-            resolution=resolution,
-            units=units,
-        )
+        bounds_at_baseline = bounds
+        if coord_space == "resolution":
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units
+            )
+            _, size_at_requested = utils.transforms.bounds2locsize(bounds)
+            # dont use the `output_size` (`size_at_requested`) here
+            # because the rounding error at `bounds_at_baseline` leads to
+            # different `size_at_requested` (keeping same read resolution
+            # but base image is of different scale)
+            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+        else:  # duplicated portion with VirtualReader, factoring out ?
+            # Find parameters for optimal read
+            (
+                read_level,
+                _,
+                size_at_requested,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
 
-        im_region = utils.image.safe_padded_read(
+        im_region = utils.image.sub_pixel_read(
             image=self.level_arrays[read_level],
-            bounds=level_bounds,
+            bounds=bounds_at_baseline,
+            output_size=size_at_requested,
+            interpolation=interpolation,
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
+            read_kwargs=kwargs,
         )
 
-        im_region = utils.transforms.imresize(
-            img=im_region,
-            scale_factor=post_read_scale,
-            output_size=output_size,
-            interpolation=interpolation,
-        )
+        if coord_space == "resolution":
+            # do this to enforce output size is as defined by input bounds
+            im_region = utils.transforms.imresize(
+                img=im_region, output_size=size_at_requested
+            )
+        else:
+            im_region = utils.transforms.imresize(
+                img=im_region,
+                scale_factor=post_read_scale,
+                output_size=size_at_requested,
+            )
 
-        im_region = utils.transforms.background_composite(image=im_region)
         return im_region
 
 
