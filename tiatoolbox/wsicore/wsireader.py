@@ -1790,7 +1790,7 @@ class ArrayView:
         """
         self.array = array
         self.axes = axes
-        self._shape = dict((k, v) for k, v in zip(self.axes, self.array.shape))
+        self._shape = {k: v for k, v in zip(self.axes, self.array.shape)}
 
     @property
     def shape(self):
@@ -1805,12 +1805,11 @@ class ArrayView:
 
         if self.axes == "YXS":
             return self.array[index]
-        elif self.axes == "SYX":
+        if self.axes == "SYX":
             Y, X, S = index
             index = (S, Y, X)
             return np.rollaxis(self.array[index], 0, 3)
-        else:
-            raise Exception("Unsupported axes")
+        raise Exception("Unsupported axes")
 
 
 class TIFFWSIReader(WSIReader):
@@ -1839,10 +1838,8 @@ class TIFFWSIReader(WSIReader):
             group = zarr.hierarchy.group()
             group[0] = self._zarr_group
             self._zarr_group = group
-        self.level_arrays = dict(
-            (int(key), ArrayView(array, axes=self.info.axes))
-            for key, array in self._zarr_group.items()
-        )
+        self.level_arrays = {int(key): ArrayView(array, axes=self.info.axes)
+            for key, array in self._zarr_group.items()}
         # Using the zarr array view method gives a ValueError
         # self.zarr_views = zarr.hierarchy.group()
         # for key, array in self.zarr_group.items():
@@ -1965,15 +1962,11 @@ class TIFFWSIReader(WSIReader):
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
         instrument_ref_id = instrument_ref.attrib["ID"]
         objective_settings_id = objective_settings.attrib["ID"]
-        instruments = dict(
-            (instrument.attrib["ID"], instrument)
-            for instrument in xml.findall("ome:Instrument", namespaces)
-        )
-        objectives = dict(
-            ((instrument_id, objective.attrib["ID"]), objective)
+        instruments = {instrument.attrib["ID"]: instrument
+            for instrument in xml.findall("ome:Instrument", namespaces)}
+        objectives = {(instrument_id, objective.attrib["ID"]): objective
             for instrument_id, instrument in instruments.items()
-            for objective in instrument.findall("ome:Objective", namespaces)
-        )
+            for objective in instrument.findall("ome:Objective", namespaces)}
 
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
@@ -1997,7 +1990,6 @@ class TIFFWSIReader(WSIReader):
             WSIMeta: Containing metadata.
 
         """
-
         level_count = len(self._zarr_group)
         level_dimensions = [
             np.array(self._shape_channels_last(p.shape)[:2][::-1])
