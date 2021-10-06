@@ -20,10 +20,6 @@
 
 """Unit test package for ABC and __init__ ."""
 
-import sys
-
-sys.path.append(".")
-
 import pytest
 
 from tiatoolbox.models.abc import ModelABC
@@ -40,31 +36,28 @@ def test_get_pretrained_model():
         _, _ = get_pretrained_model(pretrained_name)
 
 
-test_get_pretrained_model()
-
-
 def test_model_abc():
     """Test API in model ABC."""
     # test missing definition for abstract
     with pytest.raises(TypeError):
-        # crash due to not defining forward, infer_batch, posproc
+        # crash due to not defining forward, infer_batch, postproc
         ModelABC()  # skipcq
 
-    with pytest.raises(TypeError):
-
-        # intentionally create to check error
+    # intentionally create to check error
+    # skipcq
+    class Proto(ModelABC):
         # skipcq
-        class Proto(ModelABC):
-            # skipcq
-            def __init__(self):
-                super().__init__()
+        def __init__(self):
+            super().__init__()
 
-            @staticmethod
-            # skipcq
-            def infer_batch():
-                pass
+        @staticmethod
+        # skipcq
+        def infer_batch():
+            pass
 
-        # crash due to not defining forward and posproc
+    # skipcq
+    with pytest.raises(TypeError):
+        # crash due to not defining forward and postproc
         Proto()  # skipcq
 
     # intentionally create to check inheritance
@@ -104,7 +97,7 @@ def test_model_abc():
             pass
 
     model = Proto()  # skipcq
-    # test assign uncallable to preproc_func/postproc_func
+    # test assign un-callable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
         model.postproc_func = 1
     with pytest.raises(ValueError, match=r".*callable*"):
