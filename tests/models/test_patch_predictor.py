@@ -1,9 +1,27 @@
-"""Tests for code related to model usage."""
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+"""Tests for Patch Predictor."""
 
 import os
 import pathlib
 import shutil
-from time import time
 
 import cv2
 import numpy as np
@@ -12,147 +30,25 @@ import torch
 from click.testing import CliRunner
 
 from tiatoolbox import cli, rcParam
-from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.backbone import get_model
-from tiatoolbox.models.classification import CNNPatchModel, CNNPatchPredictor
+from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.models.controller.patch_predictor import (
+    CNNPatchPredictor,
+    IOPatchPredictorConfig,
+)
 from tiatoolbox.models.dataset import (
-    DatasetInfoABC,
-    KatherPatchDataset,
     PatchDataset,
     PatchDatasetABC,
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils.misc import download_data, imread, imwrite, unzip_data
+from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
 
-
-def _get_temp_folder_path():
-    """Return unique temp folder path"""
-    new_dir = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], f"test_model_patch_{int(time())}"
-    )
-    return new_dir
-
-
-def test_create_backbone():
-    """Test for creating backbone."""
-    backbones = [
-        "alexnet",
-        "resnet18",
-        "resnet34",
-        "resnet50",
-        "resnet101",
-        "resnext50_32x4d",
-        "resnext101_32x8d",
-        "wide_resnet50_2",
-        "wide_resnet101_2",
-        "densenet121",
-        "densenet161",
-        "densenet169",
-        "densenet201",
-        "googlenet",
-        "mobilenet_v2",
-        "mobilenet_v3_large",
-        "mobilenet_v3_small",
-    ]
-    for backbone in backbones:
-        try:
-            get_model(backbone, pretrained=False)
-        except ValueError:
-            raise AssertionError(f"Model {backbone} failed.")
-
-    # test for model not defined
-    with pytest.raises(ValueError, match=r".*not supported.*"):
-        get_model("secret_model-kather100k", pretrained=False)
-
-
-def test_DatasetInfo():
-    """Test for kather patch dataset."""
-    # test defining a subclass of dataset info but not defining
-    # enforcing attributes - should crash
-    with pytest.raises(TypeError):
-
-        # intentionally create to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.a = "a"
-
-        # intentionally create to check error
-        Proto()  # skipcq
-    with pytest.raises(TypeError):
-
-        # intentionally create to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.inputs = "a"
-
-        # intentionally create to check error
-        Proto()  # skipcq
-    with pytest.raises(TypeError):
-        # intentionally create to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.inputs = "a"
-                self.labels = "a"
-
-        # intentionally create to check error
-        Proto()  # skipcq
-    with pytest.raises(TypeError):
-
-        # intentionally create to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.inputs = "a"
-                self.label_names = "a"
-
-        # intentionally create to check error
-        Proto()  # skipcq
-    # test kather with default init
-    dataset = KatherPatchDataset()
-    # kather with default data path skip download
-    dataset = KatherPatchDataset()
-    # pytest for not exist dir
-    with pytest.raises(
-        ValueError,
-        match=r".*not exist.*",
-    ):
-        _ = KatherPatchDataset(save_dir_path="unknown_place")
-
-    # save to temporary location
-    save_dir_path = _get_temp_folder_path()
-    # remove previously generated data
-    if os.path.exists(save_dir_path):
-        shutil.rmtree(save_dir_path, ignore_errors=True)
-    url = (
-        "https://zenodo.org/record/53169/files/"
-        "Kather_texture_2016_image_tiles_5000.zip"
-    )
-    save_zip_path = os.path.join(save_dir_path, "Kather.zip")
-    download_data(url, save_zip_path)
-    unzip_data(save_zip_path, save_dir_path)
-    extracted_dir = os.path.join(save_dir_path, "Kather_texture_2016_image_tiles_5000/")
-    dataset = KatherPatchDataset(save_dir_path=extracted_dir)
-    assert dataset.inputs is not None
-    assert dataset.labels is not None
-    assert dataset.label_names is not None
-    assert len(dataset.inputs) == len(dataset.labels)
-
-    # to actually get the image, we feed it to PatchDataset
-    actual_ds = PatchDataset(dataset.inputs, dataset.labels)
-    sample_patch = actual_ds[100]
-    assert isinstance(sample_patch["image"], np.ndarray)
-    assert sample_patch["label"] is not None
-
-    # remove generated data
-    shutil.rmtree(save_dir_path, ignore_errors=True)
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+# -------------------------------------------------------------------------------------
+# Dataloader
+# -------------------------------------------------------------------------------------
 
 
 def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
@@ -170,8 +66,10 @@ def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
         )
 
 
-def test_PatchDatasetlist_imgs():
+def test_PatchDatasetlist_imgs(tmp_path):
     """Test for patch dataset with a list of images as input."""
+    save_dir_path = tmp_path
+
     size = (5, 5, 3)
     img = np.random.randint(0, 255, size=size)
     list_imgs = [img, img, img]
@@ -192,8 +90,7 @@ def test_PatchDatasetlist_imgs():
     item = dataset[0]
     assert np.sum(item["image"] - (list_imgs[0] - 10)) == 0
 
-    # test for loading npy
-    save_dir_path = _get_temp_folder_path()
+    # * test for loading npy
     # remove previously generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -240,9 +137,10 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-def test_PatchDataset_crash():
+def test_PatchDataset_crash(tmp_path):
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
+    save_dir_path = tmp_path
 
     # not supported input type
     imgs = {"a": np.random.randint(0, 255, (4, 4, 4))}
@@ -306,7 +204,6 @@ def test_PatchDataset_crash():
 
     # ** test different extension parser
     # save dummy data to temporary location
-    save_dir_path = _get_temp_folder_path()
     # remove prev generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -544,83 +441,28 @@ def test_PatchDataset_abc():
         ds.preproc_func = 1
 
 
-def test_model_abc():
-    """Test API in model ABC."""
-    # test missing definition for abstract
-    with pytest.raises(TypeError):
+# -------------------------------------------------------------------------------------
+# Dataloader
+# -------------------------------------------------------------------------------------
 
-        # intentionally create to check error
-        # skipcq
-        class Proto(ModelABC):
-            # skipcq
-            def __init__(self):
-                super().__init__()
 
-        # crash due to not define forward and infer_batch
-        Proto()  # skipcq
+def test_IOPatchPredictorConfig():
+    """Test for IOConfig."""
+    # test for creating
+    cfg = IOPatchPredictorConfig(
+        patch_size=[224, 224],
+        stride_size=[224, 224],
+        input_resolutions=[{"resolution": 0.5, "units": "mpp"}],
+        output_resolutions=[{"resolution": 0.5, "units": "mpp"}],
+        # test adding random kwarg and they should be accessible as kwargs
+        crop_from_source=True,
+    )
+    assert cfg.crop_from_source
 
-    with pytest.raises(TypeError):
 
-        # intentionally create to check error
-        # skipcq
-        class Proto(ModelABC):
-            # skipcq
-            def __init__(self):
-                super().__init__()
-
-            @staticmethod
-            # skipcq
-            def infer_batch():
-                pass
-
-        # crash due to not define forward
-        Proto()  # skipcq
-
-    # intentionally create to check error
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def __init__(self):
-            super().__init__()
-
-        @staticmethod
-        def postproc(image):
-            return image - 2
-
-        # skipcq
-        def forward(self):
-            pass
-
-        @staticmethod
-        # skipcq
-        def infer_batch():
-            pass
-
-    model = Proto()  # skipcq
-    # test assign uncallable to preproc_func/postproc_func
-    with pytest.raises(ValueError, match=r".*callable*"):
-        model.postproc_func = 1
-    with pytest.raises(ValueError, match=r".*callable*"):
-        model.preproc_func = 1
-
-    # test setter/getter/initial of preproc_func/postproc_func
-    assert model.preproc_func(1) == 1
-    model.preproc_func = lambda x: x - 1
-    assert model.preproc_func(1) == 0
-    assert model.preproc(1) == 1, "Must be unchanged!"
-    assert model.postproc(1) == -1, "Must be unchanged!"
-    model.preproc_func = None
-    assert model.preproc_func(2) == 2
-
-    # repeat the setter test for postproc
-    assert model.postproc_func(2) == 0
-    model.postproc_func = lambda x: x - 1
-    assert model.postproc_func(1) == 0
-    assert model.preproc(1) == 1, "Must be unchanged!"
-    assert model.postproc(2) == 0, "Must be unchanged!"
-    # coverage setter check
-    model.postproc_func = None
-    assert model.postproc_func(2) == 0
+# -------------------------------------------------------------------------------------
+# Controller
+# -------------------------------------------------------------------------------------
 
 
 def test_predictor_crash():
@@ -659,8 +501,10 @@ def test_predictor_crash():
         shutil.rmtree("output", ignore_errors=True)
 
 
-def test_patch_predictor_api(_sample_patch1, _sample_patch2):
+def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
     """Helper function to get the model output using API 1."""
+    save_dir_path = tmp_path
+
     # convert to pathlib Path to prevent reader complaint
     inputs = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
@@ -716,7 +560,6 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
         "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
     )
 
-    save_dir_path = _get_temp_folder_path()
     # remove prev generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
@@ -735,7 +578,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     )
 
     # --- test different using user model
-    model = CNNPatchModel(backbone="resnet18", num_classes=9)
+    model = CNNModel(backbone="resnet18", num_classes=9)
     # test prediction
     predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
@@ -752,8 +595,10 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(_sample_wsi_dict):
+def test_wsi_predictor_api(_sample_wsi_dict, tmp_path):
     """Test normal run of wsi predictor."""
+    save_dir_path = tmp_path
+
     # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
@@ -795,7 +640,7 @@ def test_wsi_predictor_api(_sample_wsi_dict):
     assert accuracy > 0.9, np.nonzero(~diff)
 
     # remove previously generated data
-    save_dir = "model_wsi_output"
+    save_dir = f"{save_dir_path}/model_wsi_output"
     if os.path.exists(save_dir):
         shutil.rmtree(save_dir, ignore_errors=True)
 
@@ -989,7 +834,7 @@ def test_patch_predictor_output(_sample_patch1, _sample_patch2):
     inputs = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
     pretrained_info = {
         "alexnet-kather100k": [1.0, 0.9999735355377197],
-        "resnet18-Kather100k": [1.0, 0.9999911785125732],
+        "resnet18-kather100k": [1.0, 0.9999911785125732],
         "resnet34-kather100k": [1.0, 0.9979840517044067],
         "resnet50-kather100k": [1.0, 0.9999986886978149],
         "resnet101-kather100k": [1.0, 0.9999932050704956],

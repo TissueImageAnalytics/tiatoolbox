@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.backbone.utils import UpSample2x, crop_op
+from tiatoolbox.models.architecture.utils import UpSample2x, crop_op
 
 
 def test_all():

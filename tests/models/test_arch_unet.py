@@ -26,7 +26,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.backbone.unet import UNetModel
+from tiatoolbox.models.architecture.unet import UNetModel
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 # Test pretrained Model =============================
@@ -41,7 +41,7 @@ def test_functional_unet(_sample_wsi_dict, _sample_pretrained_dict):
 
     reader = get_wsireader(_mini_wsi_svs)
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
-        model = UNetModel(3, 2, encoder="resnet101")
+        model = UNetModel(3, 2, encoder="resnet101", decoder_block=[3])
 
     # test creation
     model = UNetModel(5, 5, encoder="resnet50")
@@ -59,7 +59,7 @@ def test_functional_unet(_sample_wsi_dict, _sample_pretrained_dict):
     )
     batch = torch.from_numpy(batch)
 
-    model = UNetModel(3, 2, encoder="resnet50")
+    model = UNetModel(3, 2, encoder="resnet50", decoder_block=[3])
     pretrained = torch.load(_pretrained_path, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)

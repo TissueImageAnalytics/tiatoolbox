@@ -29,7 +29,7 @@ from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.backbone.utils import UpSample2x, crop_op
+from tiatoolbox.models.architecture.utils import UpSample2x, crop_op
 
 
 class ResNetEncoder(ResNet):
@@ -115,18 +115,32 @@ class UnetEncoder(nn.Module):
         input_channels = num_input_channels
         for output_channels in layer_output_channels:
             self.blocks.append(
-                nn.Sequential(
-                    nn.Conv2d(
-                        input_channels, output_channels, 3, 1, padding=1, bias=False
-                    ),
-                    nn.BatchNorm2d(output_channels),
-                    nn.ReLU(),
-                    nn.Conv2d(
-                        output_channels, output_channels, 3, 1, padding=1, bias=False
-                    ),
-                    nn.BatchNorm2d(output_channels),
-                    nn.ReLU(),
-                    nn.MaxPool2d(2, stride=2),
+                nn.ModuleList(
+                    [
+                        nn.Sequential(
+                            nn.Conv2d(
+                                input_channels,
+                                output_channels,
+                                3,
+                                1,
+                                padding=1,
+                                bias=False,
+                            ),
+                            nn.BatchNorm2d(output_channels),
+                            nn.ReLU(),
+                            nn.Conv2d(
+                                output_channels,
+                                output_channels,
+                                3,
+                                1,
+                                padding=1,
+                                bias=False,
+                            ),
+                            nn.BatchNorm2d(output_channels),
+                            nn.ReLU(),
+                        ),
+                        nn.AvgPool2d(2, stride=2),
+                    ]
                 )
             )
             input_channels = output_channels
@@ -134,8 +148,9 @@ class UnetEncoder(nn.Module):
     def forward(self, x):
         features = []
         for block in self.blocks:
-            x = block(x)
+            x = block[0](x)
             features.append(x)
+            x = block[1](x)
         return features
 
 
@@ -143,18 +158,23 @@ class UNetModel(ModelABC):
     """Generate families of UNet model.
 
     This supports different encoders. However, the decoder is relatively simple,
-    each upsampling block contains a single 3x3 Convolution Layer and is
-    not customizable. Additionally, the aggregation between down-sampling and
-    up-sampling is addition, not concatenation.
+    each upsampling block contains a number of vanilla Convolution Layer.
+    Additionally the block is not customizable. Additionally, the aggregation
+    between down-sampling and up-sampling is addition, not concatenation.
 
     Args:
         num_input_channels (int): Number of channels in input images.
-        num_output_channels (list): Number of channels in output images.
+        num_output_channels (int): Number of channels in output images.
         encoder (str): Name of the encoder, currently support:
             - "resnet50": The well-known ResNet50, this is not pre-activation
               model.
             - "unet": The vanilla UNet encoder where each down-sampling level
               contains 2 blocks of Convolution-BatchNorm-ReLu.
+        decoder_block (list): A list of convolution layers, each item is an
+            integer denotes the layer kernel size.
+        classifier (list): A list of convolution layers before the final 1x1,
+            each item is an integer denotes the layer kernel size. Default is
+            `None` and contain only the 1x1 convolution.
     Returns:
         model (torch.nn.Module): a pytorch model.
 
@@ -165,12 +185,16 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
+        decoder_block=[3, 3],
+        classifier=None,
     ):
         super().__init__()
 
         if encoder == "resnet50":
+            padding = 1
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
         elif encoder == "unet":
+            padding = 0
             self.backbone = UnetEncoder(num_input_channels, [64, 128, 256, 512, 2048])
         else:
             raise ValueError(f"Unknown encoder `{encoder}`")
@@ -183,20 +207,61 @@ class UNetModel(ModelABC):
         # channel mapping for shortcut
         self.conv1x1 = nn.Conv2d(down_ch_list[0], down_ch_list[1], (1, 1), bias=False)
 
+        def create_block(kernels, input_ch, output_ch, return_list=False):
+            """Helper to create a block of Vanilla Convolution.
+
+            This is in pre-activation style
+
+            Args:
+                kernels (list): A list of convolution layers, each item is an
+                    integer denotes the layer kernel size.
+                input_ch (int): Number of channels in input images.
+                output_ch (int): Number of channels in output images.
+                return_list (bool): Return layers as list instead of
+                    nn.Sequential.
+
+            """
+            layers = []
+            for ksize in kernels:
+                layers.extend(
+                    [
+                        nn.BatchNorm2d(input_ch),
+                        nn.ReLU(),
+                        nn.Conv2d(
+                            input_ch,
+                            output_ch,
+                            (ksize, ksize),
+                            padding=padding,
+                            bias=False,
+                        ),
+                    ]
+                )
+                input_ch = output_ch
+            if return_list:
+                return layers
+            return nn.Sequential(*layers)
+
         self.uplist = nn.ModuleList()
         for ch_idx, ch in enumerate(down_ch_list[1:]):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
                 next_up_ch = down_ch_list[ch_idx + 2]
-            self.uplist.append(
-                nn.Sequential(
-                    nn.BatchNorm2d(ch),
-                    nn.ReLU(),
-                    nn.Conv2d(ch, next_up_ch, (3, 3), padding=1, bias=False),
-                )
-            )
+            block = create_block(decoder_block, ch, next_up_ch)
+            self.uplist.append(block)
 
-        self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
+        if classifier is None:
+            self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
+        else:
+            layers = create_block(classifier, next_up_ch, next_up_ch, True)
+            layers.extend(
+                [
+                    nn.BatchNorm2d(next_up_ch),
+                    nn.ReLU(),
+                    nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True),
+                ]
+            )
+            self.clf = nn.Sequential(*layers)
+
         self.upsample2x = UpSample2x()
 
     # pylint: disable=W0221

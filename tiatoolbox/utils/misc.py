@@ -19,13 +19,13 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+import copy
 import json
 import os
 import pathlib
 import zipfile
 from typing import Union
 
-import copy
 import cv2
 import numpy as np
 import pandas as pd
@@ -539,8 +539,8 @@ def download_data(url, save_path, overwrite=False):
         overwrite (bool): True to force overwriting of existing data, default=False
 
     """
-    print("Download from %s" % url)
-    print("Save to %s" % save_path)
+    print(f"Download from {url}")
+    print(f"Save to {save_path}")
     save_dir = pathlib.Path(save_path).parent
 
     if not os.path.exists(save_dir):
@@ -554,7 +554,7 @@ def download_data(url, save_path, overwrite=False):
     url_exists = status_code == 200
 
     if not url_exists:
-        raise ConnectionError("Could not find URL at %s" % url)
+        raise ConnectionError(f"Could not find URL at {url}")
 
     with open(save_path, "wb") as f:
         f.write(r.content)
@@ -678,13 +678,14 @@ def get_pretrained_model_info():
     """Get the pretrained model information from yml file."""
     pretrained_yml_path = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
-        "models/pretrained.yml",
+        "models/pretrained_name.yml",
     )
-    if not os.path.exists(pretrained_yml_path):
-        download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
-            pretrained_yml_path,
-        )
+    # if not os.path.exists(pretrained_yml_path):
+    download_data(
+        "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained_name.yml",
+        pretrained_yml_path,
+        overwrite=True,
+    )
     with open(pretrained_yml_path) as fptr:
         pretrained_yml = yaml.full_load(fptr)
 
