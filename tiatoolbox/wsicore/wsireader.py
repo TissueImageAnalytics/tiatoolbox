@@ -361,6 +361,7 @@ class WSIReader:
             - :py:obj:`tuple` - Region location level 0 coordinates
                 - :py:obj:`int` - X location
                 - :py:obj:`int` - Y location
+
         """
         (
             read_level,
@@ -1870,6 +1871,7 @@ class TIFFWSIReader(WSIReader):
 
         Returns:
             dict: Dictionary of kwargs for WSIMeta.
+
         """
         raw = {}
         mpp = None
@@ -1897,6 +1899,7 @@ class TIFFWSIReader(WSIReader):
 
             Returns:
                 tuple: Key-value pair.
+
             """
             pair = string.split("=")
             if len(pair) != 2:
