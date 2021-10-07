@@ -25,7 +25,7 @@ import torch
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.utils.misc import model_to
 
-ON_GPU = True
+ON_GPU = False
 
 
 def test_functional():

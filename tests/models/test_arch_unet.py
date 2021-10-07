@@ -29,6 +29,8 @@ import torch
 from tiatoolbox.models.architecture.unet import UNetModel
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
+ON_GPU = False
+
 # Test pretrained Model =============================
 
 
@@ -62,5 +64,5 @@ def test_functional_unet(_sample_wsi_dict, _sample_pretrained_dict):
     model = UNetModel(3, 2, encoder="resnet50", decoder_block=[3])
     pretrained = torch.load(_pretrained_path, map_location="cpu")
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     output = output[0]
