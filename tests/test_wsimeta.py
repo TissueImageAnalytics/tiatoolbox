@@ -52,6 +52,13 @@ def test_wsimeta_validate_fail():
 
 
 @pytest.mark.filterwarnings("ignore")
+def test_wsimeta_validate_invalid_axes():
+    """Test failure cases for WSIMeta validation with invalid axes."""
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXSF")
+    assert meta.validate() is False
+
+
+@pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
     """Test WSIMeta validation."""
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
@@ -67,14 +74,14 @@ def test_wsimeta_validate_pass():
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_ndpi(_sample_ndpi, tmp_path):
+def test_wsimeta_openslidewsireader_ndpi(_sample_ndpi):
     """Test OpenSlide reader metadata for ndpi."""
     wsi_obj = wsireader.OpenSlideWSIReader(_sample_ndpi)
     meta = wsi_obj.info
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_svs(_sample_svs, tmp_path):
+def test_wsimeta_openslidewsireader_svs(_sample_svs):
     """Test OpenSlide reader metadata for svs."""
     wsi_obj = wsireader.OpenSlideWSIReader(_sample_svs)
     meta = wsi_obj.info
