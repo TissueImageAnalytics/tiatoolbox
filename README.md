@@ -64,7 +64,7 @@ tiatoolbox supports various features through command line. For more information,
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
 1. Open a `bash` terminal window<br/>
 `cd <future-home-of-tiatoolbox-directory>` <br/>
-2. Download a complete copy of the `tiatoolbox`.<br/>`conda clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
+2. Download a complete copy of the `tiatoolbox`.<br/>`git clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
 3. `cd tiatoolbox`
 4. `conda env create -f requirements.conda.yml`<br/>
 creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
