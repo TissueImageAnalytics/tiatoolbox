@@ -170,10 +170,10 @@ def read_bounds_level_consistency(wsi, bounds):
 
     # Avoid testing very small levels (e.g. as in Omnyx JP2) becuase
     # MSE for very small levels is noisy.
-    levels_to_test = [n for n, downsample in enumerate(wsi.info.level_downsamples) if downsample <= 32]
-    imgs = [
-        wsi.read_bounds(bounds, level, "level") for level in levels_to_test
+    levels_to_test = [
+        n for n, downsample in enumerate(wsi.info.level_downsamples) if downsample <= 32
     ]
+    imgs = [wsi.read_bounds(bounds, level, "level") for level in levels_to_test]
     smallest_size = imgs[-1].shape[:2][::-1]
     resized = [cv2.resize(img, smallest_size) for img in imgs]
     # Some blurring applied to account for changes in sharpness arising
