@@ -1903,7 +1903,9 @@ class TIFFWSIReader(WSIReader):
             """
             pair = string.split("=")
             if len(pair) != 2:
-                raise ValueError
+                raise ValueError(
+                    "Invalid metadata. Expected string of the format 'key=value'."
+                )
             key, value_string = pair
             key = key.strip()
             value_string = value_string.strip()
@@ -1983,8 +1985,8 @@ class TIFFWSIReader(WSIReader):
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
             objective_power = float(objective.attrib.get("NominalMagnification"))
-        except IndexError:
-            pass
+        except KeyError:
+            raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
 
         kwargs = dict(
             objective_power=objective_power,

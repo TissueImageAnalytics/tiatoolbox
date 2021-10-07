@@ -9,6 +9,7 @@ from time import time
 import cv2
 import numpy as np
 import pytest
+import zarr
 from click.testing import CliRunner
 from skimage.filters import threshold_otsu
 from skimage.morphology import binary_dilation, disk, remove_small_objects
@@ -19,6 +20,7 @@ from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
+    ArrayView,
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
@@ -1741,6 +1743,42 @@ def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
     wsi = wsireader.OpenSlideWSIReader(_sample_svs)
     region = wsi.read_bounds((-64, -64, 64, 64), pad_mode="reflect")
     assert 0 not in region.min(axis=-1)
+
+
+def test_tiffwsireader_invalid_tiff(_sample_ndpi):
+    with pytest.raises(ValueError, match="Unsupported TIFF"):
+        wsi = wsireader.TIFFWSIReader(_sample_ndpi)
+
+
+def test_tiffwsireader_invalid_svs_metadata(_sample_svs, monkeypatch):
+    wsi = wsireader.TIFFWSIReader(_sample_svs)
+    monkeypatch.setattr(
+        wsi.tiff.pages[0],
+        "description",
+        wsi.tiff.pages[0].description.replace("=", "=="),
+    )
+    with pytest.raises(ValueError, match="key=value"):
+        _ = wsi._info()
+
+
+def test_tiffwsireader_invalid_ome_metadata(_sample_ome_tiff, monkeypatch):
+    wsi = wsireader.TIFFWSIReader(_sample_ome_tiff)
+    monkeypatch.setattr(
+        wsi.tiff.pages[0],
+        "description",
+        wsi.tiff.pages[0].description.replace(
+            '<Objective ID="Objective:0:0" NominalMagnification="20.0"/>', ""
+        ),
+    )
+    with pytest.raises(KeyError, match="No matching Instrument"):
+        _ = wsi._info()
+
+
+def test_arrayview_unsupported_axes():
+    array = zarr.ones((128, 128, 3))
+    array_view = ArrayView(array=array, axes="FOO")
+    with pytest.raises(Exception, match="Unsupported axes"):
+        array_view[:64, :64, :]
 
 
 class TestReader:
