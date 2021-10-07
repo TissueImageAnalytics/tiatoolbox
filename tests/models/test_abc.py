@@ -30,7 +30,7 @@ from tiatoolbox.models.architecture import (
 
 
 def test_get_pretrained_model():
-    """Test for download and creating pretrained model."""
+    """Test for downloading and creating pretrained models."""
     pretrained_info = get_pretrained_model_info()
     for pretrained_name in pretrained_info.keys():
         get_pretrained_model(pretrained_name, overwrite=True)

@@ -46,6 +46,13 @@ from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
 
+
+def _rm_dir(path):
+    """Helper func to remove directory."""
+    if os.path.exists(path):
+        shutil.rmtree(path, ignore_errors=True)
+
+
 # -------------------------------------------------------------------------------------
 # Dataloader
 # -------------------------------------------------------------------------------------
@@ -108,7 +115,7 @@ def test_PatchDatasetlist_imgs(tmp_path):
         pathlib.Path(os.path.join(save_dir_path, "sample2.npy")),
     ]
     _ = PatchDataset(imgs)
-    shutil.rmtree(save_dir_path)
+    _rm_dir(save_dir_path)
 
 
 def test_PatchDatasetarray_imgs():
@@ -205,8 +212,7 @@ def test_PatchDataset_crash(tmp_path):
     # ** test different extension parser
     # save dummy data to temporary location
     # remove prev generated data
-    if os.path.exists(save_dir_path):
-        shutil.rmtree(save_dir_path, ignore_errors=True)
+    _rm_dir(save_dir_path)
     os.makedirs(save_dir_path)
     torch.save({"a": "a"}, os.path.join(save_dir_path, "sample1.tar"))
     np.save(
@@ -222,7 +228,7 @@ def test_PatchDataset_crash(tmp_path):
         match=r"Can not load data of .*",
     ):
         _ = PatchDataset(imgs)
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+    _rm_dir(rcParam["TIATOOLBOX_HOME"])
 
     # preproc func for not defined dataset
     with pytest.raises(
@@ -487,19 +493,17 @@ def test_predictor_crash():
         predictor.predict("aaa", mode="random")
     # remove previously generated data
     if os.path.exists("output"):
-        shutil.rmtree("output", ignore_errors=True)
+        _rm_dir("output")
     with pytest.raises(ValueError, match=r".*must be a list of file paths.*"):
         predictor.predict("aaa", mode="wsi")
     # remove previously generated data
-    if os.path.exists("output"):
-        shutil.rmtree("output", ignore_errors=True)
+    _rm_dir("output")
     with pytest.raises(ValueError, match=r".*masks.*!=.*imgs.*"):
         predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
     with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
         predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
     # remove previously generated data
-    if os.path.exists("output"):
-        shutil.rmtree("output", ignore_errors=True)
+    _rm_dir("output")
 
 
 def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
@@ -514,7 +518,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
         inputs,
         on_gpu=ON_GPU,
     )
-    assert sorted(list(output.keys())) == ["predictions"]
+    assert sorted(output.keys()) == ["predictions"]
     assert len(output["predictions"]) == 2
 
     output = predictor.predict(
@@ -523,7 +527,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
         return_labels=True,
         on_gpu=ON_GPU,
     )
-    assert sorted(list(output.keys())) == sorted(["labels", "predictions"])
+    assert sorted(output.keys()) == sorted(["labels", "predictions"])
     assert len(output["predictions"]) == len(output["labels"])
     assert output["labels"] == [1, "a"]
 
@@ -532,7 +536,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
         return_probabilities=True,
         on_gpu=ON_GPU,
     )
-    assert sorted(list(output.keys())) == sorted(["predictions", "probabilities"])
+    assert sorted(output.keys()) == sorted(["predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["probabilities"])
 
     output = predictor.predict(
@@ -542,9 +546,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
         return_labels=True,
         on_gpu=ON_GPU,
     )
-    assert sorted(list(output.keys())) == sorted(
-        ["labels", "predictions", "probabilities"]
-    )
+    assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["labels"])
     assert len(output["predictions"]) == len(output["probabilities"])
 
@@ -562,8 +564,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
     )
 
     # remove prev generated data
-    if os.path.exists(save_dir_path):
-        shutil.rmtree(save_dir_path, ignore_errors=True)
+    _rm_dir(save_dir_path)
     os.makedirs(save_dir_path)
     pretrained_weights = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
@@ -589,9 +590,7 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2, tmp_path):
         return_labels=True,
         on_gpu=ON_GPU,
     )
-    assert sorted(list(output.keys())) == sorted(
-        ["labels", "predictions", "probabilities"]
-    )
+    assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["labels"])
     assert len(output["predictions"]) == len(output["probabilities"])
 
@@ -642,8 +641,7 @@ def test_wsi_predictor_api(_sample_wsi_dict, tmp_path):
 
     # remove previously generated data
     save_dir = f"{save_dir_path}/model_wsi_output"
-    if os.path.exists(save_dir):
-        shutil.rmtree(save_dir, ignore_errors=True)
+    _rm_dir(save_dir)
 
     kwargs = dict(
         return_probabilities=True,
@@ -671,8 +669,7 @@ def test_wsi_predictor_api(_sample_wsi_dict, tmp_path):
     for output_info in output.values():
         assert os.path.exists(output_info["raw"])
         assert "merged" not in output_info
-    if os.path.exists(_kwargs["save_dir"]):
-        shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
+    _rm_dir(_kwargs["save_dir"])
 
     # coverage test
     _kwargs = copy.deepcopy(kwargs)
@@ -693,10 +690,8 @@ def test_wsi_predictor_api(_sample_wsi_dict, tmp_path):
             **_kwargs,
         )
     # remove previously generated data
-    if os.path.exists(_kwargs["save_dir"]):
-        shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
-    if os.path.exists("output"):
-        shutil.rmtree("output", ignore_errors=True)
+    _rm_dir(_kwargs["save_dir"])
+    _rm_dir("output")
 
     # test reading of multiple whole-slide images
     _kwargs = copy.deepcopy(kwargs)
@@ -714,8 +709,7 @@ def test_wsi_predictor_api(_sample_wsi_dict, tmp_path):
         assert "merged" in output_info and os.path.exists(output_info["merged"])
 
     # remove previously generated data
-    if os.path.exists("output"):
-        shutil.rmtree("output", ignore_errors=True)
+    _rm_dir("output")
 
 
 def test_wsi_predictor_merge_predictions(_sample_wsi_dict):

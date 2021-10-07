@@ -32,6 +32,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.architecture.utils import crop_op
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
@@ -40,33 +41,14 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 # ----------------------------------------------------
 
 
 def _rm_dir(path):
     """Helper func to remove directory."""
-    shutil.rmtree(path, ignore_errors=True)
-
-
-def _crop_op(x, cropping, data_format="NCHW"):
-    """Center crop image.
-
-    Args:
-        x (torch.Tensor): input image
-        cropping (torch.Tensor): the substracted amount
-        data_format: choose either `NCHW` or `NHWC`
-
-    """
-    crop_t = cropping[0] // 2
-    crop_b = cropping[0] - crop_t
-    crop_l = cropping[1] // 2
-    crop_r = cropping[1] - crop_l
-    if data_format == "NCHW":
-        x = x[:, :, crop_t:-crop_b, crop_l:-crop_r]
-    else:
-        x = x[:, crop_t:-crop_b, crop_l:-crop_r, :]
-    return x
+    if os.path.exists(path):
+        shutil.rmtree(path, ignore_errors=True)
 
 
 class _CNNTo1(ModelABC):
@@ -115,7 +97,7 @@ class _CNNTo1(ModelABC):
         hw = np.array(img_list.shape[2:])
         with torch.no_grad():  # do not compute gradient
             logit_list = model(img_list)
-            logit_list = _crop_op(logit_list, hw // 2)
+            logit_list = crop_op(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
             prob_list = F.relu(logit_list)
 
@@ -337,6 +319,7 @@ def test_functional_segmentor(_sample_wsi_dict, tmp_path):
     runner.num_postproc_workers = 1
 
     # * test merging method
+    _rm_dir(save_dir)
     os.mkdir(save_dir)
     # predictions with HW
     canvas = runner.merge_prediction(
@@ -480,48 +463,6 @@ def test_functional_segmentor(_sample_wsi_dict, tmp_path):
     )
 
 
-def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
-    """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = pathlib.Path(tmp_path)
-
-    wsi_with_artifacts = pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_svs"])
-    runner = SemanticSegmentor(batch_size=4, pretrained_model="fcn-tissue_mask")
-    _rm_dir(save_dir)
-    runner.predict(
-        [wsi_with_artifacts],
-        mode="wsi",
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
-    )
-    # load up the raw prediction and perform precision check
-    _cache_pred = imread(pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_pred"]))
-    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
-    _test_pred = (_test_pred[..., 1] > 0.75) * 255
-    assert np.sum(np.abs(_cache_pred[..., 0] - _test_pred)) < 1.0e-6
-
-
-def test_behavior_bcss(_sample_wsi_dict, tmp_path):
-    """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = pathlib.Path(tmp_path)
-
-    _rm_dir(save_dir)
-    wsi_breast = pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_svs"])
-    runner = SemanticSegmentor(batch_size=8, pretrained_model="fcn_resnet50_unet-bcss")
-    runner.predict(
-        [wsi_breast],
-        mode="wsi",
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
-    )
-    # load up the raw prediction and perform precision check
-    _cache_pred = np.load(pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_pred"]))
-    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
-    _test_pred = np.argmax(_test_pred, axis=-1)
-    assert np.sum(np.abs(_cache_pred - _test_pred)) < 1.0e-6
-
-
 def test_subclass(_sample_wsi_dict, tmp_path):
     """Create subclass and test parallel processing setup."""
     save_dir = pathlib.Path(tmp_path)
@@ -550,3 +491,47 @@ def test_subclass(_sample_wsi_dict, tmp_path):
         crash_on_exception=False,
         save_dir=f"{save_dir}/raw/",
     )
+
+
+def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
+    """Contain test for behavior of the segmentor and pretrained models."""
+    save_dir = pathlib.Path(tmp_path)
+
+    wsi_with_artifacts = pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_svs"])
+    runner = SemanticSegmentor(batch_size=2, pretrained_model="fcn-tissue_mask")
+    _rm_dir(save_dir)
+    runner.predict(
+        [wsi_with_artifacts],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    # load up the raw prediction and perform precision check
+    _cache_pred = imread(pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_pred"]))
+    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
+    _test_pred = (_test_pred[..., 1] > 0.75) * 255
+    assert np.sum(np.abs(_cache_pred[..., 0] - _test_pred)) < 1.0e-6
+    _rm_dir(save_dir)
+
+
+def test_behavior_bcss(_sample_wsi_dict, tmp_path):
+    """Contain test for behavior of the segmentor and pretrained models."""
+    save_dir = pathlib.Path(tmp_path)
+
+    _rm_dir(save_dir)
+    wsi_breast = pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_svs"])
+    runner = SemanticSegmentor(batch_size=2, pretrained_model="fcn_resnet50_unet-bcss")
+    runner.predict(
+        [wsi_breast],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    # load up the raw prediction and perform precision check
+    _cache_pred = np.load(pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_pred"]))
+    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
+    _test_pred = np.argmax(_test_pred, axis=-1)
+    assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-6
+    _rm_dir(save_dir)

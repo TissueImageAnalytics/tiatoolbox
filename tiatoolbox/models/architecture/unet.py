@@ -216,9 +216,11 @@ class UNetModel(ModelABC):
 
         if encoder == "resnet50":
             padding = 1
+            preact = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
         elif encoder == "unet":
             padding = 0
+            preact = False
             self.backbone = UnetEncoder(num_input_channels, [64, 128, 256, 512, 2048])
         else:
             raise ValueError(f"Unknown encoder `{encoder}`")
@@ -231,7 +233,7 @@ class UNetModel(ModelABC):
         # channel mapping for shortcut
         self.conv1x1 = nn.Conv2d(down_ch_list[0], down_ch_list[1], (1, 1), bias=False)
 
-        def create_block(kernels, input_ch, output_ch, return_list=False):
+        def create_block(kernels, input_ch, output_ch):
             """Helper to create a block of Vanilla Convolution.
 
             This is in pre-activation style
@@ -241,37 +243,48 @@ class UNetModel(ModelABC):
                     integer denotes the layer kernel size.
                 input_ch (int): Number of channels in input images.
                 output_ch (int): Number of channels in output images.
-                return_list (bool): Return layers as list instead of
-                    nn.Sequential.
 
             """
             layers = []
             for ksize in kernels:
-                layers.extend(
-                    [
-                        nn.BatchNorm2d(input_ch),
-                        nn.ReLU(),
-                        nn.Conv2d(
-                            input_ch,
-                            output_ch,
-                            (ksize, ksize),
-                            padding=padding,
-                            bias=False,
-                        ),
-                    ]
-                )
+                if preact:
+                    layers.extend(
+                        [
+                            nn.BatchNorm2d(input_ch),
+                            nn.ReLU(),
+                            nn.Conv2d(
+                                input_ch,
+                                output_ch,
+                                (ksize, ksize),
+                                padding=padding,
+                                bias=False,
+                            ),
+                        ]
+                    )
+                else:
+                    layers.extend(
+                        [
+                            nn.Conv2d(
+                                input_ch,
+                                output_ch,
+                                (ksize, ksize),
+                                padding=padding,
+                                bias=False,
+                            ),
+                            nn.BatchNorm2d(input_ch),
+                            nn.ReLU(),
+                        ]
+                    )
                 input_ch = output_ch
-            if return_list:
-                return layers
-            return nn.Sequential(*layers)
+            return layers
 
         self.uplist = nn.ModuleList()
         for ch_idx, ch in enumerate(down_ch_list[1:]):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
                 next_up_ch = down_ch_list[ch_idx + 2]
-            block = create_block(decoder_block, ch, next_up_ch)
-            self.uplist.append(block)
+            layers = create_block(decoder_block, ch, next_up_ch)
+            self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()

@@ -20,6 +20,7 @@
 """Unit test package for vanilla CNN within toolbox."""
 
 import numpy as np
+import pytest
 import torch
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
@@ -49,6 +50,8 @@ def test_functional():
         "mobilenet_v3_large",
         "mobilenet_v3_small",
     ]
+    assert CNNModel.postproc([1, 2]) == 1
+
     b = 4
     h = w = 512
     samples = torch.from_numpy(np.random.rand(b, h, w, 3))
@@ -59,3 +62,7 @@ def test_functional():
             model.infer_batch(model_, samples, on_gpu=ON_GPU)
         except ValueError:
             raise AssertionError(f"Model {backbone} failed.")
+
+    # skipcq
+    with pytest.raises(ValueError, match=r".*Backbone.*not supported.*"):
+        CNNModel("shiny_model_to_crash", num_classes=2)
