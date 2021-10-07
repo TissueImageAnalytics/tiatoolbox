@@ -1747,7 +1747,7 @@ def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
 
 def test_tiffwsireader_invalid_tiff(_sample_ndpi):
     with pytest.raises(ValueError, match="Unsupported TIFF"):
-        wsi = wsireader.TIFFWSIReader(_sample_ndpi)
+        _ = wsireader.TIFFWSIReader(_sample_ndpi)
 
 
 def test_tiffwsireader_invalid_svs_metadata(_sample_svs, monkeypatch):
