@@ -676,6 +676,7 @@ def model_to(on_gpu, model):
 
 def get_pretrained_model_info():
     """Get the pretrained model information from yml file."""
+    # TODO: merge with John PR and put the yaml within the package
     pretrained_yml_path = os.path.join(
         rcParam["TIATOOLBOX_HOME"],
         "models/pretrained_name.yml",

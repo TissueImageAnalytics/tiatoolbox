@@ -20,9 +20,10 @@
 
 """Defines a set of models to be used within tiatoolbox."""
 
-import importlib
 import os
+import pathlib
 from pydoc import locate
+from typing import Union
 
 import torch
 
@@ -33,7 +34,11 @@ from tiatoolbox.utils.misc import download_data, get_pretrained_model_info
 __all__ = ["get_pretrained_model"]
 
 
-def get_pretrained_model(pretrained_model=None, pretrained_weights=None):
+def get_pretrained_model(
+    pretrained_model: str = None,
+    pretrained_weights: Union[str, pathlib.Path] = None,
+    overwrite: bool = False,
+):
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
@@ -73,6 +78,7 @@ def get_pretrained_model(pretrained_model=None, pretrained_weights=None):
           the `pretrained_weights` argument. Argument is case insensitive.
         pretrained_weights (str): Path to the weight of the
           corresponding `pretrained_model`.
+        overwrite (bool): To always overwriting downloaded weights.
 
     Examples:
         >>> # get mobilenet pretrained on kather by TIA team
@@ -111,8 +117,8 @@ def get_pretrained_model(pretrained_model=None, pretrained_weights=None):
         pretrained_weights = os.path.join(
             rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weights_url_split[-1]
         )
-        if not os.path.exists(pretrained_weights):
-            download_data(pretrained_weights_url, pretrained_weights)
+        if overwrite or not os.path.exists(pretrained_weights):
+            download_data(pretrained_weights_url, pretrained_weights, overwrite)
 
     # ! assume to be saved in single GPU mode
     # always load on to the CPU

@@ -33,7 +33,7 @@ def test_get_pretrained_model():
     """Test for download and creating pretrained model."""
     pretrained_info = get_pretrained_model_info()
     for pretrained_name in pretrained_info.keys():
-        _, _ = get_pretrained_model(pretrained_name)
+        get_pretrained_model(pretrained_name, overwrite=True)
 
 
 def test_model_abc():
