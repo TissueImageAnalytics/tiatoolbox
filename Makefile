@@ -68,6 +68,18 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
 
+html: ## generate Sphinx PDF documentation, including API docs
+	rm -rf docs/_autosummary
+	mkdir docs/_autosummary
+	cp -r docs/images docs/_autosummary
+	sphinx-build -b html docs docs/_build/html
+
+pdf: ## generate Sphinx PDF documentation, including API docs
+	rm -rf docs/_autosummary
+	mkdir docs/_autosummary
+	cp -r docs/images docs/_autosummary
+	sphinx-build -M latexpdf docs docs/_build/latex
+
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
