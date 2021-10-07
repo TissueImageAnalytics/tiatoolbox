@@ -262,9 +262,8 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(_sample_wsi_dict, tmp_path):
+def test_crash_segmentor(_sample_wsi_dict):
     """Functional crash tests for segmentor."""
-    save_dir = pathlib.Path(tmp_path)
     # # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])

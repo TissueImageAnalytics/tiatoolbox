@@ -83,8 +83,8 @@ def test_model_abc():
         def __init__(self):
             super().__init__()
 
-        # skipcq
         @staticmethod
+        # skipcq
         def postproc(image):
             return image - 2
 
