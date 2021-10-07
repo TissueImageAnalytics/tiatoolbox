@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = python -msphinx
+SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = tiatoolbox
 SOURCEDIR     = .
 BUILDDIR      = _build
@@ -19,4 +19,6 @@ help:
 %: Makefile
 	rm -rf _build
 	rm -rf _autosummary
+	mkdir _autosummary
+	cp -r images _autosummary	
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
