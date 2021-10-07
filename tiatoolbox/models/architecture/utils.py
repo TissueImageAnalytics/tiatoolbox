@@ -70,6 +70,17 @@ class UpSample2x(nn.Module):
         self.unpool_mat.unsqueeze(0)
 
     def forward(self, x: torch.Tensor):
+        """Logic for using layers defined in init.
+
+        Args:
+            x (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+
+        Returns:
+            ret (torch.Tensor): Input images upsampled by a factor of 2
+                via nearest neightbor interpolation. The tensor is in the shape
+                of NCHW.
+
+        """
         input_shape = list(x.shape)
         # un-squeeze is expand_dims equivalent
         # permute is transpose equivalent

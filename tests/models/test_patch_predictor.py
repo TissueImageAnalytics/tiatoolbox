@@ -403,6 +403,7 @@ def test_WSIPatchDataset(_sample_wsi_dict):
 
 
 def test_PatchDataset_abc():
+    """Test for ABC methods."""
     # test missing definition for abstract
     with pytest.raises(TypeError):
 
