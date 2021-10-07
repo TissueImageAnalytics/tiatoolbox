@@ -610,20 +610,25 @@ def _sample_wsi_dict(tmpdir_factory):
     """
     file_name_dict = {
         "CMU-mini": "CMU-mini.svs",
-        "wsi1_8k_8k_svs": "wsi1_8k_8k.svs",
-        "wsi1_8k_8k_jp2": "wsi1_8k_8k.jp2",
-        "wsi1_8k_8k_jpg": "wsi1_8k_8k.jpg",
-        "wsi2_4k_4k_svs": "wsi2_4k_4k.svs",
-        "wsi2_4k_4k_jp2": "wsi2_4k_4k.jp2",
-        "wsi2_4k_4k_jpg": "wsi2_4k_4k.jpg",
-        "wsi2_4k_4k_msk": "wsi2_4k_4k.mask.png",
-        "wsi2_4k_4k_pred": "wsi2_4k_4k.pred.dat",
+        "wsi1_8k_8k_svs": "new/wsi1_8k_8k.svs",
+        "wsi1_8k_8k_jp2": "new/wsi1_8k_8k.jp2",
+        "wsi1_8k_8k_jpg": "new/wsi1_8k_8k.jpg",
+        "wsi2_4k_4k_svs": "new/wsi2_4k_4k.svs",
+        "wsi2_4k_4k_jp2": "new/wsi2_4k_4k.jp2",
+        "wsi2_4k_4k_jpg": "new/wsi2_4k_4k.jpg",
+        "wsi2_4k_4k_msk": "new/wsi2_4k_4k.mask.png",
+        "wsi2_4k_4k_pred": "new/wsi2_4k_4k.pred.dat",
+        "wsi3_20k_20k_svs": "new/wsi3_20k_20k.svs",
+        "wsi4_4k_4k_svs": "new/wsi4_4k_4k.svs",
+        "wsi3_20k_20k_pred": "predictions/tissue_mask/wsi3_20k_20k.mask.png",
+        "wsi4_4k_4k_pred": "predictions/bcss/wsi4_4k_4k.mask.npy",
     }
 
     info_dict = {}
-    URL_HOME = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new"
+    URL_HOME = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/"
     for file_code, file_name in file_name_dict.items():
-        file_path = tmpdir_factory.mktemp("data").join(file_name)
+        new_file_name = file_name.replace("/", "-")
+        file_path = tmpdir_factory.mktemp("data").join(new_file_name)
         if not pathlib.Path(file_path).is_file():
             print(f"\nDownloading {file_path}")
             r = requests.get(f"{URL_HOME}/{file_name}")

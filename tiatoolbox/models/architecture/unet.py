@@ -92,7 +92,7 @@ class UnetEncoder(nn.Module):
     """Construct a basic unet encoder.
 
     This class builds a basic unet encoder with batch normalization.
-    The number of channels in the per down-sampling block as well as
+    The number of channels in each down-sampling block and
     the number of down-sampling levels are customisable.
 
     Args:
@@ -159,7 +159,7 @@ class UNetModel(ModelABC):
 
     This supports different encoders. However, the decoder is relatively simple,
     each upsampling block contains a number of vanilla Convolution Layer.
-    Additionally the block is not customizable. Additionally, the aggregation
+    Each block is not customizable. Additionally, the aggregation
     between down-sampling and up-sampling is addition, not concatenation.
 
     Args:
@@ -186,7 +186,6 @@ class UNetModel(ModelABC):
         num_output_channels: int = 2,
         encoder: str = "resnet50",
         decoder_block=[3, 3],
-        classifier=None,
     ):
         super().__init__()
 
@@ -249,19 +248,7 @@ class UNetModel(ModelABC):
             block = create_block(decoder_block, ch, next_up_ch)
             self.uplist.append(block)
 
-        if classifier is None:
-            self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
-        else:
-            layers = create_block(classifier, next_up_ch, next_up_ch, True)
-            layers.extend(
-                [
-                    nn.BatchNorm2d(next_up_ch),
-                    nn.ReLU(),
-                    nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True),
-                ]
-            )
-            self.clf = nn.Sequential(*layers)
-
+        self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
     # pylint: disable=W0221

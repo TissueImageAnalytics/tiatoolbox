@@ -23,7 +23,6 @@ import copy
 import os
 import pathlib
 import shutil
-from time import time
 
 import numpy as np
 import pytest
@@ -32,13 +31,13 @@ import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
 )
+from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
@@ -48,14 +47,6 @@ ON_GPU = False
 def _rm_dir(path):
     """Helper func to remove directory."""
     shutil.rmtree(path, ignore_errors=True)
-
-
-def _get_temp_folder_path():
-    """Return unique temp folder path."""
-    new_dir = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], f"test_model_patch_{int(time())}"
-    )
-    return new_dir
 
 
 def _crop_op(x, cropping, data_format="NCHW"):
@@ -132,7 +123,9 @@ class _CNNTo1(ModelABC):
         return [prob_list]
 
 
-# Test Segmentor And Loader =========================
+# -------------------------------------------------------------------------------------
+# IOConfig
+# -------------------------------------------------------------------------------------
 
 
 def test_segmentor_ioconfig():
@@ -207,6 +200,11 @@ def test_segmentor_ioconfig():
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
 
 
+# -------------------------------------------------------------------------------------
+# Dataset
+# -------------------------------------------------------------------------------------
+
+
 def test_functional_WSIStreamDataset(_sample_wsi_dict):
     """Functional test for WSIStreamDataset."""
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -259,15 +257,78 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
         assert np.round(patch_resolution1.shape[0] / patch_resolution3.shape[0]) == 3
 
 
-def test_functional_segmentor(_sample_wsi_dict):
-    """Functional test for segmentor."""
-    save_dir = _get_temp_folder_path()
-    save_dir = pathlib.Path(save_dir)
+# -------------------------------------------------------------------------------------
+# Controller
+# -------------------------------------------------------------------------------------
+
+
+def test_crash_segmentor(_sample_wsi_dict, tmp_path):
+    """Functional crash tests for segmentor."""
+    save_dir = pathlib.Path(tmp_path)
     # # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
     _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
 
+    model = _CNNTo1()
+    runner = SemanticSegmentor(batch_size=1, model=model)
+    # fake injection to trigger Segmentor to create parallel
+    # post processing workers because baseline Semantic Segmentor does not support
+    # post processing out of the box. It only contains condition to create it
+    # for any subclass
+    runner.num_postproc_workers = 1
+
+    # * test basic crash
+    _rm_dir("output")  # default output dir test
+    with pytest.raises(ValueError, match=r".*`mask_reader`.*"):
+        runner.filter_coordinates(_mini_wsi_msk, np.array(["a", "b", "c"]))
+    with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
+        runner.filter_coordinates(get_wsireader(_mini_wsi_msk), np.array([1.0, 2.0]))
+    runner.get_reader(_mini_wsi_svs, None, "wsi", True)
+    with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
+        runner.get_reader(_mini_wsi_msk, "not_exist", "wsi", True)
+
+    _rm_dir("output")  # default output dir test
+    with pytest.raises(ValueError, match=r".*provide.*"):
+        SemanticSegmentor()
+    with pytest.raises(ValueError, match=r".*valid mode.*"):
+        runner.predict([], mode="abc")
+    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
+        runner.predict(
+            [_mini_wsi_jpg],
+            mode="tile",
+            on_gpu=ON_GPU,
+            patch_input_shape=[2048, 2048],
+            resolution=1.0,
+            units="mpp",
+            crash_on_exception=True,
+        )
+
+    with pytest.raises(ValueError, match=r".*already exists.*"):
+        runner.predict([], mode="tile", patch_input_shape=[2048, 2048])
+    _rm_dir("output")  # default output dir test
+
+    # * test not providing any ioconfig info when not using pretrained model
+    with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
+        runner.predict(
+            [_mini_wsi_jpg],
+            mode="tile",
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+        )
+    _rm_dir("output")  # default output dir test
+
+
+def test_functional_segmentor(_sample_wsi_dict, tmp_path):
+    """Functional test for segmentor."""
+    save_dir = pathlib.Path(tmp_path)
+    # # convert to pathlib Path to prevent wsireader complaint
+    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    # pre-emptive clean up
+    _rm_dir("output")  # default output dir test
     model = _CNNTo1()
     runner = SemanticSegmentor(batch_size=1, model=model)
     # fake injection to trigger Segmentor to create parallel
@@ -319,31 +380,6 @@ def test_functional_segmentor(_sample_wsi_dict):
     assert np.sum(canvas - _output) < 1.0e-8
     _rm_dir(save_dir)
 
-    # * test basic crash
-    with pytest.raises(ValueError, match=r".*`mask_reader`.*"):
-        runner.filter_coordinates(_mini_wsi_msk, np.array(["a", "b", "c"]))
-    with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
-        runner.filter_coordinates(get_wsireader(_mini_wsi_msk), np.array([1.0, 2.0]))
-    runner.get_reader(_mini_wsi_svs, None, "wsi", True)
-    with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
-        runner.get_reader(_mini_wsi_msk, "not_exist", "wsi", True)
-
-    _rm_dir("output")  # default output dir test
-    with pytest.raises(ValueError, match=r".*provide.*"):
-        SemanticSegmentor()
-    with pytest.raises(ValueError, match=r".*valid mode.*"):
-        runner.predict([], mode="abc")
-    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
-        runner.predict(
-            [_mini_wsi_jpg],
-            mode="tile",
-            on_gpu=ON_GPU,
-            patch_input_shape=[2048, 2048],
-            resolution=1.0,
-            units="mpp",
-            crash_on_exception=True,
-        )
-    _rm_dir("output")  # default output dir test
     # should still run because we skip exception
     runner.predict(
         [_mini_wsi_jpg],
@@ -354,8 +390,6 @@ def test_functional_segmentor(_sample_wsi_dict):
         units="mpp",
         crash_on_exception=False,
     )
-    with pytest.raises(ValueError, match=r".*already exists.*"):
-        runner.predict([], mode="tile")
     _rm_dir("output")  # default output dir test
 
     # * check exception bypass in the log
@@ -447,19 +481,62 @@ def test_functional_segmentor(_sample_wsi_dict):
     )
 
 
-def test_subclass(_sample_wsi_dict):
+def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
+    """Contain test for behavior of the segmentor and pretrained models."""
+    save_dir = pathlib.Path(tmp_path)
+
+    wsi_with_artifacts = pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_svs"])
+    runner = SemanticSegmentor(batch_size=4, pretrained_model="fcn-tissue_mask")
+    _rm_dir(save_dir)
+    runner.predict(
+        [wsi_with_artifacts],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    # load up the raw prediction and perform precision check
+    _cache_pred = imread(pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_pred"]))
+    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
+    _test_pred = (_test_pred[..., 1] > 0.75) * 255
+    assert np.sum(np.abs(_cache_pred[..., 0] - _test_pred)) < 1.0e-6
+
+
+def test_behavior_bcss(_sample_wsi_dict, tmp_path):
+    """Contain test for behavior of the segmentor and pretrained models."""
+    save_dir = pathlib.Path(tmp_path)
+
+    _rm_dir(save_dir)
+    wsi_breast = pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_svs"])
+    runner = SemanticSegmentor(batch_size=8, pretrained_model="fcn_resnet50_unet-bcss")
+    runner.predict(
+        [wsi_breast],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    # load up the raw prediction and perform precision check
+    _cache_pred = np.load(pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_pred"]))
+    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
+    _test_pred = np.argmax(_test_pred, axis=-1)
+    assert np.sum(np.abs(_cache_pred - _test_pred)) < 1.0e-6
+
+
+def test_subclass(_sample_wsi_dict, tmp_path):
     """Create subclass and test parallel processing setup."""
+    save_dir = pathlib.Path(tmp_path)
     _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
 
     model = _CNNTo1()
 
     class XSegmentor(SemanticSegmentor):
+        """Dummy class to test subclassing."""
+
         def __init__(self):
             super().__init__(model=model)
             self.num_postproc_worker = 2
 
-    save_dir = _get_temp_folder_path()
-    save_dir = pathlib.Path(save_dir)
     runner = XSegmentor()
     _rm_dir(save_dir)  # default output dir test
     runner.predict(

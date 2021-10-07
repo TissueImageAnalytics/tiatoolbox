@@ -40,6 +40,7 @@ import torch.utils.data as torch_data
 import tqdm
 
 from tiatoolbox.models.abc import IOConfigABC
+from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
@@ -380,7 +381,14 @@ class SemanticSegmentor:
         if model is None and pretrained_model is None:
             raise ValueError("Must provide either of `model` or `pretrained_model`")
 
-        # TODO: add pretrained model
+        if model is not None:
+            self.model = model
+            # template ioconfig, usually coming from pretrained
+            self.ioconfig = None
+        else:
+            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
+            self.ioconfig = ioconfig
+            self.model = model
 
         # for runtime, such as after wrapping with nn.DataParallel
         self._loader = None
@@ -825,6 +833,14 @@ class SemanticSegmentor:
     ):
         """Make a prediction for a list of input data.
 
+        By default, if the input model at the object instantiation time is a
+        pretrained model in the toolbox as well as `patch_input_shape`,
+        `patch_output_shape`, `stride_shape`, `resolution`, `units` and `ioconfig`
+        are `None`. The method will use the `ioconfig` retrieved together with
+        the pretrained model. Otherwise, either `patch_input_shape`,
+        `patch_output_shape`, `stride_shape`, `resolution`, `units` or `ioconfig`
+        must be set else a `Value Error` will be raised.
+
         Args:
             imgs (list, ndarray): List of inputs to process. When using `patch`
               mode, the input must be either a list of images, a list of image
@@ -901,7 +917,15 @@ class SemanticSegmentor:
         if stride_shape is None:
             stride_shape = patch_output_shape
 
-        if ioconfig is None:
+        if ioconfig is None and patch_input_shape is None:
+            if self.ioconfig is not None:
+                ioconfig = self.ioconfig
+            else:
+                raise ValueError(
+                    "Must provide either `ioconfig` or "
+                    "`patch_input_shape` and `patch_output_shape`"
+                )
+        elif ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
                 output_resolutions=[{"resolution": resolution, "units": units}],
