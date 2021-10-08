@@ -13,6 +13,7 @@ import zarr
 from click.testing import CliRunner
 from skimage.filters import threshold_otsu
 from skimage.morphology import binary_dilation, disk, remove_small_objects
+from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -168,8 +169,6 @@ def read_bounds_level_consistency(wsi, bounds):
     the resulting image using phase cross correlation to check that they
     are aligned.
     """
-    from skimage.registration import phase_cross_correlation
-
     # Avoid testing very small levels (e.g. as in Omnyx JP2) becuase
     # MSE for very small levels is noisy.
     levels_to_test = [
@@ -1809,6 +1808,43 @@ class TestReader:
             assert hasattr(info, attr)
 
     @staticmethod
+    def test_read_rect_level_consistency(_sample_ome_tiff, reader_class):
+        """Compare the same region at each stored resolution level.
+
+        Read the same region at each stored resolution level and compare
+        the resulting image using phase cross correlation to check that
+        they are aligned.
+
+        """
+        wsi = reader_class(_sample_ome_tiff)
+        location = (0, 0)
+        size = np.array([1024, 1024])
+
+        # Avoid testing very small levels (e.g. as in Omnyx JP2) becuase
+        # MSE for very small levels is noisy.
+        level_downsamples = [
+            downsample for downsample in wsi.info.level_downsamples if downsample <= 32
+        ]
+        imgs = [
+            wsi.read_rect(location, size // downsample, level, "level")
+            for level, downsample in enumerate(level_downsamples)
+        ]
+        smallest_size = imgs[-1].shape[:2][::-1]
+        resized = [imresize(img, output_size=smallest_size) for img in imgs]
+        # Some blurring applied to account for changes in sharpness arising
+        # from interpolation when calculating the downsampled levels. This
+        # adds some tolerance for the comparison.
+        blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
+        as_float = [img.astype(np.float) for img in blurred]
+
+        # Pair-wise check resolutions for mean squared error
+        for i, a in enumerate(as_float):
+            for b in as_float[i + 1 :]:
+                _, error, phase_diff = phase_cross_correlation(a, b)
+                assert phase_diff < 0.125
+                assert error < 0.125
+
+    @staticmethod
     def test_read_bounds_level_consistency(_sample_ome_tiff, reader_class):
         """Compare the same region at each stored resolution level.
 
@@ -1845,6 +1881,40 @@ class TestReader:
             bounds = locsize2bounds(location, size)
             region = wsi.read_bounds(bounds, resolution=0, units="level")
             assert region.shape[:2][::-1] == size
+
+    @staticmethod
+    def test_read_rect_coord_space_consistency(_sample_ome_tiff, reader_class):
+        """Test that read_rect coord_space modes are consistent.
+
+        Using `read_rect` with `coord_space="baseline"` and
+        `coord_space="resolution"` should produce the same output when
+        the bounds are a multiple of the scale difference between the two
+        modes. I.E. reading at baseline with a set of coordinates should
+        yield the same region as reading at half the resolution and
+        with coordinates which are half the size. Note that the output
+        will not be of the same size, but the field of view will match.
+
+        """
+        reader = reader_class(_sample_ome_tiff)
+        roi1 = reader.read_rect(
+            np.array([500, 500]),
+            np.array([2000, 2000]),
+            coord_space="baseline",
+            resolution=1.00,
+            units="baseline",
+        )
+        roi2 = reader.read_rect(
+            np.array([250, 250]),
+            np.array([1000, 1000]),
+            coord_space="resolution",
+            resolution=0.5,
+            units="baseline",
+        )
+        # Make the regions the same size for comparison of content
+        roi2 = imresize(roi2, output_size=[2000, 2000])
+        cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
+        # This control the harshness of similarity test, how much should be?
+        assert np.min(cc) > 0.95
 
     @staticmethod
     def test_region_dump(_sample_ome_tiff, reader_class):
