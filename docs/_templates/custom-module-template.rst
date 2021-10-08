@@ -1,4 +1,9 @@
-{{ fullname | escape | underline}}
+{{ fullname.split('.')[-1] | escape | underline }}
+
+{% for idx in range(fullname.split('.')[:-1]|length) %}
+   :py:mod:{{'`~'+ '.'.join(fullname.split('.')[:(idx+1)]) + '`'}} .
+{%- endfor %}
+   :py:mod:{{'`~'+ fullname + '`'}}
 
 .. automodule:: {{ fullname }}
 
@@ -20,6 +25,7 @@
 
    .. autosummary::
       :toctree:
+      :template: custom-function-template.rst
       :nosignatures:
    {% for item in functions %}
       {{ item }}

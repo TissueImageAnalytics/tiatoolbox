@@ -17,6 +17,7 @@
 # The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
+"""Defines vanilla CNNs with torch bacbones, mainly for patch classification."""
 
 import numpy as np
 import torch
