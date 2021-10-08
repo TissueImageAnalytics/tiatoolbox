@@ -20,7 +20,7 @@
 
 """Defines a set of ResNet variants to be used within tiatoolbox."""
 
-from typing import List
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
@@ -203,6 +203,15 @@ class UNetModel(ModelABC):
     Returns:
         model (torch.nn.Module): a pytorch model.
 
+    Examples:
+        >>> # instantiate a UNet with resnet50 endcoder and
+        >>> # only 1 3x3 per each up-sampling block in the decoder
+        >>> UNetModel.resnet50(
+        ...     2, 2
+        ...     encoder="resnet50",
+        ...     decoder_block=(3,)
+        ... )
+
     """
 
     def __init__(
@@ -210,7 +219,7 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
-        decoder_block=(3, 3),
+        decoder_block: Tuple[int] = (3, 3),
     ):
         super().__init__()
 
@@ -291,7 +300,7 @@ class UNetModel(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self, imgs, *args, **kwargs):
+    def forward(self, imgs: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -315,6 +324,10 @@ class UNetModel(ModelABC):
 
         en_list = en_list[:-1]
         for idx in range(1, len(en_list) + 1):
+            # up-sample feature from low-resolution
+            # block, add it with features from the same resolution
+            # coming from the encoder, then run it through the decoder
+            # block
             y = en_list[-idx]
             x = self.upsample2x(x) + y
             x = self.uplist[idx - 1](x)

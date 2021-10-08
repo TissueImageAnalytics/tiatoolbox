@@ -231,7 +231,7 @@ class WSIStreamDataset(torch_data.Dataset):
         >>> mp_shared_space = mp_manager.Namespace()
         >>> mp_shared_space.signal = 1  # adding variable to the shared space
         >>> wsi_paths = ['A.svs', 'B.svs']
-        >>> ds = WSIStreamDataset(ioconfig, wsi_paths, mp_shared_space)
+        >>> wsi_dataset = WSIStreamDataset(ioconfig, wsi_paths, mp_shared_space)
 
     """
 
@@ -367,6 +367,16 @@ class SemanticSegmentor:
         dataset_class (obj): Dataset class to be used instead of default.
         auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
             if is not provided.
+
+        Examples:
+            >>> # Sample output of a network
+            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
+            >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
+            >>> output = predictor.predict(wsis, mode='wsi')
+            >>> list(output.keys())
+            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+            >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
+            >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
 
     """
 
@@ -521,8 +531,8 @@ class SemanticSegmentor:
         def sel_func(coord: np.ndarray):
             """Accept coord as long as its box contains bits of mask."""
             coord_in_real_mask = np.ceil(scale_factor * coord).astype(np.int32)
-            tl_x, tl_y, br_x, br_y = coord_in_real_mask
-            roi = mask_reader.img[tl_y:br_y, tl_x:br_x]
+            start_x, start_y, end_x, end_y = coord_in_real_mask
+            roi = mask_reader.img[start_y:end_y, start_x:end_x]
             return np.sum(roi > 0) > 0
 
         flags = [sel_func(bound) for bound in bounds]
@@ -954,7 +964,7 @@ class SemanticSegmentor:
         Examples:
             >>> # Sample output of a network
             >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
-            >>> predictor = SemanticSegmentor(model='unet')
+            >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
