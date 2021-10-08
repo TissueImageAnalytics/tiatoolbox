@@ -1258,10 +1258,6 @@ def test_invalid_masker_method(sample_svs):
 
 def test_get_wsireader(sample_svs, sample_ndpi, sample_jp2, source_image):
     """Test get_wsireader to return correct object."""
-    _sample_svs = str(sample_svs)
-    _sample_ndpi = str(sample_ndpi)
-    _sample_jp2 = str(sample_jp2)
-
     with pytest.raises(FileNotSupported):
         _ = wsireader.get_wsireader("./sample.csv")
 

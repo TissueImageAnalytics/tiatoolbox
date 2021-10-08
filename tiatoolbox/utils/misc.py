@@ -34,7 +34,6 @@ import torch
 import yaml
 from skimage import exposure
 
-from tiatoolbox import rcParam
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
