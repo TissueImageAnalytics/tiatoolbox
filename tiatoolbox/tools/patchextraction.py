@@ -20,11 +20,12 @@
 
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC
+
 import numpy as np
 
-from tiatoolbox.wsicore import wsireader
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils import misc
+from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.wsicore import wsireader
 
 
 class PatchExtractor(ABC):
