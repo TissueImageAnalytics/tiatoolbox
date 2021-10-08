@@ -44,7 +44,12 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, get_wsireader
+from tiatoolbox.wsicore.wsireader import (
+    VirtualWSIReader,
+    WSIMeta,
+    WSIReader,
+    get_wsireader,
+)
 
 
 class IOSegmentorConfig(IOConfigABC):
@@ -391,6 +396,7 @@ class SemanticSegmentor:
             self.model = model
 
         # for runtime, such as after wrapping with nn.DataParallel
+        self._save_dir = None
         self._loader = None
         self._model = None
         self._on_gpu = None
@@ -564,6 +570,9 @@ class SemanticSegmentor:
             mode (str): `tile` or `wsi` to indicate run mode.
 
         """
+        cache_dir = f"{self._cache_dir}/{wsi_idx}/"
+        os.makedirs(cache_dir)
+
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
@@ -633,12 +642,23 @@ class SemanticSegmentor:
 
             sample_outputs = list(zip(sample_infos, sample_outputs))
             cum_output.extend(sample_outputs)
+            # TODO: detach or hook this into a parallel process
+            self._process_predictions(
+                cum_output, wsi_reader, ioconfig, save_path, cache_dir
+            )
             pbar.update()
         pbar.close()
-        self._process_predictions(cum_output, wsi_reader, ioconfig, save_path)
+
+        # clean up the cache directories
+        shutil.rmtree(cache_dir)
 
     def _process_predictions(
-        self, cum_batch_predictions, wsi_reader, ioconfig, save_path
+        self,
+        cum_batch_predictions: List,
+        wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
+        save_path: str,
+        cache_dir: str,
     ):
         """Define how the aggregated predictions are processed.
 
@@ -652,6 +672,7 @@ class SemanticSegmentor:
             ioconfig (:class:`IOSegmentorConfig`): A configuration object contains
              input and output information.
             save_path (str): Root path to save current WSI predictions.
+            cache_dir (str): Root path to cache current WSI data.
 
         """
         # assume predictions is N, each item has L output element
@@ -675,11 +696,13 @@ class SemanticSegmentor:
             # 0 idx is to remove singleton without removing other axes singleton
             to_merge_predictions = [v[idx][0] for v in predictions]
             sub_save_path = f"{save_path}.raw.{idx}.npy"
+            sub_count_path = f"{cache_dir}/count.{idx}.npy"
             self.merge_prediction(
                 merged_shape[::-1],  # XY to YX
                 to_merge_predictions,
                 merged_locations,
                 save_path=sub_save_path,
+                cache_count_path=sub_count_path,
                 free_prediction=True,
             )
 
@@ -689,6 +712,7 @@ class SemanticSegmentor:
         predictions: List[np.ndarray],
         locations: Union[List, np.ndarray],
         save_path: Union[str, pathlib.Path] = None,
+        cache_count_path: Union[str, pathlib.Path] = None,
         free_prediction: bool = True,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
@@ -702,6 +726,7 @@ class SemanticSegmentor:
               is in the to be assembled canvas and of the form
               (top_left_x, top_left_y, bottom_right_x, bottom_right_x).
             save_path (str): Location to save the assembled image.
+            cache_count_path (str): Location to store counting canvas when assembling.
             free_prediction (bool): If this is `True`, `predictions` will
               be modified in place and each patch will be replace with `None`
               once processed. This is to save memory when assembling.
@@ -734,29 +759,59 @@ class SemanticSegmentor:
 
         num_output_ch = 0
         add_singleton = False
-        canvas_count_shape_ = tuple(canvas_shape)
-        canvas_cum_shape_ = tuple(canvas_shape)
-        if len(sample_prediction.shape) == 3:
+        if len(sample_prediction.shape) not in (2, 3):
+            raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
+        elif len(sample_prediction.shape) == 3:
             num_output_ch = sample_prediction.shape[-1]
-            canvas_cum_shape_ += (num_output_ch,)
+            canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
+            canvas_count_shape_ = tuple(canvas_shape) + (1,)
             add_singleton = num_output_ch == 1
+        else:
+            canvas_cum_shape_ = tuple(canvas_shape) + (1,)
+            canvas_count_shape_ = tuple(canvas_shape) + (1,)
+            add_singleton = True
 
         if save_path is not None:
-            cum_canvas = np.lib.format.open_memmap(
-                save_path,
-                mode="w+",
-                shape=canvas_cum_shape_,
-                dtype=np.float32,
-            )
+            if os.path.exists(save_path):
+                cum_canvas = np.load(save_path, mmap_mode="r+")
+                count_canvas = np.load(cache_count_path, mmap_mode="r+")
+                if canvas_cum_shape_ != cum_canvas.shape:
+                    raise ValueError(
+                        "Existing image shape in `save_path` does not match."
+                    )
+                if canvas_count_shape_ != count_canvas.shape:
+                    raise ValueError(
+                        "Existing image shape in `cache_count_path` does not match."
+                    )
+            else:
+                cum_canvas = np.lib.format.open_memmap(
+                    save_path,
+                    mode="w+",
+                    shape=canvas_cum_shape_,
+                    dtype=np.float32,
+                )
+                # assuming no more than 255 overlapping times
+                count_canvas = np.lib.format.open_memmap(
+                    cache_count_path,
+                    mode="w+",
+                    shape=canvas_count_shape_,
+                    dtype=np.uint8,
+                )
+                # flush fill
+                count_canvas[:] = 0
+            is_on_drive = True
         else:
+            is_on_drive = False
             cum_canvas = np.zeros(
                 shape=canvas_cum_shape_,
                 dtype=np.float32,
             )
+            # for pixel occurrence counting
+            count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
-        # for pixel occurrence counting
-        # ! this may be expensive
-        count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
+        def index(arr, tl, br):
+            """Helper to shorten indexing."""
+            return arr[tl[0] : br[0], tl[1] : br[1]]
 
         patch_infos = list(zip(locations, predictions))
         for patch_idx, patch_info in enumerate(patch_infos):
@@ -801,19 +856,26 @@ class SemanticSegmentor:
                 tl_in_patch[0] : br_in_patch[0], tl_in_patch[1] : br_in_patch[1]
             ]
 
-            patch_count = np.ones(patch_pred.shape[:2])
-            cum_canvas[
-                tl_in_wsi[0] : br_in_wsi[0], tl_in_wsi[1] : br_in_wsi[1]
-            ] += patch_pred
-            count_canvas[
-                tl_in_wsi[0] : br_in_wsi[0], tl_in_wsi[1] : br_in_wsi[1]
-            ] += patch_count
+            patch_count = np.ones(patch_pred.shape[:2])[..., None]
+            if not is_on_drive:
+                index(cum_canvas, tl_in_wsi, br_in_wsi)[:] += patch_pred
+                index(count_canvas, tl_in_wsi, br_in_wsi)[:] += patch_count
+            else:
+                old_avg_pred = np.array(index(cum_canvas, tl_in_wsi, br_in_wsi))
+                old_count = np.array(index(count_canvas, tl_in_wsi, br_in_wsi))
+                # ! there will be precision error, but we have to live with this
+                new_count = old_count + patch_count
+                # retrieve old raw probabilities after summation
+                old_raw_pred = old_avg_pred * old_count
+                new_avg_pred = (old_raw_pred + patch_pred) / new_count
+                index(cum_canvas, tl_in_wsi, br_in_wsi)[:] = new_avg_pred
+                index(count_canvas, tl_in_wsi, br_in_wsi)[:] = new_count
+
             # remove prediction without altering list ordering or length
             if free_prediction:
                 patch_infos[patch_idx] = None
-        if num_output_ch > 0:
-            count_canvas = count_canvas[..., None]
-        cum_canvas /= count_canvas + 1.0e-6
+        if not is_on_drive:
+            cum_canvas /= count_canvas + 1.0e-6
         return cum_canvas
 
     def predict(
@@ -911,6 +973,8 @@ class SemanticSegmentor:
         if save_dir.is_dir():
             raise ValueError(f"`save_dir` already exists! {save_dir}")
         os.makedirs(save_dir)
+        self._cache_dir = f"{save_dir}/cache"
+        os.makedirs(self._cache_dir)
 
         if patch_output_shape is None:
             patch_output_shape = patch_input_shape
@@ -1003,9 +1067,13 @@ class SemanticSegmentor:
                     continue
                 raise err
 
+        # clean up the cache directories
+        shutil.rmtree(self._cache_dir)
+
         # memory clean up
         self.imgs = None
         self.masks = None
+        self._cache_dir = None
         self._model = None
         self._loader = None
         self._on_gpu = None

@@ -41,7 +41,7 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 # ----------------------------------------------------
 
 
@@ -300,6 +300,82 @@ def test_crash_segmentor(_sample_wsi_dict):
     _rm_dir("output")  # default output dir test
 
 
+def test_functional_segmentor_merging(tmp_path):
+    """Functional test for assmebling output."""
+    save_dir = pathlib.Path(tmp_path)
+
+    model = _CNNTo1()
+    runner = SemanticSegmentor(batch_size=1, model=model)
+
+    _rm_dir(save_dir)
+    os.mkdir(save_dir)
+    # predictions with HW
+    _output = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 2, 2],
+            [0, 0, 2, 2],
+        ]
+    )
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [np.full((2, 2), 1), np.full((2, 2), 2)],
+        [[0, 0, 2, 2], [2, 2, 4, 4]],
+        save_path=f"{save_dir}/raw.py",
+        cache_count_path=f"{save_dir}/count.py",
+        free_prediction=False,
+    )
+    assert np.sum(canvas - _output) < 1.0e-8
+    # a second rerun to test overlapping count,
+    # should still maintain same result
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [np.full((2, 2), 1), np.full((2, 2), 2)],
+        [[0, 0, 2, 2], [2, 2, 4, 4]],
+        save_path=f"{save_dir}/raw.py",
+        cache_count_path=f"{save_dir}/count.py",
+        free_prediction=False,
+    )
+    assert np.sum(canvas - _output) < 1.0e-8
+    # else will leave hanging file pointer
+    # and hence cant remove its folder later
+    del canvas
+
+    # * predictions with HWC
+    _rm_dir(save_dir)
+    os.mkdir(save_dir)
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
+        [[0, 0, 2, 2], [2, 2, 4, 4]],
+        save_path=f"{save_dir}/raw.py",
+        cache_count_path=f"{save_dir}/count.py",
+        free_prediction=False,
+    )
+    del canvas
+    _rm_dir(save_dir)
+    os.mkdir(save_dir)
+
+    # * with out of bound location
+    canvas = runner.merge_prediction(
+        [4, 4],
+        [
+            np.full((2, 2), 1),
+            np.full((2, 2), 2),
+            np.full((2, 2), 3),
+            np.full((2, 2), 4),
+        ],
+        [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
+        save_path=None,
+        free_prediction=False,
+    )
+    assert np.sum(canvas - _output) < 1.0e-8
+    del canvas
+    _rm_dir(save_dir)
+    os.mkdir(save_dir)
+
+
 def test_functional_segmentor(_sample_wsi_dict, tmp_path):
     """Functional test for segmentor."""
     save_dir = pathlib.Path(tmp_path)
@@ -317,50 +393,6 @@ def test_functional_segmentor(_sample_wsi_dict, tmp_path):
     # post processing out of the box. It only contains condition to create it
     # for any subclass
     runner.num_postproc_workers = 1
-
-    # * test merging method
-    _rm_dir(save_dir)
-    os.mkdir(save_dir)
-    # predictions with HW
-    canvas = runner.merge_prediction(
-        [4, 4],
-        [np.full((2, 2), 1), np.full((2, 2), 2)],
-        [[0, 0, 2, 2], [2, 2, 4, 4]],
-        f"{save_dir}/_temp.py",
-        free_prediction=False,
-    )
-    _output = np.array(
-        [
-            [1, 1, 0, 0],
-            [1, 1, 0, 0],
-            [0, 0, 2, 2],
-            [0, 0, 2, 2],
-        ]
-    )
-    assert np.sum(canvas - _output) < 1.0e-8
-    # predictions with HWC
-    canvas = runner.merge_prediction(
-        [4, 4],
-        [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
-        [[0, 0, 2, 2], [2, 2, 4, 4]],
-        f"{save_dir}/_temp.py",
-        free_prediction=False,
-    )
-    # with out of bound location
-    canvas = runner.merge_prediction(
-        [4, 4],
-        [
-            np.full((2, 2), 1),
-            np.full((2, 2), 2),
-            np.full((2, 2), 3),
-            np.full((2, 2), 4),
-        ],
-        [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
-        save_path=None,
-        free_prediction=False,
-    )
-    assert np.sum(canvas - _output) < 1.0e-8
-    _rm_dir(save_dir)
 
     # should still run because we skip exception
     runner.predict(
@@ -461,6 +493,7 @@ def test_functional_segmentor(_sample_wsi_dict, tmp_path):
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
+    _rm_dir(save_dir)
 
 
 def test_subclass(_sample_wsi_dict, tmp_path):
@@ -498,7 +531,7 @@ def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     wsi_with_artifacts = pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_svs"])
-    runner = SemanticSegmentor(batch_size=2, pretrained_model="fcn-tissue_mask")
+    runner = SemanticSegmentor(batch_size=8, pretrained_model="fcn-tissue_mask")
     _rm_dir(save_dir)
     runner.predict(
         [wsi_with_artifacts],
@@ -511,7 +544,8 @@ def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
     _cache_pred = imread(pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_pred"]))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
-    assert np.sum(np.abs(_cache_pred[..., 0] - _test_pred)) < 1.0e-6
+    # divide 255 to binarize
+    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
     _rm_dir(save_dir)
 
 
@@ -521,7 +555,7 @@ def test_behavior_bcss(_sample_wsi_dict, tmp_path):
 
     _rm_dir(save_dir)
     wsi_breast = pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_svs"])
-    runner = SemanticSegmentor(batch_size=2, pretrained_model="fcn_resnet50_unet-bcss")
+    runner = SemanticSegmentor(batch_size=8, pretrained_model="fcn_resnet50_unet-bcss")
     runner.predict(
         [wsi_breast],
         mode="wsi",
