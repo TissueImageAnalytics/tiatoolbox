@@ -17,7 +17,7 @@
 # The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
-"""Defines vanilla CNNs with torch bacbones, mainly for patch classification."""
+"""Defines vanilla CNNs with torch backbones, mainly for patch classification."""
 
 import numpy as np
 import torch
@@ -155,7 +155,7 @@ class CNNModel(ModelABC):
         # Inference mode
         model.eval()
         # Do not compute the gradient (not training)
-        with torch.no_grad():
+        with torch.inference_mode():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
         return output.cpu().numpy()

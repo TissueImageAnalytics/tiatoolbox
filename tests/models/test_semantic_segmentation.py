@@ -95,7 +95,7 @@ class _CNNTo1(ModelABC):
         img_list = img_list.permute(0, 3, 1, 2)  # to NCHW
 
         hw = np.array(img_list.shape[2:])
-        with torch.no_grad():  # do not compute gradient
+        with torch.inference_mode():  # do not compute gradient
             logit_list = model(img_list)
             logit_list = crop_op(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
@@ -187,9 +187,9 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_WSIStreamDataset(_sample_wsi_dict):
+def test_functional_wsistreamdataset(remote_sample):
     """Functional test for WSIStreamDataset."""
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
@@ -244,12 +244,12 @@ def test_functional_WSIStreamDataset(_sample_wsi_dict):
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(_sample_wsi_dict):
+def test_crash_segmentor(remote_sample):
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    _mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
+    _mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     model = _CNNTo1()
     runner = SemanticSegmentor(batch_size=1, model=model)
@@ -354,6 +354,36 @@ def test_functional_segmentor_merging(tmp_path):
         free_prediction=False,
     )
     del canvas
+
+    # * test crashing when switch to image having larger
+    # * shape but still provide old links
+    runner.merge_prediction(
+        [8, 8],
+        [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
+        [[0, 0, 2, 2], [2, 2, 4, 4]],
+        save_path=f"{save_dir}/raw.1.py",
+        cache_count_path=f"{save_dir}/count.1.py",
+        free_prediction=False,
+    )
+    with pytest.raises(ValueError, match=r".*`cache_count_path` does not match.*"):
+        runner.merge_prediction(
+            [4, 4],
+            [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
+            [[0, 0, 2, 2], [2, 2, 4, 4]],
+            save_path=f"{save_dir}/raw.py",
+            cache_count_path=f"{save_dir}/count.1.py",
+            free_prediction=False,
+        )
+    with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
+        runner.merge_prediction(
+            [8, 8],
+            [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
+            [[0, 0, 2, 2], [2, 2, 4, 4]],
+            save_path=f"{save_dir}/raw.1.py",
+            cache_count_path=f"{save_dir}/count.py",
+            free_prediction=False,
+        )
+
     _rm_dir(save_dir)
     os.mkdir(save_dir)
 
@@ -376,13 +406,13 @@ def test_functional_segmentor_merging(tmp_path):
     os.mkdir(save_dir)
 
 
-def test_functional_segmentor(_sample_wsi_dict, tmp_path):
+def test_functional_segmentor(remote_sample, tmp_path):
     """Functional test for segmentor."""
     save_dir = pathlib.Path(tmp_path)
     # # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    _mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
+    _mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     # pre-emptive clean up
     _rm_dir("output")  # default output dir test
@@ -496,10 +526,10 @@ def test_functional_segmentor(_sample_wsi_dict, tmp_path):
     _rm_dir(save_dir)
 
 
-def test_subclass(_sample_wsi_dict, tmp_path):
+def test_subclass(remote_sample, tmp_path):
     """Create subclass and test parallel processing setup."""
     save_dir = pathlib.Path(tmp_path)
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
 
     model = _CNNTo1()
 
@@ -526,12 +556,12 @@ def test_subclass(_sample_wsi_dict, tmp_path):
     )
 
 
-def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
+def test_behavior_tissue_mask(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
 
-    wsi_with_artifacts = pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_svs"])
-    runner = SemanticSegmentor(batch_size=8, pretrained_model="fcn-tissue_mask")
+    wsi_with_artifacts = pathlib.Path(remote_sample("wsi3_20k_20k_svs"))
+    runner = SemanticSegmentor(batch_size=1, pretrained_model="fcn-tissue_mask")
     _rm_dir(save_dir)
     runner.predict(
         [wsi_with_artifacts],
@@ -541,7 +571,7 @@ def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
         save_dir=f"{save_dir}/raw/",
     )
     # load up the raw prediction and perform precision check
-    _cache_pred = imread(pathlib.Path(_sample_wsi_dict["wsi3_20k_20k_pred"]))
+    _cache_pred = imread(pathlib.Path(remote_sample("wsi3_20k_20k_pred")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
@@ -549,22 +579,26 @@ def test_behavior_tissue_mask(_sample_wsi_dict, tmp_path):
     _rm_dir(save_dir)
 
 
-def test_behavior_bcss(_sample_wsi_dict, tmp_path):
+@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+def test_behavior_bcss(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
 
     _rm_dir(save_dir)
-    wsi_breast = pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_svs"])
-    runner = SemanticSegmentor(batch_size=8, pretrained_model="fcn_resnet50_unet-bcss")
+    # wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
+    wsi_breast = pathlib.Path(remote_sample)
+    runner = SemanticSegmentor(
+        num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
+    )
     runner.predict(
         [wsi_breast],
         mode="wsi",
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
     # load up the raw prediction and perform precision check
-    _cache_pred = np.load(pathlib.Path(_sample_wsi_dict["wsi4_4k_4k_pred"]))
+    _cache_pred = np.load(pathlib.Path(remote_sample("wsi4_4k_4k_pred")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = np.argmax(_test_pred, axis=-1)
     assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-6

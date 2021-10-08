@@ -672,22 +672,3 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
-
-
-def get_pretrained_model_info():
-    """Get the pretrained model information from yml file."""
-    # TODO: merge with John PR and put the yaml within the package
-    pretrained_yml_path = os.path.join(
-        rcParam["TIATOOLBOX_HOME"],
-        "models/pretrained_name.yml",
-    )
-    # if not os.path.exists(pretrained_yml_path):
-    download_data(
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained_name.yml",
-        pretrained_yml_path,
-        overwrite=True,
-    )
-    with open(pretrained_yml_path) as fptr:
-        pretrained_yml = yaml.full_load(fptr)
-
-    return pretrained_yml

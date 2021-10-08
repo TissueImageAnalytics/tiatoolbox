@@ -29,9 +29,23 @@ import torch
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
-from tiatoolbox.utils.misc import download_data, get_pretrained_model_info
+from tiatoolbox.utils.misc import download_data
 
 __all__ = ["get_pretrained_model"]
+PRETRAINED_INFO = rcParam["pretrained_model_info"]
+
+
+def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = True):
+    """Get the pretrained model information from yml file.
+    Args:
+        model_name (str): Refer to `::py::meth:get_pretrained_model` for
+          all supported model names.
+        save_path (str): Path to save the weight of the
+          corresponding `model_name`.
+        overwrite (bool): To always overwriting downloaded weights.
+    """
+    info = PRETRAINED_INFO[model_name]
+    download_data(info["url"], save_path, overwrite)
 
 
 def get_pretrained_model(
@@ -93,13 +107,10 @@ def get_pretrained_model(
     if not isinstance(pretrained_model, str):
         raise ValueError("pretrained_model must be a string.")
 
-    # parsing protocol
-    pretrained_yml = get_pretrained_model_info()
-
-    if pretrained_model not in pretrained_yml:
+    if pretrained_model not in PRETRAINED_INFO:
         raise ValueError(f"Pretrained model `{pretrained_model}` does not exist.")
 
-    info = pretrained_yml[pretrained_model]
+    info = PRETRAINED_INFO[pretrained_model]
 
     arch_info = info["architecture"]
     creator = locate((f"tiatoolbox.models.architecture" f'.{arch_info["class"]}'))
@@ -112,13 +123,11 @@ def get_pretrained_model(
         model.preproc_func = predefined_preproc_func(info["dataset"])
 
     if pretrained_weights is None:
-        pretrained_weights_url = info["url"]
-        pretrained_weights_url_split = pretrained_weights_url.split("/")
+        file_name = info["url"].split("/")[-1]
         pretrained_weights = os.path.join(
-            rcParam["TIATOOLBOX_HOME"], "models/", pretrained_weights_url_split[-1]
+            rcParam["TIATOOLBOX_HOME"], "models/", file_name
         )
-        if overwrite or not os.path.exists(pretrained_weights):
-            download_data(pretrained_weights_url, pretrained_weights, overwrite)
+        fetch_pretrained_weights(pretrained_model, pretrained_weights, overwrite)
 
     # ! assume to be saved in single GPU mode
     # always load on to the CPU

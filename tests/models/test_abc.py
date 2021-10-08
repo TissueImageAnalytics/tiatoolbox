@@ -22,16 +22,14 @@
 
 import pytest
 
+from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.architecture import (
-    get_pretrained_model,
-    get_pretrained_model_info,
-)
+from tiatoolbox.models.architecture import get_pretrained_model
 
 
 def test_get_pretrained_model():
     """Test for downloading and creating pretrained models."""
-    pretrained_info = get_pretrained_model_info()
+    pretrained_info = rcParam["pretrained_model_info"]
     for pretrained_name in pretrained_info.keys():
         get_pretrained_model(pretrained_name, overwrite=True)
 

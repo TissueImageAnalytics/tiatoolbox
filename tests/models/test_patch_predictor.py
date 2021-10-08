@@ -44,7 +44,7 @@ from tiatoolbox.models.dataset import (
 from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 
 
 def _rm_dir(path):
@@ -58,7 +58,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_PatchDatasetpath_imgs(sample_patch1, sample_patch2):
+def test_patchdatasetpath_imgs(sample_patch1, sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
@@ -66,11 +66,9 @@ def test_PatchDatasetpath_imgs(sample_patch1, sample_patch2):
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
-        assert (
-            sampled_img_shape[0] == size[0]
-            and sampled_img_shape[1] == size[1]
-            and sampled_img_shape[2] == size[2]
-        )
+        assert sampled_img_shape[0] == size[0]
+        assert sampled_img_shape[1] == size[1]
+        assert sampled_img_shape[2] == size[2]
 
 
 def test_PatchDatasetlist_imgs(tmp_path):

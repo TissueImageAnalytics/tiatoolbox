@@ -3,7 +3,7 @@
 aliases:
   tia: &tia "https://tiatoolbox.dcs.warwick.ac.uk"
   wsis: &wsis "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis"
-  wsis2: &wsis2 "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models/new"
+  modelroot: &modelroot "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
   stainnorm: &stainnorm "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm"
   patchextraction: &patchextraction "https://tiatoolbox.dcs.warwick.ac.uk/testdata/patchextraction"
   testdata: &testdata "https://tiatoolbox.dcs.warwick.ac.uk/testdata"
@@ -54,22 +54,30 @@ files:
   patch-extraction-svs-read-npy:
     url: [*patchextraction, "sample_patch_extraction_svsread.npy"]
   sample-patch-1:
-    url: [*models, "kather_patch1.tif"]
+    url: [*modelroot, "samples/kather_patch1.tif"]
   sample-patch-2:
-    url: [*models, "kather_patch2.tif"]
+    url: [*modelroot, "samples/kather_patch2.tif"]
   wsi1_8k_8k_svs:
-    url: [*wsis2, "wsi1_8k_8k.svs"]
+    url: [*modelroot, "samples/wsi1_8k_8k.svs"]
   wsi1_8k_8k_jp2:
-    url: [*wsis2, "wsi1_8k_8k.jp2"]
+    url: [*modelroot, "samples/wsi1_8k_8k.jp2"]
   wsi1_8k_8k_jpg:
-    url: [*wsis2, "wsi1_8k_8k.jpg"]
+    url: [*modelroot, "samples/wsi1_8k_8k.jpg"]
   wsi2_4k_4k_svs:
-    url: [*wsis2, "wsi2_4k_4k.svs"]
+    url: [*modelroot, "samples/wsi2_4k_4k.svs"]
   wsi2_4k_4k_jp2:
-    url: [*wsis2, "wsi2_4k_4k.jp2"]
+    url: [*modelroot, "samples/wsi2_4k_4k.jp2"]
   wsi2_4k_4k_jpg:
-    url: [*wsis2, "wsi2_4k_4k.jpg"]
+    url: [*modelroot, "samples/wsi2_4k_4k.jpg"]
   wsi2_4k_4k_msk:
-    url: [*wsis2, "wsi2_4k_4k.mask.png"]
+    url: [*modelroot, "samples/wsi2_4k_4k.mask.png"]
   wsi2_4k_4k_pred:
-    url: [*wsis2, "wsi2_4k_4k.pred.dat"]
+    url: [*modelroot, "samples/wsi2_4k_4k.pred.dat"]
+  wsi3_20k_20k_svs:
+    url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi4_4k_4k_svs:
+    url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi3_20k_20k_pred:
+    url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
+  wsi4_4k_4k_pred:
+    url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]

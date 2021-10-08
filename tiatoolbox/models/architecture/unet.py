@@ -352,7 +352,7 @@ class UNetModel(ModelABC):
 
         _, _, h, w = imgs.shape
         crop_shape = [h // 2, w // 2]
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = model(imgs)
             probs = F.softmax(logits, 1)
             probs = F.interpolate(

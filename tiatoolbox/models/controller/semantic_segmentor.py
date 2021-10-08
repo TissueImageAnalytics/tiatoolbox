@@ -311,8 +311,8 @@ class WSIStreamDataset(torch_data.Dataset):
             self.reader = self._get_reader(self.wsi_paths[self.wsi_idx])
 
         # this is in XY and at requested resolution not baseline
-        bound = self.mp_shared_space.patch_inputs[idx]
-        bound = bound.numpy()  # expected to be torch.Tensor
+        bounds = self.mp_shared_space.patch_inputs[idx]
+        bounds = bounds.numpy()  # expected to be torch.Tensor
 
         # be the same as bounds br-tl, unless bounds are of float
         patch_data_ = []
@@ -320,9 +320,9 @@ class WSIStreamDataset(torch_data.Dataset):
             self.ioconfig.input_resolutions, self.ioconfig.resolution_unit
         )
         for idy, resolution in enumerate(self.ioconfig.input_resolutions):
-            resolution_bound = np.round(bound * scale_factors[idy])
+            resolution_bounds = np.round(bounds * scale_factors[idy])
             patch_data = self.reader.read_bounds(
-                resolution_bound.astype(np.int32),
+                resolution_bounds.astype(np.int32),
                 coord_space="resolution",
                 pad_constant_values=0,  # expose this ?
                 **resolution,
@@ -342,7 +342,8 @@ class WSIStreamDataset(torch_data.Dataset):
 class SemanticSegmentor:
     """Pixel-wise segmentation predictor.
 
-    Note, if model is supplied in the arguments, it will override the backbone.
+    Note, if `model` is supplied in the arguments, it will ignore the
+    `pretrained_model` and `pretrained_weights` arguments.
 
     Args:
         model (nn.Module): Use externally defined PyTorch model for prediction with.
@@ -717,6 +718,12 @@ class SemanticSegmentor:
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
+        To re-iterate accumulating the raw prediction onto a same canvas (via calling
+        the function multiple times), `save_path` and `cache_count_path` must be the
+        same. If either of these two do not exist, the function will create new files.
+        However, if `save_path` is `None`, the function will perform the accumulation
+        using CPU-RAM as storage.
+
         Args:
             canvas_shape (:class:`numpy.ndarray`): HW of the supposed assembled image.
             predictions (list): List of nd.array, each item is a prediction of
@@ -726,7 +733,8 @@ class SemanticSegmentor:
               is in the to be assembled canvas and of the form
               (top_left_x, top_left_y, bottom_right_x, bottom_right_x).
             save_path (str): Location to save the assembled image.
-            cache_count_path (str): Location to store counting canvas when assembling.
+            cache_count_path (str): Location to store the canvas for counting
+              how many times each pixel get overlapped when assembling.
             free_prediction (bool): If this is `True`, `predictions` will
               be modified in place and each patch will be replace with `None`
               once processed. This is to save memory when assembling.
@@ -772,7 +780,7 @@ class SemanticSegmentor:
             add_singleton = True
 
         if save_path is not None:
-            if os.path.exists(save_path):
+            if os.path.exists(save_path) and os.path.exists(cache_count_path):
                 cum_canvas = np.load(save_path, mmap_mode="r+")
                 count_canvas = np.load(cache_count_path, mmap_mode="r+")
                 if canvas_cum_shape_ != cum_canvas.shape:
@@ -958,12 +966,10 @@ class SemanticSegmentor:
             raise ValueError(f"{mode} is not a valid mode. Use either `tile` or `wsi`.")
         if save_dir is None:
             warnings.warn(
-                " ".join(
-                    [
-                        "Segmentor will only output to directory.",
-                        "All subsequent output will be saved to current runtime",
-                        "location under folder 'output'. Overwriting may happen!",
-                    ]
+                (
+                    "Segmentor will only output to directory. ",
+                    "All subsequent output will be saved to current runtime ",
+                    "location under folder 'output'. Overwriting may happen! ",
                 )
             )
             save_dir = os.path.join(os.getcwd(), "output")
@@ -1042,12 +1048,12 @@ class SemanticSegmentor:
                 wsi_save_path = os.path.join(save_dir, f"{wsi_idx}")
                 self._predict_one_wsi(wsi_idx, ioconfig, wsi_save_path, mode)
 
-                # Do not use dict with file name as key, because it can overwrite.
-                # We it is user intention to provide same file name twice
-                # (may be having different root path)
+                # Do not use dict with file name as key, because it can be
+                # overwritten. It may be user intention to provide files with a
+                # same name multiple times (may be they have different root path)
                 outputs.append([img_path, wsi_save_path])
 
-                # will this corrupt old version if Ctrl-c midway?
+                # ? will this corrupt old version if Ctrl-c midway?
                 map_file_path = os.path.join(save_dir, "file_map.dat")
                 # backup old version first
                 if os.path.exists(map_file_path):

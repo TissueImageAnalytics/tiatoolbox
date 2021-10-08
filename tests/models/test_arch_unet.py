@@ -26,6 +26,7 @@ import numpy as np
 import pytest
 import torch
 
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.unet import UNetModel
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
@@ -34,12 +35,13 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_unet(_sample_wsi_dict, _sample_pretrained_dict):
+def test_functional_unet(remote_sample, tmp_path):
     """Tests for unet."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["CMU-mini"])
-    _pretrained_path = str(_sample_pretrained_dict["fcn-tissue_mask"])
-    print(_pretrained_path)
+    _mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+
+    _pretrained_path = f"{tmp_path}/weights.pth"
+    fetch_pretrained_weights("fcn-tissue_mask", _pretrained_path)
 
     reader = get_wsireader(_mini_wsi_svs)
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
