@@ -34,12 +34,23 @@ import tiatoolbox  # noqa: E402
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",  # Create neat summary tables
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "recommonmark",
 ]
+
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+# Remove 'view source code' from top of page (for html, not python)
+html_show_sourcelink = False
+# If no docstring, inherit from base class
+# ! only nice for our ABC but it looks ridiculous when inherit from
+# ! grand-nth ancestors
+autodoc_inherit_docstrings = False
+add_module_names = False  # Remove namespaces from class/method signatures
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -172,4 +183,13 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
     "matplotlib": ("https://matplotlib.org", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
+}
+
+# create latex preample so that we can build arbitrary nested depth
+fh = open("latex_preamble.tex", "r+")
+PREAMBLE = fh.read()
+fh.close()
+latex_elements = {
+    # Additional stuff for the LaTeX preamble.
+    "preamble": PREAMBLE,
 }
