@@ -340,7 +340,7 @@ def test_functional_segmentor_merging(tmp_path):
     assert np.sum(canvas - _output) < 1.0e-8
     # else will leave hanging file pointer
     # and hence cant remove its folder later
-    del canvas
+    del canvas  # skipcq
 
     # * predictions with HWC
     _rm_dir(save_dir)
@@ -353,7 +353,7 @@ def test_functional_segmentor_merging(tmp_path):
         cache_count_path=f"{save_dir}/count.py",
         free_prediction=False,
     )
-    del canvas
+    del canvas  # skipcq
 
     # * test crashing when switch to image having larger
     # * shape but still provide old links
@@ -401,7 +401,7 @@ def test_functional_segmentor_merging(tmp_path):
         free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
-    del canvas
+    del canvas  # skipcq
     _rm_dir(save_dir)
     os.mkdir(save_dir)
 

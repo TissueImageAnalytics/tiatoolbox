@@ -407,7 +407,7 @@ class SemanticSegmentor:
             self.model = model
 
         # for runtime, such as after wrapping with nn.DataParallel
-        self._save_dir = None
+        self._cache_dir = None
         self._loader = None
         self._model = None
         self._on_gpu = None
@@ -779,7 +779,8 @@ class SemanticSegmentor:
         add_singleton = False
         if len(sample_prediction.shape) not in (2, 3):
             raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
-        elif len(sample_prediction.shape) == 3:
+
+        if len(sample_prediction.shape) == 3:
             num_output_ch = sample_prediction.shape[-1]
             canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
             canvas_count_shape_ = tuple(canvas_shape) + (1,)
