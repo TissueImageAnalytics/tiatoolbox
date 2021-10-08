@@ -23,7 +23,7 @@ requirements = [
     "scikit-learn>=0.23.2",
     "scikit-image>=0.17",
     "torchvision==0.9.1",
-    "torch==1.8.1",
+    "torch==1.9.1",
     "tqdm==4.60.0",
     "requests",
 ]

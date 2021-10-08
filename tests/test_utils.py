@@ -958,7 +958,7 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
             pad_mode="constant",
         )
 
-    with pytest.raises(ValueError, match="ounds.*must be >= 0"):
+    with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, 0, 0),
@@ -970,7 +970,7 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
 
 def test_normalise_padding_input_dims():
     """Test that normalise padding error with input dimensions > 1."""
-    with pytest.raises(ValueError, match="1 dimensional"):
+    with pytest.raises(ValueError, match=r".*1 dimensional.*"):
         utils.image.normalise_padding_size(((0, 0), (0, 0)))
 
 

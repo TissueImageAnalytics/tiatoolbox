@@ -365,6 +365,16 @@ def test_functional_segmentor_merging(tmp_path):
         cache_count_path=f"{save_dir}/count.1.py",
         free_prediction=False,
     )
+    with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
+        runner.merge_prediction(
+            [4, 4],
+            [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
+            [[0, 0, 2, 2], [2, 2, 4, 4]],
+            save_path=f"{save_dir}/raw.1.py",
+            cache_count_path=f"{save_dir}/count.py",
+            free_prediction=False,
+        )
+
     with pytest.raises(ValueError, match=r".*`cache_count_path` does not match.*"):
         runner.merge_prediction(
             [4, 4],
@@ -372,15 +382,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
-        )
-    with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
-        runner.merge_prediction(
-            [8, 8],
-            [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
-            [[0, 0, 2, 2], [2, 2, 4, 4]],
-            save_path=f"{save_dir}/raw.1.py",
-            cache_count_path=f"{save_dir}/count.py",
             free_prediction=False,
         )
 
