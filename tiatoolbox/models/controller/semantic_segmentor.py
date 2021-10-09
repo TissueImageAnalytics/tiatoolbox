@@ -978,9 +978,9 @@ class SemanticSegmentor:
         if save_dir is None:
             warnings.warn(
                 (
-                    "Segmentor will only output to directory. ",
-                    "All subsequent output will be saved to current runtime ",
-                    "location under folder 'output'. Overwriting may happen! ",
+                    "Segmentor will only output to directory. "
+                    "All subsequent output will be saved to current runtime "
+                    "location under folder 'output'. Overwriting may happen! "
                 )
             )
             save_dir = os.path.join(os.getcwd(), "output")
