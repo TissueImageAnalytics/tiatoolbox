@@ -1745,11 +1745,13 @@ def test_openslide_read_bounds_edge_reflect_padding(_sample_svs):
 
 
 def test_tiffwsireader_invalid_tiff(_sample_ndpi):
+    """Test for TIFF which is not supported by TIFFWSIReader."""
     with pytest.raises(ValueError, match="Unsupported TIFF"):
         _ = wsireader.TIFFWSIReader(_sample_ndpi)
 
 
 def test_tiffwsireader_invalid_svs_metadata(_sample_svs, monkeypatch):
+    """Test for invalid SVS key-value pairs in TIFF escription tag."""
     wsi = wsireader.TIFFWSIReader(_sample_svs)
     monkeypatch.setattr(
         wsi.tiff.pages[0],
@@ -1761,6 +1763,7 @@ def test_tiffwsireader_invalid_svs_metadata(_sample_svs, monkeypatch):
 
 
 def test_tiffwsireader_invalid_ome_metadata(_sample_ome_tiff, monkeypatch):
+    """Test exception raised for invalid OME-XML metadata instrument."""
     wsi = wsireader.TIFFWSIReader(_sample_ome_tiff)
     monkeypatch.setattr(
         wsi.tiff.pages[0],
@@ -1774,6 +1777,7 @@ def test_tiffwsireader_invalid_ome_metadata(_sample_ome_tiff, monkeypatch):
 
 
 def test_arrayview_unsupported_axes():
+    """Test unsupported axes in ArrayView."""
     array = zarr.ones((128, 128, 3))
     array_view = ArrayView(array=array, axes="FOO")
     with pytest.raises(Exception, match="Unsupported axes"):
@@ -1781,10 +1785,20 @@ def test_arrayview_unsupported_axes():
 
 
 def test_arrayview_unsupported_axes_shape(_sample_ome_tiff, monkeypatch):
+    """Test accessing an unspported axes in TIFFWSIReader._shape_channels_last."""
     wsi = wsireader.TIFFWSIReader(_sample_ome_tiff)
     monkeypatch.setattr(wsi, "_axes", "FOO")
     with pytest.raises(Exception, match="Unsupported axes"):
         _ = wsi._info()
+
+
+def test_arrayview_incomplete_index():
+    """Test reading from ArrayView without specifying all axes slices."""
+    array = zarr.array(np.random.rand(128, 128, 3))
+    array_view = ArrayView(array=array, axes="YXS")
+    view_1 = array_view[:64, :64, :]
+    view_2 = array_view[:64, :64]
+    assert np.array_equal(view_1, view_2)
 
 
 class TestReader:

@@ -1804,7 +1804,7 @@ class ArrayView:
         if not isinstance(index, tuple):
             index = (index,)
         while len(index) < len(self.axes):
-            index = (*index, slice())
+            index = (*index, slice(None))
 
         if self.axes == "YXS":
             return self.array[index]
