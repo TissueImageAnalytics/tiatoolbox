@@ -1780,6 +1780,13 @@ def test_arrayview_unsupported_axes():
         array_view[:64, :64, :]
 
 
+def test_arrayview_unsupported_axes_shape(_sample_ome_tiff, monkeypatch):
+    wsi = wsireader.TIFFWSIReader(_sample_ome_tiff)
+    monkeypatch.setattr(wsi, "_axes", "FOO")
+    with pytest.raises(Exception, match="Unsupported axes"):
+        _ = wsi._info()
+
+
 class TestReader:
     scenarios = [
         ("TIFFReader", {"reader_class": TIFFWSIReader}),
