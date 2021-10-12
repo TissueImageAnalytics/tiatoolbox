@@ -145,7 +145,7 @@ def test_vahadane_normalise(source_image, norm_vahadane):
     transform = norm.transform(source_img)  # transform source image
 
     assert np.shape(transform) == np.shape(source_img)
-    assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-2
+    assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-1
 
 
 # -------------------------------------------------------------------------------------
