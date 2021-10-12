@@ -958,11 +958,11 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
             pad_mode="constant",
         )
 
-    with pytest.raises(ValueError, match="ounds.*must be >= 0"):
+    with pytest.raises(ValueError, match="max_dimensions must be >= 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, 0, 0),
-            max_dimensions=(0, 0),
+            max_dimensions=(-1, -1),
             region=np.zeros((10, 10)),
             pad_mode="constant",
         )

@@ -547,9 +547,7 @@ def test_mask_basedpatch_extractor_ndpi(sample_ndpi):
 
     # Test passing an empty mask
     wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
-    with pytest.raises(
-        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
-    ):
+    with pytest.raises(ValueError, match=".*No candidate coordinates left.*"):
         patches = patchextraction.get_patch_extractor(
             input_img=input_img,
             input_mask=wsi_mask,
