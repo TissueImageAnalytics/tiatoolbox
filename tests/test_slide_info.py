@@ -1,18 +1,18 @@
 """Tests for code related to obtaining slide information."""
 
-from tiatoolbox.wsicore.slide_info import slide_info
-from tiatoolbox import utils
-from tiatoolbox import cli
-
 import pathlib
+
 from click.testing import CliRunner
 
+from tiatoolbox import cli, utils
+from tiatoolbox.wsicore.slide_info import slide_info
 
-def test_slide_info(_sample_all_wsis, tmp_path):
+
+def test_slide_info(sample_all_wsis, tmp_path):
     """Test for slide_info as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=_sample_all_wsis,
+        input_path=sample_all_wsis,
         file_types=file_types,
     )
 
@@ -27,7 +27,7 @@ def test_slide_info(_sample_all_wsis, tmp_path):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_slide_info(_sample_all_wsis, tmp_path):
+def test_command_line_slide_info(sample_all_wsis, tmp_path):
     """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -35,7 +35,7 @@ def test_command_line_slide_info(_sample_all_wsis, tmp_path):
         [
             "slide-info",
             "--img_input",
-            str(pathlib.Path(_sample_all_wsis)),
+            str(pathlib.Path(sample_all_wsis)),
             "--mode",
             "save",
             "--file_types",
@@ -51,7 +51,7 @@ def test_command_line_slide_info(_sample_all_wsis, tmp_path):
     assert not tmp_path.joinpath("test1.yaml").exists()
 
 
-def test_command_line_slide_info_jp2(_sample_all_wsis, tmp_path):
+def test_command_line_slide_info_jp2(sample_all_wsis, tmp_path):
     """Test the Slide information CLI JP2, svs."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -59,20 +59,20 @@ def test_command_line_slide_info_jp2(_sample_all_wsis, tmp_path):
         [
             "slide-info",
             "--img_input",
-            str(pathlib.Path(_sample_all_wsis)),
+            str(pathlib.Path(sample_all_wsis)),
             "--mode",
             "save",
         ],
     )
 
-    output_dir = pathlib.Path(_sample_all_wsis).parent
+    output_dir = pathlib.Path(sample_all_wsis).parent
     assert slide_info_result.exit_code == 0
     assert output_dir.joinpath("meta/CMU-1-Small-Region.yaml").exists()
     assert output_dir.joinpath("meta/CMU-1.yaml").exists()
     assert output_dir.joinpath("meta/test1.yaml").exists()
 
 
-def test_command_line_slide_info_svs(_sample_svs):
+def test_command_line_slide_info_svs(sample_svs):
     """Test CLI slide info for single file."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -80,7 +80,7 @@ def test_command_line_slide_info_svs(_sample_svs):
         [
             "slide-info",
             "--img_input",
-            _sample_svs,
+            sample_svs,
             "--file_types",
             "*.ndpi, *.svs",
             "--mode",
@@ -93,7 +93,7 @@ def test_command_line_slide_info_svs(_sample_svs):
     assert slide_info_result.exit_code == 0
 
 
-def test_command_line_slide_info_file_not_found(_sample_svs):
+def test_command_line_slide_info_file_not_found(sample_svs):
     """Test CLI slide info file not found error."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -101,7 +101,7 @@ def test_command_line_slide_info_file_not_found(_sample_svs):
         [
             "slide-info",
             "--img_input",
-            str(_sample_svs)[:-1],
+            str(sample_svs)[:-1],
             "--file_types",
             "*.ndpi, *.svs",
             "--mode",
@@ -114,7 +114,7 @@ def test_command_line_slide_info_file_not_found(_sample_svs):
     assert isinstance(slide_info_result.exception, FileNotFoundError)
 
 
-def test_command_line_slide_info_output_none_mode_save(_sample_svs):
+def test_command_line_slide_info_output_none_mode_save(sample_svs):
     """Test CLI slide info for single file."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -122,7 +122,7 @@ def test_command_line_slide_info_output_none_mode_save(_sample_svs):
         [
             "slide-info",
             "--img_input",
-            str(_sample_svs),
+            str(sample_svs),
             "--file_types",
             "*.ndpi, *.svs",
             "--mode",
@@ -132,7 +132,7 @@ def test_command_line_slide_info_output_none_mode_save(_sample_svs):
 
     assert slide_info_result.exit_code == 0
     assert (
-        pathlib.Path(_sample_svs)
+        pathlib.Path(sample_svs)
         .parent.parent.joinpath("meta/CMU-1-Small-Region.yaml")
         .exists()
     )

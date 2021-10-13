@@ -155,11 +155,11 @@ def test_DatasetInfo():
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
 
 
-def test_PatchDatasetpath_imgs(_sample_patch1, _sample_patch2):
+def test_PatchDatasetpath_imgs(sample_patch1, sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
-    dataset = PatchDataset([pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)])
+    dataset = PatchDataset([pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)])
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -335,12 +335,12 @@ def test_PatchDataset_crash():
         predefined_preproc_func("secret-dataset")
 
 
-def test_WSIPatchDataset(_sample_wsi_dict):
+def test_WSIPatchDataset(sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     def reuse_init(img_path=_mini_wsi_svs, **kwargs):
         """Testing function."""
@@ -659,10 +659,10 @@ def test_predictor_crash():
         shutil.rmtree("output", ignore_errors=True)
 
 
-def test_patch_predictor_api(_sample_patch1, _sample_patch2):
+def test_patch_predictor_api(sample_patch1, sample_patch2):
     """Helper function to get the model output using API 1."""
     # convert to pathlib Path to prevent reader complaint
-    inputs = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+    inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
@@ -752,12 +752,12 @@ def test_patch_predictor_api(_sample_patch1, _sample_patch2):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(_sample_wsi_dict):
+def test_wsi_predictor_api(sample_wsi_dict):
     """Test normal run of wsi predictor."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
@@ -872,12 +872,12 @@ def test_wsi_predictor_api(_sample_wsi_dict):
         shutil.rmtree("output", ignore_errors=True)
 
 
-def test_wsi_predictor_merge_predictions(_sample_wsi_dict):
+def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent reader complaint
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
+    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     # blind test
     # pseudo output dict from model with 2 patches
@@ -984,9 +984,9 @@ def _test_predictor_output(
         )
 
 
-def test_patch_predictor_output(_sample_patch1, _sample_patch2):
+def test_patch_predictor_output(sample_patch1, sample_patch2):
     """Test the output of patch prediction models."""
-    inputs = [pathlib.Path(_sample_patch1), pathlib.Path(_sample_patch2)]
+    inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
     pretrained_info = {
         "alexnet-kather100k": [1.0, 0.9999735355377197],
         "resnet18-Kather100k": [1.0, 0.9999911785125732],
@@ -1021,7 +1021,7 @@ def test_patch_predictor_output(_sample_patch1, _sample_patch2):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_models_file_not_found(_sample_svs, tmp_path):
+def test_command_line_models_file_not_found(sample_svs, tmp_path):
     """Test for models CLI file not found error."""
     runner = CliRunner()
     model_file_not_found_result = runner.invoke(
@@ -1029,7 +1029,7 @@ def test_command_line_models_file_not_found(_sample_svs, tmp_path):
         [
             "patch-predictor",
             "--img_input",
-            str(_sample_svs)[:-1],
+            str(sample_svs)[:-1],
             "--file_types",
             '"*.ndpi, *.svs"',
             "--output_path",
@@ -1042,7 +1042,7 @@ def test_command_line_models_file_not_found(_sample_svs, tmp_path):
     assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
 
 
-def test_command_line_models_incorrect_mode(_sample_svs, tmp_path):
+def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
     """Test for models CLI mode not in wsi, tile."""
     runner = CliRunner()
     mode_not_in_wsi_tile_result = runner.invoke(
@@ -1050,7 +1050,7 @@ def test_command_line_models_incorrect_mode(_sample_svs, tmp_path):
         [
             "patch-predictor",
             "--img_input",
-            str(_sample_svs),
+            str(sample_svs),
             "--file_types",
             '"*.ndpi, *.svs"',
             "--mode",
@@ -1065,7 +1065,7 @@ def test_command_line_models_incorrect_mode(_sample_svs, tmp_path):
     assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
 
 
-def test_cli_model_single_file(_sample_svs, tmp_path):
+def test_cli_model_single_file(sample_svs, tmp_path):
     """Test for models CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(
@@ -1073,7 +1073,7 @@ def test_cli_model_single_file(_sample_svs, tmp_path):
         [
             "patch-predictor",
             "--img_input",
-            str(_sample_svs),
+            str(sample_svs),
             "--mode",
             "wsi",
             "--output_path",
@@ -1087,10 +1087,10 @@ def test_cli_model_single_file(_sample_svs, tmp_path):
     assert tmp_path.joinpath("results.json").exists()
 
 
-def test_cli_model_single_file_mask(_sample_wsi_dict, tmp_path):
+def test_cli_model_single_file_mask(sample_wsi_dict, tmp_path):
     """Test for models CLI single file with mask."""
-    _mini_wsi_svs = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_msk = pathlib.Path(_sample_wsi_dict["wsi2_4k_4k_msk"])
+    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
     runner = CliRunner()
     models_tiles_result = runner.invoke(
         cli.main,
@@ -1113,10 +1113,10 @@ def test_cli_model_single_file_mask(_sample_wsi_dict, tmp_path):
     assert tmp_path.joinpath("results.json").exists()
 
 
-def test_cli_model_multiple_file_mask(_sample_wsi_dict, tmp_path):
+def test_cli_model_multiple_file_mask(sample_wsi_dict, tmp_path):
     """Test for models CLI multiple file with mask."""
-    _mini_wsi_svs = _sample_wsi_dict["wsi2_4k_4k_svs"]
-    _mini_wsi_msk = _sample_wsi_dict["wsi2_4k_4k_msk"]
+    _mini_wsi_svs = sample_wsi_dict["wsi2_4k_4k_svs"]
+    _mini_wsi_msk = sample_wsi_dict["wsi2_4k_4k_msk"]
 
     # Make multiple copies for test
     dir_path = tmp_path.joinpath("new_copies")
@@ -1126,28 +1126,22 @@ def test_cli_model_multiple_file_mask(_sample_wsi_dict, tmp_path):
     dir_path_masks.mkdir()
 
     try:
-        dir_path.joinpath("1_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
-        dir_path.joinpath("2_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
-        dir_path.joinpath("3_" + _mini_wsi_svs.basename).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("1_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("2_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("3_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
     except OSError:
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.basename))
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.basename))
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.basename))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.name))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.name))
+        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.name))
 
     try:
-        dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
-        dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
-        dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("1_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("2_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("3_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
     except OSError:
-        shutil.copy(
-            _mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.basename)
-        )
-        shutil.copy(
-            _mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.basename)
-        )
-        shutil.copy(
-            _mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.basename)
-        )
+        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.name))
+        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.name))
+        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.name))
 
     tmp_path = tmp_path.joinpath("output")
 
