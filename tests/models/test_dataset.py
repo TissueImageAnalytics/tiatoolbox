@@ -36,44 +36,44 @@ def test_DatasetABC():
     # enforcing attributes - should crash
     with pytest.raises(TypeError):
 
-        # intentionally create to check error
+        # intentionally created to check error
         # skipcq
         class Proto(DatasetInfoABC):
             def __init__(self):
                 self.a = "a"
 
-        # intentionally create to check error
+        # intentionally created to check error
         Proto()  # skipcq
     with pytest.raises(TypeError):
 
-        # intentionally create to check error
+        # intentionally created to check error
         # skipcq
         class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
 
-        # intentionally create to check error
+        # intentionally created to check error
         Proto()  # skipcq
     with pytest.raises(TypeError):
-        # intentionally create to check error
+        # intentionally created to check error
         # skipcq
         class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
                 self.labels = "a"
 
-        # intentionally create to check error
+        # intentionally created to check error
         Proto()  # skipcq
     with pytest.raises(TypeError):
 
-        # intentionally create to check error
+        # intentionally created to check error
         # skipcq
         class Proto(DatasetInfoABC):
             def __init__(self):
                 self.inputs = "a"
                 self.label_names = "a"
 
-        # intentionally create to check error
+        # intentionally created to check error
         Proto()  # skipcq
 
 

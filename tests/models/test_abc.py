@@ -41,7 +41,7 @@ def test_model_abc():
         # crash due to not defining forward, infer_batch, postproc
         ModelABC()  # skipcq
 
-    # intentionally create to check error
+    # intentionally created to check error
     # skipcq
     class Proto(ModelABC):
         # skipcq
@@ -74,7 +74,7 @@ def test_model_abc():
     assert model.preproc(1) == 1, "Must be unchanged!"
     assert model.postproc(1) == 1, "Must be unchanged!"
 
-    # intentionally create to check error
+    # intentionally created to check error
     # skipcq
     class Proto(ModelABC):
         # skipcq

@@ -255,7 +255,7 @@ def test_WSIPatchDataset(sample_wsi_dict):
     with pytest.raises(
         ValueError, match=r".*inputs should be a list of patch coordinates.*"
     ):
-        # intentionally create to check error
+        # intentionally created to check error
         # skipcq
         class Proto(PatchDatasetABC):
             def __init__(self):
@@ -267,7 +267,7 @@ def test_WSIPatchDataset(sample_wsi_dict):
             def __getitem__(self, idx):
                 pass
 
-        # intentionally create to check error
+        # intentionally created to check error
         Proto()  # skipcq
 
     # invalid path input
@@ -411,7 +411,7 @@ def test_PatchDataset_abc():
     # test missing definition for abstract
     with pytest.raises(TypeError):
 
-        # intentionally create to check error
+        # intentionally created to check error
         # skipcq
         class Proto(PatchDatasetABC):
             # skipcq
