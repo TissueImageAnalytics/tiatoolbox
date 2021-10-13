@@ -13,7 +13,7 @@ from tiatoolbox.wsicore.wsireader import get_wsireader
 def test_fetch_sample(tmp_path):
     """Test for fetching sample via code name."""
     # Load a dictionary of sample files data (names and urls)
-    # code name retrieves from TOOLBOX_ROOT/data/remote_samples.yaml
+    # code name retrieved from TOOLBOX_ROOT/data/remote_samples.yaml
     tmp_path = pathlib.Path(tmp_path)
     path = _fetch_remote_sample("wsi1_8k_8k_svs")
     assert os.path.exists(path)
