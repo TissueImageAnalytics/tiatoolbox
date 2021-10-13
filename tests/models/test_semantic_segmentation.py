@@ -252,30 +252,32 @@ def test_crash_segmentor(remote_sample):
     _mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     model = _CNNTo1()
-    runner = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
     # for any subclass
-    runner.num_postproc_workers = 1
+    semantic_segmentor.num_postproc_workers = 1
 
     # * test basic crash
     _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*`mask_reader`.*"):
-        runner.filter_coordinates(_mini_wsi_msk, np.array(["a", "b", "c"]))
+        semantic_segmentor.filter_coordinates(_mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
-        runner.filter_coordinates(get_wsireader(_mini_wsi_msk), np.array([1.0, 2.0]))
-    runner.get_reader(_mini_wsi_svs, None, "wsi", True)
+        semantic_segmentor.filter_coordinates(
+            get_wsireader(_mini_wsi_msk), np.array([1.0, 2.0])
+        )
+    semantic_segmentor.get_reader(_mini_wsi_svs, None, "wsi", True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
-        runner.get_reader(_mini_wsi_msk, "not_exist", "wsi", True)
+        semantic_segmentor.get_reader(_mini_wsi_msk, "not_exist", "wsi", True)
 
     _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
-        runner.predict([], mode="abc")
+        semantic_segmentor.predict([], mode="abc")
     with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
-        runner.predict(
+        semantic_segmentor.predict(
             [_mini_wsi_jpg],
             mode="tile",
             on_gpu=ON_GPU,
@@ -286,12 +288,12 @@ def test_crash_segmentor(remote_sample):
         )
 
     with pytest.raises(ValueError, match=r".*already exists.*"):
-        runner.predict([], mode="tile", patch_input_shape=[2048, 2048])
+        semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
     _rm_dir("output")  # default output dir test
 
-    # * test not providing any ioconfig info when not using pretrained model
+    # * test not providing any io_config info when not using pretrained model
     with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
-        runner.predict(
+        semantic_segmentor.predict(
             [_mini_wsi_jpg],
             mode="tile",
             on_gpu=ON_GPU,
@@ -305,7 +307,7 @@ def test_functional_segmentor_merging(tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     model = _CNNTo1()
-    runner = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
 
     _rm_dir(save_dir)
     os.mkdir(save_dir)
@@ -318,7 +320,7 @@ def test_functional_segmentor_merging(tmp_path):
             [0, 0, 2, 2],
         ]
     )
-    canvas = runner.merge_prediction(
+    canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [np.full((2, 2), 1), np.full((2, 2), 2)],
         [[0, 0, 2, 2], [2, 2, 4, 4]],
@@ -329,7 +331,7 @@ def test_functional_segmentor_merging(tmp_path):
     assert np.sum(canvas - _output) < 1.0e-8
     # a second rerun to test overlapping count,
     # should still maintain same result
-    canvas = runner.merge_prediction(
+    canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [np.full((2, 2), 1), np.full((2, 2), 2)],
         [[0, 0, 2, 2], [2, 2, 4, 4]],
@@ -345,7 +347,7 @@ def test_functional_segmentor_merging(tmp_path):
     # * predictions with HWC
     _rm_dir(save_dir)
     os.mkdir(save_dir)
-    canvas = runner.merge_prediction(
+    canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
         [[0, 0, 2, 2], [2, 2, 4, 4]],
@@ -357,7 +359,7 @@ def test_functional_segmentor_merging(tmp_path):
 
     # * test crashing when switch to image having larger
     # * shape but still provide old links
-    runner.merge_prediction(
+    semantic_segmentor.merge_prediction(
         [8, 8],
         [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
         [[0, 0, 2, 2], [2, 2, 4, 4]],
@@ -366,7 +368,7 @@ def test_functional_segmentor_merging(tmp_path):
         free_prediction=False,
     )
     with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
-        runner.merge_prediction(
+        semantic_segmentor.merge_prediction(
             [4, 4],
             [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
             [[0, 0, 2, 2], [2, 2, 4, 4]],
@@ -376,7 +378,7 @@ def test_functional_segmentor_merging(tmp_path):
         )
 
     with pytest.raises(ValueError, match=r".*`cache_count_path` does not match.*"):
-        runner.merge_prediction(
+        semantic_segmentor.merge_prediction(
             [4, 4],
             [np.full((2, 2, 1), 1), np.full((2, 2, 1), 2)],
             [[0, 0, 2, 2], [2, 2, 4, 4]],
@@ -389,7 +391,7 @@ def test_functional_segmentor_merging(tmp_path):
     os.mkdir(save_dir)
 
     # * with out of bound location
-    canvas = runner.merge_prediction(
+    canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [
             np.full((2, 2), 1),
@@ -418,15 +420,15 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # pre-emptive clean up
     _rm_dir("output")  # default output dir test
     model = _CNNTo1()
-    runner = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
     # for any subclass
-    runner.num_postproc_workers = 1
+    semantic_segmentor.num_postproc_workers = 1
 
     # should still run because we skip exception
-    runner.predict(
+    semantic_segmentor.predict(
         [_mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
@@ -439,7 +441,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
 
     # * check exception bypass in the log
     # there should be no exception, but how to check the log?
-    runner.predict(
+    semantic_segmentor.predict(
         [_mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
@@ -467,7 +469,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         _mini_wsi_jpg,
         _mini_wsi_jpg,
     ]
-    output_list = runner.predict(
+    output_list = semantic_segmentor.predict(
         file_list,
         mode="tile",
         on_gpu=ON_GPU,
@@ -495,7 +497,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         stride_shape=[512, 512],
     )
     _rm_dir(save_dir)
-    output_list = runner.predict(
+    output_list = semantic_segmentor.predict(
         [_mini_wsi_svs],
         masks=[_mini_wsi_msk],
         mode="wsi",
@@ -514,8 +516,10 @@ def test_functional_segmentor(remote_sample, tmp_path):
     _rm_dir(save_dir)
 
     # check normal run with auto get mask
-    runner = SemanticSegmentor(batch_size=1, model=model, auto_generate_mask=True)
-    output_list = runner.predict(
+    semantic_segmentor = SemanticSegmentor(
+        batch_size=1, model=model, auto_generate_mask=True
+    )
+    output_list = semantic_segmentor.predict(
         [_mini_wsi_svs],
         masks=[_mini_wsi_msk],
         mode="wsi",
@@ -541,9 +545,9 @@ def test_subclass(remote_sample, tmp_path):
             super().__init__(model=model)
             self.num_postproc_worker = 2
 
-    runner = XSegmentor()
+    semantic_segmentor = XSegmentor()
     _rm_dir(save_dir)  # default output dir test
-    runner.predict(
+    semantic_segmentor.predict(
         [_mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
@@ -562,9 +566,11 @@ def test_behavior_tissue_mask(remote_sample, tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     wsi_with_artifacts = pathlib.Path(remote_sample("wsi3_20k_20k_svs"))
-    runner = SemanticSegmentor(batch_size=1, pretrained_model="fcn-tissue_mask")
+    semantic_segmentor = SemanticSegmentor(
+        batch_size=1, pretrained_model="fcn-tissue_mask"
+    )
     _rm_dir(save_dir)
-    runner.predict(
+    semantic_segmentor.predict(
         [wsi_with_artifacts],
         mode="wsi",
         on_gpu=ON_GPU,
@@ -588,10 +594,10 @@ def test_behavior_bcss(remote_sample, tmp_path):
     _rm_dir(save_dir)
     # wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     wsi_breast = pathlib.Path(remote_sample)
-    runner = SemanticSegmentor(
+    semantic_segmentor = SemanticSegmentor(
         num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
     )
-    runner.predict(
+    semantic_segmentor.predict(
         [wsi_breast],
         mode="wsi",
         on_gpu=True,
