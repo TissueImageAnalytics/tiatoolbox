@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Unit test package for backbone utilities."""
+"""Unit test package for architecture utilities"""
 
 import numpy as np
 import pytest
