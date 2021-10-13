@@ -58,7 +58,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_patchdatasetpath_imgs(sample_patch1, sample_patch2):
+def test_PatchDataset_path_imgs(sample_patch1, sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
@@ -71,7 +71,7 @@ def test_patchdatasetpath_imgs(sample_patch1, sample_patch2):
         assert sampled_img_shape[2] == size[2]
 
 
-def test_PatchDatasetlist_imgs(tmp_path):
+def test_PatchDataset_list_imgs(tmp_path):
     """Test for patch dataset with a list of images as input."""
     save_dir_path = tmp_path
 
