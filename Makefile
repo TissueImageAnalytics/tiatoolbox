@@ -60,27 +60,13 @@ coverage: ## check code coverage quickly with the default Python
 	pytest  --cov=tiatoolbox --cov-report=term --cov-report=html
 	$(BROWSER) htmlcov/index.html
 
-# docs: ## generate Sphinx HTML documentation, including API docs
-# 	rm -f docs/tiatoolbox.rst
-# 	rm -f docs/modules.rst
-# 	sphinx-apidoc -o docs/ tiatoolbox
-# 	$(MAKE) -C docs clean
-# 	$(MAKE) -C docs html
-# 	$(BROWSER) docs/_build/html/index.html
-
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -rf docs/_build
-	rm -rf docs/_autosummary
-	mkdir docs/_autosummary
-	cp -r docs/images docs/_autosummary
-	sphinx-build -b html docs docs/_build/html
-
-# pdf: ## generate Sphinx PDF documentation, including API docs
-# 	rm -rf docs/_build
-# 	rm -rf docs/_autosummary
-# 	mkdir docs/_autosummary
-# 	cp -r docs/images docs/_autosummary
-# 	sphinx-build -M latexpdf docs docs/_build/latex
+	rm -f docs/tiatoolbox.rst
+	rm -f docs/modules.rst
+	sphinx-apidoc -o docs/ tiatoolbox
+	$(MAKE) -C docs clean
+	$(MAKE) -C docs html
+	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
