@@ -391,7 +391,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
     ) -> Union[ET.Element, Dict[str, dict]]:
         """Generate and return DeepZoom XML metadata (.dzi).
 
-        Arguments:
+        Args:
             format (str): Format of DZI file. Defaults to "XML" which
                 returns an instance of ElementTree. Specifying "json",
                 will return a dictionary which can be serialised to
