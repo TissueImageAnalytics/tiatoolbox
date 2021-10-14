@@ -165,7 +165,7 @@ def hybrid_clustered_graph(
     point_centroids = np.array(point_centroids)
     feature_centroids = np.array(feature_centroids)
 
-    adjacency_matrix = connect_points(
+    adjacency_matrix = delaunay_adjacency(
         points=point_centroids,
         dthresh=connectivity_distance,
     )
@@ -181,7 +181,7 @@ def hybrid_clustered_graph(
     return result
 
 
-def connect_points(points: ArrayLike, dthresh: Number) -> ArrayLike:
+def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     See https://en.wikipedia.org/wiki/Adjacency_matrix.
@@ -196,7 +196,7 @@ def connect_points(points: ArrayLike, dthresh: Number) -> ArrayLike:
 
     Example:
         >>> points = np.random.rand(100, 2)
-        >>> adjacency = connect_points(points)
+        >>> adjacency = delaunay_adjacency(points)
 
     """
     # Validate inputs
@@ -258,7 +258,7 @@ def affinity_to_edge_index(
 
     Example:
         >>> points = np.random.rand(100, 2)
-        >>> adjacency = connect_points(points)
+        >>> adjacency = delaunay_adjacency(points)
         >>> edge_index = affinity_to_edge_index(adjacency)
 
     """
