@@ -248,6 +248,14 @@ def bounds2slices(
     Returns:
         tuple(slice): Tuple of slices in image read order (y, x, channels).
 
+    Example:
+        >>> from tiatoolbox.utils.transforms import bounds2slices
+        >>> import numpy as np
+        >>> bounds = (5, 5, 10, 10)
+        >>> array = np.ones((10, 10, 3))
+        >>> slices = bounds2slices(bounds)
+        >>> region = array[slices, ...]
+
     """
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
