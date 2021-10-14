@@ -8,12 +8,12 @@ from tiatoolbox.tools import stainnorm as sn
 
 
 @click.group()
-def stain_norm():
-    """Define slide_info click group."""
+def main():
+    """Define stain_norm click group."""
     return 0
 
 
-@stain_norm.command()
+@main.command()
 @click.option(
     "--source_input",
     help="input path to the source image or a directory of source images",

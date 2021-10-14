@@ -7,12 +7,12 @@ from tiatoolbox import utils, wsicore
 
 
 @click.group()
-def save_tiles():
-    """Define slide_info click group."""
+def main():
+    """Define save_tiles click group."""
     return 0
 
 
-@save_tiles.command()
+@main.command()
 @click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",

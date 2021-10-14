@@ -11,12 +11,12 @@ from tiatoolbox.tools import tissuemask
 
 
 @click.group()
-def tissue_mask():
-    """Define slide_info click group."""
+def main():
+    """Define tissue_mask click group."""
     return 0
 
 
-@tissue_mask.command()
+@main.command()
 @click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
@@ -63,7 +63,6 @@ def tissue_mask(
     img_input, output_path, method, resolution, units, kernel_size, mode, file_types
 ):
     """Generate tissue mask for a WSI."""
-
     file_types = utils.misc.string_to_tuple(file_types=file_types)
     output_path = pathlib.Path(output_path)
 

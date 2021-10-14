@@ -8,12 +8,12 @@ from tiatoolbox import utils, wsicore
 
 
 @click.group()
-def read_bounds():
+def main():
     """Define read_bounds click group."""
     return 0
 
 
-@read_bounds.command()
+@main.command()
 @click.option("--img_input", help="Path to WSI file")
 @click.option(
     "--output_path",
