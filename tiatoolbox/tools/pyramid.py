@@ -196,6 +196,16 @@ class TilePyramidGenerator:
         Returns:
             Image: Pillow image of the tile.
 
+        Example:
+            >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader("sample.svs")
+            >>> tile_generator = TilePyramidGenerator(
+            ...   wsi=reader,
+            ...   tile_size=256,
+            ... )
+            >>> tile_0_0_0 = tile_generator.get_tile(level=0, x=0, y=0)
+
         """
         if level < 0:
             raise IndexError
