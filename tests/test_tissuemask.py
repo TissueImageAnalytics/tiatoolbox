@@ -187,7 +187,6 @@ def test_morphological_min_region_size():
     only the largest square region as foreground in the mask
     (0=background, 1=foreground).
     """
-
     # Create a blank image of 1s
     img = np.ones((10, 10))
     # Create a large square region of 9 zeros
