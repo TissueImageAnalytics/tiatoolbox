@@ -31,3 +31,4 @@ tqdm==4.60.0
 jupyterlab
 shapely
 requests
+pygeos

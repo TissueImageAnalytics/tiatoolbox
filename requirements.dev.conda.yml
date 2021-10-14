@@ -37,5 +37,6 @@ dependencies:
   - jupyterlab
   - shapely
   - openjpeg
+  - pygeos
   - pip:
       - openslide-python==1.1.2

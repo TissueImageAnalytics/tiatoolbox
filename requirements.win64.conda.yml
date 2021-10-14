@@ -27,5 +27,6 @@ dependencies:
   - tqdm
   - jupyterlab
   - shapely
+  - pygeos
   - pip:
     - openslide-python
