@@ -216,6 +216,18 @@ def crop_and_pad_edges(
     Returns:
         :class:`numpy.ndarray`: The cropped and padded image.
 
+    Examples:
+        >>> from tiatoolbox.utils.image import crop_and_pad_image
+        >>> import numpy as np
+        >>> region = np.ones((10, 10, 3))
+        >>> padded_region = crop_and_pad_edges(
+        ...   bounds=(-1, -1, 5, 5),
+        ...   max_dimensions=(10, 10),
+        ...   region=image,
+        ...   pad_mode="constant",
+        ...   pad_constant_values=0,
+        ... )
+
     """
     loc, size = bounds2locsize(bounds)
 
