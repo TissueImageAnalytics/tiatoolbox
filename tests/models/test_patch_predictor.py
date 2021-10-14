@@ -58,7 +58,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_PatchDataset_path_imgs(sample_patch1, sample_patch2):
+def test_patch_dataset_path_imgs(sample_patch1, sample_patch2):
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
@@ -71,7 +71,7 @@ def test_PatchDataset_path_imgs(sample_patch1, sample_patch2):
         assert sampled_img_shape[2] == size[2]
 
 
-def test_PatchDataset_list_imgs(tmp_path):
+def test_patch_dataset_list_imgs(tmp_path):
     """Test for patch dataset with a list of images as input."""
     save_dir_path = tmp_path
 
@@ -116,7 +116,7 @@ def test_PatchDataset_list_imgs(tmp_path):
     _rm_dir(save_dir_path)
 
 
-def test_PatchDatasetarray_imgs():
+def test_patch_datasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
     img = np.random.randint(0, 255, size=size)
@@ -142,7 +142,7 @@ def test_PatchDatasetarray_imgs():
         )
 
 
-def test_PatchDataset_crash(tmp_path):
+def test_patch_dataset_crash(tmp_path):
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples below should fail when input to PatchDataset
     save_dir_path = tmp_path
@@ -236,7 +236,7 @@ def test_PatchDataset_crash(tmp_path):
         predefined_preproc_func("secret-dataset")
 
 
-def test_WSIPatchDataset(sample_wsi_dict):
+def test_wsi_patch_dataset(sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -406,7 +406,7 @@ def test_WSIPatchDataset(sample_wsi_dict):
     assert np.min(correlation) > 0.9, correlation
 
 
-def test_PatchDataset_abc():
+def test_patch_dataset_abc():
     """Test for ABC methods."""
     # test missing definition for abstract
     with pytest.raises(TypeError):
@@ -451,7 +451,7 @@ def test_PatchDataset_abc():
 # -------------------------------------------------------------------------------------
 
 
-def test_IOPatchPredictorConfig():
+def test_io_patch_predictor_config():
     """Test for IOConfig."""
     # test for creating
     cfg = IOPatchPredictorConfig(

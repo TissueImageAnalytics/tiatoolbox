@@ -30,7 +30,7 @@ from tiatoolbox.models.dataset import DatasetInfoABC, KatherPatchDataset, PatchD
 from tiatoolbox.utils.misc import download_data, unzip_data
 
 
-def test_DatasetABC():
+def test_dataset_abc():
     """Test for ABC."""
     # test defining a subclass of dataset info but not defining
     # enforcing attributes - should crash
@@ -77,7 +77,7 @@ def test_DatasetABC():
         Proto()  # skipcq
 
 
-def test_KatherDataset(tmp_path):
+def test_kather_dataset(tmp_path):
     """Test for kather patch dataset."""
     save_dir_path = tmp_path
 
