@@ -1108,7 +1108,7 @@ def test_VirtualWSIReader_read_rect_virtual_baseline(source_image):
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size)
+    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100))
     target = cv2.resize(
@@ -1130,7 +1130,9 @@ def test_VirtualWSIReader_read_rect_virtual_levels(source_image):
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
+    meta = wsireader.WSIMeta(
+        slide_dimensions=double_size, level_downsamples=[1, 2, 4], axes="YXS"
+    )
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
     target = img_array[:100, :50, :]
@@ -1155,7 +1157,9 @@ def test_VirtualWSIReader_read_bounds_virtual_levels(source_image):
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
+    meta = wsireader.WSIMeta(
+        slide_dimensions=double_size, level_downsamples=[1, 2, 4], axes="YXS"
+    )
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
