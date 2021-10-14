@@ -268,6 +268,21 @@ class TilePyramidGenerator:
                 Possible values are None, "deflate", "gzip",
                 "bz2", "lzma". Note that tar does not support deflate
                 and zip does not support gzip.
+
+        Examples:
+            >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader("sample.svs")
+            >>> tile_generator = TilePyramidGenerator(
+            ...   wsi=reader,
+            ...   tile_size=256,
+            ... )
+            >>>  tile_generator.dump(
+            ...    path="sample.gz.zip",
+            ...    container="zip",
+            ...    compression="gzip",
+            ...  )
+
         """
         path = Path(path)
         if container == "zip":
