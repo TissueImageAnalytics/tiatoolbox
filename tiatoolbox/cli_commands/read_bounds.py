@@ -9,6 +9,7 @@ from tiatoolbox import utils, wsicore
 
 @click.group()
 def read_bounds():
+    """Define read_bounds click group."""
     return 0
 
 

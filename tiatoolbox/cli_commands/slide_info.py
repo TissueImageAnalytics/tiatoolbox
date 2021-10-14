@@ -9,6 +9,7 @@ from tiatoolbox import utils, wsicore
 
 @click.group()
 def slide_info():
+    """Define slide_info click group."""
     return 0
 
 
