@@ -23,7 +23,6 @@ import copy
 import json
 import os
 import pathlib
-import re
 import zipfile
 from typing import Union
 
@@ -681,7 +680,7 @@ def string_to_tuple(in_str):
         in_str (str): input string.
 
     Returns:
-        tuple (tuple of str): Returns a tuple of strings by splitting input string at ','.
+        tuple (tuple of str): Returns a tuple of strings by splitting in_str at ','.
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
