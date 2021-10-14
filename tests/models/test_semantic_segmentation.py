@@ -32,7 +32,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.architecture.utils import crop_op
+from tiatoolbox.models.architecture.utils import center_crop
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
@@ -97,7 +97,7 @@ class _CNNTo1(ModelABC):
         hw = np.array(img_list.shape[2:])
         with torch.inference_mode():  # do not compute gradient
             logit_list = model(img_list)
-            logit_list = crop_op(logit_list, hw // 2)
+            logit_list = center_crop(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
             prob_list = F.relu(logit_list)
 

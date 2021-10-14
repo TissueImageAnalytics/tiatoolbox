@@ -23,9 +23,30 @@ import colorsys
 import random
 
 import cv2
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
+
+
+def random_colors(num_colors, bright=True):
+    """Generate a number of random colors.
+
+    To get visually distinct colors, generate them in HSV space then
+    convert to RGB.
+
+    Args:
+        num_colors(int): Number of perceptively different colors to generate.
+        bright(bool): To use bright color or not.
+
+    Returns:
+        List of (r, g, b) colors.
+
+    """
+    brightness = 1.0 if bright else 0.7
+    hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
+    colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+    random.shuffle(colors)
+    return colors
 
 
 def overlay_patch_prediction(
@@ -142,34 +163,23 @@ def overlay_patch_prediction(
     return ax
 
 
-def random_colors(num_colors, bright=True):
-    """Generate a number of random colors.
-
-    To get visually distinct colors, generate them in HSV space then
-    convert to RGB.
-
-    """
-    brightness = 1.0 if bright else 0.7
-    hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
-    colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
-    random.shuffle(colors)
-    return colors
-
-
 def overlay_instance_prediction(
     canvas, inst_dict, draw_dot=False, type_colour=None, line_thickness=2
 ):
     """Overlaying instance contours on image.
 
     Args:
-        canvas (ndarray): image to be drawn upon.
-        inst_dict (dict): dict of instances.
-        draw_dot: to draw a dot for each centroid
-        type_colour: a dict of {type_id : (type_name, colour)},
-            `type_id` is from 0-N and `colour` is a tuple of (R, G, B)
-        line_thickness: line thickness of contours
+        canvas (ndarray): Image to draw predictions on.
+        inst_dict (dict): Dictionary of instances. It is expected to be
+            in the following format:
+            {instance_id: {type: int, contour: List[List[int]], centroid:List[float]}.
+        draw_dot: To draw a dot for each centroid or not.
+        type_colour: A dict of {type_id : (type_name, colour)},
+            `type_id` is from 0-N and `colour` is a tuple of (R, G, B).
+        line_thickness: line thickness of contours.
 
     Return:
+        (np.ndarray) The overlaid image.
 
     """
     overlay = np.copy((canvas))

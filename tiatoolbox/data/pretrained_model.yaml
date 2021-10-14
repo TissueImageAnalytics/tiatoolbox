@@ -312,3 +312,49 @@ fcn_resnet50_unet-bcss:
             patch_output_shape: [512, 512]
             stride_shape: [256, 256]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_fast-pannuke:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-pannuke.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: 6
+            mode: "fast"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_original-kumar:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-kumar.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: null  # None in python ?, only do instance segmentation
+            mode: "original"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}

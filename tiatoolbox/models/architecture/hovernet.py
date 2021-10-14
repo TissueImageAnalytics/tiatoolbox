@@ -33,8 +33,13 @@ from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 
 from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.architecture.utils import (
+    UpSample2x,
+    center_crop,
+    center_crop_to_shape,
+)
+from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
-from tiatoolbox.models.backbone.utils import center_crop, center_crop_to_shape
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -269,34 +274,6 @@ class ResidualBlock(nn.Module):
         return feat
 
 
-class UpSample2x(nn.Module):
-    """Upsample input by a factor of 2.
-
-    Assume input is of NCHW, port FixedUnpooling from TensorPack.
-
-    """
-
-    def __init__(self):
-        super().__init__()
-        # correct way to create constant within module
-        self.register_buffer(
-            "unpool_mat", torch.from_numpy(np.ones((2, 2), dtype="float32"))
-        )
-        self.unpool_mat.unsqueeze(0)
-
-    def forward(self, x: torch.Tensor):
-        input_shape = list(x.shape)
-        # unsqueeze is expand_dims equivalent
-        # permute is transpose equivalent
-        # view is reshape equivalent
-        x = x.unsqueeze(-1)  # bchwx1
-        mat = self.unpool_mat.unsqueeze(0)  # 1xshxsw
-        ret = torch.tensordot(x, mat, dims=1)  # bxcxhxwxshxsw
-        ret = ret.permute(0, 1, 2, 4, 3, 5)
-        ret = ret.reshape((-1, input_shape[1], input_shape[2] * 2, input_shape[3] * 2))
-        return ret
-
-
 class HoVerNet(ModelABC):
     """Initialise HoVer-Net."""
 
@@ -325,7 +302,7 @@ class HoVerNet(ModelABC):
             ("bn", nn.BatchNorm2d(64, eps=1e-5)),
             ("relu", nn.ReLU(inplace=True)),
         ]
-        # prepend the padding for `fast` mode
+        # pre-pend the padding for `fast` mode
         if mode == "fast":
             modules = [("pad", TFSamepaddingLayer(ksize=7, stride=1)), *modules]
 
@@ -561,7 +538,7 @@ class HoVerNet(ModelABC):
 
         inst_info_dict = None
 
-        inst_id_list = np.unique(pred_inst)[1:]  # exlcude background
+        inst_id_list = np.unique(pred_inst)[1:]  # exclude background
         inst_info_dict = {}
         for inst_id in inst_id_list:
             inst_map = pred_inst == inst_id
@@ -644,15 +621,14 @@ class HoVerNet(ModelABC):
         """
         patch_imgs = batch_data
 
-        # TODO: change device to any valid device, not just cuda/cpu
-        device = "cuda" if on_gpu else "cpu"
+        device = misc.select_device(on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 
         model.eval()  # infer mode
 
         # --------------------------------------------------------------
-        with torch.no_grad():  # dont compute gradient
+        with torch.inference_mode():
             pred_dict = model(patch_imgs_gpu)
             pred_dict = OrderedDict(
                 [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()]

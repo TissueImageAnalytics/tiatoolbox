@@ -23,23 +23,24 @@
 import uuid
 from typing import List, Union
 
-import numpy as np
-
 # replace with the sql database once the PR in place
 import joblib
+import numpy as np
 import pygeos
-
 import torch
 import tqdm
 
-from tiatoolbox.models.segmentation import IOConfigSegmentor, SemanticSegmentor
+from tiatoolbox.models.controller.semantic_segmentor import (
+    IOSegmentorConfig,
+    SemanticSegmentor,
+)
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 
-# till the day Python can natively pickle Object method
-# the only way to passing function is top-level or may be
-# static instance method
+# till the day Python could natively pickle Object method/static method
+# the only way to passing function is top-level. Or we have to jump to
+# another third party solution
 def _process_tile_predictions(
     ioconfig,
     tile_bound,
@@ -183,7 +184,7 @@ def _process_tile_predictions(
         )
         # !
 
-        # remove existings insts in old prediction that intersect
+        # remove existing instances in old prediction which intersect
         # with the margin lines
         sel_indices = [
             ref_inst_rtree.query(bound, predicate="intersects")
@@ -211,7 +212,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     def _get_tile_info(
         self,
         image_shape: Union[List[int], np.ndarray],
-        ioconfig: IOConfigSegmentor,
+        ioconfig: IOSegmentorConfig,
     ):
         """Generating tile information.
 
@@ -223,12 +224,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         the stiching process will require removal of predictions within
         some bounding areas. This function generates both the tile placement
         as well as the flag to indicate how the removal should be done to
-        achieve the goal above.
+        achieve the above goal.
 
         Args:
-            image_shape (:class:`numpy.ndarray`, list(int)): the shape of WSI
+            image_shape (:class:`numpy.ndarray`, list(int)): The shape of WSI
                 to extract the tile from, assumed to be in [width, height].
-            ioconfig (:obj:IOConfigSegmentor): the input and output
+            ioconfig (:obj:IOSegmentorConfig): The input and output
                 configuration objects.
         Returns:
             grid_tiles, removal_flags: ndarray
@@ -262,7 +263,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # ! DEPRECATION:
             # !     will be deprecated upon finalization of SQL annotation store
             sel_boxes = [
-                pygeos.box(0, 0, w, 0),  # top egde
+                pygeos.box(0, 0, w, 0),  # top edge
                 pygeos.box(0, h, w, h),  # bottom edge
                 pygeos.box(0, 0, 0, h),  # left
                 pygeos.box(w, 0, w, h),  # right
@@ -393,6 +394,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
     def _infer_once(self):
+        """Running the inference only once for the currentl active dataloder."""
         num_steps = len(self._loader)
 
         pbar_desc = "Process Batch: "
@@ -438,19 +440,19 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     def _predict_one_wsi(
         self,
         wsi_idx: int,
-        ioconfig: IOConfigSegmentor,
+        ioconfig: IOSegmentorConfig,
         save_path: str,
         mode: str,
     ):
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): index of the tile/wsi to be processed within `self`.
-            ioconfig (IOConfigSegmentor): object which defines I/O placement during
+            wsi_idx (int): Index of the tile/wsi to be processed within `self`.
+            ioconfig (IOSegmentorConfig): Object which defines I/O placement during
                 inference and when assembling back to full tile/wsi.
-            loader (torch.Dataloader): loader object which return batch of data
+            loader (torch.Dataloader): The loader object which return batch of data
                 to be input to model.
-            save_path (str): location to save output prediction as well as possible
+            save_path (str): Location to save output prediction as well as possible
                 intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
         """
@@ -476,7 +478,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             patch_outputs = patch_outputs[sel]
             patch_inputs = patch_inputs[sel]
 
-        # assume to be in [topleft_x, topleft_y, botright_x, botright_y]
+        # assume to be in [top_left_x, top_left_y, bot_right_x, bot_right_y]
         # ! DEPRECATION:
         # !     will be deprecated upon finalization of SQL annotation store
         spatial_indexer = pygeos.STRtree(

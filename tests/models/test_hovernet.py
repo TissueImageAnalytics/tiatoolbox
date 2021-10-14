@@ -20,28 +20,26 @@
 
 """Unit test package for HoVerNet."""
 
-import pytest
-
 import numpy as np
+import pytest
 import torch
 import torch.nn as nn
 
-# import sys
-
-# sys.path.append(".")
-
-from tiatoolbox.wsicore.wsireader import get_wsireader
-from tiatoolbox.models.backbone.hovernet import (
-    TFSamepaddingLayer,
+from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.architecture.hovernet import (
     DenseBlock,
-    ResidualBlock,
     HoVerNet,
+    ResidualBlock,
+    TFSamepaddingLayer,
 )
+from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-def test_functionality():
+def test_functionality(remote_sample, tmp_path):
     """Functionality test."""
-    reader = get_wsireader("local/samples/wsi1_2k_2k.svs")
+    tmp_path = str(tmp_path)
+    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    reader = get_wsireader(sample_wsi)
 
     #
     patch = reader.read_bounds(
@@ -49,10 +47,8 @@ def test_functionality():
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=6, mode="fast")
-    pretrained = (
-        "/home/dang/storage_1/workspace/pretrained/hovernet_fast_pannuke_pytorch.tar"
-    )
-    pretrained = torch.load(pretrained)["desc"]
+    fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
@@ -65,10 +61,8 @@ def test_functionality():
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=None, mode="original")
-    pretrained = (
-        "/home/dang/storage_1/workspace/pretrained/hovernet_original_kumar_pytorch.tar"
-    )
-    pretrained = torch.load(pretrained)["desc"]
+    fetch_pretrained_weights("hovernet_original-kumar", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
