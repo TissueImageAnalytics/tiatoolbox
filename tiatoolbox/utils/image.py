@@ -157,6 +157,11 @@ def make_bounds_size_positive(bounds):
             - :py:obj:`bool` - Horizontal flip
             - :py:obj:`bool` - Vertical flip
 
+    Examples:
+        >>> from tiatoolbox.utils.image import make_bounds_size_positive
+        >>> bounds = (10, 10, 0, 0)
+        >>> positive_bounds, flipud, fliplr = make_bounds_size_positive(bounds)
+
     """
     fliplr, flipud = False, False
     _, (width, height) = bounds2locsize(bounds)
