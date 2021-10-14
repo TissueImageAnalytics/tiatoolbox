@@ -91,6 +91,15 @@ def find_padding(read_location, read_size, image_size):
     Returns:
         tuple: Tuple of padding to apply in the format expect by np.pad.
             i.e. ((before_x, after_x), (before_y, after_y)).
+
+    Examples:
+        >>> from tiatoolbox.utils.image import find_padding
+        >>> location, size = (-2, -2), (10, 10)
+        >>> # Find padding needed to make the output (10, 10)
+        >>> # if the image is only (5 , 5) and read at
+        >>> # location (-2, -2).
+        >>> find_padding(location, size, image_size=(5, 5))
+
     """
     read_location = np.array(read_location)
     read_size = np.array(read_size)
@@ -112,6 +121,12 @@ def find_overlap(read_location, read_size, image_size):
 
     Returns:
         tuple: Bounds of the overlapping region.
+
+    Examples:
+        >>> from tiatoolbox.utils.image import find_overlap
+        >>> loc, size = (-5, -5), (10, 10)
+        >>> find_overlap(loc, size, (5, 5))
+
     """
     read_location = np.array(read_location)
     read_size = np.array(read_size)
