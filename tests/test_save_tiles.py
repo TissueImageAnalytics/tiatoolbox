@@ -1,19 +1,19 @@
 """Tests for code related to saving image tiles."""
 
-from tiatoolbox.wsicore.save_tiles import save_tiles
-from tiatoolbox import utils
-from tiatoolbox import cli
-
-import pathlib
 import os
+import pathlib
+
 from click.testing import CliRunner
 
+from tiatoolbox import cli, utils
+from tiatoolbox.wsicore.save_tiles import save_tiles
 
-def test_save_tiles(_sample_all_wsis, tmp_path):
+
+def test_save_tiles(sample_all_wsis, tmp_path):
     """Test for save_tiles as a python function."""
     file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(_sample_all_wsis)),
+        input_path=str(pathlib.Path(sample_all_wsis)),
         file_types=file_types,
     )
 
@@ -74,7 +74,7 @@ def test_save_tiles(_sample_all_wsis, tmp_path):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_save_tiles(_sample_all_wsis, tmp_path):
+def test_command_line_save_tiles(sample_all_wsis, tmp_path):
     """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -82,7 +82,7 @@ def test_command_line_save_tiles(_sample_all_wsis, tmp_path):
         [
             "save-tiles",
             "--img_input",
-            str(pathlib.Path(_sample_all_wsis)),
+            str(pathlib.Path(sample_all_wsis)),
             "--file_types",
             '"*.ndpi, *.svs"',
             "--tile_objective_value",
@@ -95,7 +95,7 @@ def test_command_line_save_tiles(_sample_all_wsis, tmp_path):
     assert save_tiles_result.exit_code == 0
 
 
-def test_command_line_save_tiles_single_file(_sample_svs, tmp_path):
+def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
     """Test for save_tiles CLI single file."""
     runner = CliRunner()
     save_svs_tiles_result = runner.invoke(
@@ -103,7 +103,7 @@ def test_command_line_save_tiles_single_file(_sample_svs, tmp_path):
         [
             "save-tiles",
             "--img_input",
-            str(_sample_svs),
+            str(sample_svs),
             "--file_types",
             '"*.ndpi, *.svs"',
             "--tile_objective_value",
@@ -118,15 +118,15 @@ def test_command_line_save_tiles_single_file(_sample_svs, tmp_path):
     assert save_svs_tiles_result.exit_code == 0
 
 
-def test_command_line_save_tiles_file_not_found(_sample_svs, tmp_path):
-    """Test for save_tiles CLI single file."""
+def test_command_line_save_tiles_file_not_found(sample_svs, tmp_path):
+    """Test for save_tiles CLI file not found error."""
     runner = CliRunner()
     save_svs_tiles_result = runner.invoke(
         cli.main,
         [
             "save-tiles",
             "--img_input",
-            str(_sample_svs)[:-1],
+            str(sample_svs)[:-1],
             "--file_types",
             '"*.ndpi, *.svs"',
             "--tile_objective_value",

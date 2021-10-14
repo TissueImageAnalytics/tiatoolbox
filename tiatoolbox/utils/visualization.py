@@ -27,12 +27,12 @@ import matplotlib as mpl
 
 
 def overlay_patch_prediction(
-            img : np.ndarray,
-            prediction : np.ndarray,
-            alpha : float = 0.35,
-            label_info : dict = None,
-            ax=None,
-        ):
+    img: np.ndarray,
+    prediction: np.ndarray,
+    alpha: float = 0.35,
+    label_info: dict = None,
+    ax=None,
+):
     """Generate an overlay, given a 2D prediction map.
 
     Args:
@@ -44,16 +44,18 @@ def overlay_patch_prediction(
             By default, integer will be taken as label and color will be random.
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
+
     """
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
-            'Mismatch shape `img` {0} vs `prediction` {1}.'.format(
+            "Mismatch shape `img` {0} vs `prediction` {1}.".format(
                 img.shape[:2], prediction.shape[:2]
-            ))
+            )
+        )
 
     if np.issubdtype(img.dtype, np.floating):
         if not (img.max() <= 1.0 and img.min() >= 0):
-            raise ValueError('Not support float `img` outside [0, 1].')
+            raise ValueError("Not support float `img` outside [0, 1].")
         img = np.array(img * 255, dtype=np.uint8)
 
     overlay = img.copy()
@@ -73,20 +75,32 @@ def overlay_patch_prediction(
             if label_uid in check_uid_list:
                 check_uid_list.remove(label_uid)
             if not isinstance(label_uid, int):
-                raise ValueError('Wrong `label_info` format: label_uid {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_uid {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
             if not isinstance(label_name, str):
-                raise ValueError('Wrong `label_info` format: label_name {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_name {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
             if not isinstance(label_colour, (tuple, list, np.ndarray)):
-                raise ValueError('Wrong `label_info` format: label_colour {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_colour {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
             if len(label_colour) != 3:
-                raise ValueError('Wrong `label_info` format: label_colour {0}'.format(
-                    [label_uid, (label_name, label_colour)]))
+                raise ValueError(
+                    "Wrong `label_info` format: label_colour {0}".format(
+                        [label_uid, (label_name, label_colour)]
+                    )
+                )
         #
         if len(check_uid_list) != 0:
-            raise ValueError('Missing label for: {0}'.format(check_uid_list))
+            raise ValueError("Missing label for: {0}".format(check_uid_list))
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8

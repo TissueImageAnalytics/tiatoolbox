@@ -19,13 +19,13 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+import copy
 import json
 import os
 import pathlib
 import zipfile
 from typing import Union
 
-import copy
 import cv2
 import numpy as np
 import pandas as pd
@@ -34,7 +34,6 @@ import torch
 import yaml
 from skimage import exposure
 
-from tiatoolbox import rcParam
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
@@ -539,8 +538,8 @@ def download_data(url, save_path, overwrite=False):
         overwrite (bool): True to force overwriting of existing data, default=False
 
     """
-    print("Download from %s" % url)
-    print("Save to %s" % save_path)
+    print(f"Download from {url}")
+    print(f"Save to {save_path}")
     save_dir = pathlib.Path(save_path).parent
 
     if not os.path.exists(save_dir):
@@ -554,7 +553,7 @@ def download_data(url, save_path, overwrite=False):
     url_exists = status_code == 200
 
     if not url_exists:
-        raise ConnectionError("Could not find URL at %s" % url)
+        raise ConnectionError(f"Could not find URL at {url}")
 
     with open(save_path, "wb") as f:
         f.write(r.content)
@@ -602,10 +601,10 @@ def save_as_json(data, save_path):
             elif isinstance(v, np.ndarray):
                 v = v.tolist()
                 walk_list(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
             elif v is not None and not isinstance(v, (int, float, str, bool)):
                 raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            if isinstance(v, np.generic):
-                v = v.item()
             lst[i] = v
 
     def walk_dict(dct):
@@ -618,12 +617,12 @@ def save_as_json(data, save_path):
             elif isinstance(v, np.ndarray):
                 v = v.tolist()
                 walk_list(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
             elif v is not None and not isinstance(v, (int, float, str, bool)):
                 raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
             if not isinstance(k, (int, float, str, bool)):
                 raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
-            if isinstance(v, np.generic):
-                v = v.item()
             dct[k] = v
 
     if isinstance(shadow_data, dict):
@@ -672,20 +671,3 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
-
-
-def get_pretrained_model_info():
-    """Get the pretrained model information from yml file."""
-    pretrained_yml_path = os.path.join(
-        rcParam["TIATOOLBOX_HOME"],
-        "models/pretrained.yml",
-    )
-    if not os.path.exists(pretrained_yml_path):
-        download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/models/pretrained.yml",
-            pretrained_yml_path,
-        )
-    with open(pretrained_yml_path) as fptr:
-        pretrained_yml = yaml.full_load(fptr)
-
-    return pretrained_yml
