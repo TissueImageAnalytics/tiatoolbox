@@ -33,8 +33,8 @@ from tiatoolbox.models import (
 )
 from tiatoolbox.utils.metrics import f1_detection
 
-BATCH_SIZE = 16
-ON_GPU = True
+BATCH_SIZE = 2
+ON_GPU = False
 # ----------------------------------------------------
 
 
