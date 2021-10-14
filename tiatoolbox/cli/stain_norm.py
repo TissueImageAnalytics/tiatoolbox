@@ -10,7 +10,7 @@ from tiatoolbox.tools import stainnorm as sn
 @click.group()
 def main():
     """Define stain_norm click group."""
-    return 0
+    return 0  # pragma: no cover
 
 
 @main.command()

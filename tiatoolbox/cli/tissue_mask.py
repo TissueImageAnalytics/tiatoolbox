@@ -13,7 +13,7 @@ from tiatoolbox.tools import tissuemask
 @click.group()
 def main():
     """Define tissue_mask click group."""
-    return 0
+    return 0  # pragma: no cover
 
 
 @main.command()

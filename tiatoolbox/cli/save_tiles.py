@@ -9,7 +9,7 @@ from tiatoolbox import utils, wsicore
 @click.group()
 def main():
     """Define save_tiles click group."""
-    return 0
+    return 0  # pragma: no cover
 
 
 @main.command()

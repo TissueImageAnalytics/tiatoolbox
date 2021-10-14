@@ -11,7 +11,7 @@ from tiatoolbox import utils, wsicore
 @click.group()
 def main():
     """Define slide_info click group."""
-    return 0
+    return 0  # pragma: no cover
 
 
 @main.command()

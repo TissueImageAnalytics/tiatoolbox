@@ -11,7 +11,7 @@ from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
 @click.group()
 def main():
     """Define patch_predictor click group."""
-    return 0
+    return 0  # pragma: no cover
 
 
 @main.command()
