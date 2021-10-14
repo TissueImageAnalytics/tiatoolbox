@@ -8,9 +8,9 @@ from tiatoolbox.tools import stainnorm as sn
 
 
 @click.group()
-def main():
+def main():  # pragma: no cover
     """Define stain_norm click group."""
-    return 0  # pragma: no cover
+    return 0
 
 
 @main.command()

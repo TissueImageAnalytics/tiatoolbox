@@ -11,9 +11,9 @@ from tiatoolbox.tools import tissuemask
 
 
 @click.group()
-def main():
+def main():  # pragma: no cover
     """Define tissue_mask click group."""
-    return 0  # pragma: no cover
+    return 0
 
 
 @main.command()
