@@ -411,10 +411,7 @@ class DeepZoomGenerator(TilePyramidGenerator):
             >>> dz = DeepZoomGenerator(slide)
             >>> dzi = dz.get_dzi()
             >>> print(ET.tostring(dzi, encoding="utf8").decode("utf8))
-            <?xml version='1.0' encoding='utf8'?>
-            <Image Format="jpg" Overlap="1" TileSize="256"
-                xmlns="http://schemas.microsoft.com/deepzoom/2008">
-            <Size Height="512" Width="512" /></Image>
+
         """
         width, height = self.wsi.info.slide_dimensions
         if dzi_format == "xml":
