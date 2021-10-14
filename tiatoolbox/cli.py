@@ -28,6 +28,7 @@ import numpy as np
 from PIL import Image
 
 from tiatoolbox import __version__, utils, wsicore
+from tiatoolbox.cli_commands.read_bounds import read_bounds
 from tiatoolbox.cli_commands.slide_info import slide_info
 from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
 from tiatoolbox.tools import stainnorm as sn
@@ -54,61 +55,7 @@ def main():
 
 
 main.add_command(slide_info)
-
-
-@main.command()
-@click.option("--img_input", help="Path to WSI file")
-@click.option(
-    "--output_path",
-    help="Path to output file to save the image region in save mode,"
-    " default=img_input_dir/../im_region.jpg",
-)
-@click.option(
-    "--region",
-    type=int,
-    nargs=4,
-    help="image region in the whole slide image to read, default=0 0 2000 2000",
-)
-@click.option(
-    "--resolution",
-    type=float,
-    default=0,
-    help="resolution to read the image at, default=0",
-)
-@click.option(
-    "--units",
-    default="level",
-    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
-    help="resolution units, default=level",
-)
-@click.option(
-    "--mode",
-    default="show",
-    help="'show' to display image region or 'save' to save at the output path"
-    ", default=show",
-)
-def read_bounds(img_input, region, resolution, units, output_path, mode):
-    """Read a region in an whole slide image as specified."""
-    if not region:
-        region = [0, 0, 2000, 2000]
-
-    if output_path is None and mode == "save":
-        input_dir = pathlib.Path(img_input).parent
-        output_path = str(input_dir.parent / "im_region.jpg")
-
-    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
-
-    im_region = wsi.read_bounds(
-        region,
-        resolution=resolution,
-        units=units,
-    )
-    if mode == "show":
-        im_region = Image.fromarray(im_region)
-        im_region.show()
-
-    if mode == "save":
-        utils.misc.imwrite(output_path, im_region)
+main.add_command(read_bounds)
 
 
 @main.command()
@@ -216,7 +163,7 @@ def save_tiles(
 @click.option("--target_input", help="input path to the target image")
 @click.option(
     "--method",
-    help="Stain normlisation method to use. Choose from 'reinhard', 'custom',"
+    help="Stain normalisation method to use. Choose from 'reinhard', 'custom',"
     "'ruifrok', 'macenko, 'vahadane'",
     default="reinhard",
 )

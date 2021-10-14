@@ -5,7 +5,6 @@ import pathlib
 import click
 
 from tiatoolbox import utils, wsicore
-from tiatoolbox.utils.misc import string_to_tuple
 
 
 @click.group()
@@ -38,7 +37,7 @@ def slide_info():
 )
 def slide_info(img_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
-    file_types = string_to_tuple(file_types=file_types)
+    file_types = utils.misc.string_to_tuple(file_types=file_types)
 
     if isinstance(output_dir, str):
         output_dir = pathlib.Path(output_dir)
