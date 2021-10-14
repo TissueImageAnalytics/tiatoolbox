@@ -394,6 +394,16 @@ def test_functional_segmentor_merging(tmp_path):
             cache_count_path=f"{save_dir}/count.1.py",
             free_prediction=False,
         )
+    # * test non HW predictions
+    with pytest.raises(ValueError, match=r".*Prediction is no HW or HWC.*"):
+        semantic_segmentor.merge_prediction(
+            [4, 4],
+            [np.full((2,), 1), np.full((2,), 2)],
+            [[0, 0, 2, 2], [2, 2, 4, 4]],
+            save_path=f"{save_dir}/raw.py",
+            cache_count_path=f"{save_dir}/count.1.py",
+            free_prediction=False,
+        )
 
     _rm_dir(save_dir)
     os.mkdir(save_dir)
