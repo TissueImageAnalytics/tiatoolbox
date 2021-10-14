@@ -23,6 +23,7 @@ import copy
 import json
 import os
 import pathlib
+import re
 import zipfile
 from typing import Union
 
@@ -675,4 +676,4 @@ def model_to(on_gpu, model):
 
 def string_to_tuple(file_types):
     """Split file_types string to tuple."""
-    return tuple(file_types.split(", "))
+    return tuple(re.split(", |,", file_types))
