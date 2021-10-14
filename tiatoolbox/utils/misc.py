@@ -674,6 +674,14 @@ def model_to(on_gpu, model):
     return model
 
 
-def string_to_tuple(file_types):
-    """Split file_types string to tuple."""
-    return tuple(re.split(", |,", file_types))
+def string_to_tuple(in_str):
+    """Splits input string to tuple at ','.
+
+    Args:
+        in_str (str): input string.
+
+    Returns:
+        tuple (tuple of str): Returns a tuple of strings by splitting input string at ','.
+
+    """
+    return tuple(substring.strip() for substring in in_str.split(","))
