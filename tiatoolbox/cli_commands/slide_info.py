@@ -8,12 +8,12 @@ from tiatoolbox import utils, wsicore
 
 
 @click.group()
-def slide_info():
+def main():
     """Define slide_info click group."""
     return 0
 
 
-@slide_info.command()
+@main.command()
 @click.option("--img_input", help="input path to WSI file or directory path")
 @click.option(
     "--output_dir",
