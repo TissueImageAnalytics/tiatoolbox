@@ -56,13 +56,13 @@ class IOSegmentorConfig(IOConfigABC):
     """Contain semantic segmentor input and output information.
 
     Args:
-        input_resolutions (list): resolution of each input head of model
+        input_resolutions (list): Resolution of each input head of model
           inference, must be in the same order as target model.forward().
-        output_resolutions (list): resolution of each output head from model
+        output_resolutions (list): Resolution of each output head from model
           inference, must be in the same order as target model.infer_batch().
-        patch_input_shape (:class:`numpy.ndarray`, list(int)): shape of the
+        patch_input_shape (:class:`numpy.ndarray`, list(int)): Shape of the
           largest input in (height, width).
-        patch_output_shape (:class:`numpy.ndarray`, list(int)): shape of the
+        patch_output_shape (:class:`numpy.ndarray`, list(int)): Shape of the
           largest output in (height, width).
         save_resolution  (dict): resolution to save all output.
 
@@ -155,9 +155,9 @@ class IOSegmentorConfig(IOConfigABC):
         highest resolutions found in the input list of resolutions.
 
         Args:
-            resolutions (list): a list of resolutions where each defined
+            resolutions (list): A list of resolutions where each defined
               as `{'resolution': value, 'unit': value}`
-            units (str): unit that the the resolutions are at.
+            units (str): Units that the the resolutions are at.
 
         Returns:
             :class:`numpy.ndarray`: an 1D array of scaling factor having the same
@@ -451,7 +451,7 @@ class SemanticSegmentor:
               `IOSegmentorConfig` for details about available attributes.
 
         Returns:
-            (tuple): tuple containing:
+            (tuple): Tuple containing:
                 patch_inputs (list): A list of corrdinates in
                   `[start_x, start_y, end_x, end_y]` format indicating the read
                   location of the patch in the mother image.
@@ -492,7 +492,7 @@ class SemanticSegmentor:
         obey the API defined here.
 
         Args:
-            mask_reader (:class:`.VirtualReader`): a virtual pyramidal
+            mask_reader (:class:`.VirtualReader`): A virtual pyramidal
               reader of the mask related to the WSI from which we want
               to extract the patches.
             bounds (ndarray and np.int32): Coordinates to be checked
@@ -504,7 +504,7 @@ class SemanticSegmentor:
               refer to bounding boxes in `[start_x, start_y, end_x, end_y]` format.
 
         Returns:
-            ndarray: list of flags to indicate which coordinate is valid.
+            ndarray: List of flags to indicate which coordinate is valid.
 
         Examples:
             >>> # API of function expected to overwrite `filter_coordinates`
@@ -575,12 +575,12 @@ class SemanticSegmentor:
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): index of the tile/wsi to be processed within `self`.
-            ioconfig (:class:`IOSegmentorConfig`): object which defines I/O
+            wsi_idx (int): Index of the tile/wsi to be processed within `self`.
+            ioconfig (:class:`IOSegmentorConfig`): Object which defines I/O
               placement during inference and when assembling back to full tile/wsi.
-            loader (torch.Dataloader): loader object which return batch of data
+            loader (torch.Dataloader): Loader object which return batch of data
               to be input to model.
-            save_path (str): location to save output prediction as well as possible
+            save_path (str): Location to save output prediction as well as possible
               intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
 
@@ -754,7 +754,7 @@ class SemanticSegmentor:
               once processed. This is to save memory when assembling.
 
         Returns:
-            :class:`numpy.ndarray` : an image contains merged data.
+            :class:`numpy.ndarray` : An image contains merged data.
 
         Examples:
 
