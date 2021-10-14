@@ -63,7 +63,7 @@ def tissue_mask(
     img_input, output_path, method, resolution, units, kernel_size, mode, file_types
 ):
     """Generate tissue mask for a WSI."""
-    file_types = utils.misc.string_to_tuple(file_types=file_types)
+    file_types = utils.misc.string_to_tuple(in_str=file_types)
     output_path = pathlib.Path(output_path)
 
     if not os.path.exists(img_input):

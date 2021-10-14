@@ -47,7 +47,7 @@ def stain_norm(
     source_input, target_input, method, stain_matrix, output_path, file_types
 ):
     """Stain normalise an input image/directory of input images."""
-    file_types = utils.misc.string_to_tuple(file_types=file_types)
+    file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if not os.path.exists(source_input):
         raise FileNotFoundError

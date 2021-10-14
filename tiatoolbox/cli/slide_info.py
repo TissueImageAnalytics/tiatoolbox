@@ -1,6 +1,7 @@
 """Command line interface for slide_info."""
 import os
 import pathlib
+import sys
 
 import click
 
@@ -38,7 +39,7 @@ def main():
 )
 def slide_info(img_input, output_dir, file_types, mode, verbose):
     """Display or save WSI metadata."""
-    file_types = utils.misc.string_to_tuple(file_types=file_types)
+    file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if isinstance(output_dir, str):
         output_dir = pathlib.Path(output_dir)
@@ -80,3 +81,7 @@ def slide_info(img_input, output_dir, file_types, mode, verbose):
                 out_path,
             )
             print("Meta files saved at " + str(output_dir))
+
+
+if __name__ == "__main__":
+    sys.exit(main())  # pragma: no cover

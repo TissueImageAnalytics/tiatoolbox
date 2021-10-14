@@ -52,7 +52,7 @@ def save_tiles(
     verbose=True,
 ):
     """Display or save WSI metadata."""
-    file_types = utils.misc.string_to_tuple(file_types=file_types)
+    file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if not os.path.exists(img_input):
         raise FileNotFoundError

@@ -137,7 +137,7 @@ def patch_predictor(
     """Process an image/directory of input images with a patch classification CNN."""
 
     output_path = pathlib.Path(output_path)
-    file_types = utils.misc.string_to_tuple(file_types=file_types)
+    file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if not os.path.exists(img_input):
         raise FileNotFoundError
