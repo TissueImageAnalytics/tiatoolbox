@@ -30,6 +30,7 @@ from tiatoolbox.cli_commands.read_bounds import read_bounds
 from tiatoolbox.cli_commands.save_tiles import save_tiles
 from tiatoolbox.cli_commands.slide_info import slide_info
 from tiatoolbox.cli_commands.slide_thumbnail import slide_thumbnail
+from tiatoolbox.cli_commands.stain_norm import stain_norm
 from tiatoolbox.cli_commands.tissue_mask import tissue_mask
 
 
@@ -56,6 +57,7 @@ main.add_command(slide_thumbnail)
 main.add_command(save_tiles)
 main.add_command(tissue_mask)
 main.add_command(patch_predictor)
+main.add_command(stain_norm)
 
 
 if __name__ == "__main__":
