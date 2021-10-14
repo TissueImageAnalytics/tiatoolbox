@@ -64,7 +64,7 @@ class IOSegmentorConfig(IOConfigABC):
           largest input in (height, width).
         patch_output_shape (:class:`numpy.ndarray`, list(int)): Shape of the
           largest output in (height, width).
-        save_resolution  (dict): resolution to save all output.
+        save_resolution  (dict): Resolution to save all output.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
