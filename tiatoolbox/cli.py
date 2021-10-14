@@ -24,17 +24,14 @@ import pathlib
 import sys
 
 import click
-import numpy as np
-from PIL import Image
 
-from tiatoolbox import __version__, utils, wsicore
+from tiatoolbox import __version__, utils
 from tiatoolbox.cli_commands.read_bounds import read_bounds
 from tiatoolbox.cli_commands.save_tiles import save_tiles
 from tiatoolbox.cli_commands.slide_info import slide_info
 from tiatoolbox.cli_commands.slide_thumbnail import slide_thumbnail
+from tiatoolbox.cli_commands.tissue_mask import tissue_mask
 from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
-from tiatoolbox.tools import tissuemask
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import string_to_tuple
 
 
@@ -59,109 +56,7 @@ main.add_command(slide_info)
 main.add_command(read_bounds)
 main.add_command(slide_thumbnail)
 main.add_command(save_tiles)
-
-
-@main.command()  # noqa: CCR001
-@click.option("--img_input", help="Path to WSI file")
-@click.option(
-    "--output_path",
-    help="Path to output file to save the image region in save mode,"
-    " default=tissue_mask",
-    default="tissue_mask",
-)
-@click.option(
-    "--method",
-    help="Tissue masking method to use. Choose from 'Otsu', 'Morphological',"
-    " default=Otsu",
-    default="Otsu",
-)
-@click.option(
-    "--resolution",
-    type=float,
-    default=1.25,
-    help="resolution to read the image at, default=1.25",
-)
-@click.option(
-    "--units",
-    default="power",
-    help="resolution units, default=power",
-)
-@click.option(
-    "--kernel_size",
-    type=int,
-    nargs=2,
-    help="kernel size for morphological dilation, default=1, 1",
-)
-@click.option(
-    "--mode",
-    default="show",
-    help="'show' to display tissue mask or 'save' to save at the output path"
-    ", default=show",
-)
-@click.option(
-    "--file_types",
-    help="file types to capture from directory, "
-    "default='*.svs, *.ndpi, *.jp2, *.png', '*.jpg', '*.tif', '*.tiff'",
-    default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",
-)
-def tissue_mask(
-    img_input, output_path, method, resolution, units, kernel_size, mode, file_types
-):
-    """Generate tissue mask for a WSI."""
-
-    file_types = string_to_tuple(file_types=file_types)
-    output_path = pathlib.Path(output_path)
-
-    if not os.path.exists(img_input):
-        raise FileNotFoundError
-
-    files_all = [
-        img_input,
-    ]
-
-    if os.path.isdir(img_input):
-        files_all = utils.misc.grab_files_from_dir(
-            input_path=img_input, file_types=file_types
-        )
-
-    if mode == "save" and not output_path.is_dir():
-        os.makedirs(output_path)
-
-    if method not in ["Otsu", "Morphological"]:
-        raise MethodNotSupported
-
-    masker = None
-
-    if method == "Otsu":
-        masker = tissuemask.OtsuTissueMasker()
-
-    if method == "Morphological":
-        if not kernel_size:
-            if units not in ["mpp", "power"]:
-                raise MethodNotSupported(
-                    "Specified units not supported for tissue masking."
-                )
-            if units == "mpp":
-                masker = tissuemask.MorphologicalMasker(mpp=resolution)
-            if units == "power":
-                masker = tissuemask.MorphologicalMasker(power=resolution)
-        else:
-            masker = tissuemask.MorphologicalMasker(kernel_size=kernel_size)
-
-    for curr_file in files_all:
-        wsi = wsicore.wsireader.get_wsireader(input_img=curr_file)
-        wsi_thumb = wsi.slide_thumbnail(resolution=1.25, units="power")
-        mask = masker.fit_transform(wsi_thumb[np.newaxis, :])
-
-        if mode == "show":
-            im_region = Image.fromarray(mask[0])
-            im_region.show()
-
-        if mode == "save":
-            utils.misc.imwrite(
-                output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
-                mask[0].astype(np.uint8) * 255,
-            )
+main.add_command(tissue_mask)
 
 
 @main.command()
