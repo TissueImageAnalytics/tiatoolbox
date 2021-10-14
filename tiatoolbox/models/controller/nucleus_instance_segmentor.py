@@ -200,6 +200,7 @@ def _process_tile_predictions(
         raise ValueError(f"Unknown tile mode {tile_mode}.")
 
     def retrieve_sel_uids(sel_indices, inst_dict):
+        """Helper to retrieved selected instance uids."""
         sel_uids = []
         if len(sel_indices) > 0:
             # not sure how costly this is in large dict
@@ -629,7 +630,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         else:
             future = _process_tile_predictions(*args)
         self._futures.append(future)
-        return
 
     def _merge_post_process_results(self):
         """"Helper to aggregate results from parallel workers."""
@@ -661,5 +661,3 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # manually call the callback rather than
             # attaching it when receiving/creating the future
             callback(*result)
-
-        return

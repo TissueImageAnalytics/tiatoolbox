@@ -76,7 +76,6 @@ def test_functionality(remote_sample, tmp_path):
 
 def test_unit_blocks():
     """Tests for blocks within HoVerNet."""
-
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
     sample = torch.rand((1, 3, 14, 14), dtype=torch.float32)

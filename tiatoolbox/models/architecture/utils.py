@@ -41,6 +41,9 @@ def center_crop(
             [substracted height, substracted width].
         data_format (str): choose either `NCHW` or `NHWC`
 
+    Returns:
+        (ndarray, torch.tensor) Cropped image.
+
     """
     if data_format not in ["NCHW", "NHWC"]:
         raise ValueError(f"Unknown input format `{data_format}`")
@@ -67,17 +70,14 @@ def center_crop_to_shape(
     be smaller than `x` heigh width.
 
     Args:
-        x (ndarray, torch.tensor): image to be cropped.
-        y (ndarray, torch.tensor): reference image for getting cropping shape,
+        x (ndarray, torch.tensor): Image to be cropped.
+        y (ndarray, torch.tensor): Reference image for getting cropping shape,
             should be of 3 channels.
-        data_format: choose either `NCHW` or `NHWC`
+        data_format: Should either be `NCHW` or `NHWC`.
 
-    """
+    Returns:
+        (ndarray, torch.tensor) Cropped image.
 
-    """Centre crop x so that x has shape of y. y dims must be smaller than x dims.
-    Args:
-        x: input array
-        y: array with desired shape.
     """
     if data_format not in ["NCHW", "NHWC"]:
         raise ValueError(f"Unknown input format `{data_format}`")

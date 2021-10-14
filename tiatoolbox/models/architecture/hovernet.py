@@ -56,6 +56,7 @@ class TFSamepaddingLayer(nn.Module):
         self.stride = stride
 
     def forward(self, x: torch.Tensor):
+        """Logic for using layers defined in init."""
         if x.shape[2] % self.stride == 0:
             pad = max(self.ksize - self.stride, 0)
         else:
@@ -153,6 +154,7 @@ class DenseBlock(nn.Module):
         )
 
     def forward(self, prev_feat: torch.Tensor):
+        """Logic for using layers defined in init."""
         for idx in range(self.nr_unit):
             new_feat = self.units[idx](prev_feat)
             prev_feat = center_crop_to_shape(prev_feat, new_feat)
@@ -260,6 +262,7 @@ class ResidualBlock(nn.Module):
         )
 
     def forward(self, prev_feat: torch.Tensor):
+        """Logic for using layers defined in init."""
         if self.shortcut is None:
             shortcut = prev_feat
         else:
@@ -286,12 +289,8 @@ class HoVerNet(ModelABC):
 
         if mode not in ["original", "fast"]:
             raise ValueError(
-                " ".join(
-                    [
-                        f"Invalid mode {mode} for HoVerNet.",
-                        f"Only support `original` or `fast`.",
-                    ]
-                )
+                f"Invalid mode {mode} for HoVerNet. "
+                "Only support `original` or `fast`."
             )
 
         modules = [
@@ -315,6 +314,7 @@ class HoVerNet(ModelABC):
         self.conv_bot = nn.Conv2d(2048, 1024, 1, stride=1, padding=0, bias=False)
 
         def create_decoder_branch(out_ch=2, ksize=5):
+            """Helper to create a decoder branch."""
             modules = [
                 ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
                 ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
@@ -383,7 +383,18 @@ class HoVerNet(ModelABC):
         self.upsample2x = UpSample2x()
 
     def forward(self, imgs: torch.Tensor):
+        """Logic for using layers defined in init.
 
+        This method defines how layers are used in forward operation.
+
+        Args:
+            imgs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+
+        Returns:
+            output (dict): A dictionary containing the inference output.
+                The expected format os {decoder_name: prediction}.
+
+        """
         imgs = imgs / 255.0  # to 0-1 range to match XY
 
         d0 = self.conv0(imgs)
