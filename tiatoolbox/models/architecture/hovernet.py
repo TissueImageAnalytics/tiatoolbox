@@ -511,8 +511,8 @@ class HoVerNet(ModelABC):
 
         return proced_pred
 
-    # skipcq: PYL-W0221
     @staticmethod
+    # skipcq: PYL-W0221
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
 
@@ -656,5 +656,4 @@ class HoVerNet(ModelABC):
 
         if "tp" in pred_dict:
             return pred_dict["np"], pred_dict["hv"], pred_dict["tp"]
-        else:
-            return pred_dict["np"], pred_dict["hv"]
+        return pred_dict["np"], pred_dict["hv"]

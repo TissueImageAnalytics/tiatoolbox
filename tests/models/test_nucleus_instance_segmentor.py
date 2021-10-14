@@ -366,11 +366,11 @@ def test_functionality(remote_sample, tmp_path):
     assert score > 0.9, "Heavy loss of precision!"
 
     # # this is for manual debugging
-    from tiatoolbox.utils.misc import imwrite
-    from tiatoolbox.utils.visualization import overlay_instance_prediction
-    from tiatoolbox.wsicore.wsireader import get_wsireader
+    # from tiatoolbox.utils.misc import imwrite
+    # from tiatoolbox.utils.visualization import overlay_instance_prediction
+    # from tiatoolbox.wsicore.wsireader import get_wsireader
 
-    wsi_reader = get_wsireader(sample_wsi)
-    thumb = wsi_reader.slide_thumbnail(resolution=0.25, units="mpp")
-    thumb = overlay_instance_prediction(thumb, inst_dict_b)
-    imwrite("dump.png", thumb)
+    # wsi_reader = get_wsireader(sample_wsi)
+    # thumb = wsi_reader.slide_thumbnail(resolution=0.25, units="mpp")
+    # thumb = overlay_instance_prediction(thumb, inst_dict_b)
+    # imwrite("dump.png", thumb)

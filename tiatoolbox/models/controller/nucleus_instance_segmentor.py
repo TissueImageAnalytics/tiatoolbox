@@ -125,7 +125,7 @@ def _process_tile_predictions(
             free_prediction=True,
         )
         head_raws.append(head_raw)
-    inst_img, inst_dict = postproc(head_raws)
+    _, inst_dict = postproc(head_raws)
 
     # should be extremely rare
     if len(inst_dict) == 0:
@@ -286,8 +286,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # adding more runtime placeholder
         self._wsi_inst_info = None
 
+    @staticmethod
     def _get_tile_info(
-        self,
         image_shape: Union[List[int], np.ndarray],
         ioconfig: IOSegmentorConfig,
     ):
