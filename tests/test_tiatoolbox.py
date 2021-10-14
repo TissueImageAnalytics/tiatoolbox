@@ -4,7 +4,7 @@
 from click.testing import CliRunner
 
 from tiatoolbox import __version__, cli
-from tiatoolbox.cli_commands import (
+from tiatoolbox.cli import (
     patch_predictor,
     read_bounds,
     save_tiles,

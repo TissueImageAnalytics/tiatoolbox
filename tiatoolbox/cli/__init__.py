@@ -25,13 +25,15 @@ import sys
 import click
 
 from tiatoolbox import __version__
-from tiatoolbox.cli.patch_predictor import patch_predictor
-from tiatoolbox.cli.read_bounds import read_bounds
-from tiatoolbox.cli.save_tiles import save_tiles
-from tiatoolbox.cli.slide_info import slide_info
-from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
-from tiatoolbox.cli.stain_norm import stain_norm
-from tiatoolbox.cli.tissue_mask import tissue_mask
+from tiatoolbox.cli import (
+    patch_predictor,
+    read_bounds,
+    save_tiles,
+    slide_info,
+    slide_thumbnail,
+    stain_norm,
+    tissue_mask,
+)
 
 
 def version_msg():
@@ -51,13 +53,13 @@ def main():
     return 0
 
 
-main.add_command(slide_info)
-main.add_command(read_bounds)
-main.add_command(slide_thumbnail)
-main.add_command(save_tiles)
-main.add_command(tissue_mask)
-main.add_command(patch_predictor)
-main.add_command(stain_norm)
+main.add_command(slide_info.slide_info)
+main.add_command(read_bounds.read_bounds)
+main.add_command(slide_thumbnail.slide_thumbnail)
+main.add_command(save_tiles.save_tiles)
+main.add_command(tissue_mask.tissue_mask)
+main.add_command(patch_predictor.patch_predictor)
+main.add_command(stain_norm.stain_norm)
 
 
 if __name__ == "__main__":
