@@ -282,7 +282,6 @@ def pad_bounds(
 
     Examples:
         >>> pad_bounds((0, 0, 0, 0), 1)
-        (-1, -1, 1, 1)
 
     Returns:
         tuple(int): Tuple of bounds with padding to the edges.
