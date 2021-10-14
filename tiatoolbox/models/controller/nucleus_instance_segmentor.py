@@ -209,6 +209,35 @@ def _process_tile_predictions(
 class NucleusInstanceSegmentor(SemanticSegmentor):
     """Nucleus Instance Segmentor."""
 
+    def __init__(
+        self,
+        batch_size: int = 8,
+        num_loader_workers: int = 0,
+        num_postproc_workers: int = 0,
+        model: torch.nn.Module = None,
+        pretrained_model: str = None,
+        pretrained_weights: str = None,
+        verbose: bool = True,
+        auto_generate_mask: bool = False,
+        dataset_class: Callable = WSIStreamDataset,
+    ):
+        super().__init__(
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            num_postproc_workers=num_postproc_workers,
+            model=model,
+            pretrained_model=pretrained_model,
+            pretrained_weights=pretrained_weights,
+            verbose=verbose,
+            auto_generate_mask=auto_generate_mask,
+            dataset_class=dataset_class,
+        )
+        # default is None in base class and is un-settable
+        # hence we redefine the namespace here
+        self.num_postproc_workers = (
+            num_postproc_workers if num_postproc_workers > 0 else None
+        )
+
     def _get_tile_info(
         self,
         image_shape: Union[List[int], np.ndarray],
