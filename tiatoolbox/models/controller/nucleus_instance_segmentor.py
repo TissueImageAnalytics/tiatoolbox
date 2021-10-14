@@ -62,8 +62,12 @@ def _process_tile_predictions(
         tile_bounds (list): Boundary of the current tile, defined as
             (top_left_x, top_left_y, bottom_x, bottom_y).
         tile_flag (list): A list of flag to indicate if instances within
-            an area extended from each side of the tile should replace
-            those within the same spatial in the accumulated output.
+            an area extended from each side (by `ioconfig.margin`) of
+            the tile should replace those within the same spatial region
+            in the accumulated output. The format is
+            [top, bottom, left, right], 1 indicates removal while 0 is not.
+            Such as [1, 1, 0, 0] denotes replacing top and bottom instances
+            within `ref_inst_dict` with new ones after this processing.
         tile_mode (int): A flag to indicate the type of this tile. There
             are 4 flags:
             - 0: A tile from tile grid without any overlapping, it is not
@@ -296,7 +300,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         To avoid out of memory problem when processing WSI-scale in general,
         the predictor will perform the inference and assemble on a large
         image tiles (each may have size of 4000x4000 compared to patch
-        output of 256x256) first before sticthing every tiles at the end
+        output of 256x256) first before stitching every tiles by the end
         to complete the WSI output. For nuclei instance segmentation,
         the stiching process will require removal of predictions within
         some bounding areas. This function generates both the tile placement
