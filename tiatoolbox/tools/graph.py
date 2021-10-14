@@ -181,7 +181,7 @@ def hybrid_clustered_graph(
     return result
 
 
-def connect_points(points: ArrayLike, dthresh: Number = 3000) -> ArrayLike:
+def connect_points(points: ArrayLike, dthresh: Number) -> ArrayLike:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     See https://en.wikipedia.org/wiki/Adjacency_matrix.
