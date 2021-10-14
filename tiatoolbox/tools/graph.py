@@ -32,7 +32,7 @@ from scipy.spatial import Delaunay, cKDTree
 from sklearn.neighbors import KDTree as sKDTree
 
 
-def build_graph_dict(
+def hybrid_clustered_graph(
     points: ArrayLike,
     features: ArrayLike,
     label: Optional[int] = None,
@@ -43,7 +43,7 @@ def build_graph_dict(
     neighbour_search_radius: Number = 2000,
     feature_range_thresh: Number = 1e-4,
 ) -> Dict[str, ArrayLike]:
-    """Convert a set of points and associated features to a graph.
+    """Build a graph via hybrid clustering in spatial and feature space.
 
     This is part of the SlideGraph pipeline but may be used to construct
     a graph in general from point coordinates and features.
