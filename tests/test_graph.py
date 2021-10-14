@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.tools.graphconstruction import (
+from tiatoolbox.tools.graph import (
     affinity_to_edge_index,
     build_graph_dict,
     connect_points,
