@@ -997,7 +997,7 @@ class SemanticSegmentor:
             stride_shape = patch_output_shape
 
         if ioconfig is None and patch_input_shape is None:
-            if self.ioconfig is not None:
+            if self.ioconfig is None:
                 ioconfig = self.ioconfig
             else:
                 raise ValueError(
@@ -1098,3 +1098,143 @@ class SemanticSegmentor:
             self._postproc_workers.shutdown()
         self._postproc_workers = None
         return outputs
+
+
+class FeatureExtractor(SemanticSegmentor):
+    """Generic Feature Extractor."""
+
+    def _process_predictions(
+        self,
+        cum_batch_predictions: List,
+        wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
+        save_path: str,
+        cache_dir: str,
+    ):
+        """Define how the aggregated predictions are processed.
+
+        This includes merging the prediction if necessary and also saving afterwards.
+
+        Args:
+            cum_batch_predictions (list): List of batch predictions. Each item
+              within the list should be of (location, patch_predictions).
+            wsi_reader (:class:`WSIReader`): A reader for the image where the
+              predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`): A configuration object contains
+             input and output information.
+            save_path (str): Root path to save current WSI predictions.
+            cache_dir (str): Root path to cache current WSI data.
+
+        """
+
+        # assume prediction_list is N, each item has L output element
+        location_list, prediction_list = list(zip(*cum_batch_predictions))
+        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output
+        # patch, this can exceed the image bound at the requested resolution
+        # remove singleton due to split.
+        location_list = np.array([v[0] for v in location_list])
+        np.save(f"{save_path}.position.npy", location_list)
+        for idx, _ in enumerate(ioconfig.output_resolutions):
+            # assume resolution idx to be in the same order as L
+            # 0 idx is to remove singleton without removing other axes singleton
+            prediction_list = [v[idx][0] for v in prediction_list]
+            prediction_list = np.array(prediction_list)
+            np.save(f"{save_path}.features.{idx}.npy", prediction_list)
+
+    def predict(
+        self,
+        imgs,
+        masks=None,
+        mode="tile",
+        on_gpu=True,
+        ioconfig=None,
+        patch_input_shape=None,
+        patch_output_shape=None,
+        stride_shape=None,
+        resolution=1.0,
+        units="baseline",
+        save_dir=None,
+        crash_on_exception=False,
+    ):
+        """Make a prediction for a list of input data.
+
+        By default, if the input model at the object instantiation time is a
+        pretrained model in the toolbox as well as `patch_input_shape`,
+        `patch_output_shape`, `stride_shape`, `resolution`, `units` and `ioconfig`
+        are `None`. The method will use the `ioconfig` retrieved together with
+        the pretrained model. Otherwise, either `patch_input_shape`,
+        `patch_output_shape`, `stride_shape`, `resolution`, `units` or `ioconfig`
+        must be set else a `Value Error` will be raised.
+
+        Args:
+            imgs (list, ndarray): List of inputs to process. When using `patch`
+              mode, the input must be either a list of images, a list of image
+              file paths or a numpy array of an image list. When using `tile` or
+              `wsi` mode, the input must be a list of file paths.
+            masks (list): List of masks. Only utilised when processing image tiles
+              and whole-slide images. Patches are only processed if they are
+              within a masked area. If not provided, then a tissue mask will be
+              automatically generated for whole-slide images or the entire image
+              is processed for image tiles.
+            mode (str): Type of input to process. Choose from either `tile` or `wsi`.
+            ioconfig (:class:`IOSegmentorConfig`): object that define information
+              about input and ouput placement of patches. When provided,
+              `patch_input_shape`, `patch_output_shape`, `stride_shape`,
+              `resolution`, and `units` arguments are ignored. Otherwise,
+              those arguments will be internally converted to a
+              :class:`IOSegmentorConfig` object.
+            on_gpu (bool): Whether to run model on the GPU.
+            patch_input_shape (tuple): Size of patches input to the model. The value
+              are at requested read resolution and must be positive.
+            patch_output_shape (tuple): Size of patches output by the model. The
+              values are at the requested read resolution and must be positive.
+            stride_shape (tuple): Stride using during tile and WSI processing. The
+              values are at requested read resolution and must be positive.
+              If not provided, `stride_shape=patch_input_shape` is used.
+            resolution (float): Resolution used for reading the image.
+            units (str): Units of resolution used for reading the image. Choose from
+              either `level`, `power` or `mpp`.
+            save_dir (str): Output directory when processing multiple tiles and
+              whole-slide images. By default, it is folder `output` where the
+              running script is invoked.
+            crash_on_exception (bool): If `True`, the running loop will crash
+              if there is any error during processing a WSI. Otherwise, the loop
+              will move on to the next wsi for processing.
+
+        Returns:
+            output (list): A list of tuple(input_path, save_path) where
+              `input_path` is the path of the input wsi while `save_path`
+              corresponds to the output predictions.
+
+        Examples:
+            >>> # Sample output of a network
+            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
+            >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
+            >>> output = predictor.predict(wsis, mode='wsi')
+            >>> list(output.keys())
+            [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
+            >>> # If a network have 2 output heads, for 'A/wsi.svs',
+            >>> # there will be 3 output and they are respectively stored at
+            >>> # 'output/0.position.npy'
+            >>> # 'output/0.features.0.npy' # output of head 0
+            >>> # 'output/0.features.1.npy' # output of head 1
+            >>> # Each file will contain a same number of items, and the item at each
+            >>> # index corresponds to 1 patch. The item in `.*position.npy` will
+            >>> # be the patch bound at the inference resolution defined within
+            >>> # the provided `ioconfig`.
+
+        """
+        return super().predict(
+            imgs=imgs,
+            masks=masks,
+            mode=mode,
+            on_gpu=on_gpu,
+            ioconfig=ioconfig,
+            patch_input_shape=patch_input_shape,
+            patch_output_shape=patch_output_shape,
+            stride_shape=stride_shape,
+            resolution=resolution,
+            units=units,
+            save_dir=save_dir,
+            crash_on_exception=crash_on_exception,
+        )

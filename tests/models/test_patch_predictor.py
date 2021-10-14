@@ -44,7 +44,7 @@ from tiatoolbox.models.dataset import (
 from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 
 
 def _rm_dir(path):
