@@ -87,9 +87,12 @@ def build_graph_dict(
     Returns:
         dict: A dictionary defining a graph for serialisation (e.g.
         JSON) or converting into a torch-geometric Data object.
-            - x: Features of each node (mean of features in a cluster).
-            - edge_index: Edge index matrix defining connectivity.
-            - y: The label of the graph.
+            - :class:`numpy.ndarray` - x:
+                Features of each node (mean of features in a cluster).
+            - :class:`numpy.ndarray` - edge_index:
+                Edge index matrix defining connectivity.
+            - :py:obj:`Number` - y:
+                The label of the graph.
 
     Example:
         >>> points = np.random.rand(99, 2) * 1000
