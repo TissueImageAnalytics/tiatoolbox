@@ -312,6 +312,9 @@ def sample_wsi_dict(remote_sample):
         "wsi2_4k_4k_jpg",
         "wsi2_4k_4k_msk",
         "wsi2_4k_4k_pred",
+        "wsi3_20k_20k_svs",
+        "wsi4_4k_4k_svs",
+        "wsi3_20k_20k_pred",
+        "wsi4_4k_4k_pred"
     ]
-
     return {name: remote_sample(name) for name in file_names}

@@ -7,6 +7,7 @@ aliases:
   stainnorm: &stainnorm "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm"
   patchextraction: &patchextraction "https://tiatoolbox.dcs.warwick.ac.uk/testdata/patchextraction"
   testdata: &testdata "https://tiatoolbox.dcs.warwick.ac.uk/testdata"
+  models: &models "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
 files:
   ndpi-1:
     url: [*wsis, "CMU-1.ndpi"]

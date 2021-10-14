@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image
 
 from tiatoolbox import __version__, utils, wsicore
-from tiatoolbox.models.classification.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
 from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -456,10 +456,10 @@ def tissue_mask(
     "available pretrained models please see "
     "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
     "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
-    default="resnet18-kather100K",
+    default="resnet18-kather100k",
 )
 @click.option(
-    "--pretrained_weight",
+    "--pretrained_weights",
     help="Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default=None,
@@ -551,7 +551,7 @@ def tissue_mask(
 )
 def patch_predictor(
     pretrained_model,
-    pretrained_weight,
+    pretrained_weights,
     img_input,
     file_types,
     masks,
@@ -601,7 +601,7 @@ def patch_predictor(
 
     predictor = CNNPatchPredictor(
         pretrained_model=pretrained_model,
-        pretrained_weight=pretrained_weight,
+        pretrained_weights=pretrained_weights,
         batch_size=batch_size,
         num_loader_worker=num_loader_worker,
         verbose=verbose,

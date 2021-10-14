@@ -40,7 +40,7 @@ def _fetch_remote_sample(
 
     """
     if tmp_path is None:
-        tmp_path = tempfile.gettempdir()
+        tmp_path = pathlib.Path(tempfile.gettempdir())
     if not tmp_path.is_dir():
         raise ValueError("tmp_path must be a directory.")
     url = "/".join(SAMPLE_FILES[key]["url"])

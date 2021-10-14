@@ -1305,15 +1305,15 @@ def test_jp2_missing_cod(sample_jp2):
 
 def test_read_rect_at_resolution(sample_wsi_dict):
     """Test for read rect using location at requested."""
-    _mini_wsi2_svs = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_svs"])
-    _mini_wsi2_jpg = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
-    _mini_wsi2_jp2 = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
+    mini_wsi2_svs = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_svs"])
+    mini_wsi2_jpg = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
+    mini_wsi2_jp2 = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
 
     # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
     reader_list = [
-        VirtualWSIReader(_mini_wsi2_jpg),
-        OpenSlideWSIReader(_mini_wsi2_svs),
-        OmnyxJP2WSIReader(_mini_wsi2_jp2),
+        VirtualWSIReader(mini_wsi2_jpg),
+        OpenSlideWSIReader(mini_wsi2_svs),
+        OmnyxJP2WSIReader(mini_wsi2_jp2),
     ]
 
     for reader_idx, reader in enumerate(reader_list):
@@ -1341,10 +1341,10 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi1_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
-    _mini_wsi2_svs = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_svs"])
-    _mini_wsi2_jpg = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
-    _mini_wsi2_jp2 = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
+    mini_wsi1_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi2_svs = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_svs"])
+    mini_wsi2_jpg = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
+    mini_wsi2_jp2 = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
         """Correlation test to compare output of 2 readers."""
@@ -1385,7 +1385,7 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
 
     # * now check sync read by comparing the RoI with different base
     # the output should be at same resolution even if source is of different base
-    msk = imread(_mini_wsi1_msk)
+    msk = imread(mini_wsi1_msk)
     msk_reader = VirtualWSIReader(msk)
 
     bigger_msk = cv2.resize(
@@ -1437,8 +1437,8 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
         ({"resolution": 1.00, "units": "level"}, np.array([1000, 1000, 2000, 2000])),
     ]
 
-    wsi_reader = OpenSlideWSIReader(_mini_wsi2_svs)
-    tile = imread(_mini_wsi2_jpg)
+    wsi_reader = OpenSlideWSIReader(mini_wsi2_svs)
+    tile = imread(mini_wsi2_jpg)
     tile = imresize(tile, scale_factor=0.76)
     vrt_reader = VirtualWSIReader(tile)
     vrt_reader.info = wsi_reader.info
@@ -1458,7 +1458,7 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
         ({"resolution": 1.35, "units": "baseline"}, np.array([4000, 4000, 5000, 5000])),
         ({"resolution": 1.00, "units": "level"}, np.array([1500, 1500, 2000, 2000])),
     ]
-    wsi_reader = OmnyxJP2WSIReader(_mini_wsi2_jp2)
+    wsi_reader = OmnyxJP2WSIReader(mini_wsi2_jp2)
     wsi_thumb = wsi_reader.slide_thumbnail(resolution=0.85, units="mpp")
     vrt_reader = VirtualWSIReader(wsi_thumb)
     vrt_reader.info = wsi_reader.info
