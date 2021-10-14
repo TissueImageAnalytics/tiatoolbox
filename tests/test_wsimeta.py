@@ -74,16 +74,16 @@ def test_wsimeta_validate_pass():
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_ndpi(_sample_ndpi):
+def test_wsimeta_openslidewsireader_ndpi(sample_ndpi):
     """Test OpenSlide reader metadata for ndpi."""
-    wsi_obj = wsireader.OpenSlideWSIReader(_sample_ndpi)
+    wsi_obj = wsireader.OpenSlideWSIReader(sample_ndpi)
     meta = wsi_obj.info
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_svs(_sample_svs):
+def test_wsimeta_openslidewsireader_svs(sample_svs):
     """Test OpenSlide reader metadata for svs."""
-    wsi_obj = wsireader.OpenSlideWSIReader(_sample_svs)
+    wsi_obj = wsireader.OpenSlideWSIReader(sample_svs)
     meta = wsi_obj.info
     assert meta.validate()
 
@@ -92,9 +92,9 @@ def test_wsimeta_openslidewsireader_svs(_sample_svs):
     assert isinstance(m["mpp"], tuple)
 
 
-def test_wsimeta_setter(_sample_svs):
+def test_wsimeta_setter(sample_svs):
     """Test setter for metadata."""
-    wsi = wsireader.OpenSlideWSIReader(_sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     meta = wsi.info
     assert not np.array_equal(meta.mpp, np.array([1, 1]))
     meta.mpp = np.array([1, 1])

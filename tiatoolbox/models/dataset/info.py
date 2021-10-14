@@ -108,7 +108,7 @@ class KatherPatchDataset(DatasetInfoABC):
             )
         # bring outside to prevent case where download fail
         if not os.path.exists(save_dir_path):
-            raise ValueError("Dataset does not exist at `%s`" % save_dir_path)
+            raise ValueError(f"Dataset does not exist at `{save_dir_path}`")
 
         # What will happen if downloaded data get corrupted?
         uid_name_map = {}

@@ -5,7 +5,6 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python=3.7
   - black
   - Click
   - cython
@@ -29,6 +28,7 @@ dependencies:
   - pytest-cov
   - pytest-runner==5.2
   - pytest==5.4.2
+  - python=3.7
   - pytorch
   - pyyaml>=5.1
   - recommonmark
@@ -37,6 +37,7 @@ dependencies:
   - scikit-learn>=0.23.2
   - tifffile
   - torchvision
+  - torchvision>=0.10.1
   - tqdm
   - zarr
   - pip:
