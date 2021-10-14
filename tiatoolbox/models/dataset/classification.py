@@ -40,8 +40,9 @@ class _TorchPreprocCaller:
 
     Args:
         preprocs (list): List of torchvision transforms for preprocessing the image.
-            The transforms will be applied in the order that they are
-            given in the list. https://pytorch.org/vision/stable/transforms.html.
+          The transforms will be applied in the order that they are given in the
+          list. For more informaion, visit the following link:
+          https://pytorch.org/vision/stable/transforms.html.
 
     """
 
@@ -62,7 +63,7 @@ def predefined_preproc_func(dataset_name):
         dataset_name (str): Dataset name used to determine what preprocessing was used.
     Returns:
         preproc_func (_TorchPreprocCaller): Preprocessing function for transforming
-            the input data.
+          the input data.
 
     """
     preproc_dict = {
@@ -81,15 +82,15 @@ def predefined_preproc_func(dataset_name):
 
 
 class PatchDataset(abc.PatchDatasetABC):
-    """Defines a simple patch dataset, which inherits
-    from the torch.utils.data.Dataset class.
+    """Defines a simple patch dataset, which inherits from the
+      torch.utils.data.Dataset class.
 
     Attributes:
         inputs: Either a list of patches, where each patch is a ndarray or a list of
-            valid path with its extension be (".jpg", ".jpeg", ".tif", ".tiff", ".png")
-            pointing to an image.
-        labels: List of label for sample at the same index in `inputs` .
-            Default is `None`.
+          valid path with its extension be
+          (".jpg", ".jpeg", ".tif", ".tiff", ".png") pointing to an image.
+        labels: List of label for sample at the same index in `inputs`.
+          Default is `None`.
         preproc_func: Preprocessing function used to transform the input data.
 
     Examples:
@@ -140,23 +141,23 @@ class WSIPatchDataset(abc.PatchDatasetABC):
 
     Attributes:
         reader (:class:`.WSIReader`): an WSI Reader or Virtual Reader
-            for reading pyramidal image or large tile in pyramidal way.
+          for reading pyramidal image or large tile in pyramidal way.
         inputs: List of coordinates to read from the `reader`,
-            each coordinate is of the form [start_x, start_y, end_x, end_y].
+          each coordinate is of the form [start_x, start_y, end_x, end_y].
         patch_size: a tuple(int, int) or ndarray of shape (2,).
-            Expected size to read from `reader` at requested `resolution`
-            and `units`. Expected to be (height, width).
+          Expected size to read from `reader` at requested `resolution`
+          and `units`. Expected to be (height, width).
         lv0_patch_size: a tuple (int, int) or ndarray of shape (2,).
-            `patch_size` at level 0 in `reader` at requested `resolution`
-            and `units`. Expected to be (height, width).
+          `patch_size` at level 0 in `reader` at requested `resolution`
+          and `units`. Expected to be (height, width).
         resolution: check (:class:`.WSIReader`) for details.
         units: check (:class:`.WSIReader`) for details.
         preproc_func: Preprocessing function used to transform the input data.
-            If supplied, then torch.Compose will be used on the input preprocs.
-            preprocs is a list of torchvision transforms for preprocessing the
-            image. The transforms will be applied in the order that they are
-            given in the list.
-            https://pytorch.org/vision/stable/transforms.html.
+          If supplied, then torch.Compose will be used on the input preprocs.
+          preprocs is a list of torchvision transforms for preprocessing the
+          image. The transforms will be applied in the order that they are
+          given in the list. For more information, visit the following link:
+          https://pytorch.org/vision/stable/transforms.html.
 
     """
 
@@ -174,21 +175,21 @@ class WSIPatchDataset(abc.PatchDatasetABC):
         """Create a WSI-level patch dataset.
         Args:
             mode (str): can be either `wsi` or `tile` to denote the image to read is
-                either a whole-slide image or a large image tile.
+              either a whole-slide image or a large image tile.
             img_path (:obj:`str` or :obj:`pathlib.Path`): valid to pyramidal
-                whole-slide image or large tile to read.
+              whole-slide image or large tile to read.
             mask_path (:obj:`str` or :obj:`pathlib.Path`): valid mask image.
             patch_size: a tuple (int, int) or ndarray of shape (2,).
-                Expected shape to read from `reader` at requested `resolution` and
-                `units`. Expected to be positive and of (height, width). Note, this
-                is not at `resolution` coordinate space.
+              Expected shape to read from `reader` at requested `resolution` and
+              `units`. Expected to be positive and of (height, width). Note, this
+              is not at `resolution` coordinate space.
             stride_size: a tuple (int, int) or ndarray of shape (2,).
-                Expected stride shape to read at requested `resolution` and `units`.
-                Expected to be positive and of (height, width). Note, this is not at
-                level 0.
+              Expected stride shape to read at requested `resolution` and `units`.
+              Expected to be positive and of (height, width). Note, this is not at
+              level 0.
             resolution: check (:class:`.WSIReader`) for details. When `mode='tile'`,
-                value is fixed to be `resolution=1.0` and `units='baseline'`
-                units: check (:class:`.WSIReader`) for details.
+              value is fixed to be `resolution=1.0` and `units='baseline'`
+              units: check (:class:`.WSIReader`) for details.
             preproc_func: Preprocessing function used to transform the input data.
 
         Examples:

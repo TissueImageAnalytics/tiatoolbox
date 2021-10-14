@@ -18,11 +18,12 @@ dependencies:
   - requests
   - pixman<0.38.0
   - openslide
+  - openjpeg>=2.3.0
   - recommonmark
   - pandas
   - glymur
   - scikit-learn>=0.23.2
-  - torchvision
+  - torchvision>=0.10.1
   - pytorch
   - tqdm
   - pytest==5.4.2
@@ -35,5 +36,6 @@ dependencies:
   - pytest-cov
   - jupyterlab
   - shapely
+  - openjpeg
   - pip:
       - openslide-python==1.1.2
