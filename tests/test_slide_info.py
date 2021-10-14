@@ -133,6 +133,6 @@ def test_command_line_slide_info_output_none_mode_save(sample_svs):
     assert slide_info_result.exit_code == 0
     assert (
         pathlib.Path(sample_svs)
-        .parent.parent.joinpath("meta/CMU-1-Small-Region.yaml")
+        .parent.joinpath("meta/CMU-1-Small-Region.yaml")
         .exists()
     )

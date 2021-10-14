@@ -671,3 +671,8 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def string_to_tuple(file_types):
+    """Split file_types string to tuple."""
+    return tuple(file_types.split(", "))
