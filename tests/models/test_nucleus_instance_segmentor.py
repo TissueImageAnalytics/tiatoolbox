@@ -1,8 +1,30 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+"""Tests for Nucleus Instance Segmentor."""
+
 import pathlib
 import shutil
 
 import joblib
 import numpy as np
+import pytest
 
 from tiatoolbox.models import (
     IOSegmentorConfig,
@@ -19,6 +41,11 @@ ON_GPU = True
 def _rm_dir(path):
     """Helper func to remove directory."""
     shutil.rmtree(path, ignore_errors=True)
+
+
+def _crash_func(x):
+    """Helper to induce crash."""
+    raise ValueError("Propataion Crash.")
 
 
 # ----------------------------------------------------
@@ -193,6 +220,60 @@ def test_get_tile_info():
     boxes, flag = info[3]
     assert np.sum(boxes - _boxes) == 0, "Wrong Cross Section Bounds"
     assert np.sum(flag - _flag) == 0, "Fail Cross Section Flag"
+
+
+def test_crash_segmentor(remote_sample, tmp_path):
+    """Test crash."""
+    root_save_dir = pathlib.Path(tmp_path)
+    sample_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    sample_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
+    sample_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
+
+    save_dir = f"{root_save_dir}/instance/"
+
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.25},
+        ],
+        margin=128,
+        tile_shape=[1024, 1024],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
+    )
+    instance_segmentor = NucleusInstanceSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+
+    _rm_dir(save_dir)
+    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
+        instance_segmentor.predict(
+            [sample_wsi_jpg],
+            mode="tile",
+            ioconfig=ioconfig,
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+            save_dir=save_dir,
+        )
+
+    # * Test crash propagation when parallelize post processing
+    _rm_dir(save_dir)
+    instance_segmentor.model.postproc_func = _crash_func
+    with pytest.raises(ValueError, match=r"Propataion Crash."):
+        instance_segmentor.predict(
+            [sample_wsi_svs],
+            masks=[sample_wsi_msk],
+            mode="wsi",
+            ioconfig=ioconfig,
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+            save_dir=save_dir,
+        )
 
 
 def test_functionality(remote_sample, tmp_path):

@@ -195,7 +195,7 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsistreamdataset(remote_sample):
+def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
