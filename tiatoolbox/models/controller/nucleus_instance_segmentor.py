@@ -283,6 +283,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             num_postproc_workers if num_postproc_workers > 0 else None
         )
 
+        # adding more runtime placeholder
+        self._wsi_inst_info = None
+
     def _get_tile_info(
         self,
         image_shape: Union[List[int], np.ndarray],
@@ -632,7 +635,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._futures.append(future)
 
     def _merge_post_process_results(self):
-        """"Helper to aggregate results from parallel workers."""
+        """Helper to aggregate results from parallel workers."""
 
         def callback(new_inst_dict, remove_uuid_list):
             """Helper to aggregate worker's results."""

@@ -382,6 +382,7 @@ class HoVerNet(ModelABC):
 
         self.upsample2x = UpSample2x()
 
+    # skipcq: PYL-W0221
     def forward(self, imgs: torch.Tensor):
         """Logic for using layers defined in init.
 
@@ -510,6 +511,7 @@ class HoVerNet(ModelABC):
 
         return proced_pred
 
+    # skipcq: PYL-W0221
     @staticmethod
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
