@@ -406,7 +406,6 @@ class DeepZoomGenerator(TilePyramidGenerator):
             >>> from xml.etree import ElementTree as ET
             >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> from tiatoolbox.tools.pyramid import DeepZoomGenerator
-            >>>
             >>> slide = get_wsireader("CMU-1.svs")
             >>> dz = DeepZoomGenerator(slide)
             >>> dzi = dz.get_dzi()
