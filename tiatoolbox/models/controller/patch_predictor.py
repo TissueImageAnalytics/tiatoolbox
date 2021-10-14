@@ -389,9 +389,9 @@ class CNNPatchPredictor:
             merge_predictions (bool): Whether to merge the predictions to form a
               2-dimensional map. This is only applicable for `mode='wsi'`
               or `mode='tile'`.
-            save_dir (str or pathlib.Path): Output directory when processing multiple tiles and
-              whole-slide images. By default, it is folder `output` where the running
-              script is invoked.
+            save_dir (str or pathlib.Path): Output directory when processing
+              multiple tiles and whole-slide images. By default, it is folder `output`
+              where the running script is invoked.
             save_output (bool): Whether to save output for a single file. default=False
 
         Returns:
