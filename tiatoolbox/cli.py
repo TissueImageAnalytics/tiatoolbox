@@ -30,6 +30,7 @@ from PIL import Image
 from tiatoolbox import __version__, utils, wsicore
 from tiatoolbox.cli_commands.read_bounds import read_bounds
 from tiatoolbox.cli_commands.slide_info import slide_info
+from tiatoolbox.cli_commands.slide_thumbnail import slide_thumbnail
 from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
 from tiatoolbox.tools import stainnorm as sn
 from tiatoolbox.tools import tissuemask
@@ -56,37 +57,7 @@ def main():
 
 main.add_command(slide_info)
 main.add_command(read_bounds)
-
-
-@main.command()
-@click.option("--img_input", help="Path to WSI file")
-@click.option(
-    "--output_path",
-    help="Path to output file to save the image region in save mode,"
-    " default=img_input_dir/../slide_thumb.jpg",
-)
-@click.option(
-    "--mode",
-    default="show",
-    help="'show' to display image region or 'save' to save at the output path"
-    ", default=show",
-)
-def slide_thumbnail(img_input, output_path, mode):
-    """Read whole slide image thumbnail."""
-    if output_path is None and mode == "save":
-        input_dir = pathlib.Path(img_input).parent
-        output_path = str(input_dir.parent / "slide_thumb.jpg")
-
-    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
-
-    slide_thumb = wsi.slide_thumbnail()
-
-    if mode == "show":
-        im_region = Image.fromarray(slide_thumb)
-        im_region.show()
-
-    if mode == "save":
-        utils.misc.imwrite(output_path, slide_thumb)
+main.add_command(slide_thumbnail)
 
 
 @main.command()
