@@ -100,7 +100,6 @@ class IOSegmentorConfig(IOConfigABC):
     """
 
     # We pre-define to follow enforcement, actual initialization in init
-    patch_size = None
     input_resolutions = None
     output_resolutions = None
 
@@ -170,9 +169,14 @@ class IOSegmentorConfig(IOConfigABC):
             new_val = old_val
         elif units == "mpp":
             new_val = np.min(old_val) / np.array(old_val)
-        else:
+        elif units == "power":
             # when being power
             new_val = np.array(old_val) / np.max(old_val)
+        else:
+            raise ValueError(
+                f"Unknown units `{units}`. "
+                "Units should be one of 'baseline', 'mpp' or 'power'."
+            )
         return new_val
 
     def to_baseline(self):
@@ -776,7 +780,7 @@ class SemanticSegmentor:
         sample_prediction = predictions[0]
 
         num_output_ch = 0
-        add_singleton = False
+        add_singleton_dim = False
         if len(sample_prediction.shape) not in (2, 3):
             raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
 
@@ -784,11 +788,11 @@ class SemanticSegmentor:
             num_output_ch = sample_prediction.shape[-1]
             canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
             canvas_count_shape_ = tuple(canvas_shape) + (1,)
-            add_singleton = num_output_ch == 1
+            add_singleton_dim = num_output_ch == 1
         else:
             canvas_cum_shape_ = tuple(canvas_shape) + (1,)
             canvas_count_shape_ = tuple(canvas_shape) + (1,)
-            add_singleton = True
+            add_singleton_dim = True
 
         if save_path is not None:
             if os.path.exists(save_path) and os.path.exists(cache_count_path):
@@ -847,7 +851,7 @@ class SemanticSegmentor:
             prediction = prediction.astype(np.float32)
             prediction = cv2.resize(prediction, patch_shape_in_wsi[::-1])
             # ! cv2 resize will remove singleton !
-            if add_singleton:
+            if add_singleton_dim:
                 prediction = prediction[..., None]
 
             sel = tl_in_wsi < 0
@@ -863,12 +867,6 @@ class SemanticSegmentor:
             br_in_patch = br_in_wsi - old_tl_in_wsi
             patch_actual_shape = br_in_wsi - tl_in_wsi
             tl_in_patch = br_in_patch - patch_actual_shape
-
-            #  internal error, switch to raise ?
-            # if not (np.all(br_in_patch >= 0)
-            #         and np.all(tl_in_patch >= 0)):
-            #     raise RuntimeError(
-            #             '[BUG] Locations should not be negative at this stage!')
 
             # now cropping the prediction region
             patch_pred = prediction[

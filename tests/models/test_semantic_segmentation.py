@@ -181,6 +181,14 @@ def test_segmentor_ioconfig():
     assert ioconfig.input_resolutions[0]["resolution"] == 0.5
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
 
+    resolutions = [
+        {"units": "mpp", "resolution": 0.25},
+        {"units": "mpp", "resolution": 0.50},
+        {"units": "mpp", "resolution": 0.75},
+    ]
+    with pytest.raises(ValueError, match=r".*Unknown units.*"):
+        ioconfig.scale_to_highest(resolutions, "axx")
+
 
 # -------------------------------------------------------------------------------------
 # Dataset

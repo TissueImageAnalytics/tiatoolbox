@@ -42,7 +42,6 @@ class IOPatchPredictorConfig(IOConfigABC):
     """Contain patch predictor input and output information."""
 
     # We pre-define to follow enforcement, actual initialization in init
-    patch_size = None
     input_resolutions = None
     output_resolutions = None
 
