@@ -242,6 +242,7 @@ def test_functionality(remote_sample, tmp_path):
         batch_size=BATCH_SIZE,
         num_postproc_workers=2,
     )
+    assert inst_segmentor.num_postproc_workers == 2
     output = inst_segmentor.predict(
         [sample_wsi],
         mode="wsi",

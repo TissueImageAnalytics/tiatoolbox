@@ -21,7 +21,7 @@
 """This module enables nucleus instance segmentation."""
 
 import uuid
-from typing import List, Union
+from typing import Callable, List, Union
 
 # replace with the sql database once the PR in place
 import joblib
@@ -33,6 +33,7 @@ import tqdm
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
+    WSIStreamDataset,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
@@ -43,7 +44,7 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 # another third party solution
 def _process_tile_predictions(
     ioconfig,
-    tile_bound,
+    tile_bounds,
     tile_flag,
     tile_mode,
     tile_output,
@@ -53,11 +54,52 @@ def _process_tile_predictions(
     postproc,
     merge_predictions,
 ):
+    """Function to merge new tile prediction with existing prediction.
+
+    Args:
+        ioconfig (:class:`IOSegmentorConfig`): Object defines information
+            about input and ouput placement of patches.
+        tile_bounds (list): Boundary of the current tile, defined as
+            (top_left_x, top_left_y, bottom_x, bottom_y).
+        tile_flag (list): A list of flag to indicate if instances within
+            an area extended from each side of the tile should replace
+            those within the same spatial in the accumulated output.
+        tile_mode (int): A flag to indicate the type of this tile. There
+            are 4 flags:
+            - 0: A tile from tile grid without any overlapping, it is not
+                an overlapping tile from tile generation. The predicted
+                instances are immediately added to accumulated output.
+            - 1: Vertical tile strip that stands between two normal tiles
+                (flag 0). It has the the same height as normal tile but
+                less width (hence vertical strip).
+            - 2: Horizontal tile strip that stands between two normal tiles
+                (flag 0). It has the the same width as normal tile but
+                less height (hence vertical strip).
+            - 3: Tile strip stands at the cross section of four normal tiles
+                (flag 0).
+        tile_output (list): A list of patch predictions, that lie within this
+            tile, to be merged and processed.
+        ref_inst_dict (dict): Dictionary contains accumulated output. The
+            expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+        postproc (callable): Function to post-process the raw assembled tile.
+        postproc (callable): Function to merge the `tile_output` into raw tile
+            prediction.
+
+    Returns:
+        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
+            The expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
+            to be removed to prevent overlapping predictions. These instances
+            are those get cutoff at the boundary due to the tiling process.
+
+    """
     locations, predictions = list(zip(*tile_output))
 
     # convert from WSI space to Tile space
-    tile_tl = tile_bound[:2]
-    tile_br = tile_bound[2:]
+    tile_tl = tile_bounds[:2]
+    tile_br = tile_bounds[2:]
     locations = [np.reshape(loc, (2, -1)) for loc in locations]
     locations_in_tile = [loc - tile_tl[None] for loc in locations]
     locations_in_tile = [loc.flatten() for loc in locations_in_tile]
@@ -138,7 +180,7 @@ def _process_tile_predictions(
             if tile_flag[idx] or tile_mode == 3
         ]
         sel_indices = [
-            tile_rtree.query(bound, predicate="contains") for bound in sel_boxes
+            tile_rtree.query(bounds, predicate="contains") for bounds in sel_boxes
         ]
     elif tile_mode in [1, 2]:
         # for `horizontal/vertical strip` tiles
@@ -152,8 +194,10 @@ def _process_tile_predictions(
             for idx, flag in enumerate(tile_flag)
         ]
         sel_indices = [
-            tile_rtree.query(bound, predicate="intersects") for bound in sel_boxes
+            tile_rtree.query(bounds, predicate="intersects") for bounds in sel_boxes
         ]
+    else:
+        raise ValueError(f"Unknown tile mode {tile_mode}.")
 
     def retrieve_sel_uids(sel_indices, inst_dict):
         sel_uids = []
@@ -187,8 +231,8 @@ def _process_tile_predictions(
         # remove existing instances in old prediction which intersect
         # with the margin lines
         sel_indices = [
-            ref_inst_rtree.query(bound, predicate="intersects")
-            for bound in margin_lines
+            ref_inst_rtree.query(bounds, predicate="intersects")
+            for bounds in margin_lines
         ]
         remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
 
@@ -274,7 +318,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             * ioconfig.patch_output_shape
         ).astype(np.int32)
         image_shape = np.array(image_shape)
-        (tile_inputs, tile_outputs) = PatchExtractor.get_coordinates(
+        (_, tile_outputs) = PatchExtractor.get_coordinates(
             image_shape=image_shape,
             patch_input_shape=tile_shape,
             patch_output_shape=tile_shape,
@@ -415,6 +459,18 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         new data from each worker, and this portion should still be in sequential
         execution order in the main thread.
 
+        Args:
+            wsi_idx (int): The index of the WSI to be processed. This is used to
+                to retrieve the file path.
+            patch_inputs (list): A list of corrdinates in
+                [start_x, start_y, end_x, end_y] format indicating the read location
+                of the patch in the WSI image. The coordinates are in the highest
+                resolution defined in `self.ioconfig`.
+            patch_outputs (list): A list of corrdinates in
+                [start_x, start_y, end_x, end_y] format indicating the write location
+                of the patch in the WSI image. The coordinates are in the highest
+                resolution defined in `self.ioconfig`.
+
         """
         patch_inputs = torch.from_numpy(patch_inputs).share_memory_()
         patch_outputs = torch.from_numpy(patch_outputs).share_memory_()
@@ -423,7 +479,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
     def _infer_once(self):
-        """Running the inference only once for the currentl active dataloder."""
+        """Running the inference only once for the currently active dataloder."""
         num_steps = len(self._loader)
 
         pbar_desc = "Process Batch: "
@@ -533,26 +589,20 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # !
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
-            for tile_idx, tile_bound in enumerate(set_bounds):
+            for tile_idx, tile_bounds in enumerate(set_bounds):
                 tile_flag = set_flags[tile_idx]
 
                 # select any patches that have their output
                 # within the current tile
-                sel_indices = spatial_indexer.query(pygeos.box(*tile_bound))
+                sel_indices = spatial_indexer.query(pygeos.box(*tile_bounds))
                 tile_patch_inputs = patch_inputs[sel_indices]
                 tile_patch_outputs = patch_outputs[sel_indices]
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
 
                 tile_infer_output = self._infer_once()
 
-                # dump_path = (
-                #     f"local/test_output/tile_set={set_idx}_tile={tile_idx}.dat"
-                # )
-                # # joblib.dump(tile_infer_output, dump_path)
-                # tile_infer_output = joblib.load(dump_path)
-
                 self._process_tile_predictions(
-                    ioconfig, tile_bound, tile_flag, set_idx, tile_infer_output
+                    ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
                 )
 
             self._merge_post_process_results()
@@ -561,12 +611,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._wsi_inst_info = None  # clean up
 
     def _process_tile_predictions(
-        self, ioconfig, tile_bound, tile_flag, tile_mode, tile_output
+        self, ioconfig, tile_bounds, tile_flag, tile_mode, tile_output
     ):
         """Function to dispatch parallel post processing."""
         args = [
             ioconfig,
-            tile_bound,
+            tile_bounds,
             tile_flag,
             tile_mode,
             tile_output,

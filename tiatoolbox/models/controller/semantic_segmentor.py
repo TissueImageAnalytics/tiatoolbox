@@ -931,7 +931,7 @@ class SemanticSegmentor:
               automatically generated for whole-slide images or the entire image
               is processed for image tiles.
             mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`): object that define information
+            ioconfig (:class:`IOSegmentorConfig`): Object defines information
               about input and ouput placement of patches. When provided,
               `patch_input_shape`, `patch_output_shape`, `stride_shape`,
               `resolution`, and `units` arguments are ignored. Otherwise,

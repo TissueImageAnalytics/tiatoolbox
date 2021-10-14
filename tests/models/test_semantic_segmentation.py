@@ -41,7 +41,7 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 # ----------------------------------------------------
 
 
