@@ -188,6 +188,14 @@ def bounds2locsize(bounds, origin="upper"):
             - :py:obj:`int` - width
             - :py:obj:`int` - height
 
+    Examples:
+        >>> from tiatoolbox.utils.transforms import bounds2locsize
+        >>> bounds = (0, 0, 10, 10)
+        >>> location, size = bounds2locsize(bounds)
+
+        >>> from tiatoolbox.utils.transforms import bounds2locsize
+        >>> _, size = bounds2locsize((12, 4, 24, 16))
+
     """
     left, top, right, bottom = bounds
     origin = origin.lower()
