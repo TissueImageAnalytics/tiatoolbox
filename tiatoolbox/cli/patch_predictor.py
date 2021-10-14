@@ -135,7 +135,6 @@ def patch_predictor(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
-
     output_path = pathlib.Path(output_path)
     file_types = utils.misc.string_to_tuple(in_str=file_types)
 

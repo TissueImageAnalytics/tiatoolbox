@@ -28,6 +28,7 @@ from tiatoolbox import __version__
 from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
 from tiatoolbox.cli.save_tiles import save_tiles
+from tiatoolbox.cli.slide_info import slide_info
 from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
 from tiatoolbox.cli.stain_norm import stain_norm
 from tiatoolbox.cli.tissue_mask import tissue_mask
