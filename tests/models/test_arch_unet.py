@@ -38,12 +38,12 @@ ON_GPU = False
 def test_functional_unet(remote_sample, tmp_path):
     """Tests for unet."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
     _pretrained_path = f"{tmp_path}/weights.pth"
     fetch_pretrained_weights("fcn-tissue_mask", _pretrained_path)
 
-    reader = get_wsireader(_mini_wsi_svs)
+    reader = get_wsireader(mini_wsi_svs)
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
         model = UNetModel(3, 2, encoder="resnet101", decoder_block=[3])
 

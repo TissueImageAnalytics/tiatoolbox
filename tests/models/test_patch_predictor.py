@@ -239,13 +239,13 @@ def test_patch_dataset_crash(tmp_path):
 def test_wsi_patch_dataset(sample_wsi_dict):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
+    mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
-    def reuse_init(img_path=_mini_wsi_svs, **kwargs):
+    def reuse_init(img_path=mini_wsi_svs, **kwargs):
         """Testing function."""
-        return WSIPatchDataset(img_path=_mini_wsi_svs, **kwargs)
+        return WSIPatchDataset(img_path=mini_wsi_svs, **kwargs)
 
     def reuse_init_wsi(**kwargs):
         """Testing function."""
@@ -283,7 +283,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     # invalid mask path input
     with pytest.raises(ValueError, match=r".*`mask_path` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path=_mini_wsi_svs,
+            img_path=mini_wsi_svs,
             mask_path="aaaa",
             mode="wsi",
             patch_size=[512, 512],
@@ -329,7 +329,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         units="mpp",
         auto_get_mask=False,
     )
-    reader = get_wsireader(_mini_wsi_svs)
+    reader = get_wsireader(mini_wsi_svs)
     # tiling top to bottom, left to right
     ds_roi = ds[2]["image"]
     step_idx = 2  # manually calibrate
@@ -356,8 +356,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     )
     assert len(ds) > 0
     ds = WSIPatchDataset(
-        img_path=_mini_wsi_svs,
-        mask_path=_mini_wsi_msk,
+        img_path=mini_wsi_svs,
+        mask_path=mini_wsi_msk,
         mode="wsi",
         patch_size=[512, 512],
         stride_size=[256, 256],
@@ -365,12 +365,12 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         resolution=1.0,
         units="mpp",
     )
-    negative_mask = imread(_mini_wsi_msk)
+    negative_mask = imread(mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
     imwrite("negative_mask.png", negative_mask)
     with pytest.raises(ValueError, match=r".*No coordinate remain after tiling.*"):
         ds = WSIPatchDataset(
-            img_path=_mini_wsi_svs,
+            img_path=mini_wsi_svs,
             mask_path="negative_mask.png",
             mode="wsi",
             patch_size=[512, 512],
@@ -382,9 +382,9 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     shutil.rmtree("negative_mask.png", ignore_errors=True)
 
     # * for tile
-    reader = get_wsireader(_mini_wsi_jpg)
+    reader = get_wsireader(mini_wsi_jpg)
     tile_ds = WSIPatchDataset(
-        img_path=_mini_wsi_jpg,
+        img_path=mini_wsi_jpg,
         mode="tile",
         patch_size=patch_size,
         stride_size=stride_size,
@@ -598,9 +598,9 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     save_dir_path = tmp_path
 
     # convert to pathlib Path to prevent wsireader complaint
-    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
+    mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
@@ -618,15 +618,15 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
-        [_mini_wsi_svs],
-        masks=[_mini_wsi_msk],
+        [mini_wsi_svs],
+        masks=[mini_wsi_msk],
         mode="wsi",
         **kwargs,
     )
 
     tile_output = predictor.predict(
-        [_mini_wsi_jpg],
-        masks=[_mini_wsi_msk],
+        [mini_wsi_jpg],
+        masks=[mini_wsi_msk],
         mode="tile",
         **kwargs,
     )
@@ -659,8 +659,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     _kwargs["merge_predictions"] = False
     # test reading of multiple whole-slide images
     output = predictor.predict(
-        [_mini_wsi_svs, _mini_wsi_svs],
-        masks=[_mini_wsi_msk, _mini_wsi_msk],
+        [mini_wsi_svs, mini_wsi_svs],
+        masks=[mini_wsi_msk, mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
@@ -674,16 +674,16 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
     predictor.predict(
-        [_mini_wsi_svs, _mini_wsi_svs],
-        masks=[_mini_wsi_msk, _mini_wsi_msk],
+        [mini_wsi_svs, mini_wsi_svs],
+        masks=[mini_wsi_msk, mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
     with pytest.raises(FileExistsError):
         _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
-            [_mini_wsi_svs, _mini_wsi_svs],
-            masks=[_mini_wsi_msk, _mini_wsi_msk],
+            [mini_wsi_svs, mini_wsi_svs],
+            masks=[mini_wsi_msk, mini_wsi_msk],
             mode="wsi",
             **_kwargs,
         )
@@ -696,8 +696,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     _kwargs["save_dir"] = None  # default coverage
     _kwargs["return_probabilities"] = False
     output = predictor.predict(
-        [_mini_wsi_svs, _mini_wsi_svs],
-        masks=[_mini_wsi_msk, _mini_wsi_msk],
+        [mini_wsi_svs, mini_wsi_svs],
+        masks=[mini_wsi_msk, mini_wsi_msk],
         mode="wsi",
         **_kwargs,
     )
@@ -713,9 +713,9 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
 def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent reader complaint
-    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
-    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
+    mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     # blind test
     # pseudo output dict from model with 2 patches
@@ -747,8 +747,8 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     )
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
-        [_mini_wsi_svs],
-        masks=[_mini_wsi_msk],
+        [mini_wsi_svs],
+        masks=[mini_wsi_msk],
         mode="wsi",
         **kwargs,
     )
@@ -758,13 +758,13 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     # still should have the same results
     kwargs["merge_predictions"] = False
     tile_output = predictor.predict(
-        [_mini_wsi_jpg],
-        masks=[_mini_wsi_msk],
+        [mini_wsi_jpg],
+        masks=[mini_wsi_msk],
         mode="tile",
         **kwargs,
     )
     merged_tile_output = predictor.merge_predictions(
-        _mini_wsi_jpg,
+        mini_wsi_jpg,
         tile_output[0],
         resolution=kwargs["resolution"],
         units=kwargs["units"],
@@ -927,19 +927,19 @@ def test_cli_model_single_file(sample_svs, tmp_path):
 
 def test_cli_model_single_file_mask(sample_wsi_dict, tmp_path):
     """Test for models CLI single file with mask."""
-    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
     runner = CliRunner()
     models_tiles_result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
             "--img_input",
-            str(_mini_wsi_svs),
+            str(mini_wsi_svs),
             "--mode",
             "wsi",
             "--masks",
-            str(_mini_wsi_msk),
+            str(mini_wsi_msk),
             "--output_path",
             tmp_path,
         ],
@@ -953,8 +953,8 @@ def test_cli_model_single_file_mask(sample_wsi_dict, tmp_path):
 
 def test_cli_model_multiple_file_mask(sample_wsi_dict, tmp_path):
     """Test for models CLI multiple file with mask."""
-    _mini_wsi_svs = sample_wsi_dict["wsi2_4k_4k_svs"]
-    _mini_wsi_msk = sample_wsi_dict["wsi2_4k_4k_msk"]
+    mini_wsi_svs = sample_wsi_dict["wsi2_4k_4k_svs"]
+    mini_wsi_msk = sample_wsi_dict["wsi2_4k_4k_msk"]
 
     # Make multiple copies for test
     dir_path = tmp_path.joinpath("new_copies")
@@ -964,22 +964,22 @@ def test_cli_model_multiple_file_mask(sample_wsi_dict, tmp_path):
     dir_path_masks.mkdir()
 
     try:
-        dir_path.joinpath("1_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
-        dir_path.joinpath("2_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
-        dir_path.joinpath("3_" + _mini_wsi_svs.name).symlink_to(_mini_wsi_svs)
+        dir_path.joinpath("1_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
+        dir_path.joinpath("2_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
+        dir_path.joinpath("3_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
     except OSError:
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("1_" + _mini_wsi_svs.name))
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("2_" + _mini_wsi_svs.name))
-        shutil.copy(_mini_wsi_svs, dir_path.joinpath("3_" + _mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("1_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("2_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("3_" + mini_wsi_svs.name))
 
     try:
-        dir_path_masks.joinpath("1_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
-        dir_path_masks.joinpath("2_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
-        dir_path_masks.joinpath("3_" + _mini_wsi_msk.name).symlink_to(_mini_wsi_msk)
+        dir_path_masks.joinpath("1_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
+        dir_path_masks.joinpath("2_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
+        dir_path_masks.joinpath("3_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
     except OSError:
-        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("1_" + _mini_wsi_msk.name))
-        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("2_" + _mini_wsi_msk.name))
-        shutil.copy(_mini_wsi_msk, dir_path_masks.joinpath("3_" + _mini_wsi_msk.name))
+        shutil.copy(mini_wsi_msk, dir_path_masks.joinpath("1_" + mini_wsi_msk.name))
+        shutil.copy(mini_wsi_msk, dir_path_masks.joinpath("2_" + mini_wsi_msk.name))
+        shutil.copy(mini_wsi_msk, dir_path_masks.joinpath("3_" + mini_wsi_msk.name))
 
     tmp_path = tmp_path.joinpath("output")
 
