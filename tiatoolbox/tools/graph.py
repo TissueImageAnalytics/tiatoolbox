@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Methods of constructin graphs for GNN models."""
+"""Functions to help with constructing graphs."""
 
 from collections import defaultdict
 from numbers import Number
