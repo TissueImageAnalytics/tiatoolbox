@@ -281,6 +281,7 @@ class WSIStreamDataset(torch_data.Dataset):
             metadata = WSIMeta(
                 mpp=np.array([1.0, 1.0]),
                 objective_power=10,
+                axes="YXS",
                 slide_dimensions=np.array(img.shape[:2][::-1]),
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
