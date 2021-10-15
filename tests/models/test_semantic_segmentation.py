@@ -30,7 +30,9 @@ import torch
 import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import crop_op
 from tiatoolbox.models.controller.semantic_segmentor import (
@@ -38,7 +40,7 @@ from tiatoolbox.models.controller.semantic_segmentor import (
     SemanticSegmentor,
     WSIStreamDataset,
 )
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
@@ -600,7 +602,7 @@ def test_behavior_tissue_mask(remote_sample, tmp_path):
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = (_test_pred[..., 1] > 0.50) * 255
     # divide 255 to binarize
-    assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1.0e-3
+    assert np.all(_cache_pred == _test_pred)
     _rm_dir(save_dir)
 
 
@@ -628,3 +630,87 @@ def test_behavior_bcss(remote_sample, tmp_path):
     _test_pred = np.argmax(_test_pred, axis=-1)
     assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-6
     _rm_dir(save_dir)
+
+
+def test_cli_semantic_segmentation_single_file_mask(remote_sample, tmp_path):
+    """Test for semantic segmentation single file with mask."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    runner = CliRunner()
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img_input",
+            str(mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(sample_wsi_msk),
+            "--output_path",
+            tmp_path.joinpath("output"),
+        ],
+    )
+
+    assert semantic_segment_result.exit_code == 0
+    assert tmp_path.joinpath("output/0.raw.0.npy").exists()
+    assert tmp_path.joinpath("output/file_map.dat").exists()
+    assert tmp_path.joinpath("output/results.json").exists()
+
+
+def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
+    """Test for models CLI multiple file with mask."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+
+    # Make multiple copies for test
+    dir_path = tmp_path.joinpath("new_copies")
+    dir_path.mkdir()
+
+    dir_path_masks = tmp_path.joinpath("new_copies_masks")
+    dir_path_masks.mkdir()
+
+    try:
+        dir_path.joinpath("1_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
+        dir_path.joinpath("2_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
+    except OSError:
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("1_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("2_" + mini_wsi_svs.name))
+
+    try:
+        dir_path_masks.joinpath("1_" + sample_wsi_msk.name).symlink_to(sample_wsi_msk)
+        dir_path_masks.joinpath("2_" + sample_wsi_msk.name).symlink_to(sample_wsi_msk)
+    except OSError:
+        shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("1_" + sample_wsi_msk.name))
+        shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("2_" + sample_wsi_msk.name))
+
+    tmp_path = tmp_path.joinpath("output")
+
+    runner = CliRunner()
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(dir_path),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(dir_path_masks),
+            "--output_path",
+            str(tmp_path),
+        ],
+    )
+
+    assert semantic_segment_result.exit_code == 0
+    assert tmp_path.joinpath("0.merged.npy").exists()
+    assert tmp_path.joinpath("0.raw.json").exists()
+    assert tmp_path.joinpath("1.merged.npy").exists()
+    assert tmp_path.joinpath("1.raw.json").exists()
+    assert tmp_path.joinpath("results.json").exists()

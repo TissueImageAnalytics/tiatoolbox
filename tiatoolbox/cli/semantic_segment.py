@@ -27,7 +27,7 @@ def main():  # pragma: no cover
     "available pretrained models please see "
     "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
     "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
-    default="resnet18-kather100k",
+    default="fcn-tissue_mask",
 )
 @click.option(
     "--pretrained_weights",
@@ -71,55 +71,12 @@ def main():  # pragma: no cover
     default=1,
 )
 @click.option(
-    "--resolution",
-    type=float,
-    default=0.5,
-    help="resolution to read the image at, default=0",
-)
-@click.option(
-    "--units",
-    default="mpp",
-    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
-    help="resolution units, default=level",
-)
-@click.option(
     "--yaml_config_path",
     help="Path to ioconfig file. Sample yaml file can be viewed in "
     "tiatoolbox.data.pretrained_model.yaml. "
     "if pretrained_model is used the ioconfig is automatically set."
     "default=None",
     default="None",
-)
-@click.option(
-    "--patch_input_shape",
-    type=int,
-    nargs=2,
-    default=[1024, 1024],
-    help="Size of patches input to the model. ioconfig can overrides "
-    "these values. The values are at requested read resolution "
-    "and must be positive. tile width, height,"
-    " default=1024, 1024",
-)
-@click.option(
-    "--patch_output_shape",
-    type=int,
-    nargs=2,
-    default=[512, 512],
-    help="Size of patches output by the model. ioconfig can overrides "
-    "these values. The values are at the requested read "
-    "resolution and must be positive."
-    "tile width, height default=512, 512",
-)
-@click.option(
-    "--stride_shape",
-    type=int,
-    nargs=2,
-    default=[256, 256],
-    help="Stride using during tile and WSI processing. "
-    "ioconfig can overrides these values. The values are at "
-    "requested read resolution and must be positive."
-    "If not provided, `stride_shape=patch_input_shape` is used."
-    "tile width, height default=256, 256",
 )
 @click.option(
     "--num_loader_workers",
@@ -149,18 +106,17 @@ def semantic_segment(
     mode,
     output_path,
     batch_size,
-    resolution,
-    units,
     yaml_config_path,
-    patch_input_shape,
-    patch_output_shape,
-    stride_shape,
     num_loader_workers,
     on_gpu,
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     output_path = pathlib.Path(output_path)
+
+    if output_path.exists():
+        raise FileExistsError("Path already exists.")  #
+
     file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if not os.path.exists(img_input):
@@ -210,14 +166,9 @@ def semantic_segment(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
-        resolution=resolution,
-        units=units,
         on_gpu=on_gpu,
         save_dir=output_path,
         ioconfig=ioconfig,
-        patch_input_shape=patch_input_shape,
-        patch_output_shape=patch_output_shape,
-        stride_shape=stride_shape,
     )
 
     utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))
