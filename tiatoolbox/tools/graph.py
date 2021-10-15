@@ -72,10 +72,10 @@ def hybrid_clustered_graph(
             the similarity kernel (1-fd). Ranges between 0 and 1.
             Defaults to 0.8.
         connectivity_distance (Number):
-            Distance threshold in pixels to consider points as connected
+            Distance threshold to consider points as connected during
             during the Delaunay triangulation step.
         neighbour_search_radius (Number):
-            Search radius (L2 norm) threshold in pixels for points to be
+            Search radius (L2 norm) threshold for points to be
             considered as connected. Points with a spatial distance
             above this are not compared and have a similarity set to 1
             (most dissimilar).
