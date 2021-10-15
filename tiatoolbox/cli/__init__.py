@@ -28,6 +28,7 @@ from tiatoolbox import __version__
 from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
 from tiatoolbox.cli.save_tiles import save_tiles
+from tiatoolbox.cli.semantic_segment import semantic_segment
 from tiatoolbox.cli.slide_info import slide_info
 from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
 from tiatoolbox.cli.stain_norm import stain_norm
@@ -58,6 +59,7 @@ main.add_command(save_tiles)
 main.add_command(tissue_mask)
 main.add_command(patch_predictor)
 main.add_command(stain_norm)
+main.add_command(semantic_segment)
 
 
 if __name__ == "__main__":
