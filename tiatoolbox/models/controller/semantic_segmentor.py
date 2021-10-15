@@ -354,8 +354,7 @@ class SemanticSegmentor:
             weights already loaded. Default is `None`. If provided,
             `pretrained_model` argument is ignored.
         pretrained_model (str): Name of the existing models support by tiatoolbox
-            for processing the data. Refer to
-            `tiatoolbox.models.classification.get_pretrained_model` for details.
+            for processing the data. Refer to [URL] for details.
             By default, the corresponding pretrained weights will also be
             downloaded. However, you can override with your own set of weights
             via the `pretrained_weights` argument. Argument is case insensitive.
@@ -1100,7 +1099,58 @@ class SemanticSegmentor:
 
 
 class FeatureExtractor(SemanticSegmentor):
-    """Generic Feature Extractor."""
+    """Generic Feature Extractor.
+
+    Note, if `model` is supplied in the arguments, it will ignore the
+    `pretrained_model` and `pretrained_weights` arguments.
+
+    Args:
+        model (nn.Module): Use externally defined PyTorch model for prediction with.
+            weights already loaded. Default is `None`. If provided,
+            `pretrained_model` argument is ignored.
+        pretrained_model (str): Name of the existing models support by tiatoolbox
+            for processing the data. By default, the corresponding pretrained weights
+            will also be downloaded. However, you can override with your own set of
+            weights via the `pretrained_weights` argument. Argument is case insensitive.
+            Refer to `tiatoolbox.models.architecture.vanilla.CNNExtractor` for list of
+            supported pretrained models.
+        pretrained_weights (str): Path to the weight of the corresponding
+            `pretrained_model`.
+        batch_size (int) : Number of images fed into the model each time.
+        num_loader_workers (int) : Number of workers to load the data.
+            Take note that they will also perform preprocessing.
+        num_postproc_workers (int) : This value is there to maintain input
+            compatibility with `tiatoolbox.models.classification` and is
+            not used.
+        verbose (bool): Whether to output logging information.
+        dataset_class (obj): Dataset class to be used instead of default.
+        auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
+            if is not provided.
+
+        Examples:
+            >>> # Sample output of a network
+            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
+            >>> predictor = FeatureExtractor(model='resnet50')
+            >>> output = predictor.predict(wsis, mode='wsi')
+            >>> list(output.keys())
+            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+            >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
+            >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
+
+    """
+    def __init__(
+        self,
+        batch_size: int = 8,
+        num_loader_workers: int = 0,
+        num_postproc_workers: int = 0,
+        model: torch.nn.Module = None,
+        pretrained_model: str = None,
+        pretrained_weights: str = None,
+        verbose: bool = True,
+        auto_generate_mask: bool = False,
+        dataset_class: Callable = WSIStreamDataset,
+    ):
+        super().__init__()
 
     def _process_predictions(
         self,
@@ -1208,7 +1258,7 @@ class FeatureExtractor(SemanticSegmentor):
         Examples:
             >>> # Sample output of a network
             >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
-            >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
+            >>> predictor = FeatureExtractor(model='fcn-tissue_mask')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]

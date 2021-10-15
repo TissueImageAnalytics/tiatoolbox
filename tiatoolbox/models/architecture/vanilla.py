@@ -164,11 +164,41 @@ class CNNModel(ModelABC):
 class CNNExtractor(ModelABC):
     """Retrieve the model backbone and strip classification layer.
 
-    Args:
-        backbone (str): Model name.
+    This is a wrapper for pretrained models within pytorch.
 
-    Attributes:
-        backbone (str): Name of the architecture backbone such as 'resnet50'.
+    Args:
+        backbone (str): Model name. Currently the tool supports following
+            model names and their default associated weights from pytorch.
+              - "alexnet"
+              - "resnet18"
+              - "resnet34"
+              - "resnet50"
+              - "resnet101"
+              - "resnext50_32x4d"
+              - "resnext101_32x8d"
+              - "wide_resnet50_2"
+              - "wide_resnet101_2"
+              - "densenet121"
+              - "densenet161"
+              - "densenet169"
+              - "densenet201"
+              - "inception_v3"
+              - "googlenet"
+              - "mobilenet_v2"
+              - "mobilenet_v3_large"
+              - "mobilenet_v3_small"
+
+    Examples:
+        >>> # Creating resnet50 architecture from default pytorch
+        >>> # without the classification layer with its associated
+        >>> # weights loaded
+        >>> model = CNNExtractor(backbone="resnet50")
+        >>> model.eval()  # set to evaluation mode
+        >>> # dummy sample in NHWC form
+        >>> samples = torch.random.rand(4, 3, 512, 512)
+        >>> features = model(samples)
+        >>> features.shape  # features after global average pooling
+        torch.Size([4, 2048])
 
     """
 
