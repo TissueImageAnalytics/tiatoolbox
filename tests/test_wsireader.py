@@ -1797,6 +1797,19 @@ def test_arrayview_incomplete_index():
     assert np.array_equal(view_1, view_2)
 
 
+def test_arrayview_single_number_index():
+    """Test reading a column from ArrayView.
+    
+    I'm not sure why you would want to do this but it is implemented for
+    consistency with other __getitem__ objects.
+    """
+    array = zarr.array(np.random.rand(128, 128, 3))
+    array_view = ArrayView(array=array, axes="YXS")
+    view_1 = array_view[0]
+    view_2 = array_view[0]
+    assert np.array_equal(view_1, view_2)
+
+
 class TestReader:
     scenarios = [
         ("TIFFReader", {"reader_class": TIFFWSIReader}),
