@@ -671,3 +671,16 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def string_to_tuple(in_str):
+    """Splits input string to tuple at ','.
+
+    Args:
+        in_str (str): input string.
+
+    Returns:
+        tuple (tuple of str): Returns a tuple of strings by splitting in_str at ','.
+
+    """
+    return tuple(substring.strip() for substring in in_str.split(","))
