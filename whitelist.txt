@@ -39,3 +39,7 @@ wsi
 wsireader
 XY
 YX
+Segmentor
+svs
+NHWC
+binarize

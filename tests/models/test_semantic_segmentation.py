@@ -439,7 +439,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
     mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
-    # pre-emptive clean up
+    # preemptive clean up
     _rm_dir("output")  # default output dir test
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
@@ -614,7 +614,6 @@ def test_behavior_bcss(remote_sample, tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     _rm_dir(save_dir)
-    # wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     wsi_breast = pathlib.Path(remote_sample)
     semantic_segmentor = SemanticSegmentor(
         num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
@@ -735,7 +734,7 @@ def test_cli_semantic_segmentation_single_file_mask(remote_sample, tmp_path):
 
 
 def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
-    """Test for semantic segmentation single file with mask."""
+    """Test for semantic segmentation single file custom ioconfig."""
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
