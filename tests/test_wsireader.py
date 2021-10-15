@@ -1299,7 +1299,7 @@ def test_tissue_mask_morphological_levels(sample_svs):
     mask = wsi.tissue_mask("morphological", 0, "level")
     mask_thumb = mask.slide_thumbnail(0, "level")
     assert np.mean(mask_thumb == reference) > 0.99
-    # Custom kernel_size (should still be close to refernce)
+    # Custom kernel_size (should still be close to reference)
     reference = binary_dilation(reference, disk(3))
     mask = wsi.tissue_mask("morphological", 0, "level", kernel_size=3)
     mask_thumb = mask.slide_thumbnail(0, "level")
@@ -1799,7 +1799,7 @@ def test_arrayview_incomplete_index():
 
 def test_arrayview_single_number_index():
     """Test reading a column from ArrayView.
-    
+
     I'm not sure why you would want to do this but it is implemented for
     consistency with other __getitem__ objects.
     """
@@ -1945,3 +1945,20 @@ class TestReader:
         cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
         # This control the harshness of similarity test, how much should be?
         assert np.min(cc) > 0.95
+
+    @staticmethod
+    def test_region_dump(sample_ome_tiff, reader_class):
+        from matplotlib import pyplot as plt
+
+        wsi = reader_class(sample_ome_tiff)
+        _, axs = plt.subplots(
+            nrows=1,
+            ncols=wsi.info.level_count,
+            figsize=(wsi.info.level_count, 3),
+            squeeze=False,
+        )
+        for level, ax in zip(range(wsi.info.level_count), axs[0]):
+            bounds = (0, 0, 1024, 1024)
+            region = wsi.read_bounds(bounds, resolution=level, units="level")
+            ax.imshow(region)
+        plt.savefig("tiff_level_check.png")
