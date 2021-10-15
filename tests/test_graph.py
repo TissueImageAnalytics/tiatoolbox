@@ -66,7 +66,7 @@ def test_delaunay_adjacency_connected():
     assert np.sum(adjacency_matrix) / 2 == 1
 
 
-def test_affinity_to_edge_fuzz_output_shape():
+def test_affinity_to_edge_index_fuzz_output_shape():
     """Fuzz test that output shape is 2xM for affinity_to_edge.
 
     Output is 2xM, where M is the number of edges in the graph, i.e.
@@ -88,6 +88,22 @@ def test_affinity_to_edge_fuzz_output_shape():
         two, m = edge_index.shape
         assert two == 2
         assert 0 <= m <= n ** 2
+
+
+def test_affinity_to_edge_index_invalid_fuzz_input_shape():
+    """Test that affinity_to_edge fails with non-square input."""
+    # Generate some random square inputs
+    np.random.seed(123)
+    for _ in range(100):
+        input_shape = [np.random.randint(2, 10)] * 2
+        input_shape[1] -= 1
+        affinity_matrix = np.random.sample(input_shape)
+        threshold = np.random.rand()
+        # Convert to torch randomly
+        if np.random.rand() > 0.5:
+            affinity_matrix = torch.tensor(affinity_matrix)
+        with pytest.raises(ValueError, match="square"):
+            _ = affinity_to_edge_index(affinity_matrix, threshold=threshold)
 
 
 def test_hybrid_clustered_graph():
