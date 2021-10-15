@@ -5,7 +5,7 @@ import pathlib
 import click
 
 from tiatoolbox import utils
-from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.controller.semantic_segmentor import SemanticSegmentor
 
 
 @click.group()
@@ -165,7 +165,7 @@ def semantic_segment(
             input_path=masks, file_types=("*.jpg", "*.png", "*.npy")
         )
 
-    predictor = CNNPatchPredictor(
+    predictor = SemanticSegmentor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
