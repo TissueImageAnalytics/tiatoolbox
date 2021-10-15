@@ -169,7 +169,7 @@ def patch_predictor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
-        num_loader_worker=num_loader_worker,
+        num_loader_workers=num_loader_worker,
         verbose=verbose,
     )
 

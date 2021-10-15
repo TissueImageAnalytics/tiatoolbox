@@ -130,7 +130,7 @@ def semantic_segment(
     return_probabilities,
     return_labels,
     merge_predictions,
-    num_loader_worker,
+    num_loader_workers,
     on_gpu,
     verbose,
 ):
@@ -169,7 +169,7 @@ def semantic_segment(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
-        num_loader_worker=num_loader_worker,
+        num_loader_workers=num_loader_workers,
         verbose=verbose,
     )
 
