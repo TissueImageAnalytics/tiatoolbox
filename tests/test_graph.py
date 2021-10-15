@@ -91,9 +91,18 @@ def test_affinity_to_edge_fuzz_output_shape():
 
 
 def test_hybrid_clustered_graph():
-    points = np.concatenate([np.random.rand(25, 2) + offset for offset in range(4)])
-    features = np.concatenate([np.random.rand(25, 100) + offset for offset in range(4)])
-    graph = hybrid_clustered_graph(points, features, lambda_h=0.001)
+    """Test that hybrid_clustered_graph outputs are in an expected format.
+
+    Check the lengths and ranges of outputs with random data as input.
+    """
+    np.random.seed(123)
+    points = np.concatenate(
+        [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(4)]
+    )
+    features = np.concatenate(
+        [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(4)]
+    )
+    graph = hybrid_clustered_graph(points, features, lambda_h=0.8)
     x = graph["x"]
     assert len(x) > 0
     assert len(x) <= len(points)

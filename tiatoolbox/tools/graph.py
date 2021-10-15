@@ -70,7 +70,8 @@ def hybrid_clustered_graph(
         lambda_f (Number): Feature space distance weighting.
         lambda_h (Number): Clustering distance threshold. Applied to
             the similarity kernel (1-fd). Ranges between 0 and 1.
-            Defaults to 0.8.
+            Defaults to 0.8. A good value for this parameter will depend
+            on the intra-cluster variance.
         connectivity_distance (Number):
             Distance threshold to consider points as connected during
             during the Delaunay triangulation step.
