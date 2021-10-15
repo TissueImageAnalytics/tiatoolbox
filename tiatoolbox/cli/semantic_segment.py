@@ -11,7 +11,7 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 
 @click.group()
 def main():  # pragma: no cover
-    """Define slide_info click group."""
+    """Define semantic_segment click group."""
     return 0
 
 
