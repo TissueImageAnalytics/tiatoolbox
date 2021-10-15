@@ -3,9 +3,13 @@ import os
 import pathlib
 
 import click
+import yaml
 
 from tiatoolbox import utils
-from tiatoolbox.models.controller.semantic_segmentor import SemanticSegmentor
+from tiatoolbox.models.controller.semantic_segmentor import (
+    IOSegmentorConfig,
+    SemanticSegmentor,
+)
 
 
 @click.group()
@@ -59,7 +63,7 @@ def main():  # pragma: no cover
 @click.option(
     "--output_path",
     help="Output directory where model predictions will be saved.",
-    default="patch_prediction",
+    default="semantic_segmentation",
 )
 @click.option(
     "--batch_size",
@@ -79,26 +83,46 @@ def main():  # pragma: no cover
     help="resolution units, default=level",
 )
 @click.option(
-    "--return_probabilities",
-    type=bool,
-    help="Whether to return raw model probabilities. default=False",
-    default=False,
+    "--yaml_config_path",
+    help="Path to ioconfig file. Sample yaml file can be viewed in "
+    "tiatoolbox.data.pretrained_model.yaml. "
+    "if pretrained_model is used the ioconfig is automatically set."
+    "default=None",
+    default="None",
 )
 @click.option(
-    "--return_labels",
-    type=bool,
-    help="Whether to return raw model output as labels. default=True",
-    default=True,
+    "--patch_input_shape",
+    type=int,
+    nargs=2,
+    default=[1024, 1024],
+    help="Size of patches input to the model. ioconfig can overrides "
+    "these values. The values are at requested read resolution "
+    "and must be positive. tile width, height,"
+    " default=1024, 1024",
 )
 @click.option(
-    "--merge_predictions",
-    type=bool,
-    default=True,
-    help="Whether to merge the predictions to form a 2-dimensional map. "
-    "default=False",
+    "--patch_output_shape",
+    type=int,
+    nargs=2,
+    default=[512, 512],
+    help="Size of patches output by the model. ioconfig can overrides "
+    "these values. The values are at the requested read "
+    "resolution and must be positive."
+    "tile width, height default=512, 512",
 )
 @click.option(
-    "--num_loader_worker",
+    "--stride_shape",
+    type=int,
+    nargs=2,
+    default=[256, 256],
+    help="Stride using during tile and WSI processing. "
+    "ioconfig can overrides these values. The values are at "
+    "requested read resolution and must be positive."
+    "If not provided, `stride_shape=patch_input_shape` is used."
+    "tile width, height default=256, 256",
+)
+@click.option(
+    "--num_loader_workers",
     help="Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     type=int,
@@ -127,9 +151,10 @@ def semantic_segment(
     batch_size,
     resolution,
     units,
-    return_probabilities,
-    return_labels,
-    merge_predictions,
+    yaml_config_path,
+    patch_input_shape,
+    patch_output_shape,
+    stride_shape,
     num_loader_workers,
     on_gpu,
     verbose,
@@ -165,6 +190,14 @@ def semantic_segment(
             input_path=masks, file_types=("*.jpg", "*.png", "*.npy")
         )
 
+    ioconfig = None
+
+    if pretrained_model not in ["fcn-tissue_mask", "fcn_resnet50_unet-bcss"]:
+        with open(yaml_config_path) as registry_handle:
+            ioconfig = yaml.safe_load(registry_handle)
+
+        ioconfig = IOSegmentorConfig(**ioconfig)
+
     predictor = SemanticSegmentor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
@@ -177,15 +210,14 @@ def semantic_segment(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
-        return_probabilities=return_probabilities,
-        merge_predictions=merge_predictions,
-        labels=None,
-        return_labels=return_labels,
         resolution=resolution,
         units=units,
         on_gpu=on_gpu,
         save_dir=output_path,
-        save_output=True,
+        ioconfig=ioconfig,
+        patch_input_shape=patch_input_shape,
+        patch_output_shape=patch_output_shape,
+        stride_shape=stride_shape,
     )
 
     utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))
