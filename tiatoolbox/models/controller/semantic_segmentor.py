@@ -998,12 +998,12 @@ class SemanticSegmentor:
 
         if ioconfig is None and patch_input_shape is None:
             if self.ioconfig is None:
-                ioconfig = self.ioconfig
-            else:
                 raise ValueError(
                     "Must provide either `ioconfig` or "
                     "`patch_input_shape` and `patch_output_shape`"
                 )
+            else:
+                ioconfig = self.ioconfig
         elif ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
