@@ -1932,20 +1932,3 @@ class TestReader:
         cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
         # This control the harshness of similarity test, how much should be?
         assert np.min(cc) > 0.95
-
-    @staticmethod
-    def test_region_dump(sample_ome_tiff, reader_class):
-        from matplotlib import pyplot as plt
-
-        wsi = reader_class(sample_ome_tiff)
-        _, axs = plt.subplots(
-            nrows=1,
-            ncols=wsi.info.level_count,
-            figsize=(wsi.info.level_count, 3),
-            squeeze=False,
-        )
-        for level, ax in zip(range(wsi.info.level_count), axs[0]):
-            bounds = (0, 0, 1024, 1024)
-            region = wsi.read_bounds(bounds, resolution=level, units="level")
-            ax.imshow(region)
-        plt.savefig("tiff_level_check.png")
