@@ -637,6 +637,7 @@ def test_behavior_bcss(remote_sample, tmp_path):
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
+
 def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
     """Test for semantic segmentation if output path exists."""
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
@@ -749,7 +750,7 @@ def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
     semantic_segment_result = runner.invoke(
         cli.main,
         [
-            "patch-predictor",
+            "semantic-segment",
             "--img_input",
             str(dir_path),
             "--mode",
@@ -762,8 +763,7 @@ def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
     )
 
     assert semantic_segment_result.exit_code == 0
-    assert tmp_path.joinpath("0.merged.npy").exists()
-    assert tmp_path.joinpath("0.raw.json").exists()
-    assert tmp_path.joinpath("1.merged.npy").exists()
-    assert tmp_path.joinpath("1.raw.json").exists()
+    assert tmp_path.joinpath("0.raw.0.npy").exists()
+    assert tmp_path.joinpath("1.raw.0.npy").exists()
+    assert tmp_path.joinpath("file_map.dat").exists()
     assert tmp_path.joinpath("results.json").exists()
