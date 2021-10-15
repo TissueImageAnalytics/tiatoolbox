@@ -51,6 +51,11 @@ def _rm_dir(path):
         shutil.rmtree(path, ignore_errors=True)
 
 
+def _crash_func(x):
+    """Helper to induce crash."""
+    raise ValueError("Propagation Crash.")
+
+
 class _CNNTo1(ModelABC):
     """Contains a convolution.
 
@@ -308,6 +313,29 @@ def test_crash_segmentor(remote_sample):
             crash_on_exception=True,
         )
     _rm_dir("output")  # default output dir test
+
+    # * Test crash propagation when parallelize post processing
+    _rm_dir("output")
+    semantic_segmentor.num_postproc_workers = 2
+    semantic_segmentor.model.forward = _crash_func
+    with pytest.raises(ValueError, match=r"Propagation Crash."):
+        semantic_segmentor.predict(
+            [mini_wsi_svs],
+            patch_input_shape=[2048, 2048],
+            mode="wsi",
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+        )
+    _rm_dir("output")
+    # test ignore crash
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        patch_input_shape=[2048, 2048],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=False,
+    )
+    _rm_dir("output")
 
 
 def test_functional_segmentor_merging(tmp_path):
