@@ -43,3 +43,5 @@ Segmentor
 svs
 NHWC
 binarize
+PTC
+W0063
