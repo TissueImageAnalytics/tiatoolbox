@@ -948,9 +948,9 @@ class SemanticSegmentor:
             resolution (float): Resolution used for reading the image.
             units (str): Units of resolution used for reading the image. Choose from
               either `level`, `power` or `mpp`.
-            save_dir (str): Output directory when processing multiple tiles and
-              whole-slide images. By default, it is folder `output` where the
-              running script is invoked.
+            save_dir (str or pathlib.Path): Output directory when processing multiple
+              tiles and whole-slide images. By default, it is folder `output` where
+              the running script is invoked.
             crash_on_exception (bool): If `True`, the running loop will crash
               if there is any error during processing a WSI. Otherwise, the loop
               will move on to the next wsi for processing.
