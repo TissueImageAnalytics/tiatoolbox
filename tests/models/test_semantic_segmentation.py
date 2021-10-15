@@ -583,7 +583,7 @@ def test_behavior_tissue_mask(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
 
-    wsi_with_artifacts = pathlib.Path(remote_sample("wsi3_20k_20k_svs"))
+    wsi_with_artifacts = pathlib.Path(remote_sample("svs-1-small"))
     semantic_segmentor = SemanticSegmentor(
         batch_size=1, pretrained_model="fcn-tissue_mask"
     )
@@ -596,11 +596,11 @@ def test_behavior_tissue_mask(remote_sample, tmp_path):
         save_dir=f"{save_dir}/raw/",
     )
     # load up the raw prediction and perform precision check
-    _cache_pred = imread(pathlib.Path(remote_sample("wsi3_20k_20k_pred")))
+    _cache_pred = imread(pathlib.Path(remote_sample("small_svs_tissue_mask")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
-    _test_pred = (_test_pred[..., 1] > 0.75) * 255
+    _test_pred = (_test_pred[..., 1] > 0.50) * 255
     # divide 255 to binarize
-    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+    assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1.0e-3
     _rm_dir(save_dir)
 
 
