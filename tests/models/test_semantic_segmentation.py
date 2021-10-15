@@ -41,7 +41,7 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = True
 # ----------------------------------------------------
 
 
@@ -165,21 +165,23 @@ def test_segmentor_ioconfig():
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "power", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
+            {"units": "power", "resolution": 20},
+            {"units": "power", "resolution": 40},
         ],
         output_resolutions=[
-            {"units": "power", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
+            {"units": "power", "resolution": 20},
+            {"units": "power", "resolution": 40},
         ],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
+        save_resolution={"units": "power", "resolution": 8.0},
     )
-    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 0.50}
+    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 40}
     ioconfig = ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 0.5
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
+    assert ioconfig.save_resolution["resolution"] == 8.0 / 40.0
 
     resolutions = [
         {"units": "mpp", "resolution": 0.25},
@@ -195,7 +197,7 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsistreamdataset(remote_sample):
+def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
@@ -284,17 +286,15 @@ def test_crash_segmentor(remote_sample):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
         semantic_segmentor.predict([], mode="abc")
-    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
+
+    # * test not providing any io_config info when not using pretrained model
+    with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
         semantic_segmentor.predict(
             [mini_wsi_jpg],
             mode="tile",
             on_gpu=ON_GPU,
-            patch_input_shape=[2048, 2048],
-            resolution=1.0,
-            units="mpp",
             crash_on_exception=True,
         )
-
     with pytest.raises(ValueError, match=r".*already exists.*"):
         semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
     _rm_dir("output")  # default output dir test
@@ -455,6 +455,17 @@ def test_functional_segmentor(remote_sample, tmp_path):
         units="mpp",
         crash_on_exception=False,
     )
+
+    _rm_dir("output")  # default output dir test
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        patch_input_shape=[2048, 2048],
+        resolution=1.0,
+        units="baseline",
+        crash_on_exception=True,
+    )
     _rm_dir("output")  # default output dir test
 
     # * check exception bypass in the log
@@ -582,10 +593,11 @@ def test_subclass(remote_sample, tmp_path):
 def test_behavior_tissue_mask(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
-
     wsi_with_artifacts = pathlib.Path(remote_sample("wsi3_20k_20k_svs"))
+    mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
+
     semantic_segmentor = SemanticSegmentor(
-        batch_size=1, pretrained_model="fcn-tissue_mask"
+        batch_size=4, pretrained_model="fcn-tissue_mask"
     )
     _rm_dir(save_dir)
     semantic_segmentor.predict(
@@ -601,6 +613,17 @@ def test_behavior_tissue_mask(remote_sample, tmp_path):
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
     assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+
+    _rm_dir(save_dir)
+    # mainly to test prediction on tile
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+
     _rm_dir(save_dir)
 
 
