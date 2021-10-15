@@ -637,45 +637,6 @@ def test_behavior_bcss(remote_sample, tmp_path):
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
-
-def test_cli_semantic_segment_file_not_found(sample_svs, tmp_path):
-    """Test for semantic segmentation CLI file not found error."""
-    runner = CliRunner()
-    model_file_not_found_result = runner.invoke(
-        cli.main,
-        [
-            "semantic-segment",
-            "--img_input",
-            str(sample_svs)[:-1],
-        ],
-    )
-
-    assert model_file_not_found_result.output == ""
-    assert model_file_not_found_result.exit_code == 1
-    assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
-
-
-def test_cli_semantic_segment_incorrect_mode(sample_svs, tmp_path):
-    """Test for semantic segmentation mode not in wsi, tile."""
-    runner = CliRunner()
-    mode_not_in_wsi_tile_result = runner.invoke(
-        cli.main,
-        [
-            "patch-predictor",
-            "--img_input",
-            str(sample_svs),
-            "--mode",
-            '"patch"',
-            "--output_path",
-            tmp_path,
-        ],
-    )
-
-    assert mode_not_in_wsi_tile_result.output == ""
-    assert mode_not_in_wsi_tile_result.exit_code == 1
-    assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
-
-
 def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
     """Test for semantic segmentation if output path exists."""
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
@@ -702,35 +663,6 @@ def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
     assert semantic_segment_result.output == ""
     assert semantic_segment_result.exit_code == 1
     assert isinstance(semantic_segment_result.exception, FileExistsError)
-
-
-def test_cli_semantic_segmentation_single_file_mask(remote_sample, tmp_path):
-    """Test for semantic segmentation single file with mask."""
-    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
-    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
-    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
-    runner = CliRunner()
-    semantic_segment_result = runner.invoke(
-        cli.main,
-        [
-            "semantic-segment",
-            "--img_input",
-            str(mini_wsi_svs),
-            "--mode",
-            "wsi",
-            "--masks",
-            str(sample_wsi_msk),
-            "--output_path",
-            tmp_path.joinpath("output"),
-        ],
-    )
-
-    assert semantic_segment_result.exit_code == 0
-    assert tmp_path.joinpath("output/0.raw.0.npy").exists()
-    assert tmp_path.joinpath("output/file_map.dat").exists()
-    assert tmp_path.joinpath("output/results.json").exists()
 
 
 def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):

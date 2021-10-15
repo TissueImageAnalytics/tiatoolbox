@@ -684,3 +684,57 @@ def string_to_tuple(in_str):
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
+
+
+def prepare_model_cli(img_input, output_path, masks, file_types, mode):
+    """
+    Prepares cli for running models.
+    Checks for existing directories to run tests.
+    Converts file path to list of file paths or
+    creates list of file paths if input is a directory.
+
+    Args:
+        img_input (str or pathlib.Path): file path to images.
+        output_path (str or pathlib.Path): output directory path.
+        masks (str or pathlib.Path): file path to masks.
+        file_types (str): file types to process using cli.
+        mode (str): wsi or tile mode.
+
+    Returns:
+        files_all (list): list of files to process.
+        masks_all (list): list of masks corresponding to input files.
+        output_path (pathlib.Path): output path
+
+    """
+    output_path = pathlib.Path(output_path)
+    file_types = string_to_tuple(in_str=file_types)
+
+    if output_path.exists():
+        raise FileExistsError("Path already exists.")
+
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    if mode not in ["wsi", "tile"]:
+        raise ValueError("Please select wsi or tile mode.")
+
+    files_all = [
+        img_input,
+    ]
+
+    if masks is None:
+        masks_all = None
+    else:
+        masks_all = [
+            masks,
+        ]
+
+    if os.path.isdir(img_input):
+        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
+
+    if os.path.isdir(str(masks)):
+        masks_all = grab_files_from_dir(
+            input_path=masks, file_types=("*.jpg", "*.png", "*.npy")
+        )
+
+    return files_all, masks_all, output_path

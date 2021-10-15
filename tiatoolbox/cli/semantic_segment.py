@@ -112,39 +112,13 @@ def semantic_segment(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
-    output_path = pathlib.Path(output_path)
-
-    if output_path.exists():
-        raise FileExistsError("Path already exists.")  #
-
-    file_types = utils.misc.string_to_tuple(in_str=file_types)
-
-    if not os.path.exists(img_input):
-        raise FileNotFoundError
-
-    if mode not in ["wsi", "tile"]:
-        raise ValueError("Please select wsi or tile mode.")
-
-    files_all = [
-        img_input,
-    ]
-
-    if masks is None:
-        masks_all = None
-    else:
-        masks_all = [
-            masks,
-        ]
-
-    if os.path.isdir(img_input):
-        files_all = utils.misc.grab_files_from_dir(
-            input_path=img_input, file_types=file_types
-        )
-
-    if os.path.isdir(str(masks)):
-        masks_all = utils.misc.grab_files_from_dir(
-            input_path=masks, file_types=("*.jpg", "*.png", "*.npy")
-        )
+    files_all, masks_all, output_path = utils.misc.prepare_model_cli(
+        img_input=img_input,
+        output_path=output_path,
+        masks=masks,
+        file_types=file_types,
+        mode=mode,
+    )
 
     ioconfig = None
 

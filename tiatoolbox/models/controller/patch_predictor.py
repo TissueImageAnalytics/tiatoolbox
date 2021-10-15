@@ -471,7 +471,9 @@ class CNNPatchPredictor:
 
                 save_dir = pathlib.Path(save_dir)
 
-                save_dir.mkdir(parents=True, exist_ok=False)
+            if save_dir.is_dir():
+                raise ValueError(f"`save_dir` already exists! {save_dir}")
+            os.makedirs(save_dir)
 
             # return coordinates of patches processed within a tile / whole-slide image
             return_coordinates = True
