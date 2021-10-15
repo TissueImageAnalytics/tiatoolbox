@@ -270,9 +270,6 @@ def affinity_to_edge_index(
     # Handle cases for pytorch and numpy inputs
     if isinstance(affinity_matrix, torch.Tensor):
         return (affinity_matrix > threshold).nonzero().t().contiguous()
-    try:
-        return np.ascontiguousarray(
-            np.stack((affinity_matrix > threshold).nonzero(), axis=1).T
-        )
-    except TypeError:
-        raise TypeError("Unsupported type for connectivity_matrix")
+    return np.ascontiguousarray(
+        np.stack((affinity_matrix > threshold).nonzero(), axis=1).T
+    )
