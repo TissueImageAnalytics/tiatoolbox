@@ -52,7 +52,7 @@ def main():  # pragma: no cover
     "image tiles and whole-slide images. Patches are only processed if they are "
     "within a masked area. If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
-    "processed for image tiles. Supported file types are jpg, png and npy.",
+    "processed for image tiles. Supported file types are jpg, png.",
     default=None,
 )
 @click.option(

@@ -733,8 +733,6 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
         files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
 
     if os.path.isdir(str(masks)):
-        masks_all = grab_files_from_dir(
-            input_path=masks, file_types=("*.jpg", "*.png", "*.npy")
-        )
+        masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
 
     return files_all, masks_all, output_path
