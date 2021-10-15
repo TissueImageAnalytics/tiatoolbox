@@ -66,8 +66,8 @@ def hybrid_clustered_graph(
         points (ArrayLike): A list of (x, y) coordinates within a WSI.
         features (ArrayLike): A list of features associated with each
             coordinate in `points`. Must be the same length as `points`.
-        lambda_d (Number): Spatial distance weighting (AKA 'd').
-        lambda_f (Number): Feature space distance weighting (AKA 'f').
+        lambda_d (Number): Spatial distance weighting.
+        lambda_f (Number): Feature space distance weighting.
         lambda_h (Number): Clustering distance threshold. Applied to
             the similarity kernel (1-fd). Ranges between 0 and 1.
             Defaults to 0.8.
