@@ -1,7 +1,4 @@
 """Command line interface for semantic segmentation."""
-import os
-import pathlib
-
 import click
 import yaml
 

@@ -1,7 +1,4 @@
 """Command line interface for patch_predictor."""
-import os
-import pathlib
-
 import click
 
 from tiatoolbox import utils
