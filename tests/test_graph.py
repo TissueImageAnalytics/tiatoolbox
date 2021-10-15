@@ -6,8 +6,8 @@ import torch
 
 from tiatoolbox.tools.graph import (
     affinity_to_edge_index,
-    hybrid_clustered_graph,
     delaunay_adjacency,
+    hybrid_clustered_graph,
 )
 
 
@@ -21,14 +21,14 @@ def test_delaunay_adjacency_empty():
     """Test empty input raises a ValueError."""
     points = np.array([])
     with pytest.raises(ValueError, match="Points must have length >= 4"):
-        delaunay_adjacency(points)
+        delaunay_adjacency(points, 10)
 
 
 def test_delaunay_adjacency_invalid_shape():
     """Test points with invalid shape (not NxM) raises a ValueError."""
     points = np.random.rand(4, 4, 4)
     with pytest.raises(ValueError, match="NxM"):
-        delaunay_adjacency(points)
+        delaunay_adjacency(points, 10)
 
 
 def test_delaunay_adjacency_nothing_connected():
