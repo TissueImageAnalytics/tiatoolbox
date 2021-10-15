@@ -30,10 +30,12 @@ import torch
 import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
+import yaml
 from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import crop_op
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
@@ -632,6 +634,77 @@ def test_behavior_bcss(remote_sample, tmp_path):
     _rm_dir(save_dir)
 
 
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_cli_semantic_segment_file_not_found(sample_svs, tmp_path):
+    """Test for semantic segmentation CLI file not found error."""
+    runner = CliRunner()
+    model_file_not_found_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img_input",
+            str(sample_svs)[:-1],
+        ],
+    )
+
+    assert model_file_not_found_result.output == ""
+    assert model_file_not_found_result.exit_code == 1
+    assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
+
+
+def test_cli_semantic_segment_incorrect_mode(sample_svs, tmp_path):
+    """Test for semantic segmentation mode not in wsi, tile."""
+    runner = CliRunner()
+    mode_not_in_wsi_tile_result = runner.invoke(
+        cli.main,
+        [
+            "patch-predictor",
+            "--img_input",
+            str(sample_svs),
+            "--mode",
+            '"patch"',
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert mode_not_in_wsi_tile_result.output == ""
+    assert mode_not_in_wsi_tile_result.exit_code == 1
+    assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
+
+
+def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
+    """Test for semantic segmentation if output path exists."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    runner = CliRunner()
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img_input",
+            str(mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(sample_wsi_msk),
+            "--output_path",
+            tmp_path,
+        ],
+    )
+
+    assert semantic_segment_result.output == ""
+    assert semantic_segment_result.exit_code == 1
+    assert isinstance(semantic_segment_result.exception, FileExistsError)
+
+
 def test_cli_semantic_segmentation_single_file_mask(remote_sample, tmp_path):
     """Test for semantic segmentation single file with mask."""
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
@@ -652,6 +725,55 @@ def test_cli_semantic_segmentation_single_file_mask(remote_sample, tmp_path):
             str(sample_wsi_msk),
             "--output_path",
             tmp_path.joinpath("output"),
+        ],
+    )
+
+    assert semantic_segment_result.exit_code == 0
+    assert tmp_path.joinpath("output/0.raw.0.npy").exists()
+    assert tmp_path.joinpath("output/file_map.dat").exists()
+    assert tmp_path.joinpath("output/results.json").exists()
+
+
+def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
+    """Test for semantic segmentation single file with mask."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    fetch_pretrained_weights(
+        "fcn-tissue_mask", str(tmp_path.joinpath("fcn-tissue_mask.pth"))
+    )
+
+    config = dict(
+        input_resolutions=[{"units": "mpp", "resolution": 2.0}],
+        output_resolutions=[{"units": "mpp", "resolution": 2.0}],
+        patch_input_shape=[1024, 1024],
+        patch_output_shape=[512, 512],
+        stride_shape=[256, 256],
+        save_resolution={"units": "mpp", "resolution": 8.0},
+    )
+    with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+        yaml.dump(config, fptr)
+
+    runner = CliRunner()
+
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img_input",
+            str(mini_wsi_svs),
+            "--pretrained_weights",
+            str(tmp_path.joinpath("fcn-tissue_mask.pth")),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(sample_wsi_msk),
+            "--output_path",
+            tmp_path.joinpath("output"),
+            "--yaml_config_path",
+            tmp_path.joinpath("config.yaml"),
         ],
     )
 

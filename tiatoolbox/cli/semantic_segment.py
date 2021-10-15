@@ -148,7 +148,7 @@ def semantic_segment(
 
     ioconfig = None
 
-    if pretrained_model not in ["fcn-tissue_mask", "fcn_resnet50_unet-bcss"]:
+    if pretrained_weights is not None:
         with open(yaml_config_path) as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
 
