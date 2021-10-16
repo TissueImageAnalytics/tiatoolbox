@@ -583,31 +583,6 @@ def test_subclass(remote_sample, tmp_path):
     )
 
 
-def test_behavior_tissue_mask(remote_sample, tmp_path):
-    """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = pathlib.Path(tmp_path)
-
-    wsi_with_artifacts = pathlib.Path(remote_sample("svs-1-small"))
-    semantic_segmentor = SemanticSegmentor(
-        batch_size=1, pretrained_model="fcn-tissue_mask"
-    )
-    _rm_dir(save_dir)
-    semantic_segmentor.predict(
-        [wsi_with_artifacts],
-        mode="wsi",
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
-    )
-    # load up the raw prediction and perform precision check
-    _cache_pred = imread(pathlib.Path(remote_sample("small_svs_tissue_mask")))
-    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
-    _test_pred = (_test_pred[..., 1] > 0.50) * 255
-    # divide 255 to binarize
-    assert np.all(_cache_pred == _test_pred)
-    _rm_dir(save_dir)
-
-
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
 def test_behavior_bcss(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
@@ -767,3 +742,10 @@ def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
     assert tmp_path.joinpath("1.raw.0.npy").exists()
     assert tmp_path.joinpath("file_map.dat").exists()
     assert tmp_path.joinpath("results.json").exists()
+
+    # load up the raw prediction and perform precision check
+    _cache_pred = imread(pathlib.Path(remote_sample("small_svs_tissue_mask")))
+    _test_pred = np.load(str(tmp_path.joinpath("0.raw.0.npy")))
+    _test_pred = (_test_pred[..., 1] > 0.50) * 255
+
+    assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1e-3
