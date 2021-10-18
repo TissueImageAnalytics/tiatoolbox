@@ -112,6 +112,7 @@ class IOSegmentorConfig(IOConfigABC):
         save_resolution: dict = None,
         **kwargs,
     ):
+        self._kwargs = kwargs
         self.patch_input_shape = patch_input_shape
         self.patch_output_shape = patch_output_shape
         self.stride_shape = None
@@ -152,7 +153,7 @@ class IOSegmentorConfig(IOConfigABC):
         """Get scaling factor from input resolutions.
 
         This will convert resolutions to scaling factor with repsect to
-        highest resolutions found in the input list of resolutions.
+        highest resolutions found in the input resolutions list.
 
         Args:
             resolutions (list): A list of resolutions where each defined
@@ -187,18 +188,36 @@ class IOSegmentorConfig(IOConfigABC):
         in both input and output as reference.
 
         """
-        _self = copy.deepcopy(self)
-        resolutions = _self.input_resolutions + _self.output_resolutions
-        scale_factors = _self.scale_to_highest(resolutions, _self.resolution_unit)
-        _self.input_resolutions = [
-            {"units": "baseline", "resolution": v}
-            for v in scale_factors[: len(_self.input_resolutions)]
+        resolutions = self.input_resolutions + self.output_resolutions
+        if self.save_resolution is not None:
+            resolutions.append(self.save_resolution)
+
+        scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
+        num_input_resolutions = len(self.input_resolutions)
+        num_output_resolutions = len(self.input_resolutions)
+
+        end_idx = num_input_resolutions
+        input_resolutions = [
+            {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
         ]
-        _self.output_resolutions = [
+        end_idx = num_input_resolutions + num_output_resolutions
+        output_resolutions = [
             {"units": "baseline", "resolution": v}
-            for v in scale_factors[len(_self.input_resolutions) :]
+            for v in scale_factors[num_input_resolutions:end_idx]
         ]
-        return _self
+
+        save_resolution = None
+        if self.save_resolution is not None:
+            save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
+        new_config = IOSegmentorConfig(
+            input_resolutions=input_resolutions,
+            output_resolutions=output_resolutions,
+            patch_input_shape=self.patch_input_shape,
+            patch_output_shape=self.patch_output_shape,
+            save_resolution=save_resolution,
+            **self._kwargs,
+        )
+        return new_config
 
 
 class WSIStreamDataset(torch_data.Dataset):
@@ -254,13 +273,9 @@ class WSIStreamDataset(torch_data.Dataset):
 
         if mode == "tile":
             warnings.warn(
-                " ".join(
-                    [
-                        "WSIPatchDataset only reads image tile at",
-                        '`units="baseline"`. Resolutions will be converted',
-                        "to baseline value.",
-                    ]
-                )
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"`. Resolutions will be converted '
+                "to baseline value."
             )
             self.ioconfig = self.ioconfig.to_baseline()
 
@@ -594,12 +609,8 @@ class SemanticSegmentor:
             wsi_path, mask_path, mode, self.auto_generate_mask
         )
 
+        # assume ioconfig has already converted to `baseline` for `tile` mode
         resolution = ioconfig.highest_input_resolution
-        if (
-            isinstance(wsi_reader, VirtualWSIReader)
-            and resolution["units"] != "baseline"
-        ):
-            raise ValueError("Inference on `tile` only use `units='baseline'` !")
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
         # * retrieve patch and tile placement
@@ -931,7 +942,7 @@ class SemanticSegmentor:
               automatically generated for whole-slide images or the entire image
               is processed for image tiles.
             mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`): object that define information
+            ioconfig (:class:`IOSegmentorConfig`): Object defines information
               about input and ouput placement of patches. When provided,
               `patch_input_shape`, `patch_output_shape`, `stride_shape`,
               `resolution`, and `units` arguments are ignored. Otherwise,
@@ -1012,6 +1023,13 @@ class SemanticSegmentor:
                 patch_output_shape=patch_output_shape,
                 stride_shape=stride_shape,
             )
+        if mode == "tile":
+            warnings.warn(
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"`. Resolutions will be converted '
+                "to baseline value."
+            )
+            ioconfig = ioconfig.to_baseline()
 
         # use external for testing
         self._on_gpu = on_gpu

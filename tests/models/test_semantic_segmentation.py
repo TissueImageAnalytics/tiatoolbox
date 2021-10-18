@@ -55,6 +55,11 @@ def _rm_dir(path):
         shutil.rmtree(path, ignore_errors=True)
 
 
+def _crash_func(x):
+    """Helper to induce crash."""
+    raise ValueError("Propagation Crash.")
+
+
 class _CNNTo1(ModelABC):
     """Contains a convolution.
 
@@ -169,21 +174,23 @@ def test_segmentor_ioconfig():
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "power", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
+            {"units": "power", "resolution": 20},
+            {"units": "power", "resolution": 40},
         ],
         output_resolutions=[
-            {"units": "power", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
+            {"units": "power", "resolution": 20},
+            {"units": "power", "resolution": 40},
         ],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
+        save_resolution={"units": "power", "resolution": 8.0},
     )
-    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 0.50}
+    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 40}
     ioconfig = ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 0.5
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
+    assert ioconfig.save_resolution["resolution"] == 8.0 / 40.0
 
     resolutions = [
         {"units": "mpp", "resolution": 0.25},
@@ -199,7 +206,7 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsistreamdataset(remote_sample):
+def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
@@ -288,17 +295,15 @@ def test_crash_segmentor(remote_sample):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
         semantic_segmentor.predict([], mode="abc")
-    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
+
+    # * test not providing any io_config info when not using pretrained model
+    with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
         semantic_segmentor.predict(
             [mini_wsi_jpg],
             mode="tile",
             on_gpu=ON_GPU,
-            patch_input_shape=[2048, 2048],
-            resolution=1.0,
-            units="mpp",
             crash_on_exception=True,
         )
-
     with pytest.raises(ValueError, match=r".*already exists.*"):
         semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
     _rm_dir("output")  # default output dir test
@@ -312,6 +317,29 @@ def test_crash_segmentor(remote_sample):
             crash_on_exception=True,
         )
     _rm_dir("output")  # default output dir test
+
+    # * Test crash propagation when parallelize post processing
+    _rm_dir("output")
+    semantic_segmentor.num_postproc_workers = 2
+    semantic_segmentor.model.forward = _crash_func
+    with pytest.raises(ValueError, match=r"Propagation Crash."):
+        semantic_segmentor.predict(
+            [mini_wsi_svs],
+            patch_input_shape=[2048, 2048],
+            mode="wsi",
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+        )
+    _rm_dir("output")
+    # test ignore crash
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        patch_input_shape=[2048, 2048],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=False,
+    )
+    _rm_dir("output")
 
 
 def test_functional_segmentor_merging(tmp_path):
@@ -459,6 +487,17 @@ def test_functional_segmentor(remote_sample, tmp_path):
         units="mpp",
         crash_on_exception=False,
     )
+
+    _rm_dir("output")  # default output dir test
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        patch_input_shape=[2048, 2048],
+        resolution=1.0,
+        units="baseline",
+        crash_on_exception=True,
+    )
     _rm_dir("output")  # default output dir test
 
     # * check exception bypass in the log
@@ -583,8 +622,81 @@ def test_subclass(remote_sample, tmp_path):
     )
 
 
+# specifically designed for travis
+def test_functional_pretrained(remote_sample, tmp_path):
+    """Test for load up pretrained and over-writing tile mode ioconfig."""
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    reader = get_wsireader(mini_wsi_svs)
+    thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
+    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    imwrite(mini_wsi_jpg, thumb)
+
+    semantic_segmentor = SemanticSegmentor(
+        batch_size=2, pretrained_model="fcn-tissue_mask"
+    )
+    _rm_dir(save_dir)
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    _rm_dir(save_dir)
+
+    # mainly to test prediction on tile
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    _rm_dir(save_dir)
+    _rm_dir(tmp_path)
+
+
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
-def test_behavior_bcss(remote_sample, tmp_path):
+def test_behavior_tissue_mask_local(remote_sample, tmp_path):
+    """Contain test for behavior of the segmentor and pretrained models."""
+    save_dir = pathlib.Path(tmp_path)
+    wsi_with_artifacts = pathlib.Path(remote_sample("wsi3_20k_20k_svs"))
+    mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
+
+    semantic_segmentor = SemanticSegmentor(
+        batch_size=4, pretrained_model="fcn-tissue_mask"
+    )
+    _rm_dir(save_dir)
+    semantic_segmentor.predict(
+        [wsi_with_artifacts],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+    # load up the raw prediction and perform precision check
+    _cache_pred = imread(pathlib.Path(remote_sample("wsi3_20k_20k_pred")))
+    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
+    _test_pred = (_test_pred[..., 1] > 0.75) * 255
+    # divide 255 to binarize
+    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+
+    _rm_dir(save_dir)
+    # mainly to test prediction on tile
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+
+    _rm_dir(save_dir)
+
+
+@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+def test_behavior_bcss_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
 
