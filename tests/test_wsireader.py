@@ -6,6 +6,9 @@ import random
 import shutil
 from time import time
 
+# When no longer supporting Python <3.9 this should be collections.abc.Iterable
+from typing import Iterable
+
 import cv2
 import numpy as np
 import pytest
@@ -51,9 +54,11 @@ JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
 def pytest_generate_tests(metafunc):
     """Generate (parameterize) test scenarios.
+
     Adapted from pytest documentation. For more information on
     parameterized tests see:
     https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+
     """
     # Return if the test is not part of a class
     if metafunc.cls is None:
@@ -79,11 +84,11 @@ def _get_temp_folder_path(prefix="temp"):
     return new_dir
 
 
-def strictly_increasing(sequence):
+def strictly_increasing(sequence: Iterable) -> bool:
     """Return True if sequence is strictly increasing.
 
     Args:
-        sequence: Sequence to check.
+        sequence (Iterable): Sequence to check.
 
     Returns:
         bool: True if strictly increasing.
@@ -91,11 +96,11 @@ def strictly_increasing(sequence):
     return all(a < b for a, b in zip(sequence, sequence[1:]))
 
 
-def strictly_decreasing(sequence):
+def strictly_decreasing(sequence: Iterable) -> bool:
     """Return True if sequence is strictly decreasing.
 
     Args:
-        sequence: Sequence to check.
+        sequence (Iterable): Sequence to check.
 
 
     Returns:
