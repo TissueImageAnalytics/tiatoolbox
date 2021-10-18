@@ -1,13 +1,17 @@
-"""Command line interface for patch_predictor."""
+"""Command line interface for semantic segmentation."""
 import click
+import yaml
 
 from tiatoolbox import utils
-from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.controller.semantic_segmentor import (
+    IOSegmentorConfig,
+    SemanticSegmentor,
+)
 
 
 @click.group()
 def main():  # pragma: no cover
-    """Define patch_predictor click group."""
+    """Define semantic_segment click group."""
     return 0
 
 
@@ -20,7 +24,7 @@ def main():  # pragma: no cover
     "available pretrained models please see "
     "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
     "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
-    default="resnet18-kather100k",
+    default="fcn-tissue_mask",
 )
 @click.option(
     "--pretrained_weights",
@@ -45,7 +49,7 @@ def main():  # pragma: no cover
     "image tiles and whole-slide images. Patches are only processed if they are "
     "within a masked area. If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
-    "processed for image tiles. Supported file types are jpg, png and npy.",
+    "processed for image tiles. Supported file types are jpg, png.",
     default=None,
 )
 @click.option(
@@ -56,7 +60,7 @@ def main():  # pragma: no cover
 @click.option(
     "--output_path",
     help="Output directory where model predictions will be saved.",
-    default="patch_prediction",
+    default="semantic_segmentation",
 )
 @click.option(
     "--batch_size",
@@ -64,35 +68,12 @@ def main():  # pragma: no cover
     default=1,
 )
 @click.option(
-    "--resolution",
-    type=float,
-    default=0.5,
-    help="resolution to read the image at, default=0",
-)
-@click.option(
-    "--units",
-    default="mpp",
-    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
-    help="resolution units, default=level",
-)
-@click.option(
-    "--return_probabilities",
-    type=bool,
-    help="Whether to return raw model probabilities. default=False",
-    default=False,
-)
-@click.option(
-    "--return_labels",
-    type=bool,
-    help="Whether to return raw model output as labels. default=True",
-    default=True,
-)
-@click.option(
-    "--merge_predictions",
-    type=bool,
-    default=True,
-    help="Whether to merge the predictions to form a 2-dimensional map. "
-    "default=False",
+    "--yaml_config_path",
+    help="Path to ioconfig file. Sample yaml file can be viewed in "
+    "tiatoolbox.data.pretrained_model.yaml. "
+    "if pretrained_model is used the ioconfig is automatically set."
+    "default=None",
+    default="None",
 )
 @click.option(
     "--num_loader_workers",
@@ -113,7 +94,7 @@ def main():  # pragma: no cover
     default=True,
     help="Print output, default=True",
 )
-def patch_predictor(
+def semantic_segment(
     pretrained_model,
     pretrained_weights,
     img_input,
@@ -122,11 +103,7 @@ def patch_predictor(
     mode,
     output_path,
     batch_size,
-    resolution,
-    units,
-    return_probabilities,
-    return_labels,
-    merge_predictions,
+    yaml_config_path,
     num_loader_workers,
     on_gpu,
     verbose,
@@ -140,7 +117,15 @@ def patch_predictor(
         mode=mode,
     )
 
-    predictor = CNNPatchPredictor(
+    ioconfig = None
+
+    if pretrained_weights is not None:
+        with open(yaml_config_path) as registry_handle:
+            ioconfig = yaml.safe_load(registry_handle)
+
+        ioconfig = IOSegmentorConfig(**ioconfig)
+
+    predictor = SemanticSegmentor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
@@ -152,15 +137,9 @@ def patch_predictor(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
-        return_probabilities=return_probabilities,
-        merge_predictions=merge_predictions,
-        labels=None,
-        return_labels=return_labels,
-        resolution=resolution,
-        units=units,
         on_gpu=on_gpu,
         save_dir=output_path,
-        save_output=True,
+        ioconfig=ioconfig,
     )
 
     utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))

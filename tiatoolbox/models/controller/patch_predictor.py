@@ -75,7 +75,7 @@ class CNNPatchPredictor:
           ...    pretrained_model="resnet18-kather100k",
           ...    pretrained_weights="resnet18_local_weight")
         batch_size (int) : Number of images fed into the model each time.
-        num_loader_worker (int) : Number of workers to load the data.
+        num_loader_workers (int) : Number of workers to load the data.
           Take note that they will also perform preprocessing.
         verbose (bool): Whether to output logging information.
 
@@ -92,7 +92,7 @@ class CNNPatchPredictor:
           downloaded. However, you can override with your own set of weights
           via the `pretrained_weights` argument. Argument is case insensitive.
         batch_size (int) : Number of images fed into the model each time.
-        num_loader_worker (int): Number of workers used in torch.utils.data.DataLoader.
+        num_loader_workers (int): Number of workers used in torch.utils.data.DataLoader.
         verbose (bool): Whether to output logging information.
 
     Examples:
@@ -126,7 +126,7 @@ class CNNPatchPredictor:
     def __init__(
         self,
         batch_size=8,
-        num_loader_worker=0,
+        num_loader_workers=0,
         model=None,
         pretrained_model=None,
         pretrained_weights=None,
@@ -151,7 +151,7 @@ class CNNPatchPredictor:
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
-        self.num_loader_worker = num_loader_worker
+        self.num_loader_worker = num_loader_workers
         self.verbose = verbose
 
     @staticmethod
@@ -461,6 +461,13 @@ class CNNPatchPredictor:
                     "we save the outputs and return the locations "
                     "to the corresponding files."
                 )
+
+            if len(imgs) > 1:
+                warnings.warn(
+                    "When providing multiple whole-slide images / tiles, "
+                    "we save the outputs and return the locations "
+                    "to the corresponding files."
+                )
                 if save_dir is None:
                     warnings.warn(
                         "> 1 WSIs detected but there is no save directory set."
@@ -471,6 +478,7 @@ class CNNPatchPredictor:
 
                 save_dir = pathlib.Path(save_dir)
 
+            if save_dir is not None:
                 save_dir.mkdir(parents=True, exist_ok=False)
 
             # return coordinates of patches processed within a tile / whole-slide image
