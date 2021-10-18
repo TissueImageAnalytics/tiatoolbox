@@ -36,6 +36,7 @@ def test_delaunay_adjacency_nothing_connected():
 
     Nothing should connect for this case as all points are further
     apart than dthresh.
+
     """
     # Simple convex hull with the minimum of 4 points
     points = np.array(
@@ -71,6 +72,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
 
     Output is 2xM, where M is the number of edges in the graph, i.e.
     the number of connections between nodes with a value > threshold.
+
     """
     np.random.seed(123)
     for _ in range(1000):
@@ -110,6 +112,7 @@ def test_hybrid_clustered_graph():
     """Test that hybrid_clustered_graph outputs are in an expected format.
 
     Check the lengths and ranges of outputs with random data as input.
+
     """
     np.random.seed(123)
     points = np.concatenate(
