@@ -144,7 +144,7 @@ def hybrid_clustered_graph(
         # (most un-similar).
         i_vs_all_similarities = np.ones(len(points))
         # Set the neighbours similarity to calculated values (similarity/fd)
-        i_vs_all_similarities[neighbour_indexes[i]] = neighbour_similarities
+        i_vs_all_similarities[neighbour_indexes_singlepoint] = neighbour_similarities
         i_vs_all_similarities = i_vs_all_similarities[i + 1 :]
         condensed_distance_matrix[
             index : index + len(i_vs_all_similarities)
