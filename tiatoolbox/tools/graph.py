@@ -108,11 +108,11 @@ def hybrid_clustered_graph(
     where_significant = feature_ranges > feature_range_thresh
     features = features[:, where_significant]
 
-    # Build a kd-tree and rank neighbours according to the euclidean distance (nearest -> farthest)
+    # Build a kd-tree and rank neighbours according to the euclidean
+    # distance (nearest -> farthest).
     ckdtree = cKDTree(points)
     neighbour_distances_ckd, neighbour_indexes_ckd = ckdtree.query(
-        x=points,
-        k=len(points)
+        x=points, k=len(points)
     )
 
     # Initialise an empty 1-D condensed distance matrix.
@@ -124,17 +124,26 @@ def hybrid_clustered_graph(
     # Find the similarity between pairs of patches
     index = 0
     for i in range(len(points) - 1):
-        # Only consider neighbours which are inside of the radius (neighbour_search_radius)
-        neighbour_distances_singlepoint = neighbour_distances_ckd[i][neighbour_distances_ckd[i] < neighbour_search_radius]
-        neighbour_indexes_singlepoint = neighbour_indexes_ckd[i][:len(neighbour_distances_singlepoint)]
-        
+        # Only consider neighbours which are inside of the radius
+        # (neighbour_search_radius).
+        neighbour_distances_singlepoint = neighbour_distances_ckd[i][
+            neighbour_distances_ckd[i] < neighbour_search_radius
+        ]
+        neighbour_indexes_singlepoint = neighbour_indexes_ckd[i][
+            : len(neighbour_distances_singlepoint)
+        ]
+
         # Called f in the paper
         neighbour_feature_similarities = np.exp(
             -lambda_f
-            * np.linalg.norm(features[i] - features[neighbour_indexes_singlepoint], axis=1)
+            * np.linalg.norm(
+                features[i] - features[neighbour_indexes_singlepoint], axis=1
+            )
         )
         # Called d in paper
-        neighbour_distance_similarities = np.exp(-lambda_d * neighbour_distances_singlepoint)
+        neighbour_distance_similarities = np.exp(
+            -lambda_d * neighbour_distances_singlepoint
+        )
         # 1 - product of similarities (1 - fd)
         # (1 = most un-similar 0 = most similar)
         neighbour_similarities = (
