@@ -622,20 +622,15 @@ def test_subclass(remote_sample, tmp_path):
     )
 
 
+# specifically designed for travis
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
-    save_dir = pathlib.Path(f'{tmp_path}/output')
+    save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
     reader = get_wsireader(mini_wsi_svs)
-    thumb = reader.slide_thumbnail(resolution=1.0, units='baseline')
+    thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
-
-    # mini_wsi_msk_npy = remote_sample("small_svs_tissue_mask")
-    # mini_wsi_msk = np.load(mini_wsi_msk_npy).astype(np.uint8)
-    # mini_wsi_msk_jpg = f"{tmp_path}/mini_svs_tissue_mask.jpg"
-    # imwrite(mini_wsi_msk_jpg, mini_wsi_msk)
-    # *
 
     semantic_segmentor = SemanticSegmentor(
         batch_size=4, pretrained_model="fcn-tissue_mask"
