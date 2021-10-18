@@ -687,8 +687,7 @@ def string_to_tuple(in_str):
 
 
 def prepare_model_cli(img_input, output_path, masks, file_types, mode):
-    """
-    Prepares cli for running models.
+    """Prepares cli for running models.
     Checks for existing directories to run tests.
     Converts file path to list of file paths or
     creates list of file paths if input is a directory.
