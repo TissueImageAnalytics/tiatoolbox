@@ -871,7 +871,7 @@ def test_command_line_models_file_not_found(sample_svs, tmp_path):
             "--file_types",
             '"*.ndpi, *.svs"',
             "--output_path",
-            tmp_path,
+            str(tmp_path.joinpath("output")),
         ],
     )
 
@@ -894,7 +894,7 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
             "--mode",
             '"patch"',
             "--output_path",
-            tmp_path,
+            str(tmp_path.joinpath("output")),
         ],
     )
 
@@ -915,20 +915,24 @@ def test_cli_model_single_file(sample_svs, tmp_path):
             "--mode",
             "wsi",
             "--output_path",
-            tmp_path,
+            str(tmp_path.joinpath("output")),
         ],
     )
 
     assert models_wsi_result.exit_code == 0
-    assert tmp_path.joinpath("0.merged.npy").exists()
-    assert tmp_path.joinpath("0.raw.json").exists()
-    assert tmp_path.joinpath("results.json").exists()
+    assert tmp_path.joinpath("output/0.merged.npy").exists()
+    assert tmp_path.joinpath("output/0.raw.json").exists()
+    assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_single_file_mask(sample_wsi_dict, tmp_path):
+def test_cli_model_single_file_mask(remote_sample, tmp_path):
     """Test for models CLI single file with mask."""
-    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+
     runner = CliRunner()
     models_tiles_result = runner.invoke(
         cli.main,
@@ -939,22 +943,25 @@ def test_cli_model_single_file_mask(sample_wsi_dict, tmp_path):
             "--mode",
             "wsi",
             "--masks",
-            str(mini_wsi_msk),
+            str(sample_wsi_msk),
             "--output_path",
-            tmp_path,
+            str(tmp_path.joinpath("output")),
         ],
     )
 
     assert models_tiles_result.exit_code == 0
-    assert tmp_path.joinpath("0.merged.npy").exists()
-    assert tmp_path.joinpath("0.raw.json").exists()
-    assert tmp_path.joinpath("results.json").exists()
+    assert tmp_path.joinpath("output/0.merged.npy").exists()
+    assert tmp_path.joinpath("output/0.raw.json").exists()
+    assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_multiple_file_mask(sample_wsi_dict, tmp_path):
+def test_cli_model_multiple_file_mask(remote_sample, tmp_path):
     """Test for models CLI multiple file with mask."""
-    mini_wsi_svs = sample_wsi_dict["wsi2_4k_4k_svs"]
-    mini_wsi_msk = sample_wsi_dict["wsi2_4k_4k_msk"]
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    mini_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     # Make multiple copies for test
     dir_path = tmp_path.joinpath("new_copies")

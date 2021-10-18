@@ -959,9 +959,9 @@ class SemanticSegmentor:
             resolution (float): Resolution used for reading the image.
             units (str): Units of resolution used for reading the image. Choose from
               either `level`, `power` or `mpp`.
-            save_dir (str): Output directory when processing multiple tiles and
-              whole-slide images. By default, it is folder `output` where the
-              running script is invoked.
+            save_dir (str or pathlib.Path): Output directory when processing multiple
+              tiles and whole-slide images. By default, it is folder `output` where
+              the running script is invoked.
             crash_on_exception (bool): If `True`, the running loop will crash
               if there is any error during processing a WSI. Otherwise, the loop
               will move on to the next wsi for processing.
@@ -998,7 +998,7 @@ class SemanticSegmentor:
         save_dir = pathlib.Path(save_dir)
         if save_dir.is_dir():
             raise ValueError(f"`save_dir` already exists! {save_dir}")
-        os.makedirs(save_dir)
+        save_dir.mkdir(parents=True)
         self._cache_dir = f"{save_dir}/cache"
         os.makedirs(self._cache_dir)
 
@@ -1072,13 +1072,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             try:
-                wsi_save_path = os.path.join(save_dir, f"{wsi_idx}")
-                self._predict_one_wsi(wsi_idx, ioconfig, wsi_save_path, mode)
+                wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
+                self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
 
                 # Do not use dict with file name as key, because it can be
                 # overwritten. It may be user intention to provide files with a
                 # same name multiple times (may be they have different root path)
-                outputs.append([img_path, wsi_save_path])
+                outputs.append([str(img_path), str(wsi_save_path)])
 
                 # ? will this corrupt old version if Ctrl-c midway?
                 map_file_path = os.path.join(save_dir, "file_map.dat")
