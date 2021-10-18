@@ -624,7 +624,7 @@ def test_subclass(remote_sample, tmp_path):
 
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
-    save_dir = pathlib.Path(tmp_path)
+    save_dir = pathlib.Path(f'{tmp_path}/output')
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units='baseline')
