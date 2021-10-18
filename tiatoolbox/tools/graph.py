@@ -100,7 +100,7 @@ def hybrid_clustered_graph(
         ...     np.random.rand(11) * n
         ...     for n, _ in enumerate(points)
         ... ])
-        >>> graph_dict = build_graph_dict(points, features)
+        >>> graph_dict = hybrid_clustered_graph(points, features)
 
     """
     # Remove features which do not change significantly between patches
