@@ -212,19 +212,19 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
     tessellation = Delaunay(points)
     # Find all connected neighbours for each point in the set of
     # triangles. Starting with an empty dictionary.
-    traingle_neighbours = defaultdict(set)
+    triangle_neighbours = defaultdict(set)
     # Iterate over each triplet of point indexes which denotes a
     # triangle within the tessellation.
     for index_triplet in tessellation.simplices:
         for index in index_triplet:
             connected = set(index_triplet)
             connected.remove(index)  # Do not allow connection to itself.
-            traingle_neighbours[index] = traingle_neighbours[index].union(connected)
+            triangle_neighbours[index] = triangle_neighbours[index].union(connected)
     # Initialise the nxn adjacency matrix with zeros.
     adjacency = np.zeros((len(points), len(points)))
     # Fill the adjacency matrix:
-    for index in traingle_neighbours:
-        neighbours = traingle_neighbours[index]
+    for index in triangle_neighbours:
+        neighbours = triangle_neighbours[index]
         neighbours = np.array(list(neighbours), dtype=int)
         kdtree = cKDTree(points[neighbours, :])
         nearby_neighbours = kdtree.query_ball_point(
