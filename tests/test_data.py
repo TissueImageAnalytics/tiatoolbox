@@ -35,6 +35,7 @@ def test_fetch_sample(tmp_path):
     arr = stainnorm_target()
     assert isinstance(arr, np.ndarray)
 
+
 def test_fetch_sample_skip(tmp_path):
     """Test skipping fetching sample via code name if already downloaded."""
     # Fetch the remote file twice
