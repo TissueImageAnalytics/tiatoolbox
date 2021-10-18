@@ -633,7 +633,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=4, pretrained_model="fcn-tissue_mask"
+        batch_size=2, pretrained_model="fcn-tissue_mask"
     )
     _rm_dir(save_dir)
     semantic_segmentor.predict(
@@ -654,6 +654,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
         save_dir=f"{save_dir}/raw/",
     )
     _rm_dir(save_dir)
+    _rm_dir(tmp_path)
 
 
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
