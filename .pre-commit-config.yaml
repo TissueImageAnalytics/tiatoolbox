@@ -13,6 +13,15 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies: [
+          flake8-spellcheck, # Spelling checker
+        ]
+        args: [--exit-zero]  # These checks will not cause the commit to fail
+        verbose: true
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.7.9
+    hooks:
+      - id: flake8
+        additional_dependencies: [
           flake8-bugbear, # Detect potential bugs
           flake8-isort, # Check import ordering
           flake8-comprehensions, # Suggestions for better list/set/dict comprehensions 
@@ -25,7 +34,6 @@ repos:
           flake8-cognitive-complexity, # Check max function complexity
           flake8-expression-complexity, # Check max expression complexity
           flake8-return, # Check return statements
-          flake8-spellcheck, # Spelling checker
           flake8-pytest-style, # Check against pytest style guide
           flake8-fixme, # Check for FIXME, TODO, and XXX left in comments
           flake8-sql, # Check SQL statement style
