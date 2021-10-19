@@ -156,11 +156,11 @@ def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
         cli.main,
         [
             "slide-thumbnail",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample)),
             "--mode",
             mode,
-            "--output_path",
+            "--output-path",
             str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
         ],
     )
