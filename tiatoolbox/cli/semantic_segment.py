@@ -17,7 +17,7 @@ def main():  # pragma: no cover
 
 @main.command()
 @click.option(
-    "--pretrained_model",
+    "--pretrained-model",
     help="Predefined model used to process the data. the format is "
     "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
     "resnet18 model trained on the kather dataset. For a detailed list of "
@@ -27,18 +27,18 @@ def main():  # pragma: no cover
     default="fcn-tissue_mask",
 )
 @click.option(
-    "--pretrained_weights",
+    "--pretrained-weights",
     help="Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default=None,
 )
 @click.option(
-    "--img_input",
+    "--img-input",
     help="Path to the input directory containing images to process or an "
     "individual file.",
 )
 @click.option(
-    "--file_types",
+    "--file-types",
     help="File types to capture from directory. "
     "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
@@ -58,17 +58,17 @@ def main():  # pragma: no cover
     default="wsi",
 )
 @click.option(
-    "--output_path",
+    "--output-path",
     help="Output directory where model predictions will be saved.",
     default="semantic_segmentation",
 )
 @click.option(
-    "--batch_size",
+    "--batch-size",
     help="Number of images to feed into the model each time.",
     default=1,
 )
 @click.option(
-    "--yaml_config_path",
+    "--yaml-config-path",
     help="Path to ioconfig file. Sample yaml file can be viewed in "
     "tiatoolbox.data.pretrained_model.yaml. "
     "if pretrained_model is used the ioconfig is automatically set."
@@ -76,14 +76,14 @@ def main():  # pragma: no cover
     default="None",
 )
 @click.option(
-    "--num_loader_workers",
+    "--num-loader-workers",
     help="Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     type=int,
     default=0,
 )
 @click.option(
-    "--on_gpu",
+    "--on-gpu",
     type=bool,
     default=False,
     help="Run the model on GPU, default=False",

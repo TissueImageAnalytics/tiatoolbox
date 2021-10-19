@@ -14,9 +14,9 @@ def main():  # pragma: no cover
 
 
 @main.command()
-@click.option("--img_input", help="Path to WSI file")
+@click.option("--img-input", help="Path to WSI file")
 @click.option(
-    "--output_path",
+    "--output-path",
     help="Path to output file to save the image region in save mode,"
     " default=img_input_dir/../im_region.jpg",
 )
