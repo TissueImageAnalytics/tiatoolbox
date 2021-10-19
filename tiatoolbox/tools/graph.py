@@ -44,41 +44,45 @@ def hybrid_clustered_graph(
 ) -> Dict[str, ArrayLike]:
     """Build a graph via hybrid clustering in spatial and feature space.
 
+    The graph is constructed via hybrid heirachical clustering followed
+    by Delaunay triangulation of these cluster centroids.
     This is part of the SlideGraph pipeline but may be used to construct
     a graph in general from point coordinates and features.
 
-    The graph is constructed via hybrid heirachical clustering and
-    Delaunay triangulation.
-
     The clustering uses a distance kernel, ranging between 0 and 1,
-    which is a weighted product of spatial distance and feature-space
-    distance. Points which are spatially further apart than
+    which is a weighted product of spatial distance (distance between
+    coordinates in `points`, e.g. WSI location
+    and feature-space distance (e.g. ResNet features).
+
+    Points which are spatially further apart than
     `neighbour_search_radius` are given a similarity of 1 (most
     dissimilar). This significantly speeds up computation. This distance
     metric is then used to form clusters via hierachical/agglomerative
     clustering.
 
     Next, a Delaunay triangulation is applied to the clusters to connect
-    the neighouring clusters.
+    the neighouring clusters. Only clusters which are closer than
+    `connectivity_distance` in the spatial domain will be connected.
 
     Args:
-        points (ArrayLike): A list of (x, y) coordinates within a WSI.
+        points (ArrayLike): A list of (x, y) spatial coordinates, e.g.
+            pixel locations within a WSI.
         features (ArrayLike): A list of features associated with each
             coordinate in `points`. Must be the same length as `points`.
-        lambda_d (Number): Spatial distance weighting.
-        lambda_f (Number): Feature space distance weighting.
+        lambda_d (Number): Spatial distance (d) weighting.
+        lambda_f (Number): Feature distance (f) weighting.
         lambda_h (Number): Clustering distance threshold. Applied to
             the similarity kernel (1-fd). Ranges between 0 and 1.
             Defaults to 0.8. A good value for this parameter will depend
             on the intra-cluster variance.
         connectivity_distance (Number):
-            Distance threshold to consider points as connected during
+            Spatial distance threshold to consider points as connected
             during the Delaunay triangulation step.
         neighbour_search_radius (Number):
             Search radius (L2 norm) threshold for points to be
-            considered as connected. Points with a spatial distance
-            above this are not compared and have a similarity set to 1
-            (most dissimilar).
+            considered as similar for clustering.
+            Points with a spatial distance above this are not compared
+            and have a similarity set to 1 (most dissimilar).
         feature_range_thresh (Number):
             Minimal range for which a feature is considered significant.
             Features which have a range less than this are ignored.
@@ -86,7 +90,8 @@ def hybrid_clustered_graph(
 
     Returns:
         dict: A dictionary defining a graph for serialisation (e.g.
-        JSON) or converting into a torch-geometric Data object.
+        JSON) or converting into a torch-geometric Data object where
+        each node is the centroid (mean) if the features in a cluster.
             - :class:`numpy.ndarray` - x:
                 Features of each node (mean of features in a cluster).
             - :class:`numpy.ndarray` - edge_index:
@@ -194,6 +199,8 @@ def hybrid_clustered_graph(
 
 def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
+
+    Points which are further apart than dthresh will not be connected.
 
     See https://en.wikipedia.org/wiki/Adjacency_matrix.
 
