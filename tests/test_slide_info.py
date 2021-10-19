@@ -40,7 +40,7 @@ def test_command_line_slide_info(sample_all_wsis, tmp_path):
             "save",
             "--file-types",
             "*.ndpi, *.svs",
-            "--output-dir",
+            "--output-path",
             str(tmp_path),
         ],
     )

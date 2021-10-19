@@ -87,7 +87,7 @@ def test_command_line_save_tiles(sample_all_wsis, tmp_path):
             '"*.ndpi, *.svs"',
             "--tile-objective-value",
             "5",
-            "--output-dir",
+            "--output-path",
             os.path.join(tmp_path, "all_tiles"),
         ],
     )
@@ -108,7 +108,7 @@ def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
             '"*.ndpi, *.svs"',
             "--tile-objective-value",
             "5",
-            "--output-dir",
+            "--output-path",
             tmp_path,
             "--verbose",
             "False",
@@ -131,7 +131,7 @@ def test_command_line_save_tiles_file_not_found(sample_svs, tmp_path):
             '"*.ndpi, *.svs"',
             "--tile-objective-value",
             "5",
-            "--output-dir",
+            "--output-path",
             tmp_path,
         ],
     )

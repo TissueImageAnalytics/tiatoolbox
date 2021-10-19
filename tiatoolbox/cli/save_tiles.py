@@ -15,7 +15,7 @@ def main():  # pragma: no cover
 @main.command()
 @click.option("--img-input", help="input path to WSI file or directory path")
 @click.option(
-    "--output-dir",
+    "--output-path",
     default="tiles",
     help="Path to output directory to save the output, default=tiles",
 )
@@ -45,7 +45,7 @@ def main():  # pragma: no cover
 )
 def save_tiles(
     img_input,
-    output_dir,
+    output_path,
     file_types,
     tile_objective_value,
     tile_read_size,
@@ -71,7 +71,7 @@ def save_tiles(
     for curr_file in files_all:
         wsicore.save_tiles.save_tiles(
             input_path=curr_file,
-            output_dir=output_dir,
+            output_dir=output_path,
             tile_objective_value=tile_objective_value,
             tile_read_size=tile_read_size,
             verbose=verbose,

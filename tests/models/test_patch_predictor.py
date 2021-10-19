@@ -866,11 +866,11 @@ def test_command_line_models_file_not_found(sample_svs, tmp_path):
         cli.main,
         [
             "patch-predictor",
-            "--img_input",
+            "--img-input",
             str(sample_svs)[:-1],
-            "--file_types",
+            "--file-types",
             '"*.ndpi, *.svs"',
-            "--output_path",
+            "--output-path",
             str(tmp_path.joinpath("output")),
         ],
     )
@@ -887,13 +887,13 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
         cli.main,
         [
             "patch-predictor",
-            "--img_input",
+            "--img-input",
             str(sample_svs),
-            "--file_types",
+            "--file-types",
             '"*.ndpi, *.svs"',
             "--mode",
             '"patch"',
-            "--output_path",
+            "--output-path",
             str(tmp_path.joinpath("output")),
         ],
     )
@@ -910,11 +910,11 @@ def test_cli_model_single_file(sample_svs, tmp_path):
         cli.main,
         [
             "patch-predictor",
-            "--img_input",
+            "--img-input",
             str(sample_svs),
             "--mode",
             "wsi",
-            "--output_path",
+            "--output-path",
             str(tmp_path.joinpath("output")),
         ],
     )
@@ -938,13 +938,13 @@ def test_cli_model_single_file_mask(remote_sample, tmp_path):
         cli.main,
         [
             "patch-predictor",
-            "--img_input",
+            "--img-input",
             str(mini_wsi_svs),
             "--mode",
             "wsi",
             "--masks",
             str(sample_wsi_msk),
-            "--output_path",
+            "--output-path",
             str(tmp_path.joinpath("output")),
         ],
     )
@@ -995,13 +995,13 @@ def test_cli_model_multiple_file_mask(remote_sample, tmp_path):
         cli.main,
         [
             "patch-predictor",
-            "--img_input",
+            "--img-input",
             str(dir_path),
             "--mode",
             "wsi",
             "--masks",
             str(dir_path_masks),
-            "--output_path",
+            "--output-path",
             str(tmp_path),
         ],
     )
