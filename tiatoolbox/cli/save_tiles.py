@@ -13,25 +13,25 @@ def main():  # pragma: no cover
 
 
 @main.command()
-@click.option("--img_input", help="input path to WSI file or directory path")
+@click.option("--img-input", help="input path to WSI file or directory path")
 @click.option(
-    "--output_dir",
+    "--output-dir",
     default="tiles",
     help="Path to output directory to save the output, default=tiles",
 )
 @click.option(
-    "--file_types",
+    "--file-types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
     default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
 @click.option(
-    "--tile_objective_value",
+    "--tile-objective-value",
     type=int,
     default=20,
     help="objective value at which tile is generated- default=20",
 )
 @click.option(
-    "--tile_read_size",
+    "--tile-read-size",
     type=int,
     nargs=2,
     default=[5000, 5000],
