@@ -15,13 +15,13 @@ def main():  # pragma: no cover
 
 
 @main.command()
-@click.option("--img_input", help="input path to WSI file or directory path")
+@click.option("--img-input", help="input path to WSI file or directory path")
 @click.option(
-    "--output_dir",
+    "--output-dir",
     help="Path to output directory to save the output, default=img_input/../meta",
 )
 @click.option(
-    "--file_types",
+    "--file-types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
     default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
