@@ -37,7 +37,7 @@ test_requirements = [
 ]
 
 setup(
-    author="TIA Lab",
+    author="TIA Centre",
     author_email="tia@dcs.warwick.ac.uk",
     python_requires=">=3.7",
     classifiers=[
