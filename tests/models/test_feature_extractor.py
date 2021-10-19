@@ -34,7 +34,7 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
-BATCH_SIZE = 4
+
 # ----------------------------------------------------
 
 
@@ -49,12 +49,28 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_feature_extractor(remote_sample, tmp_path):
+def test_functional(remote_sample, tmp_path):
     """Test for feature extraction."""
-    save_dir = pathlib.Path(tmp_path)
+    save_dir = pathlib.Path(f"{tmp_path}/output/")
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
+    # * test providing pretrained from torch vs pretrained_model.yaml
+    _rm_dir(save_dir)  # default output dir test
+    extractor = FeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
+    output_list = extractor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    wsi_0_root_path = output_list[0][1]
+    positions = np.load(f"{wsi_0_root_path}.position.npy")
+    features = np.load(f"{wsi_0_root_path}.features.0.npy")
+    assert len(features.shape) == 4
+
+    # * test same output between full infer and controller
     # pre-emptive clean up
     _rm_dir(save_dir)  # default output dir test
 
@@ -72,14 +88,14 @@ def test_functional_feature_extractor(remote_sample, tmp_path):
     )
 
     model = CNNExtractor("resnet50")
-    extractor = FeatureExtractor(batch_size=BATCH_SIZE, model=model)
+    extractor = FeatureExtractor(batch_size=4, model=model)
     # should still run because we skip exception
     output_list = extractor.predict(
         [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
         on_gpu=ON_GPU,
-        crash_on_exception=False,
+        crash_on_exception=True,
         save_dir=save_dir,
     )
     wsi_0_root_path = output_list[0][1]
@@ -109,6 +125,6 @@ def test_functional_feature_extractor(remote_sample, tmp_path):
     # ! must maintain same batch size and likely same ordering
     # ! else the output values will not exactly be the same (still < 1.0e-5
     # ! of epsilon though)
-    assert np.mean(np.abs(features[:BATCH_SIZE] - _features)) < 1.0e-6
+    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-6
 
     _rm_dir(save_dir)

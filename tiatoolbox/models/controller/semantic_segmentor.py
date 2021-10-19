@@ -388,7 +388,7 @@ class SemanticSegmentor:
 
         Examples:
             >>> # Sample output of a network
-            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
+            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
             >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
@@ -972,7 +972,7 @@ class SemanticSegmentor:
 
         Examples:
             >>> # Sample output of a network
-            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
+            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
             >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
@@ -1148,8 +1148,11 @@ class FeatureExtractor(SemanticSegmentor):
 
         Examples:
             >>> # Sample output of a network
-            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
-            >>> predictor = FeatureExtractor(model='resnet50')
+            >>> from tiatoolbox.models.architecture.vanilla import CNNExtractor
+            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
+            >>> # create resnet50 with pytorch pretrained weights
+            >>> model = CNNExtractor('resnet50')
+            >>> predictor = FeatureExtractor(model=model)
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
@@ -1177,7 +1180,17 @@ class FeatureExtractor(SemanticSegmentor):
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ):
-        super().__init__()
+        super().__init__(
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            num_postproc_workers=num_postproc_workers,
+            model=model,
+            pretrained_model=pretrained_model,
+            pretrained_weights=pretrained_weights,
+            verbose=verbose,
+            auto_generate_mask=auto_generate_mask,
+            dataset_class=dataset_class,
+        )
 
     def _process_predictions(
         self,
@@ -1284,8 +1297,11 @@ class FeatureExtractor(SemanticSegmentor):
 
         Examples:
             >>> # Sample output of a network
-            >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
-            >>> predictor = FeatureExtractor(model='resnet50')
+            >>> from tiatoolbox.models.architecture.vanilla import CNNExtractor
+            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
+            >>> # create resnet50 with pytorch pretrained weights
+            >>> model = CNNExtractor('resnet50')
+            >>> predictor = FeatureExtractor(model=model)
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
