@@ -1117,8 +1117,9 @@ class SemanticSegmentor:
 
 
 class FeatureExtractor(SemanticSegmentor):
-    """Generic Feature Extractor.
+    """Generic CNN Feature Extractor.
 
+    A controller for using any CNN model as a feature extractor.
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 
@@ -1151,11 +1152,19 @@ class FeatureExtractor(SemanticSegmentor):
             >>> predictor = FeatureExtractor(model='resnet50')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
-            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
-            >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
-            >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
+            [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
+            >>> # If a network have 2 output heads, for 'A/wsi.svs',
+            >>> # there will be 3 output and they are respectively stored at
+            >>> # 'output/0.position.npy'   # will alwayw be output
+            >>> # 'output/0.features.0.npy' # output of head 0
+            >>> # 'output/0.features.1.npy' # output of head 1
+            >>> # Each file will contain a same number of items, and the item at each
+            >>> # index corresponds to 1 patch. The item in `.*position.npy` will
+            >>> # be the corresponding patch bounding box. The box coordinates are at
+            >>> # the inference resolution defined within the provided `ioconfig`.
 
     """
+
     def __init__(
         self,
         batch_size: int = 8,
@@ -1276,19 +1285,19 @@ class FeatureExtractor(SemanticSegmentor):
         Examples:
             >>> # Sample output of a network
             >>> wsis = ['A/wsi1.svs', 'B/wsi2.svs']
-            >>> predictor = FeatureExtractor(model='fcn-tissue_mask')
+            >>> predictor = FeatureExtractor(model='resnet50')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
             >>> # If a network have 2 output heads, for 'A/wsi.svs',
             >>> # there will be 3 output and they are respectively stored at
-            >>> # 'output/0.position.npy'
+            >>> # 'output/0.position.npy'   # will alwayw be output
             >>> # 'output/0.features.0.npy' # output of head 0
             >>> # 'output/0.features.1.npy' # output of head 1
             >>> # Each file will contain a same number of items, and the item at each
             >>> # index corresponds to 1 patch. The item in `.*position.npy` will
-            >>> # be the patch bound at the inference resolution defined within
-            >>> # the provided `ioconfig`.
+            >>> # be the corresponding patch bounding box. The box coordinates are at
+            >>> # the inference resolution defined within the provided `ioconfig`.
 
         """
         return super().predict(
