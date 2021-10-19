@@ -100,9 +100,9 @@ def test_command_line_slide_info_file_not_found(sample_svs):
         cli.main,
         [
             "slide-info",
-            "--img_input",
+            "--img-input",
             str(sample_svs)[:-1],
-            "--file_types",
+            "--file-types",
             "*.ndpi, *.svs",
             "--mode",
             "show",
