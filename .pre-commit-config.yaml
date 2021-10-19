@@ -41,3 +41,11 @@ repos:
           flake8-logging-format, # Validate (lack of) logging format strings
           flake8-pie, # Misc. linting rules
         ]
+  - repo: local
+    hooks:
+      - id: pytest-changed-files
+        name: pytest-changed-files
+        entry: pytest
+        files: tests/.*\btest_\w*.py
+        language: system
+        stages: [push]
