@@ -27,7 +27,7 @@ dependencies:
   - pre-commit
   - pytest-cov
   - pytest-runner==5.2
-  - pytest==5.4.2
+  - pytest==6.2.5
   - python=3.7
   - pytorch
   - pyyaml>=5.1

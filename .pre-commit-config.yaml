@@ -1,15 +1,24 @@
 repos:
   - repo: https://github.com/pycqa/isort
-    rev: 5.8.0
+    rev: 5.9.3
     hooks:
       - id: isort
   - repo: https://github.com/psf/black
-    rev: 20.8b1 # Replace with any tag/version: https://github.com/psf/black/tags
+    rev: 21.9b0 # Replace with any tag/version: https://github.com/psf/black/tags
     hooks:
       - id: black
         language_version: python3 # Should be a command that runs python3.7+
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.7.9
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+        additional_dependencies: [
+          flake8-spellcheck, # Spelling checker
+        ]
+        args: [--exit-zero]  # These checks will not cause the commit to fail
+        verbose: true
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.9.2
     hooks:
       - id: flake8
         additional_dependencies: [
@@ -25,7 +34,6 @@ repos:
           flake8-cognitive-complexity, # Check max function complexity
           flake8-expression-complexity, # Check max expression complexity
           flake8-return, # Check return statements
-          flake8-spellcheck, # Spelling checker
           flake8-pytest-style, # Check against pytest style guide
           flake8-fixme, # Check for FIXME, TODO, and XXX left in comments
           flake8-sql, # Check SQL statement style
@@ -33,3 +41,11 @@ repos:
           flake8-logging-format, # Validate (lack of) logging format strings
           flake8-pie, # Misc. linting rules
         ]
+  - repo: local
+    hooks:
+      - id: pytest-changed-files
+        name: pytest-changed-files
+        entry: pytest
+        files: tests/.*\btest_\w*.py
+        language: system
+        stages: [push]

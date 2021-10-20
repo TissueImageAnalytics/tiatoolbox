@@ -202,11 +202,11 @@ def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
         cli.main,
         [
             "slide-thumbnail",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample)),
             "--mode",
             mode,
-            "--output_path",
+            "--output-path",
             str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
         ],
     )
@@ -1560,7 +1560,7 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_ndpi)),
             "--resolution",
             "0",
@@ -1573,7 +1573,7 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
             "0",
             "2000",
             "2000",
-            "--output_path",
+            "--output-path",
             str(pathlib.Path(tmp_path).joinpath("im_region.jpg")),
         ],
     )
@@ -1585,7 +1585,7 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_ndpi)),
             "--resolution",
             "0",
@@ -1593,7 +1593,7 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
             "level",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")),
         ],
     )
@@ -1609,7 +1609,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_jp2)),
             "--resolution",
             "0",
@@ -1631,7 +1631,7 @@ def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_jp2)),
             "--resolution",
             "0",
@@ -1652,7 +1652,7 @@ def test_command_line_unsupported_file_read_bounds(sample_svs, tmp_path):
         cli.main,
         [
             "read-bounds",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_svs))[:-1],
             "--resolution",
             "0",
@@ -1682,7 +1682,7 @@ def test_command_line_slide_thumbnail_output_none(sample_svs, tmp_path):
         cli.main,
         [
             "slide-thumbnail",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_svs)),
             "--mode",
             "save",
@@ -1717,11 +1717,11 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(sample_jp2, tmp_pat
         cli.main,
         [
             "slide-thumbnail",
-            "--img_input",
+            "--img-input",
             str(pathlib.Path(sample_jp2))[:-1],
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             str(pathlib.Path(tmp_path).joinpath("slide_thumb.jpg")),
         ],
     )

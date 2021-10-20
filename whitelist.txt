@@ -46,3 +46,9 @@ wsi
 wsireader
 XY
 YX
+Segmentor
+svs
+NHWC
+binarize
+PTC
+W0063
