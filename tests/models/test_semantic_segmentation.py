@@ -637,6 +637,15 @@ def test_functional_pretrained(remote_sample, tmp_path):
         batch_size=2, pretrained_model="fcn-tissue_mask"
     )
 
+    # _rm_dir(save_dir)
+    # semantic_segmentor.predict(
+    #     [mini_wsi_svs],
+    #     mode="wsi",
+    #     on_gpu=ON_GPU,
+    #     crash_on_exception=True,
+    #     save_dir=f"{save_dir}/raw/",
+    # )
+
     _rm_dir(save_dir)
 
     # mainly to test prediction on tile
