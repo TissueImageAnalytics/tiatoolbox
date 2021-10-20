@@ -194,7 +194,7 @@ class IOSegmentorConfig(IOConfigABC):
 
         scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
         num_input_resolutions = len(self.input_resolutions)
-        num_output_resolutions = len(self.input_resolutions)
+        num_output_resolutions = len(self.output_resolutions)
 
         end_idx = num_input_resolutions
         input_resolutions = [
