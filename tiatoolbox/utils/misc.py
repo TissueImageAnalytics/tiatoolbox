@@ -38,25 +38,25 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
-    """Split path of a file to directory path, file name and extension.
+    """Split path of a file to directory path, file name and extensions.
 
     Args:
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
         tuple: Three parts of the input file path:
-            - :py:obj:`pathlib.Path` - parent directory path
-            - :py:obj:`str` - file name
-            - :py:obj:`str` - file extension
+            - :py:obj:`pathlib.Path` - Parent directory path
+            - :py:obj:`str` - File name
+            - :py:obj:`list(str)` - File extensions
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> dir_path, file_name, extension =
+        >>> dir_path, file_name, extensions =
         ...     utils.misc.split_path_name_ext(full_path)
 
     """
     input_path = pathlib.Path(full_path)
-    return input_path.parent.absolute(), input_path.name, input_path.suffix
+    return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
 def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):

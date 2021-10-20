@@ -2182,19 +2182,22 @@ def get_wsireader(input_img):
 
     """
     if isinstance(input_img, (str, pathlib.Path)):
-        _, _, suffix = utils.misc.split_path_name_ext(input_img)
+        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
 
-        if suffix in (".npy",):
+        if suffixes[-1] in (".npy",):
             input_img = np.load(input_img)
             wsi = VirtualWSIReader(input_img)
 
-        elif suffix in (".jpg", ".png", ".tif"):
+        if suffixes[-2:] in ([".ome", ".tiff"],):
+            wsi = TIFFWSIReader(input_img)
+
+        elif suffixes[-1] in (".jpg", ".png", ".tif"):
             wsi = VirtualWSIReader(input_img)
 
-        elif suffix in (".svs", ".ndpi", ".mrxs"):
+        elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
             wsi = OpenSlideWSIReader(input_img)
 
-        elif suffix == ".jp2":
+        elif suffixes[-1] == [".jp2"]:
             wsi = OmnyxJP2WSIReader(input_img)
 
         else:
