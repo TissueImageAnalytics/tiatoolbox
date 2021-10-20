@@ -626,10 +626,9 @@ def test_subclass(remote_sample, tmp_path):
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
-    thumb = thumb[1024:1536, 1024:1536, :]
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
@@ -637,14 +636,14 @@ def test_functional_pretrained(remote_sample, tmp_path):
         batch_size=2, pretrained_model="fcn-tissue_mask"
     )
 
-    # _rm_dir(save_dir)
-    # semantic_segmentor.predict(
-    #     [mini_wsi_svs],
-    #     mode="wsi",
-    #     on_gpu=ON_GPU,
-    #     crash_on_exception=True,
-    #     save_dir=f"{save_dir}/raw/",
-    # )
+    _rm_dir(save_dir)
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
 
     _rm_dir(save_dir)
 
