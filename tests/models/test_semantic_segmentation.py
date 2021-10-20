@@ -637,17 +637,6 @@ def test_functional_pretrained(remote_sample, tmp_path):
         batch_size=2, pretrained_model="fcn-tissue_mask"
     )
 
-    semantic_segmentor.predict(
-        [mini_wsi_svs],
-        mode="wsi",
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
-    )
-
-    assert save_dir.joinpath("raw/0.raw.0.npy").exists()
-    assert save_dir.joinpath("raw/file_map.dat").exists()
-
     _rm_dir(save_dir)
 
     # mainly to test prediction on tile
