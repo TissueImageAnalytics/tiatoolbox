@@ -59,7 +59,7 @@ def _fetch_remote_sample(
             for block in response.iter_content(1024):
                 handle.write(block)
         return file_path
-    print(f"Skipping {filename}")
+    print(f"Skipping {filename}. File exists at {file_path}")
     return file_path
 
 
