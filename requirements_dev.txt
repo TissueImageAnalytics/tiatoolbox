@@ -30,3 +30,4 @@ torch==1.9.1
 tqdm==4.60.0
 jupyterlab
 requests
+zarr

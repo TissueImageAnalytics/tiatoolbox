@@ -178,10 +178,10 @@ def load_stain_matrix(stain_matrix_input):
 
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
-        _, __, ext = split_path_name_ext(stain_matrix_input)
-        if ext == ".csv":
+        _, __, suffixes = split_path_name_ext(stain_matrix_input)
+        if suffixes[-1] == ".csv":
             stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
-        elif ext == ".npy":
+        elif suffixes[-1] == ".npy":
             stain_matrix = np.load(str(stain_matrix_input))
         else:
             raise FileNotSupported(
@@ -376,9 +376,9 @@ def read_locations(input_table):
 
     """
     if isinstance(input_table, (str, pathlib.Path)):
-        _, _, suffix = split_path_name_ext(input_table)
+        _, _, suffixes = split_path_name_ext(input_table)
 
-        if suffix == ".npy":
+        if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
             if out_table.shape[1] == 2:
                 out_table = pd.DataFrame(out_table, columns=["x", "y"])
@@ -390,7 +390,7 @@ def read_locations(input_table):
                     "numpy table should be of format `x, y` or " "`x, y, class`"
                 )
 
-        elif suffix == ".csv":
+        elif suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
@@ -403,7 +403,7 @@ def read_locations(input_table):
             if out_table.shape[1] == 2:
                 out_table["class"] = None
 
-        elif suffix == ".json":
+        elif suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
             if out_table.shape[1] == 2:
                 out_table["class"] = None
