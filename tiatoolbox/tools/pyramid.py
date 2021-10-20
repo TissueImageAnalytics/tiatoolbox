@@ -36,8 +36,7 @@ import zipfile
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Iterable, Tuple, Union
-from xml.etree import ElementTree as ET
+from typing import Iterable, Tuple, Union
 
 import defusedxml
 import numpy as np
@@ -131,15 +130,13 @@ class TilePyramidGenerator:
         the slide baseline resolution (level 0 of the WSI).
 
         """
-        return int(
-            np.ceil(
-                np.log2(np.divide(self.wsi.info.slide_dimensions, self.tile_size))
-            ).max()
-            + 1
-            + self.sub_tile_level_count
-        )
+        wsi_to_tile_ratio = np.divide(self.wsi.info.slide_dimensions, self.tile_size)
+        # Levels where a tile contains only part of the wsi
+        super_level_count = np.ceil(np.log2(wsi_to_tile_ratio)).max()
+        total_level_count = super_level_count + 1 + self.sub_tile_level_count
+        return int(total_level_count)
 
-    def get_tile_thumb(self) -> Image:
+    def get_thumb_tile(self) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
 
         The thumbnail output size has the longest edge equal to the
@@ -219,7 +216,7 @@ class TilePyramidGenerator:
         coord = [baseline_x, baseline_y]
         if level < self.sub_tile_level_count:
             output_size = [2 ** level] * 2
-            thumb = self.get_tile_thumb()
+            thumb = self.get_thumb_tile()
             thumb.thumbnail(output_size)
             return thumb
         slide_dimensions = np.array(self.wsi.info.slide_dimensions)
@@ -257,7 +254,9 @@ class TilePyramidGenerator:
         """
         raise NotImplementedError
 
-    def dump(self, path: Union[str, Path], container=None, compression=None):
+    def dump(  # noqa: CCR001
+        self, path: Union[str, Path], container=None, compression=None
+    ):
         """Write all tiles to disk.
 
         Arguments:
@@ -285,7 +284,21 @@ class TilePyramidGenerator:
 
         """
         path = Path(path)
-        if container == "zip":
+        if container not in [None, "zip", "tar"]:
+            raise ValueError("Unsupported container")
+
+        if container is None:
+            path.mkdir(parents=False)
+            if compression is not None:
+                raise ValueError("Unsupported compression for container None")
+
+            def save_tile(tile_path: Path, tile: Image.Image) -> None:
+                """Write the tile to the output directory."""
+                full_path = path / tile_path
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                tile.save(full_path)
+
+        elif container == "zip":
             compression2enum = {
                 None: zipfile.ZIP_STORED,
                 "deflate": zipfile.ZIP_DEFLATED,
@@ -294,9 +307,21 @@ class TilePyramidGenerator:
             }
             if compression not in compression2enum:
                 raise ValueError("Unsupported compression for zip")
+
             archive = zipfile.ZipFile(
                 path, mode="w", compression=compression2enum[compression]
             )
+
+            def save_tile(tile_path: Path, tile: Image.Image) -> None:
+                """Write the tile to the output zip."""
+                bio = BytesIO()
+                tile.save(bio, format="jpeg")
+                bio.seek(0)
+                tar_info = tarfile.TarInfo(name=str(tile_path))
+                tar_info.mtime = time.time()
+                tar_info.size = bio.tell()
+                archive.addfile(tarinfo=tar_info, fileobj=bio)
+
         elif container == "tar":
             compression2mode = {
                 None: "w",
@@ -308,36 +333,25 @@ class TilePyramidGenerator:
                 raise ValueError("Unsupported compression for tar")
 
             archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
-        elif container is None:
-            path.mkdir(parents=False)
-            if compression is not None:
-                raise ValueError("Unsupported compression for container None")
-        else:
-            raise ValueError("Unsupported container")
+
+            def save_tile(tile_path: Path, tile: Image.Image) -> None:
+                """Write the tile to the output tar."""
+                bio = BytesIO()
+                tile.save(bio, format="jpeg")
+                bio.seek(0)
+                data = bio.read()
+                archive.writestr(
+                    str(tile_path),
+                    data,
+                    compress_type=compression2enum[compression],
+                )
+
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 tile = self.get_tile(level=level, x=x, y=y)
                 tile_path = self.tile_path(level, x, y)
-                full_path = path / tile_path
-                if container is None:
-                    full_path.parent.mkdir(parents=True, exist_ok=True)
-                    tile.save(full_path)
-                else:
-                    bio = BytesIO()
-                    tile.save(bio, format="jpeg")
-                    bio.seek(0)
-                    if container == "tar":
-                        tar_info = tarfile.TarInfo(name=str(tile_path))
-                        tar_info.mtime = time.time()
-                        tar_info.size = bio.tell()
-                        archive.addfile(tarinfo=tar_info, fileobj=bio)
-                    if container == "zip":
-                        data = bio.read()
-                        archive.writestr(
-                            str(tile_path),
-                            data,
-                            compress_type=compression2enum[compression],
-                        )
+                save_tile(tile_path, tile)
+
         if container is not None:
             archive.close()
 
@@ -350,142 +364,6 @@ class TilePyramidGenerator:
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 yield self.get_tile(level=level, x=x, y=y)
-
-
-class DeepZoomGenerator(TilePyramidGenerator):
-    r"""Pyramid tile generator following the DeepZoom format.
-
-    Args:
-        wsi (WSIReader):
-            The WSI reader object. Must implement
-            `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
-        tile_size (int):
-            The size of tiles to generate.
-            Default is 256.
-            Note that the output tile size will be
-            :math:`\text{tile size} + 2 \times\text{overlap}`.
-        downsample (int):
-            The downsample factor between levels.
-            Default is 2.
-        tile_overlap (int):
-            The number of extra pixel to add to each edge of the tile.
-            Default is 0.
-
-    """
-
-    def __init__(
-        self,
-        wsi: WSIReader,
-        tile_size: int = 254,
-        downsample: int = 2,
-        overlap: int = 1,
-    ):
-        super().__init__(wsi, tile_size, downsample, overlap)
-
-    @property
-    def level_count(self) -> int:
-        return super().level_count - 1
-
-    def dzi(
-        self, dzi_format="xml", tile_format="jpg"
-    ) -> Union[ET.Element, Dict[str, dict]]:
-        """Generate and return DeepZoom XML metadata (.dzi).
-
-        Args:
-            format (str): Format of DZI file. Defaults to "XML" which
-                returns an instance of ElementTree. Specifying "json",
-                will return a dictionary which can be serialised to
-                a valid DZI JSON file.
-            tile_format (str): Image format file extension for tiles.
-                Defaults to "jpg".
-
-        Returns:
-            ElementTree: XML DZI metadata.
-
-        Example:
-            >>> from xml.etree import ElementTree as ET
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> from tiatoolbox.tools.pyramid import DeepZoomGenerator
-            >>> slide = get_wsireader("CMU-1.svs")
-            >>> dz = DeepZoomGenerator(slide)
-            >>> dzi = dz.get_dzi()
-            >>> print(ET.tostring(dzi, encoding="utf8").decode("utf8))
-
-        """
-        width, height = self.wsi.info.slide_dimensions
-        if dzi_format == "xml":
-            root = ET.Element(
-                "Image",
-                {
-                    "xmlns": "http://schemas.microsoft.com/deepzoom/2008",
-                    "Format": tile_format,
-                    "Overlap": str(self.overlap),
-                    "TileSize": str(self.output_tile_size),
-                },
-            )
-            ET.SubElement(root, "Size", {"Height": str(width), "Width": str(height)})
-            return root
-        if dzi_format == "json":
-            json_dict = {
-                "Image": {
-                    "xmlns": "http://schemas.microsoft.com/deepzoom/2008",
-                    "Format": tile_format,
-                    "Overlap": str(self.overlap),
-                    "TileSize": str(self.output_tile_size),
-                    "Size": {
-                        "Height": str(width),
-                        "Width": str(height),
-                    },
-                }
-            }
-            return json_dict
-        raise ValueError("Invalid format.")
-
-    @property
-    def sub_tile_level_count(self) -> int:
-        """The number of levels which are a downsample of the whole image tile 0-0-0.
-
-        Deepzoom levels start at 0 with a 1x1 pixel representing the
-        whole image. The levels double in size until the region size is
-        larger than a single tile.
-
-        Returns:
-            int: The number of levels at a sub-tile resolution.
-
-        """
-        return int(np.ceil(np.log2(self.output_tile_size)))
-
-    @lru_cache(maxsize=None)
-    def tile_path(self, level: int, x: int, y: int) -> Path:
-        """Generate the DeepZoom path for a specified tile.
-
-        Args:
-            level (int):
-                The pyramid level of the tile starting from 0
-                (the whole slide in one tile, 0-0-0).
-            x (int):
-                The tile index in the x direction.
-            y (int):
-                The tile index in the y direction.
-
-        Returns:
-            Path: A pathlib path object with two parts.
-
-        """
-        path = Path(f"{level}") / f"{x}_{y}.jpg"
-        return path
-
-    def get_tile(
-        self,
-        level: int,
-        x: int,
-        y: int,
-        pad_mode: str = "none",
-        interpolation: str = "optimise",
-    ) -> Image:
-        return super().get_tile(
-            level, x, y, pad_mode=pad_mode, interpolation=interpolation
-        )
 
 
 class ZoomifyGenerator(TilePyramidGenerator):
@@ -543,8 +421,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
         cumsum = sum(np.prod(self.tile_grid_size(n)) for n in range(level))
         index_in_level = np.ravel_multi_index((y, x), self.tile_grid_size(level)[::-1])
         tile_index = cumsum + index_in_level
-        tile_group = tile_index // 256
-        return tile_group
+        return tile_index // 256  # the tile group
 
     @lru_cache(maxsize=None)
     def tile_path(self, level: int, x: int, y: int) -> Path:
@@ -562,5 +439,4 @@ class ZoomifyGenerator(TilePyramidGenerator):
         """
         g = self.tile_group(level, x, y)
         z = level
-        path = Path(f"TileGroup{g}") / f"{z}-{x}-{y}.jpg"
-        return path
+        return Path(f"TileGroup{g}") / f"{z}-{x}-{y}.jpg"
