@@ -26,7 +26,7 @@ dependencies:
   - torchvision>=0.10.1
   - pytorch
   - tqdm
-  - pytest==5.4.2
+  - pytest==6.2.5
   - pytest-runner==5.2
   - scikit-image
   - pre-commit
