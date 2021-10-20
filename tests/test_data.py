@@ -15,12 +15,12 @@ def test_fetch_sample(tmp_path):
     # Load a dictionary of sample files data (names and urls)
     # code name retrieved from TOOLBOX_ROOT/data/remote_samples.yaml
     tmp_path = pathlib.Path(tmp_path)
-    path = _fetch_remote_sample("wsi1_8k_8k_svs")
+    path = _fetch_remote_sample("stainnorm-source")
     assert os.path.exists(path)
     # test if corrupted
     get_wsireader(path)
 
-    path = _fetch_remote_sample("wsi1_8k_8k_svs", tmp_path)
+    path = _fetch_remote_sample("stainnorm-source", tmp_path)
     # assuming Path has no trailing '/'
     assert os.path.exists(path)
     assert str(tmp_path) in str(path)
@@ -34,3 +34,5 @@ def test_fetch_sample(tmp_path):
     #  very tiny so temporary hook here also
     arr = stainnorm_target()
     assert isinstance(arr, np.ndarray)
+
+    _ = _fetch_remote_sample("stainnorm-source", tmp_path)

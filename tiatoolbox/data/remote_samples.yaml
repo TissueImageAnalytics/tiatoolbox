@@ -83,3 +83,5 @@ files:
     url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
   wsi4_4k_4k_pred:
     url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
+  small_svs_tissue_mask:
+    url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]

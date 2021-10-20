@@ -263,35 +263,6 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
     assert np.all(img_patches == img_patches_test)
 
 
-def test_slidingpatch_extractor_ndpi(sample_ndpi):
-    """Test SlidingWindowPatchExtractor for ndpi image."""
-    stride = (40, 20)
-    patch_size = (400, 200)
-    input_img = pathlib.Path(sample_ndpi)
-
-    patches = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="slidingwindow",
-        patch_size=patch_size,
-        resolution=1,
-        units="level",
-        stride=stride,
-    )
-
-    wsi = OpenSlideWSIReader(input_img=input_img)
-    x = 800
-    y = 0
-    patch = wsi.read_rect(
-        location=(int(x), int(y)),
-        size=patch_size,
-        resolution=1,
-        units="level",
-    )
-
-    assert np.all(patches[10] == patch)
-    assert patches[0].shape == (200, 400, 3)
-
-
 def test_get_coordinates():
     """Test get tile cooordinates functionality."""
     expected_output = np.array(
