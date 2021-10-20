@@ -17,9 +17,9 @@ def main():  # pragma: no cover
 
 
 @main.command()
-@click.option("--img_input", help="Path to WSI file")
+@click.option("--img-input", help="Path to WSI file")
 @click.option(
-    "--output_path",
+    "--output-path",
     help="Path to output file to save the image region in save mode,"
     " default=tissue_mask",
     default="tissue_mask",
@@ -42,7 +42,7 @@ def main():  # pragma: no cover
     help="resolution units, default=power",
 )
 @click.option(
-    "--kernel_size",
+    "--kernel-size",
     type=int,
     nargs=2,
     help="kernel size for morphological dilation, default=1, 1",
@@ -54,7 +54,7 @@ def main():  # pragma: no cover
     ", default=show",
 )
 @click.option(
-    "--file_types",
+    "--file-types",
     help="file types to capture from directory, "
     "default='*.svs, *.ndpi, *.jp2, *.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff",

@@ -629,20 +629,23 @@ def test_functional_pretrained(remote_sample, tmp_path):
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
+    thumb = thumb[1024:1536, 1024:1536, :]
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
         batch_size=1, pretrained_model="fcn-tissue_mask"
     )
-    _rm_dir(save_dir)
-    semantic_segmentor.predict(
-        [mini_wsi_svs],
-        mode="wsi",
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
-    )
+
+    # _rm_dir(save_dir)
+    # semantic_segmentor.predict(
+    #     [mini_wsi_svs],
+    #     mode="wsi",
+    #     on_gpu=ON_GPU,
+    #     crash_on_exception=True,
+    #     save_dir=f"{save_dir}/raw/",
+    # )
+
     _rm_dir(save_dir)
 
     # mainly to test prediction on tile
@@ -653,7 +656,10 @@ def test_functional_pretrained(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
-    _rm_dir(save_dir)
+
+    assert save_dir.joinpath("raw/0.raw.0.npy").exists()
+    assert save_dir.joinpath("raw/file_map.dat").exists()
+
     _rm_dir(tmp_path)
 
 
@@ -737,13 +743,13 @@ def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
         cli.main,
         [
             "semantic-segment",
-            "--img_input",
+            "--img-input",
             str(mini_wsi_svs),
             "--mode",
             "wsi",
             "--masks",
             str(sample_wsi_msk),
-            "--output_path",
+            "--output-path",
             tmp_path,
         ],
     )
@@ -781,17 +787,17 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
         cli.main,
         [
             "semantic-segment",
-            "--img_input",
+            "--img-input",
             str(mini_wsi_svs),
-            "--pretrained_weights",
+            "--pretrained-weights",
             str(tmp_path.joinpath("fcn-tissue_mask.pth")),
             "--mode",
             "wsi",
             "--masks",
             str(sample_wsi_msk),
-            "--output_path",
+            "--output-path",
             tmp_path.joinpath("output"),
-            "--yaml_config_path",
+            "--yaml-config-path",
             tmp_path.joinpath("config.yaml"),
         ],
     )
@@ -838,13 +844,13 @@ def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
         cli.main,
         [
             "semantic-segment",
-            "--img_input",
+            "--img-input",
             str(dir_path),
             "--mode",
             "wsi",
             "--masks",
             str(dir_path_masks),
-            "--output_path",
+            "--output-path",
             str(tmp_path),
         ],
     )

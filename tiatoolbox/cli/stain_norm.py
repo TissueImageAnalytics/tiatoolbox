@@ -15,10 +15,10 @@ def main():  # pragma: no cover
 
 @main.command()
 @click.option(
-    "--source_input",
+    "--source-input",
     help="input path to the source image or a directory of source images",
 )
-@click.option("--target_input", help="input path to the target image")
+@click.option("--target-input", help="input path to the target image")
 @click.option(
     "--method",
     help="Stain normalisation method to use. Choose from 'reinhard', 'custom',"
@@ -26,19 +26,19 @@ def main():  # pragma: no cover
     default="reinhard",
 )
 @click.option(
-    "--stain_matrix",
+    "--stain-matrix",
     help="stain matrix to use in custom normaliser. This can either be a numpy array"
     ", a path to a npy file or a path to a csv file. If using a path to a csv file, "
     "there must not be any column headers.",
     default=None,
 )
 @click.option(
-    "--output_path",
+    "--output-path",
     help="Output directory for stain normalisation",
     default="stainorm_output",
 )
 @click.option(
-    "--file_types",
+    "--file-types",
     help="file types to capture from directory"
     "default='*.png', '*.jpg', '*.tif', '*.tiff'",
     default="*.png, *.jpg, *.tif, *.tiff",
