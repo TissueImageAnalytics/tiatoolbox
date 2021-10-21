@@ -609,7 +609,7 @@ class SemanticSegmentor:
             wsi_path, mask_path, mode, self.auto_generate_mask
         )
 
-        # assume ioconfig has already converted to `baseline` for `tile` mode
+        # assume ioconfig has already been converted to `baseline` for `tile` mode
         resolution = ioconfig.highest_input_resolution
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 

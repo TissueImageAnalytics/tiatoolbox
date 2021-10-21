@@ -36,7 +36,6 @@ from tiatoolbox.models.controller.semantic_segmentor import (
     WSIStreamDataset,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 
 # till the day Python could natively pickle Object method/static method
@@ -63,10 +62,10 @@ def _process_tile_predictions(
             (top_left_x, top_left_y, bottom_x, bottom_y).
         tile_flag (list): A list of flag to indicate if instances within
             an area extended from each side (by `ioconfig.margin`) of
-            the tile should replace those within the same spatial region
-            in the accumulated output. The format is
+            the tile should be replaced by those within the same spatial
+            region in the accumulated output this run. The format is
             [top, bottom, left, right], 1 indicates removal while 0 is not.
-            Such as [1, 1, 0, 0] denotes replacing top and bottom instances
+            For example, [1, 1, 0, 0] denotes replacing top and bottom instances
             within `ref_inst_dict` with new ones after this processing.
         tile_mode (int): A flag to indicate the type of this tile. There
             are 4 flags:
@@ -555,12 +554,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             wsi_path, mask_path, mode, self.auto_generate_mask
         )
 
+        # assume ioconfig has already been converted to `baseline` for `tile` mode
         resolution = ioconfig.highest_input_resolution
-        if (
-            isinstance(wsi_reader, VirtualWSIReader)
-            and resolution["units"] != "baseline"
-        ):
-            raise ValueError("Inference on `tile` only use `units='baseline'` !")
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
         # * retrieve patch placement

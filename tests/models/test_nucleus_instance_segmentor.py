@@ -32,9 +32,12 @@ from tiatoolbox.models import (
     SemanticSegmentor,
 )
 from tiatoolbox.utils.metrics import f1_detection
+from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.utils.misc import imwrite
 
 BATCH_SIZE = 2
 ON_GPU = False
+
 # ----------------------------------------------------
 
 
@@ -225,17 +228,16 @@ def test_crash_segmentor(remote_sample, tmp_path):
     """Test crash."""
     root_save_dir = pathlib.Path(tmp_path)
     sample_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
-    sample_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
     sample_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     save_dir = f"{root_save_dir}/instance/"
 
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        input_resolutions=[{"units": "mpp", "resolution": 1.0}],
         output_resolutions=[
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 1.0},
+            {"units": "mpp", "resolution": 1.0},
+            {"units": "mpp", "resolution": 1.0},
         ],
         margin=128,
         tile_shape=[1024, 1024],
@@ -248,17 +250,6 @@ def test_crash_segmentor(remote_sample, tmp_path):
         num_postproc_workers=2,
         pretrained_model="hovernet_fast-pannuke",
     )
-
-    _rm_dir(save_dir)
-    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
-        instance_segmentor.predict(
-            [sample_wsi_jpg],
-            mode="tile",
-            ioconfig=ioconfig,
-            on_gpu=ON_GPU,
-            crash_on_exception=True,
-            save_dir=save_dir,
-        )
 
     # * Test crash propagation when parallelize post processing
     _rm_dir(save_dir)
@@ -273,22 +264,29 @@ def test_crash_segmentor(remote_sample, tmp_path):
             crash_on_exception=True,
             save_dir=save_dir,
         )
+    _rm_dir(tmp_path)
 
 
 def test_functionality(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
-    sample_wsi = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    reader = get_wsireader(mini_wsi_svs)
+    thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
+    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    imwrite(mini_wsi_jpg, thumb)
 
+    # resolution for travis testing, not the correct ones
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
         output_resolutions=[
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 0.5},
+            {"units": "mpp", "resolution": 0.5},
+            {"units": "mpp", "resolution": 0.5},
         ],
         margin=128,
-        tile_shape=[1024, 1024],
+        tile_shape=[512, 512],
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -302,9 +300,20 @@ def test_functionality(remote_sample, tmp_path):
         num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
-
+    # * test run on tile
     output = inst_segmentor.predict(
-        [sample_wsi],
+        [mini_wsi_jpg],
+        mode="tile",
+        ioconfig=ioconfig,
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+
+    # * test run on wsi
+    _rm_dir(save_dir)
+    output = inst_segmentor.predict(
+        [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
         on_gpu=ON_GPU,
@@ -324,7 +333,7 @@ def test_functionality(remote_sample, tmp_path):
     )
     assert inst_segmentor.num_postproc_workers == 2
     output = inst_segmentor.predict(
-        [sample_wsi],
+        [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
         on_gpu=ON_GPU,
@@ -350,7 +359,7 @@ def test_functionality(remote_sample, tmp_path):
         num_postproc_workers=2,
     )
     output = semantic_segmentor.predict(
-        [sample_wsi],
+        [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
         on_gpu=ON_GPU,
@@ -364,6 +373,7 @@ def test_functionality(remote_sample, tmp_path):
     inst_coords_b = np.array([v["centroid"] for v in inst_dict_b.values()])
     score = f1_detection(inst_coords_b, inst_coords_a, radius=1.0)
     assert score > 0.9, "Heavy loss of precision!"
+    _rm_dir(tmp_path)
 
     # # this is for manual debugging
     # from tiatoolbox.utils.misc import imwrite
@@ -371,6 +381,6 @@ def test_functionality(remote_sample, tmp_path):
     # from tiatoolbox.wsicore.wsireader import get_wsireader
 
     # wsi_reader = get_wsireader(sample_wsi)
-    # thumb = wsi_reader.slide_thumbnail(resolution=0.25, units="mpp")
+    # thumb = wsi_reader.slide_thumbnail(resolution=0.50, units="mpp")
     # thumb = overlay_instance_prediction(thumb, inst_dict_b)
     # imwrite("dump.png", thumb)
