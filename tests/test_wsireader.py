@@ -1336,7 +1336,9 @@ def test_invalid_masker_method(sample_svs):
         wsi.tissue_mask(method="foo")
 
 
-def test_get_wsireader(sample_svs, sample_ndpi, sample_jp2, source_image):
+def test_get_wsireader(
+    sample_svs, sample_ndpi, sample_jp2, sample_ome_tiff, source_image
+):
     """Test get_wsireader to return correct object."""
     with pytest.raises(FileNotSupported):
         _ = wsireader.get_wsireader("./sample.csv")
@@ -1352,6 +1354,9 @@ def test_get_wsireader(sample_svs, sample_ndpi, sample_jp2, source_image):
 
     wsi = wsireader.get_wsireader(sample_jp2)
     assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
+
+    wsi = wsireader.get_wsireader(sample_ome_tiff)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
     wsi = wsireader.get_wsireader(pathlib.Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
