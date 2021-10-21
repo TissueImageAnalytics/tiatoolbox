@@ -1829,8 +1829,9 @@ class TIFFWSIReader(WSIReader):
             raise Exception("TIFF does not contain any valid series.")
         if self.series_n == "auto":
             series_areas = [
+                all_series = (self.tiff.series or [])
                 np.prod(self._shape_channels_last(np.array(s.pages[0].shape))[:2])
-                for s in (self.tiff.series or [])
+                for s in all_series
             ]
             self.series_n = np.argmax(series_areas)
         self._tiff_series = self.tiff.series[self.series_n]
