@@ -374,13 +374,3 @@ def test_functionality(remote_sample, tmp_path):
     score = f1_detection(inst_coords_b, inst_coords_a, radius=1.0)
     assert score > 0.9, "Heavy loss of precision!"
     _rm_dir(tmp_path)
-
-    # # this is for manual debugging
-    # from tiatoolbox.utils.misc import imwrite
-    # from tiatoolbox.utils.visualization import overlay_instance_prediction
-    # from tiatoolbox.wsicore.wsireader import get_wsireader
-
-    # wsi_reader = get_wsireader(sample_wsi)
-    # thumb = wsi_reader.slide_thumbnail(resolution=0.50, units="mpp")
-    # thumb = overlay_instance_prediction(thumb, inst_dict_b)
-    # imwrite("dump.png", thumb)
