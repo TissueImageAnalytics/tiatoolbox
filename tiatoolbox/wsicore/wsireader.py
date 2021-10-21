@@ -1831,7 +1831,7 @@ class TIFFWSIReader(WSIReader):
             all_series = self.tiff.series or []
             series_areas = [
                 np.prod(self._shape_channels_last(np.array(s.pages[0].shape))[:2])
-                for s in all_series
+                for s in all_series  # skipcq: PYL-E1133
             ]
             self.series_n = np.argmax(series_areas)
         self._tiff_series = self.tiff.series[self.series_n]
