@@ -29,7 +29,7 @@ History
   - Uses `requirements.txt` in `.readthedocs.yml`
   - Uses apt-get installation for openjpeg and openslide
   - Removes conda build on readthedocs build
-- Adds extra checks to pre-commit, e.g., import sorting, spellcheck etc. Detailed list can be found on this [commit](https://github.com/TIA-Lab/tiatoolbox/commit/662a143e915fa55416badd992d8e7358211730a6).
+- Adds extra checks to pre-commit, e.g., import sorting, spellcheck etc. Detailed list can be found on this [commit](https://github.com/TissueImageAnalytics/tiatoolbox/commit/662a143e915fa55416badd992d8e7358211730a6).
 
 
 0.6.0 (2021-05-11)

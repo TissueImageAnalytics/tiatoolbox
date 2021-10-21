@@ -187,7 +187,6 @@ def test_morphological_min_region_size():
     only the largest square region as foreground in the mask
     (0=background, 1=foreground).
     """
-
     # Create a blank image of 1s
     img = np.ones((10, 10))
     # Create a large square region of 9 zeros
@@ -217,7 +216,7 @@ def test_cli_tissue_mask_Otsu(sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Otsu",
@@ -226,48 +225,48 @@ def test_cli_tissue_mask_Otsu(sample_svs):
 
     assert tissue_mask_result.exit_code == 0
 
-    output_path = str(pathlib.Path(sample_svs.parent).joinpath("tissue_mask"))
+    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Otsu",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             output_path,
         ],
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_Otsu_dir(sample_all_wsis):
     """Test Otsu tissue masking for multiple files with default input CLI."""
     source_img = pathlib.Path(sample_all_wsis)
     runner = CliRunner()
-    output_path = str(pathlib.Path(source_img).joinpath("tissue_mask"))
+    output_path = str(pathlib.Path(source_img, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Otsu",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             output_path,
         ],
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path).joinpath("test1.png").is_file()
+    assert pathlib.Path(output_path, "test1.png").is_file()
 
 
 def test_cli_tissue_mask_Morphological(sample_svs):
@@ -278,7 +277,7 @@ def test_cli_tissue_mask_Morphological(sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Morphological",
@@ -287,36 +286,36 @@ def test_cli_tissue_mask_Morphological(sample_svs):
 
     assert tissue_mask_result.exit_code == 0
 
-    output_path = str(pathlib.Path(sample_svs.parent).joinpath("tissue_mask"))
+    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Morphological",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             output_path,
         ],
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
     tissue_mask_result = runner.invoke(
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Morphological",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             output_path,
             "--resolution",
             1.25,
@@ -326,19 +325,19 @@ def test_cli_tissue_mask_Morphological(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
     tissue_mask_result = runner.invoke(
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Morphological",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             output_path,
             "--resolution",
             32,
@@ -348,28 +347,28 @@ def test_cli_tissue_mask_Morphological(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
     tissue_mask_result = runner.invoke(
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Morphological",
             "--mode",
             "save",
-            "--output_path",
+            "--output-path",
             output_path,
-            "--kernel_size",
+            "--kernel-size",
             "1",
             "1",
         ],
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path).joinpath(source_img.stem + ".png").is_file()
+    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_method_not_supported(sample_svs):
@@ -380,7 +379,7 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Test",
@@ -395,7 +394,7 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img),
             "--method",
             "Morphological",
@@ -419,7 +418,7 @@ def test_cli_tissue_mask_file_not_found_error(source_image):
         cli.main,
         [
             "tissue-mask",
-            "--img_input",
+            "--img-input",
             str(source_img)[:-1],
             "--method",
             "Otsu",

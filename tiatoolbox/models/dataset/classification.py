@@ -244,10 +244,10 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             units = "baseline"
             resolution = 1.0
             img = imread(img_path)
-            axes = "YXS"[:len(img.shape)]
+            axes = "YXS"[: len(img.shape)]
             # initialise metadata for VirtualWSIReader.
             # here, we simulate a whole-slide image, but with a single level.
-            # ! should we expose this so that use can provide their metadat ?
+            # ! should we expose this so that use can provide their metadata ?
             metadata = WSIMeta(
                 mpp=np.array([1.0, 1.0]),
                 axes=axes,

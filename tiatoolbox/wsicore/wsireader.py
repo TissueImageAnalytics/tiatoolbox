@@ -2199,7 +2199,7 @@ def get_wsireader(input_img):
         elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
             wsi = OpenSlideWSIReader(input_img)
 
-        elif suffixes[-1] == [".jp2"]:
+        elif suffixes[-1] == (".jp2"):
             wsi = OmnyxJP2WSIReader(input_img)
 
         else:

@@ -30,15 +30,19 @@ import torch
 import torch.multiprocessing as torch_mp
 import torch.nn as nn
 import torch.nn.functional as F
+import yaml
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import crop_op
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
 )
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 ON_GPU = False
@@ -49,6 +53,11 @@ def _rm_dir(path):
     """Helper func to remove directory."""
     if os.path.exists(path):
         shutil.rmtree(path, ignore_errors=True)
+
+
+def _crash_func(x):
+    """Helper to induce crash."""
+    raise ValueError("Propagation Crash.")
 
 
 class _CNNTo1(ModelABC):
@@ -165,21 +174,23 @@ def test_segmentor_ioconfig():
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "power", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
+            {"units": "power", "resolution": 20},
+            {"units": "power", "resolution": 40},
         ],
         output_resolutions=[
-            {"units": "power", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
+            {"units": "power", "resolution": 20},
+            {"units": "power", "resolution": 40},
         ],
         patch_input_shape=[2048, 2048],
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
+        save_resolution={"units": "power", "resolution": 8.0},
     )
-    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 0.50}
+    assert ioconfig.highest_input_resolution == {"units": "power", "resolution": 40}
     ioconfig = ioconfig.to_baseline()
     assert ioconfig.input_resolutions[0]["resolution"] == 0.5
     assert ioconfig.input_resolutions[1]["resolution"] == 1.0
+    assert ioconfig.save_resolution["resolution"] == 8.0 / 40.0
 
     resolutions = [
         {"units": "mpp", "resolution": 0.25},
@@ -195,7 +206,7 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsistreamdataset(remote_sample):
+def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
@@ -284,17 +295,15 @@ def test_crash_segmentor(remote_sample):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
         semantic_segmentor.predict([], mode="abc")
-    with pytest.raises(ValueError, match=r".*`tile` only use .*baseline.*"):
+
+    # * test not providing any io_config info when not using pretrained model
+    with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
         semantic_segmentor.predict(
             [mini_wsi_jpg],
             mode="tile",
             on_gpu=ON_GPU,
-            patch_input_shape=[2048, 2048],
-            resolution=1.0,
-            units="mpp",
             crash_on_exception=True,
         )
-
     with pytest.raises(ValueError, match=r".*already exists.*"):
         semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
     _rm_dir("output")  # default output dir test
@@ -308,6 +317,29 @@ def test_crash_segmentor(remote_sample):
             crash_on_exception=True,
         )
     _rm_dir("output")  # default output dir test
+
+    # * Test crash propagation when parallelize post processing
+    _rm_dir("output")
+    semantic_segmentor.num_postproc_workers = 2
+    semantic_segmentor.model.forward = _crash_func
+    with pytest.raises(ValueError, match=r"Propagation Crash."):
+        semantic_segmentor.predict(
+            [mini_wsi_svs],
+            patch_input_shape=[2048, 2048],
+            mode="wsi",
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+        )
+    _rm_dir("output")
+    # test ignore crash
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        patch_input_shape=[2048, 2048],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=False,
+    )
+    _rm_dir("output")
 
 
 def test_functional_segmentor_merging(tmp_path):
@@ -435,7 +467,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
     mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
-    # pre-emptive clean up
+    # preemptive clean up
     _rm_dir("output")  # default output dir test
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
@@ -450,10 +482,21 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[2048, 2048],
+        patch_input_shape=(2048, 2048),
         resolution=1.0,
         units="mpp",
         crash_on_exception=False,
+    )
+
+    _rm_dir("output")  # default output dir test
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        patch_input_shape=[2048, 2048],
+        resolution=1.0,
+        units="baseline",
+        crash_on_exception=True,
     )
     _rm_dir("output")  # default output dir test
 
@@ -463,9 +506,9 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
-        stride_shape=[512, 512],
+        patch_input_shape=(2048, 2048),
+        patch_output_shape=(1024, 1024),
+        stride_shape=(512, 512),
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
@@ -569,9 +612,9 @@ def test_subclass(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
-        stride_shape=[512, 512],
+        patch_input_shape=(2048, 2048),
+        patch_output_shape=(1024, 1024),
+        stride_shape=(512, 512),
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
@@ -579,13 +622,56 @@ def test_subclass(remote_sample, tmp_path):
     )
 
 
-def test_behavior_tissue_mask(remote_sample, tmp_path):
+# specifically designed for travis
+def test_functional_pretrained(remote_sample, tmp_path):
+    """Test for load up pretrained and over-writing tile mode ioconfig."""
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    reader = get_wsireader(mini_wsi_svs)
+    thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
+    thumb = thumb[1024:1536, 1024:1536, :]
+    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    imwrite(mini_wsi_jpg, thumb)
+
+    semantic_segmentor = SemanticSegmentor(
+        batch_size=2, pretrained_model="fcn-tissue_mask"
+    )
+
+    # _rm_dir(save_dir)
+    # semantic_segmentor.predict(
+    #     [mini_wsi_svs],
+    #     mode="wsi",
+    #     on_gpu=ON_GPU,
+    #     crash_on_exception=True,
+    #     save_dir=f"{save_dir}/raw/",
+    # )
+
+    _rm_dir(save_dir)
+
+    # mainly to test prediction on tile
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+
+    assert save_dir.joinpath("raw/0.raw.0.npy").exists()
+    assert save_dir.joinpath("raw/file_map.dat").exists()
+
+    _rm_dir(tmp_path)
+
+
+@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
+    wsi_with_artifacts = pathlib.Path(remote_sample("wsi3_20k_20k_svs"))
+    mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
 
-    wsi_with_artifacts = pathlib.Path(remote_sample("svs-1-small"))
     semantic_segmentor = SemanticSegmentor(
-        batch_size=1, pretrained_model="fcn-tissue_mask"
+        batch_size=4, pretrained_model="fcn-tissue_mask"
     )
     _rm_dir(save_dir)
     semantic_segmentor.predict(
@@ -596,21 +682,31 @@ def test_behavior_tissue_mask(remote_sample, tmp_path):
         save_dir=f"{save_dir}/raw/",
     )
     # load up the raw prediction and perform precision check
-    _cache_pred = imread(pathlib.Path(remote_sample("small_svs_tissue_mask")))
+    _cache_pred = imread(pathlib.Path(remote_sample("wsi3_20k_20k_pred")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
-    _test_pred = (_test_pred[..., 1] > 0.50) * 255
+    _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
-    assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1.0e-3
+    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+
+    _rm_dir(save_dir)
+    # mainly to test prediction on tile
+    semantic_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
+
     _rm_dir(save_dir)
 
 
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
-def test_behavior_bcss(remote_sample, tmp_path):
+def test_behavior_bcss_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
 
     _rm_dir(save_dir)
-    # wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     wsi_breast = pathlib.Path(remote_sample)
     semantic_segmentor = SemanticSegmentor(
         num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
@@ -628,3 +724,146 @@ def test_behavior_bcss(remote_sample, tmp_path):
     _test_pred = np.argmax(_test_pred, axis=-1)
     assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-6
     _rm_dir(save_dir)
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
+    """Test for semantic segmentation if output path exists."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    runner = CliRunner()
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img-input",
+            str(mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(sample_wsi_msk),
+            "--output-path",
+            tmp_path,
+        ],
+    )
+
+    assert semantic_segment_result.output == ""
+    assert semantic_segment_result.exit_code == 1
+    assert isinstance(semantic_segment_result.exception, FileExistsError)
+
+
+def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
+    """Test for semantic segmentation single file custom ioconfig."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    fetch_pretrained_weights(
+        "fcn-tissue_mask", str(tmp_path.joinpath("fcn-tissue_mask.pth"))
+    )
+
+    config = dict(
+        input_resolutions=[{"units": "mpp", "resolution": 2.0}],
+        output_resolutions=[{"units": "mpp", "resolution": 2.0}],
+        patch_input_shape=[1024, 1024],
+        patch_output_shape=[512, 512],
+        stride_shape=[256, 256],
+        save_resolution={"units": "mpp", "resolution": 8.0},
+    )
+    with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+        yaml.dump(config, fptr)
+
+    runner = CliRunner()
+
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img-input",
+            str(mini_wsi_svs),
+            "--pretrained-weights",
+            str(tmp_path.joinpath("fcn-tissue_mask.pth")),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(sample_wsi_msk),
+            "--output-path",
+            tmp_path.joinpath("output"),
+            "--yaml-config-path",
+            tmp_path.joinpath("config.yaml"),
+        ],
+    )
+
+    assert semantic_segment_result.exit_code == 0
+    assert tmp_path.joinpath("output/0.raw.0.npy").exists()
+    assert tmp_path.joinpath("output/file_map.dat").exists()
+    assert tmp_path.joinpath("output/results.json").exists()
+
+
+def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
+    """Test for models CLI multiple file with mask."""
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+
+    # Make multiple copies for test
+    dir_path = tmp_path.joinpath("new_copies")
+    dir_path.mkdir()
+
+    dir_path_masks = tmp_path.joinpath("new_copies_masks")
+    dir_path_masks.mkdir()
+
+    try:
+        dir_path.joinpath("1_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
+        dir_path.joinpath("2_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
+    except OSError:
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("1_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path.joinpath("2_" + mini_wsi_svs.name))
+
+    try:
+        dir_path_masks.joinpath("1_" + sample_wsi_msk.name).symlink_to(sample_wsi_msk)
+        dir_path_masks.joinpath("2_" + sample_wsi_msk.name).symlink_to(sample_wsi_msk)
+    except OSError:
+        shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("1_" + sample_wsi_msk.name))
+        shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("2_" + sample_wsi_msk.name))
+
+    tmp_path = tmp_path.joinpath("output")
+
+    runner = CliRunner()
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segment",
+            "--img-input",
+            str(dir_path),
+            "--mode",
+            "wsi",
+            "--masks",
+            str(dir_path_masks),
+            "--output-path",
+            str(tmp_path),
+        ],
+    )
+
+    assert semantic_segment_result.exit_code == 0
+    assert tmp_path.joinpath("0.raw.0.npy").exists()
+    assert tmp_path.joinpath("1.raw.0.npy").exists()
+    assert tmp_path.joinpath("file_map.dat").exists()
+    assert tmp_path.joinpath("results.json").exists()
+
+    # load up the raw prediction and perform precision check
+    _cache_pred = imread(pathlib.Path(remote_sample("small_svs_tissue_mask")))
+    _test_pred = np.load(str(tmp_path.joinpath("0.raw.0.npy")))
+    _test_pred = (_test_pred[..., 1] > 0.50) * 255
+
+    assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1e-3
