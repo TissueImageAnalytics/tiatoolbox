@@ -32,8 +32,8 @@ from tiatoolbox.models import (
     SemanticSegmentor,
 )
 from tiatoolbox.utils.metrics import f1_detection
-from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.utils.misc import imwrite
+from tiatoolbox.wsicore.wsireader import get_wsireader
 
 BATCH_SIZE = 2
 ON_GPU = False
