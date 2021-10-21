@@ -547,6 +547,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             save_path (str): Location to save output prediction as well as possible
                 intermediat results.
             mode (str): `tile` or `wsi` to indicate run mode.
+
         """
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
