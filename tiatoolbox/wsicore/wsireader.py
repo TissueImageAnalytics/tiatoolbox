@@ -1825,10 +1825,12 @@ class TIFFWSIReader(WSIReader):
 
         self.series_n = series
         # Find the largest series if series="auto"
+        if len(self.tiff.series) == 0:
+            raise Exception("TIFF does not contain any valid series.")
         if self.series_n == "auto":
             series_areas = [
                 np.prod(self._shape_channels_last(np.array(s.pages[0].shape))[:2])
-                for s in self.tiff.series
+                for s in (self.tiff.series or [])
             ]
             self.series_n = np.argmax(series_areas)
         self._tiff_series = self.tiff.series[self.series_n]
