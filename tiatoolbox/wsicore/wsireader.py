@@ -2191,7 +2191,7 @@ def get_wsireader(input_img):
             input_img = np.load(input_img)
             wsi = VirtualWSIReader(input_img)
 
-        if suffixes[-2:] in ([".ome", ".tiff"],):
+        elif suffixes[-2:] in ([".ome", ".tiff"],):
             wsi = TIFFWSIReader(input_img)
 
         elif suffixes[-1] in (".jpg", ".png", ".tif"):
