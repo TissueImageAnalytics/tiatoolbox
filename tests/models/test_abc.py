@@ -26,12 +26,11 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import get_pretrained_model
 
-
-def test_get_pretrained_model():
-    """Test for downloading and creating pretrained models."""
-    pretrained_info = rcParam["pretrained_model_info"]
-    for pretrained_name in pretrained_info.keys():
-        get_pretrained_model(pretrained_name, overwrite=True)
+# def test_get_pretrained_model():
+#     """Test for downloading and creating pretrained models."""
+#     pretrained_info = rcParam["pretrained_model_info"]
+#     for pretrained_name in pretrained_info.keys():
+#         get_pretrained_model(pretrained_name, overwrite=True)
 
 
 def test_model_abc():
