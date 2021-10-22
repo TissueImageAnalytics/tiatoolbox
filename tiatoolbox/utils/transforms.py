@@ -19,9 +19,9 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
+import cv2
 import numpy as np
 from PIL import Image
-import cv2
 
 from tiatoolbox import utils
 
