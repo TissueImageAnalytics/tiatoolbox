@@ -115,7 +115,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
     # Resize the image
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
-    if set(img.shape[:2]) == set([1]):
+    if img.shape[0] == img.shape[1] == 1:
         return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
