@@ -66,7 +66,7 @@ class WSIReader:
     """
 
     @staticmethod
-    def open():
+    def open(input_img):
         """Return an appropriate :class:`.WSIReader` object.
 
         Args:
