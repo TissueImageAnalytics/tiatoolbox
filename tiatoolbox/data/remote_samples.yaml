@@ -11,6 +11,8 @@ aliases:
 files:
   ndpi-1:
     url: [*wsis, "CMU-1.ndpi"]
+  ndpi-2:
+      url: [ *wsis, "bioformatspull2759.ndpi" ]
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
   ome-brightfield-pyramid-1-small:
