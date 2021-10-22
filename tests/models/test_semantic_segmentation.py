@@ -634,7 +634,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=2, pretrained_model="fcn-tissue_mask"
+        batch_size=1, pretrained_model="fcn-tissue_mask"
     )
 
     # _rm_dir(save_dir)
