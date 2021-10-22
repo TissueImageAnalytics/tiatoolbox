@@ -5,6 +5,7 @@ import pathlib
 import random
 import shutil
 from time import time
+import re
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
 from typing import Iterable
@@ -1780,6 +1781,18 @@ def test_tiffwsireader_invalid_ome_metadata(sample_ome_tiff, monkeypatch):
     )
     with pytest.raises(KeyError, match="No matching Instrument"):
         _ = wsi._info()
+
+def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatch):
+    """Test no exception raised for missing x/y mpp but warning given."""
+    for dim in "XY":
+        wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
+        monkeypatch.setattr(
+            wsi.tiff.pages[0],
+            "description",
+            re.sub(f'PhysicalSize{dim}="[^"]*"', "", wsi.tiff.pages[0].description),
+        )
+        with pytest.warns(UserWarning, match="Only one MPP"):
+            _ = wsi._info()
 
 
 def test_arrayview_unsupported_axes():

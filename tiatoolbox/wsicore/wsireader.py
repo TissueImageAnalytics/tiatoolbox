@@ -1970,6 +1970,9 @@ class TIFFWSIReader(WSIReader):
         mppy = xml_pixels.attrib.get("PhysicalSizeY")
         if mppx is not None and mppy is not None:
             mpp = [mppx, mppy]
+        elif mppx is not None or mppy is not None:
+            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            mpp = [mppx or mppy] * 2
 
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
