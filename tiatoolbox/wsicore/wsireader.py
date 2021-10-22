@@ -2240,6 +2240,6 @@ def get_wsireader(input_img):
     """
     warnings.warn(
         "get_wsireader is deprecated. Please use WSIReader.open instead",
-        warnings.DeprecationWarning,
+        DeprecationWarning,
     )
     return WSIReader.open(input_img)
