@@ -22,9 +22,7 @@
 
 import pytest
 
-from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.architecture import get_pretrained_model
 
 # def test_get_pretrained_model():
 #     """Test for downloading and creating pretrained models."""
