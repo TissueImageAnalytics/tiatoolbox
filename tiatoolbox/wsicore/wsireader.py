@@ -65,6 +65,60 @@ class WSIReader:
 
     """
 
+    @staticmethod
+    def open():
+        """Return an appropriate :class:`.WSIReader` object.
+
+        Args:
+            input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+            Input to create a WSI object from.
+            Supported types of input are: `str` and `pathlib.Path` which point to
+            the location on the disk where image is stored, :class:`numpy.ndarray`
+            in which the input image in the form of numpy array (HxWxC) is stored,
+            or :obj:WSIReader which is an already created tiatoolbox WSI handler.
+            In the latter case, the function directly passes the input_imge to the
+            output.
+
+        Returns:
+            WSIReader: an object with base :class:`.WSIReader` as base class.
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> wsi = get_wsireader(input_img="./sample.svs")
+
+        """
+        if isinstance(input_img, (str, pathlib.Path)):
+            _, _, suffixes = utils.misc.split_path_name_ext(input_img)
+
+            if suffixes[-1] in (".npy",):
+                input_img = np.load(input_img)
+                wsi = VirtualWSIReader(input_img)
+
+            if suffixes[-2:] in ([".ome", ".tiff"],):
+                wsi = TIFFWSIReader(input_img)
+
+            elif suffixes[-1] in (".jpg", ".png", ".tif"):
+                wsi = VirtualWSIReader(input_img)
+
+            elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
+                wsi = OpenSlideWSIReader(input_img)
+
+            elif suffixes[-1] == (".jp2"):
+                wsi = OmnyxJP2WSIReader(input_img)
+
+            else:
+                raise FileNotSupported("Filetype not supported.")
+        elif isinstance(input_img, np.ndarray):
+            wsi = VirtualWSIReader(input_img)
+        elif isinstance(
+            input_img, (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader)
+        ):
+            # input is already a tiatoolbox wsi handler
+            wsi = input_img
+        else:
+            raise TypeError("Please input correct image path or an ndarray image.")
+        return wsi
+
     def __init__(self, input_img):
         if isinstance(input_img, np.ndarray):
             self.input_path = None
@@ -2184,35 +2238,8 @@ def get_wsireader(input_img):
         >>> wsi = get_wsireader(input_img="./sample.svs")
 
     """
-    if isinstance(input_img, (str, pathlib.Path)):
-        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
-
-        if suffixes[-1] in (".npy",):
-            input_img = np.load(input_img)
-            wsi = VirtualWSIReader(input_img)
-
-        if suffixes[-2:] in ([".ome", ".tiff"],):
-            wsi = TIFFWSIReader(input_img)
-
-        elif suffixes[-1] in (".jpg", ".png", ".tif"):
-            wsi = VirtualWSIReader(input_img)
-
-        elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
-            wsi = OpenSlideWSIReader(input_img)
-
-        elif suffixes[-1] == (".jp2"):
-            wsi = OmnyxJP2WSIReader(input_img)
-
-        else:
-            raise FileNotSupported("Filetype not supported.")
-    elif isinstance(input_img, np.ndarray):
-        wsi = VirtualWSIReader(input_img)
-    elif isinstance(
-        input_img, (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader)
-    ):
-        # input is already a tiatoolbox wsi handler
-        wsi = input_img
-    else:
-        raise TypeError("Please input correct image path or an ndarray image.")
-
-    return wsi
+    warnings.warn(
+        "get_wsireader is deprecated. Please use WSIReader.open instead",
+        warnings.DeprecationWarning,
+    )
+    return WSIReader.open(input_img)
