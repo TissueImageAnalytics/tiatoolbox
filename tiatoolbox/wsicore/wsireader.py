@@ -1825,7 +1825,7 @@ class TIFFWSIReader(WSIReader):
 
         self.series_n = series
         # Find the largest series if series="auto"
-        if self.tiff.series is None or len(self.tiff.series) == 0:
+        if self.tiff.series is None or len(self.tiff.series) == 0: # pragma: no cover
             raise Exception("TIFF does not contain any valid series.")
         if self.series_n == "auto":
             all_series = self.tiff.series or []
