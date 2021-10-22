@@ -37,7 +37,7 @@ test_requirements = [
 ]
 
 setup(
-    author="TIA Lab",
+    author="TIA Centre",
     author_email="tia@dcs.warwick.ac.uk",
     python_requires=">=3.7",
     classifiers=[
@@ -65,7 +65,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    url="https://github.com/TIA-Lab/tiatoolbox",
+    url="https://github.com/TissueImageAnalytics/tiatoolbox",
     version="0.7.0",
     zip_safe=False,
 )
