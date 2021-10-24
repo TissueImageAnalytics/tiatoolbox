@@ -12,7 +12,7 @@ pytest==6.2.5
 pytest-runner==5.2
 opencv-python>=4.0
 openslide-python==1.1.2
-pytest-cov==3.0.0
+pytest-cov==2.12.1
 pytest-xdist==2.4.0
 numpy
 pillow
