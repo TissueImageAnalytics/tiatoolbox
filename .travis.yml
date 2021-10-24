@@ -24,6 +24,8 @@ install:
 # Command to run tests, e.g. python setup.py test
 script:
     - set -e # Exit on first failure (errexit)
+    - tox -e black # Check for black style
+    - tox -e flake8  # Linter
     - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)  # Unit tests
     - set +e
 
