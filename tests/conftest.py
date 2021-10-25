@@ -31,6 +31,17 @@ def sample_ndpi(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
+def sample_ndpi2(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for ndpi images.
+
+    Download ndpi image for pytest.
+    Collected from doi:10.5072/zenodo.219445
+
+    """
+    return remote_sample("ndpi-2")
+
+
+@pytest.fixture(scope="session")
 def sample_svs(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for svs images.
     Download svs image for pytest.
@@ -68,6 +79,27 @@ def sample_all_wsis(sample_ndpi, sample_svs, sample_jp2, tmpdir_factory):
         dir_path.joinpath(sample_jp2.name).symlink_to(sample_jp2)
     except OSError:
         shutil.copy(sample_ndpi, dir_path.joinpath(sample_ndpi.name))
+        shutil.copy(sample_svs, dir_path.joinpath(sample_svs.name))
+        shutil.copy(sample_jp2, dir_path.joinpath(sample_jp2.name))
+
+    return dir_path
+
+
+@pytest.fixture(scope="session")
+def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
+    """Sample wsi(s) of all types supported by tiatoolbox.
+
+    Adds sample fluorescence ndpi image.
+
+    """
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(sample_ndpi2.name).symlink_to(sample_ndpi2)
+        dir_path.joinpath(sample_svs.name).symlink_to(sample_svs)
+        dir_path.joinpath(sample_jp2.name).symlink_to(sample_jp2)
+    except OSError:
+        shutil.copy(sample_ndpi2, dir_path.joinpath(sample_ndpi2.name))
         shutil.copy(sample_svs, dir_path.joinpath(sample_svs.name))
         shutil.copy(sample_jp2, dir_path.joinpath(sample_jp2.name))
 

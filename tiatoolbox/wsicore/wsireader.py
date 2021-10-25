@@ -1879,7 +1879,7 @@ class TIFFWSIReader(WSIReader):
 
         self.series_n = series
         # Find the largest series if series="auto"
-        if self.tiff.series is None or len(self.tiff.series) == 0:
+        if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
             raise Exception("TIFF does not contain any valid series.")
         if self.series_n == "auto":
             all_series = self.tiff.series or []
@@ -2024,6 +2024,9 @@ class TIFFWSIReader(WSIReader):
         mppy = xml_pixels.attrib.get("PhysicalSizeY")
         if mppx is not None and mppy is not None:
             mpp = [mppx, mppy]
+        elif mppx is not None or mppy is not None:
+            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            mpp = [mppx or mppy] * 2
 
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)

@@ -5,76 +5,14 @@ import pathlib
 
 from click.testing import CliRunner
 
-from tiatoolbox import cli, utils
-from tiatoolbox.wsicore.save_tiles import save_tiles
-
-
-def test_save_tiles(sample_all_wsis, tmp_path):
-    """Test for save_tiles as a python function."""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(sample_all_wsis)),
-        file_types=file_types,
-    )
-
-    for curr_file in files_all:
-        save_tiles(
-            input_path=curr_file,
-            tile_objective_value=5,
-            output_dir=str(pathlib.Path(tmp_path).joinpath("tiles_save_tiles")),
-            verbose=True,
-        )
-
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1.ndpi")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1.ndpi")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("tiles_save_tiles")
-        .joinpath("CMU-1.ndpi")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
-
+from tiatoolbox import cli
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_save_tiles(sample_all_wsis, tmp_path):
+def test_command_line_save_tiles(sample_all_wsis2, tmp_path):
     """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -82,9 +20,9 @@ def test_command_line_save_tiles(sample_all_wsis, tmp_path):
         [
             "save-tiles",
             "--img-input",
-            str(pathlib.Path(sample_all_wsis)),
+            str(pathlib.Path(sample_all_wsis2)),
             "--file-types",
-            '"*.ndpi, *.svs"',
+            "*.ndpi, *.svs, *.jp2",
             "--tile-objective-value",
             "5",
             "--output-path",
@@ -93,6 +31,69 @@ def test_command_line_save_tiles(sample_all_wsis, tmp_path):
     )
 
     assert save_tiles_result.exit_code == 0
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("bioformatspull2759.ndpi")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("bioformatspull2759.ndpi")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("bioformatspull2759.ndpi")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("all_tiles")
+        .joinpath("test1.jp2")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
 
 
 def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
@@ -105,7 +106,7 @@ def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
             "--img-input",
             str(sample_svs),
             "--file-types",
-            '"*.ndpi, *.svs"',
+            "*.ndpi, *.svs",
             "--tile-objective-value",
             "5",
             "--output-path",
@@ -116,6 +117,24 @@ def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
     )
 
     assert save_svs_tiles_result.exit_code == 0
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Output.csv")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("slide_thumbnail.jpg")
+        .exists()
+    )
+    assert (
+        pathlib.Path(tmp_path)
+        .joinpath("CMU-1-Small-Region.svs")
+        .joinpath("Tile_5_0_0.jpg")
+        .exists()
+    )
 
 
 def test_command_line_save_tiles_file_not_found(sample_svs, tmp_path):
@@ -128,7 +147,7 @@ def test_command_line_save_tiles_file_not_found(sample_svs, tmp_path):
             "--img-input",
             str(sample_svs)[:-1],
             "--file-types",
-            '"*.ndpi, *.svs"',
+            "*.ndpi, *.svs",
             "--tile-objective-value",
             "5",
             "--output-path",
