@@ -75,10 +75,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         scale_factor (tuple(float)): scaling factor to resize the input image
         output_size (tuple(int)): output image size, (width, height)
         interpolation (str or int): interpolation method used to interpolate the image
-          using `opencv interpolation flags
-          <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`.
-          default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
-          otherwise uses cv2.INTER_CUBIC
+         using `opencv interpolation flags
+         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
+         default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
+         otherwise uses cv2.INTER_CUBIC
 
     Returns:
         :class:`numpy.ndarray`: resized image
@@ -114,9 +114,6 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
     # Resize the image
-    # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
-    if img.shape[0] == img.shape[1] == 1:
-        return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
