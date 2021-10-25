@@ -13,33 +13,25 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies: [
-          flake8-spellcheck, # Spelling checker
-        ]
-        args: [--exit-zero]  # These checks will not cause the commit to fail
-        verbose: true
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
-    hooks:
-      - id: flake8
-        additional_dependencies: [
           flake8-bugbear, # Detect potential bugs
-          flake8-isort, # Check import ordering
-          flake8-comprehensions, # Suggestions for better list/set/dict comprehensions 
-          flake8-mutable, # Check for mutable default arguments
-          flake8-use-fstring, # Encourages use of f-strings vs old style
-          flake8-simplify, # Suggestions to simplify code
-          pep8-naming, # Check PEP8 class naming
-          flake8-eradicate, # Find dead/commented out code
           flake8-builtins, # Check for built-ins being used as variables
           flake8-cognitive-complexity, # Check max function complexity
+          flake8-comprehensions, # Suggestions for better list/set/dict comprehensions 
+          flake8-eradicate, # Find dead/commented out code
           flake8-expression-complexity, # Check max expression complexity
-          flake8-return, # Check return statements
-          flake8-pytest-style, # Check against pytest style guide
           flake8-fixme, # Check for FIXME, TODO, and XXX left in comments
-          flake8-sql, # Check SQL statement style
-          nitpick, # Check that black, flake8, isort have compaible options
+          flake8-isort, # Check import ordering
           flake8-logging-format, # Validate (lack of) logging format strings
+          flake8-mutable, # Check for mutable default arguments
           flake8-pie, # Misc. linting rules
+          flake8-pytest-style, # Check against pytest style guide
+          flake8-return, # Check return statements
+          flake8-simplify, # Suggestions to simplify code
+          flake8-spellcheck, # Spelling checker
+          flake8-sql, # Check SQL statement style
+          flake8-use-fstring, # Encourages use of f-strings vs old style
+          nitpick, # Check that black, flake8, isort have compaible options
+          pep8-naming, # Check PEP8 class naming
         ]
   - repo: local
     hooks:
