@@ -22,7 +22,7 @@
 
 from collections import defaultdict
 from numbers import Number
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import torch
@@ -91,12 +91,16 @@ def hybrid_clustered_graph(
         dict: A dictionary defining a graph for serialisation (e.g.
         JSON) or converting into a torch-geometric Data object where
         each node is the centroid (mean) if the features in a cluster.
+        The dictionary has the following entries:
             - :class:`numpy.ndarray` - x:
                 Features of each node (mean of features in a cluster).
+                Required for torch-geometric Data.
             - :class:`numpy.ndarray` - edge_index:
                 Edge index matrix defining connectivity.
-            - :py:obj:`Number` - y:
-                The label of the graph.
+                Required for torch-geometric Data.
+            - :py:obj:`numpy.ndarray` - coords:
+                Coordinates of each node within the WSI (mean of point
+                in a cluster). Useful for visualisation over the WSI.
 
     Example:
         >>> points = np.random.rand(99, 2) * 1000
@@ -186,12 +190,11 @@ def hybrid_clustered_graph(
     )
     edge_index = affinity_to_edge_index(adjacency_matrix)
 
-    result = {
+    return {
         "x": feature_centroids,
         "edge_index": edge_index,
         "coords": point_centroids,
     }
-    return result
 
 
 def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
