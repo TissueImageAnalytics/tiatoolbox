@@ -34,7 +34,6 @@ from scipy.spatial import Delaunay, cKDTree
 def hybrid_clustered_graph(
     points: ArrayLike,
     features: ArrayLike,
-    label: Optional[int] = None,
     lambda_d: Number = 3.0e-3,
     lambda_f: Number = 1.0e-3,
     lambda_h: Number = 0.8,
@@ -192,8 +191,6 @@ def hybrid_clustered_graph(
         "edge_index": edge_index,
         "coords": point_centroids,
     }
-    if label is not None:
-        result["y"] = np.array([label])
     return result
 
 
