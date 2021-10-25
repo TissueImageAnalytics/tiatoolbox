@@ -386,15 +386,15 @@ class SemanticSegmentor:
         auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
           if is not provided.
 
-        Examples:
-            >>> # Sample output of a network
-            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-            >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
-            >>> output = predictor.predict(wsis, mode='wsi')
-            >>> list(output.keys())
-            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
-            >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
-            >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
+    Examples:
+        >>> # Sample output of a network
+        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
+        >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
+        >>> output = predictor.predict(wsis, mode='wsi')
+        >>> list(output.keys())
+        [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+        >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
+        >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
 
     """
 
