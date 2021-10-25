@@ -131,18 +131,3 @@ def test_hybrid_clustered_graph():
     n = len(x)
     assert two == 2
     assert 0 <= m <= n ** 2
-
-
-def test_hybrid_clustered_graph_wth_y_value():
-    """Test that hybrid_clustered_graph assigns the y value correctly."""
-    np.random.seed(123)
-    label = 123
-    points = np.concatenate(
-        [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(4)]
-    )
-    features = np.concatenate(
-        [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(4)]
-    )
-    graph = hybrid_clustered_graph(points, features, lambda_h=0.8, label=label)
-    assert "y" in graph
-    assert graph["y"] == [label]
