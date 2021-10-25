@@ -17,21 +17,48 @@ def test_fetch_sample(tmp_path):
     tmp_path = pathlib.Path(tmp_path)
     path = _fetch_remote_sample("stainnorm-source")
     assert os.path.exists(path)
-    # test if corrupted
+    # Test if corrupted
     get_wsireader(path)
 
     path = _fetch_remote_sample("stainnorm-source", tmp_path)
-    # assuming Path has no trailing '/'
+    # Assuming Path has no trailing '/'
     assert os.path.exists(path)
     assert str(tmp_path) in str(path)
 
-    # test not directory path
+    # Test not directory path
     test_path = pathlib.Path(f"{tmp_path}/dummy.npy")
     np.save(test_path, np.zeros([3, 3, 3]))
     with pytest.raises(ValueError, match=r".*tmp_path must be a directory.*"):
         path = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
 
-    #  very tiny so temporary hook here also
+    # Very tiny so temporary hook here also
+    arr = stainnorm_target()
+    assert isinstance(arr, np.ndarray)
+
+
+def test_fetch_sample_skip(tmp_path):
+    """Test skipping fetching sample via code name if already downloaded."""
+    # Fetch the remote file twice
+    tmp_path = pathlib.Path(tmp_path)
+    path_a = _fetch_remote_sample("wsi1_8k_8k_svs")
+    path_b = _fetch_remote_sample("wsi1_8k_8k_svs")
+    assert os.path.exists(path_a)
+    assert path_a == path_b
+    # Test if corrupted
+    get_wsireader(path_a)
+
+    path = _fetch_remote_sample("wsi1_8k_8k_svs", tmp_path)
+    # Assuming Path has no trailing '/'
+    assert os.path.exists(path)
+    assert str(tmp_path) in str(path)
+
+    # Test not directory path
+    test_path = pathlib.Path(f"{tmp_path}/dummy.npy")
+    np.save(test_path, np.zeros([3, 3, 3]))
+    with pytest.raises(ValueError, match=r".*tmp_path must be a directory.*"):
+        path = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
+
+    # Very tiny so temporary hook here also
     arr = stainnorm_target()
     assert isinstance(arr, np.ndarray)
 
