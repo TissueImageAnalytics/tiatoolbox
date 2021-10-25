@@ -7,9 +7,12 @@ aliases:
   stainnorm: &stainnorm "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm"
   patchextraction: &patchextraction "https://tiatoolbox.dcs.warwick.ac.uk/testdata/patchextraction"
   testdata: &testdata "https://tiatoolbox.dcs.warwick.ac.uk/testdata"
+  models: &models "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
 files:
   ndpi-1:
     url: [*wsis, "CMU-1.ndpi"]
+  ndpi-2:
+      url: [ *wsis, "bioformatspull2759.ndpi" ]
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
   ome-brightfield-pyramid-1-small:
@@ -80,3 +83,5 @@ files:
     url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
   wsi4_4k_4k_pred:
     url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
+  small_svs_tissue_mask:
+    url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]

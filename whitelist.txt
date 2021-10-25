@@ -9,6 +9,7 @@ dataframe
 dataset
 Dataset
 Delaunay
+downsampled
 dtype
 func
 getitem
@@ -17,9 +18,12 @@ HW
 HWC
 img
 iostate
+JP2
 kather
 kd
 MERCHANTABILITY
+mpp
+mse
 NCHW
 ndarray
 NHW
@@ -28,6 +32,8 @@ npy
 numpy
 NxM
 NxN
+Omnyx
+openslide
 otsu
 pathlib
 postproc
@@ -41,7 +47,14 @@ scipy
 skipcq
 tolist
 uint8
+WRT
 wsi
 wsireader
 XY
 YX
+Segmentor
+svs
+NHWC
+binarize
+PTC
+W0063

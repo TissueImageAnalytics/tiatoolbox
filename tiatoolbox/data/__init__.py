@@ -40,7 +40,7 @@ def _fetch_remote_sample(
 
     """
     if tmp_path is None:
-        tmp_path = tempfile.gettempdir()
+        tmp_path = pathlib.Path(tempfile.gettempdir())
     if not tmp_path.is_dir():
         raise ValueError("tmp_path must be a directory.")
     url = "/".join(SAMPLE_FILES[key]["url"])
@@ -59,7 +59,7 @@ def _fetch_remote_sample(
             for block in response.iter_content(1024):
                 handle.write(block)
         return file_path
-    print(f"Skipping {filename}")
+    print(f"Skipping {filename}. File exists at {file_path}")
     return file_path
 
 

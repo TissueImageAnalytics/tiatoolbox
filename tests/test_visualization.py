@@ -14,11 +14,11 @@ from tiatoolbox.wsicore.wsireader import get_wsireader
 
 def test_overlay_patch_prediction(sample_wsi_dict):
     """Test for overlaying merged patch prediction of wsi."""
-    _mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    _mini_wsi_pred = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_pred"])
-    reader = get_wsireader(_mini_wsi_svs)
+    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_pred = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_pred"])
+    reader = get_wsireader(mini_wsi_svs)
 
-    raw, merged = joblib.load(_mini_wsi_pred)
+    raw, merged = joblib.load(mini_wsi_pred)
 
     thumb = reader.slide_thumbnail(resolution=2.77, units="mpp")
     with pytest.raises(ValueError, match=r".*Mismatch shape.*"):
