@@ -28,7 +28,7 @@ format of this dictionary may vary between WSI formats.
 """
 import warnings
 from pathlib import Path
-from typing import Sequence, Tuple, Optional, Mapping
+from typing import Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -61,6 +61,11 @@ class WSIMeta:
         slide_dimensions (tuple(int)): Tuple containing the width and
             height of the WSI. These are for the baseline (full resolution)
             image if the WSI is a pyramid or multi-resoltion. Required.
+        axes (str): Axes ordering of the image. This is most relevant for
+            OME-TIFF images where the axes ordering can vary. For most
+            images this with be "YXS" i.e. the image is store in the axis
+            order of Y coordinates first, then X coordinates, and
+            colour channels last.
         level_dimensions (list): A list of dimensions for each level of the
             pyramid or for each resolution in the WSI. Defaults to
             [slide_dimension].
@@ -84,9 +89,12 @@ class WSIMeta:
 
     """
 
+    _valid_axes_characters = "YXSTZ"
+
     def __init__(
         self,
         slide_dimensions: Tuple[int, int],
+        axes: str,
         level_dimensions: Optional[Sequence[Tuple[int, int]]] = None,
         objective_power: Optional[float] = None,
         level_count: Optional[int] = None,
@@ -96,6 +104,7 @@ class WSIMeta:
         file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
     ):
+        self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple([int(x) for x in slide_dimensions])
         self.level_dimensions = (
@@ -130,6 +139,13 @@ class WSIMeta:
         passed = True
 
         # Fatal conditions: Should return False if not True
+
+        if len(set(self.axes) - set(self._valid_axes_characters)) > 0:
+            warnings.warn(
+                "Axes contains invalid characters. "
+                f"Valid characters are '{self._valid_axes_characters}'."
+            )
+            passed = False
 
         if self.level_count < 1:
             warnings.warn("Level count is not a positive integer")
