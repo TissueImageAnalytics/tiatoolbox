@@ -1131,8 +1131,8 @@ class FeatureExtractor(SemanticSegmentor):
           for processing the data. By default, the corresponding pretrained weights
           will also be downloaded. However, you can override with your own set of
           weights via the `pretrained_weights` argument. Argument is case insensitive.
-          Refer to `tiatoolbox.models.architecture.vanilla.CNNExtractor` for list of
-          supported pretrained models.
+          Refer to :class:`tiatoolbox.models.architecture.vanilla.CNNExtractor`
+          for list of supported pretrained models.
         pretrained_weights (str): Path to the weight of the corresponding
           `pretrained_model`.
         batch_size (int) : Number of images fed into the model each time.
@@ -1146,25 +1146,25 @@ class FeatureExtractor(SemanticSegmentor):
         auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
           if is not provided.
 
-        Examples:
-            >>> # Sample output of a network
-            >>> from tiatoolbox.models.architecture.vanilla import CNNExtractor
-            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-            >>> # create resnet50 with pytorch pretrained weights
-            >>> model = CNNExtractor('resnet50')
-            >>> predictor = FeatureExtractor(model=model)
-            >>> output = predictor.predict(wsis, mode='wsi')
-            >>> list(output.keys())
-            [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
-            >>> # If a network have 2 output heads, for 'A/wsi.svs',
-            >>> # there will be 3 output and they are respectively stored at
-            >>> # 'output/0.position.npy'   # will alwayw be output
-            >>> # 'output/0.features.0.npy' # output of head 0
-            >>> # 'output/0.features.1.npy' # output of head 1
-            >>> # Each file will contain a same number of items, and the item at each
-            >>> # index corresponds to 1 patch. The item in `.*position.npy` will
-            >>> # be the corresponding patch bounding box. The box coordinates are at
-            >>> # the inference resolution defined within the provided `ioconfig`.
+    Examples:
+        >>> # Sample output of a network
+        >>> from tiatoolbox.models.architecture.vanilla import CNNExtractor
+        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
+        >>> # create resnet50 with pytorch pretrained weights
+        >>> model = CNNExtractor('resnet50')
+        >>> predictor = FeatureExtractor(model=model)
+        >>> output = predictor.predict(wsis, mode='wsi')
+        >>> list(output.keys())
+        [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
+        >>> # If a network have 2 output heads, for 'A/wsi.svs',
+        >>> # there will be 3 output and they are respectively stored at
+        >>> # 'output/0.position.npy'   # will alwayw be output
+        >>> # 'output/0.features.0.npy' # output of head 0
+        >>> # 'output/0.features.1.npy' # output of head 1
+        >>> # Each file will contain a same number of items, and the item at each
+        >>> # index corresponds to 1 patch. The item in `.*position.npy` will
+        >>> # be the corresponding patch bounding box. The box coordinates are at
+        >>> # the inference resolution defined within the provided `ioconfig`.
 
     """
 
