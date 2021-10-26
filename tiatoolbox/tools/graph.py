@@ -20,6 +20,7 @@
 
 """Functions to help with constructing graphs."""
 
+from __future__ import annotations
 from collections import defaultdict
 from numbers import Number
 from typing import Dict, List, Union
@@ -257,7 +258,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
 
 
 def affinity_to_edge_index(
-    affinity_matrix: Union[torch.Tensor, ArrayLike, List[List[Number]]],
+    affinity_matrix: Union[torch.Tensor, ArrayLike],
     threshold: Number = 0.5,
 ) -> Union[torch.tensor, ArrayLike]:
     """Convert an affinity matrix (similarity matrix) to an edge index.
