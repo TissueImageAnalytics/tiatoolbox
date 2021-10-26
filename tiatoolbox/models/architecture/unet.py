@@ -29,7 +29,8 @@ from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.architecture.utils import UpSample2x, crop_op
+from tiatoolbox.models.architecture.utils import UpSample2x, center_crop
+from tiatoolbox.utils import misc
 
 
 class ResNetEncoder(ResNet):
@@ -352,7 +353,7 @@ class UNetModel(ModelABC):
 
         """
         model.eval()
-        device = "cuda" if on_gpu else "cpu"
+        device = misc.select_device(on_gpu)
 
         ####
         imgs = batch_data
@@ -368,7 +369,7 @@ class UNetModel(ModelABC):
             probs = F.interpolate(
                 probs, scale_factor=2, mode="bilinear", align_corners=False
             )
-            probs = crop_op(probs, crop_shape)
+            probs = center_crop(probs, crop_shape)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 
         probs = probs.cpu().numpy()

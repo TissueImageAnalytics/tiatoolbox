@@ -111,6 +111,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
             interpolation = "cubic"
         else:
             interpolation = "area"
+
+    if np.float16 == img.dtype:
+        img = img.astype(np.float32)
+
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
     # Resize the image

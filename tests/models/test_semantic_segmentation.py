@@ -36,7 +36,7 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import crop_op
+from tiatoolbox.models.architecture.utils import center_crop
 from tiatoolbox.models.controller.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
@@ -106,7 +106,7 @@ class _CNNTo1(ModelABC):
         hw = np.array(img_list.shape[2:])
         with torch.inference_mode():  # do not compute gradient
             logit_list = model(img_list)
-            logit_list = crop_op(logit_list, hw // 2)
+            logit_list = center_crop(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
             prob_list = F.relu(logit_list)
 
@@ -626,10 +626,9 @@ def test_subclass(remote_sample, tmp_path):
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
-    thumb = thumb[1024:1536, 1024:1536, :]
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
@@ -637,14 +636,14 @@ def test_functional_pretrained(remote_sample, tmp_path):
         batch_size=1, pretrained_model="fcn-tissue_mask"
     )
 
-    # _rm_dir(save_dir)
-    # semantic_segmentor.predict(
-    #     [mini_wsi_svs],
-    #     mode="wsi",
-    #     on_gpu=ON_GPU,
-    #     crash_on_exception=True,
-    #     save_dir=f"{save_dir}/raw/",
-    # )
+    _rm_dir(save_dir)
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
 
     _rm_dir(save_dir)
 
@@ -707,7 +706,7 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     _rm_dir(save_dir)
-    wsi_breast = pathlib.Path(remote_sample)
+    wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     semantic_segmentor = SemanticSegmentor(
         num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
     )
@@ -722,7 +721,7 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
     _cache_pred = np.load(pathlib.Path(remote_sample("wsi4_4k_4k_pred")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = np.argmax(_test_pred, axis=-1)
-    assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-6
+    assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-2
     _rm_dir(save_dir)
 
 

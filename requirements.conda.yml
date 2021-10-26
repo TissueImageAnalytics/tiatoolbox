@@ -22,9 +22,11 @@ dependencies:
   - pillow
   - pip
   - pixman<0.38.0
+  - pygeos
   - pytorch
   - pyyaml>=5.1
   - requests
+  - shapely
   - scikit-image
   - scikit-learn>=0.23.2
   - tifffile

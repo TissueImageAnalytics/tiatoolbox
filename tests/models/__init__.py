@@ -18,19 +18,4 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Models package for the models implemented in tiatoolbox."""
-from tiatoolbox.models import abc, architecture, dataset
-from tiatoolbox.models.controller.nucleus_instance_segmentor import (
-    NucleusInstanceSegmentor,
-)
-from tiatoolbox.models.controller.patch_predictor import (
-    CNNPatchPredictor,
-    IOPatchPredictorConfig,
-    PatchDataset,
-    WSIPatchDataset,
-)
-from tiatoolbox.models.controller.semantic_segmentor import (
-    IOSegmentorConfig,
-    SemanticSegmentor,
-    WSIStreamDataset,
-)
+"""Unit test package for tiatoolbox models."""
