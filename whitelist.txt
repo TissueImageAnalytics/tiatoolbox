@@ -7,6 +7,7 @@ CUDA
 dataframe
 dataset
 Dataset
+downsampled
 dtype
 func
 getitem
@@ -15,14 +16,19 @@ HW
 HWC
 img
 iostate
+JP2
 kather
 MERCHANTABILITY
+mpp
+mse
 NCHW
 ndarray
 NHW
 nn
 npy
 numpy
+Omnyx
+openslide
 otsu
 pathlib
 postproc
@@ -35,6 +41,7 @@ runtime
 skipcq
 tolist
 uint8
+WRT
 wsi
 wsireader
 XY
@@ -45,3 +52,6 @@ NHWC
 binarize
 PTC
 W0063
+cv2
+1x1
+v4

@@ -19,25 +19,35 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This module defines classes which can read image data from WSI formats."""
-from tiatoolbox import utils
-from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.tools import tissuemask
-from tiatoolbox.wsicore.wsimeta import WSIMeta
-
-import pathlib
-import warnings
 import copy
-import numpy as np
-import openslide
-import glymur
 import math
-import pandas as pd
-import re
 import numbers
 import os
+import pathlib
+import re
+import warnings
+from datetime import datetime
+from numbers import Number
 from typing import Tuple, Union
 
+import glymur
+import numpy as np
+import openslide
+import pandas as pd
+import tifffile
+import zarr
+from defusedxml.ElementTree import fromstring as et_from_string
+
+from tiatoolbox import utils
+from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.wsicore.wsimeta import WSIMeta
+
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
+
+
+IntPair = Tuple[int, int]
+IntBounds = Tuple[int, int, int, int]
 
 
 class WSIReader:
@@ -351,6 +361,7 @@ class WSIReader:
             - :py:obj:`tuple` - Region location level 0 coordinates
                 - :py:obj:`int` - X location
                 - :py:obj:`int` - Y location
+
         """
         (
             read_level,
@@ -1317,6 +1328,7 @@ class OpenSlideWSIReader(WSIReader):
 
         param = WSIMeta(
             file_path=self.input_path,
+            axes="YXS",
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,
@@ -1524,6 +1536,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         param = WSIMeta(
             file_path=self.input_path,
+            axes="YXS",
             objective_power=objective_power,
             slide_dimensions=slide_dimensions,
             level_count=level_count,
@@ -1602,6 +1615,7 @@ class VirtualWSIReader(WSIReader):
         """
         param = WSIMeta(
             file_path=self.input_path,
+            axes="YSX",
             objective_power=None,
             # align to XY to match with OpenSlide
             slide_dimensions=self.img.shape[:2][::-1],
@@ -1637,9 +1651,9 @@ class VirtualWSIReader(WSIReader):
         self,
         location,
         size,
-        resolution=1.0,
-        units="baseline",
-        interpolation="cubic",
+        resolution=0,
+        units="level",
+        interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
@@ -1693,9 +1707,9 @@ class VirtualWSIReader(WSIReader):
     def read_bounds(
         self,
         bounds,
-        resolution=1.0,
-        units="baseline",
-        interpolation="cubic",
+        resolution=0,
+        units="level",
+        interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
@@ -1759,6 +1773,399 @@ class VirtualWSIReader(WSIReader):
         return im_region
 
 
+class ArrayView:
+    """An object for viewing a zarr array with a different index ordering.
+
+    Used to allow YXS index order reads for arrays with axes in other
+    orders such as SYX. Currently supported axes are:
+    - YXS
+    - SYX
+
+    """
+
+    def __init__(self, array: zarr.Array, axes: str):
+        """Initialise the view object.
+
+        Args:
+            array (zarr.Array): Zarr Array to read from.
+            axes (str): Axes ordering string. Allowed values are YXS and SYX.
+
+        """
+        self.array = array
+        self.axes = axes
+        self._shape = dict(zip(self.axes, self.array.shape))
+
+    @property
+    def shape(self):
+        return tuple(self._shape[c] for c in "YXS")
+
+    def __getitem__(self, index):
+        # Normalise to a tuple of length = len(self.axes)
+        if not isinstance(index, tuple):
+            index = (index,)
+        while len(index) < len(self.axes):
+            index = (*index, slice(None))
+
+        if self.axes == "YXS":
+            return self.array[index]
+        if self.axes == "SYX":
+            Y, X, S = index
+            index = (S, Y, X)
+            return np.rollaxis(self.array[index], 0, 3)
+        raise Exception("Unsupported axes")
+
+
+class TIFFWSIReader(WSIReader):
+    def __init__(self, input_img, series="auto", cache_size=2 ** 28):
+        super().__init__(input_img=input_img)
+        self.tiff = tifffile.TiffFile(self.input_path)
+        self._axes = self.tiff.pages[0].axes
+        if not any([self.tiff.is_svs, self.tiff.is_ome]):
+            raise ValueError("Unsupported TIFF WSI format.")
+
+        self.series_n = series
+        # Find the largest series if series="auto"
+        if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
+            raise Exception("TIFF does not contain any valid series.")
+        if self.series_n == "auto":
+            all_series = self.tiff.series or []
+            series_areas = [
+                np.prod(self._shape_channels_last(np.array(s.pages[0].shape))[:2])
+                for s in all_series  # skipcq: PYL-E1133
+            ]
+            self.series_n = np.argmax(series_areas)
+        self._tiff_series = self.tiff.series[self.series_n]
+        self._zarr_store = tifffile.imread(
+            self.input_path, series=self.series_n, aszarr=True
+        )
+        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
+        self._zarr_group = zarr.open(self._zarr_lru_cache)
+        if not isinstance(self._zarr_group, zarr.hierarchy.Group):
+            group = zarr.hierarchy.group()
+            group[0] = self._zarr_group
+            self._zarr_group = group
+        self.level_arrays = {
+            int(key): ArrayView(array, axes=self.info.axes)
+            for key, array in self._zarr_group.items()
+        }
+        # Using the zarr array view method gives a ValueError
+        # self.zarr_views = zarr.hierarchy.group()
+        # for key, array in self.zarr_group.items():
+        #     self.zarr_views[key] = array.view(self._shape_channels_last(array.shape))
+
+    def _shape_channels_last(self, shape):
+        """Make a level shape tuple in YXS order.
+
+        Args:
+            shape (tuple(int)): Input shape tuple.
+
+        Returns:
+            Shape in YXS order.
+
+        """
+        if self._axes == "YXS":
+            return shape
+        if self._axes == "SYX":
+            return np.roll(shape, -1)
+        raise Exception("Unsupported axes")
+
+    def _parse_svs_metadata(self) -> dict:
+        """Extract SVS specific metadata.
+
+        Returns:
+            dict: Dictionary of kwargs for WSIMeta.
+
+        """
+        raw = {}
+        mpp = None
+        objective_power = None
+        vendor = "Aperio"
+
+        description = self.tiff.pages[0].description
+        raw["Description"] = description
+        parts = description.split("|")
+        description_headers, key_value_pairs = parts[0], parts[1:]
+        description_headers = description_headers.split(";")
+
+        software, photometric_info = description_headers[0].splitlines()
+        raw["Software"] = software
+        raw["Photometric Info"] = photometric_info
+
+        def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
+            """Parse SVS key-value string.
+
+            Infers types of data by trial and error with a fallback to
+            the original string type.
+
+            Args:
+                string (str): key-value string in SVS format: "key=value".
+
+            Returns:
+                tuple: Key-value pair.
+
+            """
+            pair = string.split("=")
+            if len(pair) != 2:
+                raise ValueError(
+                    "Invalid metadata. Expected string of the format 'key=value'."
+                )
+            key, value_string = pair
+            key = key.strip()
+            value_string = value_string.strip()
+            value = value_string.strip()
+
+            def us_date(string: str) -> datetime:
+                return datetime.strptime(string, r"%m/%d/%y")
+
+            def time(string: str) -> datetime:
+                return datetime.strptime(string, r"%H:%M:%S")
+
+            casting_prescedence = [us_date, time, int, float]
+            value = value_string
+            for cast in casting_prescedence:
+                try:
+                    value = cast(value_string)
+                    return key, value
+                except ValueError:
+                    continue
+
+            return key, value
+
+        svs_tags = dict(parse_svs_tag(string) for string in key_value_pairs)
+        raw["SVS Tags"] = svs_tags
+        mpp = svs_tags.get("MPP")
+        if mpp is not None:
+            mpp = [mpp] * 2
+        objective_power = svs_tags.get("AppMag")
+
+        kwargs = dict(
+            objective_power=objective_power,
+            vendor=vendor,
+            mpp=mpp,
+            raw=raw,
+        )
+
+        return kwargs
+
+    def _parse_ome_metadata(self) -> dict:
+        # The OME-XML should be in each IFD but is optional. It must be
+        # present in the first IFD. We simply get the description from
+        # the first IFD.
+        description = self.tiff.pages[0].description
+        xml = et_from_string(description)
+        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+
+        raw = {
+            "Description": description,
+            "OME-XML": xml,
+        }
+
+        objective_power = None
+        mpp = None
+        vendor = None
+
+        xml_pixels = xml_series.find("ome:Pixels", namespaces)
+        mppx = xml_pixels.attrib.get("PhysicalSizeX")
+        mppy = xml_pixels.attrib.get("PhysicalSizeY")
+        if mppx is not None and mppy is not None:
+            mpp = [mppx, mppy]
+        elif mppx is not None or mppy is not None:
+            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            mpp = [mppx or mppy] * 2
+
+        instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
+        objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
+        instrument_ref_id = instrument_ref.attrib["ID"]
+        objective_settings_id = objective_settings.attrib["ID"]
+        instruments = {
+            instrument.attrib["ID"]: instrument
+            for instrument in xml.findall("ome:Instrument", namespaces)
+        }
+        objectives = {
+            (instrument_id, objective.attrib["ID"]): objective
+            for instrument_id, instrument in instruments.items()
+            for objective in instrument.findall("ome:Objective", namespaces)
+        }
+
+        try:
+            objective = objectives[(instrument_ref_id, objective_settings_id)]
+            objective_power = float(objective.attrib.get("NominalMagnification"))
+        except KeyError:
+            raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
+
+        kwargs = dict(
+            objective_power=objective_power,
+            vendor=vendor,
+            mpp=mpp,
+            raw=raw,
+        )
+
+        return kwargs
+
+    def _info(self):
+        """TIFF metadata constructor.
+
+        Returns:
+            WSIMeta: Containing metadata.
+
+        """
+        level_count = len(self._zarr_group)
+        level_dimensions = [
+            np.array(self._shape_channels_last(p.shape)[:2][::-1])
+            for p in self._zarr_group.values()
+        ]
+        slide_dimensions = level_dimensions[0]
+        level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
+        # The tags attribute object will not pickle or deepcopy,
+        # so a copy with only python values or tiffile enums is made.
+        tiff_tags = {
+            code: {
+                "code": code,
+                "value": tag.value,
+                "name": tag.name,
+                "count": tag.count,
+                "type": tag.dtype,
+            }
+            for code, tag in self.tiff.pages[0].tags.items()
+        }
+
+        if self.tiff.is_svs:
+            filetype_params = self._parse_svs_metadata()
+        if self.tiff.is_ome:
+            filetype_params = self._parse_ome_metadata()
+        filetype_params["raw"]["TIFF Tags"] = tiff_tags
+
+        param = WSIMeta(
+            file_path=self.input_path,
+            slide_dimensions=slide_dimensions,
+            axes=self._axes,
+            level_count=level_count,
+            level_dimensions=level_dimensions,
+            level_downsamples=level_downsamples,
+            **filetype_params,
+        )
+
+        return param
+
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        if coord_space == "resolution":
+            region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return region
+
+        # Find parameters for optimal read
+        (
+            read_level,
+            _,
+            _,
+            post_read_scale,
+            baseline_read_size,
+        ) = self.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
+
+        bounds = utils.transforms.locsize2bounds(
+            location=location, size=baseline_read_size
+        )
+        im_region = utils.image.safe_padded_read(
+            image=self.level_arrays[read_level],
+            bounds=bounds,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation=interpolation,
+        )
+
+        im_region = utils.transforms.background_composite(image=im_region)
+        return im_region
+
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        bounds_at_baseline = bounds
+        if coord_space == "resolution":
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units
+            )
+            _, size_at_requested = utils.transforms.bounds2locsize(bounds)
+            # dont use the `output_size` (`size_at_requested`) here
+            # because the rounding error at `bounds_at_baseline` leads to
+            # different `size_at_requested` (keeping same read resolution
+            # but base image is of different scale)
+            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+        else:  # duplicated portion with VirtualReader, factoring out ?
+            # Find parameters for optimal read
+            (
+                read_level,
+                _,
+                size_at_requested,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+
+        im_region = utils.image.sub_pixel_read(
+            image=self.level_arrays[read_level],
+            bounds=bounds_at_baseline,
+            output_size=size_at_requested,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            read_kwargs=kwargs,
+        )
+
+        if coord_space == "resolution":
+            # do this to enforce output size is as defined by input bounds
+            im_region = utils.transforms.imresize(
+                img=im_region, output_size=size_at_requested
+            )
+        else:
+            im_region = utils.transforms.imresize(
+                img=im_region,
+                scale_factor=post_read_scale,
+                output_size=size_at_requested,
+            )
+
+        return im_region
+
+
 def get_wsireader(input_img):
     """Return an appropriate :class:`.WSIReader` object.
 
@@ -1781,19 +2188,22 @@ def get_wsireader(input_img):
 
     """
     if isinstance(input_img, (str, pathlib.Path)):
-        _, _, suffix = utils.misc.split_path_name_ext(input_img)
+        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
 
-        if suffix in (".npy",):
+        if suffixes[-1] in (".npy",):
             input_img = np.load(input_img)
             wsi = VirtualWSIReader(input_img)
 
-        elif suffix in (".jpg", ".png", ".tif"):
+        elif suffixes[-2:] in ([".ome", ".tiff"],):
+            wsi = TIFFWSIReader(input_img)
+
+        elif suffixes[-1] in (".jpg", ".png", ".tif"):
             wsi = VirtualWSIReader(input_img)
 
-        elif suffix in (".svs", ".ndpi", ".mrxs"):
+        elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
             wsi = OpenSlideWSIReader(input_img)
 
-        elif suffix == ".jp2":
+        elif suffixes[-1] == (".jp2"):
             wsi = OmnyxJP2WSIReader(input_img)
 
         else:
