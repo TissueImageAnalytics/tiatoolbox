@@ -21,6 +21,7 @@
 
 import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from tiatoolbox import rcParam
 from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
@@ -95,17 +96,19 @@ class KatherPatchDataset(DatasetInfoABC):
         ]
 
         if save_dir_path is None:
-            save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "dataset/")
+            save_dir_path = Path(rcParam["TIATOOLBOX_HOME"], "dataset")
             if not os.path.exists(save_dir_path):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
-                url = "https://tiatoolbox.dcs.warwick.ac.uk/datasets/kather100k-validation.zip"
+                url = (
+                    "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
+                    "/kather100k-validation.zip"
+                )
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
-            save_dir_path = os.path.join(
-                save_dir_path, "Kather_texture_2016_image_tiles_5000/"
-            )
+            save_dir_path = Path(save_dir_path, "kather100k-validation")
         # bring outside to prevent case where download fail
-        if not os.path.exists(save_dir_path):
+        save_dir_path = Path(save_dir_path)
+        if not save_dir_path.exists():
             raise ValueError(f"Dataset does not exist at `{save_dir_path}`")
 
         # What will happen if downloaded data get corrupted?

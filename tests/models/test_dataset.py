@@ -92,6 +92,9 @@ def test_kather_dataset_default(tmp_path):
     ):
         _ = KatherPatchDataset(save_dir_path="unknown_place")
 
+    # remove generated data
+    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+
 
 def test_kather_dataset(tmp_path):
     """Test for kather patch dataset."""
@@ -101,7 +104,10 @@ def test_kather_dataset(tmp_path):
     # remove previously generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    url = "https://tiatoolbox.dcs.warwick.ac.uk/datasets/kather100k-validation-norm-subset-90.zip"
+    url = (
+        "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
+        "/kather100k-validation-norm-subset-90.zip"
+    )
     save_zip_path = os.path.join(save_dir_path, "Kather.zip")
     download_data(url, save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
