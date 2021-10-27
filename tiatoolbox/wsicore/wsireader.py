@@ -94,7 +94,7 @@ class WSIReader:
                 input_img = np.load(input_img)
                 wsi = VirtualWSIReader(input_img)
 
-            if suffixes[-2:] in ([".ome", ".tiff"],):
+            elif suffixes[-2:] in ([".ome", ".tiff"],):
                 wsi = TIFFWSIReader(input_img)
 
             elif suffixes[-1] in (".jpg", ".png", ".tif"):
@@ -117,6 +117,7 @@ class WSIReader:
             wsi = input_img
         else:
             raise TypeError("Please input correct image path or an ndarray image.")
+
         return wsi
 
     def __init__(self, input_img):
