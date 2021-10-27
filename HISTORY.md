@@ -12,11 +12,11 @@ History
 - Minor updates for `get_coordinates` to pave the way for getting patch IO for segmentation.
 - Migrates old code to new variable names (patch extraction, patch wsi model).
 - Change in API from `pretrained_weight` to `pretrained_weights`.
-- Adds cli for semantic segmenation.
+- Adds cli for semantic segmentation.
 - Update python notebooks to add `read_rect` and `read_bounds` examples with `mpp` read.
 
 ### Changes to API
-- Adds `WSIReader.open`. `get_wsireader` will deprecated in the next release. Please use `WSIReader.open` instead.
+- Adds `WSIReader.open`. `get_wsireader` will deprecate in the next release. Please use `WSIReader.open` instead.
 - CLI is now POSIX compatible
   - Replaces underscores in variable names with hyphens
 - Models API updated to use `pretrained_weights` instead of `pretrained_weight`.
