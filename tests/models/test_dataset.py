@@ -77,14 +77,14 @@ def test_dataset_abc():
         Proto()  # skipcq
 
 
-def test_kather_dataset(tmp_path):
-    """Test for kather patch dataset."""
-    save_dir_path = tmp_path
+@pytest.mark.skip(reason="Local test, not applicable for travis.")
+def test_kather_dataset_default(tmp_path):
+    """Test for kather patch dataset with default parameters."""
 
     # test kather with default init
-    dataset = KatherPatchDataset()
+    _ = KatherPatchDataset()
     # kather with default data path skip download
-    dataset = KatherPatchDataset()
+    _ = KatherPatchDataset()
     # pytest for not exist dir
     with pytest.raises(
         ValueError,
@@ -92,18 +92,20 @@ def test_kather_dataset(tmp_path):
     ):
         _ = KatherPatchDataset(save_dir_path="unknown_place")
 
+
+def test_kather_dataset(tmp_path):
+    """Test for kather patch dataset."""
+    save_dir_path = tmp_path
+
     # save to temporary location
     # remove previously generated data
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    url = (
-        "https://zenodo.org/record/53169/files/"
-        "Kather_texture_2016_image_tiles_5000.zip"
-    )
+    url = "https://tiatoolbox.dcs.warwick.ac.uk/datasets/kather100k-validation-norm-subset-90.zip"
     save_zip_path = os.path.join(save_dir_path, "Kather.zip")
     download_data(url, save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
-    extracted_dir = os.path.join(save_dir_path, "Kather_texture_2016_image_tiles_5000/")
+    extracted_dir = os.path.join(save_dir_path, "CRC-VAL-HE-7K/")
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
     assert dataset.inputs is not None
     assert dataset.labels is not None
@@ -112,10 +114,9 @@ def test_kather_dataset(tmp_path):
 
     # to actually get the image, we feed it to PatchDataset
     actual_ds = PatchDataset(dataset.inputs, dataset.labels)
-    sample_patch = actual_ds[100]
+    sample_patch = actual_ds[89]
     assert isinstance(sample_patch["image"], np.ndarray)
     assert sample_patch["label"] is not None
 
     # remove generated data
     shutil.rmtree(save_dir_path, ignore_errors=True)
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])

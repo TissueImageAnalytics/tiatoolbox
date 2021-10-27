@@ -83,24 +83,22 @@ class KatherPatchDataset(DatasetInfoABC):
         save_dir_path=None,
     ):
         label_names = [
-            "01_TUMOR",
-            "02_STROMA",
-            "03_COMPLEX",
-            "04_LYMPHO",
-            "05_DEBRIS",
-            "06_MUCOSA",
-            "07_ADIPOSE",
-            "08_EMPTY",
+            "BACK",
+            "NORM",
+            "DEB",
+            "TUM",
+            "ADI",
+            "MUC",
+            "MUS",
+            "STR",
+            "LYM",
         ]
 
         if save_dir_path is None:
             save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "dataset/")
             if not os.path.exists(save_dir_path):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
-                url = (
-                    "https://zenodo.org/record/53169/files/"
-                    "Kather_texture_2016_image_tiles_5000.zip"
-                )
+                url = "https://tiatoolbox.dcs.warwick.ac.uk/datasets/kather100k-validation.zip"
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             save_dir_path = os.path.join(
