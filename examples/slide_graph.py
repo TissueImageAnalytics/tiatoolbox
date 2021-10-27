@@ -11,6 +11,7 @@ import shutil
 import sys
 from collections import OrderedDict
 from typing import List
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -101,6 +102,12 @@ def recur_find_ext(root_dir: str, exts: List[str]):
 # As such, for WSIs coming from the same patient, we assign them the
 # same label. Besides that, WSIs that do not have labels are also
 # excluded from subsequent processing.
+#
+# `ROOT_OUTPUT_DIR`: Root directory to save output under.
+# `WSI_DIR`: Directory contains WSIs.
+# `MSK_DIR`: Directory to retrieve corresponding WSI mask. If set to `None`,
+# the subsequent process will use the default method in the toolbox to obtain
+# the mask here [@!URL]
 
 # %%
 SEED = 5
@@ -109,7 +116,7 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 
-ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/code/"
+ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/code/dump/"
 WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
 MSK_DIR = None
 
@@ -117,6 +124,13 @@ wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])
 wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
 msk_paths = None if MSK_DIR is None else [f"{MSK_DIR}/{v}.png" for v in wsi_names]
 assert len(wsi_paths) > 0, "No files found."
+
+# !- debug injection, remove later
+wsi_paths = recur_find_ext(
+    "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet", [".json"]
+)
+wsi_names = np.array([pathlib.Path(v).stem for v in wsi_paths])
+# !-
 
 CLINICAL_FILE = (
     "/home/dang/storage_1/workspace/tiatoolbox/local/code/TCGA-BRCA-DX_CLINI.csv"
@@ -232,19 +246,17 @@ def generate_split(x, y, train, valid, test, num_folds):
 
 # %%
 
-# - debug injection, remove later
+# !- debug injection, remove later
 wsi_paths = recur_find_ext(
     "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet", [".json"]
 )
 wsi_names = np.array([pathlib.Path(v).stem for v in wsi_paths])
-#
+# !-
 
 NUM_FOLDS = 5
 TEST_RATIO = 0.2
 TRAIN_RATIO = 0.8 * 0.9
 VALID_RATIO = 0.8 * 0.1
-
-# %%
 
 sel = ~np.isnan(wsi_labels)
 wsi_labels = wsi_labels[sel]
@@ -256,8 +268,14 @@ label_df = pd.DataFrame(label_df, columns=["WSI-CODE", "LABEL"])
 x = np.array(label_df["WSI-CODE"].to_list())
 y = np.array(label_df["LABEL"].to_list())
 
-# %%
-split_list = generate_split(x, y, 0.6, 0.2, 0.2)
+# this one will be used later several times, take care not to
+# modify it
+wsi_codes = label_df["WSI-CODE"].to_list()
+
+split_list = generate_split(
+    x, y,
+    TRAIN_RATIO, VALID_RATIO, TEST_RATIO,
+    NUM_FOLDS)
 
 
 # %% [markdown]
@@ -293,12 +311,30 @@ stain_normaliser = get_normaliser("vahadane")
 stain_normaliser.fit(target_image)
 
 
+# ! stainormalizer may crash, do we want to handle them manually
+# ! or ignore it for now? (np.linalg)
 def stain_norm_func(img):
     return stain_normaliser.transform(img)
 
 
+# %%
+def rename_output(file_map_list):
+    for input_path, output_path in file_map_list:
+        input_name = pathlib.Path(input_path).stem
+
+        output_parent_dir = pathlib.Path(output_path).parent
+
+        src_path = pathlib.Path(f'{output_path}.position.npy')
+        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.position.npy')
+        src_path.rename(new_path)
+
+        src_path = pathlib.Path(f'{output_path}.features.0.npy')
+        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.features.npy')
+        src_path.rename(new_path)
+
+
 # %% [markdown]
-# # Deep Feature Extraction
+# ## Deep Feature Extraction
 # Here, we define the code to use functionalities within the toolbox
 # for feature extraction. To make it better organized and differentiated
 # from other parts of the notebook, we package it into the small function
@@ -318,26 +354,39 @@ from tiatoolbox.models.architecture import CNNExtractor
 
 
 def extract_deep_feature(save_dir):
+    # ioconfig = IOSegmentorConfig(
+    #     input_resolutions=[
+    #         {"units": "mpp", "resolution": 0.25},
+    #     ],
+    #     output_resolutions=[
+    #         {"units": "mpp", "resolution": 0.25},
+    #     ],
+    #     patch_input_shape=[512, 512],
+    #     patch_output_shape=[512, 512],
+    #     stride_shape=[512, 512],
+    #     save_resolution={"units": "mpp", "resolution": 8.0},
+    # )
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 4.0},
         ],
         output_resolutions=[
-            {"units": "mpp", "resolution": 0.25},
+            {"units": "mpp", "resolution": 4.0},
         ],
         patch_input_shape=[512, 512],
         patch_output_shape=[512, 512],
         stride_shape=[512, 512],
-        save_resolution={"units": "mpp", "resolution": 8.0},
+        save_resolution={"units": "mpp", "resolution": 4.0},
     )
 
     model = CNNExtractor("resnet50")
     # using the stain normalization as pre-processing function
-    model.preproc_func = stain_norm_func
-    extractor = FeatureExtractor(batch_size=4, model=model)
+    # model.preproc_func = stain_norm_func
+    extractor = FeatureExtractor(
+        batch_size=16, model=model, num_loader_workers=4)
 
     rmdir(save_dir)
-    output_list = extractor.predict(
+    output_map = extractor.predict(
         wsi_paths,
         msk_paths,
         mode="wsi",
@@ -346,11 +395,12 @@ def extract_deep_feature(save_dir):
         crash_on_exception=True,
         save_dir=save_dir,
     )
-    return output_list
+    rename_output(output_map)
+    return
 
 
 # %% [markdown]
-# # Cell Composition Extraction
+# ## Cell Composition Extraction
 # In a very similar manner, we define the code for extracting cell
 # composition in `extract_composition_feature`.
 # %%
@@ -364,19 +414,31 @@ def extract_composition_feature(save_dir):
 # As we have defined functions for performing WSI feature extraction,
 # we now perform the extraction itself. Additionally, we would want to avoid
 # un-necessarily re-extracting the WSI features as they are computationally
-# expensive in nature. Here, we differentiate these through use case via `CACHE_PATH`
-# variable, if `CACHE_PATH = None`, the extraction is performed and the results is save
-# into `WSI_FEATURE_DIR`. For ease of organization, we set the
+# expensive in nature. Here, we differentiate these two use cases via `CACHE_PATH`
+# variable, if `CACHE_PATH = None`, the extraction is performed and the results is saved
+# under `WSI_FEATURE_DIR`. For ease of organization, we set the
 # `WSI_FEATURE_DIR = f'{ROOT_OUTPUT_DIR}/features/'` by default. Otherwise, the paths
-# to feature files are queried. We also put an assertion check by then to ensure we have
+# to feature files are queried. On the other hand, there is `FEATURE_MODE` variable
+# which dictate which patch features will be extracted. Here, we support
+# - `"cnn"` : for the deep neural network features.
+# - `"composition"` : for the cell composition features.
+#
+# Lastly, We also put an assertion check by the end to ensure we have
 # the same number of output file as the number of sample cases we loaded above.
+
 # %%
-# set to None to extract into WSI_FEATURE_DIR
-# else it will load cached data from CACHE_PATH
-CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet/"
 
 FEATURE_MODE = "cnn"
+CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet/"
 WSI_FEATURE_DIR = f"{ROOT_OUTPUT_DIR}/features/"
+
+# !- debug injection, remove later
+CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
+WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
+wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
+wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
+# !-
+
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     # ! check the extension search
     output_list = recur_find_ext(f"{CACHE_PATH}/", [".json"])
@@ -413,13 +475,22 @@ def construct_graph(wsi_name, save_path):
 
 
 CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet/"
-
 GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
+
+# !- debug injection, remove later
+CACHE_PATH = None
+GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
+# !-
+
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     GRAPH_DIR = CACHE_PATH  # assignment for follow up loading
     graph_paths = recur_find_ext(f"{CACHE_PATH}/", [".json"])
 else:
-    graph_paths = [construct_graph(v, f"{GRAPH_DIR}/{v}.json") for v in wsi_names]
+    rm_n_mkdir(GRAPH_DIR)
+    graph_paths = [
+        construct_graph(v, f"{GRAPH_DIR}/{v}.json")
+        for v in wsi_names
+    ]
 # ! put the assertion back later
 # assert len(graph_paths) == len(wsi_names), 'Missing output.'
 
@@ -496,34 +567,52 @@ class SlideGraphDataset(Dataset):
 # entire dataset population, we first load all the node features from all
 # the graphs within our dataset and then training the normalizer. To avoid
 # redundancy, we can also skip this training step and used an existing normalizer
-# by setting `CACHE_PATH` to a valid path.
+# by setting `CACHE_PATH` to a valid path. By default, normalizer is trained and
+# saved to `SCALER_PATH`.
 # %%
 
 import joblib
 from sklearn.preprocessing import StandardScaler
 
-CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/node_scaler.dat"
-SCALER_PATH = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/node_scaler.dat"
-)
+CACHE_PATH = None
+SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 
-if CACHE_PATH and os.path.exists(CACHE_PATH):
+# !- debug injection, remove later
+# CACHE_PATH = None
+# GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
+# SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+# wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
+# wsi_codes = [pathlib.Path(v).stem for v in wsi_codes]
+
+# CACHE_PATH = None
+# GRAPH_DIR = f"/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet"
+# SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+# wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
+# wsi_codes = [pathlib.Path(v).stem for v in wsi_codes][:2]
+
+CACHE_PATH = '/home/dang/storage_1/workspace/tiatoolbox/local/code/data/node_scaler.dat'
+# !-
+
+if SCALER_PATH and os.path.exists(SCALER_PATH):
     SCALER_PATH = CACHE_PATH  # assignment for follow up loading
     node_scaler = joblib.load(SCALER_PATH)
 else:
-    wsi_codes = label_df["WSI-CODE"].to_list()
+    # ! we need a better way of doing this, will have OOM problem
     loader = SlideGraphDataset(wsi_codes, mode="infer")
-    node_features = [v.x.numpy() for idx, v in enumerate(loader)]
+    node_features = [
+        v['graph'].x.numpy() for idx, v in enumerate(loader)]
     node_features = np.concatenate(node_features, axis=0)
     node_scaler = StandardScaler(copy=False)
     node_scaler.fit(node_features)
     joblib.dump(node_scaler, SCALER_PATH)
 
 
+# we must define the function after training
 def nodes_preproc_func(node_features):
     return node_scaler.transform(node_features)
 
 
+# exit()
 # %% [markdown]
 # ## The architecture holder
 
@@ -689,9 +778,18 @@ class SlideGraphArch(nn.Module):
 
 # %% [markdown]
 # To test that our architecture works, at least on the surface level,
-# we perform a brief inference with some random graph data.
+# we perform a brief inference with some random graph data and print
+# out the output predictions.
 # %%
-wsi_codes = label_df["WSI-CODE"].to_list()
+
+# !- debug injection, remove later
+GRAPH_DIR = f"/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet"
+SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
+wsi_codes = [pathlib.Path(v).stem for v in wsi_codes][:2]
+# !-
+
+
 dummy_ds = SlideGraphDataset(wsi_codes, mode="infer")
 loader = DataLoader(
     dummy_ds,
@@ -706,7 +804,6 @@ batch_data = iterator.__next__()
 wsi_graphs = batch_data["graph"]
 wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 
-# %%
 # ! --- [TEST] model forward integerity checking
 # from examples.GNN_modelling import GNN
 
@@ -736,7 +833,33 @@ wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 #     src_output = src_output.cpu().numpy()
 #     dst_output = dst_output.cpu().numpy()
 #     assert np.sum(np.abs(src_output - dst_output)) == 0
+# print(src_output)
 # ! ---
+
+# define model object
+arch_kwargs = dict(
+    dim_features=2048,
+    dim_target=1,
+    layers=[16, 16, 8],
+    dropout=0.5,
+    pooling="mean",
+    conv="EdgeConv",
+    aggr="max",
+)
+model = SlideGraphArch(**arch_kwargs)
+
+# inference section
+model.eval()
+with torch.inference_mode():
+    output, _ = model(wsi_graphs)
+    output = output.cpu().numpy()
+print(output)
+
+
+# %% [markdown]
+# Here, you can notice the value is not between 0-1. For SlideGraph
+# approach, we will turn the above values into proper propabilities later
+# via using the Platt Scaling https://en.wikipedia.org/wiki/Platt_scaling.
 
 # %% [markdown]
 # ## Training Portion
@@ -766,34 +889,27 @@ class ScalarMovingAverage(object):
 
 # %% [markdown]
 # ## The running loop
-
-# %%
-from sklearn.metrics import average_precision_score as auprc_scorer
-from sklearn.metrics import roc_auc_score as auroc_scorer
-
-loader_kwargs = dict(
-    num_workers=0,
-    batch_size=2,
-    shuffle=True,
-)
-arch_kwargs = dict(
-    dim_features=2048,
-    dim_target=1,
-    layers=[16, 16, 8],
-    dropout=0.5,
-    pooling="mean",
-    conv="EdgeConv",
-    aggr="max",
-)
-optim_kwargs = dict(
-    lr=1.0e-3,
-    weight_decay=1.0e-4,
-)
-NUM_EPOCHS = 5
+# Training and running a neural network at the current time involve wiring
+# several parts together so that they work in tandem. For training side,
+# in a simplified term, it consist of:
+# 1. Define network object from a particular architecture.
+# 2. Define loader object to handle loading data concurrently.
+# 3. Define optimizer and scheduler to update network weights.
+# 4. The callbacks function at several junctions (starting of epoch, end of step, etc.)
+# to aggregate results, saving the models, or refreshing data.
+#
+# As for inference side, #3 is not necessary. At the moment, the wiring of these
+# operations are handled mostly in the toolbox via various `engine` (controller).
+# However, they focus mostly on inference portion. For SlideGraph case and this
+# notebook, we also require the training portion. Hence, we define below a very
+# simplified version of what an `engine` usually do for both `training` and `inference`.
 
 
 # %%
-def run_once(dataset_dict, num_epochs, save_dir, on_gpu=True, pretrained=None):
+def run_once(
+        dataset_dict, num_epochs, save_dir,
+        on_gpu=True, pretrained=None,
+        loader_kwargs={}, arch_kwargs={}, optim_kwargs={}):
     """Running the inference or training loop once."""
     model = SlideGraphArch(**arch_kwargs)
     if pretrained is not None:
@@ -821,6 +937,13 @@ def run_once(dataset_dict, num_epochs, save_dir, on_gpu=True, pretrained=None):
             # * EPOCH START
             step_output = []
             ema = ScalarMovingAverage()
+            pbar = tqdm(
+                leave=True,
+                total=int(len(loader)),
+                ncols=80,
+                ascii=True,
+                position=0,
+            )
             for step, batch_data in enumerate(loader):
                 # * STEP COMPLETE CALLBACKS
                 if loader_name == "train":
@@ -838,6 +961,8 @@ def run_once(dataset_dict, num_epochs, save_dir, on_gpu=True, pretrained=None):
                     # N batch size x H head list
                     output = list(zip(*output))
                     step_output.extend(output)
+                pbar.update()
+            pbar.close()
 
             # * EPOCH COMPLETE
 
@@ -887,17 +1012,51 @@ def run_once(dataset_dict, num_epochs, save_dir, on_gpu=True, pretrained=None):
 
 # %% [markdown]
 # ### The training portion
-
+# With the `engine` above, we can now start our training loop with
+# a set of parameters.
 
 # %%
-ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/code/"
+# !- debug injection, remove later
+GRAPH_DIR = f"/home/dang/local/workspace/projects/tiatoolbox/local/code/data/resnet/"
+SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+wsi_codes = label_df["WSI-CODE"].to_list()
+# !-
+
+
+from sklearn.metrics import average_precision_score as auprc_scorer
+from sklearn.metrics import roc_auc_score as auroc_scorer
+
+loader_kwargs = dict(
+    num_workers=8,
+    batch_size=16,
+)
+arch_kwargs = dict(
+    dim_features=2048,
+    dim_target=1,
+    layers=[16, 16, 8],
+    dropout=0.5,
+    pooling="mean",
+    conv="EdgeConv",
+    aggr="max",
+)
+optim_kwargs = dict(
+    lr=1.0e-3,
+    weight_decay=1.0e-4,
+)
+NUM_EPOCHS = 5
+
 MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 for split_idx, split in enumerate(split_list):
     split_ = copy.deepcopy(split)
     split_.pop("test")
     split_save_dir = f"{MODEL_DIR}/{split_idx:02d}/"
     rm_n_mkdir(split_save_dir)
-    run_once(split_, NUM_EPOCHS, split_save_dir)
+    run_once(
+        split_, NUM_EPOCHS,
+        save_dir=split_save_dir,
+        arch_kwargs=arch_kwargs,
+        loader_kwargs=loader_kwargs,
+        optim_kwargs=optim_kwargs)
 
 
 # %% [markdown]
@@ -935,6 +1094,7 @@ chkpt_paths, chkpt_stats_list = select_checkpoints(stat_files[0])
 cum_results = []
 # for split_idx, split in enumerate(split_list):
 
+# !- test run with 1 single split
 split = copy.deepcopy(split_list[0])
 for chkpt_path in chkpt_paths:
     split_ = {"infer": [v[0] for v in split["test"]]}
