@@ -63,7 +63,7 @@ RESERVED_PROPERTIES = {  # Currently unused
     "class_": pd.Int8Dtype(),
     "properties": str,
     "boundary": bytes,
-    "index": int,
+    "key": str,
     "x": int,
     "y": int,
     "min_x": int,
@@ -117,7 +117,7 @@ class AnnotationStoreABC(ABC):
         geometry: Geometry,
         properties: Optional[Dict[str, Any]] = None,
     ) -> int:
-        """Insert a new annotation, returning the index."""
+        """Insert a new annotation, returning the key."""
         if properties is None:
             properties = {}
         return self.append_many([geometry], [properties])[0]
@@ -138,38 +138,38 @@ class AnnotationStoreABC(ABC):
             indexes.append(key)
         return indexes
 
-    def update(self, index: int, update: Dict[str, Any]) -> None:
-        """Update an annotation at given index."""
-        return self.update_many([index], [update])
+    def update(self, key: str, update: Dict[str, Any]) -> None:
+        """Update an annotation at given key."""
+        return self.update_many([key], [update])
 
     def update_many(
         self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
-        for index, update in zip(indexes, updates):
-            self.update(index, update)
+        for key, update in zip(indexes, updates):
+            self.update(key, update)
 
-    def remove(self, index: int) -> None:
-        """Remove annotation by index."""
-        self.remove_many([index])
+    def remove(self, key: str) -> None:
+        """Remove annotation by key."""
+        self.remove_many([key])
 
     def remove_many(self, indexes: Iterable[int]) -> None:
-        for index in indexes:
-            self.remove(index)
+        for key in indexes:
+            self.remove(key)
 
     def __len__(self) -> int:
         """Return the number of annotations in the store."""
         raise NotImplementedError()
 
-    def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
+    def __getitem__(self, key: str) -> Tuple[Geometry, Dict[str, Any]]:
         raise NotImplementedError()
 
     def __setitem__(
-        self, index: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
+        self, key: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
         raise NotImplementedError()
 
-    def __delitem__(self, index: int) -> None:
-        self.remove(index)
+    def __delitem__(self, key: str) -> None:
+        self.remove(key)
 
     def keys(self) -> Iterable[int]:
         for key, _ in self.items():
@@ -200,8 +200,8 @@ class AnnotationStoreABC(ABC):
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
-            index
-            for index, (geometry, _) in self.items()
+            key
+            for key, (geometry, _) in self.items()
             if geometry.intersects(query_geometry)
         ]
 
@@ -309,14 +309,14 @@ class AnnotationStoreABC(ABC):
         store = cls()
         for _, row in df.iterrows():
             geometry = row["geometry"]
-            properties = dict(row.filter(regex="^(?!geometry|index).*$"))
+            properties = dict(row.filter(regex="^(?!geometry|key).*$"))
             store.append(geometry, properties)
         return store
 
     def to_dataframe(self) -> pd.DataFrame:
         features = (
-            {"key": index, "geometry": geometry, "properties": properties}
-            for index, (geometry, properties) in self.items()
+            {"key": key, "geometry": geometry, "properties": properties}
+            for key, (geometry, properties) in self.items()
         )
         return pd.json_normalize(features).set_index("key")
 
@@ -585,8 +585,8 @@ class SQLiteStore(AnnotationStoreABC):
             row = cur.fetchone()
             if row is None:
                 break
-            index = row[0]
-            yield index
+            key = row[0]
+            yield key
 
     def values(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
         for _, value in self.items():
@@ -664,7 +664,7 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.commit()
 
     def __setitem__(
-        self, index: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
+        self, key: str, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
         geometry, properties = record
         properties = copy.deepcopy(properties)
@@ -683,7 +683,7 @@ class SQLiteStore(AnnotationStoreABC):
             dict(
                 **xy,
                 **bounds,
-                key=index,
+                key=key,
                 boundary=self.serialise_geometry(geometry),
                 class_=class_,
             ),
@@ -696,17 +696,17 @@ class SQLiteStore(AnnotationStoreABC):
                  WHERE [key] = :key
                 """,
                 {
-                    "key": index,
+                    "key": key,
                     "properties": json.dumps(properties, separators=(",", ":")),
                 },
             )
         self.con.commit()
 
-    def __delitem__(self, index: str) -> None:
+    def __delitem__(self, key: str) -> None:
         cur = self.con.cursor()
         cur.execute(
             "DELETE FROM main WHERE [key] = ?",
-            (index,),
+            (key,),
         )
         self.con.commit()
 
@@ -720,11 +720,11 @@ class SQLiteStore(AnnotationStoreABC):
                 break
             rows = (
                 {
-                    "key": index,
+                    "key": key,
                     "geometry": geometry,
                     "properties": properties,
                 }
-                for index, (geometry, properties) in self.items()
+                for key, (geometry, properties) in self.items()
             )
             df = df.append(pd.json_normalize(rows))
         return df.set_index("key")
@@ -773,15 +773,15 @@ class DictionaryStore(AnnotationStoreABC):
         }
         return key
 
-    def update(self, index: int, update: Dict[str, Any]) -> None:
-        feature = self[index]
+    def update(self, key: str, update: Dict[str, Any]) -> None:
+        feature = self[key]
         update = copy.copy(update)
         geometry = update.pop("geometry", feature[0])
         feature[1].update(update)
-        self[index] = (geometry, feature[1])
+        self[key] = (geometry, feature[1])
 
-    def remove(self, index: int) -> None:
-        del self._features[index]
+    def remove(self, key: str) -> None:
+        del self._features[key]
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         return (
@@ -793,16 +793,16 @@ class DictionaryStore(AnnotationStoreABC):
             for feature in self._features.values()
         )
 
-    def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
-        feature = self._features[index]
+    def __getitem__(self, key: str) -> Tuple[Geometry, Dict[str, Any]]:
+        feature = self._features[key]
         return feature["geometry"], feature["properties"]
 
     def __setitem__(
-        self, index: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
+        self, key: str, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
         geometry, properties = record
         properties = dict(properties)
-        self._features[index] = {"geometry": geometry, "properties": properties}
+        self._features[key] = {"geometry": geometry, "properties": properties}
 
     def __contains__(self, key: int) -> bool:
         return key in self._features
@@ -811,8 +811,8 @@ class DictionaryStore(AnnotationStoreABC):
         yield from self.keys()
 
     def items(self):
-        for index, value in self._features.items():
-            yield index, (value["geometry"], value["properties"])
+        for key, value in self._features.items():
+            yield key, (value["geometry"], value["properties"])
 
     def __len__(self) -> int:
         return len(self._features)
