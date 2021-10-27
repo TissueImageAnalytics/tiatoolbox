@@ -1,19 +1,19 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/docs/tia_logo.png">
+  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tia_logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
 <p align="center">
   <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
     <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
   </a>
-  <a href="https://travis-ci.org/TIA-Lab/tiatoolbox">
-    <img src="https://travis-ci.org/TIA-Lab/tiatoolbox.svg?branch=master" alt="Travis CI Status" />
+  <a href="https://travis-ci.org/TissueImageAnalytics/tiatoolbox">
+    <img src="https://travis-ci.org/TissueImageAnalytics/tiatoolbox.svg?branch=master" alt="Travis CI Status" />
   </a>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
-    <a href="https://codecov.io/gh/TIA-Lab/tiatoolbox">
-      <img src="https://codecov.io/gh/TIA-Lab/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
+    <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
+      <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
     </a>
 </p>
 
@@ -30,7 +30,7 @@ This package is for those interested in digital pathology: including graduate st
 
 ### Developers
 
-Anyone wanting to contribute to this repository, please first look at our [Wiki](https://github.com/TIA-Lab/tiatoolbox/wiki) and at our web page for [contributors](https://github.com/TIA-Lab/tiatoolbox/blob/master/CONTRIBUTING.rst). See also the *Prepare for development* section of this document.
+Anyone wanting to contribute to this repository, please first look at our [Wiki](https://github.com/TissueImageAnalytics/tiatoolbox/wiki) and at our web page for [contributors](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/CONTRIBUTING.rst). See also the *Prepare for development* section of this document.
 
 ### Links, if needed
 The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Commands in this README are in bash. Windows users can use the command prompt to install conda and python packages.
@@ -43,7 +43,7 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 
 ### Examples Taster
 
-1. [Click here](https://github.com/TIA-Lab/tiatoolbox/tree/develop/examples) for [jupyter notebooks](https://jupyter.org/), hosted on the web, with demos of `tiatoolbox`. All necessary resources to run the notebooks are remotely provided, so you don't need to have Python installed on your computer.
+1. [Click here](https://github.com/TissueImageAnalytics/tiatoolbox/tree/develop/examples) for [jupyter notebooks](https://jupyter.org/), hosted on the web, with demos of `tiatoolbox`. All necessary resources to run the notebooks are remotely provided, so you don't need to have Python installed on your computer.
 2. Click on a filename with suffix `.ipynb` and the notebook will open in your browser.
 3. Click on one of the two blue checkboxes in your browser window labelled either **Open in Colab** or **Open in Kaggle**: [colab](https://colab.research.google.com/notebooks/intro.ipynb#) and [kaggle](https://www.kaggle.com/) are websites providing free-of-charge platforms for running jupyter notebooks.
 4. Operate the notebook in your browser, editing, inserting or deleting cells as desired.
@@ -64,7 +64,7 @@ tiatoolbox supports various features through command line. For more information,
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
 1. Open a `bash` terminal window<br/>
 `cd <future-home-of-tiatoolbox-directory>` <br/>
-2. Download a complete copy of the `tiatoolbox`.<br/>`conda clone https://github.com/TIA-Lab/tiatoolbox.git`<br/>
+2. Download a complete copy of the `tiatoolbox`.<br/>`git clone https://github.com/TissueImageAnalytics/tiatoolbox.git`<br/>
 3. `cd tiatoolbox`
 4. `conda env create -f requirements.conda.yml`<br/>
 creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
@@ -74,7 +74,7 @@ creates the virtual environment `tiatoolbox`. Details in the text file `requirem
 
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
 
-The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TIA-Lab/tiatoolbox/develop/LICENSE.md).
+The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE.md).
 
 [gnu general public license (version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
 

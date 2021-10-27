@@ -19,8 +19,9 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
-import torch.nn as nn
 from abc import ABC, abstractmethod
+
+import torch.nn as nn
 
 
 class IOConfigABC(ABC):
@@ -29,7 +30,6 @@ class IOConfigABC(ABC):
     Enforcing such that following attributes must always be defined by the subclass.
 
     Attributes:
-        patch_size (tuple(height, width)): Define the size of input patch.
         input_resolutions (list): Define the resolution of each input, incase the
           predictor receives variable input. Must be in the same order as network
           input.
@@ -38,11 +38,6 @@ class IOConfigABC(ABC):
           output.
 
     """
-
-    @property
-    @abstractmethod
-    def patch_size(self):
-        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -64,11 +59,11 @@ class ModelABC(ABC, nn.Module):
         self._preproc = self.preproc
 
     @abstractmethod
-    # pylint: disable=W0221
-    # shut up pylint because this is generic abc, else it will keep complaining
+    # noqa
+    # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
-        ...
+        ...  # pragma: no cover
 
     @staticmethod
     @abstractmethod
@@ -83,7 +78,7 @@ class ModelABC(ABC, nn.Module):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        ...
+        ...  # pragma: no cover
 
     @staticmethod
     def preproc(image):
@@ -114,12 +109,13 @@ class ModelABC(ABC, nn.Module):
             >>> transformed_img = model.preproc_func(img)
 
         """
+        if func is not None and not callable(func):
+            raise ValueError(f"{func} is not callable!")
+
         if func is None:
             self._preproc = self.preproc
-        elif callable(func):
-            self._preproc = func
         else:
-            raise ValueError(f"{func} is not callable!")
+            self._preproc = func
 
     @property
     def postproc_func(self):
@@ -140,9 +136,10 @@ class ModelABC(ABC, nn.Module):
             >>> transformed_img = model.postproc_func(img)
 
         """
+        if func is not None and not callable(func):
+            raise ValueError(f"{func} is not callable!")
+
         if func is None:
             self._postproc = self.postproc
-        elif callable(func):
-            self._postproc = func
         else:
-            raise ValueError(f"{func} is not callable!")
+            self._postproc = func
