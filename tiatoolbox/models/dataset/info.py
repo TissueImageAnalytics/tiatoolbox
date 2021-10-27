@@ -74,7 +74,7 @@ class KatherPatchDataset(DatasetInfoABC):
 
     """
 
-    # We predefine to follow enforcement, actual initialization in init
+    # We pre-define to follow enforcement, actual initialization in init
     inputs = None
     labels = None
     label_names = None
@@ -95,7 +95,7 @@ class KatherPatchDataset(DatasetInfoABC):
             "LYM",
         ]
 
-        if save_dir_path is None:
+        if save_dir_path is None:  # pragma: no cover
             save_dir_path = Path(rcParam["TIATOOLBOX_HOME"], "dataset")
             if not os.path.exists(save_dir_path):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
