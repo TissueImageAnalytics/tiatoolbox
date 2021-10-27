@@ -30,6 +30,7 @@ from tiatoolbox.models.controller.patch_predictor import (
     WSIPatchDataset,
 )
 from tiatoolbox.models.controller.semantic_segmentor import (
+    FeatureExtractor,
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
