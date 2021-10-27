@@ -1,14 +1,14 @@
-from pathlib import Path
-from typing import Generator, Tuple, Union, List
-from numbers import Number
 import json
 from itertools import repeat
+from numbers import Number
+from pathlib import Path
+from typing import Generator, List, Tuple, Union
 
-import pytest
 import numpy as np
 import pandas as pd
-from shapely.geometry import Polygon
+import pytest
 from shapely import affinity
+from shapely.geometry import Polygon
 
 from tiatoolbox.annotation.storage import (
     AnnotationStoreABC,
@@ -73,8 +73,7 @@ def cell_polygon(
 
     # Add random rotation
     angle = np.random.rand() * 360
-    polygon = affinity.rotate(polygon, angle, origin="centroid")
-    return polygon
+    return affinity.rotate(polygon, angle, origin="centroid")
 
 
 # Fixtures
@@ -92,7 +91,7 @@ def sample_triangle() -> Polygon:
     return Polygon([(0, 0), (1, 1), (2, 0)])
 
 
-@pytest.fixture
+@pytest.fixture()
 def fill_store(cell_grid):
     """Factory fixture to cache and return filled stores."""
 
@@ -133,18 +132,18 @@ def pytest_generate_tests(metafunc):
 # Class Specific Tests
 
 
-def test_SQLiteStore_compile_options():
+def test_sqlite_compile_options():
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
-def test_SQLiteStore_compile_options_exception(monkeypatch):
+def test_sqlite_compile_options_exception(monkeypatch):
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="RTREE and JSON1"):
         SQLiteStore()
 
 
-def test_SQLiteStore_multiple_connection(tmp_path):
+def test_sqlite_multiple_connection(tmp_path):
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
@@ -155,49 +154,49 @@ def test_SQLiteStore_multiple_connection(tmp_path):
 
 class TestStore:
     scenarios = [
-        ("Dictionary", {"Store": DictionaryStore}),
-        ("SQLite", {"Store": SQLiteStore}),
+        ("Dictionary", {"store": DictionaryStore}),
+        ("SQLite", {"store": SQLiteStore}),
     ]
 
     @staticmethod
-    def test_open_close(fill_store, tmp_path, Store):
+    def test_open_close(fill_store, tmp_path, store):
         path = tmp_path / "polygons"
-        indexes, store = fill_store(Store, path)
+        indexes, store = fill_store(store, path)
         store.close()
-        store2 = Store.open(path)
+        store2 = store.open(path)
         assert len(store2) == len(indexes)
 
     @staticmethod
-    def test_append_many(cell_grid, tmp_path, Store):
-        store = Store(tmp_path / "polygons")
+    def test_append_many(cell_grid, tmp_path, store):
+        store = store(tmp_path / "polygons")
         indexes = store.append_many(
             cell_grid, ({"class": x} for x in np.random.randint(0, 7, len(cell_grid)))
         )
         assert len(indexes) == len(cell_grid)
 
     @staticmethod
-    def test_query_bbox(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_query_bbox(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.query((0, 0, 25, 25))
         assert len(results) == 4
 
     @staticmethod
-    def test_iquery_bbox(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_iquery_bbox(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.iquery((0, 0, 25, 25))
         assert len(results) == 4
-        assert all(isinstance(index, int) for index in results)
+        assert all(isinstance(index, str) for index in results)
 
     @staticmethod
-    def test_iquery_polygon(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_iquery_polygon(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.iquery(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 3
-        assert all(isinstance(index, int) for index in results)
+        assert all(isinstance(index, str) for index in results)
 
     @staticmethod
-    def test_update(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_update(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         index = indexes[0]
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         # Geometry update
@@ -208,8 +207,8 @@ class TestStore:
         assert store[index][1]["abc"] == 123
 
     @staticmethod
-    def test_update_many(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_update_many(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         # Geometry update
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         store.update_many(indexes, repeat({"geometry": new_geometry}))
@@ -221,60 +220,60 @@ class TestStore:
             assert store[index][1]["abc"] == 123
 
     @staticmethod
-    def test_keys(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_keys(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         indexes = list(indexes)
         assert len(list(store.keys())) == len(indexes)
         assert isinstance(list(store.keys())[0], type(indexes[0]))
 
     @staticmethod
-    def test_remove(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_remove(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         index = indexes[0]
         store.remove(index)
         assert len(store) == FILLED_LEN - 1
 
     @staticmethod
-    def test_delitem(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_delitem(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         index = indexes[0]
         del store[index]
         assert len(store) == FILLED_LEN - 1
 
     @staticmethod
-    def test_remove_many(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_remove_many(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         store.remove_many(indexes)
         assert len(store) == 0
 
     @staticmethod
-    def test_len(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_len(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         assert len(store) == FILLED_LEN
 
     @staticmethod
-    def test_contains(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_contains(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         for index in indexes:
             assert index in store
 
     @staticmethod
-    def test_iter(fill_store, tmp_path, Store):
-        indexes, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_iter(fill_store, tmp_path, store):
+        indexes, store = fill_store(store, tmp_path / "polygon.db")
         for index in store:
             assert index in indexes
 
     @staticmethod
-    def test_getitem(fill_store, tmp_path, sample_triangle, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_getitem(fill_store, tmp_path, sample_triangle, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         index = store.append(sample_triangle)
         geometry, properties = store[index]
         assert geometry == sample_triangle
         assert properties == {}
 
     @staticmethod
-    def test_setitem(fill_store, tmp_path, sample_triangle, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_setitem(fill_store, tmp_path, sample_triangle, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         index = store.append(sample_triangle)
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         new_properties = {"abc": 123}
@@ -282,15 +281,15 @@ class TestStore:
         assert store[index] == (new_geometry, new_properties)
 
     @staticmethod
-    def test_getitem_setitem_cycle(fill_store, tmp_path, sample_triangle, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_getitem_setitem_cycle(fill_store, tmp_path, sample_triangle, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         index = store.append(sample_triangle, {"class": 0})
         geometry, properties = store[index]
         store[index] = (geometry, properties)
         assert store[index] == (geometry, properties)
 
     @staticmethod
-    def test_from_dataframe(cell_grid, Store):
+    def test_from_dataframe(cell_grid, store):
         df = pd.DataFrame.from_records(
             [
                 {
@@ -300,24 +299,24 @@ class TestStore:
                 for n, cell in enumerate(cell_grid)
             ]
         )
-        store = Store.from_dataframe(df)
+        store = store.from_dataframe(df)
         keys = list(store.keys())
         _, properties = store[keys[0]]
         assert "row_id" in properties
 
     @staticmethod
-    def test_to_dataframe(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_dataframe(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         df = store.to_dataframe()
         assert isinstance(df, pd.DataFrame)
         assert len(df) == FILLED_LEN
         assert "geometry" in df.columns
-        assert df.index.name == "index"
+        assert df.index.name == "key"
         assert isinstance(df.geometry.iloc[0], Polygon)
 
     @staticmethod
-    def test_features(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_features(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         features = store.features()
         assert isinstance(features, Generator)
         features = list(features)
@@ -328,8 +327,8 @@ class TestStore:
         )
 
     @staticmethod
-    def test_to_geodict(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_geodict(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         geodict = store.to_geodict()
         assert isinstance(geodict, dict)
         assert "features" in geodict
@@ -338,30 +337,30 @@ class TestStore:
         assert geodict["features"] == list(store.features())
 
     @staticmethod
-    def test_from_geojson_str(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_from_geojson_str(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
-        store2 = Store.from_geojson(geojson)
+        store2 = store.from_geojson(geojson)
         assert len(store) == len(store2)
 
     @staticmethod
-    def test_from_geojson_file(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_from_geojson_file(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
         with open(tmp_path / "polygon.json", "r") as file_handle:
-            store2 = Store.from_geojson(file_handle)
+            store2 = store.from_geojson(file_handle)
         assert len(store) == len(store2)
 
     @staticmethod
-    def test_from_geojson_path(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_from_geojson_path(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
-        store2 = Store.from_geojson(tmp_path / "polygon.json")
+        store2 = store.from_geojson(tmp_path / "polygon.json")
         assert len(store) == len(store2)
 
     @staticmethod
-    def test_to_geojson_str(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_geojson_str(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
         assert isinstance(geojson, str)
         geodict = json.loads(geojson)
@@ -371,8 +370,8 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_geojson_file(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_geojson_file(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.json", "w") as fh:
             geojson = store.to_geojson(fp=fh)
         assert geojson is None
@@ -384,8 +383,8 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_geojson_path(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_geojson_path(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson(fp=tmp_path / "polygon.json")
         assert geojson is None
         with open(tmp_path / "polygon.json", "r") as fh:
@@ -396,8 +395,8 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_ldjson_str(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_ldjson_str(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         ldjson = store.to_ldjson()
         for line in ldjson.split():
             assert isinstance(line, str)
@@ -407,8 +406,8 @@ class TestStore:
             assert "properties" in feature
 
     @staticmethod
-    def test_to_ldjson_file(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_ldjson_file(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.ldjson", "w") as fh:
             ldjson = store.to_ldjson(fp=fh)
         assert ldjson is None
@@ -421,8 +420,8 @@ class TestStore:
                 assert "properties" in feature
 
     @staticmethod
-    def test_to_ldjson_path(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, tmp_path / "polygon.db")
+    def test_to_ldjson_path(fill_store, tmp_path, store):
+        _, store = fill_store(store, tmp_path / "polygon.db")
         ldjson = store.to_ldjson(fp=tmp_path / "polygon.ldjson")
         assert ldjson is None
         with open(tmp_path / "polygon.ldjson", "r") as fh:
@@ -434,20 +433,20 @@ class TestStore:
                 assert "properties" in feature
 
     @staticmethod
-    def test_dump(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, ":memory:")
+    def test_dump(fill_store, tmp_path, store):
+        _, store = fill_store(store, ":memory:")
         store.dump(tmp_path / "dump_test.db")
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
     @staticmethod
-    def test_dump_file_handle(fill_store, tmp_path, Store):
-        _, store = fill_store(Store, ":memory:")
+    def test_dump_file_handle(fill_store, tmp_path, store):
+        _, store = fill_store(store, ":memory:")
         with open(tmp_path / "dump_test.db", "w") as fh:
             store.dump(fh)
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
     @staticmethod
-    def test_dumps(fill_store, Store):
-        _, store = fill_store(Store, ":memory:")
+    def test_dumps(fill_store, store):
+        _, store = fill_store(store, ":memory:")
         string = store.dumps()
         assert isinstance(string, str)

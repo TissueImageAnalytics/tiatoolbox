@@ -19,9 +19,9 @@ Properties
 
 """
 import copy
-import hashlib
 import itertools
 import sqlite3
+import uuid
 import warnings
 from abc import ABC
 from numbers import Number
@@ -58,7 +58,7 @@ Geometry = Union[Point, Polygon, LineString]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
 
-RESERVED_PROPERTIES = {
+RESERVED_PROPERTIES = {  # Currently unused
     "class": pd.Int8Dtype(),
     "class_": pd.Int8Dtype(),
     "properties": str,
@@ -83,20 +83,6 @@ ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 
 
 class AnnotationStoreABC(ABC):
-    @staticmethod
-    def geometry_hash(geometry: Geometry) -> int:
-        """Create a 64 bit integer hash of a geometry object.
-
-        Args:
-            geometry (Geometry): Shapely geometry object to hash.
-
-        Returns:
-            int: 64 bit hash
-        """
-        return int.from_bytes(
-            hashlib.md5(geometry.wkb).digest()[:8], "big", signed=True
-        )
-
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStoreABC":
         """Load a store object from a path or file-like object."""
@@ -140,10 +126,13 @@ class AnnotationStoreABC(ABC):
         self,
         geometries: Iterable[Geometry],
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+        keys: Optional[Iterable[str]] = None,
     ) -> List[int]:
         indexes = []
         if properties_iter is None:
             properties_iter = itertools.repeat({})
+        if keys is None:
+            keys = (str(uuid.uuid4()) for _ in geometries)
         for geometry, properties in zip(geometries, properties_iter):
             key = self.append(geometry, properties)
             indexes.append(key)
@@ -374,25 +363,18 @@ class SQLiteStore(AnnotationStoreABC):
         # Create tables for geometry and RTree index
         cur.execute(
             """
-            CREATE VIRTUAL TABLE rtree
+            CREATE VIRTUAL TABLE main
             USING rtree_i32(
-                id,      -- Integer primary key
-                min_x, max_x, -- 1st dimension min, max
-                min_y, max_y  -- 2nd dimension min, max
-            )
-            """
-        )
-        cur.execute(
-            """
-            CREATE TABLE geometry(
-                id INTEGER PRIMARY KEY, -- 64 bit truncated MD5 hash of boundary WKB
-                objtype TEXT,              -- Object type
-                class INTEGER,             -- Class ID
-                x INTEGER NOT NULL,        -- X centroid
-                y INTEGER NOT NULL,        -- Y centroid
-                boundary BLOB,             -- Detailed boundary
-                properties TEXT,           -- JSON properties
-                FOREIGN KEY(id) REFERENCES rtree(id) ON DELETE CASCADE
+                id,                      -- Integer primary key
+                min_x, max_x,            -- 1st dimension min, max
+                min_y, max_y,            -- 2nd dimension min, max
+                +key TEXT UNIQUE,        -- Unique identifier
+                +objtype TEXT,           -- Object type
+                +class INTEGER,          -- Class ID
+                +cx INTEGER NOT NULL,    -- X of centroid/representative point
+                +cy INTEGER NOT NULL,    -- Y of centroid/representative point
+                +boundary BLOB NOT NULL, -- Detailed boundary
+                +properties TEXT,        -- JSON properties
             )
             """
         )
@@ -440,9 +422,11 @@ class SQLiteStore(AnnotationStoreABC):
     def close(self) -> None:
         self.con.close()
 
-    def _make_token(self, geometry: Geometry, properties: Dict) -> Dict:
+    def _make_token(
+        self, geometry: Geometry, properties: Dict, key: Optional[str]
+    ) -> Dict:
         """Create token data dict for tokenised SQL transaction."""
-        key = self.geometry_hash(geometry)
+        key = key or str(uuid.uuid4())
         if geometry.geom_type == "Point":
             boundary = None
         else:
@@ -452,7 +436,7 @@ class SQLiteStore(AnnotationStoreABC):
             properties = copy.copy(properties)
             del properties["class"]
         return {
-            "index": key,
+            "key": key,
             "boundary": boundary,
             "cx": int(geometry.centroid.x),
             "cy": int(geometry.centroid.y),
@@ -469,35 +453,32 @@ class SQLiteStore(AnnotationStoreABC):
         self,
         geometries: Iterable[Geometry],
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+        keys: Optional[Iterable[str]] = None,
     ) -> List[int]:
         if properties_iter is None:
             properties_iter = itertools.repeat({})
+        if keys is None:
+            keys = (str(uuid.uuid4()) for _ in geometries)
         tokens = [
             self._make_token(
                 geometry=geometry,
                 properties=properties,
+                key=key,
             )
-            for geometry, properties in zip(geometries, properties_iter)
+            for geometry, properties, key in zip(geometries, properties_iter, keys)
         ]
         cur = self.con.cursor()
         cur.executemany(
             """
-            INSERT INTO geometry VALUES(
-                :index, :geom_type, :class, :cx, :cy, :boundary, :properties
-            )
-            """,
-            tokens,
-        )
-        cur.executemany(
-            """
-            INSERT INTO rtree VALUES(
-                :index, :min_x, :max_x, :min_y, :max_y
+            INSERT INTO main VALUES(
+                NULL, :min_x, :max_x, :min_y, :max_y, :key, :geom_type,
+                :class, :cx, :cy, :boundary, :properties
             )
             """,
             tokens,
         )
         self.con.commit()
-        return [token["index"] for token in tokens]
+        return [token["key"] for token in tokens]
 
     def iquery(self, query_geometry: QueryGeometry) -> List[int]:
         cur = self.con.cursor()
@@ -506,13 +487,12 @@ class SQLiteStore(AnnotationStoreABC):
         min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
             """
-            SELECT geometry.id
-              FROM geometry, rtree
-             WHERE rtree.id = geometry.id
-               AND rtree.max_x >= :min_x
-               AND rtree.min_x <= :max_x
-               AND rtree.max_y >= :min_y
-               AND rtree.min_y <= :max_y
+            SELECT [key]
+              FROM main
+             WHERE max_x >= :min_x
+               AND min_x <= :max_x
+               AND max_y >= :min_y
+               AND min_y <= :max_y
                AND intersects(boundary, :intersector)
             """,
             {
@@ -523,8 +503,8 @@ class SQLiteStore(AnnotationStoreABC):
                 "intersector": query_geometry.wkb,
             },
         )
-        boundaries = cur.fetchall()
-        return [index for index, in boundaries]
+        keys = cur.fetchall()
+        return [key for key, in keys]
 
     def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
         cur = self.con.cursor()
@@ -534,12 +514,11 @@ class SQLiteStore(AnnotationStoreABC):
         cur.execute(
             """
             SELECT boundary, [class], properties
-              FROM geometry, rtree
-             WHERE rtree.id = geometry.id
-               AND rtree.max_x >= :min_x
-               AND rtree.min_x <= :max_x
-               AND rtree.max_y >= :min_y
-               AND rtree.min_y <= :max_y
+              FROM main
+             WHERE max_x >= :min_x
+               AND min_x <= :max_x
+               AND max_y >= :min_y
+               AND min_y <= :max_y
                AND intersects(boundary, :intersector)
             """,
             {
@@ -562,24 +541,24 @@ class SQLiteStore(AnnotationStoreABC):
 
     def __len__(self) -> int:
         cur = self.con.cursor()
-        cur.execute("SELECT COUNT(*) FROM geometry")
+        cur.execute("SELECT COUNT(*) FROM main")
         (count,) = cur.fetchone()
         return count
 
     def __contains__(self, key: int) -> bool:
         cur = self.con.cursor()
-        cur.execute("SELECT EXISTS(SELECT 1 FROM geometry WHERE id = ?)", (key,))
+        cur.execute("SELECT EXISTS(SELECT 1 FROM main WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, index: int) -> Tuple[Geometry, Dict[str, Any]]:
+    def __getitem__(self, key: str) -> Tuple[Geometry, Dict[str, Any]]:
         cur = self.con.cursor()
         cur.execute(
             """
             SELECT boundary, [class], properties
-              FROM geometry
-             WHERE geometry.id = :index
+              FROM main
+             WHERE [key] = :key
             """,
-            {"index": index},
+            {"key": key},
         )
         boundary, class_, properties = cur.fetchone()
         if properties is None:
@@ -598,8 +577,8 @@ class SQLiteStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT id
-              FROM geometry
+            SELECT [key]
+              FROM main
             """
         )
         while True:
@@ -617,29 +596,29 @@ class SQLiteStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT id, [class], x, y, boundary, properties
-              FROM geometry
+            SELECT [key], [class], cx, cy, boundary, properties
+              FROM main
             """
         )
         while True:
             row = cur.fetchone()
             if row is None:
                 break
-            index, class_, x, y, boundary, properties = row
+            key, class_, cx, cy, boundary, properties = row
             if boundary is not None:
                 geometry = self.deserialise_geometry(boundary)
             else:
-                geometry = Point(x, y)
+                geometry = Point(cx, cy)
             properties = json.loads(properties)
             properties.update({"class": class_})
-            yield index, (geometry, properties)
+            yield key, (geometry, properties)
 
     def update_many(
         self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        for index, update in zip(indexes, updates):
+        for key, update in zip(indexes, updates):
             update = copy.copy(update)
             geometry = update.pop("geometry", None)
             if geometry is not None:
@@ -649,46 +628,37 @@ class SQLiteStore(AnnotationStoreABC):
                 xy = dict(zip("xy", np.array(geometry.centroid)))
                 cur.execute(
                     """
-                    UPDATE geometry
-                       SET x = :x, y = :y, boundary = :boundary
-                     WHERE id = :index
-                    """,
-                    dict(
-                        xy,
-                        index=index,
-                        boundary=self.serialise_geometry(geometry),
-                    ),
-                )
-                cur.execute(
-                    """
-                    UPDATE rtree
-                       SET min_x = :min_x, min_y = :min_y,
+                    UPDATE main
+                       SET cx = :x, cy = :y, boundary = :boundary,
+                           min_x = :min_x, min_y = :min_y,
                            max_x = :max_x, max_y = :max_y
-                     WHERE id = :index
+                     WHERE [key] = :key
                     """,
                     dict(
-                        bounds,
-                        index=index,
+                        **bounds,
+                        **xy,
+                        key=key,
+                        boundary=self.serialise_geometry(geometry),
                     ),
                 )
             if len(update) > 0:
                 cur.execute(
                     """
-                    UPDATE geometry
+                    UPDATE main
                        SET properties = json_patch(properties, :properties)
-                     WHERE id = :index
+                     WHERE [key] = :key
                     """,
                     {
-                        "index": index,
+                        "key": key,
                         "properties": json.dumps(update, separators=(",", ":")),
                     },
                 )
         self.con.commit()
 
-    def remove_many(self, indexes: Iterable[int]) -> None:
+    def remove_many(self, indexes: Iterable[str]) -> None:
         cur = self.con.cursor()
         cur.executemany(
-            "DELETE FROM geometry WHERE id = ?",
+            "DELETE FROM main WHERE [key] = ?",
             ((i,) for i in indexes),
         )
         self.con.commit()
@@ -705,46 +675,37 @@ class SQLiteStore(AnnotationStoreABC):
         xy = dict(zip("xy", geometry.centroid.xy))
         cur.execute(
             """
-            UPDATE geometry
-               SET x = :x, y = :y, boundary = :boundary, [class] = :class_
-             WHERE id = :index
+            UPDATE main
+               SET cx = :x, cy = :y, boundary = :boundary, [class] = :class_,
+                   min_x = :min_x, min_y = :min_y, max_x = :max_x, max_y = :max_y
+             WHERE [key] = :key
             """,
             dict(
-                xy,
-                index=index,
+                **xy,
+                **bounds,
+                key=index,
                 boundary=self.serialise_geometry(geometry),
                 class_=class_,
-            ),
-        )
-        cur.execute(
-            """
-            UPDATE rtree
-               SET min_x = :min_x, min_y = :min_y, max_x = :max_x, max_y = :max_y
-             WHERE id = :index
-            """,
-            dict(
-                bounds,
-                index=index,
             ),
         )
         if len(properties) > 0:
             cur.execute(
                 """
-                UPDATE geometry
+                UPDATE main
                    SET properties = json_patch(properties, :properties)
-                 WHERE id = :index
+                 WHERE [key] = :key
                 """,
                 {
-                    "index": index,
+                    "key": index,
                     "properties": json.dumps(properties, separators=(",", ":")),
                 },
             )
         self.con.commit()
 
-    def __delitem__(self, index: int) -> None:
+    def __delitem__(self, index: str) -> None:
         cur = self.con.cursor()
         cur.execute(
-            "DELETE FROM geometry WHERE id = ?",
+            "DELETE FROM main WHERE [key] = ?",
             (index,),
         )
         self.con.commit()
@@ -752,21 +713,21 @@ class SQLiteStore(AnnotationStoreABC):
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame()
         cur = self.con.cursor()
-        cur.execute("SELECT id, boundary, [class], properties FROM geometry")
+        cur.execute("SELECT id, boundary, [class], properties FROM main")
         while True:
             rows = cur.fetchmany(100)
             if len(rows) == 0:
                 break
             rows = (
                 {
-                    "index": index,
+                    "key": index,
                     "geometry": geometry,
                     "properties": properties,
                 }
                 for index, (geometry, properties) in self.items()
             )
             df = df.append(pd.json_normalize(rows))
-        return df.set_index("index")
+        return df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         return (
@@ -801,10 +762,11 @@ class DictionaryStore(AnnotationStoreABC):
         self,
         geometry: Union[Geometry, Iterable[Geometry]],
         properties: Optional[Dict[str, Any]] = None,
+        key: Optional[str] = None,
     ) -> int:
         if properties is None:
             properties = {}
-        key = self.geometry_hash(geometry)
+        key = key or str(uuid.uuid4())
         self._features[key] = {
             "geometry": geometry,
             "properties": properties,
