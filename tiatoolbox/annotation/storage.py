@@ -315,10 +315,10 @@ class AnnotationStoreABC(ABC):
 
     def to_dataframe(self) -> pd.DataFrame:
         features = (
-            {"index": index, "geometry": geometry, "properties": properties}
+            {"key": index, "geometry": geometry, "properties": properties}
             for index, (geometry, properties) in self.items()
         )
-        return pd.json_normalize(features).set_index("index")
+        return pd.json_normalize(features).set_index("key")
 
     def __del__(self) -> None:
         self.close()
