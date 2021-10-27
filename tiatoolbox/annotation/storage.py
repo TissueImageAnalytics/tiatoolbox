@@ -18,14 +18,18 @@ Properties
     Key-value pairs associated with a geometry.
 
 """
+import copy
 import hashlib
 import itertools
 import sqlite3
+import warnings
 from abc import ABC
 from numbers import Number
 from pathlib import Path
 from typing import (
+    IO,
     Any,
+    Callable,
     Dict,
     Generator,
     Iterable,
@@ -33,15 +37,11 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    Callable,
 )
-from typing.io import IO
-import warnings
-import copy
 
 import numpy as np
 import pandas as pd
-from shapely import speedups, wkt, wkb
+from shapely import speedups, wkb, wkt
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
@@ -250,12 +250,13 @@ class AnnotationStoreABC(ABC):
         none_fn: Callable[[], str],
     ) -> Union[None, Any]:
         if fp is not None:
-            if hasattr(fp, "write"):  # fp is a file handle, write to it
+            # It is a file-like object, write to it
+            if hasattr(fp, "write"):
                 return file_fn(fp)
-            # Get a file handle from fp, then write to it
+            # Turn a path into a file handle, then write to it
             with open(fp, "w", encoding="utf-8") as file_handle:
                 return file_fn(file_handle)
-        # Return as an object (str or bytes) if no fp is given
+        # Return as an object (str or bytes) if no handle/path is given
         return none_fn()
 
     @staticmethod
@@ -591,8 +592,7 @@ class SQLiteStore(AnnotationStoreABC):
         return geometry, properties
 
     def keys(self) -> Iterable[int]:
-        for key in self:
-            yield key
+        yield from self
 
     def __iter__(self) -> Iterable[int]:
         cur = self.con.cursor()
@@ -846,8 +846,7 @@ class DictionaryStore(AnnotationStoreABC):
         return key in self._features
 
     def __iter__(self) -> Iterable[int]:
-        for key in self.keys():
-            yield key
+        yield from self.keys()
 
     def items(self):
         for index, value in self._features.items():
@@ -856,7 +855,7 @@ class DictionaryStore(AnnotationStoreABC):
     def __len__(self) -> int:
         return len(self._features)
 
-    @classmethod
+    @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
         return cls.from_geojson(fp)
 
