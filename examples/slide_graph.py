@@ -10,18 +10,24 @@ import random
 import shutil
 import sys
 from collections import OrderedDict
-from typing import List
-from tqdm import tqdm
+from typing import List, Tuple
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from tqdm import tqdm
+
 
 sys.path.append("/home/dang/storage_1/workspace/tiatoolbox")
 
 # ! save_yaml, save_as_json => need same name, need to factor out jsonify
 from tiatoolbox.utils.misc import save_as_json
+
+
+mpl.rcParams['figure.dpi'] = 160  # for high resolution figure in notebook
+
 
 # %% [markdown]
 # Here we define some quality of life functions that will be frequently reused
@@ -501,12 +507,61 @@ else:
 # ! put the assertion back later
 # assert len(graph_paths) == len(wsi_names), 'Missing output.'
 
-# %%
-# [markdown]
-# # The Graph Neural Network
+# %% [markdown]
+# ## Visualize a sample graph
+# It is always a good practice to validate data or any results visually. Here,
+# we plot the one sample graph on its WSI thumbnail.
 
 # %%
-# [markdown]
+from skimage.exposure import equalize_hist
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from torch_geometric.data import Data
+
+from tiatoolbox.utils.visualization import plot_graph
+from tiatoolbox.wsicore.wsireader import get_wsireader
+
+# !- debug injection, remove later
+CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
+WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
+wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
+wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
+# !-
+
+# we should use .read_json or sthg for this
+sample_idx = 0
+graph_path = f"{ROOT_OUTPUT_DIR}/graph/{wsi_names[sample_idx]}.json"
+graph_dict = load_json(graph_path)
+graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
+graph = Data(**graph_dict)
+
+# deriving node colors via projecting n-d features down to 3-d
+graph.x = StandardScaler().fit_transform(graph.x)
+# .c for node colors
+graph.c = PCA(n_components=3).fit_transform(graph.x)[:, [1, 0, 2]]
+for channel in range(graph.c.shape[-1]):
+    graph.c[:, channel] = (
+        1 - equalize_hist(graph.c[:, channel]) ** 2
+    )
+graph.c = (graph.c * 255).astype(np.uint8)
+
+reader = get_wsireader(wsi_paths[sample_idx])
+thumb = reader.slide_thumbnail(4.0, 'mpp')
+thumb_overlaid = plot_graph(
+    thumb.copy(), graph.coords, graph.edge_index.T,
+    node_colors=graph.c, node_size=5)
+plt.subplot(1, 2, 1)
+plt.imshow(thumb)
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(thumb_overlaid)
+plt.axis('off')
+plt.show()
+
+# %% [markdown]
+# # The Graph Neural Network
+
+# %% [markdown]
 # ## The dataset loader
 # As graph dataset that has yet been supported by the toolbox, we defined their
 # loading and IO conversion here. The goal of this dataset class is to support
@@ -569,8 +624,7 @@ class SlideGraphDataset(Dataset):
         return len(self.info_list)
 
 
-# %%
-# [markdown]
+# %% [markdown]
 # ## Entire dataset feature normalization
 # Similarly to how we utilize the stain normalizer, we define the feature
 # normalizer here. Additionally, as this normalization is derived from the
@@ -915,8 +969,8 @@ print(output)
 
 # %%
 
-from torch.utils.data import Sampler
 from sklearn.model_selection import StratifiedKFold
+from torch.utils.data import Sampler
 
 
 class StratifiedSampler(Sampler):
