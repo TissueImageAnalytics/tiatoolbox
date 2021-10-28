@@ -35,3 +35,6 @@ from tiatoolbox.models.controller.semantic_segmentor import (
     SemanticSegmentor,
     WSIStreamDataset,
 )
+from tiatoolbox.models.controller.nucleus_instance_segmentor import (
+    NucleusInstanceSegmentor
+)
