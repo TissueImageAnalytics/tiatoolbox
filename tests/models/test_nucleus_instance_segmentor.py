@@ -249,7 +249,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
     )
     instance_segmentor = NucleusInstanceSegmentor(
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=1,
         pretrained_model="hovernet_fast-pannuke",
     )
 
@@ -289,7 +289,7 @@ def test_functionality(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[1024, 1024],
+        tile_shape=[512, 512],
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -332,7 +332,7 @@ def test_functionality(remote_sample, tmp_path):
     inst_segmentor = NucleusInstanceSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=1,
     )
     assert inst_segmentor.num_postproc_workers == 2
     output = inst_segmentor.predict(
@@ -359,7 +359,7 @@ def test_functionality(remote_sample, tmp_path):
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=1,
     )
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
