@@ -354,34 +354,21 @@ from tiatoolbox.models.architecture import CNNExtractor
 
 
 def extract_deep_feature(save_dir):
-    # ioconfig = IOSegmentorConfig(
-    #     input_resolutions=[
-    #         {"units": "mpp", "resolution": 0.25},
-    #     ],
-    #     output_resolutions=[
-    #         {"units": "mpp", "resolution": 0.25},
-    #     ],
-    #     patch_input_shape=[512, 512],
-    #     patch_output_shape=[512, 512],
-    #     stride_shape=[512, 512],
-    #     save_resolution={"units": "mpp", "resolution": 8.0},
-    # )
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "mpp", "resolution": 4.0},
+            {"units": "mpp", "resolution": 0.25},
         ],
         output_resolutions=[
-            {"units": "mpp", "resolution": 4.0},
+            {"units": "mpp", "resolution": 0.25},
         ],
         patch_input_shape=[512, 512],
         patch_output_shape=[512, 512],
         stride_shape=[512, 512],
-        save_resolution={"units": "mpp", "resolution": 4.0},
+        save_resolution={"units": "mpp", "resolution": 8.0},
     )
-
     model = CNNExtractor("resnet50")
     # using the stain normalization as pre-processing function
-    # model.preproc_func = stain_norm_func
+    model.preproc_func = stain_norm_func
     extractor = FeatureExtractor(
         batch_size=16, model=model, num_loader_workers=4)
 
@@ -404,10 +391,30 @@ def extract_deep_feature(save_dir):
 # In a very similar manner, we define the code for extracting cell
 # composition in `extract_composition_feature`.
 # %%
+from tiatoolbox.models import NucleusInstanceSegmentor
 
 
 def extract_composition_feature(save_dir):
-    return []
+    inst_segmentor = NucleusInstanceSegmentor(
+        pretrained_model="hovernet_fast-pannuke",
+        batch_size=16,
+        num_postproc_workers=2,
+    )
+
+    rmdir(save_dir)
+    output_map = inst_segmentor.predict(
+        wsi_paths,
+        msk_paths,
+        mode="wsi",
+        on_gpu=True,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    rename_output(output_map)
+
+    # [!@Wenqi] Cell composition goes here
+
+    return output_map
 
 
 # %% [markdown]
@@ -534,7 +541,7 @@ class SlideGraphDataset(Dataset):
 
     def __getitem__(self, idx):
         info = self.info_list[idx]
-        if self.mode != "infer":
+        if any(v in self.mode for v in ['train', 'valid']):
             wsi_code, label = info
             # torch.Tensor will create 1-d vector not scalar
             label = torch.tensor(label)
@@ -551,7 +558,7 @@ class SlideGraphDataset(Dataset):
         graph_dict = {k: torch.tensor(v) for k, v in graph_dict.items()}
         graph = Data(**graph_dict)
 
-        if self.mode != "infer":
+        if any(v in self.mode for v in ['train', 'valid']):
             return dict(graph=graph, label=label)
         return dict(graph=graph)
 
@@ -585,22 +592,29 @@ SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 # wsi_codes = [pathlib.Path(v).stem for v in wsi_codes]
 
 # CACHE_PATH = None
-# GRAPH_DIR = f"/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet"
+# GRAPH_DIR = f"/home/dang/local/workspace/projects/tiatoolbox/local/code/data/resnet/"
 # SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 # wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
-# wsi_codes = [pathlib.Path(v).stem for v in wsi_codes][:2]
+# wsi_codes = [pathlib.Path(v).stem for v in wsi_codes]
 
 CACHE_PATH = '/home/dang/storage_1/workspace/tiatoolbox/local/code/data/node_scaler.dat'
 # !-
 
-if SCALER_PATH and os.path.exists(SCALER_PATH):
+if CACHE_PATH and os.path.exists(CACHE_PATH):
     SCALER_PATH = CACHE_PATH  # assignment for follow up loading
     node_scaler = joblib.load(SCALER_PATH)
 else:
     # ! we need a better way of doing this, will have OOM problem
     loader = SlideGraphDataset(wsi_codes, mode="infer")
+    loader = DataLoader(
+        loader,
+        num_workers=8,
+        batch_size=1,
+        shuffle=False,
+        drop_last=False
+    )
     node_features = [
-        v['graph'].x.numpy() for idx, v in enumerate(loader)]
+        v['graph'].x.numpy() for idx, v in enumerate(tqdm(loader))]
     node_features = np.concatenate(node_features, axis=0)
     node_scaler = StandardScaler(copy=False)
     node_scaler.fit(node_features)
@@ -613,6 +627,10 @@ def nodes_preproc_func(node_features):
 
 
 # exit()
+
+# %% [markdown]
+# # The Graph Neural Network
+
 # %% [markdown]
 # ## The architecture holder
 
@@ -686,6 +704,20 @@ class SlideGraphArch(nn.Module):
         # has got one more for initial input, what does this mean
         self.linears = torch.nn.ModuleList(self.linears)
 
+        # auxilary holder for external model, these are saved separately from torch.save
+        # as they can be sklearn model etc.
+        self.aux_model = {}
+
+    def save(self, path, aux_path):
+        state_dict = self.state_dict()
+        torch.save(state_dict, path)
+        joblib.dump(self.aux_model, aux_path)
+
+    def load(self, path, aux_path):
+        state_dict = torch.load(path)
+        self.load_state_dict(state_dict)
+        self.aux_model = joblib.load(aux_path)
+
     def forward(self, data):
 
         feature, edge_index, batch = data.x, data.edge_index, data.batch
@@ -743,13 +775,13 @@ class SlideGraphArch(nn.Module):
         wsi_output_ = wsi_output - wsi_output.T
         diff = wsi_output_[wsi_labels_ > 0]
         loss = torch.mean(F.relu(1.0 - diff))
-
         # back prop and update
         loss.backward()
         optimizer.step()
 
         #
         loss = loss.detach().cpu().numpy()
+        assert not np.isnan(loss)
         wsi_labels = wsi_labels.cpu().numpy()
         return [loss, wsi_output, wsi_labels]
 
@@ -805,35 +837,35 @@ wsi_graphs = batch_data["graph"]
 wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 
 # ! --- [TEST] model forward integerity checking
-# from examples.GNN_modelling import GNN
+from examples.GNN_modelling import GNN
 
-# arch_kwargs = dict(
-#     dim_features=2048,
-#     dim_target=1,
-#     layers=[16, 16, 8],
-#     dropout=0.5,
-#     pooling="mean",
-#     conv="EdgeConv",
-#     aggr="max",
-# )
-# pretrained = torch.load(
-#     "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/wenqi_model.pth"
-# )
-# src_model = GNN(**arch_kwargs)
-# src_model.load_state_dict(pretrained)
+arch_kwargs = dict(
+    dim_features=2048,
+    dim_target=1,
+    layers=[16, 16, 8],
+    dropout=0.5,
+    pooling="mean",
+    conv="EdgeConv",
+    aggr="max",
+)
+pretrained = torch.load(
+    "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/wenqi_model.pth"
+)
+src_model = GNN(**arch_kwargs)
+src_model.load_state_dict(pretrained)
 
-# dst_model = SlideGraphArch(**arch_kwargs)
-# dst_model.load_state_dict(pretrained)
+dst_model = SlideGraphArch(**arch_kwargs)
+dst_model.load_state_dict(pretrained)
 
-# src_model.eval()
-# dst_model.eval()
-# with torch.inference_mode():
-#     src_output, _ = src_model(wsi_graphs)
-#     dst_output, _ = dst_model(wsi_graphs)
-#     src_output = src_output.cpu().numpy()
-#     dst_output = dst_output.cpu().numpy()
-#     assert np.sum(np.abs(src_output - dst_output)) == 0
-# print(src_output)
+src_model.eval()
+dst_model.eval()
+with torch.inference_mode():
+    src_output, _ = src_model(wsi_graphs)
+    dst_output, _ = dst_model(wsi_graphs)
+    src_output = src_output.cpu().numpy()
+    dst_output = dst_output.cpu().numpy()
+    assert np.sum(np.abs(src_output - dst_output)) == 0
+print(src_output)
 # ! ---
 
 # define model object
@@ -855,6 +887,76 @@ with torch.inference_mode():
     output = output.cpu().numpy()
 print(output)
 
+# %% [markdown]
+# ## Batch Sampler
+# Now that we have ensured that the model can run. Let's take a step back and
+# looking at the model definition again so that we can prepare for the training
+# and inference handling later.
+#
+# The `infer_batch` is straigh forward here, it handles inferencing of the input batch
+# data and organizes the output content. Likewise, `train_batch` defines the handling
+# for training, such as calculating the loss and so on. For our case, you can realize
+# that the loss defined here is not straightforward or standardized like the
+# cross-entropy.There is a pitfall that may crash the training if we do not handle
+# this:
+# ```python
+# wsi_labels_ = wsi_labels[:, None]
+# wsi_labels_ = wsi_labels_ - wsi_labels_.T
+# wsi_output_ = wsi_output - wsi_output.T
+# diff = wsi_output_[wsi_labels_ > 0]
+# loss = torch.mean(F.relu(1.0 - diff))
+# ```
+# Specifically, we need to take care of `diff = wsi_output_[wsi_labels_ > 0]` where
+# we only want to calculate the loss using pairing containing positive sample. Thus,
+# when the batch contains no positive samples at all, especially for skewed dataset,
+# there will no sample to calculate the loss and we will have `NaN` loss. To resolve
+# this, we define a sampler dedicated for training process such that its resulting
+# batch will always contain positive samples.
+
+# %%
+
+from torch.utils.data import Sampler
+from sklearn.model_selection import StratifiedKFold
+
+
+class StratifiedSampler(Sampler):
+    """Sampling the dataset such that the batch contains stratified samples.
+
+    Args:
+        labels (list): List of labels, must be in the same ordering as input
+            samples provided to the `SlideGraphDataset` object.
+        batch_size (int): Size of the batch.
+    Returns:
+        List of indices to query from the `SlideGraphDataset` object.
+
+    """
+
+    def __init__(self, labels, batch_size=10):
+        self.batch_size = batch_size
+        self.num_splits = int(len(labels) / self.batch_size)
+        self.labels = labels
+        self.num_steps = self.num_splits
+
+    def _sampling(self):
+        # do we want to control randomness here
+        skf = StratifiedKFold(n_splits=self.num_splits, shuffle=True)
+        indices = np.arange(len(self.labels))  # idx holder
+        # return array of arrays of indices in each batch
+        return [tidx for _, tidx in skf.split(indices, self.labels)]
+
+    def __iter__(self):
+        return iter(self._sampling())
+
+    def __len__(self):
+        """The length of the sampler.
+
+        This value actually corresponds to the number of steps to query
+        sampled batch indices. Thus, to maintain epoch and steps hierarchy,
+        this should be equal to the number of expected steps as in usual
+        sampling: `steps=dataset_size / batch_size`.
+
+        """
+        return self.num_steps
 
 # %% [markdown]
 # Here, you can notice the value is not between 0-1. For SlideGraph
@@ -862,9 +964,51 @@ print(output)
 # via using the Platt Scaling https://en.wikipedia.org/wiki/Platt_scaling.
 
 # %% [markdown]
-# ## Training Portion
+# ## The running loop
+# Training and running a neural network at the current time involve wiring
+# several parts together so that they work in tandem. For training side,
+# in a simplified term, it consists of:
+# 1. Define network object from a particular architecture.
+# 2. Define loader object to handle loading data concurrently.
+# 3. Define optimizer and scheduler to update network weights.
+# 4. The callbacks function at several junctions (starting of epoch, end of step, etc.)
+# to aggregate results, saving the models, refreshing data, and much more.
+#
+# As for inference side, #3 is not necessary. At the moment, the wiring of these
+# operations are handled mostly in the toolbox via various `engine` (controller).
+# However, they focus mostly on inference portion. For SlideGraph case and this
+# notebook, we also require the training portion. Hence, we define below a very
+# simplified version of what an `engine` usually do for both `training` and `inference`.
 
-# %%
+# %% [markdown]
+# ### Helper functions and classes
+
+
+def create_pbar(engine_name: str, num_steps: int):
+    """Helper to clean up progress bar creation."""
+    pbar_format = (
+        'Processing: |{bar}| {n_fmt}/{total_fmt}'
+        '[{elapsed}<{remaining},{rate_fmt}]'
+    )
+    pbar = tqdm(
+            total=num_steps,
+            leave=True,
+            bar_format=pbar_format,
+            ascii=True)
+    if engine_name == 'train':
+        pbar_format += (
+            'step={postfix[1][step]:0.5f}'
+            '|EMA={postfix[1][EMA]:0.5f}'
+        )
+        # * changing print char may break the bar so avoid it
+        pbar = tqdm(
+                total=num_steps,
+                leave=True, initial=0,
+                bar_format=pbar_format, ascii=True,
+                postfix=['', dict(step=float('NaN'), EMA=float('NaN'))])
+    return pbar
+
+
 class ScalarMovingAverage(object):
     """Object to calculate running average."""
 
@@ -888,24 +1032,12 @@ class ScalarMovingAverage(object):
 
 
 # %% [markdown]
-# ## The running loop
-# Training and running a neural network at the current time involve wiring
-# several parts together so that they work in tandem. For training side,
-# in a simplified term, it consist of:
-# 1. Define network object from a particular architecture.
-# 2. Define loader object to handle loading data concurrently.
-# 3. Define optimizer and scheduler to update network weights.
-# 4. The callbacks function at several junctions (starting of epoch, end of step, etc.)
-# to aggregate results, saving the models, or refreshing data.
-#
-# As for inference side, #3 is not necessary. At the moment, the wiring of these
-# operations are handled mostly in the toolbox via various `engine` (controller).
-# However, they focus mostly on inference portion. For SlideGraph case and this
-# notebook, we also require the training portion. Hence, we define below a very
-# simplified version of what an `engine` usually do for both `training` and `inference`.
-
+# ### Defining the loop
 
 # %%
+from tiatoolbox.tools.scale import PlattScaling
+
+
 def run_once(
         dataset_dict, num_epochs, save_dir,
         on_gpu=True, pretrained=None,
@@ -913,8 +1045,7 @@ def run_once(
     """Running the inference or training loop once."""
     model = SlideGraphArch(**arch_kwargs)
     if pretrained is not None:
-        pretrained = torch.load(pretrained)
-        model.load_state_dict(pretrained)
+        model.load(*pretrained)
     model = model.to("cuda")
     optimizer = torch.optim.Adam(model.parameters(), **optim_kwargs)
 
@@ -923,12 +1054,23 @@ def run_once(
     # for loading in multi-thread
     loader_dict = {}
     for subset_name, subset in dataset_dict.items():
-        ds = SlideGraphDataset(subset, mode=subset_name, preproc=nodes_preproc_func)
+        _loader_kwargs = copy.deepcopy(loader_kwargs)
+        batch_sampler = None
+        if subset_name == 'train':
+            _loader_kwargs = {}
+            batch_sampler = StratifiedSampler(
+                labels=[v[1] for v in subset],
+                batch_size=loader_kwargs['batch_size']
+            )
+
+        ds = SlideGraphDataset(
+            subset, mode=subset_name, preproc=nodes_preproc_func)
         loader_dict[subset_name] = DataLoader(
             ds,
-            drop_last=subset_name == "train",
-            shuffle=subset_name == "train",
-            **loader_kwargs,
+            batch_sampler=batch_sampler,
+            drop_last=subset_name == "train" and batch_sampler is None,
+            shuffle=subset_name == "train" and batch_sampler is None,
+            **_loader_kwargs,
         )
 
     for epoch in range(num_epochs):
@@ -937,19 +1079,15 @@ def run_once(
             # * EPOCH START
             step_output = []
             ema = ScalarMovingAverage()
-            pbar = tqdm(
-                leave=True,
-                total=int(len(loader)),
-                ncols=80,
-                ascii=True,
-                position=0,
-            )
+            pbar = create_pbar(loader_name, len(loader))
             for step, batch_data in enumerate(loader):
                 # * STEP COMPLETE CALLBACKS
                 if loader_name == "train":
                     output = model.train_batch(model, batch_data, on_gpu, optimizer)
                     # check the output for agreement
                     ema({"loss": output[0]})
+                    pbar.postfix[1]["step"] = output[0]
+                    pbar.postfix[1]["EMA"] = ema.tracking_dict['loss']
                 else:
                     output = model.infer_batch(model, batch_data, on_gpu)
                     batch_size = batch_data["graph"].num_graphs
@@ -971,18 +1109,26 @@ def run_once(
             if loader_name == "train":
                 for val_name, val in ema.tracking_dict.items():
                     logging_dict[f"train-EMA-{val_name}"] = val
-            elif loader_name == "valid":
+            elif ("infer" in loader_name and
+                    any(v in loader_name for v in ["train", "valid"])):
                 # expand list of N dataset size x H heads
                 # back to list of H Head each with N samples
                 output = list(zip(*step_output))
-                prob, true = output
-                prob = np.squeeze(np.array(prob))
+                logit, true = output
+                logit = np.squeeze(np.array(logit))
                 true = np.squeeze(np.array(true))
 
+                if "train" in loader_name:
+                    scaler = PlattScaling()
+                    scaler.fit(true, logit)
+                    model.aux_model['scaler'] = scaler
+                scaler = model.aux_model['scaler']
+                prob = scaler.transform(logit)
+
                 val = auroc_scorer(true, prob)
-                logging_dict["valid-auroc"] = val
+                logging_dict[f"{loader_name}-auroc"] = val
                 val = auprc_scorer(true, prob)
-                logging_dict["valid-auprc"] = val
+                logging_dict[f"{loader_name}-auprc"] = val
 
             # callbacks for logging and saving
             for val_name, val in logging_dict.items():
@@ -1006,12 +1152,15 @@ def run_once(
             save_as_json(new_stats, f"{save_dir}/stats.json")
 
             # save the pytorch model
-            torch.save(model.state_dict(), f"{save_dir}/epoch={epoch:03d}-weights.pth")
+            model.save(
+                f"{save_dir}/epoch={epoch:03d}.weights.pth",
+                f"{save_dir}/epoch={epoch:03d}.aux.dat"
+            )
     return step_output
 
 
 # %% [markdown]
-# ### The training portion
+# ## The training
 # With the `engine` above, we can now start our training loop with
 # a set of parameters.
 
@@ -1047,12 +1196,16 @@ NUM_EPOCHS = 5
 
 MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 for split_idx, split in enumerate(split_list):
-    split_ = copy.deepcopy(split)
-    split_.pop("test")
+    break
+    new_split = {
+        "train": split['train'],
+        "infer-train": split['train'],
+        "infer-valid": split['valid']
+    }
     split_save_dir = f"{MODEL_DIR}/{split_idx:02d}/"
     rm_n_mkdir(split_save_dir)
     run_once(
-        split_, NUM_EPOCHS,
+        new_split, NUM_EPOCHS,
         save_dir=split_save_dir,
         arch_kwargs=arch_kwargs,
         loader_kwargs=loader_kwargs,
@@ -1060,18 +1213,41 @@ for split_idx, split in enumerate(split_list):
 
 
 # %% [markdown]
-# ## The inference portion
+# ## The inference
 
 # %% [markdown]
 # ### The model selections
+# According to our engine running loop definition above, these
+# are the metrics saved for each epoch:
+# - "infer-train-auroc"
+# - "infer-train-auprc"
+# - "infer-valid-auroc"
+# - "infer-valid-auprc"
 
 # %%
-PRETRAINED_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/code/model/"
+PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 stat_files = recur_find_ext(PRETRAINED_DIR, [".json"])
 stat_files = [v for v in stat_files if ".old.json" not in v]
 
 
-def select_checkpoints(stat_file_path, top_k=2, metric="valid-auprc"):
+def select_checkpoints(
+        stat_file_path: str,
+        top_k: int = 2,
+        metric: str = "infer-valid-auprc"):
+    """Select checkpoints basing on training statistics.
+
+    Args:
+        stat_file_path (str): Path pointing to the .json
+            which contains the statistics.
+        top_k (int): Number of top checkpoints to be selected.
+        metric (str): The metric name saved within .json to perform
+            selection.
+    Returns:
+        paths (list): List of paths or info tuple where each point
+            to the correspond check point saving location.
+        stats (list): List of corresponding statistics.
+
+    """
     stats_dict = load_json(stat_file_path)
     # k is the epoch counter in this case
     stats = [[int(k), v[metric]] for k, v in stats_dict.items()]
@@ -1081,29 +1257,86 @@ def select_checkpoints(stat_file_path, top_k=2, metric="valid-auprc"):
 
     model_dir = pathlib.Path(stat_file_path).parent
     epochs = [v[0] for v in chkpt_stats_list]
-    paths = [f"{model_dir}/epoch={epoch:03d}-weights.pth" for epoch in epochs]
+    paths = [(
+        f"{model_dir}/epoch={epoch:03d}.weights.pth",
+        f"{model_dir}/epoch={epoch:03d}.aux.dat")
+        for epoch in epochs
+    ]
     return paths, chkpt_stats_list
 
 
-chkpt_paths, chkpt_stats_list = select_checkpoints(stat_files[0])
+chkpts, chkpt_stats_list = select_checkpoints(stat_files[0])
 
 # %% [markdown]
 # ### Bulk inference and ensemble results
 
 # %%
-cum_results = []
-# for split_idx, split in enumerate(split_list):
 
-# !- test run with 1 single split
-split = copy.deepcopy(split_list[0])
-for chkpt_path in chkpt_paths:
-    split_ = {"infer": [v[0] for v in split["test"]]}
-    chkpt_results = run_once(
-        split_,
-        num_epochs=1,
-        save_dir=None,
-        pretrained=chkpt_path,
-    )
-    cum_results.append(chkpt_results)
-cum_results = np.array(cum_results)
-cum_results = np.squeeze(cum_results)
+# !- injecttion debug
+split_list = split_list[:1]
+# !-
+
+loader_kwargs = dict(
+    num_workers=8,
+    batch_size=16,
+)
+arch_kwargs = dict(
+    dim_features=2048,
+    dim_target=1,
+    layers=[16, 16, 8],
+    dropout=0.5,
+    pooling="mean",
+    conv="EdgeConv",
+    aggr="max",
+)
+
+cum_stats = []
+for split_idx, split in enumerate(split_list):
+    break
+    new_split = {
+        "infer": [v[0] for v in split["test"]]
+    }
+
+    # Perform ensembling by averaging probabilities
+    # across checkpoint predictions
+    cum_results = []
+    for chkpt_info in chkpts:
+        chkpt_results = run_once(
+            new_split,
+            num_epochs=1,
+            save_dir=None,
+            pretrained=chkpt_info,
+            arch_kwargs=arch_kwargs,
+            loader_kwargs=loader_kwargs,
+        )
+
+        # * re-calibrate logit to probabilities
+        model = SlideGraphArch(**arch_kwargs)
+        model.load(*chkpt_info)
+        scaler = model.aux_model['scaler']
+        chkpt_results = np.array(chkpt_results)
+        chkpt_results = np.squeeze(chkpt_results)
+        chkpt_results = scaler.transform(chkpt_results)
+
+        cum_results.append(chkpt_results)
+    cum_results = np.array(cum_results)
+    cum_results = np.squeeze(cum_results)
+    prob = np.mean(cum_results, axis=0)
+
+    # * calculate split statistics
+    true = [v[1] for v in split["test"]]
+    true = np.array(true)
+
+    cum_stats.append({
+        'auroc': auroc_scorer(true, prob),
+        'auprc': auprc_scorer(true, prob)
+    })
+
+stat_df = pd.DataFrame(cum_stats)
+for metric in stat_df.columns:
+    vals = stat_df[metric]
+    mu = np.mean(vals)
+    va = np.std(vals)
+    print(f'{metric}: {mu:0.4f}±{va:0.4f}')
+
+# %%
