@@ -890,38 +890,6 @@ batch_data = iterator.__next__()
 wsi_graphs = batch_data["graph"]
 wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 
-# ! --- [TEST] model forward integerity checking
-from examples.GNN_modelling import GNN
-
-arch_kwargs = dict(
-    dim_features=2048,
-    dim_target=1,
-    layers=[16, 16, 8],
-    dropout=0.5,
-    pooling="mean",
-    conv="EdgeConv",
-    aggr="max",
-)
-pretrained = torch.load(
-    "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/wenqi_model.pth"
-)
-src_model = GNN(**arch_kwargs)
-src_model.load_state_dict(pretrained)
-
-dst_model = SlideGraphArch(**arch_kwargs)
-dst_model.load_state_dict(pretrained)
-
-src_model.eval()
-dst_model.eval()
-with torch.inference_mode():
-    src_output, _ = src_model(wsi_graphs)
-    dst_output, _ = dst_model(wsi_graphs)
-    src_output = src_output.cpu().numpy()
-    dst_output = dst_output.cpu().numpy()
-    assert np.sum(np.abs(src_output - dst_output)) == 0
-print(src_output)
-# ! ---
-
 # define model object
 arch_kwargs = dict(
     dim_features=2048,
