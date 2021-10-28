@@ -204,37 +204,38 @@ def generate_split(x, y, train, valid, test, num_folds):
     assert train + valid + test - 1.0 < 1.0e-10, "Ratio must be summed up to 1.0 ."
 
     outer_splitter = StratifiedShuffleSplit(
-        n_splits=num_folds, train_size=train, test_size=valid + test, random_state=SEED
+        n_splits=num_folds,
+        train_size=train + valid,
+        random_state=SEED
     )
     inner_splitter = StratifiedShuffleSplit(
         n_splits=1,
-        train_size=valid / (valid + test),
-        test_size=test / (valid + test),
+        train_size=train / (train + valid),
         random_state=SEED,
     )
 
     x = np.array(x)
     y = np.array(y)
     split_list = []
-    for train_idx, valid_test_idx in outer_splitter.split(x, y):
-        train_x = x[train_idx]
-        train_y = y[train_idx]
+    for train_valid_idx, test_idx in outer_splitter.split(x, y):
+        test_x = x[test_idx]
+        test_y = y[test_idx]
 
-        # holder for valid_test set
-        x_ = x[valid_test_idx]
-        y_ = y[valid_test_idx]
+        # holder for train_valid set
+        x_ = x[train_valid_idx]
+        y_ = y[train_valid_idx]
 
-        # split valid_test into valid and test set
-        valid_idx, test_idx = list(inner_splitter.split(x_, y_))[0]
+        # split train_valid into train and valid set
+        train_idx, valid_idx = list(inner_splitter.split(x_, y_))[0]
         valid_x = x_[valid_idx]
         valid_y = y_[valid_idx]
 
-        test_x = x_[test_idx]
-        test_y = y_[test_idx]
+        train_x = x_[train_idx]
+        train_y = y_[train_idx]
         # integrity check
         assert len(set(train_x).intersection(set(valid_x))) == 0
         assert len(set(valid_x).intersection(set(test_x))) == 0
-        assert len(set(train_x).intersection(set(test_x))) == 0
+        assert len(set(train_x).intersection(set(test_x))) == 0        
 
         split_list.append(
             {
@@ -1059,6 +1060,8 @@ class ScalarMovingAverage(object):
 
 # %%
 from tiatoolbox.tools.scale import PlattScaling
+from sklearn.metrics import average_precision_score as auprc_scorer
+from sklearn.metrics import roc_auc_score as auroc_scorer
 
 
 def run_once(
@@ -1193,10 +1196,6 @@ GRAPH_DIR = f"/home/dang/local/workspace/projects/tiatoolbox/local/code/data/res
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 wsi_codes = label_df["WSI-CODE"].to_list()
 # !-
-
-
-from sklearn.metrics import average_precision_score as auprc_scorer
-from sklearn.metrics import roc_auc_score as auroc_scorer
 
 loader_kwargs = dict(
     num_workers=8,
