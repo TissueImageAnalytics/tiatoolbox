@@ -24,6 +24,7 @@ import sqlite3
 import uuid
 import warnings
 from abc import ABC
+from functools import lru_cache
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -83,6 +84,24 @@ ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 
 
 class AnnotationStoreABC(ABC):
+    @staticmethod
+    def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
+        return getattr(a, name)(b)
+
+    # All valid shapely binary predicates
+    _geometry_predicate_names = [
+        "equals",
+        "contains",
+        "covers",
+        "covered_by",
+        "crosses",
+        "disjoint",
+        "intersects",
+        "overlaps",
+        "touches",
+        "within",
+    ]
+
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStoreABC":
         """Load a store object from a path or file-like object."""
@@ -94,6 +113,7 @@ class AnnotationStoreABC(ABC):
         return geometry.wkt
 
     @staticmethod
+    @lru_cache(32)
     def deserialise_geometry(data: Union[str, bytes]):
         """Deserialise a geometry from a string or bytes."""
         if isinstance(data, str):
@@ -186,23 +206,29 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
     def query(
-        self, query_geometry: QueryGeometry
+        self,
+        query_geometry: QueryGeometry,
+        geometry_predicate: str = "intersects",
     ) -> List[Tuple[Geometry, Dict[str, Any]]]:
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             (geometry, properties)
             for geometry, properties in self.values()
-            if geometry.intersects(query_geometry)
+            if self._geometry_predicate(geometry_predicate, query_geometry, geometry)
         ]
 
-    def iquery(self, query_geometry: QueryGeometry) -> List[int]:
+    def iquery(
+        self,
+        query_geometry: QueryGeometry,
+        geometry_predicate: str = "intersects",
+    ) -> List[int]:
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             key
             for key, (geometry, _) in self.items()
-            if geometry.intersects(query_geometry)
+            if self._geometry_predicate(geometry_predicate, query_geometry, geometry)
         ]
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
@@ -343,18 +369,27 @@ class SQLiteStore(AnnotationStoreABC):
         exists = path.exists() and path.is_file()
         self.con = sqlite3.connect(connection, isolation_level="DEFERRED")
 
-        # Register custom functions
-        def wkb_intersects(candidate: Union[bytes, str], geometry_wkb: bytes) -> bool:
-            """Check if one WKB/WKT intersects a geometry."""
-            candidate = self.deserialise_geometry(candidate)
-            return wkb.loads(geometry_wkb).intersects(candidate)
+        # Register predicate functions as custom SQLite functions
+        for name in self._geometry_predicate_names:
 
-        try:
-            self.con.create_function(
-                "intersects", 2, wkb_intersects, deterministic=True
-            )
-        except TypeError:  # only Python >= 3.8 supports deterministic
-            self.con.create_function("intersects", 2, wkb_intersects)
+            def wkb_predicate(name: str) -> Callable:
+                """Wrapper factory to allow WKB as inputs to binary predicates."""
+
+                def wrapper(wkb_a: bytes, wkb_b: bytes) -> bool:
+                    a = wkb.loads(wkb_a)
+                    b = self.deserialise_geometry(wkb_b)
+                    return self._geometry_predicate(name, a, b)
+
+                return wrapper
+
+            try:
+                self.con.create_function(
+                    name, 2, wkb_predicate(name), deterministic=True
+                )
+            # Only Python >= 3.8 supports deterministic, fallback
+            # to without this argument.
+            except TypeError:
+                self.con.create_function(name, 2, wkb_predicate(name))
 
         if exists:
             return
@@ -480,53 +515,67 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.commit()
         return [token["key"] for token in tokens]
 
-    def iquery(self, query_geometry: QueryGeometry) -> List[int]:
+    def iquery(
+        self, query_geometry: QueryGeometry, geometry_predicate="intersects"
+    ) -> List[int]:
+        if geometry_predicate not in self._geometry_predicate_names:
+            raise ValueError(
+                "Invalid geometry predicate."
+                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
+            )
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
-            """
+            f"""
             SELECT [key]
               FROM main
              WHERE max_x >= :min_x
                AND min_x <= :max_x
                AND max_y >= :min_y
                AND min_y <= :max_y
-               AND intersects(boundary, :intersector)
+               AND {geometry_predicate}(:query_geometry, boundary)
             """,
             {
                 "min_x": min_x,
                 "max_x": max_x,
                 "min_y": min_y,
                 "max_y": max_y,
-                "intersector": query_geometry.wkb,
+                "query_geometry": query_geometry.wkb,
             },
         )
         keys = cur.fetchall()
         return [key for key, in keys]
 
-    def query(self, query_geometry: QueryGeometry) -> List[Geometry]:
+    def query(
+        self, query_geometry: QueryGeometry, geometry_predicate: str = "intersects"
+    ) -> List[Geometry]:
+        if geometry_predicate not in self._geometry_predicate_names:
+            raise ValueError(
+                "Invalid geometry predicate."
+                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
+            )
         cur = self.con.cursor()
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
-            """
+            f"""
             SELECT boundary, [class], properties
               FROM main
              WHERE max_x >= :min_x
                AND min_x <= :max_x
                AND max_y >= :min_y
                AND min_y <= :max_y
-               AND intersects(boundary, :intersector)
+               AND {geometry_predicate}(:query_geometry, boundary)
             """,
             {
                 "min_x": min_x,
                 "max_x": max_x,
                 "min_y": min_y,
                 "max_y": max_y,
-                "intersector": query_geometry.wkb,
+                "query_geometry": query_geometry.wkb,
             },
         )
         rows = cur.fetchall()
