@@ -504,6 +504,9 @@ else:
 # %%
 # [markdown]
 # # The Graph Neural Network
+
+# %%
+# [markdown]
 # ## The dataset loader
 # As graph dataset that has yet been supported by the toolbox, we defined their
 # loading and IO conversion here. The goal of this dataset class is to support
@@ -627,9 +630,6 @@ def nodes_preproc_func(node_features):
 
 
 # exit()
-
-# %% [markdown]
-# # The Graph Neural Network
 
 # %% [markdown]
 # ## The architecture holder
