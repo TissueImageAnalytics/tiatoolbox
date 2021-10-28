@@ -28,7 +28,7 @@ from tiatoolbox.tools.stainnorm import VahadaneNormaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
-class StainAugmentaiton:
+class StainAugmentation:
     """Stain augmentation using predefined stain matrix or stain extraction methods
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
