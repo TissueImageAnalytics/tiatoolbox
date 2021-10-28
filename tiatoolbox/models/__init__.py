@@ -19,4 +19,4 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Models package for the models implemented in tiatoolbox."""
-from tiatoolbox.models import abc, backbone, classification, dataset
+from tiatoolbox.models import abc, architecture, dataset

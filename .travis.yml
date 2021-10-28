@@ -24,8 +24,9 @@ install:
 # Command to run tests, e.g. python setup.py test
 script:
     - set -e # Exit on first failure (errexit)
-    - tox -e flake8
-    - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
+    - tox -e black # Check for black style
+    - tox -e flake8  # Linter
+    - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)  # Unit tests
     - set +e
 
 # Upload test coverage reports (codecov and deepsource)
@@ -51,7 +52,7 @@ deploy:
       secure: a5EoBz4NAQWB0EmgQCKpDRtISy76uNt2dWYZURzTW5v7V2GHyP+drNDWW5HNN0qoLK8pYXBGS47DqJtNDD0+k4G1ogINQKTENWI/oAxXrI8mwAAEhp+2uhHBGSWUX0jlnfRD3VX3M4zSy0DEszGONrJMiJyfRAKNa+P1FPp7AFjRKh8keivCLXgL3Y27OfyBKf4wgy/EnlK2P/BkO9fhPLfDNdBAXikrOCTmG7b0MIRpSXdOqtgo0QtR8t2tQnekke14iH4oTlhEMq2+X875Fejg3n686mXvmTrenLNyZiO0PW4MXAsc5PEES3F2yyLVyk9tHhp54eBErhg60jr2q5GqkX+QBA9wooXcWoLdB+fKJbv4I4XtiMQ68B/1RLvQwWTUjMp520eFBc1dD3HiCEj0KuoplaxFWAgJoAAawC6/TrSpACgb1Cw1M5XcOb3dzUN4hduuvYp8emcixmc0mufrK1QU62u9320rMMF7HZJuLCg4GVHryWqBlc6u6kQrmnF+xU36ms0Deamjzb96TfA2W+DEG2N2dtxmbYEIaLyKZnpLhCV5FZDai4AK5nW9Hst6w/dDU7kYiHwM962ArEKApFuoF4mbNJe3EALR2xlNINZRaEqY+XPXtjODY7g/3bajsDfxEjKB9RTBxq9mL49ioxlXGRTvS7VhU+n6BE0=
     on:
       branch: pre-release
-      repo: TIA-Lab/tiatoolbox
+      repo: TissueImageAnalytics/tiatoolbox
       python: 3.9
   - provider: pypi
     distributions: sdist bdist_wheel
@@ -61,5 +62,5 @@ deploy:
     on:
       branch: master
       tags: true
-      repo: TIA-Lab/tiatoolbox
+      repo: TissueImageAnalytics/tiatoolbox
       python: 3.9
