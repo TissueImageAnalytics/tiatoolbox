@@ -85,15 +85,18 @@ def test_kather_dataset_default(tmp_path):
     _ = KatherPatchDataset()
     # kather with default data path skip download
     _ = KatherPatchDataset()
+
+    # remove generated data
+    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+
+
+def test_kather_nonexisting_dir():
     # pytest for not exist dir
     with pytest.raises(
         ValueError,
         match=r".*not exist.*",
     ):
-        _ = KatherPatchDataset(save_dir_path="unknown_place")
-
-    # remove generated data
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+        _ = KatherPatchDataset(save_dir_path="non-existing-path")
 
 
 def test_kather_dataset(tmp_path):
