@@ -1,10 +1,46 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# This file contains code inspired by StainTools
+# [https://github.com/Peter554/StainTools] written by Peter Byfield.
+#
+# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
+"""Staing augmentation"""
 import numpy as np
 import copy
 from tiatoolbox.tools.stainnorm import VahadaneNormaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
-class StainAugmentaiton(object):
+class StainAugmentaiton:
+    """Stain augmentation using predefined stain matrix or stain extraction methods
+    This class contains code inspired by StainTools
+    [https://github.com/Peter554/StainTools] written by Peter Byfield.
+
+
+    Args:
+        image:
+
+    Examples:
+         >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
+    """
+
     def __init__(
         self,
         image,
@@ -31,6 +67,13 @@ class StainAugmentaiton(object):
         self.image_shape = image.shape
 
     def augment(self, seed=None):
+        """Return an stain augmented image.
+
+        Args:
+            seed:
+        Returns:
+            I_augmented:
+        """
         if seed is not None:
             np.random.seed(seed=seed)
         augmented_concentrations = copy.deepcopy(self.source_concentrations)
