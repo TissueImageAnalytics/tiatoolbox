@@ -232,12 +232,14 @@ def test_crash_segmentor(remote_sample, tmp_path):
 
     save_dir = f"{root_save_dir}/instance/"
 
+    # resolution for travis testing, not the correct ones
+    resolution = 1.0
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": 1.0}],
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
-            {"units": "mpp", "resolution": 1.0},
-            {"units": "mpp", "resolution": 1.0},
-            {"units": "mpp", "resolution": 1.0},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
         tile_shape=[1024, 1024],
@@ -278,15 +280,16 @@ def test_functionality(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     # resolution for travis testing, not the correct ones
+    resolution = 1.0
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
-            {"units": "mpp", "resolution": 0.5},
-            {"units": "mpp", "resolution": 0.5},
-            {"units": "mpp", "resolution": 0.5},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[512, 512],
+        tile_shape=[1024, 1024],
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
