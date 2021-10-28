@@ -151,8 +151,9 @@ patient_labels_[patient_labels == "Positive"] = 1
 patient_labels_[patient_labels == "Negative"] = 0
 sel = patient_labels_ >= 0
 
-patient_labels = patient_uids[sel]
+patient_uids = patient_uids[sel]
 patient_labels = patient_labels_[sel]
+assert len(patient_uids) == len(patient_labels)
 clinical_info = OrderedDict(list(zip(patient_uids, patient_labels)))
 
 # retrieve patient code of each WSI, this is basing TCGA bar codes
