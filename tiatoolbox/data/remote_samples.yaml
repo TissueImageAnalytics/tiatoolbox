@@ -1,0 +1,87 @@
+%YAML 1.2
+---
+aliases:
+  tia: &tia "https://tiatoolbox.dcs.warwick.ac.uk"
+  wsis: &wsis "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis"
+  modelroot: &modelroot "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
+  stainnorm: &stainnorm "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm"
+  patchextraction: &patchextraction "https://tiatoolbox.dcs.warwick.ac.uk/testdata/patchextraction"
+  testdata: &testdata "https://tiatoolbox.dcs.warwick.ac.uk/testdata"
+  models: &models "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
+files:
+  ndpi-1:
+    url: [*wsis, "CMU-1.ndpi"]
+  ndpi-2:
+      url: [ *wsis, "bioformatspull2759.ndpi" ]
+  svs-1-small:
+    url: [*wsis, "CMU-1-Small-Region.svs"]
+  ome-brightfield-pyramid-1-small:
+    url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
+  jp2-omnyx-1:
+    url: [*wsis, "test1.jp2"]
+  stainnorm-source:
+    url: [*testdata, "common/source_image.png"]
+  stainnorm-target-macenko:
+    url: [*stainnorm, "norm_macenko.png"]
+  stainnorm-target-reinhard:
+    url: [*stainnorm, "norm_reinhard.png"]
+  stainnorm-target-ruifrok:
+    url: [*stainnorm, "norm_ruifrok.png"]
+  stainnorm-target-vahadane:
+    url: [*stainnorm, "norm_vahadane.png"]
+  patch-extraction-vf:
+    url: [*patchextraction, "TCGA-HE-7130-01Z-00-DX1.png"]
+  patch-extraction-csv:
+    url: [*patchextraction, "sample_patch_extraction.csv"]
+  patch-extraction-json:
+    url: [*patchextraction, "sample_patch_extraction.json"]
+  patch-extraction-npy:
+    url: [*patchextraction, "sample_patch_extraction.npy"]
+  patch-extraction-csv-noheader:
+    url: [*patchextraction, "sample_patch_extraction-noheader.csv"]
+  patch-extraction-2col-json:
+    url: [*patchextraction, "sample_patch_extraction_2col.json"]
+  patch-extraction-2col-npy:
+    url: [*patchextraction, "sample_patch_extraction_2col.npy"]
+  patch-extraction-jp2-csv:
+    url: [*patchextraction, "sample_patch_extraction_jp2.csv"]
+  patch-extraction-jp2-read-npy:
+    url: [*patchextraction, "sample_patch_extraction_jp2read.npy"]
+  patch-extraction-read-npy:
+    url: [*patchextraction, "sample_patch_extraction_read.npy"]
+  patch-extraction-svs-csv:
+    url: [*patchextraction, "sample_patch_extraction_svs.csv"]
+  patch-extraction-svs-header-csv:
+    url: [*patchextraction, "sample_patch_extraction_svs_header.csv"]
+  patch-extraction-svs-read-npy:
+    url: [*patchextraction, "sample_patch_extraction_svsread.npy"]
+  sample-patch-1:
+    url: [*modelroot, "samples/kather_patch1.tif"]
+  sample-patch-2:
+    url: [*modelroot, "samples/kather_patch2.tif"]
+  wsi1_8k_8k_svs:
+    url: [*modelroot, "samples/wsi1_8k_8k.svs"]
+  wsi1_8k_8k_jp2:
+    url: [*modelroot, "samples/wsi1_8k_8k.jp2"]
+  wsi1_8k_8k_jpg:
+    url: [*modelroot, "samples/wsi1_8k_8k.jpg"]
+  wsi2_4k_4k_svs:
+    url: [*modelroot, "samples/wsi2_4k_4k.svs"]
+  wsi2_4k_4k_jp2:
+    url: [*modelroot, "samples/wsi2_4k_4k.jp2"]
+  wsi2_4k_4k_jpg:
+    url: [*modelroot, "samples/wsi2_4k_4k.jpg"]
+  wsi2_4k_4k_msk:
+    url: [*modelroot, "samples/wsi2_4k_4k.mask.png"]
+  wsi2_4k_4k_pred:
+    url: [*modelroot, "samples/wsi2_4k_4k.pred.dat"]
+  wsi3_20k_20k_svs:
+    url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi4_4k_4k_svs:
+    url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi3_20k_20k_pred:
+    url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
+  wsi4_4k_4k_pred:
+    url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
+  small_svs_tissue_mask:
+    url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]

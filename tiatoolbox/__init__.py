@@ -22,9 +22,12 @@
 
 import os
 
+import pkg_resources
+import yaml
+
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "0.6.0"
+__version__ = "0.8.0"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
@@ -54,7 +57,16 @@ else:
 # runtime context parameters
 rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
 
-from tiatoolbox import tiatoolbox, wsicore, utils, tools, models
+# Load a dictionary of sample files data (names and urls)
+PRETRAINED_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
+    "tiatoolbox", "data/pretrained_model.yaml"
+)
+with open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
+    PRETRAINED_INFO = yaml.safe_load(registry_handle)
+rcParam["pretrained_model_info"] = PRETRAINED_INFO
+
+
+from tiatoolbox import models, tiatoolbox, tools, utils, wsicore
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))

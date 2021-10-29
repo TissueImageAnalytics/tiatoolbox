@@ -66,7 +66,7 @@ def normalise_padding_size(padding):
     padding_shape = np.shape(padding)
     if len(padding_shape) > 1:
         raise ValueError(
-            "Invalid input padding shape. Must be scalar or 1 dimentional."
+            "Invalid input padding shape. Must be scalar or 1 dimensional."
         )
     padding_size = np.size(padding)
     if padding_size == 3:
@@ -483,6 +483,7 @@ def sub_pixel_read(
     Raises:
         ValueError: Invalid arguments.
         AssertionError: Internal errors, possibly due to invalid values.
+
     Examples:
         >>> # Simple read
         >>> bounds = (0, 0, 10.5, 10.5)

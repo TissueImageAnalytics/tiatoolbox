@@ -1,6 +1,80 @@
 History
 =======
 
+0.8.0 (2021-10-27)
+------------------
+### Major Updates and Feature Improvements
+- Adds `SemanticSegmentor` which is Predictor equivalent for semantic segmentation.
+-  Add `TIFFWSIReader` class to support OMETiff reading.
+- Adds `FeatureExtractor` API to controller.
+- Adds WSI Serialization Dataset which support changing parallel workers on the fly. This would reduce the time spent to create new worker for every WSI/Tile (costly).
+- Adds IOState data class to contain IO information for loading input to model and assembling model output back to WSI/Tile.
+- Minor updates for `get_coordinates` to pave the way for getting patch IO for segmentation.
+- Migrates old code to new variable names (patch extraction, patch wsi model).
+- Change in API from `pretrained_weight` to `pretrained_weights`.
+- Adds cli for semantic segmentation.
+- Update python notebooks to add `read_rect` and `read_bounds` examples with `mpp` read.
+
+### Changes to API
+- Adds `WSIReader.open`. `get_wsireader` will deprecate in the next release. Please use `WSIReader.open` instead.
+- CLI is now POSIX compatible
+  - Replaces underscores in variable names with hyphens
+- Models API updated to use `pretrained_weights` instead of `pretrained_weight`.
+- Move string_to_tuple to tiatoolbox/utils/misc.py
+
+### Bug Fixes and Other Changes
+- Fixes README git clone instructions.
+- Fixes stain normalisation due to changes in sklearn.
+- Fixes a test in tests/test_slide_info
+- Fixes readthedocs documentation issues
+
+### Development related changes
+- Adds dependencies for tiffile, imagecodecs, zarr.
+- Adds more stringent pre-commit checks
+- Moved local test files into `tiatoolbox/data`.
+- Fixed `Manifest.ini` and added  `tiatoolbox/data`. This means that this directory will be downloaded with the package.
+- Using `pkg_resources` to properly load bundled resources (e.g. `target_image.png`) in `tiatoolbox.data`.
+- Removed duplicate code in `conftest.py` for downloading remote files. This is now in `tiatoolbox.data._fetch_remote_file`.
+- Fixes errors raised by new flake8 rules.
+  - Remove leading underscores from fixtures.
+- Rename some remote sample files to make more sense.
+- Moves all cli commands/options from cli.py to cli_commands to make it clean and easier to add new commands
+- Removes redundant tests
+- Updates to new GitHub organisation name in the repo
+  - Fixes related links
+
+
+0.7.0 (2021-09-16)
+------------------
+### Major and Feature Improvements
+- Drops support for python 3.6
+- Update minimum requirement to python 3.7
+- Adds support for python 3.9
+- Adds `models` base to the repository. Currently, PyTorch models are supported. New custom models can be added. The tiatoolbox also supports using custom weights to pre-existing built-in models.
+  - Adds `classification` package and CNNPatchPredictor which takes predefined model architecture and pre-trained weights as input. The pre-trained weights for classification using kather100k data set is automatically downloaded if no weights are provided as input.
+- Adds mask-based patch extraction functionality to extract patches based on the regions that are highlighted in the `input_mask`. If `'auto'` option is selected, a tissue mask is automatically generated for the `input_image` using tiatoolbox `TissueMasker` functionality.
+- Adds visualisation module to overlay the results of an algorithm.
+
+### Changes to API
+- Command line interface for stain normalisation can be called using the keyword `stain-norm` instead of `stainnorm`
+- Replaces `FixedWindowPatchExtractor` with `SlidingWindowPatchExtractor` .
+- get_patchextractor takes the `slidingwindow` as an argument.
+- Depreciates `VariableWindowPatchExtractor`
+
+### Bug Fixes and Other Changes
+- Significantly improved python notebook documentation for clarity, consistency and ease of use for non-experts.
+- Adds detailed installation instructions for Windows, Linux and Mac
+
+### Development related changes
+- Moves flake8 above pytest in the `travis.yml` script stage.
+- Adds `set -e` at the start of the script stage in `travis.yml` to cause it to exit on error and (hopefully) not run later parts of the stage.
+- Readthedocs related changes
+  - Uses `requirements.txt` in `.readthedocs.yml`
+  - Uses apt-get installation for openjpeg and openslide
+  - Removes conda build on readthedocs build
+- Adds extra checks to pre-commit, e.g., import sorting, spellcheck etc. Detailed list can be found on this [commit](https://github.com/TissueImageAnalytics/tiatoolbox/commit/662a143e915fa55416badd992d8e7358211730a6).
+
+
 0.6.0 (2021-05-11)
 ------------------
 ### Major and Feature Improvements

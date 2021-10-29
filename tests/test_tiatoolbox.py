@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
 """Pytests for `tiatoolbox` package."""
-from tiatoolbox import cli
-from tiatoolbox import __version__
-
 from click.testing import CliRunner
 
+from tiatoolbox import __version__, cli
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface

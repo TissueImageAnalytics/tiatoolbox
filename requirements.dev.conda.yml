@@ -5,35 +5,40 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python=3.7
+  - black
   - Click
   - cython
+  - defusedxml
+  - flake8
+  - flake8-bugbear
+  - glymur
   - h5py
+  - imagecodecs
+  - jupyterlab
   - matplotlib
   - numpy
   - opencv>=4.0
+  - openjpeg>=2.3.0
+  - openslide
+  - pandas
   - pillow
   - pip
-  - pyyaml>=5.1
-  - requests
   - pixman<0.38.0
-  - openslide
-  - recommonmark
-  - pandas
-  - glymur
-  - scikit-learn>=0.23.2
-  - torchvision
-  - pytorch
-  - tqdm
-  - pytest==5.4.2
-  - pytest-runner==5.2
-  - scikit-image
   - pre-commit
-  - flake8
-  - flake8-bugbear
-  - black
   - pytest-cov
-  - jupyterlab
-  - defusedxml
+  - pytest-runner==5.2
+  - pytest==6.2.5
+  - python=3.7
+  - pytorch
+  - pyyaml>=5.1
+  - recommonmark
+  - requests
+  - scikit-image
+  - scikit-learn>=0.23.2
+  - tifffile
+  - torchvision
+  - torchvision>=0.10.1
+  - tqdm
+  - zarr
   - pip:
       - openslide-python==1.1.2
