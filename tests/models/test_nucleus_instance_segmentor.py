@@ -386,6 +386,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
             postproc=semantic_segmentor.model.postproc_func,
             merge_predictions=semantic_segmentor.merge_prediction,
         )
+    _rm_dir(tmp_path)
 
 
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
