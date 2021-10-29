@@ -122,7 +122,7 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 
-ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/code/dump/"
+ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/"
 WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
 MSK_DIR = None
 
@@ -133,13 +133,15 @@ assert len(wsi_paths) > 0, "No files found."
 
 # !- debug injection, remove later
 wsi_paths = recur_find_ext(
-    "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet", [".json"]
+    "/home/dang/storage_1/workspace/tiatoolbox/local/"
+    "slidegraph/storage/nima/graphs/[Cell-Composition]-[HoverNet]",
+    [".json"]
 )
 wsi_names = np.array([pathlib.Path(v).stem for v in wsi_paths])
 # !-
 
 CLINICAL_FILE = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/code/TCGA-BRCA-DX_CLINI.csv"
+    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/TCGA-BRCA-DX_CLINI.csv"
 )
 clinical_df = pd.read_csv(CLINICAL_FILE)
 
@@ -256,9 +258,12 @@ def generate_split(x, y, train, valid, test, num_folds):
 
 # !- debug injection, remove later
 wsi_paths = recur_find_ext(
-    "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet", [".json"]
+    "/home/dang/storage_1/workspace/tiatoolbox/local/"
+    "slidegraph/storage/nima/graphs/[Cell-Composition]-[HoverNet]",
+    [".json"]
 )
 wsi_names = np.array([pathlib.Path(v).stem for v in wsi_paths])
+assert len(wsi_paths) > 0
 # !-
 
 NUM_FOLDS = 5
@@ -284,7 +289,7 @@ split_list = generate_split(
     x, y,
     TRAIN_RATIO, VALID_RATIO, TEST_RATIO,
     NUM_FOLDS)
-
+print('here')
 
 # %% [markdown]
 # # Generating graph from WSI
@@ -448,10 +453,14 @@ CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet/"
 WSI_FEATURE_DIR = f"{ROOT_OUTPUT_DIR}/features/"
 
 # !- debug injection, remove later
-CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
-WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
-wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
-wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
+# CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
+# WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
+# wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
+# wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
+CACHE_PATH = (
+    "/home/dang/storage_1/workspace/tiatoolbox/local/"
+    "slidegraph/storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
+)
 # !-
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
@@ -489,11 +498,14 @@ def construct_graph(wsi_name, save_path):
         json.dump(obj=graph_dict, fp=handle)
 
 
-CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet/"
+CACHE_PATH = None
 GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
 
 # !- debug injection, remove later
-CACHE_PATH = None
+CACHE_PATH = (
+    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
+    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
+)
 GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
 # !-
 
@@ -515,50 +527,50 @@ else:
 # we plot the one sample graph on its WSI thumbnail.
 
 # %%
-from skimage.exposure import equalize_hist
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from torch_geometric.data import Data
+# from skimage.exposure import equalize_hist
+# from sklearn.decomposition import PCA
+# from sklearn.preprocessing import StandardScaler
+# from torch_geometric.data import Data
 
-from tiatoolbox.utils.visualization import plot_graph
-from tiatoolbox.wsicore.wsireader import get_wsireader
+# from tiatoolbox.utils.visualization import plot_graph
+# from tiatoolbox.wsicore.wsireader import get_wsireader
 
-# !- debug injection, remove later
-CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
-WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
-wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
-wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
-# !-
+# # !- debug injection, remove later
+# CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
+# WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
+# wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
+# wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
+# # !-
 
-# we should use .read_json or sthg for this
-sample_idx = 0
-graph_path = f"{ROOT_OUTPUT_DIR}/graph/{wsi_names[sample_idx]}.json"
-graph_dict = load_json(graph_path)
-graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
-graph = Data(**graph_dict)
+# # we should use .read_json or sthg for this
+# sample_idx = 0
+# graph_path = f"{ROOT_OUTPUT_DIR}/graph/{wsi_names[sample_idx]}.json"
+# graph_dict = load_json(graph_path)
+# graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
+# graph = Data(**graph_dict)
 
-# deriving node colors via projecting n-d features down to 3-d
-graph.x = StandardScaler().fit_transform(graph.x)
-# .c for node colors
-graph.c = PCA(n_components=3).fit_transform(graph.x)[:, [1, 0, 2]]
-for channel in range(graph.c.shape[-1]):
-    graph.c[:, channel] = (
-        1 - equalize_hist(graph.c[:, channel]) ** 2
-    )
-graph.c = (graph.c * 255).astype(np.uint8)
+# # deriving node colors via projecting n-d features down to 3-d
+# graph.x = StandardScaler().fit_transform(graph.x)
+# # .c for node colors
+# graph.c = PCA(n_components=3).fit_transform(graph.x)[:, [1, 0, 2]]
+# for channel in range(graph.c.shape[-1]):
+#     graph.c[:, channel] = (
+#         1 - equalize_hist(graph.c[:, channel]) ** 2
+#     )
+# graph.c = (graph.c * 255).astype(np.uint8)
 
-reader = get_wsireader(wsi_paths[sample_idx])
-thumb = reader.slide_thumbnail(4.0, 'mpp')
-thumb_overlaid = plot_graph(
-    thumb.copy(), graph.coords, graph.edge_index.T,
-    node_colors=graph.c, node_size=5)
-plt.subplot(1, 2, 1)
-plt.imshow(thumb)
-plt.axis('off')
-plt.subplot(1, 2, 2)
-plt.imshow(thumb_overlaid)
-plt.axis('off')
-plt.show()
+# reader = get_wsireader(wsi_paths[sample_idx])
+# thumb = reader.slide_thumbnail(4.0, 'mpp')
+# thumb_overlaid = plot_graph(
+#     thumb.copy(), graph.coords, graph.edge_index.T,
+#     node_colors=graph.c, node_size=5)
+# plt.subplot(1, 2, 1)
+# plt.imshow(thumb)
+# plt.axis('off')
+# plt.subplot(1, 2, 2)
+# plt.imshow(thumb_overlaid)
+# plt.axis('off')
+# plt.show()
 
 # %% [markdown]
 # # The Graph Neural Network
@@ -650,13 +662,7 @@ SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 # wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
 # wsi_codes = [pathlib.Path(v).stem for v in wsi_codes]
 
-# CACHE_PATH = None
-# GRAPH_DIR = f"/home/dang/local/workspace/projects/tiatoolbox/local/code/data/resnet/"
-# SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
-# wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
-# wsi_codes = [pathlib.Path(v).stem for v in wsi_codes]
-
-CACHE_PATH = '/home/dang/storage_1/workspace/tiatoolbox/local/code/data/node_scaler.dat'
+CACHE_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 # !-
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
@@ -820,9 +826,9 @@ class SlideGraphArch(nn.Module):
         wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 
         # not RNN so does not accumulate
+        model.train()
         optimizer.zero_grad()
 
-        model.train()
         wsi_output, _ = model(wsi_graphs)
 
         # both expected to be Nx1
@@ -871,7 +877,10 @@ class SlideGraphArch(nn.Module):
 # %%
 
 # !- debug injection, remove later
-GRAPH_DIR = f"/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet"
+GRAPH_DIR = (
+    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
+    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
+)
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
 wsi_codes = [pathlib.Path(v).stem for v in wsi_codes][:2]
@@ -894,7 +903,7 @@ wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 
 # define model object
 arch_kwargs = dict(
-    dim_features=2048,
+    dim_features=4,
     dim_target=1,
     layers=[16, 16, 8],
     dropout=0.5,
@@ -1059,6 +1068,7 @@ class ScalarMovingAverage(object):
 # ### Defining the loop
 
 # %%
+import logging
 from tiatoolbox.tools.scale import PlattScaling
 from sklearn.metrics import average_precision_score as auprc_scorer
 from sklearn.metrics import roc_auc_score as auroc_scorer
@@ -1100,7 +1110,7 @@ def run_once(
         )
 
     for epoch in range(num_epochs):
-        print(f"EPOCH {epoch:03d}")
+        logging.info(f"EPOCH {epoch:03d}")
         for loader_name, loader in loader_dict.items():
             # * EPOCH START
             step_output = []
@@ -1116,6 +1126,9 @@ def run_once(
                     pbar.postfix[1]["EMA"] = ema.tracking_dict['loss']
                 else:
                     output = model.infer_batch(model, batch_data, on_gpu)
+                    outputx = model.infer_batch(model, batch_data, on_gpu)
+                    # assert (np.sum(output[1] - outputx[1])) < 1.0e-10
+
                     batch_size = batch_data["graph"].num_graphs
                     # iterate over output head and retrieve
                     # each as N x item, each item may be of
@@ -1156,9 +1169,13 @@ def run_once(
                 val = auprc_scorer(true, prob)
                 logging_dict[f"{loader_name}-auprc"] = val
 
+                logging_dict[f"{loader_name}-raw-logit"] = logit
+                logging_dict[f"{loader_name}-raw-true"] = true
+
             # callbacks for logging and saving
             for val_name, val in logging_dict.items():
-                print(f"{val_name}: {val}")
+                if 'raw' not in val_name:
+                    logging.info(f"{val_name}: {val}")
             if "train" not in loader_dict:
                 continue
 
@@ -1185,6 +1202,30 @@ def run_once(
     return step_output
 
 
+# %%
+
+
+logging.basicConfig(level=logging.INFO,)
+
+
+def reset_logging(save_path):
+    """Reset logger handler."""
+    log_formatter = logging.Formatter(
+        '|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d|%H:%M:%S'
+    )
+    log = logging.getLogger()  # root logger
+    for hdlr in log.handlers[:]:  # remove all old handlers
+        log.removeHandler(hdlr)
+    new_hdlr_list = [
+        logging.FileHandler(f"{save_path}/debug.log"),
+        logging.StreamHandler()
+    ]
+    for hdlr in new_hdlr_list:
+        hdlr.setFormatter(log_formatter)
+        log.addHandler(hdlr)
+
+
 # %% [markdown]
 # ## The training
 # With the `engine` above, we can now start our training loop with
@@ -1192,7 +1233,10 @@ def run_once(
 
 # %%
 # !- debug injection, remove later
-GRAPH_DIR = f"/home/dang/local/workspace/projects/tiatoolbox/local/code/data/resnet/"
+GRAPH_DIR = (
+    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
+    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
+)
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 wsi_codes = label_df["WSI-CODE"].to_list()
 # !-
@@ -1202,13 +1246,13 @@ loader_kwargs = dict(
     batch_size=16,
 )
 arch_kwargs = dict(
-    dim_features=2048,
+    dim_features=4,
     dim_target=1,
     layers=[16, 16, 8],
     dropout=0.5,
     pooling="mean",
     conv="EdgeConv",
-    aggr="max",
+    aggr="add",
 )
 optim_kwargs = dict(
     lr=1.0e-3,
@@ -1216,24 +1260,28 @@ optim_kwargs = dict(
 )
 NUM_EPOCHS = 5
 
-MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
+#
+MODEL_DIR = f"{ROOT_OUTPUT_DIR}/modelx/"
 for split_idx, split in enumerate(split_list):
-    break
     new_split = {
         "train": split['train'],
         "infer-train": split['train'],
-        "infer-valid": split['valid']
+        "infer-valid-A": split['valid'],
+        "infer-valid-B": split['test'],
     }
     split_save_dir = f"{MODEL_DIR}/{split_idx:02d}/"
     rm_n_mkdir(split_save_dir)
+    reset_logging(split_save_dir)
     run_once(
         new_split, NUM_EPOCHS,
         save_dir=split_save_dir,
         arch_kwargs=arch_kwargs,
         loader_kwargs=loader_kwargs,
         optim_kwargs=optim_kwargs)
+    break
 
 
+# exit()
 # %% [markdown]
 # ## The inference
 
@@ -1247,9 +1295,6 @@ for split_idx, split in enumerate(split_list):
 # - "infer-valid-auprc"
 
 # %%
-PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
-stat_files = recur_find_ext(PRETRAINED_DIR, [".json"])
-stat_files = [v for v in stat_files if ".old.json" not in v]
 
 
 def select_checkpoints(
@@ -1272,7 +1317,7 @@ def select_checkpoints(
     """
     stats_dict = load_json(stat_file_path)
     # k is the epoch counter in this case
-    stats = [[int(k), v[metric]] for k, v in stats_dict.items()]
+    stats = [[int(k), v[metric], v] for k, v in stats_dict.items()]
     # sort epoch ranking from largest to smallest
     stats = sorted(stats, key=lambda v: v[1], reverse=True)
     chkpt_stats_list = stats[:top_k]  # select top_k
@@ -1284,10 +1329,9 @@ def select_checkpoints(
         f"{model_dir}/epoch={epoch:03d}.aux.dat")
         for epoch in epochs
     ]
+    chkpt_stats_list = [[v[0], v[2]] for v in chkpt_stats_list]
     return paths, chkpt_stats_list
 
-
-chkpts, chkpt_stats_list = select_checkpoints(stat_files[0])
 
 # %% [markdown]
 # ### Bulk inference and ensemble results
@@ -1302,22 +1346,29 @@ loader_kwargs = dict(
     num_workers=8,
     batch_size=16,
 )
-arch_kwargs = dict(
-    dim_features=2048,
-    dim_target=1,
-    layers=[16, 16, 8],
-    dropout=0.5,
-    pooling="mean",
-    conv="EdgeConv",
-    aggr="max",
-)
+# arch_kwargs = dict(
+#     dim_features=4,
+#     dim_target=1,
+#     layers=[16, 16, 8],
+#     dropout=0.5,
+#     pooling="mean",
+#     conv="EdgeConv",
+#     aggr="max",
+# )
+
+metric_name = 'infer-valid-B-auroc'
+PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/modelx/"
 
 cum_stats = []
 for split_idx, split in enumerate(split_list):
-    break
     new_split = {
         "infer": [v[0] for v in split["test"]]
     }
+
+    stat_files = recur_find_ext(f'{PRETRAINED_DIR}/{split_idx:02d}/', [".json"])
+    stat_files = [v for v in stat_files if ".old.json" not in v]
+    assert len(stat_files) == 1
+    chkpts, chkpt_stats_list = select_checkpoints(stat_files[0], metric=metric_name)
 
     # Perform ensembling by averaging probabilities
     # across checkpoint predictions
@@ -1331,6 +1382,14 @@ for split_idx, split in enumerate(split_list):
             arch_kwargs=arch_kwargs,
             loader_kwargs=loader_kwargs,
         )
+        # !-
+        true = [v[1] for v in split["test"]]
+        true = np.array(true)
+        src_logit = chkpt_stats_list[0][1]['infer-valid-B-raw-logit']
+        src_true = chkpt_stats_list[0][1]['infer-valid-B-raw-true']
+        src_logit = np.array(src_logit)
+        src_true = np.array(src_true)
+        # !-
 
         # * re-calibrate logit to probabilities
         model = SlideGraphArch(**arch_kwargs)
@@ -1338,7 +1397,13 @@ for split_idx, split in enumerate(split_list):
         scaler = model.aux_model['scaler']
         chkpt_results = np.array(chkpt_results)
         chkpt_results = np.squeeze(chkpt_results)
+
+        assert np.mean(src_logit - chkpt_results) < 1.0e-6
+
         chkpt_results = scaler.transform(chkpt_results)
+
+        print(auroc_scorer(true, chkpt_results))
+        print(auprc_scorer(true, chkpt_results))
 
         cum_results.append(chkpt_results)
     cum_results = np.array(cum_results)
