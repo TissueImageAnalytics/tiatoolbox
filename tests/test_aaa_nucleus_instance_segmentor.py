@@ -1,5 +1,6 @@
 """Tests for Nucleus Instance Segmentor."""
 
+import copy
 import pathlib
 import shutil
 
@@ -20,7 +21,7 @@ from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 BATCH_SIZE = 2
-ON_GPU = False
+ON_GPU = True
 
 # ----------------------------------------------------
 
@@ -338,11 +339,18 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
         stride_shape=[164, 164],
     )
 
+    # mainly to hook the merge prediction function
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+
     _rm_dir(save_dir)
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=0,
     )
 
     output = semantic_segmentor.predict(
@@ -362,8 +370,26 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
         [[0, 0, 1, 1], 2],
         [[1, 1, 1, 1], 3],
     ]
+
+    inst_segmentor._wsi_inst_info = copy.deepcopy(dummy_reference)
+    inst_segmentor._futures = [[dummy_reference, dummy_reference.keys()]]
+    inst_segmentor._merge_post_process_results()
+    assert len(inst_segmentor._wsi_inst_info) == 0
+
+    blank_raw_maps = [np.zeros_like(v) for v in raw_maps]
+    _process_tile_predictions(
+        ioconfig=ioconfig,
+        tile_bounds=np.array([0, 0, 512, 512]),
+        tile_flag=dummy_flag_mode_list[0][0],
+        tile_mode=dummy_flag_mode_list[0][1],
+        tile_output=[[np.array([0, 0, 512, 512]), blank_raw_maps]],
+        ref_inst_dict=dummy_reference,
+        postproc=semantic_segmentor.model.postproc_func,
+        merge_predictions=semantic_segmentor.merge_prediction,
+    )
+
     for tile_flag, tile_mode in dummy_flag_mode_list:
-        _process_tile_predictions(
+        (new_inst_dict, remove_insts_in_orig) = _process_tile_predictions(
             ioconfig=ioconfig,
             tile_bounds=np.array([0, 0, 512, 512]),
             tile_flag=tile_flag,
