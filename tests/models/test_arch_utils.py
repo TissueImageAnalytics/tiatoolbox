@@ -58,7 +58,7 @@ def test_all():
     assert np.sum(x[0, 0, :, :] - sample) == 0
 
 
-def test_center_croperators():
+def test_center_crop_operators():
     """Test for crop et. al. ."""
     sample = torch.rand((1, 3, 15, 15), dtype=torch.float32)
     output = center_crop(sample, [3, 3], data_format="NCHW")
@@ -81,3 +81,8 @@ def test_center_croperators():
 
     with pytest.raises(ValueError, match=r".*Unknown.*format.*"):
         center_crop_to_shape(x, y, data_format="NHWCT")
+
+    x = torch.rand((1, 3, 15, 15), dtype=torch.float32)
+    y = x[:, :, 6:9, 6:9]
+    with pytest.raises(ValueError, match=r".*Height.*smaller than `y`*"):
+        center_crop_to_shape(y, x, data_format="NCHW")

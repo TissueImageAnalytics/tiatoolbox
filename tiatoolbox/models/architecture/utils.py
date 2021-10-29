@@ -92,7 +92,7 @@ def center_crop_to_shape(
     if h1 <= h2 or w1 <= w2:
         raise ValueError(
             (
-                "Height width of `x` is smaller than `y` ",
+                "Height or width of `x` is smaller than `y` ",
                 f"{[h1, w1]} vs {[h2, w2]}",
             )
         )
