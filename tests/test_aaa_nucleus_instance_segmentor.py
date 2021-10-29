@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for Nucleus Instance Segmentor."""
 
 import pathlib
@@ -233,7 +214,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
     save_dir = f"{root_save_dir}/instance/"
 
     # resolution for travis testing, not the correct ones
-    resolution = 1.0
+    resolution = 4.0
     ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
@@ -242,7 +223,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[1024, 1024],
+        tile_shape=[512, 512],
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -269,18 +250,20 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality_travis(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+
+    resolution = 0.5
+
     reader = get_wsireader(mini_wsi_svs)
-    thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
+    thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
     # resolution for travis testing, not the correct ones
-    resolution = 0.5
     ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
@@ -296,15 +279,14 @@ def test_functionality(remote_sample, tmp_path):
     )
 
     save_dir = f"{root_save_dir}/instance/"
-    # test run without worker first
+    # * test run on tile, run without worker first
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=BATCH_SIZE,
         num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
-    # * test run on tile
-    output = inst_segmentor.predict(
+    inst_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
         ioconfig=ioconfig,
@@ -313,9 +295,14 @@ def test_functionality(remote_sample, tmp_path):
         save_dir=save_dir,
     )
 
-    # * test run on wsi
+    # * test run on wsi, test run with worker
     _rm_dir(save_dir)
-    output = inst_segmentor.predict(
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+    inst_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
@@ -323,11 +310,37 @@ def test_functionality(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
+
+    # clean up
+    _rm_dir(tmp_path)
+    return
+
+
+@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+def test_functionality_local(remote_sample, tmp_path):
+    """Local functionality test for nuclei instance segmentor."""
+    root_save_dir = pathlib.Path(tmp_path)
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+
+    # * generate full output w/o parallel post processing worker first
+    _rm_dir(save_dir)
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=8,
+        num_postproc_workers=0,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+    output = inst_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=True,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
     inst_dict_a = joblib.load(f"{output[0][1]}.dat")
 
-    # **
-    # then test run when using workers, will then compare results
-    # to ensure the predictions are the same
+    # * then test run when using workers, will then compare results
+    # * to ensure the predictions are the same
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
         pretrained_model="hovernet_fast-pannuke",
@@ -338,8 +351,7 @@ def test_functionality(remote_sample, tmp_path):
     output = inst_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -364,8 +376,7 @@ def test_functionality(remote_sample, tmp_path):
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=save_dir,
     )
