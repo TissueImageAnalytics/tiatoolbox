@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from tiatoolbox.utils.visualization import overlay_patch_prediction
+from tiatoolbox.utils.visualization import (
+    overlay_instance_prediction,
+    overlay_patch_prediction,
+)
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
@@ -71,3 +74,47 @@ def test_overlay_patch_prediction(sample_wsi_dict):
     _ = overlay_patch_prediction(thumb, merged, label_info=label_info_full)
     ax = plt.subplot(1, 2, 1)
     _ = overlay_patch_prediction(thumb, merged, ax=ax)
+
+
+def test_overlay_instance_prediction():
+    """Test for overlaying instance predictions on canvas."""
+
+    inst_map = np.array(
+        [
+            [0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0],
+            [0, 0, 0, 2, 2, 0],
+            [0, 0, 0, 2, 2, 0],
+            [0, 0, 0, 0, 0, 0],
+        ],
+        dtype=np.int32,
+    )
+
+    # dummy instance dict
+    type_colour = {
+        0: ("A", (1, 0, 1)),
+        1: ("B", (2, 0, 2)),
+    }
+    inst_dict = {
+        0: {
+            "centroid": [1, 1],
+            "type": 0,
+            "contour": [[1, 1], [1, 2], [2, 2], [2, 1]],
+        },
+        1: {
+            "centroid": [3, 3],
+            "type": 1,
+            "contour": [[3, 3], [3, 4], [4, 4], [4, 3]],
+        },
+    }
+    canvas = np.zeros(inst_map.shape + (3,), dtype=np.uint8)
+    canvas = overlay_instance_prediction(
+        canvas, inst_dict, draw_dot=False, type_colour=type_colour, line_thickness=1
+    )
+    assert np.sum(canvas[..., 0].astype(np.int32) - inst_map) == 0
+    assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == -12
+    assert np.sum(canvas[..., 2].astype(np.int32) - inst_map) == 0
+    canvas = overlay_instance_prediction(
+        canvas, inst_dict, draw_dot=True, type_colour=None, line_thickness=1
+    )

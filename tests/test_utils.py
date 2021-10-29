@@ -47,6 +47,14 @@ def test_imresize():
     )
     assert resized_img.shape == (1000, 500, 3)
 
+    # test for dtype conversion
+    resized_img = utils.transforms.imresize(
+        img.astype(np.float16),
+        scale_factor=0.5,
+        interpolation=cv2.INTER_CUBIC,
+    )
+    assert resized_img.shape == (1000, 500, 3)
+
 
 def test_imresize_no_scale_factor():
     """Test for imresize with no scale_factor given."""
