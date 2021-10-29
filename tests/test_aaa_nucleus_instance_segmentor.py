@@ -323,7 +323,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
-    resolution = 1.0
+    resolution = 0.5
     ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
