@@ -86,8 +86,8 @@ def _process_tile_predictions(
             expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
         postproc (callable): Function to post-process the raw assembled tile.
-        postproc (callable): Function to merge the `tile_output` into raw tile
-            prediction.
+        merge_predictions (callable): Function to merge the `tile_output` into
+            raw tile prediction.
 
     Returns:
         new_inst_dict (dict): A dictionary contain new instances to be accumulated.
@@ -360,7 +360,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         h, w = image_shape
         boxes = tile_outputs
         #  expand to full four corners
-        # boxes_tl = boxes[:, :2]
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
         boxes_bl = np.dstack([boxes[:, 0], boxes[:, 3]])[0]

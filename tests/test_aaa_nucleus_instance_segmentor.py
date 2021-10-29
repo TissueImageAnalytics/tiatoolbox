@@ -12,12 +12,15 @@ from tiatoolbox.models import (
     NucleusInstanceSegmentor,
     SemanticSegmentor,
 )
+from tiatoolbox.models.controller.nucleus_instance_segmentor import (
+    _process_tile_predictions,
+)
 from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 BATCH_SIZE = 2
-ON_GPU = False
+ON_GPU = True
 
 # ----------------------------------------------------
 
@@ -256,7 +259,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
-    resolution = 0.5
+    resolution = 1.0
 
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
@@ -313,6 +316,76 @@ def test_functionality_travis(remote_sample, tmp_path):
 
     # clean up
     _rm_dir(tmp_path)
+
+
+def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
+    """Functional tests for merging tile predictions."""
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+
+    resolution = 1.0
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        margin=128,
+        tile_shape=[512, 512],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
+    )
+
+    _rm_dir(save_dir)
+    semantic_segmentor = SemanticSegmentor(
+        pretrained_model="hovernet_fast-pannuke",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+    )
+
+    output = semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=True,
+        ioconfig=ioconfig,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    raw_maps = [np.load(f"{output[0][1]}.raw.{head_idx}.npy") for head_idx in range(3)]
+    raw_maps = [[v] for v in raw_maps]  # mask it as patch output
+
+    dummy_reference = {i: {"box": np.array([0, 0, 32, 32])} for i in range(1000)}
+    dummy_flag_mode_list = [
+        [[1, 1, 0, 0], 1],
+        [[0, 0, 1, 1], 2],
+        [[1, 1, 1, 1], 3],
+    ]
+    for tile_flag, tile_mode in dummy_flag_mode_list:
+        _process_tile_predictions(
+            ioconfig=ioconfig,
+            tile_bounds=np.array([0, 0, 512, 512]),
+            tile_flag=tile_flag,
+            tile_mode=tile_mode,
+            tile_output=[[np.array([0, 0, 512, 512]), raw_maps]],
+            ref_inst_dict=dummy_reference,
+            postproc=semantic_segmentor.model.postproc_func,
+            merge_predictions=semantic_segmentor.merge_prediction,
+        )
+
+    # test exception flag
+    with pytest.raises(ValueError, match=r".*Unknown tile mode.*"):
+        _process_tile_predictions(
+            ioconfig=ioconfig,
+            tile_bounds=np.array([0, 0, 512, 512]),
+            tile_flag=tile_flag,
+            tile_mode=-1,
+            tile_output=[[np.array([0, 0, 512, 512]), raw_maps]],
+            ref_inst_dict=dummy_reference,
+            postproc=semantic_segmentor.model.postproc_func,
+            merge_predictions=semantic_segmentor.merge_prediction,
+        )
 
 
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
