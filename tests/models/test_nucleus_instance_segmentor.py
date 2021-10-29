@@ -348,7 +348,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=True,
+        on_gpu=ON_GPU,
         ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=save_dir,
