@@ -299,7 +299,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=1,
         pretrained_model="hovernet_fast-pannuke",
     )
     inst_segmentor.predict(
@@ -313,7 +313,6 @@ def test_functionality_travis(remote_sample, tmp_path):
 
     # clean up
     _rm_dir(tmp_path)
-    return
 
 
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
