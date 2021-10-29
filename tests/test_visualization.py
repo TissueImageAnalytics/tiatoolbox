@@ -78,7 +78,6 @@ def test_overlay_patch_prediction(sample_wsi_dict):
 
 def test_overlay_instance_prediction():
     """Test for overlaying instance predictions on canvas."""
-
     inst_map = np.array(
         [
             [0, 0, 0, 0, 0, 0],

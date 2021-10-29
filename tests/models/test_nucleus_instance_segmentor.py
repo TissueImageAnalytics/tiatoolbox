@@ -389,7 +389,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
     )
 
     for tile_flag, tile_mode in dummy_flag_mode_list:
-        (new_inst_dict, remove_insts_in_orig) = _process_tile_predictions(
+        _process_tile_predictions(
             ioconfig=ioconfig,
             tile_bounds=np.array([0, 0, 512, 512]),
             tile_flag=tile_flag,
