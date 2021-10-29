@@ -656,12 +656,6 @@ CACHE_PATH = None
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 
 # !- debug injection, remove later
-# CACHE_PATH = None
-# GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
-# SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
-# wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
-# wsi_codes = [pathlib.Path(v).stem for v in wsi_codes]
-
 CACHE_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 # !-
 
@@ -690,8 +684,6 @@ else:
 def nodes_preproc_func(node_features):
     return node_scaler.transform(node_features)
 
-
-# exit()
 
 # %% [markdown]
 # ## The architecture holder
@@ -1126,8 +1118,6 @@ def run_once(
                     pbar.postfix[1]["EMA"] = ema.tracking_dict['loss']
                 else:
                     output = model.infer_batch(model, batch_data, on_gpu)
-                    outputx = model.infer_batch(model, batch_data, on_gpu)
-                    # assert (np.sum(output[1] - outputx[1])) < 1.0e-10
 
                     batch_size = batch_data["graph"].num_graphs
                     # iterate over output head and retrieve
@@ -1278,10 +1268,8 @@ for split_idx, split in enumerate(split_list):
         arch_kwargs=arch_kwargs,
         loader_kwargs=loader_kwargs,
         optim_kwargs=optim_kwargs)
-    break
 
 
-# exit()
 # %% [markdown]
 # ## The inference
 
@@ -1338,9 +1326,6 @@ def select_checkpoints(
 
 # %%
 
-# !- injecttion debug
-split_list = split_list[:1]
-# !-
 
 loader_kwargs = dict(
     num_workers=8,
@@ -1357,7 +1342,7 @@ loader_kwargs = dict(
 # )
 
 metric_name = 'infer-valid-B-auroc'
-PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/modelx/"
+PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 
 cum_stats = []
 for split_idx, split in enumerate(split_list):
@@ -1368,7 +1353,8 @@ for split_idx, split in enumerate(split_list):
     stat_files = recur_find_ext(f'{PRETRAINED_DIR}/{split_idx:02d}/', [".json"])
     stat_files = [v for v in stat_files if ".old.json" not in v]
     assert len(stat_files) == 1
-    chkpts, chkpt_stats_list = select_checkpoints(stat_files[0], metric=metric_name)
+    chkpts, chkpt_stats_list = select_checkpoints(
+        stat_files[0], top_k=2, metric=metric_name)
 
     # Perform ensembling by averaging probabilities
     # across checkpoint predictions
@@ -1382,33 +1368,21 @@ for split_idx, split in enumerate(split_list):
             arch_kwargs=arch_kwargs,
             loader_kwargs=loader_kwargs,
         )
-        # !-
-        true = [v[1] for v in split["test"]]
-        true = np.array(true)
-        src_logit = chkpt_stats_list[0][1]['infer-valid-B-raw-logit']
-        src_true = chkpt_stats_list[0][1]['infer-valid-B-raw-true']
-        src_logit = np.array(src_logit)
-        src_true = np.array(src_true)
-        # !-
-
         # * re-calibrate logit to probabilities
         model = SlideGraphArch(**arch_kwargs)
         model.load(*chkpt_info)
         scaler = model.aux_model['scaler']
         chkpt_results = np.array(chkpt_results)
         chkpt_results = np.squeeze(chkpt_results)
-
-        assert np.mean(src_logit - chkpt_results) < 1.0e-6
-
         chkpt_results = scaler.transform(chkpt_results)
-
-        print(auroc_scorer(true, chkpt_results))
-        print(auprc_scorer(true, chkpt_results))
 
         cum_results.append(chkpt_results)
     cum_results = np.array(cum_results)
     cum_results = np.squeeze(cum_results)
-    prob = np.mean(cum_results, axis=0)
+
+    prob = cum_results
+    if len(cum_results.shape) == 2:
+        prob = np.mean(cum_results, axis=0)
 
     # * calculate split statistics
     true = [v[1] for v in split["test"]]
