@@ -711,7 +711,7 @@ class SQLiteStore(AnnotationStoreABC):
         if isinstance(properties_predicate, str):
             sql_predicate = eval(
                 properties_predicate, SQL_GLOBALS, {}
-            )  # noqa: SC100 nocq: PYL-W0123
+            )  # noqa: SC100 skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
         if isinstance(properties_predicate, bytes):
             query_string += (
