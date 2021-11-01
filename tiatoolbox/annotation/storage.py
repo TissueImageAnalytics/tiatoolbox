@@ -370,26 +370,20 @@ class SQLiteStore(AnnotationStoreABC):
         self.con = sqlite3.connect(connection, isolation_level="DEFERRED")
 
         # Register predicate functions as custom SQLite functions
-        for name in self._geometry_predicate_names:
+        def wkb_predicate(name: str, wkb_a: bytes, b: bytes) -> bool:
+            """Wrapper function to allow WKB as inputs to binary predicates."""
+            a = wkb.loads(wkb_a)
+            b = self.deserialise_geometry(b)
+            return self._geometry_predicate(name, a, b)
 
-            def wkb_predicate(name: str) -> Callable:
-                """Wrapper factory to allow WKB as inputs to binary predicates."""
-
-                def wrapper(wkb_a: bytes, wkb_b: bytes) -> bool:
-                    a = wkb.loads(wkb_a)
-                    b = self.deserialise_geometry(wkb_b)
-                    return self._geometry_predicate(name, a, b)
-
-                return wrapper
-
-            try:
-                self.con.create_function(
-                    name, 2, wkb_predicate(name), deterministic=True
-                )
-            # Only Python >= 3.8 supports deterministic, fallback
-            # to without this argument.
-            except TypeError:
-                self.con.create_function(name, 2, wkb_predicate(name))
+        try:
+            self.con.create_function(
+                "geometry_predicate", 3, wkb_predicate, deterministic=True
+            )
+        # Only Python >= 3.8 supports deterministic, fallback
+        # to without this argument.
+        except TypeError:
+            self.con.create_function("geometry_predicate", 2, wkb_predicate)
 
         if exists:
             return
@@ -528,20 +522,21 @@ class SQLiteStore(AnnotationStoreABC):
             query_geometry = Polygon.from_bounds(*query_geometry)
         min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
-            f"""
+            """
             SELECT [key]
               FROM main
              WHERE max_x >= :min_x
                AND min_x <= :max_x
                AND max_y >= :min_y
                AND min_y <= :max_y
-               AND {geometry_predicate}(:query_geometry, boundary)
+               AND geometry_predicate(:predicate, :query_geometry, boundary)
             """,
             {
                 "min_x": min_x,
                 "max_x": max_x,
                 "min_y": min_y,
                 "max_y": max_y,
+                "predicate": geometry_predicate,
                 "query_geometry": query_geometry.wkb,
             },
         )
@@ -561,20 +556,21 @@ class SQLiteStore(AnnotationStoreABC):
             query_geometry = Polygon.from_bounds(*query_geometry)
         min_x, min_y, max_x, max_y = query_geometry.bounds
         cur.execute(
-            f"""
+            """
             SELECT boundary, [class], properties
               FROM main
              WHERE max_x >= :min_x
                AND min_x <= :max_x
                AND max_y >= :min_y
                AND min_y <= :max_y
-               AND {geometry_predicate}(:query_geometry, boundary)
+               AND geometry_predicate(:predicate, :query_geometry, boundary)
             """,
             {
                 "min_x": min_x,
                 "max_x": max_x,
                 "min_y": min_y,
                 "max_y": max_y,
+                "predicate": geometry_predicate,
                 "query_geometry": query_geometry.wkb,
             },
         )
