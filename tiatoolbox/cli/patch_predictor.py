@@ -22,7 +22,7 @@
 import click
 
 from tiatoolbox import utils
-from tiatoolbox.models.controller.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.engine.patch_predictor import CNNPatchPredictor
 
 
 @click.group()

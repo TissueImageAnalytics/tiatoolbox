@@ -136,7 +136,7 @@ def get_pretrained_model(
 
     # !
     io_info = info["ioconfig"]
-    creator = locate((f"tiatoolbox.models.controller" f'.{io_info["class"]}'))
+    creator = locate((f"tiatoolbox.models.engine" f'.{io_info["class"]}'))
 
     iostate = creator(**io_info["kwargs"])
     return model, iostate
