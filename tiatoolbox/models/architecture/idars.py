@@ -44,7 +44,8 @@ class CNNModel1(CNNModel):
     def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
-    def preproc(self, img):
+    @staticmethod
+    def preproc(img):
         img = transform(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)
