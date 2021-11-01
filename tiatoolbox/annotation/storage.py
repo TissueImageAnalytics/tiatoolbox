@@ -147,11 +147,14 @@ class AnnotationStoreABC(ABC):
         self,
         geometry: Geometry,
         properties: Optional[Dict[str, Any]] = None,
+        key: Optional[str] = None,
     ) -> int:
         """Insert a new annotation, returning the key."""
-        if properties is None:
-            properties = {}
-        return self.append_many([geometry], [properties])[0]
+        if properties is not None:
+            properties_iter = [properties]
+        if key is not None:
+            keys = [key]
+        return self.append_many([geometry], properties_iter, keys)[0]
 
     def append_many(
         self,
@@ -159,7 +162,6 @@ class AnnotationStoreABC(ABC):
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
         keys: Optional[Iterable[str]] = None,
     ) -> List[int]:
-        keys = []
         if properties_iter is None:
             properties_iter = ({} for _ in geometries)
         if keys is None:
