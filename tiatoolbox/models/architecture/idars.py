@@ -23,7 +23,7 @@
 from torchvision import transforms
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.utils.misc import download_data
+from tiatoolbox.utils.misc import download_data, imread
 from tiatoolbox.tools.stainnorm import get_normaliser
 
 from tiatoolbox import rcParam
@@ -54,7 +54,7 @@ class CNNModel1(CNNModel):
 
 
 class CNNModel2(CNNModel):
-    def __init__(self, backbone, num_classes=1, target_url=None):
+    def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
         global stain_normaliser
@@ -67,8 +67,9 @@ class CNNModel2(CNNModel):
             target = download_data(
                 TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg"
             )
-            stain_normaliser = get_normaliser(method_name="vahadane")
-            stain_normaliser.fit(target)
+        target = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
+        stain_normaliser = get_normaliser(method_name="vahadane")
+        stain_normaliser.fit(target)
 
         img = transform(img)
         # toTensor will turn image to CHW so we transpose again
