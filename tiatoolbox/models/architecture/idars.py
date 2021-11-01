@@ -25,7 +25,26 @@ from torchvision import transforms
 from tiatoolbox.models.architecture.vanilla import CNNModel
 
 
-class CNNModel_IDaRS(CNNModel):
+class CNNModel1(CNNModel):
+    def __init__(self, backbone, num_classes=1):
+        super().__init__(backbone, num_classes=num_classes)
+
+        self.transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
+            ]
+        )
+
+    def preproc(self, img):
+        img = self.transform(img)
+        # toTensor will turn image to CHW so we transpose again
+        img = img.permute(1, 2, 0)
+
+        return img
+
+
+class CNNModel2(CNNModel):
     def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
