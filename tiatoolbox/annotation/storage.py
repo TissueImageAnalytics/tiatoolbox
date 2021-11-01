@@ -73,6 +73,8 @@ ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 
 
 class AnnotationStoreABC(ABC):
+    """Annotation storage abstract base class."""
+
     @staticmethod
     def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
         return getattr(a, name)(b)
@@ -137,32 +139,33 @@ class AnnotationStoreABC(ABC):
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
         keys: Optional[Iterable[str]] = None,
     ) -> List[int]:
-        indexes = []
+        keys = []
         if properties_iter is None:
             properties_iter = ({} for _ in geometries)
         if keys is None:
             keys = (str(uuid.uuid4()) for _ in geometries)
         for geometry, properties in zip(geometries, properties_iter):
             key = self.append(geometry, properties)
-            indexes.append(key)
-        return indexes
+            keys.append(key)
+        return keys
 
     def update(self, key: str, update: Dict[str, Any]) -> None:
         """Update an annotation at given key."""
         return self.update_many([key], [update])
 
     def update_many(
-        self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
+        self, keys: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
-        for key, update in zip(indexes, updates):
+        for key, update in zip(keys, updates):
             self.update(key, update)
 
     def remove(self, key: str) -> None:
         """Remove annotation by key."""
         self.remove_many([key])
 
-    def remove_many(self, indexes: Iterable[int]) -> None:
-        for key in indexes:
+    def remove_many(self, keys: Iterable[int]) -> None:
+        """Bulk removal of annotations by key."""
+        for key in keys:
             self.remove(key)
 
     def __len__(self) -> int:
@@ -218,6 +221,57 @@ class AnnotationStoreABC(ABC):
             str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
         ] = None,
     ) -> List[Tuple[Geometry, Dict[str, Any]]]:
+        """Query the store for annotations.
+
+        Args:
+            query_geometry:
+                Geometry to use when querying. This can be a bounds or
+                a Shapely geometry (e.g. Polygon).
+            geometry_predicate:
+                A string which define which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                intersects.
+                For more information see the `shapely documentation on
+                binary predicates`__.
+            properties_predicate:
+                A statment which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). May
+                be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned
+                the from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are converted to a domain specific predicate
+                representation on a best-effort basis. E.g. a simple
+                python expression `props["class"] == 42` will be
+                converted to a valid SQLite predicate when using
+                `SQLiteStore` and inserted into the SQL query. This
+                should be faster than filtering in python after or
+                during the query. Additionally, the same string can be
+                used across different backends (e.g. the previous
+                example predicate string is valid for both
+                `DictionaryStore `and a `SQliteStore`). On the
+                other hand it has many more limitations. It is important
+                to note that untrusted user input should never be
+                accepted to this argument as arbitrary code can be run
+                via pickle or the parsing of the string statement.
+
+            Returns:
+                list: A list of 2-tuples containing:
+                - geometry: The annotation Shapely geometry object.
+                - properties: The properties JSON as a dictionary.
+
+            .. _BP:
+                | https://shapely.readthedocs.io/en/stable/
+                | manual.html#binary-predicates
+
+            __ BP_
+
+        """
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
@@ -237,6 +291,60 @@ class AnnotationStoreABC(ABC):
             str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
         ] = None,
     ) -> List[int]:
+        """Query the store for annotation keys.
+
+        Acts the same as `AnnotationStore.query` except returns keys
+        insteaf the annotations (geometry, properties).
+
+        Args:
+            query_geometry:
+                Geometry to use when querying. This can be a bounds or
+                a Shapely geometry (e.g. Polygon).
+            geometry_predicate:
+                A string which define which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                intersects.
+                For more information see the `shapely documentation on
+                binary predicates`__.
+            properties_predicate:
+                A statment which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). May
+                be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned
+                the from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are converted to a domain specific predicate
+                representation on a best-effort basis. E.g. a simple
+                python expression `props["class"] == 42` will be
+                converted to a valid SQLite predicate when using
+                `SQLiteStore` and inserted into the SQL query. This
+                should be faster than filtering in python after or
+                during the query. Additionally, the same string can be
+                used across different backends (e.g. the previous
+                example predicate string is valid for both a
+                 `DictionaryStore `and a `SQliteStore`). On the
+                other hand it has many more limitations. It is important
+                to note that untrusted user input should never be
+                accepted to this argument as arbitrary code can be run
+                via pickle or the parsing of the string statement.
+
+            Returns:
+                list: A list of 2-tuples containing:
+                - geometry: The annotation Shapely geometry object.
+                - properties: The properties JSON as a dictionary.
+
+            .. _BP:
+                | https://shapely.readthedocs.io/en/stable/
+                | manual.html#binary-predicates
+
+            __ BP_
+
+        """
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
@@ -368,6 +476,8 @@ class AnnotationStoreABC(ABC):
 
 
 class SQLiteStore(AnnotationStoreABC):
+    """SQLite backed annotation store."""
+
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str]) -> "SQLiteStore":
         return SQLiteStore(fp)
@@ -544,7 +654,7 @@ class SQLiteStore(AnnotationStoreABC):
             str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
         ] = None,
     ) -> sqlite3.Cursor:
-        """ "Common query construction logic for `query` and `iquery`."""
+        """Common query construction logic for `query` and `iquery`."""
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
@@ -714,11 +824,11 @@ class SQLiteStore(AnnotationStoreABC):
             yield key, (geometry, properties)
 
     def update_many(
-        self, indexes: Iterable[int], updates: Iterable[Dict[str, Any]]
+        self, keys: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        for key, update in zip(indexes, updates):
+        for key, update in zip(keys, updates):
             update = copy.copy(update)
             geometry = update.pop("geometry", None)
             if geometry is not None:
@@ -755,11 +865,11 @@ class SQLiteStore(AnnotationStoreABC):
                 )
         self.con.commit()
 
-    def remove_many(self, indexes: Iterable[str]) -> None:
+    def remove_many(self, keys: Iterable[str]) -> None:
         cur = self.con.cursor()
         cur.executemany(
             "DELETE FROM main WHERE [key] = ?",
-            ((i,) for i in indexes),
+            ((i,) for i in keys),
         )
         self.con.commit()
 
@@ -851,6 +961,8 @@ class SQLiteStore(AnnotationStoreABC):
 
 
 class DictionaryStore(AnnotationStoreABC):
+    """Pure python dictionary backed annotation store."""
+
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
         super().__init__()
         self._features = {}
