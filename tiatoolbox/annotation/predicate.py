@@ -258,35 +258,3 @@ PY_GLOBALS = {
 PY_LOCALS = {
     "props": [0, 1],
 }
-
-if __name__ == "__main__":
-    # Simply access a property value
-    query1 = 'props["value"] == 5'
-    print(query1, "\n>>>", eval(query1, SQL_GLOBALS, SQL_LOCALS))
-
-    # Nesting
-    query2 = 'props["nums"][0] == 0'
-    print(query2, "\n>>>", eval(query2, SQL_GLOBALS, SQL_LOCALS))
-
-    # Complex query
-    query3 = '(props["nums"][0] == 0) & props["bool"]'
-    print(query3, "\n>>>", eval(query3, SQL_GLOBALS, SQL_LOCALS))
-
-    # More complex query
-    query4 = (
-        '((props["nums"][0] == 0) & props["value"] > 4) | is_none(props["nothing"])'
-    )
-    print(query4, "\n>>>", eval(query4, SQL_GLOBALS, SQL_LOCALS))
-
-    # Even regex works
-    query6 = 'regexp("H.*", props["abc"]["msg"])'
-    print(query6, "\n>>>", eval(query6, SQL_GLOBALS, SQL_LOCALS))
-
-    query7 = "is_none(123) & is_not_none(345)"
-    print(query7, "\n>>>", eval(query7, SQL_GLOBALS, SQL_LOCALS))
-
-    query8 = "has_key(props, 'abc')"
-    print(query8, "\n>>>", eval(query8, SQL_GLOBALS, SQL_LOCALS))
-
-    query9 = "props.get('abc')"
-    print(query9, "\n>>>", eval(query9, SQL_GLOBALS, SQL_LOCALS))

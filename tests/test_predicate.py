@@ -41,6 +41,7 @@ SAMPLE_PROPERTIES = {
     "list": [0, 1, 2, 3],
     "neg": -1,
     "bool": True,
+    "nesting": {"fib": [1, 1, 2, 3, 5], "foo": {"bar": "baz"}},
 }
 
 # Generate Parameterized Tests
@@ -147,6 +148,12 @@ class TestPredicate:
             assert isinstance(check(result), Number)
 
     @staticmethod
+    def test_regex_nested_props(eval_globals, eval_locals, check):
+        query = "props['nesting']['fib'][4]"
+        result = eval(query, eval_globals, eval_locals)
+        assert check(result) == 5
+
+    @staticmethod
     def test_regex_str_props(eval_globals, eval_locals, check):
         query = "regexp('Hello', props['string'])"
         result = eval(query, eval_globals, eval_locals)
@@ -241,3 +248,21 @@ class TestPredicate:
         query = "has_key(1, 'a')"
         with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):
             _ = eval(query, eval_globals, eval_locals)
+
+    @staticmethod
+    def test_logical_and(eval_globals, eval_locals, check):
+        query = "props['bool'] & is_none(props['null'])"
+        result = eval(query, eval_globals, eval_locals)
+        assert bool(check(result)) is True
+
+    @staticmethod
+    def test_logical_or(eval_globals, eval_locals, check):
+        query = "props['bool'] | (props['int'] < 2)"
+        result = eval(query, eval_globals, eval_locals)
+        assert bool(check(result)) is True
+
+    @staticmethod
+    def test_nested_logic(eval_globals, eval_locals, check):
+        query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
+        result = eval(query, eval_globals, eval_locals)
+        assert bool(check(result)) is True
