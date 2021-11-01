@@ -23,21 +23,29 @@
 from torchvision import transforms
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.utils.misc import download_data
+from tiatoolbox.tools.stainnorm import get_normaliser
+
+from tiatoolbox import rcParam
+
+
+# fit Vahadane stain normalisation
+TARGET_URL = "https://tiatoolbox.dcs.warwick.ac.uk/models/idars/target.jpg"
+stain_normaliser = None
+transform = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
+    ]
+)
 
 
 class CNNModel1(CNNModel):
     def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
-        self.transform = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
-            ]
-        )
-
     def preproc(self, img):
-        img = self.transform(img)
+        img = transform(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)
 
@@ -45,19 +53,26 @@ class CNNModel1(CNNModel):
 
 
 class CNNModel2(CNNModel):
-    def __init__(self, backbone, num_classes=1):
+    def __init__(self, backbone, num_classes=1, target_url=None):
         super().__init__(backbone, num_classes=num_classes)
 
-        self.transform = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
-            ]
-        )
+        global stain_normaliser
+        stain_normaliser = None
 
-    def preproc(self, img):
-        img = self.transform(img)
+    @staticmethod
+    def preproc(img):
+        global stain_normaliser
+        if stain_normaliser is None:
+            target = download_data(
+                TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg"
+            )
+            stain_normaliser = get_normaliser(method_name="vahadane")
+            stain_normaliser.fit(target)
+
+        img = transform(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)
+        # apply stain normalisation
+        img = stain_normaliser.transform(img)
 
         return img

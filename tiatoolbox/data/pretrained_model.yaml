@@ -275,6 +275,7 @@ resnet34-idars-msi-fold1:
         kwargs:
             backbone: resnet34
             num_classes: 2
+            target: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/target.jpg
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
