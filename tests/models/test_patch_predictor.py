@@ -31,7 +31,7 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli, rcParam
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.models.controller.patch_predictor import (
+from tiatoolbox.models.engine.patch_predictor import (
     CNNPatchPredictor,
     IOPatchPredictorConfig,
 )

@@ -37,7 +37,7 @@ from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import crop_op
-from tiatoolbox.models.controller.semantic_segmentor import (
+from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,

@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 from tiatoolbox.models.architecture.vanilla import CNNExtractor
-from tiatoolbox.models.controller.semantic_segmentor import (
+from tiatoolbox.models.engine.semantic_segmentor import (
     FeatureExtractor,
     IOSegmentorConfig,
 )
@@ -70,7 +70,7 @@ def test_functional(remote_sample, tmp_path):
     features = np.load(f"{wsi_0_root_path}.features.0.npy")
     assert len(features.shape) == 4
 
-    # * test same output between full infer and controller
+    # * test same output between full infer and engine
     # pre-emptive clean up
     _rm_dir(save_dir)  # default output dir test
 
