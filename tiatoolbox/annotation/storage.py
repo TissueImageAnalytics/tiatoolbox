@@ -232,7 +232,9 @@ class AnnotationStoreABC(ABC):
         if isinstance(properties_predicate, str):
             return bool(eval(properties_predicate, PY_GLOBALS, {"props": properties}))
         if isinstance(properties_predicate, bytes):
-            properties_predicate = pickle.loads(properties_predicate)
+            properties_predicate = pickle.loads(
+                properties_predicate
+            )  # noqa: SC100 skipcq: BAN-B301
         return bool(properties_predicate(properties))
 
     def query(
@@ -526,7 +528,7 @@ class SQLiteStore(AnnotationStoreABC):
             return self._geometry_predicate(name, a, b)
 
         def pickle_properties_predicate(pickle_bytes: bytes, properties: str) -> bool:
-            fn = pickle.loads(pickle_bytes)
+            fn = pickle.loads(pickle_bytes)  # noqa: SC100 skipcq: BAN-B301
             properties = json.loads(properties)
             return fn(properties)
 
