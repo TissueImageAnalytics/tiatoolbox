@@ -268,6 +268,7 @@ resnet18-idars-tumour:
             stride_size: [512, 512]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
             output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    dataset: None
 resnet34-idars-msi-fold1:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold1.pth
     architecture:
@@ -282,6 +283,7 @@ resnet34-idars-msi-fold1:
             stride_size: [224, 224]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
             output_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: None
 resnet34-idars-msi-fold2:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold2.pth
     architecture:
@@ -296,6 +298,7 @@ resnet34-idars-msi-fold2:
             stride_size: [224, 224]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
             output_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: None
 resnet34-idars-msi-fold3:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold3.pth
     architecture:
@@ -310,6 +313,7 @@ resnet34-idars-msi-fold3:
             stride_size: [224, 224]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
             output_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: None
 resnet34-idars-msi-fold4:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold4.pth
     architecture:
@@ -324,6 +328,7 @@ resnet34-idars-msi-fold4:
             stride_size: [224, 224]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
             output_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: None
 
 fcn-tissue_mask:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
