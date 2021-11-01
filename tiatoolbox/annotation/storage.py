@@ -20,6 +20,7 @@ Properties
 """
 import copy
 import itertools
+import pickle
 import sqlite3
 import uuid
 import warnings
@@ -52,28 +53,16 @@ try:
 except ImportError:
     import json
 
+from tiatoolbox.annotation.predicate import PY_GLOBALS, SQL_GLOBALS
+
+sqlite3.enable_callback_tracebacks(True)
+
 if speedups.available:
     speedups.enable()
 
 Geometry = Union[Point, Polygon, LineString]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
-
-RESERVED_PROPERTIES = {  # Currently unused
-    "class": pd.Int8Dtype(),
-    "class_": pd.Int8Dtype(),
-    "properties": str,
-    "boundary": bytes,
-    "key": str,
-    "x": int,
-    "y": int,
-    "min_x": int,
-    "min_y": int,
-    "max_x": int,
-    "max_y": int,
-    "type": int,
-    "type_": int,
-}
 
 ASCII_FILE_SEP = "\x1c"
 ASCII_GROUP_SEP = "\x1d"
@@ -150,7 +139,7 @@ class AnnotationStoreABC(ABC):
     ) -> List[int]:
         indexes = []
         if properties_iter is None:
-            properties_iter = itertools.repeat({})
+            properties_iter = ({} for _ in geometries)
         if keys is None:
             keys = (str(uuid.uuid4()) for _ in geometries)
         for geometry, properties in zip(geometries, properties_iter):
@@ -205,30 +194,58 @@ class AnnotationStoreABC(ABC):
     def __iter__(self) -> Iterable[int]:
         raise NotImplementedError()
 
+    @staticmethod
+    def _eval_properties_predicate(
+        properties_predicate: Optional[
+            Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]]
+        ],
+        properties: Dict[str, Any],
+    ) -> bool:
+        """Evaluate properties predicate against properties."""
+        if properties_predicate is None:
+            return True
+        if isinstance(properties_predicate, str):
+            return bool(eval(properties_predicate, PY_GLOBALS, {"props": properties}))
+        if isinstance(properties_predicate, bytes):
+            properties_predicate = pickle.loads(properties_predicate)
+        return bool(properties_predicate(properties))
+
     def query(
         self,
         query_geometry: QueryGeometry,
         geometry_predicate: str = "intersects",
+        properties_predicate: Union[
+            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
+        ] = None,
     ) -> List[Tuple[Geometry, Dict[str, Any]]]:
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             (geometry, properties)
             for geometry, properties in self.values()
-            if self._geometry_predicate(geometry_predicate, query_geometry, geometry)
+            if (
+                self._geometry_predicate(geometry_predicate, query_geometry, geometry)
+                and self._eval_properties_predicate(properties_predicate, properties)
+            )
         ]
 
     def iquery(
         self,
         query_geometry: QueryGeometry,
         geometry_predicate: str = "intersects",
+        properties_predicate: Union[
+            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
+        ] = None,
     ) -> List[int]:
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             key
-            for key, (geometry, _) in self.items()
-            if self._geometry_predicate(geometry_predicate, query_geometry, geometry)
+            for key, (geometry, properties) in self.items()
+            if (
+                self._geometry_predicate(geometry_predicate, query_geometry, geometry)
+                and self._eval_properties_predicate(properties_predicate, properties)
+            )
         ]
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
@@ -376,14 +393,28 @@ class SQLiteStore(AnnotationStoreABC):
             b = self.deserialise_geometry(b)
             return self._geometry_predicate(name, a, b)
 
+        def pickle_properties_predicate(pickle_bytes: bytes, properties: str) -> bool:
+            fn = pickle.loads(pickle_bytes)
+            properties = json.loads(properties)
+            return fn(properties)
+
         try:
             self.con.create_function(
                 "geometry_predicate", 3, wkb_predicate, deterministic=True
             )
+            self.con.create_function(
+                "pickle_properties_predicate",
+                2,
+                pickle_properties_predicate,
+                deterministic=True,
+            )
         # Only Python >= 3.8 supports deterministic, fallback
         # to without this argument.
         except TypeError:
-            self.con.create_function("geometry_predicate", 2, wkb_predicate)
+            self.con.create_function("geometry_predicate", 3, wkb_predicate)
+            self.con.create_function(
+                "pickle_properties_predicate", 2, pickle_properties_predicate
+            )
 
         if exists:
             return
@@ -399,7 +430,6 @@ class SQLiteStore(AnnotationStoreABC):
                 min_y, max_y,            -- 2nd dimension min, max
                 +key TEXT UNIQUE,        -- Unique identifier
                 +objtype TEXT,           -- Object type
-                +class INTEGER,          -- Class ID
                 +cx INTEGER NOT NULL,    -- X of centroid/representative point
                 +cy INTEGER NOT NULL,    -- Y of centroid/representative point
                 +boundary BLOB NOT NULL, -- Detailed boundary
@@ -460,10 +490,6 @@ class SQLiteStore(AnnotationStoreABC):
             boundary = None
         else:
             boundary = self.serialise_geometry(geometry)
-        class_ = properties.get("class")
-        if "class" in properties:
-            properties = copy.copy(properties)
-            del properties["class"]
         return {
             "key": key,
             "boundary": boundary,
@@ -473,7 +499,6 @@ class SQLiteStore(AnnotationStoreABC):
             "min_y": geometry.bounds[1],
             "max_x": geometry.bounds[2],
             "max_y": geometry.bounds[3],
-            "class": class_,
             "geom_type": geometry.geom_type,
             "properties": json.dumps(properties, separators=(",", ":")),
         }
@@ -501,7 +526,7 @@ class SQLiteStore(AnnotationStoreABC):
             """
             INSERT INTO main VALUES(
                 NULL, :min_x, :max_x, :min_y, :max_y, :key, :geom_type,
-                :class, :cx, :cy, :boundary, :properties
+                :cx, :cy, :boundary, :properties
             )
             """,
             tokens,
@@ -509,9 +534,17 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.commit()
         return [token["key"] for token in tokens]
 
-    def iquery(
-        self, query_geometry: QueryGeometry, geometry_predicate="intersects"
-    ) -> List[int]:
+    def _query(
+        self,
+        query_select: str,
+        query_geometry: QueryGeometry,
+        query_select_callable: Optional[str] = None,
+        geometry_predicate="intersects",
+        properties_predicate: Union[
+            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
+        ] = None,
+    ) -> sqlite3.Cursor:
+        """ "Common query construction logic for `query` and `iquery`."""
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
@@ -521,67 +554,92 @@ class SQLiteStore(AnnotationStoreABC):
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         min_x, min_y, max_x, max_y = query_geometry.bounds
-        cur.execute(
-            """
-            SELECT [key]
-              FROM main
-             WHERE max_x >= :min_x
-               AND min_x <= :max_x
-               AND max_y >= :min_y
-               AND min_y <= :max_y
-               AND geometry_predicate(:predicate, :query_geometry, boundary)
-            """,
-            {
-                "min_x": min_x,
-                "max_x": max_x,
-                "min_y": min_y,
-                "max_y": max_y,
-                "predicate": geometry_predicate,
-                "query_geometry": query_geometry.wkb,
-            },
+
+        if isinstance(properties_predicate, Callable):
+            query_select = query_select_callable
+
+        query_string = (
+            "SELECT "
+            + query_select
+            + """
+         FROM main
+        WHERE max_x >= :min_x
+          AND min_x <= :max_x
+          AND max_y >= :min_y
+          AND min_y <= :max_y
+          AND geometry_predicate(:geometry_predicate, :query_geometry, boundary)
+        """
         )
-        keys = cur.fetchall()
-        return [key for key, in keys]
+        query_parameters = {
+            "min_x": min_x,
+            "max_x": max_x,
+            "min_y": min_y,
+            "max_y": max_y,
+            "geometry_predicate": geometry_predicate,
+            "query_geometry": query_geometry.wkb,
+        }
+        if isinstance(properties_predicate, str):
+            sql_predicate = eval(
+                properties_predicate, SQL_GLOBALS, {}
+            )  # noqa: SC100 nocq: PYL-W0123
+            query_string += f"AND {sql_predicate}"
+        if isinstance(properties_predicate, bytes):
+            query_string += (
+                "AND pickle_properties_predicate(:properties_predicate, properties)"
+            )
+            query_parameters["properties_predicate"] = properties_predicate
+        cur.execute(query_string, query_parameters)
+        return cur
+
+    def iquery(
+        self,
+        query_geometry: QueryGeometry,
+        geometry_predicate="intersects",
+        properties_predicate: Union[
+            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
+        ] = None,
+    ) -> List[int]:
+        cur = self._query(
+            "[key]",
+            query_geometry=query_geometry,
+            geometry_predicate=geometry_predicate,
+            properties_predicate=properties_predicate,
+            query_select_callable="[key], boundary, properties",
+        )
+        if isinstance(properties_predicate, Callable):
+            return [
+                key
+                for key, boundary, properties in cur.fetchall()
+                if properties_predicate(json.loads(properties))
+            ]
+        return [key for key, in cur.fetchall()]
 
     def query(
-        self, query_geometry: QueryGeometry, geometry_predicate: str = "intersects"
-    ) -> List[Geometry]:
-        if geometry_predicate not in self._geometry_predicate_names:
-            raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
-            )
-        cur = self.con.cursor()
-        if isinstance(query_geometry, Iterable):
-            query_geometry = Polygon.from_bounds(*query_geometry)
-        min_x, min_y, max_x, max_y = query_geometry.bounds
-        cur.execute(
-            """
-            SELECT boundary, [class], properties
-              FROM main
-             WHERE max_x >= :min_x
-               AND min_x <= :max_x
-               AND max_y >= :min_y
-               AND min_y <= :max_y
-               AND geometry_predicate(:predicate, :query_geometry, boundary)
-            """,
-            {
-                "min_x": min_x,
-                "max_x": max_x,
-                "min_y": min_y,
-                "max_y": max_y,
-                "predicate": geometry_predicate,
-                "query_geometry": query_geometry.wkb,
-            },
+        self,
+        query_geometry: QueryGeometry,
+        geometry_predicate: str = "intersects",
+        properties_predicate: Union[
+            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
+        ] = None,
+    ) -> List[Tuple[Geometry, Dict[str, Any]]]:
+        cur = self._query(
+            "boundary, properties",
+            query_geometry=query_geometry,
+            geometry_predicate=geometry_predicate,
+            properties_predicate=properties_predicate,
         )
-        rows = cur.fetchall()
-
+        if isinstance(properties_predicate, Callable):
+            return [
+                (boundary, properties)
+                for boundary, properties in cur.fetchall()
+                if properties_predicate(json.loads(properties))
+            ]
         return [
             (
                 self.deserialise_geometry(blob),
-                {"class": class_, **json.loads(properties)},
+                json.loads(properties),
             )
-            for blob, class_, properties in rows
+            for blob, properties in cur.fetchall()
         ]
 
     def __len__(self) -> int:
@@ -599,19 +657,17 @@ class SQLiteStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT boundary, [class], properties
+            SELECT boundary, properties
               FROM main
              WHERE [key] = :key
             """,
             {"key": key},
         )
-        boundary, class_, properties = cur.fetchone()
+        boundary, properties = cur.fetchone()
         if properties is None:
             properties = {}
         else:
             properties = json.loads(properties)
-        if class_ is not None:
-            properties.update({"class": class_})
         geometry = self.deserialise_geometry(boundary)
         return geometry, properties
 
@@ -641,7 +697,7 @@ class SQLiteStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT [key], [class], cx, cy, boundary, properties
+            SELECT [key], cx, cy, boundary, properties
               FROM main
             """
         )
@@ -649,13 +705,12 @@ class SQLiteStore(AnnotationStoreABC):
             row = cur.fetchone()
             if row is None:
                 break
-            key, class_, cx, cy, boundary, properties = row
+            key, cx, cy, boundary, properties = row
             if boundary is not None:
                 geometry = self.deserialise_geometry(boundary)
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(properties)
-            properties.update({"class": class_})
             yield key, (geometry, properties)
 
     def update_many(
@@ -715,13 +770,12 @@ class SQLiteStore(AnnotationStoreABC):
         properties = copy.deepcopy(properties)
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        class_ = properties.pop("class", None)
         bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
         xy = dict(zip("xy", geometry.centroid.xy))
         cur.execute(
             """
             UPDATE main
-               SET cx = :x, cy = :y, boundary = :boundary, [class] = :class_,
+               SET cx = :x, cy = :y, boundary = :boundary,
                    min_x = :min_x, min_y = :min_y, max_x = :max_x, max_y = :max_y
              WHERE [key] = :key
             """,
@@ -730,7 +784,6 @@ class SQLiteStore(AnnotationStoreABC):
                 **bounds,
                 key=key,
                 boundary=self.serialise_geometry(geometry),
-                class_=class_,
             ),
         )
         if len(properties) > 0:
@@ -758,7 +811,7 @@ class SQLiteStore(AnnotationStoreABC):
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame()
         cur = self.con.cursor()
-        cur.execute("SELECT id, boundary, [class], properties FROM main")
+        cur.execute("SELECT id, boundary, properties FROM main")
         while True:
             rows = cur.fetchmany(100)
             if len(rows) == 0:
@@ -819,11 +872,11 @@ class DictionaryStore(AnnotationStoreABC):
         return key
 
     def update(self, key: str, update: Dict[str, Any]) -> None:
-        feature = self[key]
+        geometry, properties = self[key]
         update = copy.copy(update)
-        geometry = update.pop("geometry", feature[0])
-        feature[1].update(update)
-        self[key] = (geometry, feature[1])
+        geometry = update.pop("geometry", geometry)
+        properties.update(update)
+        self[key] = (geometry, properties)
 
     def remove(self, key: str) -> None:
         del self._features[key]

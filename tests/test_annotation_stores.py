@@ -1,8 +1,11 @@
 import json
+import pickle
+import random
+import sqlite3
 from itertools import repeat
 from numbers import Number
 from pathlib import Path
-from typing import Generator, List, Tuple, Union
+from typing import Any, Dict, Generator, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -15,6 +18,8 @@ from tiatoolbox.annotation.storage import (
     DictionaryStore,
     SQLiteStore,
 )
+
+sqlite3.enable_callback_tracebacks(True)
 
 # Constants
 
@@ -74,6 +79,11 @@ def cell_polygon(
     # Add random rotation
     angle = np.random.rand() * 360
     return affinity.rotate(polygon, angle, origin="centroid")
+
+
+def sample_predicate(props: Dict[str, Any]) -> bool:
+    """Simple example predicate function for tests."""
+    return props.get("class") == 123
 
 
 # Fixtures
@@ -170,7 +180,8 @@ class TestStore:
     def test_append_many(cell_grid, tmp_path, store):
         store = store(tmp_path / "polygons")
         indexes = store.append_many(
-            cell_grid, ({"class": x} for x in np.random.randint(0, 7, len(cell_grid)))
+            cell_grid,
+            ({"class": random.randint(0, 6)} for _ in cell_grid),
         )
         assert len(indexes) == len(cell_grid)
 
@@ -450,3 +461,63 @@ class TestStore:
         _, store = fill_store(store, ":memory:")
         string = store.dumps()
         assert isinstance(string, str)
+
+    @staticmethod
+    def test_iquery_predicate_str(fill_store, store):
+        keys, store = fill_store(store, ":memory:")
+        store.update(keys[0], {"class": 123})
+        results = store.iquery(
+            (0, 0, 1024, 1024), properties_predicate="props.get('class') == 123"
+        )
+        assert len(results) == 1
+        assert results[0] == keys[0]
+
+    @staticmethod
+    def test_iquery_predicate_callable(fill_store, store):
+        keys, store = fill_store(store, ":memory:")
+        store.update(keys[0], {"class": 123})
+        results = store.iquery(
+            (0, 0, 1024, 1024),
+            properties_predicate=lambda props: props.get("class") == 123,
+        )
+        assert len(results) == 1
+        assert results[0] == keys[0]
+
+    @staticmethod
+    def test_iquery_predicate_pickle(fill_store, store):
+        keys, store = fill_store(store, ":memory:")
+        store.update(keys[0], {"class": 123})
+
+        results = store.query(
+            (0, 0, 1024, 1024), properties_predicate=pickle.dumps(sample_predicate)
+        )
+        assert len(results) == 1
+
+    @staticmethod
+    def test_query_predicate_str(fill_store, store):
+        keys, store = fill_store(store, ":memory:")
+        store.update(keys[0], {"class": 123})
+        results = store.query(
+            (0, 0, 1024, 1024), properties_predicate="props.get('class') == 123"
+        )
+        assert len(results) == 1
+
+    @staticmethod
+    def test_query_predicate_callable(fill_store, store):
+        keys, store = fill_store(store, ":memory:")
+        store.update(keys[0], {"class": 123})
+        results = store.iquery(
+            (0, 0, 1024, 1024),
+            properties_predicate=lambda props: props.get("class") == 123,
+        )
+        assert len(results) == 1
+
+    @staticmethod
+    def test_query_predicate_pickle(fill_store, store):
+        keys, store = fill_store(store, ":memory:")
+        store.update(keys[0], {"class": 123})
+
+        results = store.query(
+            (0, 0, 1024, 1024), properties_predicate=pickle.dumps(sample_predicate)
+        )
+        assert len(results) == 1
