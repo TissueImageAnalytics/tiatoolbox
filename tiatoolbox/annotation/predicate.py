@@ -22,6 +22,7 @@
 import json
 import operator
 import re
+from abc import ABC
 from dataclasses import dataclass
 from numbers import Number
 from typing import Callable, Optional, Union
@@ -36,12 +37,101 @@ class SQLNone:
         return str(self)  # pragma: no cover
 
 
-class SQLExpression:
+class SQLExpression(ABC):
+    def __repr__(self):
+        return str(self)  # pragma: no cover
+
+    def __add__(self, other):
+        return SQLTriplet(self, operator.add, other)
+
+    def __radd__(self, other):
+        return SQLTriplet(other, operator.add, self)
+
+    def __mul__(self, other):
+        return SQLTriplet(self, operator.mul, other)
+
+    def __rmul__(self, other):
+        return SQLTriplet(other, operator.mul, self)
+
+    def __sub__(self, other):
+        return SQLTriplet(other, operator.sub, self)
+
+    def __rsub__(self, other):
+        return SQLTriplet(self, operator.sub, other)
+
+    def __truediv__(self, other):
+        return SQLTriplet(self, operator.truediv, other)
+
+    def __rtruediv__(self, other):
+        return SQLTriplet(other, operator.truediv, self)
+
+    def __floordiv__(self, other):
+        return SQLTriplet(self, operator.floordiv, other)
+
+    def __rfloordiv__(self, other):
+        return SQLTriplet(other, operator.floordiv, self)
+
+    def __mod__(self, other):
+        return SQLTriplet(self, operator.mod, other)
+
+    def __rmod__(self, other):
+        return SQLTriplet(other, operator.mod, self)
+
+    def __gt__(self, other):
+        return SQLTriplet(self, operator.gt, other)
+
+    def __ge__(self, other):
+        return SQLTriplet(self, operator.ge, other)
+
+    def __lt__(self, other):
+        return SQLTriplet(self, operator.lt, other)
+
+    def __le__(self, other):
+        return SQLTriplet(self, operator.le, other)
+
+    def __abs__(self):
+        return SQLTriplet(self, operator.abs)
+
+    def __not__(self):
+        return SQLTriplet(self, operator.not_)
+
+    def __eq__(self, other):
+        return SQLTriplet(self, operator.eq, other)
+
+    def __ne__(self, other: object):
+        return SQLTriplet(self, operator.ne, other)
+
+    def __neg__(self):
+        return SQLTriplet(self, operator.neg)
+
+    def __contains__(self, other):
+        return SQLTriplet(self, "contains", other)
+
+    def __pow__(self, x):
+        return SQLTriplet(self, operator.pow, x)
+
+    def __rpow__(self, x):
+        return SQLTriplet(x, operator.pow, self)
+
+    def __and__(self, other):
+        return SQLTriplet(self, operator.and_, other)
+
+    def __rand__(self, other):
+        return SQLTriplet(other, operator.and_, self)
+
+    def __or__(self, other):
+        return SQLTriplet(self, operator.or_, other)
+
+    def __ror__(self, other):
+        return SQLTriplet(other, operator.or_, self)
+
+
+class SQLTriplet(SQLExpression):
     def __init__(
         self,
-        lhs: Union["SQLExpression", str],
+        lhs: Union["SQLTriplet", str],
         op: Union[Callable, str] = None,
-        rhs: Union["SQLExpression", str] = None,
+        rhs: Union["SQLTriplet", str] = None,
     ):
         self.lhs = lhs
         self.op = op
@@ -80,93 +170,6 @@ class SQLExpression:
             return self.formatters[self.op](lhs, rhs)
         return f" {lhs} "
 
-    def __repr__(self):
-        return str(self)  # pragma: no cover
-
-    def __add__(self, other):
-        return SQLExpression(self, operator.add, other)
-
-    def __radd__(self, other):
-        return SQLExpression(other, operator.add, self)
-
-    def __mul__(self, other):
-        return SQLExpression(self, operator.mul, other)
-
-    def __rmul__(self, other):
-        return SQLExpression(other, operator.mul, self)
-
-    def __sub__(self, other):
-        return SQLExpression(other, operator.sub, self)
-
-    def __rsub__(self, other):
-        return SQLExpression(self, operator.sub, other)
-
-    def __truediv__(self, other):
-        return SQLExpression(self, operator.truediv, other)
-
-    def __rtruediv__(self, other):
-        return SQLExpression(other, operator.truediv, self)
-
-    def __floordiv__(self, other):
-        return SQLExpression(self, operator.floordiv, other)
-
-    def __rfloordiv__(self, other):
-        return SQLExpression(other, operator.floordiv, self)
-
-    def __mod__(self, other):
-        return SQLExpression(self, operator.mod, other)
-
-    def __rmod__(self, other):
-        return SQLExpression(other, operator.mod, self)
-
-    def __gt__(self, other):
-        return SQLExpression(self, operator.gt, other)
-
-    def __ge__(self, other):
-        return SQLExpression(self, operator.ge, other)
-
-    def __lt__(self, other):
-        return SQLExpression(self, operator.lt, other)
-
-    def __le__(self, other):
-        return SQLExpression(self, operator.le, other)
-
-    def __abs__(self):
-        return SQLExpression(self, operator.abs)
-
-    def __not__(self):
-        return SQLExpression(self, operator.not_)
-
-    def __eq__(self, other):
-        return SQLExpression(self, operator.eq, other)
-
-    def __ne__(self, other: object):
-        return SQLExpression(self, operator.ne, other)
-
-    def __neg__(self):
-        return SQLExpression(self, operator.neg)
-
-    def __contains__(self, other):
-        return SQLExpression(self, "contains", other)
-
-    def __pow__(self, x):
-        return SQLExpression(self, operator.pow, x)
-
-    def __rpow__(self, x):
-        return SQLExpression(x, operator.pow, self)
-
-    def __and__(self, other):
-        return SQLExpression(self, operator.and_, other)
-
-    def __rand__(self, other):
-        return SQLExpression(other, operator.and_, self)
-
-    def __or__(self, other):
-        return SQLExpression(self, operator.or_, other)
-
-    def __ror__(self, other):
-        return SQLExpression(other, operator.or_, self)
-
 
 class Properties(SQLExpression):
     def __init__(self, acc: str = None) -> None:
@@ -184,7 +187,7 @@ class Properties(SQLExpression):
         return Properties(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
-        return SQLExpression(self[key], "ifnull", default or SQLNone())
+        return SQLTriplet(self[key], "ifnull", default or SQLNone())
 
 
 class SQLRegex(SQLExpression):
@@ -206,8 +209,8 @@ class SQLRegex(SQLExpression):
         return f"({string} REGEXP {pattern})"
 
     @classmethod
-    def search(cls, pattern: str, string: str, flags: int = 0) -> SQLExpression:
-        return SQLExpression(SQLRegex(pattern, string, flags))
+    def search(cls, pattern: str, string: str, flags: int = 0) -> "SQLRegex":
+        return SQLRegex(pattern, string, flags)
 
 
 def is_none(x) -> bool:
@@ -234,22 +237,22 @@ def json_contains(json_str: str, x: object) -> bool:
     return x in json.loads(json_str)
 
 
-def sql_is_none(x) -> SQLExpression:
-    return SQLExpression(x, "is none")
+def sql_is_none(x) -> SQLTriplet:
+    return SQLTriplet(x, "is none")
 
 
-def sql_is_not_none(x) -> SQLExpression:
-    return SQLExpression(x, "is not none")
+def sql_is_not_none(x) -> SQLTriplet:
+    return SQLTriplet(x, "is not none")
 
 
-def sql_list_sum(x) -> SQLExpression:
-    return SQLExpression(x, "listsum")
+def sql_list_sum(x) -> SQLTriplet:
+    return SQLTriplet(x, "listsum")
 
 
-def sql_has_key(a, b) -> SQLExpression:
+def sql_has_key(a, b) -> SQLTriplet:
     if not isinstance(a, (Properties,)):
         raise TypeError("Unsupported type for has_key.")
-    return SQLExpression(a[b], "is not none")
+    return SQLTriplet(a[b], "is not none")
 
 
 _COMMON_GLOBALS = {
