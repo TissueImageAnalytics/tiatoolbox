@@ -10,8 +10,9 @@ import random
 import shutil
 import sys
 from collections import OrderedDict
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
+import joblib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,15 +20,27 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-
 sys.path.append("/home/dang/storage_1/workspace/tiatoolbox")
 
-# ! save_yaml, save_as_json => need same name, need to factor out jsonify
-from tiatoolbox.utils.misc import save_as_json
+import warnings
+warnings.filterwarnings("ignore")
 
+# ! save_yaml, save_as_json => need same name, need to factor out jsonify
+from tiatoolbox.utils.misc import imread, save_as_json
 
 mpl.rcParams['figure.dpi'] = 160  # for high resolution figure in notebook
 
+# %%
+from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.models.controller import patch_predictor
+
+predictor = patch_predictor.CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+output = predictor.predict([
+    '/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/wsis/wsi1_2k_2k_00.svs'],
+    mode="wsi", merge_predictions=True)
+
+exit()
+# %%
 
 # %% [markdown]
 # Here we define some quality of life functions that will be frequently reused
@@ -123,28 +136,18 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 
 ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/"
-WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
+WSI_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/wsis/"
 MSK_DIR = None
+CLINICAL_FILE = (
+    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/label.csv"
+)
 
 wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])
 wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
 msk_paths = None if MSK_DIR is None else [f"{MSK_DIR}/{v}.png" for v in wsi_names]
 assert len(wsi_paths) > 0, "No files found."
 
-# !- debug injection, remove later
-wsi_paths = recur_find_ext(
-    "/home/dang/storage_1/workspace/tiatoolbox/local/"
-    "slidegraph/storage/nima/graphs/[Cell-Composition]-[HoverNet]",
-    [".json"]
-)
-wsi_names = np.array([pathlib.Path(v).stem for v in wsi_paths])
-# !-
-
-CLINICAL_FILE = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/TCGA-BRCA-DX_CLINI.csv"
-)
 clinical_df = pd.read_csv(CLINICAL_FILE)
-
 patient_uids = clinical_df["PATIENT"].to_numpy()
 patient_labels = clinical_df["HER2FinalStatus"].to_numpy()
 
@@ -158,12 +161,28 @@ patient_labels = patient_labels_[sel]
 assert len(patient_uids) == len(patient_labels)
 clinical_info = OrderedDict(list(zip(patient_uids, patient_labels)))
 
-# retrieve patient code of each WSI, this is basing TCGA bar codes
+# retrieve patient code of each WSI, this is basing on TCGA bar codes
 # https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
 wsi_patient_codes = np.array(["-".join(v.split("-")[:3]) for v in wsi_names])
 wsi_labels = np.array(
     [clinical_info[v] if v in clinical_info else np.nan for v in wsi_patient_codes]
 )
+
+# * filtering our wsis and paths that do not have labels
+sel = ~np.isnan(wsi_labels)
+# light sanity check before filtering
+assert len(wsi_paths) == len(wsi_names)
+assert len(wsi_paths) == len(wsi_labels)
+wsi_paths = np.array(wsi_paths)[sel]
+wsi_names = np.array(wsi_names)[sel]
+wsi_labels = np.array(wsi_labels)[sel]
+
+label_df = list(zip(wsi_names, wsi_labels))
+label_df = pd.DataFrame(label_df, columns=["WSI-CODE", "LABEL"])
+
+# this one will be used later several times, take care not to
+# modify it
+wsi_codes = label_df["WSI-CODE"].to_list()
 
 # %% [markdown]
 # ## Generate the data split
@@ -178,7 +197,14 @@ import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
-def generate_split(x, y, train, valid, test, num_folds):
+def stratified_split(
+        x: List,
+        y: List,
+        train: float,
+        valid: float,
+        test: float,
+        num_folds: int,
+        seed: int = 5):
     """Helper to generate stratified splits.
 
     Split `x` and `y` in to N number of `num_folds` sets
@@ -208,17 +234,17 @@ def generate_split(x, y, train, valid, test, num_folds):
     outer_splitter = StratifiedShuffleSplit(
         n_splits=num_folds,
         train_size=train + valid,
-        random_state=SEED
+        random_state=seed
     )
     inner_splitter = StratifiedShuffleSplit(
         n_splits=1,
         train_size=train / (train + valid),
-        random_state=SEED,
+        random_state=seed,
     )
 
     x = np.array(x)
     y = np.array(y)
-    split_list = []
+    splits = []
     for train_valid_idx, test_idx in outer_splitter.split(x, y):
         test_x = x[test_idx]
         test_y = y[test_idx]
@@ -237,59 +263,44 @@ def generate_split(x, y, train, valid, test, num_folds):
         # integrity check
         assert len(set(train_x).intersection(set(valid_x))) == 0
         assert len(set(valid_x).intersection(set(test_x))) == 0
-        assert len(set(train_x).intersection(set(test_x))) == 0        
+        assert len(set(train_x).intersection(set(test_x))) == 0
 
-        split_list.append(
+        splits.append(
             {
                 "train": list(zip(train_x, train_y)),
                 "valid": list(zip(valid_x, valid_y)),
                 "test": list(zip(test_x, test_y)),
             }
         )
-    return split_list
+    return splits
 
 
 # %% [markdown]
 # Now, we split the data with given ratio.
 #
-# ![@John] do we want to load cached split also? I think we should
 
 # %%
 
-# !- debug injection, remove later
-wsi_paths = recur_find_ext(
-    "/home/dang/storage_1/workspace/tiatoolbox/local/"
-    "slidegraph/storage/nima/graphs/[Cell-Composition]-[HoverNet]",
-    [".json"]
-)
-wsi_names = np.array([pathlib.Path(v).stem for v in wsi_paths])
-assert len(wsi_paths) > 0
-# !-
+CACHE_PATH = None
+SPLIT_PATH = f'{ROOT_OUTPUT_DIR}/splits.dat'
 
 NUM_FOLDS = 5
 TEST_RATIO = 0.2
 TRAIN_RATIO = 0.8 * 0.9
 VALID_RATIO = 0.8 * 0.1
 
-sel = ~np.isnan(wsi_labels)
-wsi_labels = wsi_labels[sel]
-wsi_names = wsi_names[sel]
+if CACHE_PATH and os.path.exists(CACHE_PATH):
+    splits = joblib.load(CACHE_PATH)
+    SPLIT_PATH = CACHE_PATH
+else:
+    x = np.array(label_df["WSI-CODE"].to_list())
+    y = np.array(label_df["LABEL"].to_list())
+    splits = stratified_split(
+        x, y,
+        TRAIN_RATIO, VALID_RATIO, TEST_RATIO,
+        NUM_FOLDS)
 
-label_df = list(zip(wsi_names, wsi_labels))
-label_df = pd.DataFrame(label_df, columns=["WSI-CODE", "LABEL"])
-
-x = np.array(label_df["WSI-CODE"].to_list())
-y = np.array(label_df["LABEL"].to_list())
-
-# this one will be used later several times, take care not to
-# modify it
-wsi_codes = label_df["WSI-CODE"].to_list()
-
-split_list = generate_split(
-    x, y,
-    TRAIN_RATIO, VALID_RATIO, TEST_RATIO,
-    NUM_FOLDS)
-print('here')
+    joblib.dump(splits, SPLIT_PATH)
 
 # %% [markdown]
 # # Generating graph from WSI
@@ -305,45 +316,19 @@ print('here')
 # so that nodes which are close to each other both in feature space and in the 2D
 # space (i.e the WSI canvas) are assigned into the same cluster.
 
-
 # %% [markdown]
-# ## Stain normalization on image patch
-# Both of deep feature and cell compositions requires analyses on the patches.
-# In histopathology, we often want to normalize the image patch stain to reduce
-# as much variation as possible. Here we define the normalizer and the function
-# to perform such job later in parallel processing manner. Both the target image
-# and the normalizer here are provided by our toolbox at `tiatoolbox.tools.stainnorm`
-# and `tiatoolbox.data` . Notice we do not perform stain norm here, however, we will
-# use them in tandem with other methods in the toolbox to automatically handle that.
-# %%
-from tiatoolbox.data import stainnorm_target
-from tiatoolbox.tools.stainnorm import get_normaliser
-
-target_image = stainnorm_target()
-stain_normaliser = get_normaliser("vahadane")
-stain_normaliser.fit(target_image)
-
-
-# ! stainormalizer may crash, do we want to handle them manually
-# ! or ignore it for now? (np.linalg)
-def stain_norm_func(img):
-    return stain_normaliser.transform(img)
-
-
-# %%
-def rename_output(file_map_list):
-    for input_path, output_path in file_map_list:
-        input_name = pathlib.Path(input_path).stem
-
-        output_parent_dir = pathlib.Path(output_path).parent
-
-        src_path = pathlib.Path(f'{output_path}.position.npy')
-        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.position.npy')
-        src_path.rename(new_path)
-
-        src_path = pathlib.Path(f'{output_path}.features.0.npy')
-        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.features.npy')
-        src_path.rename(new_path)
+# First, we define a functions to help converting the ouput file name
+# to have the same name as the input wsi. By default, the toolbox will output
+# files with names that have been changed to numerical ordering (000.*.npy,
+# 001.*.npy, etc.) to prevent overwriting output in case users provided WSIs with the
+# same names but may come from different directories. The engine object will return
+# a list of input-output path mapping to facilitate this conversion. Additionally,
+# we are using toolbox model with only 1 head output. Hence, for each input,
+# we will have `*.position.npy` and `*.features.0.npy`. In cases of models having
+# multiple output heads, it will become [`*.position.npy`, `*.features.0.npy`,
+# `*.features.1.npy`, etc.] . The positions are always defined as the patch bounding
+# box `(start_x, start_y, end_x, end_y)` at the highest resolutions within the list
+# of input resolutions. Refer to [@URL/semantic_segmentation] notebook for details.
 
 
 # %% [markdown]
@@ -351,22 +336,26 @@ def rename_output(file_map_list):
 # Here, we define the code to use functionalities within the toolbox
 # for feature extraction. To make it better organized and differentiated
 # from other parts of the notebook, we package it into the small function
-# `extract_deep_feature`. Within it we define the config object which define
+# `extract_deep_features`. Within it we define the config object which define
 # the shape and magnification of the patch we want to extract. While the patch
 # can be of arbitrary size and come from different resolutions, we use patch
 # of 512x512 coming from `mpp=0.25` by default. Additionally, we will use
 # ResNet50 trained on ImageNet as feature extractor. For more detail on how
-# to further customize this, you can refer to [URL].
-#
-# Now, to allow extraction for stain-normalized image patches, we need to
-# provide our `stain_norm_func` above to the model.
+# to further customize this, you can refer to [URL]. We also expose an argument
+# for a customized pre-processing function that we would like the engine to
+# perform on each input patch. For this notebook, we will perform stain-normalization
+# on each image patches. We will show how this function can be defined later.
 
 # %%
 from tiatoolbox.models import FeatureExtractor, IOSegmentorConfig
 from tiatoolbox.models.architecture import CNNExtractor
 
 
-def extract_deep_feature(save_dir):
+def extract_deep_features(
+        wsi_paths: List[str],
+        msk_paths: List[str],
+        save_dir: str,
+        preproc_func: Callable = None):
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
@@ -380,13 +369,14 @@ def extract_deep_feature(save_dir):
         save_resolution={"units": "mpp", "resolution": 8.0},
     )
     model = CNNExtractor("resnet50")
-    # using the stain normalization as pre-processing function
-    model.preproc_func = stain_norm_func
     extractor = FeatureExtractor(
         batch_size=16, model=model, num_loader_workers=4)
+    # injecting customized preprocessing functions,
+    # check the document or sample codes below for API
+    extractor.model.preproc_func = preproc_func
 
     rmdir(save_dir)
-    output_map = extractor.predict(
+    output_map_list = extractor.predict(
         wsi_paths,
         msk_paths,
         mode="wsi",
@@ -395,27 +385,118 @@ def extract_deep_feature(save_dir):
         crash_on_exception=True,
         save_dir=save_dir,
     )
-    rename_output(output_map)
-    return
+
+    # rename output files
+    for input_path, output_path in output_map_list:
+        input_name = pathlib.Path(input_path).stem
+
+        output_parent_dir = pathlib.Path(output_path).parent
+
+        src_path = pathlib.Path(f'{output_path}.position.npy')
+        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.position.npy')
+        src_path.rename(new_path)
+
+        src_path = pathlib.Path(f'{output_path}.features.0.npy')
+        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.features.npy')
+        src_path.rename(new_path)
+
+    return output_map_list
 
 
 # %% [markdown]
 # ## Cell Composition Extraction
 # In a very similar manner, we define the code for extracting cell
-# composition in `extract_composition_feature`.
+# composition in `extract_composition_features`.
 # %%
+import pygeos  # replace with annotation store laters
+from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.models import NucleusInstanceSegmentor
+from tiatoolbox.tools.patchextraction import PatchExtractor
+
+# ! need a new name for this
+def get_composition_features(
+            wsi_path: str,
+            inst_pred_path: str,
+            save_dir: str,
+            num_types: int = 6,
+            patch_input_shape: Tuple[int] = [512, 512],
+            stride_shape: Tuple[int] = [512, 512],
+            resolution: float = 0.25,
+            units: str = 'mpp',
+        ):
+    """
+    Args:
+        out_path (str): Path pointing to file containing nucleus
+            instance predictions, assumed to be from tiatoolbox.
+
+    """
+
+    reader = get_wsireader(wsi_path)
+    inst_pred = joblib.load(inst_pred_path)
+    # convert to {key: int, value: dict}
+    inst_pred = {
+        i: v for i, (_, v) in enumerate(inst_pred.items())
+    }
+
+    inst_boxes = [v['box'] for v in inst_pred.values()]
+    inst_boxes = np.array(inst_boxes)
+    # replace with annotation store later
+    spatial_indexer = pygeos.STRtree(
+        pygeos.box(
+            inst_boxes[:, 0],
+            inst_boxes[:, 1],
+            inst_boxes[:, 2],
+            inst_boxes[:, 3],
+        )
+    )
+
+    # * generate patch coordinates
+    # this is in XY
+    wsi_shape = reader.slide_dimensions(resolution=resolution, units=units)
+
+    (patch_inputs, _) = PatchExtractor.get_coordinates(
+        image_shape=wsi_shape,
+        patch_input_shape=patch_input_shape,
+        patch_output_shape=patch_input_shape,
+        stride_shape=stride_shape,
+    )
+
+    bounds_compositions = []
+    for bounds in patch_inputs:
+        indices = spatial_indexer.query(
+                    pygeos.box(*bounds), predicate='contains')
+        insts = [inst_pred[v]['type'] for v in indices]
+        uids, freqs = np.unique(insts, return_counts=True)
+        # a bound may not contain all types, hence, to sync
+        # the array and placement across all types, we create
+        # a holder then fill the count within
+        holder = np.zeros(num_types, dtype=np.int16)
+        holder[uids] = freqs
+        bounds_compositions.append(holder)
+    bounds_compositions = np.array(bounds_compositions)
+
+    base_name = pathlib.Path(wsi_path).stem
+    # output in the same saving protocol for construct graph
+    np.save(f'{save_dir}/{base_name}.position.npy', patch_inputs)
+    np.save(f'{save_dir}/{base_name}.features.npy', bounds_compositions)
 
 
-def extract_composition_feature(save_dir):
+def extract_composition_features(
+        wsi_paths: List[str],
+        msk_paths: List[str],
+        save_dir: str,
+        preproc_func: Callable):
     inst_segmentor = NucleusInstanceSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=16,
         num_postproc_workers=2,
     )
+    # injecting customized preprocessing functions,
+    # check the document or sample codes below for API
+    inst_segmentor.model.preproc_func = preproc_func
 
     rmdir(save_dir)
-    output_map = inst_segmentor.predict(
+    output_map_list = inst_segmentor.predict(
         wsi_paths,
         msk_paths,
         mode="wsi",
@@ -423,11 +504,49 @@ def extract_composition_feature(save_dir):
         crash_on_exception=True,
         save_dir=save_dir,
     )
-    rename_output(output_map)
+    # rename output files of toolbox
+    output_paths = []
+    for input_path, output_path in output_map_list:
+        input_name = pathlib.Path(input_path).stem
 
-    # [!@Wenqi] Cell composition goes here
+        output_parent_dir = pathlib.Path(output_path).parent
 
-    return output_map
+        src_path = pathlib.Path(f'{output_path}.dat')
+        new_path = pathlib.Path(f'{output_parent_dir}/{input_name}.dat')
+        src_path.rename(new_path)
+        output_paths.append(new_path)
+
+    # TODO: parallelize this later if possible
+    for idx, path in enumerate(output_paths):
+        get_composition_features(wsi_paths[idx], path, save_dir)
+    return output_paths
+
+
+# %% [markdown]
+# ## Stain normalization on each image patch
+# Both of deep feature and cell compositions requires analyses on the patches.
+# In histopathology, we often want to normalize the image patch stain to reduce
+# as much variation as possible. Here we define the normalizer and the function
+# to perform such job later in parallel processing manner. Both the target image
+# and the normalizer here are provided by our toolbox at `tiatoolbox.tools.stainnorm`
+# and `tiatoolbox.data` . Notice we do not perform stain norm here. Instead, we will
+# use this function in tandem with other methods in the toolbox where those methods
+# will automatically use this function for pre-processing. In our cases, this will
+# be through the `engine` object defined above.
+
+# %%
+from tiatoolbox.data import stainnorm_target
+from tiatoolbox.tools.stainnorm import get_normaliser
+
+target_image = stainnorm_target()
+stain_normaliser = get_normaliser("vahadane")
+stain_normaliser.fit(target_image)
+
+
+# ! stainormalizer may crash, do we want to handle them manually
+# ! or ignore it for now? (np.linalg)
+def stain_norm_func(img):
+    return stain_normaliser.transform(img)
 
 
 # %% [markdown]
@@ -448,30 +567,30 @@ def extract_composition_feature(save_dir):
 
 # %%
 
-FEATURE_MODE = "cnn"
-CACHE_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/code/data/resnet/"
+# [!@john] manually define or auto-infer from input ?
+NUM_NODE_FEATURES = 6
+FEATURE_MODE = "composition"
+CACHE_PATH = None
 WSI_FEATURE_DIR = f"{ROOT_OUTPUT_DIR}/features/"
 
 # !- debug injection, remove later
-# CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
-# WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
-# wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
-# wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
-CACHE_PATH = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/"
-    "slidegraph/storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
-)
+# CACHE_PATH = '/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/features'
+# CACHE_PATH = None
+# wsi_names = wsi_names[:2]
+# wsi_paths = wsi_paths[:2]
+# msk_paths = msk_paths[:2] if msk_paths else None
 # !-
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
-    # ! check the extension search
-    output_list = recur_find_ext(f"{CACHE_PATH}/", [".json"])
+    output_list = recur_find_ext(f"{CACHE_PATH}/", [".npy"])
 elif FEATURE_MODE == "composition":
-    output_list = extract_composition_feature(WSI_FEATURE_DIR)
+    output_list = extract_composition_features(
+        wsi_paths, msk_paths, WSI_FEATURE_DIR, stain_norm_func)
 else:
-    output_list = extract_deep_feature(WSI_FEATURE_DIR)
-# ! put the assertion back later
-# assert len(output_list) == len(wsi_names), 'Missing output.'
+    output_list = extract_deep_features(
+        wsi_paths, msk_paths, WSI_FEATURE_DIR, stain_norm_func)
+assert len(output_list) == len(wsi_names), \
+            f'Missing output. {len(output_list)} vs {len(wsi_names)}'
 
 # %% [markdown]
 # ## Binding it all into a graph
@@ -490,7 +609,9 @@ def construct_graph(wsi_name, save_path):
     """Construct graph for one WSI and save to file."""
     positions = np.load(f"{WSI_FEATURE_DIR}/{wsi_name}.position.npy")
     features = np.load(f"{WSI_FEATURE_DIR}/{wsi_name}.features.npy")
-    graph_dict = hybrid_clustered_graph(positions[:, :2], features)
+    graph_dict = hybrid_clustered_graph(
+                    positions[:, :2], features,
+                    feature_range_thresh=None)
 
     # Write a graph to a JSON file
     with open(save_path, "w") as handle:
@@ -500,14 +621,6 @@ def construct_graph(wsi_name, save_path):
 
 CACHE_PATH = None
 GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
-
-# !- debug injection, remove later
-CACHE_PATH = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
-    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
-)
-GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
-# !-
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     GRAPH_DIR = CACHE_PATH  # assignment for follow up loading
@@ -527,50 +640,44 @@ else:
 # we plot the one sample graph on its WSI thumbnail.
 
 # %%
-# from skimage.exposure import equalize_hist
-# from sklearn.decomposition import PCA
-# from sklearn.preprocessing import StandardScaler
-# from torch_geometric.data import Data
+from skimage.exposure import equalize_hist
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from torch_geometric.data import Data
 
-# from tiatoolbox.utils.visualization import plot_graph
-# from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.utils.visualization import plot_graph
+from tiatoolbox.wsicore.wsireader import get_wsireader
 
-# # !- debug injection, remove later
-# CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
-# WSI_DIR = "/home/dang/storage_1/dataset/TCGA-LUAD/"
-# wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])[:2]
-# wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
-# # !-
 
-# # we should use .read_json or sthg for this
-# sample_idx = 0
-# graph_path = f"{ROOT_OUTPUT_DIR}/graph/{wsi_names[sample_idx]}.json"
-# graph_dict = load_json(graph_path)
-# graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
-# graph = Data(**graph_dict)
+# we should use .read_json or sthg for this
+sample_idx = 0
+graph_path = f"{ROOT_OUTPUT_DIR}/graph/{wsi_names[sample_idx]}.json"
+graph_dict = load_json(graph_path)
+graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
+graph = Data(**graph_dict)
 
-# # deriving node colors via projecting n-d features down to 3-d
-# graph.x = StandardScaler().fit_transform(graph.x)
-# # .c for node colors
-# graph.c = PCA(n_components=3).fit_transform(graph.x)[:, [1, 0, 2]]
-# for channel in range(graph.c.shape[-1]):
-#     graph.c[:, channel] = (
-#         1 - equalize_hist(graph.c[:, channel]) ** 2
-#     )
-# graph.c = (graph.c * 255).astype(np.uint8)
+# deriving node colors via projecting n-d features down to 3-d
+graph.x = StandardScaler().fit_transform(graph.x)
+# .c for node colors
+graph.c = PCA(n_components=3).fit_transform(graph.x)[:, [1, 0, 2]]
+for channel in range(graph.c.shape[-1]):
+    graph.c[:, channel] = (
+        1 - equalize_hist(graph.c[:, channel]) ** 2
+    )
+graph.c = (graph.c * 255).astype(np.uint8)
 
-# reader = get_wsireader(wsi_paths[sample_idx])
-# thumb = reader.slide_thumbnail(4.0, 'mpp')
-# thumb_overlaid = plot_graph(
-#     thumb.copy(), graph.coords, graph.edge_index.T,
-#     node_colors=graph.c, node_size=5)
-# plt.subplot(1, 2, 1)
-# plt.imshow(thumb)
-# plt.axis('off')
-# plt.subplot(1, 2, 2)
-# plt.imshow(thumb_overlaid)
-# plt.axis('off')
-# plt.show()
+reader = get_wsireader(wsi_paths[sample_idx])
+thumb = reader.slide_thumbnail(4.0, 'mpp')
+thumb_overlaid = plot_graph(
+    thumb.copy(), graph.coords, graph.edge_index.T,
+    node_colors=graph.c, node_size=5)
+plt.subplot(1, 2, 1)
+plt.imshow(thumb)
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(thumb_overlaid)
+plt.axis('off')
+plt.show()
 
 # %% [markdown]
 # # The Graph Neural Network
@@ -594,12 +701,13 @@ class SlideGraphDataset(Dataset):
     """Handling loading graph data from disk.
 
     Args:
-        info_list (list): A list of `[path, label]` in case of
-            `mode != "infer"`, otherwise it is a list of `path`.
-            Here, `path` points to file containing the graph structure
-            saved in `.json` while `label` is the label of the graph.
-            The format within `.json` is expected to from
-            `tiatoolbox.tools.graph`.
+        info_list (list): In case of `train` or `valid` is in `mode`,
+            this is expected to be a list of `[uid, label]` . Otherwise,
+            it is a list of `uid`. Here, `uid` is used to construct
+            `f"{GRAPH_DIR}/{wsi_code}.json"` which is a path points to
+            a `.json` file containing the graph structure. On the other
+            hand, `label` is the label of the graph. The format within `.json`
+            is expected to from `tiatoolbox.tools.graph`.
         mode (str): Denoting which data mode the `info_list` is in.
         preproc (callable): The prerocessing function for each node
             within the graph.
@@ -655,16 +763,13 @@ from sklearn.preprocessing import StandardScaler
 CACHE_PATH = None
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 
-# !- debug injection, remove later
-CACHE_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
-# !-
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     SCALER_PATH = CACHE_PATH  # assignment for follow up loading
     node_scaler = joblib.load(SCALER_PATH)
 else:
     # ! we need a better way of doing this, will have OOM problem
-    loader = SlideGraphDataset(wsi_codes, mode="infer")
+    loader = SlideGraphDataset(wsi_names, mode="infer")
     loader = DataLoader(
         loader,
         num_workers=8,
@@ -680,7 +785,7 @@ else:
     joblib.dump(node_scaler, SCALER_PATH)
 
 
-# we must define the function after training
+# we must define the function after training/loading
 def nodes_preproc_func(node_features):
     return node_scaler.transform(node_features)
 
@@ -868,18 +973,7 @@ class SlideGraphArch(nn.Module):
 # out the output predictions.
 # %%
 
-# !- debug injection, remove later
-GRAPH_DIR = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
-    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
-)
-SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
-wsi_codes = recur_find_ext(GRAPH_DIR, ['.json'])
-wsi_codes = [pathlib.Path(v).stem for v in wsi_codes][:2]
-# !-
-
-
-dummy_ds = SlideGraphDataset(wsi_codes, mode="infer")
+dummy_ds = SlideGraphDataset(wsi_names, mode="infer")
 loader = DataLoader(
     dummy_ds,
     num_workers=0,
@@ -895,7 +989,7 @@ wsi_graphs.x = wsi_graphs.x.type(torch.float32)
 
 # define model object
 arch_kwargs = dict(
-    dim_features=4,
+    dim_features=NUM_NODE_FEATURES,
     dim_target=1,
     layers=[16, 16, 8],
     dropout=0.5,
@@ -1061,16 +1155,26 @@ class ScalarMovingAverage(object):
 
 # %%
 import logging
-from tiatoolbox.tools.scale import PlattScaling
+
 from sklearn.metrics import average_precision_score as auprc_scorer
 from sklearn.metrics import roc_auc_score as auroc_scorer
+
+from tiatoolbox.tools.scale import PlattScaling
 
 
 def run_once(
         dataset_dict, num_epochs, save_dir,
         on_gpu=True, pretrained=None,
         loader_kwargs={}, arch_kwargs={}, optim_kwargs={}):
-    """Running the inference or training loop once."""
+    """Running the inference or training loop once.
+
+    The actual running mode is defined via the code name of the dataset
+    within `dataset_dict`. Here, `train` is specifically preserved for
+    dataset used for training. `.*infer-valid.*` and `.*infer-train*`
+    are preserved for dataset containing the labels. Otherwise,
+    the dataset is assumed to be for inference run without.
+
+    """
     model = SlideGraphArch(**arch_kwargs)
     if pretrained is not None:
         model.load(*pretrained)
@@ -1222,27 +1326,38 @@ def reset_logging(save_path):
 # a set of parameters.
 
 # %%
+
+exit()
 # !- debug injection, remove later
 GRAPH_DIR = (
     "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
     "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
 )
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+SPLIT_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/splits.dat"
+node_scaler = joblib.load(SCALER_PATH)
+
 wsi_codes = label_df["WSI-CODE"].to_list()
+
+def nodes_preproc_func(node_features):
+    return node_scaler.transform(node_features)
+
 # !-
+
+splits = joblib.load(SPLIT_PATH)
 
 loader_kwargs = dict(
     num_workers=8,
     batch_size=16,
 )
 arch_kwargs = dict(
-    dim_features=4,
+    dim_features=NUM_NODE_FEATURES,
     dim_target=1,
     layers=[16, 16, 8],
     dropout=0.5,
     pooling="mean",
     conv="EdgeConv",
-    aggr="add",
+    aggr="max",
 )
 optim_kwargs = dict(
     lr=1.0e-3,
@@ -1252,7 +1367,7 @@ NUM_EPOCHS = 5
 
 #
 MODEL_DIR = f"{ROOT_OUTPUT_DIR}/modelx/"
-for split_idx, split in enumerate(split_list):
+for split_idx, split in enumerate(splits):
     new_split = {
         "train": split['train'],
         "infer-train": split['train'],
@@ -1270,6 +1385,7 @@ for split_idx, split in enumerate(split_list):
         optim_kwargs=optim_kwargs)
 
 
+exit()
 # %% [markdown]
 # ## The inference
 
@@ -1345,7 +1461,7 @@ metric_name = 'infer-valid-B-auroc'
 PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 
 cum_stats = []
-for split_idx, split in enumerate(split_list):
+for split_idx, split in enumerate(splits):
     new_split = {
         "infer": [v[0] for v in split["test"]]
     }
