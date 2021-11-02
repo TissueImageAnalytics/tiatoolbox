@@ -371,7 +371,7 @@ class HoVerNetPlus(ModelABC):
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("tp2", create_decoder_branch(ksize=ksize, out_ch=num_types)),
+                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
                         ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
                         ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
@@ -381,7 +381,7 @@ class HoVerNetPlus(ModelABC):
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("tp2", create_decoder_branch(ksize=ksize, out_ch=num_types)),
+                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
                         ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
                         ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
                         ("ls", create_decoder_branch(ksize=ksize, out_ch=num_layers)),
@@ -714,11 +714,11 @@ class HoVerNetPlus(ModelABC):
             )
             if "np" in pred_dict:
                 pred_dict["np"] = F.softmax(pred_dict["np"], dim=-1)[..., 1:]
-            if "tp2" in pred_dict:
-                type_map = F.softmax(pred_dict["tp2"], dim=-1)
+            if "tp" in pred_dict:
+                type_map = F.softmax(pred_dict["tp"], dim=-1)
                 type_map = torch.argmax(type_map, dim=-1, keepdim=True)
                 type_map = type_map.type(torch.float32)
-                pred_dict["tp2"] = type_map
+                pred_dict["tp"] = type_map
             if "ls" in pred_dict:
                 layer_map = F.softmax(pred_dict["ls"], dim=-1)
                 layer_map = torch.argmax(layer_map, dim=-1, keepdim=True)
@@ -726,16 +726,16 @@ class HoVerNetPlus(ModelABC):
                 pred_dict["ls"] = layer_map
             pred_dict = {k: v.cpu().numpy() for k, v in pred_dict.items()}
 
-        if "tp2" in pred_dict and "ls" not in pred_dict:
-            return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"]
+        if "tp" in pred_dict and "ls" not in pred_dict:
+            return pred_dict["np"], pred_dict["hv"], pred_dict["tp"]
 
-        if "tp2" in pred_dict and "ls" in pred_dict:
-            return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"], pred_dict["ls"]
+        if "tp" in pred_dict and "ls" in pred_dict:
+            return pred_dict["np"], pred_dict["hv"], pred_dict["tp"], pred_dict["ls"]
 
-        if "tp2" not in pred_dict and "ls" in pred_dict:
+        if "tp" not in pred_dict and "ls" in pred_dict:
             return pred_dict["ls"]
 
-        if "tp2" not in pred_dict and "np" in pred_dict:
+        if "tp" not in pred_dict and "np" in pred_dict:
             return pred_dict["np"], pred_dict["hv"]
 
         return None
