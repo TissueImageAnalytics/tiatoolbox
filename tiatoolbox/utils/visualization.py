@@ -31,7 +31,9 @@ def overlay_patch_prediction(
     prediction: np.ndarray,
     alpha: float = 0.35,
     label_info: dict = None,
+    min_val: float = 0.0,
     ax=None,
+    return_ax: bool = True,
 ):
     """Generate an overlay, given a 2D prediction map.
 
@@ -42,8 +44,12 @@ def overlay_patch_prediction(
         label_info (dict): A dictionary contains the mapping for each integer value
             within `prediction` to its string and color. [int] : (str, (int, int, int)).
             By default, integer will be taken as label and color will be random.
+        min_val (float):
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
+        return_ax:
+    
+    Returns:
 
     """
     if img.shape[:2] != prediction.shape[:2]:
@@ -57,6 +63,10 @@ def overlay_patch_prediction(
         if not (img.max() <= 1.0 and img.min() >= 0):
             raise ValueError("Not support float `img` outside [0, 1].")
         img = np.array(img * 255, dtype=np.uint8)
+
+    # if `min_val` is defined, only display the overlay for areas with pred > min_val
+    if min_val > 0:
+        prediction_sel = prediction >= min_val
 
     overlay = img.copy()
 
@@ -113,6 +123,12 @@ def overlay_patch_prediction(
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype(np.uint8)
 
+    if min_val > 0.0:
+        overlay[~prediction_sel] = img[~prediction_sel]
+
+    if ax is None and not return_ax:
+        return overlay
+
     # create colorbar parameters
     name_list = [v[0] for v in label_info.values()]
     color_list = [v[1] for v in label_info.values()]
@@ -145,8 +161,9 @@ def overlay_patch_probmap(
     prediction: np.ndarray,
     alpha: float = 0.35,
     colour_map: str = "jet",
-    cutoff: float = 0.0,
+    min_val: float = 0.0,
     ax=None,
+    return_ax: bool = True,
 ):
     """Generate an overlay, given a 2D prediction map.
 
@@ -155,7 +172,10 @@ def overlay_patch_probmap(
         prediction (ndarray): 2D prediction map. Multi-class prediction should have
             values ranging from 0 to N-1, where N is the number of classes.
         alpha (float): Opacity value used for the overlay.
+        colour_map (string): 
+        min_val (float):
         ax (ax): Matplotlib ax object.
+        return_ax (bool):
 
     Returns:
 
@@ -178,12 +198,12 @@ def overlay_patch_probmap(
             raise ValueError("Not support float `img` outside [0, 1].")
         img = np.array(img * 255, dtype=np.uint8)
 
-    # if `cutoff` is defined, only display the overlay for areas with prob > cutoff
-    if cutoff is not None:
+    # if `min_val` is defined, only display the overlay for areas with prob > min_val
+    if min_val > 0.0:
         assert (
-            cutoff >= 0 and cutoff <= 1
-        ), "`cutoff` must be a probability between 0 and 1"
-        prediction_sel = prediction >= cutoff
+            min_val >= 0 and min_val <= 1
+        ), "`min_val` must be a probability between 0 and 1"
+        prediction_sel = prediction >= min_val
 
     overlay = img.copy()
 
@@ -198,11 +218,11 @@ def overlay_patch_probmap(
     overlay[overlay > 255.0] = 255.0
     overlay = overlay.astype(np.uint8)
 
-    if cutoff is not None:
+    if min_val > 0.0:
         overlay[~prediction_sel] = img[~prediction_sel]
 
-    # if ax is None and not return_ax:
-    #     return overlay
+    if ax is None and not return_ax:
+        return overlay
 
     colorbar_params = {
         "mappable": mpl.cm.ScalarMappable(cmap="jet"),
