@@ -28,17 +28,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from scipy.ndimage import measurements
-from scipy.ndimage.morphology import (
-    binary_fill_holes,
-    binary_closing,
-    binary_opening
-)
-
-from skimage.morphology import (
-    remove_small_objects,
-    remove_small_holes,
-    disk
-    )
+from scipy.ndimage.morphology import binary_fill_holes
+from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 
 from tiatoolbox.models.abc import ModelABC
@@ -283,8 +274,11 @@ class HoVerNetPlus(ModelABC):
     """Initialise HoVer-Net+."""
 
     def __init__(
-        self, num_input_channels: int = 3, num_types: int = None,
-        num_layers: int = None, mode: str = "original"
+        self,
+        num_input_channels: int = 3,
+        num_types: int = None,
+        num_layers: int = None,
+        mode: str = "original",
     ):
         super().__init__()
         self.mode = mode
@@ -405,6 +399,7 @@ class HoVerNetPlus(ModelABC):
 
         self.upsample2x = UpSample2x()
 
+    # skipcq: PYL-W0221
     def forward(self, imgs: torch.Tensor):
         """Logic for using layers defined in init.
         This method defines how layers are used in forward operation.
@@ -534,14 +529,15 @@ class HoVerNetPlus(ModelABC):
         Args:
             ls_map: prediction output
         """
-        ls_map = np.squeeze(ls_map.astype('float32'))
+        ls_map = np.squeeze(ls_map.astype("float32"))
         ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
         ls_map = np.around(ls_map)
-        ls_map = ls_map.astype('int')
+        ls_map = ls_map.astype("int")
 
         return ls_map
 
     @staticmethod
+    # skipcq: PYL-W0221
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
         Args:
@@ -604,7 +600,7 @@ class HoVerNetPlus(ModelABC):
                 inst_box_tl = inst_box[:2]
                 inst_map = inst_map[
                     inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]
-                    ]
+                ]
                 inst_map = inst_map.astype(np.uint8)
                 inst_moment = cv2.moments(inst_map)
                 inst_contour = cv2.findContours(
@@ -668,12 +664,14 @@ class HoVerNetPlus(ModelABC):
             def image2contours(image, layer_info_dict, cnt, type_class):
 
                 contours, _ = cv2.findContours(
-                    image.astype('uint8'), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+                    image.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+                )
                 for layer in contours:
                     coords = layer[:, 0, :]
                     layer_info_dict[str(count)] = {
-                        "contours": coords.tolist(), "type": type_class
-                        }
+                        "contours": coords.tolist(),
+                        "type": type_class,
+                    }
                     cnt += 1
 
                 return layer_info_dict, count
@@ -684,7 +682,7 @@ class HoVerNetPlus(ModelABC):
             count = 1
 
             for lyr in layer_list:
-                layer = np.where(pred_layer == lyr, 1, 0).astype('uint8')
+                layer = np.where(pred_layer == lyr, 1, 0).astype("uint8")
                 layer_dict, count = image2contours(layer, layer_dict, count, lyr)
 
         return pred_inst, inst_info_dict, pred_layer, layer_dict
