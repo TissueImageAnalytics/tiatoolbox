@@ -98,6 +98,28 @@ class AnnotationStoreABC(ABC):
 
     @staticmethod
     def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
+        """Apply a binary geometry predicate.
+
+        For more information on geomeric predicates see the `Shapely
+        documentation`.
+
+        .. _BP:
+            | https://shapely.readthedocs.io/en/stable/
+            | manual.html#binary-predicates
+
+        __ BP_
+
+        Args:
+            name(str):
+                Name of the predicate to apply.
+            a(Geometry):
+                The first geometry.
+            b(Geomettry):
+                The second geometry.
+
+        Returns:
+            bool: True if the predicate holds.
+        """
         return getattr(a, name)(b)
 
     # All valid shapely binary predicates
@@ -116,18 +138,52 @@ class AnnotationStoreABC(ABC):
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStoreABC":
-        """Load a store object from a path or file-like object."""
+        """Load a store object from a path or file-like object.
+
+        Args:
+            fp(Path or str or IO): The file path or file handle.
+
+        Returns:
+            AnnotationStoreABC: An instance of an annotation store.
+
+        """
         raise NotImplementedError()
 
     @staticmethod
     def serialise_geometry(geometry: Geometry) -> Union[str, bytes]:
-        """Serialise a geometry to a string or bytes."""
+        """Serialise a geometry to a string or bytes.
+
+        This defaults to well-known text (WKT) but may be overriden to
+        any other format which a Shapely geometry could be serialised to
+        e.g. well-known binary (WKB) or geoJSON etc.
+
+        Args:
+            geometry(Geometry):
+                The Shapely geometry to be serialised.
+
+        Returns:
+            bytes or str: The serialised geometry.
+
+        """
         return geometry.wkt
 
     @staticmethod
     @lru_cache(32)
     def deserialise_geometry(data: Union[str, bytes]) -> Geometry:
-        """Deserialise a geometry from a string or bytes."""
+        """Deserialise a geometry from a string or bytes.
+
+        This default implementaion will deserialise bytes as well-known
+        binary (WKB) and srings as well-known text (WKT). This can be
+        overriden to deserialise other formats such as geoJSON etc.
+
+        Args:
+            data(bytes or str):
+                The serialised representaion of a Shapely geometry.
+
+        Returns:
+            Geometry: The deserialised Shapely geometry.
+
+        """
         if isinstance(data, str):
             return wkt.loads(data)
         return wkb.loads(data)
@@ -137,11 +193,22 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
-        """Serialise a copy of the store to a file-like object."""
+        """Serialise a copy of the whole store to a file-like object.
+
+        Args:
+            fp(Path or str or IO):
+                A file path or file handle object for output to disk.
+
+        """
         raise NotImplementedError()
 
-    def dumps(self) -> str:
-        """Serialise and return a copy of store as a string."""
+    def dumps(self) -> Union[str, bytes]:
+        """Serialise and return a copy of store as a string or bytes.
+
+        Returns:
+            str or bytes: The serialised store.
+
+        """
         raise NotImplementedError()
 
     def append(
@@ -150,7 +217,22 @@ class AnnotationStoreABC(ABC):
         properties: Optional[Dict[str, Any]] = None,
         key: Optional[str] = None,
     ) -> int:
-        """Insert a new annotation, returning the key."""
+        """Insert a new annotation, returning the key.
+
+        Args:
+            geometry(Geometry):
+                The shapely geometry to insert.
+            properties(dict):
+                A dictionary of JSON serialisable data associated with
+                the geometry.
+            key(str):
+                Optional. The uniqure key used to identify the
+                annotation in the store. If not given a new UUID4 will
+                be generated and returned instead.
+
+        Returns:
+            str: The unique key of the newly inserted annotation.
+        """
         properties_iter = properties if properties is None else [properties]
         keys = key if key is None else [key]
         return self.append_many([geometry], properties_iter, keys)[0]
@@ -161,6 +243,27 @@ class AnnotationStoreABC(ABC):
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
         keys: Optional[Iterable[str]] = None,
     ) -> List[str]:
+        """Bulk append of annotations.
+
+        This may be more performant than repeated calls to `append`.
+
+        Args:
+            geometries(iter(Geometry)):
+                An iterable of Shapely geometries to insert.
+            properties_iter(iter(dict)):
+                An iterable of JSON serialisable properties associaed
+                with each geomettry. If None,it is assumed that each
+                geometry has no properties.
+            keys:
+                An interable of unique keys associatetd with each
+                geometry being inserted. If None, a new UUID4 is
+                generated for each geometry.
+
+        Returns:
+            list(str):
+                A list of unqiue keys for the inserted geometries.
+
+        """
         if properties_iter is None:
             properties_iter = ({} for _ in geometries)
         if keys is None:
@@ -171,22 +274,64 @@ class AnnotationStoreABC(ABC):
             result.append(key)
         return result
 
-    def update(self, key: str, update: Dict[str, Any]) -> None:
-        """Update an annotation at given key."""
-        return self.update_many([key], [update])
+    def update(
+        self,
+        key: str,
+        geometry: Optional[Geometry] = None,
+        properties: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Update an annotation at given key.
+        
+        Args:
+            key(str):
+                The key of the annoation to update.
+            geometry(Geometry):
+                The new geometry. If None, the geometry is not updated.
+            properties(dict):
+                A dictionary of properties to update and their new
+                new values. If None, the existing properties are not
+                altered.
+            
+        """
+        geometry = geometry if geometry is None else [geometry]
+        properties = properties if properties is None else [properties]
+        return self.update_many([key], geometry, properties)
 
     def update_many(
         self, keys: Iterable[int], updates: Iterable[Dict[str, Any]]
     ) -> None:
+        """Bulk update of annotattions.
+        
+        This may be more efficient than calling `update` repeatetdy
+        in a loop.
+
+        Args:
+            geometries(iter(Geometry)):
+                An iterable of geometries to update.
+            properties_iter(iter(dict)):
+                An iterable of properties to update.
+            key(iter(str)):
+                An iterable of keys for each annotation to be updated.
+        """
         for key, update in zip(keys, updates):
             self.update(key, update)
 
     def remove(self, key: str) -> None:
-        """Remove annotation by key."""
+        """Remove annotation from the store with its unique key.
+        
+        Args:
+            key(str):
+                The key of the annoation to be removed.
+        """
         self.remove_many([key])
 
     def remove_many(self, keys: Iterable[str]) -> None:
-        """Bulk removal of annotations by key."""
+        """Bulk removal of annotations by keys.
+        
+        Args:
+            keys(iter(str)):
+                An iterable of keys for the annotation to be removed.
+        """
         for key in keys:
             self.remove(key)
 
@@ -195,51 +340,118 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
     def __getitem__(self, key: str) -> Annotation:
+        """Fetch a single annotation by key.
+        
+        Args:
+            key(str):
+                The key of the annoation to be fetchedd.
+        """
         raise NotImplementedError()
 
     def __setitem__(
         self, key: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
+        """Set an annotation in the store.
+        
+        If an annotation with this key already exists, it is replaced.
+        Otherwise, it is inserted as a new annotation.
+
+        Args:
+            key(str):
+                The key of he annotation to be set.
+            annotation(tuple):
+                The annotation being set, i.e. a tuple of
+                (geometry, properties).
+    
+        """
         raise NotImplementedError()
 
     def __delitem__(self, key: str) -> None:
+        """Delete an annotation by key.
+
+        An alias of `remove`.
+        
+        Args:
+            key(str):
+                The key of the annotation to be removed.
+
+        """
         self.remove(key)
 
     def keys(self) -> Iterable[int]:
+        """Return an iterable (usually generator) of all keys in the store.
+        
+        Returns:
+            iter: An iterable of keys.
+        
+        """
         for key, _ in self.items():
             yield key
 
     def values(self) -> Iterable[Annotation]:
+        """Return an iterable of all annotattion in the store.
+        
+        Returns:
+            iter: An iterable of annotations.
+            
+        """
         for _, value in self.items():
             yield value
 
     def items(self) -> Iterable[Tuple[str, Annotation]]:
+        """Return an iterable of all keys and annotation in the store.
+        
+        Returns:
+            iter: An iterable of keys and annotations.
+        """
         raise NotImplementedError()
 
     def __iter__(self) -> Iterable[int]:
-        raise NotImplementedError()
+        """Return an iterable of keys in the store.
+        
+        An alias of `keys`.
+
+        Returns:
+            iter: An iterable of keys.
+
+        """
+        yield from self.keys()
 
     @staticmethod
-    def _eval_properties_predicate(
-        properties_predicate: Optional[
+    def _eval_predicate(
+        predicate: Optional[
             Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]]
         ],
         properties: Dict[str, Any],
     ) -> bool:
-        """Evaluate properties predicate against properties."""
-        if properties_predicate is None:
+        """Evaluate properties predicate against properties.
+
+        Args:
+            predicate(strt or bytes or Callable):
+                The predicate to evaluate on properties. The predicate
+                may be a string, pickled bytes, or a callable
+                (e.g. a function).
+            properties(dict):
+                A dictionary of JSON serialisable
+                properties on which to evaluate the predicate.
+
+        Returns:
+            bool: Returns true if the predicate holds.
+    
+        """
+        if predicate is None:
             return True
-        if isinstance(properties_predicate, str):
+        if isinstance(predicate, str):
             return bool(
                 eval(  # skipcq: PYL-W0123
-                    properties_predicate, PY_GLOBALS, {"props": properties}
+                    predicate, PY_GLOBALS, {"props": properties}
                 )
             )
-        if isinstance(properties_predicate, bytes):
-            properties_predicate = pickle.loads(  # skipcq: BAN-B301
-                properties_predicate
+        if isinstance(predicate, bytes):
+            predicate = pickle.loads(  # skipcq: BAN-B301
+                predicate
             )
-        return bool(properties_predicate(properties))
+        return bool(predicate(properties))
 
     def query(
         self,
