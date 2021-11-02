@@ -14,14 +14,16 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
+import cv2
 import numpy as np
 from PIL import Image
-import cv2
+
+from tiatoolbox import utils
 
 
 def background_composite(image, fill=255, alpha=False):
@@ -37,6 +39,7 @@ def background_composite(image, fill=255, alpha=False):
 
     Examples:
         >>> from tiatoolbox.utils import transforms
+        >>> import numpy as np
         >>> from matplotlib import pyplot as plt
         >>> img_with_alpha = np.zeros((2000, 2000, 4)).astype('uint8')
         >>> img_with_alpha[:1000, :, 3] = 255 # edit alpha channel
@@ -73,9 +76,9 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         output_size (tuple(int)): output image size, (width, height)
         interpolation (str or int): interpolation method used to interpolate the image
          using `opencv interpolation flags
-         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`
-         __ default='optimise', uses cv2.INTER_AREA for scale_factor
-         <1.0 otherwise uses cv2.INTER_CUBIC
+         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
+         default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
+         otherwise uses cv2.INTER_CUBIC
 
     Returns:
         :class:`numpy.ndarray`: resized image
@@ -89,26 +92,32 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
-    # Estimate new dimension
+    # Handle None arguments
     if output_size is None:
         width = int(img.shape[1] * scale_factor)
         height = int(img.shape[0] * scale_factor)
         output_size = (width, height)
 
-    # Optimise interpolation
-    if np.any(scale_factor != 1.0):
-        if interpolation == "optimise":
-            if np.any(scale_factor > 1.0):
-                interpolation = cv2.INTER_CUBIC
-            else:
-                interpolation = cv2.INTER_AREA
+    if scale_factor is None:
+        scale_factor = img.shape[:2][::-1] / np.array(output_size)
 
-        # Resize image
-        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
-    else:
-        resized_img = img
+    # Return original if scale factor is 1
+    if np.all(scale_factor == 1.0):
+        return img
 
-    return resized_img
+    # Get appropriate cv2 interpolation enum
+    if interpolation == "optimise":
+        if np.any(scale_factor > 1.0):
+            interpolation = "cubic"
+        else:
+            interpolation = "area"
+    interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
+
+    # Resize the image
+    # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
+    if img.shape[0] == img.shape[1] == 1:
+        return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
+    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
 def convert_RGB2OD(img):
@@ -184,8 +193,12 @@ def locsize2bounds(location, size):
          height.
 
     Returns:
-        tuple: A tuple of bounds in (left, top, right, bottom) /
-        (start_x, start_y, end_x, end_y) format.
+        tuple: A tuple of bounds:
+          - :py:obj:`int` - left / start_x
+          - :py:obj:`int` - top / start_y
+          - :py:obj:`int` - right / end_x
+          - :py:obj:`int` - bottom / end_y
+
     """
     return (
         location[0],

@@ -66,6 +66,15 @@ Stain Normalisation
 .. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
+
+^^^^^^^^^^^^^^^
+Tissue Masking
+^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.tissuemask
+    :members:
+
+
 ^^^^^^^^^^^^^^^^^^
 Stain Extraction
 ^^^^^^^^^^^^^^^^^^
@@ -83,11 +92,48 @@ Patch Extraction
 .. autoclass:: PointsPatchExtractor
     :show-inheritance:
 
-.. autoclass:: FixedWindowPatchExtractor
+.. autoclass:: SlidingWindowPatchExtractor
     :show-inheritance:
 
-.. autoclass:: VariableWindowPatchExtractor
-    :show-inheritance:
+^^^^^^^^^^^^^^^^^^^^
+Deep Learning Models
+^^^^^^^^^^^^^^^^^^^^
+
+.. automodule::tiatoolbox.models
+    :members:
+
+.. automodule:: tiatoolbox.models.abc
+    :members:
+
+------------
+Architecture
+------------
+
+.. automodule:: tiatoolbox.models.architecture
+    :members:
+
+--------------
+Engine
+--------------
+
+.. automodule:: tiatoolbox.models.engine
+    :members:
+
+.. automodule:: tiatoolbox.models.engine.patch_predictor
+    :members:
+
+.. automodule:: tiatoolbox.models.engine.semantic_segmentor
+    :members:
+
+-------
+Dataset
+-------
+
+.. automodule:: tiatoolbox.models.dataset
+    :members:
+
+.. automodule:: tiatoolbox.models.dataset.classification
+    :members:
 
 ^^^^^^^^^
 Utilities

@@ -17,7 +17,7 @@
 # This file contains code inspired by StainTools
 # [https://github.com/Peter554/StainTools] written by Peter Byfield.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -25,8 +25,8 @@
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
-from tiatoolbox.utils.transforms import convert_RGB2OD
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
+from tiatoolbox.utils.transforms import convert_RGB2OD
 
 
 def vectors_in_correct_direction(e_vectors):

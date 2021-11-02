@@ -2,7 +2,7 @@
 
 """The setup script."""
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md") as readme_file:
     readme = readme_file.read()
@@ -17,11 +17,18 @@ requirements = [
     "matplotlib",
     "opencv-python>=4.0",
     "openslide-python==1.1.2",
-    "pyyaml",
+    "pyyaml>=5.1",
     "pandas",
     "glymur",
-    "scikit-learn==0.23.2",
+    "scikit-learn>=0.23.2",
     "scikit-image>=0.17",
+    "torchvision==0.10.1",
+    "torch==1.9.1",
+    "tqdm==4.60.0",
+    "tifffile",
+    "imagecodecs",
+    "zarr",
+    "requests",
 ]
 
 setup_requirements = [
@@ -33,17 +40,17 @@ test_requirements = [
 ]
 
 setup(
-    author="TIA Lab",
-    author_email="tialab@dcs.warwick.ac.uk",
-    python_requires=">=3.6",
+    author="TIA Centre",
+    author_email="tia@dcs.warwick.ac.uk",
+    python_requires=">=3.7",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
     description="Computational pathology toolbox developed by TIA Lab.",
     entry_points={
@@ -61,7 +68,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    url="https://github.com/tialab/tiatoolbox",
-    version="0.5.2",
+    url="https://github.com/TissueImageAnalytics/tiatoolbox",
+    version="0.8.0",
     zip_safe=False,
 )

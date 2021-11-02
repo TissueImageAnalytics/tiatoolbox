@@ -66,6 +66,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/_autosummary/
 
 # PyBuilder
 target/
@@ -106,6 +107,8 @@ ENV/
 # IDE settings
 .vscode/
 
-examples/*.py
 # Mac generated
 .DS_Store
+
+# vim/vi generated
+*.swp

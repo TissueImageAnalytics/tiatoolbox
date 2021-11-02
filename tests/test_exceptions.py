@@ -1,3 +1,5 @@
+"""Tests for exceptions used in the toolbox."""
+
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.wsicore.save_tiles import save_tiles
 from tiatoolbox.wsicore.slide_info import slide_info

@@ -17,14 +17,16 @@
 # This file contains code inspired by StainTools
 # [https://github.com/Peter554/StainTools] written by Peter Byfield.
 #
-# The Original Code is Copyright (C) 2020, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIACentre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Staing augmentation"""
-import numpy as np
 import copy
-from tiatoolbox.tools.stainnorm import VahadaneNormaliser
+
+import numpy as np
+
+from tiatoolbox.tools.stainnorm import MacenkoNormaliser, VahadaneNormaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
@@ -44,11 +46,18 @@ class StainAugmentation:
     def __init__(
         self,
         image,
+        method="vahadane",
         source_stain_matrix=None,
         sigma1=0.2,
         sigma2=0.2,
         augment_background=False,
     ):
+        if method.lower() == "macenko":
+            self.stain_normaliser = MacenkoNormaliser()
+        elif method.lower() == "vahadane":
+            self.stain_normaliser = VahadaneNormaliser()
+        else:
+            raise Exception(f"Invalid stain extractor method: {method}")
         self.augment_background = augment_background
         self.sigma1 = sigma1
         self.sigma2 = sigma2
@@ -72,7 +81,7 @@ class StainAugmentation:
         Args:
             seed:
         Returns:
-            I_augmented:
+            image_augmented:
         """
         if seed is not None:
             np.random.seed(seed=seed)
@@ -87,9 +96,9 @@ class StainAugmentation:
                 augmented_concentrations[self.tissue_mask, i] *= alpha
                 augmented_concentrations[self.tissue_mask, i] += beta
 
-        I_augmented = 255 * np.exp(
+        image_augmented = 255 * np.exp(
             -1 * np.dot(augmented_concentrations, self.source_stain_matrix)
         )
-        I_augmented = I_augmented.reshape(self.image_shape)
-        I_augmented = np.clip(I_augmented, 0, 255)
-        return np.uint8(I_augmented)
+        image_augmented = image_augmented.reshape(self.image_shape)
+        image_augmented = np.clip(image_augmented, 0, 255)
+        return np.uint8(image_augmented)
