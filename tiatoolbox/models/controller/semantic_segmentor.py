@@ -1012,7 +1012,7 @@ class SemanticSegmentor:
                     "Must provide either `ioconfig` or "
                     "`patch_input_shape` and `patch_output_shape`"
                 )
-            ioconfig = self.ioconfig
+            ioconfig = copy.deepcopy(self.ioconfig)
         elif ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],

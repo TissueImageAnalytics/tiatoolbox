@@ -138,3 +138,85 @@ def overlay_patch_prediction(
     cbar.ax.tick_params(labelsize=12)
 
     return ax
+
+
+def overlay_patch_probmap(
+    img: np.ndarray,
+    prediction: np.ndarray,
+    alpha: float = 0.35,
+    colour_map: str = "jet",
+    cutoff: float = 0.0,
+    ax=None,
+):
+    """Generate an overlay, given a 2D prediction map.
+
+    Args:
+        img (ndarray): Input image to overlay the results on top of. Assumed to be HW.
+        prediction (ndarray): 2D prediction map. Multi-class prediction should have
+            values ranging from 0 to N-1, where N is the number of classes.
+        alpha (float): Opacity value used for the overlay.
+        ax (ax): Matplotlib ax object.
+
+    Returns:
+
+    """
+    if img.shape[:2] != prediction.shape[:2]:
+        raise ValueError(
+            "Mismatch shape `img` {0} vs `prediction` {1}.".format(
+                img.shape[:2], prediction.shape[:2]
+            )
+        )
+
+    assert np.issubdtype(
+        prediction.dtype, np.floating
+    ), "`prediction` must be of type float"
+    if not (prediction.max() <= 1.0 and prediction.min() >= 0):
+        raise ValueError("Not support float `prediction` outside [0, 1].")
+
+    if np.issubdtype(img.dtype, np.floating):
+        if not (img.max() <= 1.0 and img.min() >= 0):
+            raise ValueError("Not support float `img` outside [0, 1].")
+        img = np.array(img * 255, dtype=np.uint8)
+
+    # if `cutoff` is defined, only display the overlay for areas with prob > cutoff
+    if cutoff is not None:
+        assert (
+            cutoff >= 0 and cutoff <= 1
+        ), "`cutoff` must be a probability between 0 and 1"
+        prediction_sel = prediction >= cutoff
+
+    overlay = img.copy()
+
+    cmap = plt.get_cmap(colour_map)
+    prediction = np.squeeze(prediction.astype("float32"))
+    # take RGB from RGBA heat map
+    rgb_prediction = (cmap(prediction)[..., :3] * 255).astype("uint8")
+
+    # add the overlay
+    # cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
+    overlay = (1 - alpha) * rgb_prediction + alpha * overlay
+    overlay[overlay > 255.0] = 255.0
+    overlay = overlay.astype(np.uint8)
+
+    if cutoff is not None:
+        overlay[~prediction_sel] = img[~prediction_sel]
+
+    # if ax is None and not return_ax:
+    #     return overlay
+
+    colorbar_params = {
+        "mappable": mpl.cm.ScalarMappable(cmap="jet"),
+        "spacing": "proportional",
+        "orientation": "vertical",
+    }
+
+    # generate another ax, else using the provided
+    if ax is None:
+        _, ax = plt.subplots()
+    ax.imshow(overlay)
+    ax.axis("off")
+    # generate colour bar
+    cbar = plt.colorbar(**colorbar_params)
+    cbar.ax.tick_params(labelsize=12)
+
+    return ax
