@@ -210,7 +210,7 @@ class SQLRegex(SQLExpression):
 
     @classmethod
     def search(cls, pattern: str, string: str, flags: int = 0) -> "SQLRegex":
-        return SQLRegex(pattern, string, flags)
+        return SQLRegex(pattern, string, int(flags))
 
 
 def is_none(x) -> bool:
