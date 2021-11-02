@@ -42,7 +42,14 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 class IOPatchPredictorConfig(IOSegmentorConfig):
     """Contain patch predictor input and output information."""
 
-    def __init__(self, patch_input_shape, input_resolutions, stride_shape, **kwargs):
+    def __init__(
+        self,
+        patch_input_shape=None,
+        input_resolutions=None,
+        stride_shape=None,
+        **kwargs,
+    ):
+        stride_shape = patch_input_shape if stride_shape is None else stride_shape
         super().__init__(
             input_resolutions=input_resolutions,
             output_resolutions=[],
@@ -145,6 +152,7 @@ class CNNPatchPredictor:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
 
         self.ioconfig = ioconfig  # for storing original
+        self._ioconfig = None  # for storing runtime
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
@@ -471,7 +479,7 @@ class CNNPatchPredictor:
                     ioconfig.input_resolutions[0]["resolution"] = resolution
                 if units is not None:
                     ioconfig.input_resolutions[0]["units"] = units
-            elif ioconfig is None and all(make_config_flag):
+            elif ioconfig is None and all([not v for v in make_config_flag]):
                 ioconfig = IOPatchPredictorConfig(
                     input_resolutions=[{"resolution": resolution, "units": units}],
                     patch_input_shape=patch_input_shape,
@@ -517,6 +525,7 @@ class CNNPatchPredictor:
                 save_dir = pathlib.Path(save_dir)
 
             if save_dir is not None:
+                save_dir = pathlib.Path(save_dir)
                 save_dir.mkdir(parents=True, exist_ok=False)
 
             # return coordinates of patches processed within a tile / whole-slide image
@@ -529,6 +538,7 @@ class CNNPatchPredictor:
             # None if no output
             outputs = None
 
+            self._ioconfig = ioconfig
             # generate a list of output file paths if number of input images > 1
             file_dict = OrderedDict()
             for idx, img_path in enumerate(imgs):
@@ -540,8 +550,8 @@ class CNNPatchPredictor:
                     img_path,
                     mode=mode,
                     mask_path=img_mask,
-                    patch_size=ioconfig.patch_input_shape,
-                    stride_size=ioconfig.stride_shape,
+                    patch_input_shape=ioconfig.patch_input_shape,
+                    stride_shape=ioconfig.stride_shape,
                     resolution=ioconfig.input_resolutions[0]["resolution"],
                     units=ioconfig.input_resolutions[0]["units"],
                 )
