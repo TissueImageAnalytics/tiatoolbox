@@ -467,14 +467,14 @@ class AnnotationStoreABC(ABC):
 
     def query(
         self,
-        query_geometry: QueryGeometry,
+        geometry: QueryGeometry,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
     ) -> List[Tuple[Geometry, Dict[str, Any]]]:
         """Query the store for annotations.
 
         Args:
-            query_geometry:
+            geometry:
                 Geometry to use when querying. This can be a bounds or
                 a Shapely geometry (e.g. Polygon).
             geometry_predicate:
@@ -522,6 +522,7 @@ class AnnotationStoreABC(ABC):
             __ BP_
 
         """
+        query_geometry = geometry
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
@@ -535,7 +536,7 @@ class AnnotationStoreABC(ABC):
 
     def iquery(
         self,
-        query_geometry: QueryGeometry,
+        geometry: QueryGeometry,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
     ) -> List[int]:
@@ -545,7 +546,7 @@ class AnnotationStoreABC(ABC):
         insteaf the annotations (geometry, properties).
 
         Args:
-            query_geometry:
+            geometry:
                 Geometry to use when querying. This can be a bounds or
                 a Shapely geometry (e.g. Polygon).
             geometry_predicate:
@@ -593,6 +594,7 @@ class AnnotationStoreABC(ABC):
             __ BP_
 
         """
+        query_geometry = geometry
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
@@ -780,7 +782,7 @@ class SQLiteMetadata:
     def __init__(self, con: sqlite3.Connection) -> None:
         self.con = con
         self.con.execute(
-            "CREATE TABLE IF NOT EXISTS metadata (key text unique, value text)"
+            "CREATE TABLE IF NOT EXISTS metadata (key TEXT UNIQUE, value TEXT)"
         )
         self.con.commit()
 
@@ -795,7 +797,7 @@ class SQLiteMetadata:
     def __getitem__(self, key: str) -> Union[dict, list, int, float, str]:
         """Get a metadata value."""
         cur = self.con.cursor()
-        cur.execute("SELECT value FROM metadata WHERE key = ?", (key,))
+        cur.execute("SELECT value FROM metadata WHERE [key] = ?", (key,))
         (value,) = cur.fetchone()
         if value is None:
             raise KeyError(key)
@@ -805,7 +807,7 @@ class SQLiteMetadata:
         """Delete a metadata value."""
         if key not in self:
             raise KeyError(key)
-        self.con.execute("DELETE FROM metadata WHERE key = ?", (key,))
+        self.con.execute("DELETE FROM metadata WHERE [key] = ?", (key,))
 
 
 class SQLiteStore(AnnotationStoreABC):
@@ -1050,13 +1052,14 @@ class SQLiteStore(AnnotationStoreABC):
 
     def _query(
         self,
-        query_select: str,
-        query_geometry: QueryGeometry,
-        query_select_callable: Optional[str] = None,
+        select: str,
+        geometry: QueryGeometry,
+        select_callable: Optional[str] = None,
         geometry_predicate="intersects",
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`."""
+        query_geometry = geometry
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
@@ -1068,11 +1071,11 @@ class SQLiteStore(AnnotationStoreABC):
         min_x, min_y, max_x, max_y = query_geometry.bounds
 
         if isinstance(where, Callable):
-            query_select = query_select_callable
+            select = select_callable
 
         query_string = (
             "SELECT "  # skipcq: BAN-B608
-            + query_select  # skipcq: BAN-B608
+            + select  # skipcq: BAN-B608
             + """
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
@@ -1102,16 +1105,17 @@ class SQLiteStore(AnnotationStoreABC):
 
     def iquery(
         self,
-        query_geometry: QueryGeometry,
+        geometry: QueryGeometry,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate="intersects",
     ) -> List[str]:
+        query_geometry = geometry
         cur = self._query(
             "[key]",
-            query_geometry=query_geometry,
+            geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
-            query_select_callable="[key], boundary, properties",
+            select_callable="[key], boundary, properties",
         )
         if isinstance(where, Callable):
             return [
@@ -1123,13 +1127,14 @@ class SQLiteStore(AnnotationStoreABC):
 
     def query(
         self,
-        query_geometry: QueryGeometry,
+        geometry: QueryGeometry,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
     ) -> List[Annotation]:
+        query_geometry = geometry
         cur = self._query(
             "boundary, properties",
-            query_geometry=query_geometry,
+            geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
         )
