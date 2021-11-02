@@ -80,6 +80,8 @@ if speedups.available:
     speedups.enable()
 
 Geometry = Union[Point, Polygon, LineString]
+Properties = Dict[str, Union[Dict, List, Number, str]]
+Annotation = Tuple[Geometry, Properties]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
 
@@ -124,7 +126,7 @@ class AnnotationStoreABC(ABC):
 
     @staticmethod
     @lru_cache(32)
-    def deserialise_geometry(data: Union[str, bytes]):
+    def deserialise_geometry(data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes."""
         if isinstance(data, str):
             return wkt.loads(data)
@@ -158,7 +160,7 @@ class AnnotationStoreABC(ABC):
         geometries: Iterable[Geometry],
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
         keys: Optional[Iterable[str]] = None,
-    ) -> List[int]:
+    ) -> List[str]:
         if properties_iter is None:
             properties_iter = ({} for _ in geometries)
         if keys is None:
@@ -183,7 +185,7 @@ class AnnotationStoreABC(ABC):
         """Remove annotation by key."""
         self.remove_many([key])
 
-    def remove_many(self, keys: Iterable[int]) -> None:
+    def remove_many(self, keys: Iterable[str]) -> None:
         """Bulk removal of annotations by key."""
         for key in keys:
             self.remove(key)
@@ -192,7 +194,7 @@ class AnnotationStoreABC(ABC):
         """Return the number of annotations in the store."""
         raise NotImplementedError()
 
-    def __getitem__(self, key: str) -> Tuple[Geometry, Dict[str, Any]]:
+    def __getitem__(self, key: str) -> Annotation:
         raise NotImplementedError()
 
     def __setitem__(
@@ -207,11 +209,11 @@ class AnnotationStoreABC(ABC):
         for key, _ in self.items():
             yield key
 
-    def values(self) -> Iterable[Tuple[Geometry, Dict[str, Any]]]:
+    def values(self) -> Iterable[Annotation]:
         for _, value in self.items():
             yield value
 
-    def items(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
+    def items(self) -> Iterable[Tuple[str, Annotation]]:
         raise NotImplementedError()
 
     def __iter__(self) -> Iterable[int]:
@@ -688,7 +690,7 @@ class SQLiteStore(AnnotationStoreABC):
         geometries: Iterable[Geometry],
         properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
         keys: Optional[Iterable[str]] = None,
-    ) -> List[int]:
+    ) -> List[str]:
         if properties_iter is None:
             properties_iter = ({} for _ in geometries)
         if keys is None:
@@ -790,7 +792,7 @@ class SQLiteStore(AnnotationStoreABC):
         properties_predicate: Union[
             str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
         ] = None,
-    ) -> List[int]:
+    ) -> List[str]:
         cur = self._query(
             "[key]",
             query_geometry=query_geometry,
@@ -813,7 +815,7 @@ class SQLiteStore(AnnotationStoreABC):
         properties_predicate: Union[
             str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
         ] = None,
-    ) -> List[Tuple[Geometry, Dict[str, Any]]]:
+    ) -> List[Annotation]:
         cur = self._query(
             "boundary, properties",
             query_geometry=query_geometry,
@@ -840,12 +842,12 @@ class SQLiteStore(AnnotationStoreABC):
         (count,) = cur.fetchone()
         return count
 
-    def __contains__(self, key: int) -> bool:
+    def __contains__(self, key: str) -> bool:
         cur = self.con.cursor()
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str) -> Tuple[Geometry, Dict[str, Any]]:
+    def __getitem__(self, key: str) -> Annotation:
         cur = self.con.cursor()
         cur.execute(
             """
@@ -881,11 +883,11 @@ class SQLiteStore(AnnotationStoreABC):
             key = row[0]
             yield key
 
-    def values(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
+    def values(self) -> Iterable[Tuple[int, Annotation]]:
         for _, value in self.items():
             yield value
 
-    def items(self) -> Iterable[Tuple[int, Tuple[Geometry, Dict[str, Any]]]]:
+    def items(self) -> Iterable[Tuple[int, Annotation]]:
         cur = self.con.cursor()
         cur.execute(
             """
@@ -1076,7 +1078,7 @@ class DictionaryStore(AnnotationStoreABC):
             for feature in self._features.values()
         )
 
-    def __getitem__(self, key: str) -> Tuple[Geometry, Dict[str, Any]]:
+    def __getitem__(self, key: str) -> Annotation:
         feature = self._features[key]
         return feature["geometry"], feature["properties"]
 
@@ -1087,13 +1089,13 @@ class DictionaryStore(AnnotationStoreABC):
         properties = dict(properties)
         self._features[key] = {"geometry": geometry, "properties": properties}
 
-    def __contains__(self, key: int) -> bool:
+    def __contains__(self, key: str) -> bool:
         return key in self._features
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterable[str]:
         yield from self.keys()
 
-    def items(self):
+    def items(self) -> Generator[Tuple[str, Annotation]]:
         for key, value in self._features.items():
             yield key, (value["geometry"], value["properties"])
 
