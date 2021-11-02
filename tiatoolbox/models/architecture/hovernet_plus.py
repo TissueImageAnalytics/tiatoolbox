@@ -542,16 +542,12 @@ class HoVerNetPlus(ModelABC):
         return ls_map
 
     @staticmethod
-    def postproc(
-            raw_maps: List[np.ndarray], num_layers: int = None, num_types: int = None
-        ):
+    def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
         Args:
             raw_maps (list(ndarray)): list of prediction output of each head and
                 assumed to be in the order of [np, hv, tp, ls] (match with the output
                 of `infer_batch`).
-            num_layers (int): number of layer classes in model.
-            num_types (int): number of nuclei classes in model.
         Returns:
             inst_map (ndarray): pixel-wise nuclear instance segmentation
                 prediction.
@@ -576,22 +572,22 @@ class HoVerNetPlus(ModelABC):
             >>> }
             >>> layer_dict = {[layer_uid: number] : layer_info}
         """
-        if num_types is not None and num_layers is None:
+        if len(raw_maps) == 4:
+            # Nuclei and layer segmentation
+            np_map, hv_map, tp_map, ls_map = raw_maps
+        elif len(raw_maps) == 3:
             # Nuclei segmentation (with classes) only
             np_map, hv_map, tp_map = raw_maps
             ls_map = None
-        elif num_types is None and num_layers is not None:
-            # Layer segmentation only
-            ls_map = raw_maps
-            np_map, hv_map, tp_map = None, None, None
-        elif num_types is not None and num_layers is not None:
-            # Nuclei and layer segmentation
-            np_map, hv_map, tp_map, ls_map = raw_maps
-        elif num_types is None and num_layers is None:
+        elif len(raw_maps) == 2:
             # Nuclei segmentation (no classes) only
             tp_map = None
             np_map, hv_map = raw_maps
             ls_map = None
+        elif len(raw_maps) == 1:
+            # Layer segmentation only
+            ls_map = raw_maps
+            np_map, hv_map, tp_map = None, None, None
 
         pred_type = tp_map
         pred_inst = HoVerNetPlus.__proc_np_hv(np_map, hv_map)
