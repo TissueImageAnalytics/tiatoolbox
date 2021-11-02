@@ -75,7 +75,7 @@ class TFSamepaddingLayer(nn.Module):
         else:
             pad_val_start = pad // 2
             pad_val_end = pad - pad_val_start
-            padding = (pad_val_start, pad_val_end, pad_val_start, pad_val_end)
+            padding = (pad_val_start, pad_val_end,pad_val_start, pad_val_end)
         x = F.pad(x, padding, "constant", 0)
         return x
 
@@ -283,7 +283,8 @@ class HoVerNetPlus(ModelABC):
     """Initialise HoVer-Net+."""
 
     def __init__(
-        self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None, mode: str = "original"
+        self, num_input_channels: int = 3, num_types: int = None, 
+        num_layers: int = None, mode: str = "original"
     ):
         super().__init__()
         self.mode = mode
@@ -528,68 +529,11 @@ class HoVerNetPlus(ModelABC):
         return proced_pred
 
     @staticmethod
-    def __proc_ls_old(ls_map: np.ndarray):
-        """Extract Layer Segmentation map with LS Map. Currently 
-        this function is specific to epithelium segmentation.
-        Args:
-            ls_map: prediction output
-        """
-
-        def remove_holes_objects(img, size):
-            img = remove_small_objects(img == 1, min_size=size, connectivity=2)
-            img = remove_small_holes(img == True, area_threshold=size)
-            return img
-            
-        def closing_opening(img, dsk=5, size=750):
-            img = binary_closing(img, disk(dsk))
-            img = binary_opening(img, disk(dsk))
-            img = remove_holes_objects(img, size)
-            return img
-
-        def crop_center(img, cropx, cropy):
-            y, x = img.shape
-            startx = x//2 - (cropx//2)
-            starty = y//2 - (cropy//2)
-            return img[starty:starty+cropy, startx:startx+cropx]
-
-        ls_map = np.squeeze(ls_map.astype('uint32'))
-        w, h = ls_map.shape
-
-        # Zero-pad the array to ensure the morphological operations
-        # doesn't create an empty border
-        ls_map = np.pad(ls_map, ((5, 5), (5, 5)), 'constant')
-
-        t = np.where(ls_map > 0, 1, 0)
-        b = np.where(ls_map == 2, 1, 0)
-        e = np.where(ls_map == 3, 1, 0)
-        k = np.where(ls_map == 4, 1, 0)
-
-        t = closing_opening(t)
-        b = closing_opening(b, size=750)
-        e = closing_opening(e, size=2000)
-        k = closing_opening(k, size=2000)
-
-        layers = t + 2*b
-        layers[layers == 3] = 2
-        layers += 3*e
-        layers[layers == 5] = 2  # basal takes priority of epithelium tissue
-        layers[layers == 4] = 3  # epithelium takes priority of other tissue
-        layers += 4*k
-        layers[layers == 5] = 4  # keratin takes priority of other tissue
-        layers[layers == 6] = 4  # allow keratin to take prioirty of basal - this may need to be changed!
-        layers[layers == 7] = 4  # keratin takes priority of epithelium
-        layers_cropped = crop_center(layers, w, h)
-
-        return layers_cropped
-
-
-    @staticmethod
     def __proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
         Args:
             ls_map: prediction output
         """
-
         ls_map = np.squeeze(ls_map.astype('float32'))
         ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)    
         ls_map = np.around(ls_map)
@@ -597,9 +541,9 @@ class HoVerNetPlus(ModelABC):
 
         return ls_map
 
-
     @staticmethod
-    def postproc(raw_maps: List[np.ndarray], num_layers: int = None, num_types: int = None):
+    def postproc(raw_maps: List[np.ndarray], num_layers: int = None, 
+    num_types: int = None):
         """Post processing script for image tiles.
         Args:
             raw_maps (list(ndarray)): list of prediction output of each head and
@@ -631,15 +575,19 @@ class HoVerNetPlus(ModelABC):
             >>> }
             >>> layer_dict = {[layer_uid: number] : layer_info}
         """
-        if num_types is not None and num_layers is None:  # Nuclei segmentation (with classes) only 
+        if num_types is not None and num_layers is None:
+            # Nuclei segmentation (with classes) only 
             np_map, hv_map, tp_map = raw_maps
             ls_map = None
-        elif num_types is None and num_layers is not None:  # Layer segmentation only
+        elif num_types is None and num_layers is not None:
+            # Layer segmentation only
             ls_map = raw_maps
             np_map, hv_map, tp_map = None, None, None
-        elif num_types is not None and num_layers is not None:  # Nuclei and layer segmentation
+        elif num_types is not None and num_layers is not None:
+            # Nuclei and layer segmentation
             np_map, hv_map, tp_map, ls_map = raw_maps
-        elif num_types is None and num_layers is None:  # Nuclei segmentation (no classes) only
+        elif num_types is None and num_layers is None:
+            # Nuclei segmentation (no classes) only
             tp_map = None
             np_map, hv_map = raw_maps
             ls_map = None
@@ -657,7 +605,9 @@ class HoVerNetPlus(ModelABC):
                 inst_map = pred_inst == inst_id
                 inst_box = get_bounding_box(inst_map)
                 inst_box_tl = inst_box[:2]
-                inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
+                inst_map = inst_map[
+                    inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]
+                    ]
                 inst_map = inst_map.astype(np.uint8)
                 inst_moment = cv2.moments(inst_map)
                 inst_contour = cv2.findContours(
@@ -781,9 +731,11 @@ class HoVerNetPlus(ModelABC):
 
         if "tp2" in pred_dict and "ls" not in pred_dict:
             return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"]
-        if "tp2" in pred_dict and "ls" in pred_dict:
-            return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"], pred_dict["ls"]            
-        if "tp2" not in pred_dict and "ls" in pred_dict:
+        elif "tp2" in pred_dict and "ls" in pred_dict:
+            return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"], pred_dict["ls"]
+        elif "tp2" not in pred_dict and "ls" in pred_dict:
             return pred_dict["ls"]
-        if "tp2" not in pred_dict and "np" in pred_dict:
+        elif "tp2" not in pred_dict and "np" in pred_dict:
             return pred_dict["np"], pred_dict["hv"]
+        else:
+            return None

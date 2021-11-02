@@ -27,7 +27,6 @@ import torch
 import torch.nn as nn
 
 
-
 def center_crop(
     img: Union[np.ndarray, torch.tensor],
     crop_shape: Union[np.ndarray, torch.tensor],
