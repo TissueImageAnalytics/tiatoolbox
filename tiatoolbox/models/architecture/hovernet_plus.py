@@ -543,7 +543,7 @@ class HoVerNetPlus(ModelABC):
 
     @staticmethod
     def postproc(
-        raw_maps: List[np.ndarray], num_layers: int = None, num_types: int = None
+            raw_maps: List[np.ndarray], num_layers: int = None, num_types: int = None
         ):
         """Post processing script for image tiles.
         Args:
@@ -669,14 +669,14 @@ class HoVerNetPlus(ModelABC):
 
         if pred_layer is not None:
 
-            def image2contours(image, layer_info_dict, cnt, type):
+            def image2contours(image, layer_info_dict, cnt, type_class):
 
                 contours, _ = cv2.findContours(
                     image.astype('uint8'), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
                 for layer in contours:
                     coords = layer[:, 0, :]
                     layer_info_dict[str(count)] = {
-                        "contours": coords.tolist(), "type": type
+                        "contours": coords.tolist(), "type": type_class
                         }
                     cnt += 1
 
@@ -740,8 +740,8 @@ class HoVerNetPlus(ModelABC):
 
         if "tp2" not in pred_dict and "ls" in pred_dict:
             return pred_dict["ls"]
-            
+
         if "tp2" not in pred_dict and "np" in pred_dict:
             return pred_dict["np"], pred_dict["hv"]
-        
+
         return None
