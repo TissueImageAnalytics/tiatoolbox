@@ -281,7 +281,7 @@ class AnnotationStoreABC(ABC):
         properties: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Update an annotation at given key.
-        
+
         Args:
             key(str):
                 The key of the annoation to update.
@@ -291,17 +291,23 @@ class AnnotationStoreABC(ABC):
                 A dictionary of properties to update and their new
                 new values. If None, the existing properties are not
                 altered.
-            
+
         """
+        if key not in self:
+            self.append(geometry, properties, key)
+            return
         geometry = geometry if geometry is None else [geometry]
         properties = properties if properties is None else [properties]
-        return self.update_many([key], geometry, properties)
+        self.update_many([key], geometry, properties)
 
     def update_many(
-        self, keys: Iterable[int], updates: Iterable[Dict[str, Any]]
+        self,
+        keys: Iterable[int],
+        geometries: Optional[Iterable[Geometry]] = None,
+        properties_iter: Optional[Iterable[Properties]] = None,
     ) -> None:
-        """Bulk update of annotattions.
-        
+        """Bulk update of annotations.
+
         This may be more efficient than calling `update` repeatetdy
         in a loop.
 
@@ -313,12 +319,21 @@ class AnnotationStoreABC(ABC):
             key(iter(str)):
                 An iterable of keys for each annotation to be updated.
         """
-        for key, update in zip(keys, updates):
-            self.update(key, update)
+        if geometries and properties_iter and len(geometries) != len(properties_iter):
+            raise ValueError(
+                "geometries and properties_iter must have the same length."
+            )
+        if properties_iter is None:
+            properties_iter = ({} for _ in keys)
+        if geometries is None:
+            geometries = (None for _ in keys)
+        for key, geometry, properties in zip(keys, geometries, properties_iter):
+            properties = copy.deepcopy(properties)
+            self.update(key, geometry, properties)
 
     def remove(self, key: str) -> None:
         """Remove annotation from the store with its unique key.
-        
+
         Args:
             key(str):
                 The key of the annoation to be removed.
@@ -327,7 +342,7 @@ class AnnotationStoreABC(ABC):
 
     def remove_many(self, keys: Iterable[str]) -> None:
         """Bulk removal of annotations by keys.
-        
+
         Args:
             keys(iter(str)):
                 An iterable of keys for the annotation to be removed.
@@ -341,7 +356,7 @@ class AnnotationStoreABC(ABC):
 
     def __getitem__(self, key: str) -> Annotation:
         """Fetch a single annotation by key.
-        
+
         Args:
             key(str):
                 The key of the annoation to be fetchedd.
@@ -349,10 +364,10 @@ class AnnotationStoreABC(ABC):
         raise NotImplementedError()
 
     def __setitem__(
-        self, key: int, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
+        self, key: int, annoation: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
         """Set an annotation in the store.
-        
+
         If an annotation with this key already exists, it is replaced.
         Otherwise, it is inserted as a new annotation.
 
@@ -362,7 +377,7 @@ class AnnotationStoreABC(ABC):
             annotation(tuple):
                 The annotation being set, i.e. a tuple of
                 (geometry, properties).
-    
+
         """
         raise NotImplementedError()
 
@@ -370,7 +385,7 @@ class AnnotationStoreABC(ABC):
         """Delete an annotation by key.
 
         An alias of `remove`.
-        
+
         Args:
             key(str):
                 The key of the annotation to be removed.
@@ -380,27 +395,27 @@ class AnnotationStoreABC(ABC):
 
     def keys(self) -> Iterable[int]:
         """Return an iterable (usually generator) of all keys in the store.
-        
+
         Returns:
             iter: An iterable of keys.
-        
+
         """
         for key, _ in self.items():
             yield key
 
     def values(self) -> Iterable[Annotation]:
         """Return an iterable of all annotattion in the store.
-        
+
         Returns:
             iter: An iterable of annotations.
-            
+
         """
         for _, value in self.items():
             yield value
 
     def items(self) -> Iterable[Tuple[str, Annotation]]:
         """Return an iterable of all keys and annotation in the store.
-        
+
         Returns:
             iter: An iterable of keys and annotations.
         """
@@ -408,7 +423,7 @@ class AnnotationStoreABC(ABC):
 
     def __iter__(self) -> Iterable[int]:
         """Return an iterable of keys in the store.
-        
+
         An alias of `keys`.
 
         Returns:
@@ -418,7 +433,7 @@ class AnnotationStoreABC(ABC):
         yield from self.keys()
 
     @staticmethod
-    def _eval_predicate(
+    def _eval_properties_predicate(
         predicate: Optional[
             Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]]
         ],
@@ -437,20 +452,16 @@ class AnnotationStoreABC(ABC):
 
         Returns:
             bool: Returns true if the predicate holds.
-    
+
         """
         if predicate is None:
             return True
         if isinstance(predicate, str):
             return bool(
-                eval(  # skipcq: PYL-W0123
-                    predicate, PY_GLOBALS, {"props": properties}
-                )
+                eval(predicate, PY_GLOBALS, {"props": properties})  # skipcq: PYL-W0123
             )
         if isinstance(predicate, bytes):
-            predicate = pickle.loads(  # skipcq: BAN-B301
-                predicate
-            )
+            predicate = pickle.loads(predicate)  # skipcq: BAN-B301
         return bool(predicate(properties))
 
     def query(
@@ -630,11 +641,11 @@ class AnnotationStoreABC(ABC):
         none_fn: Callable[[], Union[str, bytes]],
     ) -> Union[None, Union[str, bytes]]:
         """Helper function to handle cases for dumping.
-        
+
         Args:
             fp:
                 The file path or handle to dump to.
-            file_fn(Callable): 
+            file_fn(Callable):
                 The function to call when fp is a file handle.
             none_fn(Callable):
                 The function to call when fp is None.
@@ -1133,13 +1144,25 @@ class SQLiteStore(AnnotationStoreABC):
             yield key, (geometry, properties)
 
     def update_many(
-        self, keys: Iterable[int], updates: Iterable[Dict[str, Any]]
+        self,
+        keys: Iterable[int],
+        geometries: Optional[Iterable[Geometry]] = None,
+        properties_iter: Optional[Iterable[Properties]] = None,
     ) -> None:
+        if geometries and properties_iter and len(geometries) != len(properties_iter):
+            raise ValueError(
+                "geometries and properties_iter must have the same length."
+            )
+        if properties_iter is None:
+            properties_iter = ({} for _ in keys)
+        if geometries is None:
+            geometries = (None for _ in keys)
         cur = self.con.cursor()
         cur.execute("BEGIN")
-        for key, update in zip(keys, updates):
-            update = copy.copy(update)
-            geometry = update.pop("geometry", None)
+        for key, geometry, properties in zip(keys, geometries, properties_iter):
+            if key not in self:
+                self.append(geometry, properties, key)
+                continue
             if geometry is not None:
                 bounds = dict(
                     zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds)
@@ -1172,7 +1195,7 @@ class SQLiteStore(AnnotationStoreABC):
                     """,
                     query_parameters,
                 )
-            if len(update) > 0:
+            if len(properties) > 0:
                 cur.execute(
                     """
                     UPDATE annotations
@@ -1181,7 +1204,7 @@ class SQLiteStore(AnnotationStoreABC):
                     """,
                     {
                         "key": key,
-                        "properties": json.dumps(update, separators=(",", ":")),
+                        "properties": json.dumps(properties, separators=(",", ":")),
                     },
                 )
         self.con.commit()
@@ -1209,14 +1232,14 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.commit()
 
     def __setitem__(
-        self, key: str, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
+        self, key: str, annotation: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
     ) -> None:
-        geometry, properties = record
+        geometry, properties = annotation
         properties = copy.deepcopy(properties)
         if key in self:
-            self.update(key, {"geometry": geometry, **properties})
-        else:
-            self.append(geometry, properties, key)
+            self.update(key, geometry, properties)
+            return
+        self.append(geometry, properties, key)
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame()
@@ -1283,12 +1306,20 @@ class DictionaryStore(AnnotationStoreABC):
         }
         return key
 
-    def update(self, key: str, update: Dict[str, Any]) -> None:
-        geometry, properties = self[key]
-        update = copy.copy(update)
-        geometry = update.pop("geometry", geometry)
-        properties.update(update)
-        self[key] = (geometry, properties)
+    def update(
+        self,
+        key: str,
+        geometry: Optional[Geometry] = None,
+        properties: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if key not in self:
+            self.append(geometry, properties, key)
+            return
+        existing_geometry, existing_properties = self[key]
+        geometry = geometry or existing_geometry
+        update = copy.copy(properties or {})
+        existing_properties.update(update)
+        self[key] = (geometry, existing_properties)
 
     def remove(self, key: str) -> None:
         del self._features[key]
@@ -1320,7 +1351,7 @@ class DictionaryStore(AnnotationStoreABC):
     def __iter__(self) -> Iterable[str]:
         yield from self.keys()
 
-    def items(self) -> Generator[Tuple[str, Annotation]]:
+    def items(self) -> Generator[Tuple[str, Annotation], None, None]:
         for key, value in self._features.items():
             yield key, (value["geometry"], value["properties"])
 

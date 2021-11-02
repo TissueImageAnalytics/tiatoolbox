@@ -242,10 +242,10 @@ class TestStore:
         index = indexes[0]
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         # Geometry update
-        store.update(index, {"geometry": new_geometry})
+        store.update(index, new_geometry)
         assert store[index][0] == new_geometry
         # Properties update
-        store.update(index, {"abc": 123})
+        store.update(index, properties={"abc": 123})
         assert store[index][1]["abc"] == 123
 
     @staticmethod
@@ -253,9 +253,9 @@ class TestStore:
         indexes, store = fill_store(store, tmp_path / "polygon.db")
         # Geometry update
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
-        store.update_many(indexes, repeat({"geometry": new_geometry}))
+        store.update_many(indexes, repeat(new_geometry, 10))
         # Properties update
-        store.update_many(indexes, repeat({"abc": 123}))
+        store.update_many(indexes, properties_iter=repeat({"abc": 123}, 10))
 
         for _, index in enumerate(indexes[:10]):
             assert store[index][0] == new_geometry
@@ -496,7 +496,7 @@ class TestStore:
     @staticmethod
     def test_iquery_predicate_str(fill_store, store):
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], {"class": 123})
+        store.update(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024), properties_predicate="props.get('class') == 123"
         )
@@ -506,7 +506,7 @@ class TestStore:
     @staticmethod
     def test_iquery_predicate_callable(fill_store, store):
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], {"class": 123})
+        store.update(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024),
             properties_predicate=lambda props: props.get("class") == 123,
@@ -517,7 +517,7 @@ class TestStore:
     @staticmethod
     def test_iquery_predicate_pickle(fill_store, store):
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], {"class": 123})
+        store.update(keys[0], properties={"class": 123})
 
         results = store.query(
             (0, 0, 1024, 1024), properties_predicate=pickle.dumps(sample_predicate)
@@ -527,7 +527,7 @@ class TestStore:
     @staticmethod
     def test_query_predicate_str(fill_store, store):
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], {"class": 123})
+        store.update(keys[0], properties={"class": 123})
         results = store.query(
             (0, 0, 1024, 1024), properties_predicate="props.get('class') == 123"
         )
@@ -536,7 +536,7 @@ class TestStore:
     @staticmethod
     def test_query_predicate_callable(fill_store, store):
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], {"class": 123})
+        store.update(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024),
             properties_predicate=lambda props: props.get("class") == 123,
@@ -546,7 +546,7 @@ class TestStore:
     @staticmethod
     def test_query_predicate_pickle(fill_store, store):
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], {"class": 123})
+        store.update(keys[0], properties={"class": 123})
 
         results = store.query(
             (0, 0, 1024, 1024), properties_predicate=pickle.dumps(sample_predicate)
