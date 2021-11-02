@@ -95,6 +95,13 @@ Patch Extraction
 .. autoclass:: SlidingWindowPatchExtractor
     :show-inheritance:
 
+^^^^^^^^^^^^^^^^^^
+Graph Construction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.graph
+    :members:
+
 ^^^^^^^^^^^^^^^^^^^^
 Deep Learning Models
 ^^^^^^^^^^^^^^^^^^^^

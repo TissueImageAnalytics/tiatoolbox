@@ -20,9 +20,11 @@
 
 """Functions to help with constructing graphs."""
 
+from __future__ import annotations
+
 from collections import defaultdict
 from numbers import Number
-from typing import Dict, List, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 import torch
@@ -39,7 +41,7 @@ def hybrid_clustered_graph(
     lambda_h: Number = 0.8,
     connectivity_distance: Number = 4000,
     neighbour_search_radius: Number = 2000,
-    feature_range_thresh: Number = 1e-4,
+    feature_range_thresh: Optional[Number] = 1e-4,
 ) -> Dict[str, ArrayLike]:
     """Build a graph via hybrid clustering in spatial and feature space.
 
@@ -85,7 +87,8 @@ def hybrid_clustered_graph(
         feature_range_thresh (Number):
             Minimal range for which a feature is considered significant.
             Features which have a range less than this are ignored.
-            Defaults to 1e-4.
+            Defaults to 1e-4. If set to None or 0, no features are
+            removed.
 
     Returns:
         dict: A dictionary defining a graph for serialisation (e.g.
@@ -112,9 +115,10 @@ def hybrid_clustered_graph(
 
     """
     # Remove features which do not change significantly between patches
-    feature_ranges = np.max(features, axis=0) - np.min(features, axis=0)
-    where_significant = feature_ranges > feature_range_thresh
-    features = features[:, where_significant]
+    if feature_range_thresh and feature_range_thresh != 0:
+        feature_ranges = np.max(features, axis=0) - np.min(features, axis=0)
+        where_significant = feature_ranges > feature_range_thresh
+        features = features[:, where_significant]
 
     # Build a kd-tree and rank neighbours according to the euclidean
     # distance (nearest -> farthest).
@@ -257,7 +261,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
 
 
 def affinity_to_edge_index(
-    affinity_matrix: Union[torch.Tensor, ArrayLike, List[List[Number]]],
+    affinity_matrix: Union[torch.Tensor, ArrayLike],
     threshold: Number = 0.5,
 ) -> Union[torch.tensor, ArrayLike]:
     """Convert an affinity matrix (similarity matrix) to an edge index.
