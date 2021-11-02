@@ -230,9 +230,9 @@ class AnnotationStoreABC(ABC):
         if isinstance(properties_predicate, str):
             return bool(eval(properties_predicate, PY_GLOBALS, {"props": properties}))
         if isinstance(properties_predicate, bytes):
-            properties_predicate = pickle.loads(
+            properties_predicate = pickle.loads(  # skipcq: BAN-B301
                 properties_predicate
-            )  # skipcq: BAN-B301
+            )
         return bool(properties_predicate(properties))
 
     def query(

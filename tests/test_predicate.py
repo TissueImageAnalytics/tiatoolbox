@@ -115,7 +115,7 @@ class TestPredicate:
         """Check that binary operations between ints does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} 2"
-            result = eval(query, eval_globals, eval_locals)
+            result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
             assert isinstance(check(result), Number)
 
     @staticmethod
@@ -123,7 +123,7 @@ class TestPredicate:
         """Check that binary operations between properties does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"props['int'] {op} props['int']"
-            result = eval(query, eval_globals, eval_locals)
+            result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
             assert isinstance(check(result), Number)
 
     @staticmethod
@@ -131,139 +131,139 @@ class TestPredicate:
         """Test right hand binary operations between numbers and properties."""
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} props['int']"
-            result = eval(query, eval_globals, eval_locals)
+            result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
             assert isinstance(check(result), Number)
 
     @staticmethod
     def test_number_prefix_operations(eval_globals, eval_locals, check):
         for op in PREFIX_OP_STRINGS:
             query = f"{op}1"
-            result = eval(query, eval_globals, eval_locals)
+            result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
             assert isinstance(check(result), Number)
 
     @staticmethod
     def test_property_prefix_operations(eval_globals, eval_locals, check):
         for op in PREFIX_OP_STRINGS:
             query = f"{op}props['int']"
-            result = eval(query, eval_globals, eval_locals)
+            result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
             assert isinstance(check(result), Number)
 
     @staticmethod
     def test_regex_nested_props(eval_globals, eval_locals, check):
         query = "props['nesting']['fib'][4]"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 5
 
     @staticmethod
     def test_regex_str_props(eval_globals, eval_locals, check):
         query = "regexp('Hello', props['string'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"
 
     @staticmethod
     def test_regex_str_str(eval_globals, eval_locals, check):
         query = "regexp('Hello', 'Hello world!')"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"
 
     @staticmethod
     def test_regex_ignorecase(eval_globals, eval_locals, check):
         query = "regexp('hello', props['string'], re.IGNORECASE)"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"
 
     @staticmethod
     def test_regex_no_match(eval_globals, eval_locals, check):
         query = "regexp('Yello', props['string'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) is None
 
     @staticmethod
     def test_has_key(eval_globals, eval_locals, check):
         query = "has_key(props, 'foo')"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is False
 
     @staticmethod
     def test_is_none(eval_globals, eval_locals, check):
         query = "is_none(props['null'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_is_not_none(eval_globals, eval_locals, check):
         query = "is_not_none(props['int'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_nested_has_key(eval_globals, eval_locals, check):
         query = "has_key(props['dict'], 'a')"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_list_sum(eval_globals, eval_locals, check):
         query = "sum(props['list'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == sum(SAMPLE_PROPERTIES["list"])
 
     @staticmethod
     def test_abs(eval_globals, eval_locals, check):
         query = "abs(props['neg'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 1
 
     @staticmethod
     def test_not(eval_globals, eval_locals, check):
         query = "not props['bool']"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is False
 
     @staticmethod
     def test_props_int_keys(eval_globals, eval_locals, check):
         query = "props['list'][1]"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 1
 
     @staticmethod
     def test_props_get(eval_globals, eval_locals, check):
         query = "is_none(props.get('foo'))"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_props_get_default(eval_globals, eval_locals, check):
         query = "props.get('foo', 42)"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 42
 
     @staticmethod
     def test_in_list(eval_globals, eval_locals, check):
         query = "1 in props.get('list')"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_has_key_exception(eval_globals, eval_locals, check):
         query = "has_key(1, 'a')"
         with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):
-            _ = eval(query, eval_globals, eval_locals)
+            _ = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
 
     @staticmethod
     def test_logical_and(eval_globals, eval_locals, check):
         query = "props['bool'] & is_none(props['null'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_logical_or(eval_globals, eval_locals, check):
         query = "props['bool'] | (props['int'] < 2)"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_nested_logic(eval_globals, eval_locals, check):
         query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
