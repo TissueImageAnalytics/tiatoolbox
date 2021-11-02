@@ -9,7 +9,7 @@ import pytest
 from tiatoolbox.annotation.predicate import (
     PY_GLOBALS,
     SQL_GLOBALS,
-    Properties,
+    SQLProperties,
     json_contains,
     json_list_sum,
     regexp,
@@ -104,7 +104,7 @@ class TestPredicate:
             "SQLite",
             {
                 "eval_globals": SQL_GLOBALS,
-                "eval_locals": {"props": Properties()},
+                "eval_locals": {"props": SQLProperties()},
                 "check": sqlite_eval,
             },
         ),

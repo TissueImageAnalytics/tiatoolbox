@@ -171,20 +171,20 @@ class SQLTriplet(SQLExpression):
         return f" {lhs} "
 
 
-class Properties(SQLExpression):
+class SQLProperties(SQLExpression):
     def __init__(self, acc: str = None) -> None:
         self.acc = acc or ""
 
     def __str__(self) -> str:
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
-    def __getitem__(self, key: str) -> "Properties":
+    def __getitem__(self, key: str) -> "SQLProperties":
         if isinstance(key, (int,)):
             key_str = f"[{key}]"
         else:
             key_str = str(key)
         joiner = "." if self.acc and not isinstance(key, (int)) else ""
-        return Properties(acc=self.acc + joiner + f"{key_str}")
+        return SQLProperties(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
         return SQLTriplet(self[key], "ifnull", default or SQLNone())
@@ -250,7 +250,7 @@ def sql_list_sum(x) -> SQLTriplet:
 
 
 def sql_has_key(a, b) -> SQLTriplet:
-    if not isinstance(a, (Properties,)):
+    if not isinstance(a, (SQLProperties,)):
         raise TypeError("Unsupported type for has_key.")
     return SQLTriplet(a[b], "is not none")
 
@@ -261,7 +261,7 @@ _COMMON_GLOBALS = {
 }
 SQL_GLOBALS = {
     "__builtins__": {**_COMMON_GLOBALS["__builtins__"], "sum": sql_list_sum},
-    "props": Properties(),
+    "props": SQLProperties(),
     "is_none": sql_is_none,
     "is_not_none": sql_is_not_none,
     "regexp": SQLRegex.search,
