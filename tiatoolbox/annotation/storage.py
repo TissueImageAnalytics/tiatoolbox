@@ -746,8 +746,8 @@ class SQLiteStore(AnnotationStoreABC):
             query_select = query_select_callable
 
         query_string = (
-            "SELECT "
-            + query_select
+            "SELECT "  # skipcq: BAN-B608
+            + query_select  # skipcq: BAN-B608
             + """
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
