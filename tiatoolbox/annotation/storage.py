@@ -228,7 +228,11 @@ class AnnotationStoreABC(ABC):
         if properties_predicate is None:
             return True
         if isinstance(properties_predicate, str):
-            return bool(eval(properties_predicate, PY_GLOBALS, {"props": properties}))
+            return bool(
+                eval(  # skipcq: PYL-W0123
+                    properties_predicate, PY_GLOBALS, {"props": properties}
+                )
+            )
         if isinstance(properties_predicate, bytes):
             properties_predicate = pickle.loads(  # skipcq: BAN-B301
                 properties_predicate
@@ -518,7 +522,7 @@ class AnnotationStoreABC(ABC):
             raise Exception("Requires sqlite version 3.9.0 or higher.")
         cur = self.con.cursor()
         if isinstance(properties_predicate, str):
-            sql_predicate = eval(properties_predicate, SQL_GLOBALS)
+            sql_predicate = eval(properties_predicate, SQL_GLOBALS)  # skipcq: PYL-W0123
             cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
             return
         if isinstance(properties_predicate, bytes):
@@ -767,9 +771,9 @@ class SQLiteStore(AnnotationStoreABC):
             "query_geometry": query_geometry.wkb,
         }
         if isinstance(properties_predicate, str):
-            sql_predicate = eval(
+            sql_predicate = eval(  # skipcq: PYL-W0123
                 properties_predicate, SQL_GLOBALS, {}
-            )  # noqa: SC100 skipcq: PYL-W0123
+            )
             query_string += f"AND {sql_predicate}"
         if isinstance(properties_predicate, bytes):
             query_string += (
