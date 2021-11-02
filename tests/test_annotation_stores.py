@@ -5,6 +5,7 @@ import sqlite3
 from itertools import repeat
 from numbers import Number
 from pathlib import Path
+from timeit import timeit
 from typing import Any, Dict, Generator, List, Tuple, Union
 
 import numpy as np
@@ -157,6 +158,36 @@ def test_sqlite_multiple_connection(tmp_path):
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
+
+
+def test_sqlitestore_index_str(fill_store, tmp_path):
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+
+    def query():
+        """Test query."""
+        return store.iquery(
+            (0, 0, 1e4, 1e4), properties_predicate="props['class'] == 0"
+        )
+
+    def alt_query():
+        """Alternative query to avoid temporary caches giving unfair advantage."""
+        return store.iquery(
+            (0, 0, 1e4, 1e4), properties_predicate="has_key(props, 'foo')"
+        )
+
+    # Do an initial bunch of queries to initialise any internal state or
+    # caches.
+    _ = timeit(query, number=10)
+    # Time query without index
+    t1 = timeit(query, number=50)
+    # Create the index
+    properties_predicate = "props['class']"
+    store.create_index("test_index", properties_predicate)
+    # Do another unrelated query
+    _ = timeit(alt_query, number=10)
+    # Time the original query with the index
+    t2 = timeit(query, number=50)
+    assert t2 < t1
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
