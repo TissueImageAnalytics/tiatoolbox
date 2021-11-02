@@ -54,7 +54,7 @@ def test_functionality(remote_sample, tmp_path):
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
-    output = model.postproc(output, num_types=3, num_layers=5)
+    output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
     assert len(output[3]) > 0, "Must have some layers."
 

@@ -595,7 +595,7 @@ class HoVerNetPlus(ModelABC):
 
         inst_info_dict = None
 
-        if num_types is not None or num_layers is None:
+        if pred_type is not None or pred_layer is None:
             inst_id_list = np.unique(pred_inst)[1:]  # exclude background
             inst_info_dict = {}
             for inst_id in inst_id_list:
