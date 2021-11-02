@@ -434,7 +434,7 @@ class AnnotationStoreABC(ABC):
         yield from self.keys()
 
     @staticmethod
-    def _eval_properties_predicate(
+    def _eval_where(
         predicate: Optional[
             Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]]
         ],
@@ -468,10 +468,8 @@ class AnnotationStoreABC(ABC):
     def query(
         self,
         query_geometry: QueryGeometry,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
-        properties_predicate: Union[
-            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
-        ] = None,
     ) -> List[Tuple[Geometry, Dict[str, Any]]]:
         """Query the store for annotations.
 
@@ -487,7 +485,7 @@ class AnnotationStoreABC(ABC):
                 intersects.
                 For more information see the `shapely documentation on
                 binary predicates`__.
-            properties_predicate:
+            where:
                 A statment which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). May
@@ -531,17 +529,15 @@ class AnnotationStoreABC(ABC):
             for geometry, properties in self.values()
             if (
                 self._geometry_predicate(geometry_predicate, query_geometry, geometry)
-                and self._eval_properties_predicate(properties_predicate, properties)
+                and self._eval_where(where, properties)
             )
         ]
 
     def iquery(
         self,
         query_geometry: QueryGeometry,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
-        properties_predicate: Union[
-            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
-        ] = None,
     ) -> List[int]:
         """Query the store for annotation keys.
 
@@ -560,7 +556,7 @@ class AnnotationStoreABC(ABC):
                 intersects.
                 For more information see the `shapely documentation on
                 binary predicates`__.
-            properties_predicate:
+            where:
                 A statment which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). May
@@ -604,7 +600,7 @@ class AnnotationStoreABC(ABC):
             for key, (geometry, properties) in self.items()
             if (
                 self._geometry_predicate(geometry_predicate, query_geometry, geometry)
-                and self._eval_properties_predicate(properties_predicate, properties)
+                and self._eval_where(where, properties)
             )
         ]
 
@@ -739,7 +735,7 @@ class AnnotationStoreABC(ABC):
     def __del__(self) -> None:
         self.close()
 
-    def create_index(self, name: str, properties_predicate: Union[str, bytes]) -> None:
+    def create_index(self, name: str, where: Union[str, bytes]) -> None:
         """Create an SQLite expression index based on the provided predicate.
 
         Note that an expression index will only be used if the query
@@ -753,29 +749,29 @@ class AnnotationStoreABC(ABC):
         Args:
             name(str):
                 Name of the index to create.
-            properties_predicate:
+            where:
                 The predicate used to create the index.
         """
         _, minor, _ = sqlite3.sqlite_version_info
         if minor < 9:
             raise Exception("Requires sqlite version 3.9.0 or higher.")
         cur = self.con.cursor()
-        if isinstance(properties_predicate, str):
-            sql_predicate = eval(properties_predicate, SQL_GLOBALS)  # skipcq: PYL-W0123
+        if isinstance(where, str):
+            sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
             cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
             return
-        if isinstance(properties_predicate, bytes):
+        if isinstance(where, bytes):
             cur.execute(
                 f"""
                 CREATE INDEX{name}
                     ON annotaions(
-                        pickle_properties_predicate(:pickle_bytes, properties)
+                        pickle_where(:pickle_bytes, properties)
                     )
                 """,
-                {"name": name, "pickle_bytes": properties_predicate},
+                {"name": name, "pickle_bytes": where},
             )
             return
-        raise TypeError("Invalid type for properties_predicate")
+        raise TypeError("Invalid type for where")
 
 
 class SQLiteMetadata:
@@ -851,7 +847,7 @@ class SQLiteStore(AnnotationStoreABC):
             b = self.deserialise_geometry(b)
             return self._geometry_predicate(name, a, b)
 
-        def pickle_properties_predicate(pickle_bytes: bytes, properties: str) -> bool:
+        def pickle_where(pickle_bytes: bytes, properties: str) -> bool:
             fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
             properties = json.loads(properties)
             return fn(properties)
@@ -861,18 +857,16 @@ class SQLiteStore(AnnotationStoreABC):
                 "geometry_predicate", 3, wkb_predicate, deterministic=True
             )
             self.con.create_function(
-                "pickle_properties_predicate",
+                "pickle_where",
                 2,
-                pickle_properties_predicate,
+                pickle_where,
                 deterministic=True,
             )
         # Only Python >= 3.8 supports deterministic, fallback
         # to without this argument.
         except TypeError:
             self.con.create_function("geometry_predicate", 3, wkb_predicate)
-            self.con.create_function(
-                "pickle_properties_predicate", 2, pickle_properties_predicate
-            )
+            self.con.create_function("pickle_where", 2, pickle_where)
 
         if exists:
             return
@@ -1060,9 +1054,7 @@ class SQLiteStore(AnnotationStoreABC):
         query_geometry: QueryGeometry,
         query_select_callable: Optional[str] = None,
         geometry_predicate="intersects",
-        properties_predicate: Union[
-            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
-        ] = None,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`."""
         if geometry_predicate not in self._geometry_predicate_names:
@@ -1075,7 +1067,7 @@ class SQLiteStore(AnnotationStoreABC):
             query_geometry = Polygon.from_bounds(*query_geometry)
         min_x, min_y, max_x, max_y = query_geometry.bounds
 
-        if isinstance(properties_predicate, Callable):
+        if isinstance(where, Callable):
             query_select = query_select_callable
 
         query_string = (
@@ -1099,61 +1091,53 @@ class SQLiteStore(AnnotationStoreABC):
             "geometry_predicate": geometry_predicate,
             "query_geometry": query_geometry.wkb,
         }
-        if isinstance(properties_predicate, str):
-            sql_predicate = eval(  # skipcq: PYL-W0123
-                properties_predicate, SQL_GLOBALS, {}
-            )
+        if isinstance(where, str):
+            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
-        if isinstance(properties_predicate, bytes):
-            query_string += (
-                "AND pickle_properties_predicate(:properties_predicate, properties)"
-            )
-            query_parameters["properties_predicate"] = properties_predicate
+        if isinstance(where, bytes):
+            query_string += "AND pickle_where(:where, properties)"
+            query_parameters["where"] = where
         cur.execute(query_string, query_parameters)
         return cur
 
     def iquery(
         self,
         query_geometry: QueryGeometry,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate="intersects",
-        properties_predicate: Union[
-            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
-        ] = None,
     ) -> List[str]:
         cur = self._query(
             "[key]",
             query_geometry=query_geometry,
             geometry_predicate=geometry_predicate,
-            properties_predicate=properties_predicate,
+            where=where,
             query_select_callable="[key], boundary, properties",
         )
-        if isinstance(properties_predicate, Callable):
+        if isinstance(where, Callable):
             return [
                 key
                 for key, _, properties in cur.fetchall()
-                if properties_predicate(json.loads(properties))
+                if where(json.loads(properties))
             ]
         return [key for key, in cur.fetchall()]
 
     def query(
         self,
         query_geometry: QueryGeometry,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
-        properties_predicate: Union[
-            str, bytes, Callable[[Geometry, Dict[str, Any]], bool]
-        ] = None,
     ) -> List[Annotation]:
         cur = self._query(
             "boundary, properties",
             query_geometry=query_geometry,
             geometry_predicate=geometry_predicate,
-            properties_predicate=properties_predicate,
+            where=where,
         )
-        if isinstance(properties_predicate, Callable):
+        if isinstance(where, Callable):
             return [
                 (boundary, properties)
                 for boundary, properties in cur.fetchall()
-                if properties_predicate(json.loads(properties))
+                if where(json.loads(properties))
             ]
         return [
             (

@@ -165,15 +165,11 @@ def test_sqlitestore_index_str(fill_store, tmp_path):
 
     def query():
         """Test query."""
-        return store.iquery(
-            (0, 0, 1e4, 1e4), properties_predicate="props['class'] == 0"
-        )
+        return store.iquery((0, 0, 1e4, 1e4), where="props['class'] == 0")
 
     def alt_query():
         """Alternative query to avoid temporary caches giving unfair advantage."""
-        return store.iquery(
-            (0, 0, 1e4, 1e4), properties_predicate="has_key(props, 'foo')"
-        )
+        return store.iquery((0, 0, 1e4, 1e4), where="has_key(props, 'foo')")
 
     # Do an initial bunch of queries to initialise any internal state or
     # caches.
@@ -497,9 +493,7 @@ class TestStore:
     def test_iquery_predicate_str(fill_store, store):
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
-        results = store.iquery(
-            (0, 0, 1024, 1024), properties_predicate="props.get('class') == 123"
-        )
+        results = store.iquery((0, 0, 1024, 1024), where="props.get('class') == 123")
         assert len(results) == 1
         assert results[0] == keys[0]
 
@@ -509,7 +503,7 @@ class TestStore:
         store.update(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024),
-            properties_predicate=lambda props: props.get("class") == 123,
+            where=lambda props: props.get("class") == 123,
         )
         assert len(results) == 1
         assert results[0] == keys[0]
@@ -519,18 +513,14 @@ class TestStore:
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
 
-        results = store.query(
-            (0, 0, 1024, 1024), properties_predicate=pickle.dumps(sample_predicate)
-        )
+        results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
         assert len(results) == 1
 
     @staticmethod
     def test_query_predicate_str(fill_store, store):
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
-        results = store.query(
-            (0, 0, 1024, 1024), properties_predicate="props.get('class') == 123"
-        )
+        results = store.query((0, 0, 1024, 1024), where="props.get('class') == 123")
         assert len(results) == 1
 
     @staticmethod
@@ -539,7 +529,7 @@ class TestStore:
         store.update(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024),
-            properties_predicate=lambda props: props.get("class") == 123,
+            where=lambda props: props.get("class") == 123,
         )
         assert len(results) == 1
 
@@ -548,7 +538,5 @@ class TestStore:
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
 
-        results = store.query(
-            (0, 0, 1024, 1024), properties_predicate=pickle.dumps(sample_predicate)
-        )
+        results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
         assert len(results) == 1
