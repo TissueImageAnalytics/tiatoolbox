@@ -627,8 +627,21 @@ class AnnotationStoreABC(ABC):
     def _dump_cases(
         fp: Union[IO, str, Path, None],
         file_fn: Callable[[IO], None],
-        none_fn: Callable[[], str],
-    ) -> Union[None, Any]:
+        none_fn: Callable[[], Union[str, bytes]],
+    ) -> Union[None, Union[str, bytes]]:
+        """Helper function to handle cases for dumping.
+        
+        Args:
+            fp:
+                The file path or handle to dump to.
+            file_fn(Callable): 
+                The function to call when fp is a file handle.
+            none_fn(Callable):
+                The function to call when fp is None.
+
+        Returns:
+            Any: The result of dump. Depends on the provided functions.
+        """
         if fp is not None:
             # It is a file-like object, write to it
             if hasattr(fp, "write"):
@@ -636,7 +649,7 @@ class AnnotationStoreABC(ABC):
             # Turn a path into a file handle, then write to it
             with open(fp, "w", encoding="utf-8") as file_handle:
                 return file_fn(file_handle)
-        # Return as an object (str or bytes) if no handle/path is given
+        # Return as str or bytes if no handle/path is given
         return none_fn()
 
     @staticmethod
