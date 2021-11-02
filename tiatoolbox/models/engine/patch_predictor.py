@@ -14,12 +14,13 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """This module implements patch-level prediction."""
 
+import copy
 import os
 import pathlib
 import warnings
@@ -30,30 +31,27 @@ import numpy as np
 import torch
 import tqdm
 
-from tiatoolbox.models.abc import IOConfigABC
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-class IOPatchPredictorConfig(IOConfigABC):
+class IOPatchPredictorConfig(IOSegmentorConfig):
     """Contain patch predictor input and output information."""
 
-    # We pre-define to follow enforcement, actual initialization in init
-    input_resolutions = None
-    output_resolutions = None
-
-    def __init__(
-        self, patch_size, input_resolutions, output_resolutions, stride_size, **kwargs
-    ):
-        self.patch_size = patch_size
-        self.stride_size = stride_size
-        self.input_resolutions = input_resolutions
-        self.output_resolutions = output_resolutions
-        for variable, value in kwargs.items():
-            self.__setattr__(variable, value)
+    def __init__(self, patch_input_shape, input_resolutions, stride_shape, **kwargs):
+        super().__init__(
+            input_resolutions=input_resolutions,
+            output_resolutions=[],
+            stride_shape=stride_shape,
+            patch_input_shape=patch_input_shape,
+            patch_output_shape=patch_input_shape,
+            save_resolution=None,
+            **kwargs,
+        )
 
 
 class CNNPatchPredictor:
@@ -142,12 +140,11 @@ class CNNPatchPredictor:
 
         if model is not None:
             self.model = model
-            iostate = None  # retrieve iostate from provided model ?
+            ioconfig = None  # retrieve iostate from provided model ?
         else:
-            model, iostate = get_pretrained_model(pretrained_model, pretrained_weights)
+            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
 
-        self._iostate = iostate  # for storing original
-        self.iostate = None  # for runtime
+        self.ioconfig = ioconfig  # for storing original
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
@@ -161,8 +158,14 @@ class CNNPatchPredictor:
         resolution=None,
         units=None,
         postproc_func: Callable = None,
+        return_probmap=False,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
+
+        #! Improve how the below reads.
+        The prediction map will contain values from 0 to N, where N is the number
+        of classes. Here, 0 is the background which has not been processed by the
+        model and N is the number of classes predicted by the model.
 
         Args:
             img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
@@ -176,7 +179,6 @@ class CNNPatchPredictor:
 
         Returns:
             prediction_map (ndarray): Merged predictions as a 2D array.
-            overlay (ndarray): Overlaid output if return_overlay is set to True.
 
         Examples:
             >>> # pseudo output dict from model with 2 patches
@@ -203,11 +205,9 @@ class CNNPatchPredictor:
         reader = get_wsireader(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
-                " ".join(
-                    [
-                        "Image is not pyramidal hence read is forced to be",
-                        "at `units='baseline'` and `resolution=1.0`.",
-                    ]
+                (
+                    "Image is not pyramidal hence read is forced to be "
+                    "at `units='baseline'` and `resolution=1.0`."
                 )
             )
             resolution = 1.0
@@ -249,13 +249,14 @@ class CNNPatchPredictor:
         # deal with overlapping regions
         if denominator is not None:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
-            # convert raw probabilities to predictions
-            if postproc_func is not None:
-                output = postproc_func(output)
-            else:
-                output = np.argmax(output, axis=-1)
-            # to make sure background is 0 while class will be 1..N
-            output[denominator > 0] += 1
+            if not return_probmap:
+                # convert raw probabilities to predictions
+                if postproc_func is not None:
+                    output = postproc_func(output)
+                else:
+                    output = np.argmax(output, axis=-1)
+                # to make sure background is 0 while class will be 1..N
+                output[denominator > 0] += 1
         return output
 
     def _predict_engine(
@@ -348,8 +349,9 @@ class CNNPatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        patch_size: Tuple[int, int] = None,
-        stride_size: Tuple[int, int] = None,
+        ioconfig: IOPatchPredictorConfig = None,
+        patch_input_shape: Tuple[int, int] = None,
+        stride_shape: Tuple[int, int] = None,
         resolution=None,
         units=None,
         merge_predictions=False,
@@ -443,17 +445,53 @@ class CNNPatchPredictor:
             )
 
         else:
-            stride_size = stride_size if stride_size is not None else patch_size
+            if stride_shape is None:
+                stride_shape = patch_input_shape
 
-            self.iostate = self._iostate
-            if patch_size is not None:
-                iostate = IOPatchPredictorConfig(
-                    input_resolutions=[{"resolution": resolution, "units": units}],
-                    output_resolutions=[{"resolution": resolution, "units": units}],
-                    patch_size=patch_size,
-                    stride_size=stride_size,
+            # ! not sure if there is any way to make this nicer
+            make_config_flag = (
+                patch_input_shape is None,
+                resolution is None,
+                units is None,
+            )
+
+            if ioconfig is None and self.ioconfig is None and any(make_config_flag):
+                raise ValueError(
+                    "Must provide either `ioconfig` or "
+                    "`patch_input_shape`, `resolution`, and `units`."
                 )
-                self.iostate = iostate
+            elif ioconfig is None and self.ioconfig:
+                ioconfig = copy.deepcopy(self.ioconfig)
+                # ! not sure if there is a nicer way to set this
+                if patch_input_shape is not None:
+                    ioconfig.patch_input_shape = patch_input_shape
+                if stride_shape is not None:
+                    ioconfig.stride_shape = stride_shape
+                if resolution is not None:
+                    ioconfig.input_resolutions[0]["resolution"] = resolution
+                if units is not None:
+                    ioconfig.input_resolutions[0]["units"] = units
+            elif ioconfig is None and all(make_config_flag):
+                ioconfig = IOPatchPredictorConfig(
+                    input_resolutions=[{"resolution": resolution, "units": units}],
+                    patch_input_shape=patch_input_shape,
+                    stride_shape=stride_shape,
+                )
+
+            fx_list = ioconfig.scale_to_highest(
+                ioconfig.input_resolutions, ioconfig.input_resolutions[0]["units"]
+            )
+            fx_list = zip(fx_list, ioconfig.input_resolutions)
+            fx_list = sorted(fx_list, key=lambda x: x[0])
+            highest_input_resolution = fx_list[0][1]
+
+            if mode == "tile":
+                warnings.warn(
+                    "WSIPatchDataset only reads image tile at "
+                    '`units="baseline"`. Resolutions will be converted '
+                    "to baseline value."
+                )
+                ioconfig = ioconfig.to_baseline()
 
             if len(imgs) > 1:
                 warnings.warn(
@@ -502,10 +540,10 @@ class CNNPatchPredictor:
                     img_path,
                     mode=mode,
                     mask_path=img_mask,
-                    patch_size=self.iostate.patch_size,
-                    stride_size=self.iostate.stride_size,
-                    resolution=self.iostate.input_resolutions[0]["resolution"],
-                    units=self.iostate.input_resolutions[0]["units"],
+                    patch_size=ioconfig.patch_input_shape,
+                    stride_size=ioconfig.stride_shape,
+                    resolution=ioconfig.input_resolutions[0]["resolution"],
+                    units=ioconfig.input_resolutions[0]["units"],
                 )
                 output_model = self._predict_engine(
                     dataset,
@@ -517,8 +555,8 @@ class CNNPatchPredictor:
                 output_model["label"] = img_label
                 # add extra information useful for downstream analysis
                 output_model["pretrained_model"] = self.pretrained_model
-                output_model["resolution"] = resolution
-                output_model["units"] = units
+                output_model["resolution"] = highest_input_resolution["resolution"]
+                output_model["units"] = highest_input_resolution["units"]
 
                 outputs = [output_model]  # assign to a list
                 merged_prediction = None
@@ -533,9 +571,9 @@ class CNNPatchPredictor:
                     outputs.append(merged_prediction)
 
                 if len(imgs) > 1 or save_output:
-                    img_code = "{number:0{width}d}".format(
-                        width=len(str(len(imgs))), number=idx
-                    )
+                    # dynamic 0 padding
+                    img_code = f"{idx:0{len(str(len(imgs)))}d}"
+
                     save_info = {}
                     save_path = os.path.join(str(save_dir), img_code)
                     raw_save_path = f"{save_path}.raw.json"
