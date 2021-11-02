@@ -380,12 +380,12 @@ class CNNPatchPredictor:
             return_probabilities (bool): Whether to return per-class probabilities.
             return_labels (bool): Whether to return the labels with the predictions.
             on_gpu (bool): whether to run model on the GPU.
-            patch_size (tuple): Size of patches input to the model. Patches are at
+            patch_input_shape (tuple): Size of patches input to the model. Patches are at
               requested read resolution, not with respect to level 0, and must be
               positive.
-            stride_size (tuple): Stride using during tile and WSI processing.
+            stride_shape (tuple): Stride using during tile and WSI processing.
               Stride is at requested read resolution, not with respect to to level
-              0, and must be positive. If not provided, `stride_size=patch_size`.
+              0, and must be positive. If not provided, `stride_shape=patch_input_shape`.
             resolution (float): Resolution used for reading the image. Please see
                 :obj:`WSIReader` for details.
             units (str): Units of resolution used for reading the image. Choose from
@@ -543,8 +543,8 @@ class CNNPatchPredictor:
                     img_path,
                     mode=mode,
                     mask_path=img_mask,
-                    patch_size=ioconfig.patch_input_shape,
-                    stride_size=ioconfig.stride_shape,
+                    patch_shape=ioconfig.patch_input_shape,
+                    stride_shape=ioconfig.stride_shape,
                     resolution=ioconfig.input_resolutions[0]["resolution"],
                     units=ioconfig.input_resolutions[0]["units"],
                 )
