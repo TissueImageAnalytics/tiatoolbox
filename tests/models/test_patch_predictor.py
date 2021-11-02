@@ -521,7 +521,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         "resolution": 1.75,
         "units": "mpp",
     }
-    for key in kwargs.keys():
+    for key, _ in enumerate(kwargs.items()):
         _kwargs = copy.deepcopy(kwargs)
         _kwargs.pop(key)
         with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
@@ -731,8 +731,6 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
         merge_predictions=True,  # to test the api coverage
         units="mpp",
     )
-
-    import copy
 
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = False

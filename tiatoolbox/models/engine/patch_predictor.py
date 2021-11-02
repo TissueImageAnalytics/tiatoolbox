@@ -468,7 +468,7 @@ class CNNPatchPredictor:
                     "Must provide either `ioconfig` or "
                     "`patch_input_shape`, `resolution`, and `units`."
                 )
-            elif ioconfig is None and self.ioconfig:
+            if ioconfig is None and self.ioconfig:
                 ioconfig = copy.deepcopy(self.ioconfig)
                 # ! not sure if there is a nicer way to set this
                 if patch_input_shape is not None:
@@ -479,7 +479,7 @@ class CNNPatchPredictor:
                     ioconfig.input_resolutions[0]["resolution"] = resolution
                 if units is not None:
                     ioconfig.input_resolutions[0]["units"] = units
-            elif ioconfig is None and all([not v for v in make_config_flag]):
+            elif ioconfig is None and all(not v for v in make_config_flag):
                 ioconfig = IOPatchPredictorConfig(
                     input_resolutions=[{"resolution": resolution, "units": units}],
                     patch_input_shape=patch_input_shape,
