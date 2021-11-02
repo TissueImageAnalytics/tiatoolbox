@@ -526,7 +526,11 @@ def test_io_config_delegation(remote_sample, tmp_path):
         _kwargs.pop(key)
         with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
             predictor.predict(
-                [mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump", **_kwargs
+                [mini_wsi_svs],
+                mode="wsi",
+                save_dir=f"{tmp_path}/dump",
+                on_gpu=ON_GPU,
+                **_kwargs,
             )
         _rm_dir(f"{tmp_path}/dump")
 
@@ -537,11 +541,17 @@ def test_io_config_delegation(remote_sample, tmp_path):
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
     predictor.predict(
-        [mini_wsi_svs], ioconfig=ioconfig, mode="wsi", save_dir=f"{tmp_path}/dump"
+        [mini_wsi_svs],
+        ioconfig=ioconfig,
+        mode="wsi",
+        save_dir=f"{tmp_path}/dump",
+        on_gpu=ON_GPU,
     )
     _rm_dir(f"{tmp_path}/dump")
 
-    predictor.predict([mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump", **kwargs)
+    predictor.predict(
+        [mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump", on_gpu=ON_GPU, **kwargs
+    )
     _rm_dir(f"{tmp_path}/dump")
 
     # test overwriting pretrained ioconfig
@@ -550,6 +560,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         [mini_wsi_svs],
         patch_input_shape=[300, 300],
         mode="wsi",
+        on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.patch_input_shape == [300, 300]
@@ -559,6 +570,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         [mini_wsi_svs],
         stride_shape=[300, 300],
         mode="wsi",
+        on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.stride_shape == [300, 300]
@@ -568,6 +580,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         [mini_wsi_svs],
         resolution=1.99,
         mode="wsi",
+        on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
@@ -577,6 +590,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         [mini_wsi_svs],
         units="baseline",
         mode="wsi",
+        on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
