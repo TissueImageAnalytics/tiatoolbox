@@ -75,7 +75,7 @@ class TFSamepaddingLayer(nn.Module):
         else:
             pad_val_start = pad // 2
             pad_val_end = pad - pad_val_start
-            padding = (pad_val_start, pad_val_end,pad_val_start, pad_val_end)
+            padding = (pad_val_start, pad_val_end, pad_val_start, pad_val_end)
         x = F.pad(x, padding, "constant", 0)
         return x
 
@@ -283,7 +283,7 @@ class HoVerNetPlus(ModelABC):
     """Initialise HoVer-Net+."""
 
     def __init__(
-        self, num_input_channels: int = 3, num_types: int = None, 
+        self, num_input_channels: int = 3, num_types: int = None,
         num_layers: int = None, mode: str = "original"
     ):
         super().__init__()
@@ -535,15 +535,16 @@ class HoVerNetPlus(ModelABC):
             ls_map: prediction output
         """
         ls_map = np.squeeze(ls_map.astype('float32'))
-        ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)    
+        ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
         ls_map = np.around(ls_map)
         ls_map = ls_map.astype('int')
 
         return ls_map
 
     @staticmethod
-    def postproc(raw_maps: List[np.ndarray], num_layers: int = None, 
-    num_types: int = None):
+    def postproc(
+        raw_maps: List[np.ndarray], num_layers: int = None, num_types: int = None
+        ):
         """Post processing script for image tiles.
         Args:
             raw_maps (list(ndarray)): list of prediction output of each head and
@@ -576,7 +577,7 @@ class HoVerNetPlus(ModelABC):
             >>> layer_dict = {[layer_uid: number] : layer_info}
         """
         if num_types is not None and num_layers is None:
-            # Nuclei segmentation (with classes) only 
+            # Nuclei segmentation (with classes) only
             np_map, hv_map, tp_map = raw_maps
             ls_map = None
         elif num_types is None and num_layers is not None:
@@ -668,16 +669,18 @@ class HoVerNetPlus(ModelABC):
 
         if pred_layer is not None:
 
-            def image2contours(image, layer_dict, count, type):
+            def image2contours(image, layer_info_dict, cnt, type):
 
-                contours, hierarchy = cv2.findContours(
+                contours, _ = cv2.findContours(
                     image.astype('uint8'), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
                 for layer in contours:
                     coords = layer[:, 0, :]
-                    layer_dict[str(count)] = {"contours": coords.tolist(), "type": type}
-                    count += 1
+                    layer_info_dict[str(count)] = {
+                        "contours": coords.tolist(), "type": type
+                        }
+                    cnt += 1
 
-                return layer_dict, count
+                return layer_info_dict, count
 
             layer_list = np.unique(pred_layer)
             layer_list = np.delete(layer_list, np.where(layer_list == 0))
@@ -731,11 +734,14 @@ class HoVerNetPlus(ModelABC):
 
         if "tp2" in pred_dict and "ls" not in pred_dict:
             return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"]
-        elif "tp2" in pred_dict and "ls" in pred_dict:
+
+        if "tp2" in pred_dict and "ls" in pred_dict:
             return pred_dict["np"], pred_dict["hv"], pred_dict["tp2"], pred_dict["ls"]
-        elif "tp2" not in pred_dict and "ls" in pred_dict:
+
+        if "tp2" not in pred_dict and "ls" in pred_dict:
             return pred_dict["ls"]
-        elif "tp2" not in pred_dict and "np" in pred_dict:
+            
+        if "tp2" not in pred_dict and "np" in pred_dict:
             return pred_dict["np"], pred_dict["hv"]
-        else:
-            return None
+        
+        return None
