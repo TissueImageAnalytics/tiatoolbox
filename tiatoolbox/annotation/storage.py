@@ -43,6 +43,7 @@ import pickle
 import sqlite3
 import uuid
 import warnings
+import zlib
 from abc import ABC
 from functools import lru_cache
 from numbers import Number
@@ -777,6 +778,40 @@ class AnnotationStoreABC(ABC):
         raise TypeError("Invalid type for properties_predicate")
 
 
+class SQLiteMetadata:
+    """Metadata storage for an SQLiteStore."""
+
+    def __init__(self, con: sqlite3.Connection) -> None:
+        self.con = con
+        self.con.execute(
+            "CREATE TABLE IF NOT EXISTS metadata (key text unique, value text)"
+        )
+        self.con.commit()
+
+    def __setitem__(self, key: str, value: Union[dict, list, int, float, str]) -> None:
+        """Set a metadata value."""
+        value = json.dumps(value)
+        self.con.execute(
+            "REPLACE INTO metadata (key, value) VALUES (?,?)", (key, value)
+        )
+        self.con.commit()
+
+    def __getitem__(self, key: str) -> Union[dict, list, int, float, str]:
+        """Get a metadata value."""
+        cur = self.con.cursor()
+        cur.execute("SELECT value FROM metadata WHERE key = ?", (key,))
+        (value,) = cur.fetchone()
+        if value is None:
+            raise KeyError(key)
+        return json.loads(value)
+
+    def __delitem__(self, key: str) -> None:
+        """Delete a metadata value."""
+        if key not in self:
+            raise KeyError(key)
+        self.con.execute("DELETE FROM metadata WHERE key = ?", (key,))
+
+
 class SQLiteStore(AnnotationStoreABC):
     """SQLite backed annotation store."""
 
@@ -784,7 +819,12 @@ class SQLiteStore(AnnotationStoreABC):
     def open(cls, fp: Union[Path, str]) -> "SQLiteStore":
         return SQLiteStore(fp)
 
-    def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
+    def __init__(
+        self,
+        connection: Union[Path, str] = ":memory:",
+        compression="zlib",
+        compression_level=9,
+    ) -> None:
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
@@ -797,6 +837,12 @@ class SQLiteStore(AnnotationStoreABC):
         path = Path(connection)
         exists = path.exists() and path.is_file()
         self.con = sqlite3.connect(connection, isolation_level="DEFERRED")
+
+        # Set up metadata
+        self.metadata = SQLiteMetadata(self.con)
+        self.metadata["version"] = "1.0.0"
+        self.metadata["compression"] = compression
+        self.metadata["compression_level"] = compression_level
 
         # Register predicate functions as custom SQLite functions
         def wkb_predicate(name: str, wkb_a: bytes, b: bytes) -> bool:
@@ -830,10 +876,9 @@ class SQLiteStore(AnnotationStoreABC):
 
         if exists:
             return
-        cur = self.con.cursor()
 
         # Create tables for geometry and RTree index
-        cur.execute(
+        self.con.execute(
             """
             CREATE VIRTUAL TABLE rtree USING rtree_i32(
                 id,                      -- Integer primary key
@@ -842,7 +887,7 @@ class SQLiteStore(AnnotationStoreABC):
             )
             """
         )
-        cur.execute(
+        self.con.execute(
             """
             CREATE TABLE annotations(
                 id INTEGER PRIMARY KEY,  -- Integer primary key
@@ -856,6 +901,51 @@ class SQLiteStore(AnnotationStoreABC):
             """
         )
         self.con.commit()
+
+    def serialise_geometry(self, geometry: Geometry) -> Union[str, bytes]:
+        """Serialise a geometry to WKB with optional compression.
+
+        Converts shapely geometry objects to well-known binary (WKB) and
+        applies optional compression.
+
+        Args:
+            geometry(Geometry):
+                The Shapely geometry to be serialised.
+
+        Returns:
+            bytes or str: The serialised geometry.
+
+        """
+        wkb = geometry.wkb
+        if self.metadata["compression"] is None:
+            return wkb
+        if self.metadata["compression"] == "zlib":
+            return zlib.compress(wkb, level=self.metadata["compression_level"])
+        raise Exception("Unsupported compression method.")
+
+    @lru_cache(32)
+    def deserialise_geometry(self, data: Union[str, bytes]) -> Geometry:
+        """Deserialise a geometry from a string or bytes.
+
+        This default implementaion will deserialise bytes as well-known
+        binary (WKB) and srings as well-known text (WKT). This can be
+        overriden to deserialise other formats such as geoJSON etc.
+
+        Args:
+            data(bytes or str):
+                The serialised representaion of a Shapely geometry.
+
+        Returns:
+            Geometry: The deserialised Shapely geometry.
+
+        """
+        if self.metadata["compression"] == "zlib":
+            data = zlib.decompress(data)
+        elif self.metadata["compression"] is not None:
+            raise Exception("Unsupported compression method.")
+        if isinstance(data, str):
+            return wkt.loads(data)
+        return wkb.loads(data)
 
     @staticmethod
     def compile_options() -> List[str]:
@@ -897,6 +987,7 @@ class SQLiteStore(AnnotationStoreABC):
         return [opt for opt, in options]
 
     def close(self) -> None:
+        self.con.commit()
         self.con.close()
 
     def _make_token(
@@ -1039,7 +1130,7 @@ class SQLiteStore(AnnotationStoreABC):
         if isinstance(properties_predicate, Callable):
             return [
                 key
-                for key, boundary, properties in cur.fetchall()
+                for key, _, properties in cur.fetchall()
                 if properties_predicate(json.loads(properties))
             ]
         return [key for key, in cur.fetchall()]
