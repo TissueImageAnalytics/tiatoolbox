@@ -39,7 +39,7 @@ class StainAugmentation(ImageOnlyTransform):
 
 
     Args:
-        image:
+        img:
 
     Examples:
          >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
@@ -63,57 +63,64 @@ class StainAugmentation(ImageOnlyTransform):
         self.method = method
         self.stain_matrix = stain_matrix
 
+        if self.method.lower() not in {"macenko", "vahadane"}:
+            raise Exception(f"Invalid stain extractor method: {self.method}")
+
         if self.method.lower() == "macenko":
             self.stain_normaliser = MacenkoNormaliser()
         elif self.method.lower() == "vahadane":
             self.stain_normaliser = VahadaneNormaliser()
-        else:
-            raise Exception(f"Invalid stain extractor method: {self.method}")
 
-    def fit(self, image, threshold=0.85):
+    def fit(self, img, threshold=0.85):
         if self.stain_matrix is None:
-            self.stain_normaliser.fit(image)
+            self.stain_normaliser.fit(img)
             self.stain_matrix = self.stain_normaliser.stain_matrix_target
             self.source_concentrations = self.stain_normaliser.target_concentrations
         else:
             self.source_concentrations = self.stain_normaliser.get_concentrations(
-                image, self.stain_matrix
-                )
+                img, self.stain_matrix
+            )
         self.n_stains = self.source_concentrations.shape[1]
-        self.tissue_mask = get_luminosity_tissue_mask(image, threshold=threshold).ravel()
-        self.image_shape = image.shape
+        self.tissue_mask = get_luminosity_tissue_mask(img, threshold=threshold).ravel()
+        self.img_shape = img.shape
 
-    def augment(self, alpha, beta):
+    def augment(self):  # alpha, beta
         augmented_concentrations = copy.deepcopy(self.source_concentrations)
         for i in range(self.n_stains):
             if self.augment_background:
-                augmented_concentrations[:, i] *= alpha
-                augmented_concentrations[:, i] += beta
+                augmented_concentrations[:, i] *= self.alpha
+                augmented_concentrations[:, i] += self.beta
             else:
-                augmented_concentrations[self.tissue_mask, i] *= alpha
-                augmented_concentrations[self.tissue_mask, i] += beta
+                augmented_concentrations[self.tissue_mask, i] *= self.alpha
+                augmented_concentrations[self.tissue_mask, i] += self.beta
 
-        image_augmented = 255 * np.exp(-1 * np.dot(augmented_concentrations,
-                                                   self.stain_matrix))
-        image_augmented = image_augmented.reshape(self.image_shape)
-        image_augmented = np.clip(image_augmented, 0, 255)
-        return np.uint8(image_augmented)
+        img_augmented = 255 * np.exp(
+            -1 * np.dot(augmented_concentrations, self.stain_matrix)
+        )
+        img_augmented = img_augmented.reshape(self.img_shape)
+        img_augmented = np.clip(img_augmented, 0, 255)
+        return np.uint8(img_augmented)
 
-    def apply(self, image, alpha=None, beta=None, **params):
-        """Return an stain augmented image.
+    def apply(self, img, **params):  # alpha=None, beta=None,
+        """Fit the augmentor on the input image and return an augmented instance
 
         Args:
-            seed:
+            img (::np.ndarray::): Input RGB image in the form of unit8 numpy array.
         Returns:
-            image_augmented:
+            img_augmented (::np.ndarray::): Stain augmented image with the same size
+              and format as the input img.
         """
-        self.fit(image, threshold=0.85)
-        return self.augment(alpha, beta)
+        self.fit(img, threshold=0.85)
+        return self.augment()
 
     def get_params(self):
-        alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
-        beta = random.uniform(-self.sigma2, self.sigma2)
-        return {"alpha": alpha, "beta": beta}
+        self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
+        self.beta = random.uniform(-self.sigma2, self.sigma2)
+        return {"alpha": self.alpha, "beta": self.beta}
+
+    def get_params_dependent_on_targets(self, params):
+        """Does nothing, added to resolve flake 8 error"""
+        pass
 
     def get_transform_init_args_names(self):
         return ("method", "stain_matrix", "sigma1", "sigma2", "augment_background")
