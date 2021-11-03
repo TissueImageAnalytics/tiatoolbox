@@ -31,4 +31,5 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
+    FeatureExtractor,
 )
