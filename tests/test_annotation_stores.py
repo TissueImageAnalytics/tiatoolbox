@@ -200,6 +200,37 @@ def test_sqlitestore_unsupported_decompression():
         _ = store.deserialise_geometry(bytes())
 
 
+def test_sqlitestore_wkt_deserialisation(sample_triangle):
+    """Test WKT deserialisation."""
+    store = SQLiteStore(compression=None)
+    wkt = sample_triangle.wkt
+    geom = store.deserialise_geometry(wkt)
+    assert geom == sample_triangle
+
+
+def test_sqlitestore_metadata_get_keyerror():
+    """Test getting a metadata entry that does not exists."""
+    store = SQLiteStore()
+    with pytest.raises(KeyError):
+        store.metadata["foo"]
+
+
+def test_sqlitestore_metadata_delete_keyerror():
+    """Test deleting a metadata entry that does not exists."""
+    store = SQLiteStore(compression=None)
+    with pytest.raises(KeyError):
+        del store.metadata["foo"]
+
+
+def test_sqlitestore_metadata_delete():
+    """Test adding and deleting a metadata entry."""
+    store = SQLiteStore(compression=None)
+    store.metadata["foo"] = 1
+    assert "foo" in store.metadata
+    del store.metadata["foo"]
+    assert "foo" not in store.metadata
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 

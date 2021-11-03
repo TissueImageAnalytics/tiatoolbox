@@ -786,6 +786,10 @@ class SQLiteMetadata:
         )
         self.con.commit()
 
+    def __contains__(self, key: str) -> bool:
+        cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
+        return cursor.fetchone() is not None
+
     def __setitem__(self, key: str, value: Union[dict, list, int, float, str]) -> None:
         """Set a metadata value."""
         value = json.dumps(value)
@@ -796,12 +800,11 @@ class SQLiteMetadata:
 
     def __getitem__(self, key: str) -> Union[dict, list, int, float, str]:
         """Get a metadata value."""
-        cur = self.con.cursor()
-        cur.execute("SELECT value FROM metadata WHERE [key] = ?", (key,))
-        (value,) = cur.fetchone()
-        if value is None:
+        cursor = self.con.execute("SELECT value FROM metadata WHERE [key] = ?", (key,))
+        result = cursor.fetchone()
+        if result is None:
             raise KeyError(key)
-        return json.loads(value)
+        return json.loads(result[0])
 
     def __delitem__(self, key: str) -> None:
         """Delete a metadata value."""
