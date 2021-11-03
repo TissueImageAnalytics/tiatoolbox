@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -1119,7 +1119,7 @@ class SemanticSegmentor:
 class FeatureExtractor(SemanticSegmentor):
     """Generic CNN Feature Extractor.
 
-    A controller for using any CNN model as a feature extractor.
+    A engine for using any CNN model as a feature extractor.
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 
