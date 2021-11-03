@@ -29,7 +29,6 @@ dependencies:
   - tifffile
   - torchvision
   - tqdm
-  - jupyterlab
   - shapely
   - pygeos
   - zarr

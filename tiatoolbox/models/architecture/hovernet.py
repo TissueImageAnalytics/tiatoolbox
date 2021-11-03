@@ -74,9 +74,9 @@ class TFSamepaddingLayer(nn.Module):
 
 
 class DenseBlock(nn.Module):
-    """Dense Block as defined in:
+    """Dense Convolutional Block
 
-    This will only performs `valid` convolution.
+    This convolutional block supports only `valid` padding.
 
     References:
         Huang, Gao, Zhuang Liu, Laurens Van Der Maaten, and Kilian Q. Weinberger.
@@ -278,7 +278,25 @@ class ResidualBlock(nn.Module):
 
 
 class HoVerNet(ModelABC):
-    """Initialise HoVer-Net."""
+    """HoVer-Net Architecture.
+
+    Args:
+        num_input_channels (int): Number of channels in input.
+        num_types (int): Number of nuclei types within the predictions.
+          Once define, a branch dedicated for typing is created.
+          By default, no typing (`num_types=None`) is used.
+        mode (str): To use architecture defined in as in original paper
+          (`original`) or the one used in Pannuke (`fast`).
+
+    Reference:
+        Graham, Simon, et al. "Hover-net: Simultaneous segmentation
+        and classification of nuclei in multi-tissue histology images."
+        Medical Image Analysis 58 (2019): 101563.
+
+        Jevgenij, Gamper, et al. "PanNuke Dataset Extension, Insights
+        and Baselines", arXiv:2003.10778. https://arxiv.org/abs/2003.10778
+
+    """
 
     def __init__(
         self, num_input_channels: int = 3, num_types: int = None, mode: str = "original"
