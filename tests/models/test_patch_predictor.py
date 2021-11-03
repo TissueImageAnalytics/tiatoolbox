@@ -823,6 +823,20 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
     assert np.sum(merged - _merged) == 0
 
+    # blind test for merging probabilities
+    merged = CNNPatchPredictor.merge_predictions(
+        np.zeros([4, 4]),
+        output,
+        resolution=1.0,
+        units="baseline",
+        return_raw=True,
+    )
+    _merged = np.array(
+        [[0.45, 0.45, 0, 0], [0.45, 0.45, 0, 0], [0, 0, 0.90, 0.90], [0, 0, 0.90, 0.90]]
+    )
+    assert merged.shape == (4, 4, 2)
+    assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
+
     # integration test
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 

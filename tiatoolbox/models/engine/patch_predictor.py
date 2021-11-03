@@ -25,7 +25,7 @@ import os
 import pathlib
 import warnings
 from collections import OrderedDict
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 
 import numpy as np
 import torch
@@ -161,12 +161,12 @@ class CNNPatchPredictor:
 
     @staticmethod
     def merge_predictions(
-        img,
-        output,
-        resolution=None,
-        units=None,
+        img: Union[str, pathlib.Path, np.ndarray],
+        output: dict,
+        resolution: float = None,
+        units: str = None,
         postproc_func: Callable = None,
-        return_probmap=False,
+        return_raw: bool = False,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
@@ -183,8 +183,9 @@ class CNNPatchPredictor:
             units (str): Units of resolution used when merging predictions. This
               must be the same `units` used when processing the data.
             postproc_func (callable): A function to post-process raw prediction
-              from model.
-
+              from model. By default, internal code uses the `np.argmax` function.
+            return_raw (bool): Return raw result without applying the `postproc_func`
+              on the assembled image.
         Returns:
             prediction_map (ndarray): Merged predictions as a 2D array.
 
@@ -257,7 +258,7 @@ class CNNPatchPredictor:
         # deal with overlapping regions
         if denominator is not None:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
-            if not return_probmap:
+            if not return_raw:
                 # convert raw probabilities to predictions
                 if postproc_func is not None:
                     output = postproc_func(output)
