@@ -74,10 +74,9 @@ def normalise_padding_size(padding):
 
     if padding_size == 1:
         return np.repeat(padding, 4)
-    elif padding_size == 2:
+    if padding_size == 2:
         return np.tile(padding, 2)
-    else:
-        return np.array(padding)
+    return np.array(padding)
 
 
 def find_padding(read_location, read_size, image_size):
