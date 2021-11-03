@@ -33,14 +33,13 @@ import tqdm
 
 from tiatoolbox.models.abc import IOConfigABC
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.controller.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-class IOPatchPredictorConfig(IOSegmentorConfig):
+class IOPatchPredictorConfig(IOConfigABC):
     """Contain patch predictor input and output information."""
 
     def __init__(self, patch_input_shape, input_resolutions, stride_shape, **kwargs):
