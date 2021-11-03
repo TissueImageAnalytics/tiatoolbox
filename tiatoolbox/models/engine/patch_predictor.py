@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
+# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -25,24 +25,31 @@ import os
 import pathlib
 import warnings
 from collections import OrderedDict
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 
 import numpy as np
 import torch
 import tqdm
 
-from tiatoolbox.models.abc import IOConfigABC
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
-class IOPatchPredictorConfig(IOConfigABC):
+class IOPatchPredictorConfig(IOSegmentorConfig):
     """Contain patch predictor input and output information."""
 
-    def __init__(self, patch_input_shape, input_resolutions, stride_shape, **kwargs):
+    def __init__(
+        self,
+        patch_input_shape=None,
+        input_resolutions=None,
+        stride_shape=None,
+        **kwargs,
+    ):
+        stride_shape = patch_input_shape if stride_shape is None else stride_shape
         super().__init__(
             input_resolutions=input_resolutions,
             output_resolutions=[],
@@ -145,6 +152,7 @@ class CNNPatchPredictor:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
 
         self.ioconfig = ioconfig  # for storing original
+        self._ioconfig = None  # for storing runtime
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
@@ -153,14 +161,19 @@ class CNNPatchPredictor:
 
     @staticmethod
     def merge_predictions(
-        img,
-        output,
-        resolution=None,
-        units=None,
+        img: Union[str, pathlib.Path, np.ndarray],
+        output: dict,
+        resolution: float = None,
+        units: str = None,
         postproc_func: Callable = None,
-        return_probmap=False,
+        return_raw: bool = False,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
+
+        #! Improve how the below reads.
+        The prediction map will contain values from 0 to N, where N is the number
+        of classes. Here, 0 is the background which has not been processed by the
+        model and N is the number of classes predicted by the model.
 
         Args:
             img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
@@ -170,15 +183,11 @@ class CNNPatchPredictor:
             units (str): Units of resolution used when merging predictions. This
               must be the same `units` used when processing the data.
             postproc_func (callable): A function to post-process raw prediction
-              from model.
-
+              from model. By default, internal code uses the `np.argmax` function.
+            return_raw (bool): Return raw result without applying the `postproc_func`
+              on the assembled image.
         Returns:
-            prediction_map (ndarray): Merged predictions.
-              If return_probmap is True, them the output will be HxWxC, where C is the
-              number of classes and each channel denotes the probability of an input
-              patch belonging to the corresponding class. Otherwise, the prediction map
-              will contain values between 0 and C, where 0 indicate areas not processed
-              by the model (areas outside of mask) and C is the number of classes.
+            prediction_map (ndarray): Merged predictions as a 2D array.
 
         Examples:
             >>> # pseudo output dict from model with 2 patches
@@ -205,11 +214,9 @@ class CNNPatchPredictor:
         reader = get_wsireader(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
-                " ".join(
-                    [
-                        "Image is not pyramidal hence read is forced to be",
-                        "at `units='baseline'` and `resolution=1.0`.",
-                    ]
+                (
+                    "Image is not pyramidal hence read is forced to be "
+                    "at `units='baseline'` and `resolution=1.0`."
                 )
             )
             resolution = 1.0
@@ -251,7 +258,7 @@ class CNNPatchPredictor:
         # deal with overlapping regions
         if denominator is not None:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
-            if not return_probmap:
+            if not return_raw:
                 # convert raw probabilities to predictions
                 if postproc_func is not None:
                     output = postproc_func(output)
@@ -462,7 +469,7 @@ class CNNPatchPredictor:
                     "Must provide either `ioconfig` or "
                     "`patch_input_shape`, `resolution`, and `units`."
                 )
-            elif ioconfig is None and self.ioconfig:
+            if ioconfig is None and self.ioconfig:
                 ioconfig = copy.deepcopy(self.ioconfig)
                 # ! not sure if there is a nicer way to set this
                 if patch_input_shape is not None:
@@ -473,7 +480,7 @@ class CNNPatchPredictor:
                     ioconfig.input_resolutions[0]["resolution"] = resolution
                 if units is not None:
                     ioconfig.input_resolutions[0]["units"] = units
-            elif ioconfig is None and all(make_config_flag):
+            elif ioconfig is None and all(not v for v in make_config_flag):
                 ioconfig = IOPatchPredictorConfig(
                     input_resolutions=[{"resolution": resolution, "units": units}],
                     patch_input_shape=patch_input_shape,
@@ -519,6 +526,7 @@ class CNNPatchPredictor:
                 save_dir = pathlib.Path(save_dir)
 
             if save_dir is not None:
+                save_dir = pathlib.Path(save_dir)
                 save_dir.mkdir(parents=True, exist_ok=False)
 
             # return coordinates of patches processed within a tile / whole-slide image
@@ -531,6 +539,7 @@ class CNNPatchPredictor:
             # None if no output
             outputs = None
 
+            self._ioconfig = ioconfig
             # generate a list of output file paths if number of input images > 1
             file_dict = OrderedDict()
             for idx, img_path in enumerate(imgs):
@@ -542,7 +551,7 @@ class CNNPatchPredictor:
                     img_path,
                     mode=mode,
                     mask_path=img_mask,
-                    patch_shape=ioconfig.patch_input_shape,
+                    patch_input_shape=ioconfig.patch_input_shape,
                     stride_shape=ioconfig.stride_shape,
                     resolution=ioconfig.input_resolutions[0]["resolution"],
                     units=ioconfig.input_resolutions[0]["units"],
@@ -566,16 +575,16 @@ class CNNPatchPredictor:
                     merged_prediction = self.merge_predictions(
                         img_path,
                         output_model,
-                        resolution=resolution,
-                        units=units,
+                        resolution=output_model["resolution"],
+                        units=output_model["units"],
                         postproc_func=self.model.postproc,
                     )
                     outputs.append(merged_prediction)
 
                 if len(imgs) > 1 or save_output:
-                    img_code = "{number:0{width}d}".format(
-                        width=len(str(len(imgs))), number=idx
-                    )
+                    # dynamic 0 padding
+                    img_code = f"{idx:0{len(str(len(imgs)))}d}"
+
                     save_info = {}
                     save_path = os.path.join(str(save_dir), img_code)
                     raw_save_path = f"{save_path}.raw.json"

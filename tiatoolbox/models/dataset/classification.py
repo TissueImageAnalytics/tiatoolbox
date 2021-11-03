@@ -144,11 +144,8 @@ class WSIPatchDataset(abc.PatchDatasetABC):
           for reading pyramidal image or large tile in pyramidal way.
         inputs: List of coordinates to read from the `reader`,
           each coordinate is of the form [start_x, start_y, end_x, end_y].
-        patch_shape: a tuple(int, int) or ndarray of shape (2,).
+        patch_input_shape: a tuple(int, int) or ndarray of shape (2,).
           Expected size to read from `reader` at requested `resolution`
-          and `units`. Expected to be (height, width).
-        lv0_patch_shape: a tuple (int, int) or ndarray of shape (2,).
-          `patch_shape` at level 0 in `reader` at requested `resolution`
           and `units`. Expected to be (height, width).
         resolution: check (:class:`.WSIReader`) for details.
         units: check (:class:`.WSIReader`) for details.
@@ -166,7 +163,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
         img_path,
         mode="wsi",
         mask_path=None,
-        patch_shape=None,
+        patch_input_shape=None,
         stride_shape=None,
         resolution=None,
         units=None,
@@ -179,7 +176,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             img_path (:obj:`str` or :obj:`pathlib.Path`): valid to pyramidal
               whole-slide image or large tile to read.
             mask_path (:obj:`str` or :obj:`pathlib.Path`): valid mask image.
-            patch_shape: a tuple (int, int) or ndarray of shape (2,).
+            patch_input_shape: a tuple (int, int) or ndarray of shape (2,).
               Expected shape to read from `reader` at requested `resolution` and
               `units`. Expected to be positive and of (height, width). Note, this
               is not at `resolution` coordinate space.
@@ -201,7 +198,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             >>> ds = WSIPatchDataset(
             ...     img_path='/A/B/C/wsi.svs',
             ...     mode="wsi",
-            ...     patch_shape=[512, 512],
+            ...     patch_input_shape=[512, 512],
             ...     stride_shape=[256, 256],
             ...     auto_get_mask=False,
             ...     preproc_func=preproc_func
@@ -215,15 +212,15 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             raise ValueError("`img_path` must be a valid file path.")
         if mode not in ["wsi", "tile"]:
             raise ValueError(f"`{mode}` is not supported.")
-        patch_shape = np.array(patch_shape)
+        patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
 
         if (
-            not np.issubdtype(patch_shape.dtype, np.integer)
-            or np.size(patch_shape) > 2
-            or np.any(patch_shape < 0)
+            not np.issubdtype(patch_input_shape.dtype, np.integer)
+            or np.size(patch_input_shape) > 2
+            or np.any(patch_input_shape < 0)
         ):
-            raise ValueError(f"Invalid `patch_shape` value {patch_shape}.")
+            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
             or np.size(stride_shape) > 2
@@ -272,7 +269,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
         # use all patches, as long as it overlaps source image
         self.inputs = PatchExtractor.get_coordinates(
             image_shape=wsi_shape,
-            patch_input_shape=patch_shape[::-1],
+            patch_input_shape=patch_input_shape[::-1],
             stride_shape=stride_shape[::-1],
             input_within_bound=False,
         )
@@ -306,7 +303,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
         if len(self.inputs) == 0:
             raise ValueError("No coordinate remain after tiling!")
 
-        self.patch_shape = patch_shape
+        self.patch_input_shape = patch_input_shape
         self.resolution = resolution
         self.units = units
 
