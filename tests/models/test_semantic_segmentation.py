@@ -45,7 +45,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_TRAVIS = False
+ON_TRAVIS = True
 ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 # ----------------------------------------------------
 
