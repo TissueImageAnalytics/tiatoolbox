@@ -1395,12 +1395,14 @@ class DictionaryStore(AnnotationStoreABC):
 
     def append(
         self,
-        geometry: Union[Geometry, Iterable[Geometry]],
+        geometry: Geometry,
         properties: Optional[Dict[str, Any]] = None,
         key: Optional[str] = None,
     ) -> int:
         if properties is None:
             properties = {}
+        if not isinstance(geometry, (Polygon, Point, LineString)):
+            raise TypeError("Invalid geometry type.")
         key = key or str(uuid.uuid4())
         self._features[key] = {
             "geometry": geometry,

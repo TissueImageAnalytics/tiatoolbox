@@ -593,3 +593,18 @@ class TestStore:
 
         results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
         assert len(results) == 1
+
+    @staticmethod
+    def test_append_invalid_geometry(fill_store, store):
+        """Test that appending invalid geometry raises an exception."""
+        store = store()
+        with pytest.raises((TypeError, AttributeError)):
+            store.append("point", {})
+
+    @staticmethod
+    def test_update_invalid_geometry(fill_store, store):
+        """Test that updating  a new key and None geometry raises an exception."""
+        store = store()
+        key = "foo"
+        with pytest.raises((TypeError, AttributeError)):
+            store.update(key, geometry=None, properties={"class": 123})
