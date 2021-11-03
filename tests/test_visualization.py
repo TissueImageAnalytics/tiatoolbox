@@ -9,13 +9,13 @@ import numpy as np
 import pytest
 
 from tiatoolbox.utils.visualization import (
-    overlay_instance_prediction,
-    overlay_patch_prediction,
+    overlay_prediction_contours,
+    overlay_prediction_mask,
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
-def test_overlay_patch_prediction(sample_wsi_dict):
+def test_overlay_prediction_mask(sample_wsi_dict):
     """Test for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_pred = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_pred"])
@@ -25,7 +25,7 @@ def test_overlay_patch_prediction(sample_wsi_dict):
 
     thumb = reader.slide_thumbnail(resolution=2.77, units="mpp")
     with pytest.raises(ValueError, match=r".*Mismatch shape.*"):
-        _ = overlay_patch_prediction(thumb, merged)
+        _ = overlay_prediction_mask(thumb, merged)
 
     label_info_full = {
         0: ("BACKGROUND", (0, 0, 0)),
@@ -41,39 +41,39 @@ def test_overlay_patch_prediction(sample_wsi_dict):
 
     thumb = reader.slide_thumbnail(resolution=raw["resolution"], units=raw["units"])
     with pytest.raises(ValueError, match=r".*float `img` outside.*"):
-        _ = overlay_patch_prediction(thumb.astype(np.float32), merged)
+        _ = overlay_prediction_mask(thumb.astype(np.float32), merged)
 
     label_info_fail = copy.deepcopy(label_info_full)
     del label_info_fail[1]
     with pytest.raises(ValueError, match=r".*Missing label.*"):
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+        _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = (1, (255, 255, 255))
     with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+        _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail["ABC"] = ("ABC", (255, 255, 255))
     with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+        _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = ("ABC", "ABC")
     with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+        _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = ("ABC", (255, 255))
     with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
-        _ = overlay_patch_prediction(thumb, merged, label_info=label_info_fail)
+        _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     # Test normal run, should not crash.
     thumb_float = thumb / 255.0
-    _ = overlay_patch_prediction(thumb_float, merged, label_info=label_info_full)
-    _ = overlay_patch_prediction(thumb, merged, label_info=label_info_full)
+    _ = overlay_prediction_mask(thumb_float, merged, label_info=label_info_full)
+    _ = overlay_prediction_mask(thumb, merged, label_info=label_info_full)
     ax = plt.subplot(1, 2, 1)
-    _ = overlay_patch_prediction(thumb, merged, ax=ax)
+    _ = overlay_prediction_mask(thumb, merged, ax=ax)
 
 
 def test_overlay_instance_prediction():
@@ -108,12 +108,12 @@ def test_overlay_instance_prediction():
         },
     }
     canvas = np.zeros(inst_map.shape + (3,), dtype=np.uint8)
-    canvas = overlay_instance_prediction(
+    canvas = overlay_prediction_contours(
         canvas, inst_dict, draw_dot=False, type_colour=type_colour, line_thickness=1
     )
     assert np.sum(canvas[..., 0].astype(np.int32) - inst_map) == 0
     assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == -12
     assert np.sum(canvas[..., 2].astype(np.int32) - inst_map) == 0
-    canvas = overlay_instance_prediction(
+    canvas = overlay_prediction_contours(
         canvas, inst_dict, draw_dot=True, type_colour=None, line_thickness=1
     )

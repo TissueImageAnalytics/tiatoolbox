@@ -49,7 +49,7 @@ def random_colors(num_colors, bright=True):
     return colors
 
 
-def overlay_patch_prediction(
+def overlay_prediction_mask(
     img: np.ndarray,
     prediction: np.ndarray,
     alpha: float = 0.35,
@@ -163,7 +163,7 @@ def overlay_patch_prediction(
     return ax
 
 
-def overlay_instance_prediction(
+def overlay_prediction_contours(
     canvas, inst_dict, draw_dot=False, type_colour=None, line_thickness=2
 ):
     """Overlaying instance contours on image.
