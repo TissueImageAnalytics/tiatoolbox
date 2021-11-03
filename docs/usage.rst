@@ -120,16 +120,16 @@ Architecture
     :members:
 
 --------------
-Controller
+Engine
 --------------
 
-.. automodule:: tiatoolbox.models.controller
+.. automodule:: tiatoolbox.models.engine
     :members:
 
-.. automodule:: tiatoolbox.models.controller.patch_predictor
+.. automodule:: tiatoolbox.models.engine.patch_predictor
     :members:
 
-.. automodule:: tiatoolbox.models.controller.semantic_segmentor
+.. automodule:: tiatoolbox.models.engine.semantic_segmentor
     :members:
 
 -------
