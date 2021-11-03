@@ -204,7 +204,7 @@ class StainAugmentation(ImageOnlyTransform):
         """Returns randomly generated parameters based on input arguments."""
         self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
         self.beta = random.uniform(-self.sigma2, self.sigma2)
-        return {"alpha": self.alpha, "beta": self.beta}
+        return {}  # "alpha": self.alpha, "beta": self.beta
 
     def get_params_dependent_on_targets(self, params):
         """Does nothing, added to resolve flake 8 error"""
