@@ -163,11 +163,6 @@ class CNNPatchPredictor:
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
-        #! Improve how the below reads.
-        The prediction map will contain values from 0 to N, where N is the number
-        of classes. Here, 0 is the background which has not been processed by the
-        model and N is the number of classes predicted by the model.
-
         Args:
             img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
               A HWC image or a path to WSI.
@@ -179,7 +174,12 @@ class CNNPatchPredictor:
               from model.
 
         Returns:
-            prediction_map (ndarray): Merged predictions as a 2D array.
+            prediction_map (ndarray): Merged predictions.
+              If return_probmap is True, them the output will be HxWxC, where C is the
+              number of classes and each channel denotes the probability of an input
+              patch belonging to the corresponding class. Otherwise, the prediction map
+              will contain values between 0 and C, where 0 indicate areas not processed
+              by the model (areas outside of mask) and C is the number of classes.
 
         Examples:
             >>> # pseudo output dict from model with 2 patches

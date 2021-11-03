@@ -17,7 +17,7 @@
 # The Original Code is Copyright (C) 2021, TIALab, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
-"""Defines vanilla CNNs with torch backbones, mainly for patch classification."""
+"""Defines CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
 
 
 import numpy as np
@@ -48,6 +48,17 @@ stain_normaliser.fit(target)
 
 
 class CNNModel1(CNNModel):
+    """Retrieve the model and add custom preprocessing.
+
+    This is named CNNModel1 in line with the original IDaRS paper and
+    is used for tumour segmentation.
+
+    Args:
+        backbone (str): Model name.
+        num_classes (int): Number of classes output by model.
+
+    """
+
     def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
@@ -61,11 +72,23 @@ class CNNModel1(CNNModel):
 
 
 class CNNModel2(CNNModel):
+    """Retrieve the model and add custom preprocessing, including
+      Vahadane stain normalisation.
+
+      This is named CNNModel2 in line with the original IDaRS paper and
+      is used for prediction of molecular pathways and key mutations.
+
+    Args:
+        backbone (str): Model name.
+        num_classes (int): Number of classes output by model.
+
+    """
+
     def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
         # download_data(TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-        
+
         # target = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
         # stain_normaliser = get_normaliser(method_name="vahadane")
         # stain_normaliser.fit(target)
@@ -74,6 +97,7 @@ class CNNModel2(CNNModel):
     def preproc(img):
         # apply stain normalisation
         import matplotlib.pyplot as plt
+
         # plt.imsave('stain_normed_orig.png', img)
         # img = stain_normaliser.transform(img.copy())
         # plt.imsave('stain_normed.png', img)
@@ -87,6 +111,18 @@ class CNNModel2(CNNModel):
 
 
 # class CNNModel2(CNNModel):
+# """Retrieve the model and add custom preprocessing, including
+#   Vahadane stain normalisation.
+
+#   This is named CNNModel2 in line with the original IDaRS paper and
+#   is used for prediction of molecular pathways and key mutations.
+
+# Args:
+#     backbone (str): Model name.
+#     num_classes (int): Number of classes output by model.
+
+# """
+
 #     def __init__(self, backbone, num_classes=1):
 #         super().__init__(backbone, num_classes=num_classes)
 

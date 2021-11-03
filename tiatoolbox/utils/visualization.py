@@ -40,16 +40,20 @@ def overlay_patch_prediction(
     Args:
         img (ndarray): Input image to overlay the results on top of.
         prediction (ndarray): 2D prediction map. Multi-class prediction should have
-            values ranging from 0 to N-1, where N is the number of classes.
+          values ranging from 0 to N-1, where N is the number of classes.
         label_info (dict): A dictionary contains the mapping for each integer value
-            within `prediction` to its string and color. [int] : (str, (int, int, int)).
-            By default, integer will be taken as label and color will be random.
-        min_val (float):
+          within `prediction` to its string and color. [int] : (str, (int, int, int)).
+          By default, integer will be taken as label and color will be random.
+        min_val (float): Only consider predictions greater than or equal to `min_val`. Otherwise,
+          the original WSI in those regions will be displayed.
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
-        return_ax:
-    
+        return_ax (bool): Whether to return the matplotlib ax object. If not,
+          then the overlay array will be returned.
+
     Returns:
+        If return_ax is True, return the matplotlib ax object. Else,
+          return the overlay array.
 
     """
     if img.shape[:2] != prediction.shape[:2]:
@@ -170,16 +174,25 @@ def overlay_patch_probmap(
     Args:
         img (ndarray): Input image to overlay the results on top of. Assumed to be HW.
         prediction (ndarray): 2D prediction map. Multi-class prediction should have
-            values ranging from 0 to N-1, where N is the number of classes.
+          values ranging from 0 to N-1, where N is the number of classes.
         alpha (float): Opacity value used for the overlay.
-        colour_map (string): 
-        min_val (float):
+        colour_map (string): The colour map to use for the heatmap. `jet`
+          is used as the default.
+        min_val (float): Only consider predictions greater than or equal to `min_val`. Otherwise,
+          the original WSI in those regions will be displayed.
+        alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
-        return_ax (bool):
+        return_ax (bool): Whether to return the matplotlib ax object. If not,
+          then the overlay array will be returned.
 
     Returns:
+        If return_ax is True, return the matplotlib ax object. Else,
+          return the overlay array.
 
     """
+    if prediction.ndim != 2:
+        raise ValueError("The input prediction must be 2-dimensional of the form HW.")
+
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
             "Mismatch shape `img` {0} vs `prediction` {1}.".format(
