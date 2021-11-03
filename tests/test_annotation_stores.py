@@ -160,7 +160,15 @@ def test_sqlitestore_multiple_connection(tmp_path):
     assert len(store) == len(store2)
 
 
+def test_sqlitestore_index_error():
+    """Test adding an index of invalid type."""
+    store = SQLiteStore()
+    with pytest.raises(TypeError, match="where"):
+        store.create_index("foo", lambda g, p: "foo" in p)
+
+
 def test_sqlitestore_index_str(fill_store, tmp_path):
+    """Test that adding an index improves performance."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
 
     def query():
