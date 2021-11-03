@@ -575,8 +575,8 @@ class CNNPatchPredictor:
                     merged_prediction = self.merge_predictions(
                         img_path,
                         output_model,
-                        resolution=resolution,
-                        units=units,
+                        resolution=output_model["resolution"],
+                        units=output_model["units"],
                         postproc_func=self.model.postproc,
                     )
                     outputs.append(merged_prediction)

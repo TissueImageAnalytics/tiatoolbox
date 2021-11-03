@@ -32,7 +32,7 @@ mpl.rcParams['figure.dpi'] = 160  # for high resolution figure in notebook
 
 # %%
 from tiatoolbox.wsicore.wsireader import WSIReader
-from tiatoolbox.models.controller import patch_predictor
+from tiatoolbox.models.engine import patch_predictor
 
 predictor = patch_predictor.CNNPatchPredictor(pretrained_model="resnet18-kather100k")
 output = predictor.predict([
