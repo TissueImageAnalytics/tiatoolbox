@@ -143,18 +143,18 @@ def pytest_generate_tests(metafunc):
 # Class Specific Tests
 
 
-def test_sqlite_compile_options():
+def test_sqlitestore_compile_options():
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
-def test_sqlite_compile_options_exception(monkeypatch):
+def test_sqlitestore_compile_options_exception(monkeypatch):
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
     with pytest.raises(Exception, match="RTREE and JSON1"):
         SQLiteStore()
 
 
-def test_sqlite_multiple_connection(tmp_path):
+def test_sqlitestore_multiple_connection(tmp_path):
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
@@ -184,6 +184,20 @@ def test_sqlitestore_index_str(fill_store, tmp_path):
     # Time the original query with the index
     t2 = timeit(query, number=50)
     assert t2 < t1
+
+
+def test_sqlitestore_unsupported_compression(sample_triangle):
+    """Test that using an unsupported compression str raises error."""
+    store = SQLiteStore(compression="foo")
+    with pytest.raises(Exception, match="Unsupported"):
+        _ = store.serialise_geometry(sample_triangle)
+
+
+def test_sqlitestore_unsupported_decompression():
+    """Test that using an unsupported decompression str raises error."""
+    store = SQLiteStore(compression="foo")
+    with pytest.raises(Exception, match="Unsupported"):
+        _ = store.deserialise_geometry(bytes())
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
