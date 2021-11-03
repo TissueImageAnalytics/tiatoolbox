@@ -54,6 +54,7 @@ def test_imresize():
         interpolation=cv2.INTER_CUBIC,
     )
     assert resized_img.shape == (1000, 500, 3)
+    assert resized_img.dtype == np.float32
 
 
 def test_imresize_no_scale_factor():
