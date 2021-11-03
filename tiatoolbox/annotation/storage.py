@@ -912,11 +912,11 @@ class SQLiteStore(AnnotationStoreABC):
             bytes or str: The serialised geometry.
 
         """
-        wkb = geometry.wkb
+        data = geometry.wkb
         if self.metadata["compression"] is None:
-            return wkb
+            return data
         if self.metadata["compression"] == "zlib":
-            return zlib.compress(wkb, level=self.metadata["compression_level"])
+            return zlib.compress(data, level=self.metadata["compression_level"])
         raise Exception("Unsupported compression method.")
 
     @lru_cache(32)
