@@ -21,7 +21,7 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 import cv2
 import matplotlib as mpl
