@@ -24,7 +24,7 @@ A predicate is a statement which should evaluate to a boolean value.
 Only annotations for which this predicate is true will
 be returned.
 
-The classes and functions in this module allow for conversion from a 
+The classes and functions in this module allow for conversion from a
 restricted subset of python to a domain specific language, in this case
 SQL, using `eval`.
 
