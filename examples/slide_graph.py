@@ -1,5 +1,6 @@
 # %% [markdown]
 # # Preparation code
+# %% [markdown]
 # ## Importing related libraries utilized throughout the notebook
 # %%
 import copy
@@ -123,6 +124,16 @@ def recur_find_ext(root_dir: str, exts: List[str]):
 # the subsequent process will use the default method in the toolbox to obtain
 # the mask (via `WSIReader.tissue_mask`). Each mask file is assumed to be `.png`
 # and any non-zero pixels within it are considered for the processing.
+#
+# By the end of this process, we will obtain following variables for subsequent
+# operations
+# - `wsi_paths`: The list of paths pointing to WSIs.
+# - `wsi_names`: The list of WSI names in `wsi_paths`.
+# - `msk_paths`: The list of paths pointing to masks of each
+# WSI in `wsi_paths`.
+# - `label_df`: A panda dataframe containing two columns: `WSI-CODE` and "LABEL".
+# Values of `WSI-CODE` is the `wsi_names` while `LABEL` contains the label of WSI
+# at the same index.
 
 # %%
 SEED = 5
@@ -1623,6 +1634,10 @@ for split_idx, split in enumerate(splits):
         'auroc': auroc_scorer(true, prob),
         'auprc': auprc_scorer(true, prob)
     })
+
+# %% [markdown]
+# Now we print out the results.
+
 
 # %%
 stat_df = pd.DataFrame(cum_stats)
