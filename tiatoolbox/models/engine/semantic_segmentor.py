@@ -1119,7 +1119,7 @@ class SemanticSegmentor:
 class FeatureExtractor(SemanticSegmentor):
     """Generic CNN Feature Extractor.
 
-    A controller for using any CNN model as a feature extractor.
+    A engine for using any CNN model as a feature extractor.
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 

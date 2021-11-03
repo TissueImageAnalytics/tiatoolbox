@@ -23,7 +23,7 @@ import click
 import yaml
 
 from tiatoolbox import utils
-from tiatoolbox.models.controller.semantic_segmentor import (
+from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
 )

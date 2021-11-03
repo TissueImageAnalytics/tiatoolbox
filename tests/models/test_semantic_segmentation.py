@@ -37,7 +37,7 @@ from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import center_crop
-from tiatoolbox.models.controller.semantic_segmentor import (
+from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
@@ -45,7 +45,8 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_TRAVIS = False
+ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 # ----------------------------------------------------
 
 
@@ -259,7 +260,7 @@ def test_functional_wsi_stream_dataset(remote_sample):
 
 
 # -------------------------------------------------------------------------------------
-# Controller
+# Engine
 # -------------------------------------------------------------------------------------
 
 
