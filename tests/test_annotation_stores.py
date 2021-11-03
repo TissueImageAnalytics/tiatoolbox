@@ -104,15 +104,15 @@ def sample_triangle() -> Polygon:
 
 @pytest.fixture()
 def fill_store(cell_grid):
-    """Factory fixture to cache and return filled stores."""
+    """Factory fixture to fill stores with test data."""
 
     def _fill_store(
         store_class: AnnotationStoreABC,
         path: Union[str, Path],
     ):
         store = store_class(path)
-        indexes = store.append_many(cell_grid)
-        return indexes, store
+        keys = store.append_many(cell_grid)
+        return keys, store
 
     return _fill_store
 
@@ -250,137 +250,155 @@ class TestStore:
 
     @staticmethod
     def test_open_close(fill_store, tmp_path, store):
+        """Test opening and closing a store."""
         path = tmp_path / "polygons"
-        indexes, store = fill_store(store, path)
+        keys, store = fill_store(store, path)
         store.close()
         store2 = store.open(path)
-        assert len(store2) == len(indexes)
+        assert len(store2) == len(keys)
 
     @staticmethod
     def test_append_many(cell_grid, tmp_path, store):
+        """Test bulk append of annotations."""
         store = store(tmp_path / "polygons")
-        indexes = store.append_many(
+        keys = store.append_many(
             cell_grid,
             ({"class": random.randint(0, 6)} for _ in cell_grid),
         )
-        assert len(indexes) == len(cell_grid)
+        assert len(keys) == len(cell_grid)
 
     @staticmethod
     def test_query_bbox(fill_store, tmp_path, store):
+        """Test query with a bounding box."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.query((0, 0, 25, 25))
         assert len(results) == 4
 
     @staticmethod
     def test_iquery_bbox(fill_store, tmp_path, store):
+        """Test iquery with a bounding box."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.iquery((0, 0, 25, 25))
         assert len(results) == 4
-        assert all(isinstance(index, str) for index in results)
+        assert all(isinstance(key, str) for key in results)
 
     @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store):
+        """Test iquery with a non-rectangular geometry."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.iquery(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 3
-        assert all(isinstance(index, str) for index in results)
+        assert all(isinstance(key, str) for key in results)
 
     @staticmethod
     def test_update(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        index = indexes[0]
+        """Test updating an annotation."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        key = keys[0]
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         # Geometry update
-        store.update(index, new_geometry)
-        assert store[index][0] == new_geometry
+        store.update(key, new_geometry)
+        assert store[key][0] == new_geometry
         # Properties update
-        store.update(index, properties={"abc": 123})
-        assert store[index][1]["abc"] == 123
+        store.update(key, properties={"abc": 123})
+        assert store[key][1]["abc"] == 123
 
     @staticmethod
     def test_update_many(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
+        """Test bulk update."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
         # Geometry update
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
-        store.update_many(indexes, repeat(new_geometry, 10))
+        store.update_many(keys, repeat(new_geometry, 10))
         # Properties update
-        store.update_many(indexes, properties_iter=repeat({"abc": 123}, 10))
+        store.update_many(keys, properties_iter=repeat({"abc": 123}, 10))
 
-        for _, index in enumerate(indexes[:10]):
-            assert store[index][0] == new_geometry
-            assert store[index][1]["abc"] == 123
+        for _, key in enumerate(keys[:10]):
+            assert store[key][0] == new_geometry
+            assert store[key][1]["abc"] == 123
 
     @staticmethod
     def test_keys(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        indexes = list(indexes)
-        assert len(list(store.keys())) == len(indexes)
-        assert isinstance(list(store.keys())[0], type(indexes[0]))
+        """Test getting an keys iterator."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        keys = list(keys)
+        assert len(list(store.keys())) == len(keys)
+        assert isinstance(list(store.keys())[0], type(keys[0]))
 
     @staticmethod
     def test_remove(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        index = indexes[0]
-        store.remove(index)
+        """Test removing an annotation."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        key = keys[0]
+        store.remove(key)
         assert len(store) == FILLED_LEN - 1
 
     @staticmethod
     def test_delitem(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        index = indexes[0]
-        del store[index]
+        """Test using the delitem syntax."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        key = keys[0]
+        del store[key]
         assert len(store) == FILLED_LEN - 1
 
     @staticmethod
     def test_remove_many(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        store.remove_many(indexes)
+        """Test bulk deletion."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        store.remove_many(keys)
         assert len(store) == 0
 
     @staticmethod
     def test_len(fill_store, tmp_path, store):
+        """Test finding the number of annotation via the len operator."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         assert len(store) == FILLED_LEN
 
     @staticmethod
     def test_contains(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        for index in indexes:
-            assert index in store
+        """Test using the contains (in) operator."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        for key in keys:
+            assert key in store
 
     @staticmethod
     def test_iter(fill_store, tmp_path, store):
-        indexes, store = fill_store(store, tmp_path / "polygon.db")
-        for index in store:
-            assert index in indexes
+        """Test iterating over the store."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        for key in store:
+            assert key in keys
 
     @staticmethod
     def test_getitem(fill_store, tmp_path, sample_triangle, store):
+        """Test the getitem syntax."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        index = store.append(sample_triangle)
-        geometry, properties = store[index]
+        key = store.append(sample_triangle)
+        geometry, properties = store[key]
         assert geometry == sample_triangle
         assert properties == {}
 
     @staticmethod
     def test_setitem(fill_store, tmp_path, sample_triangle, store):
+        """Test the setitem syntax."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        index = store.append(sample_triangle)
+        key = store.append(sample_triangle)
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         new_properties = {"abc": 123}
-        store[index] = (new_geometry, new_properties)
-        assert store[index] == (new_geometry, new_properties)
+        store[key] = (new_geometry, new_properties)
+        assert store[key] == (new_geometry, new_properties)
 
     @staticmethod
     def test_getitem_setitem_cycle(fill_store, tmp_path, sample_triangle, store):
+        """Test getting an setting an annotation."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        index = store.append(sample_triangle, {"class": 0})
-        geometry, properties = store[index]
-        store[index] = (geometry, properties)
-        assert store[index] == (geometry, properties)
+        key = store.append(sample_triangle, {"class": 0})
+        geometry, properties = store[key]
+        store[key] = (geometry, properties)
+        assert store[key] == (geometry, properties)
 
     @staticmethod
     def test_from_dataframe(cell_grid, store):
+        """Test loading from to a pandas dataframe."""
         df = pd.DataFrame.from_records(
             [
                 {
@@ -397,6 +415,7 @@ class TestStore:
 
     @staticmethod
     def test_to_dataframe(fill_store, tmp_path, store):
+        """Test converting to a pandas dataframe."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         df = store.to_dataframe()
         assert isinstance(df, pd.DataFrame)
@@ -407,6 +426,7 @@ class TestStore:
 
     @staticmethod
     def test_features(fill_store, tmp_path, store):
+        """Test converting to a features dictionaries."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         features = store.features()
         assert isinstance(features, Generator)
@@ -419,6 +439,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geodict(fill_store, tmp_path, store):
+        """Test converting to a geodict."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         geodict = store.to_geodict()
         assert isinstance(geodict, dict)
@@ -429,6 +450,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_str(fill_store, tmp_path, store):
+        """Test loading from geojson with a file path string."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
         store2 = store.from_geojson(geojson)
@@ -436,6 +458,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_file(fill_store, tmp_path, store):
+        """Test loading from geojson with a file handle."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
         with open(tmp_path / "polygon.json", "r") as file_handle:
@@ -444,6 +467,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_path(fill_store, tmp_path, store):
+        """Test loading from geojson with a file path."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
         store2 = store.from_geojson(tmp_path / "polygon.json")
@@ -451,6 +475,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_str(fill_store, tmp_path, store):
+        """Test exporting to ldjson with a file path string."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
         assert isinstance(geojson, str)
@@ -462,6 +487,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_file(fill_store, tmp_path, store):
+        """Test exporting to ldjson with a file handle."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.json", "w") as fh:
             geojson = store.to_geojson(fp=fh)
@@ -475,6 +501,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_path(fill_store, tmp_path, store):
+        """Test exporting to geojson with a file path."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson(fp=tmp_path / "polygon.json")
         assert geojson is None
@@ -487,6 +514,7 @@ class TestStore:
 
     @staticmethod
     def test_to_ldjson_str(fill_store, tmp_path, store):
+        """Test exporting to ldjson with a file path string."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         ldjson = store.to_ldjson()
         for line in ldjson.split():
@@ -498,6 +526,7 @@ class TestStore:
 
     @staticmethod
     def test_to_ldjson_file(fill_store, tmp_path, store):
+        """Test exporting to ldjson with a file handle."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.ldjson", "w") as fh:
             ldjson = store.to_ldjson(fp=fh)
@@ -512,6 +541,7 @@ class TestStore:
 
     @staticmethod
     def test_to_ldjson_path(fill_store, tmp_path, store):
+        """Test exporting to ldjson with a file path."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         ldjson = store.to_ldjson(fp=tmp_path / "polygon.ldjson")
         assert ldjson is None
@@ -525,12 +555,14 @@ class TestStore:
 
     @staticmethod
     def test_dump(fill_store, tmp_path, store):
+        """Test dumping to a file path."""
         _, store = fill_store(store, ":memory:")
         store.dump(tmp_path / "dump_test.db")
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
     @staticmethod
     def test_dump_file_handle(fill_store, tmp_path, store):
+        """Test dumping to a file handle."""
         _, store = fill_store(store, ":memory:")
         with open(tmp_path / "dump_test.db", "w") as fh:
             store.dump(fh)
@@ -538,12 +570,14 @@ class TestStore:
 
     @staticmethod
     def test_dumps(fill_store, store):
+        """Test dumping by returning a string."""
         _, store = fill_store(store, ":memory:")
         string = store.dumps()
         assert isinstance(string, str)
 
     @staticmethod
     def test_iquery_predicate_str(fill_store, store):
+        """Test iquering with a predicate string."""
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
         results = store.iquery((0, 0, 1024, 1024), where="props.get('class') == 123")
@@ -552,6 +586,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_predicate_callable(fill_store, store):
+        """Test iquering with a predicate function."""
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
         results = store.iquery(
@@ -563,6 +598,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_predicate_pickle(fill_store, store):
+        """Test iquering with a pickled predicate function."""
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
 
@@ -571,6 +607,7 @@ class TestStore:
 
     @staticmethod
     def test_query_predicate_str(fill_store, store):
+        """Test quering with a predicate string."""
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
         results = store.query((0, 0, 1024, 1024), where="props.get('class') == 123")
@@ -578,6 +615,7 @@ class TestStore:
 
     @staticmethod
     def test_query_predicate_callable(fill_store, store):
+        """Test quering with a predicate function."""
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
         results = store.iquery(
@@ -588,6 +626,7 @@ class TestStore:
 
     @staticmethod
     def test_query_predicate_pickle(fill_store, store):
+        """Test quering with a pickled predicate function."""
         keys, store = fill_store(store, ":memory:")
         store.update(keys[0], properties={"class": 123})
 
