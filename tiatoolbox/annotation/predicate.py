@@ -26,7 +26,7 @@ be returned.
 
 The classes and functions in this module allow for conversion from a 
 restricted subset of python to a domain specific language, in this case
-SQL, usinf `eval`.
+SQL, using `eval`.
 
 This conversion should be assumed to be on a best-effort basis.
 Not every expression valid in python can be evaluated to form a valid
