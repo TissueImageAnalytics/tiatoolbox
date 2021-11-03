@@ -3,7 +3,9 @@
 # ## Importing related libraries utilized throughout the notebook
 # %%
 import copy
-import json
+from PIL.Image import new
+# use as replacement for default json because its faster for large json
+import ujson as json
 import os
 import pathlib
 import random
@@ -30,20 +32,11 @@ from tiatoolbox.utils.misc import imread, save_as_json
 
 mpl.rcParams['figure.dpi'] = 160  # for high resolution figure in notebook
 
-# %%
-from tiatoolbox.wsicore.wsireader import WSIReader
-from tiatoolbox.models.engine import patch_predictor
 
-predictor = patch_predictor.CNNPatchPredictor(pretrained_model="resnet18-kather100k")
-output = predictor.predict([
-    '/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/wsis/wsi1_2k_2k_00.svs'],
-    mode="wsi", merge_predictions=True)
-
-exit()
 # %%
 
 # %% [markdown]
-# Here we define some quality of life functions that will be frequently reused
+# Here we define some quality of life functions that will be frequently used
 # throughout the notebook.
 # - `load_json`: Function to load json from path.
 # - `rmdir`: Function to remove directory at path.
@@ -107,26 +100,29 @@ def recur_find_ext(root_dir: str, exts: List[str]):
 
 # %% [markdown]
 # ## Loading affiliated dataset
-# We start the main part of the note book by defining and loading
-# the affiliated original data. In this case, they are
-# - The Whole Slide Images (WSIs), or the paths pointing to them.
-# - The associated tissue masks if they are available to reduce
-# our subsequent computation when generatin intermediate results.
-# - The patient labels, and then the slide labels so to speak for
-# our task.
-#
 # In the scope of this notebook, our task is classifying if
-# a WSI is being HER2 negative or positive. And for this
-# dataset, HER2 status is provided per patient instead of per slide.
-# As such, for WSIs coming from the same patient, we assign them the
-# same label. Besides that, WSIs that do not have labels are also
-# excluded from subsequent processing.
+# a WSI is being HER2 negative or positive. We will use the TCGA-BRCA
+# dataset and for this dataset, the HER2 status is provided per patient
+# instead of per slide. As such, for WSIs coming from the same patient,
+# we assign them the same label. In addtion, WSIs that do not have labels
+# are therefore excluded from subsequent processing.
 #
-# `ROOT_OUTPUT_DIR`: Root directory to save output under.
-# `WSI_DIR`: Directory contains WSIs.
-# `MSK_DIR`: Directory to retrieve corresponding WSI mask. If set to `None`,
+# Thereby, we start the note book by defining and loading
+# the affiliated data by doing the subsequent steps:
+# 1. Load up the list of WSIs and their masks (their paths to be exact).
+# 2. Convert the clinical infomation in `.csv` to labels.
+# 3. Assign the patient label to each WSI and then filter WSIs without
+# labels.
+#
+# We utilize subsequent global variables:
+# - `CLINICAL_FILE`: The `.csv` file which contains the patient code and
+# the associated labels.
+# - `ROOT_OUTPUT_DIR`: Root directory to save output under.
+# - `WSI_DIR`: Directory contains WSIs.
+# - `MSK_DIR`: Directory to retrieve corresponding WSI mask. If set to `None`,
 # the subsequent process will use the default method in the toolbox to obtain
-# the mask here [@!URL]
+# the mask (via `WSIReader.tissue_mask`). Each mask file is assumed to be `.png`
+# and any non-zero pixels within it are considered for the processing.
 
 # %%
 SEED = 5
@@ -135,6 +131,7 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 
+# * query for paths
 ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/"
 WSI_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/wsis/"
 MSK_DIR = None
@@ -147,6 +144,7 @@ wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
 msk_paths = None if MSK_DIR is None else [f"{MSK_DIR}/{v}.png" for v in wsi_names]
 assert len(wsi_paths) > 0, "No files found."
 
+# * generating label
 clinical_df = pd.read_csv(CLINICAL_FILE)
 patient_uids = clinical_df["PATIENT"].to_numpy()
 patient_labels = clinical_df["HER2FinalStatus"].to_numpy()
@@ -180,15 +178,11 @@ wsi_labels = np.array(wsi_labels)[sel]
 label_df = list(zip(wsi_names, wsi_labels))
 label_df = pd.DataFrame(label_df, columns=["WSI-CODE", "LABEL"])
 
-# this one will be used later several times, take care not to
-# modify it
-wsi_codes = label_df["WSI-CODE"].to_list()
-
 # %% [markdown]
 # ## Generate the data split
-# Now, we start defining how out dataset should be split into training,
+# Now, we start defining how our dataset should be split into training,
 # validation, and testing set. To that end, we define a new function called
-# `generate_split`. It will receive paired input of the samples and their labels;
+# `stratified_split`. It will receive paired input of the samples and their labels;
 # the train, valid, and test percentage; and then return a number of stratified
 # splits.
 
@@ -311,40 +305,48 @@ else:
 # Here, their representation (or features) can be:
 # - Deep Neural Network features, such as those obtained from the global average
 # pooling layer after we apply ResNet50 on the patch.
-# - Or cell composition, where we [!@Wenqi]
+# - Or cell composition, where we count the number of nuclei of each type within
+# the patch.
+#
 # With these node-level representations (or features), we then perform clustering
 # so that nodes which are close to each other both in feature space and in the 2D
-# space (i.e the WSI canvas) are assigned into the same cluster.
-
-# %% [markdown]
-# First, we define a functions to help converting the ouput file name
-# to have the same name as the input wsi. By default, the toolbox will output
-# files with names that have been changed to numerical ordering (000.*.npy,
-# 001.*.npy, etc.) to prevent overwriting output in case users provided WSIs with the
-# same names but may come from different directories. The engine object will return
-# a list of input-output path mapping to facilitate this conversion. Additionally,
-# we are using toolbox model with only 1 head output. Hence, for each input,
-# we will have `*.position.npy` and `*.features.0.npy`. In cases of models having
-# multiple output heads, it will become [`*.position.npy`, `*.features.0.npy`,
-# `*.features.1.npy`, etc.] . The positions are always defined as the patch bounding
-# box `(start_x, start_y, end_x, end_y)` at the highest resolutions within the list
-# of input resolutions. Refer to [@URL/semantic_segmentation] notebook for details.
-
+# space (i.e the WSI canvas) are assigned into the same cluster. These clusters are
+# then linked to each other within a certain distance, thus making up the WSI graph.
+#
+# **Note**: We will assume features of patches and theirs positions within each WSI
+# will be stored separately `*.features.npy` and `*.position.npy` .
+# The positions are always defined as the patch bounding box
+# `(start_x, start_y, end_x, end_y)` at the highest resolutions
+# Subsequent function definition will be based upon the convention defined here.
 
 # %% [markdown]
 # ## Deep Feature Extraction
-# Here, we define the code to use functionalities within the toolbox
-# for feature extraction. To make it better organized and differentiated
-# from other parts of the notebook, we package it into the small function
-# `extract_deep_features`. Within it we define the config object which define
-# the shape and magnification of the patch we want to extract. While the patch
-# can be of arbitrary size and come from different resolutions, we use patch
-# of 512x512 coming from `mpp=0.25` by default. Additionally, we will use
-# ResNet50 trained on ImageNet as feature extractor. For more detail on how
-# to further customize this, you can refer to [URL]. We also expose an argument
-# for a customized pre-processing function that we would like the engine to
+# Here, we define the code to use the toolbox to extract features. To make it better
+# organized and differentiable from other parts of the notebook, we package it into
+# a small function called `extract_deep_features`.
+#
+# Within it, we define the config object which define the shape and magnification of the
+# patch we want to extract. Although the patch can be of arbitrary size and come from
+# different resolutions, here we use patch of size 512x512 and coming from `mpp=0.25`.
+# Additionally, we will use ResNet50 trained on ImageNet as feature extractor. For more
+# detail on how to further customize this, you can refer to [URL]. We also expose an
+# argument for a customized pre-processing function that we would like the engine to
 # perform on each input patch. For this notebook, we will perform stain-normalization
 # on each image patches. We will show how this function can be defined later.
+#
+# Aside from that, by default, the output files from the toolbox have their names
+# changed to numerical ordering (000.*.npy, 001.*.npy, etc.) to prevent user from
+# overwriting their output in case they provide WSIs with the same names. The engine
+# object will return a list of input-output path mapping to facilitate this conversion.
+#
+# In this demo, we are using toolbox model with only 1 head output.
+# Hence, for each input, we will have `*.position.npy` and `*.features.0.npy`.
+# In cases of models having multiple output heads, it will become `['*.position.npy',
+# '*.features.0.npy', '*.features.1.npy', etc.]` . The positions are always defined as
+# the patch bounding box `(start_x, start_y, end_x, end_y)` at the highest resolutions
+# within the list of input resolutions. Refer to [@URL/semantic_segmentation] notebook
+# for details.
+
 
 # %%
 from tiatoolbox.models import FeatureExtractor, IOSegmentorConfig
@@ -405,13 +407,28 @@ def extract_deep_features(
 
 # %% [markdown]
 # ## Cell Composition Extraction
-# In a very similar manner, we define the code for extracting cell
-# composition in `extract_composition_features`.
+# In a very similar manner, we define the code for to extract cell
+# composition in `extract_composition_features`. First, we need to
+# detect all nuclei and their types out from thw WSI. This can be
+# easily achieved via `tiatoolbox.models.NucleusInstanceSegmentor`
+# engine and the HoVer-Net pretrained model we provided in the toolbox.
+# Once we have the nuclei, we then split the WSI into arbitrary patches
+# and count the nuclei of each types within. We enclose this process within
+# the `get_composition_features` function.
+#
+# All the engine objects from `NucleusInstanceSegmentor` will output a singular
+# output unlike the `FeatureExtractor` above. Their output will be named as
+# `['*/0.dat', '*/1.dat', etc.]` and we will also need to rename them accordingly.
+# Finally, to make it inline with `extract_deep_features`, the features of patches
+# and their location will be save under `*.features.npy` and `*.position.npy`
+# respectively.
+
 # %%
 import pygeos  # replace with annotation store laters
 from tiatoolbox.wsicore.wsireader import get_wsireader
 from tiatoolbox.models import NucleusInstanceSegmentor
 from tiatoolbox.tools.patchextraction import PatchExtractor
+
 
 # ! need a new name for this
 def get_composition_features(
@@ -524,10 +541,11 @@ def extract_composition_features(
 
 # %% [markdown]
 # ## Stain normalization on each image patch
-# Both of deep feature and cell compositions requires analyses on the patches.
-# In histopathology, we often want to normalize the image patch stain to reduce
-# as much variation as possible. Here we define the normalizer and the function
-# to perform such job later in parallel processing manner. Both the target image
+# Extracting either deep features or cell compositions above requires running
+# inferen on each patch within the WSI. In histopathology, we often want to
+# normalize the image patch stain to reduce as much variation as possible.
+# Here we define the normalizer and the function to perform such job later
+# in parallel processing manner. Both the target image
 # and the normalizer here are provided by our toolbox at `tiatoolbox.tools.stainnorm`
 # and `tiatoolbox.data` . Notice we do not perform stain norm here. Instead, we will
 # use this function in tandem with other methods in the toolbox where those methods
@@ -551,8 +569,8 @@ def stain_norm_func(img):
 
 # %% [markdown]
 # As we have defined functions for performing WSI feature extraction,
-# we now perform the extraction itself. Additionally, we would want to avoid
-# un-necessarily re-extracting the WSI features as they are computationally
+# we now perform the extraction itself. We also would like to avoid
+# re-extracting the WSI features as they are computationally
 # expensive in nature. Here, we differentiate these two use cases via `CACHE_PATH`
 # variable, if `CACHE_PATH = None`, the extraction is performed and the results is saved
 # under `WSI_FEATURE_DIR`. For ease of organization, we set the
@@ -567,15 +585,14 @@ def stain_norm_func(img):
 
 # %%
 
-# [!@john] manually define or auto-infer from input ?
-NUM_NODE_FEATURES = 6
-FEATURE_MODE = "composition"
+NUM_NODE_FEATURES = 2048
+FEATURE_MODE = "cnn"
 CACHE_PATH = None
 WSI_FEATURE_DIR = f"{ROOT_OUTPUT_DIR}/features/"
 
 # !- debug injection, remove later
 # CACHE_PATH = '/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/features'
-# CACHE_PATH = None
+CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
 # wsi_names = wsi_names[:2]
 # wsi_paths = wsi_paths[:2]
 # msk_paths = msk_paths[:2] if msk_paths else None
@@ -589,17 +606,25 @@ elif FEATURE_MODE == "composition":
 else:
     output_list = extract_deep_features(
         wsi_paths, msk_paths, WSI_FEATURE_DIR, stain_norm_func)
-assert len(output_list) == len(wsi_names), \
-            f'Missing output. {len(output_list)} vs {len(wsi_names)}'
+# assert len(output_list) == len(wsi_names), \
+#             f'Missing output. {len(output_list)} vs {len(wsi_names)}'
 
 # %% [markdown]
 # ## Binding it all into a graph
-# Finally, with the patches and their features we have just loaded, we construct the graph
-# for each WSI using the function provided in our toolbox `tiatoolbox.tools.graph`.
-# Like above, if we already have the graph extracted, we will only need to load them back
-# via `CACHE_PATH` instead of wasting time on re-doing the job.
+# Finally, with the patches and their features we have just loaded,
+# we construct the graph for each WSI using the function provided in our
+# toolbox `tiatoolbox.tools.graph`.
+# Like above, if we already have the graph extracted, we will only need to
+# load them back via setting `CACHE_PATH` instead of wasting time on re-doing the job.
 #
-# ! [@WENQI, a patch is a node here, but are there other cases? We may need to mention here]
+# **Note**: Althought so far we are treating each node to construct the graph
+# as a patch, it may not necessarily be so. You can provide your own form
+# of nodes and their features here if you prefer. You can modify
+# ```python
+# positions = np.load(f"{WSI_FEATURE_DIR}/{wsi_name}.position.npy")
+# features = np.load(f"{WSI_FEATURE_DIR}/{wsi_name}.features.npy")
+# ```
+# within `construct_graph` to fit with your objective.
 # %%
 
 from tiatoolbox.tools.graph import hybrid_clustered_graph
@@ -616,7 +641,7 @@ def construct_graph(wsi_name, save_path):
     # Write a graph to a JSON file
     with open(save_path, "w") as handle:
         graph_dict = {k: v.tolist() for k, v in graph_dict.items()}
-        json.dump(obj=graph_dict, fp=handle)
+        json.dump(graph_dict, handle)
 
 
 CACHE_PATH = None
@@ -637,7 +662,7 @@ else:
 # %% [markdown]
 # ## Visualize a sample graph
 # It is always a good practice to validate data or any results visually. Here,
-# we plot the one sample graph on its WSI thumbnail.
+# we plot the one sample graph upon its WSI thumbnail.
 
 # %%
 from skimage.exposure import equalize_hist
@@ -684,10 +709,10 @@ plt.show()
 
 # %% [markdown]
 # ## The dataset loader
-# As graph dataset that has yet been supported by the toolbox, we defined their
+# As graph dataset has yet been supported by the toolbox, we defined their
 # loading and IO conversion here. The goal of this dataset class is to support
-# parrallely loading the input concurrently from the running process on GPU.
-# Commonly, it will also perform data conversion or any other preprocessing if
+# loading the input concurrently, and seperately from the running process on GPU.
+# Commonly, it also performs data conversion or any other preprocessing if
 # necessary. In the scope of this notebook, we expose `preproc` argument to receive
 # the function which will normalize node features.
 
@@ -762,6 +787,16 @@ from sklearn.preprocessing import StandardScaler
 
 CACHE_PATH = None
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+
+
+# !- debug injection, remove later
+# GRAPH_DIR = (
+#     "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
+#     "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
+# )
+# wsi_paths = recur_find_ext(GRAPH_DIR, ['.json'])
+# wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
+# !-
 
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
@@ -973,6 +1008,10 @@ class SlideGraphArch(nn.Module):
 # out the output predictions.
 # %%
 
+# !- debug injection, remove later
+# NUM_NODE_FEATURES = 4
+# !-
+
 dummy_ds = SlideGraphDataset(wsi_names, mode="infer")
 loader = DataLoader(
     dummy_ds,
@@ -1005,6 +1044,18 @@ with torch.inference_mode():
     output, _ = model(wsi_graphs)
     output = output.cpu().numpy()
 print(output)
+
+# %% [markdown]
+# Here, you can notice the output value is not between 0-1. For SlideGraph
+# approach, we will turn the above values into proper propabilities later
+# via using the Platt Scaling https://en.wikipedia.org/wiki/Platt_scaling.
+# This scaler will be defined and trained during the training process defined
+# below. After the training is finished, you can access it under
+# ```python
+# model = SlideGraphArch(**arch_kwargs)
+# model.aux_model  # will hold the trained Platt Scaler
+# ```
+
 
 # %% [markdown]
 # ## Batch Sampler
@@ -1077,10 +1128,6 @@ class StratifiedSampler(Sampler):
         """
         return self.num_steps
 
-# %% [markdown]
-# Here, you can notice the value is not between 0-1. For SlideGraph
-# approach, we will turn the above values into proper propabilities later
-# via using the Platt Scaling https://en.wikipedia.org/wiki/Platt_scaling.
 
 # %% [markdown]
 # ## The running loop
@@ -1101,9 +1148,13 @@ class StratifiedSampler(Sampler):
 
 # %% [markdown]
 # ### Helper functions and classes
+# We define function `create_pbar` to simplify the process of creating a progress bar
+# for tracking the running loop. Additionally, we also define a class to calculate
+# the exponential moving average (EMA) of the training loss from each step.
 
+# %%
 
-def create_pbar(engine_name: str, num_steps: int):
+def create_pbar(subset_name: str, num_steps: int):
     """Helper to clean up progress bar creation."""
     pbar_format = (
         'Processing: |{bar}| {n_fmt}/{total_fmt}'
@@ -1114,7 +1165,7 @@ def create_pbar(engine_name: str, num_steps: int):
             leave=True,
             bar_format=pbar_format,
             ascii=True)
-    if engine_name == 'train':
+    if subset_name == 'train':
         pbar_format += (
             'step={postfix[1][step]:0.5f}'
             '|EMA={postfix[1][EMA]:0.5f}'
@@ -1152,6 +1203,28 @@ class ScalarMovingAverage(object):
 
 # %% [markdown]
 # ### Defining the loop
+# Finally, we define the function to manage the running loop, or the simplified
+# engine so to speak. The running loop consists of several important time events
+# that require special definition and handling of the dataset, the model, etc.
+# - **EPOCH_START**: The starting of each epoch, depending on the task, it may be
+# necesssary to clean up and re-fresh the data accumulated over previous epoch (such
+# as for validation stage)
+# - **STEP_START**: The starting of each step, this involves querying for data from
+# loader, passing data down and trigger model inference or training steps
+# - **STEP_STOP**: The end of each step, this involves computing the loss, logging
+# console output and accumulation.
+# - **EPOCH_COMPLETE**: The end of each epoch, it often involves saving, or in our case,
+# starting the training of the Platt Scaler.
+#
+# Often, each of these events can have their own set of callbacks that will be invoked.
+# Furthermore, these callbacks may also vary across dataset or running mode (such as
+# metric calculations, saving mode, etc.) . As this is a simplified version,
+# we include all handling of these within `run_once`. However, in practice, they are
+# usually factoring out into a set of classes and hooks.
+#
+# Within `run_once`, `train` is specifically preserved for dataset used for training.
+# `.*infer-valid.*` and `.*infer-train*` are preserved for dataset containing the
+# labels. Otherwise, the dataset is assumed to be for inference run.
 
 # %%
 import logging
@@ -1324,29 +1397,40 @@ def reset_logging(save_path):
 # %% [markdown]
 # ## The training
 # With the `engine` above, we can now start our training loop with
-# a set of parameters.
+# a set of parameters:
+# - `MODEL_DIR`: defines the location we will save the model weights
+# every epoch and associated information. Under it, we will have
+#   - `epoch=[X].weights.pth`: the graph neural network weights after
+# X-th training epoch.
+#   - `epoch=[X].weights.aux.dat`: the associated sklearn model trained
+# for X-th epoch. In our case, it contains the Platt Scaling.
+#   - `stats.json`: the file contains accumulated statistic of the entire
+# training run for X-th epoch.
+#   - `stats.old.json`: the backup file of `stats.json` of previous epoch.
+# - `NUM_EPOCHS`: the number of epoch for training.
 
 # %%
 
-exit()
+# % default param
+NUM_EPOCHS = 100
+NUM_NODE_FEATURES = 4
+SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
+MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
+
 # !- debug injection, remove later
+NUM_EPOCHS = 100
+NUM_NODE_FEATURES = 4
 GRAPH_DIR = (
     "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
     "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
 )
-SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
-SPLIT_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/splits.dat"
-node_scaler = joblib.load(SCALER_PATH)
-
-wsi_codes = label_df["WSI-CODE"].to_list()
-
-def nodes_preproc_func(node_features):
-    return node_scaler.transform(node_features)
-
+SCALER_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/node_scaler_composition.dat"
+SPLIT_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/splits_fixed.dat"
+MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 # !-
 
 splits = joblib.load(SPLIT_PATH)
-
+node_scaler = joblib.load(SCALER_PATH)
 loader_kwargs = dict(
     num_workers=8,
     batch_size=16,
@@ -1364,10 +1448,8 @@ optim_kwargs = dict(
     lr=1.0e-3,
     weight_decay=1.0e-4,
 )
-NUM_EPOCHS = 5
 
 #
-MODEL_DIR = f"{ROOT_OUTPUT_DIR}/modelx/"
 for split_idx, split in enumerate(splits):
     new_split = {
         "train": split['train'],
@@ -1386,18 +1468,24 @@ for split_idx, split in enumerate(splits):
         optim_kwargs=optim_kwargs)
 
 
-exit()
 # %% [markdown]
 # ## The inference
 
 # %% [markdown]
 # ### The model selections
-# According to our engine running loop definition above, these
-# are the metrics saved for each epoch:
+# According to our engine running loop defined above, we will have following
+# metrics saved for each epoch:
 # - "infer-train-auroc"
 # - "infer-train-auprc"
 # - "infer-valid-auroc"
 # - "infer-valid-auprc"
+# With these metrics, we can pick the most promising model weights for inference
+# on indepedent dataset. We encapsulate this selection within `select_checkpoints`
+# function.
+#
+# **Note**: For the metrics we defined here (`auroc`, `auprc`), the larger value
+# is better. However, in case you want to add your own metrics, remember to change
+# the comparison operator within `select_checkpoints` accordingly.
 
 # %%
 
@@ -1443,23 +1531,36 @@ def select_checkpoints(
 
 # %%
 
+# default params
+metric_name = 'infer-valid-B-auroc'
+PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
+SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 
+# !- debug injection, remove later
+NUM_NODE_FEATURES = 4
+GRAPH_DIR = (
+    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
+    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
+)
+SCALER_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/node_scaler_composition.dat"
+SPLIT_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/splits_fixed.dat"
+# !-
+
+splits = joblib.load(SPLIT_PATH)
+node_scaler = joblib.load(SCALER_PATH)
 loader_kwargs = dict(
     num_workers=8,
     batch_size=16,
 )
-# arch_kwargs = dict(
-#     dim_features=4,
-#     dim_target=1,
-#     layers=[16, 16, 8],
-#     dropout=0.5,
-#     pooling="mean",
-#     conv="EdgeConv",
-#     aggr="max",
-# )
-
-metric_name = 'infer-valid-B-auroc'
-PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
+arch_kwargs = dict(
+    dim_features=NUM_NODE_FEATURES,
+    dim_target=1,
+    layers=[16, 16, 8],
+    dropout=0.5,
+    pooling="mean",
+    conv="EdgeConv",
+    aggr="max",
+)
 
 cum_stats = []
 for split_idx, split in enumerate(splits):
@@ -1510,6 +1611,7 @@ for split_idx, split in enumerate(splits):
         'auprc': auprc_scorer(true, prob)
     })
 
+# %%
 stat_df = pd.DataFrame(cum_stats)
 for metric in stat_df.columns:
     vals = stat_df[metric]
