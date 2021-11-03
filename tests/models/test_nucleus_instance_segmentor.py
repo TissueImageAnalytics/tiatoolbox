@@ -7,6 +7,7 @@ import shutil
 import joblib
 import numpy as np
 import pytest
+import torch
 
 from tiatoolbox.models import (
     IOSegmentorConfig,
@@ -21,7 +22,8 @@ from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 BATCH_SIZE = 2
-ON_GPU = False
+ON_TRAVIS = False
+ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
 # ----------------------------------------------------
 
@@ -210,7 +212,7 @@ def test_get_tile_info():
 
 
 def test_crash_segmentor(remote_sample, tmp_path):
-    """Test crash."""
+    """Test engine crash when given malformed input."""
     root_save_dir = pathlib.Path(tmp_path)
     sample_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
     sample_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))

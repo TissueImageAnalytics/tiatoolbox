@@ -45,7 +45,7 @@ from tiatoolbox.models.engine.patch_predictor import (
 from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_TRAVIS = True
+ON_TRAVIS = False
 ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
 
