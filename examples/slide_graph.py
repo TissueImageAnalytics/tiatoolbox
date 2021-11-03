@@ -1172,7 +1172,7 @@ def run_once(
     within `dataset_dict`. Here, `train` is specifically preserved for
     dataset used for training. `.*infer-valid.*` and `.*infer-train*`
     are preserved for dataset containing the labels. Otherwise,
-    the dataset is assumed to be for inference run without.
+    the dataset is assumed to be for inference run.
 
     """
     model = SlideGraphArch(**arch_kwargs)
@@ -1278,11 +1278,12 @@ def run_once(
             if os.path.exists(f"{save_dir}/stats.json"):
                 old_stats = load_json(f"{save_dir}/stats.json")
                 # save a backup first
-                save_as_json(logging_dict, f"{save_dir}/stats.old.json")
+                save_as_json(old_stats, f"{save_dir}/stats.old.json")
                 new_stats = copy.deepcopy(old_stats)
+                new_stats = {int(k): v for k, v in new_stats.items()}
 
             old_epoch_stats = {}
-            if epoch in old_epoch_stats:
+            if epoch in new_stats:
                 old_epoch_stats = new_stats[epoch]
             old_epoch_stats.update(logging_dict)
             new_stats[epoch] = old_epoch_stats
