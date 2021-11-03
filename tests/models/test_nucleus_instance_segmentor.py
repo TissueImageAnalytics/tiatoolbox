@@ -1,42 +1,29 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for Nucleus Instance Segmentor."""
 
+import copy
 import pathlib
 import shutil
 
 import joblib
 import numpy as np
 import pytest
+import torch
 
 from tiatoolbox.models import (
     IOSegmentorConfig,
     NucleusInstanceSegmentor,
     SemanticSegmentor,
 )
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
+    _process_tile_predictions,
+)
 from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 BATCH_SIZE = 2
-ON_GPU = False
+ON_TRAVIS = True
+ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
 # ----------------------------------------------------
 
@@ -225,22 +212,24 @@ def test_get_tile_info():
 
 
 def test_crash_segmentor(remote_sample, tmp_path):
-    """Test crash."""
+    """Test engine crash when given malformed input."""
     root_save_dir = pathlib.Path(tmp_path)
     sample_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
     sample_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     save_dir = f"{root_save_dir}/instance/"
 
+    # resolution for travis testing, not the correct ones
+    resolution = 4.0
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": 1.0}],
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
-            {"units": "mpp", "resolution": 1.0},
-            {"units": "mpp", "resolution": 1.0},
-            {"units": "mpp", "resolution": 1.0},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[1024, 1024],
+        tile_shape=[512, 512],
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -267,23 +256,26 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality_travis(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+
+    resolution = 2.0
+
     reader = get_wsireader(mini_wsi_svs)
-    thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
+    thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
     # resolution for travis testing, not the correct ones
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
-            {"units": "mpp", "resolution": 0.5},
-            {"units": "mpp", "resolution": 0.5},
-            {"units": "mpp", "resolution": 0.5},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
         tile_shape=[512, 512],
@@ -293,15 +285,14 @@ def test_functionality(remote_sample, tmp_path):
     )
 
     save_dir = f"{root_save_dir}/instance/"
-    # test run without worker first
+    # * test run on tile, run without worker first
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=BATCH_SIZE,
         num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
-    # * test run on tile
-    output = inst_segmentor.predict(
+    inst_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
         ioconfig=ioconfig,
@@ -310,9 +301,14 @@ def test_functionality(remote_sample, tmp_path):
         save_dir=save_dir,
     )
 
-    # * test run on wsi
+    # * test run on wsi, test run with worker
     _rm_dir(save_dir)
-    output = inst_segmentor.predict(
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=1,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+    inst_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
@@ -320,11 +316,132 @@ def test_functionality(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
+
+    # clean up
+    _rm_dir(tmp_path)
+
+
+def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
+    """Functional tests for merging tile predictions."""
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+
+    resolution = 0.5
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        margin=128,
+        tile_shape=[512, 512],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
+    )
+
+    # mainly to hook the merge prediction function
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+
+    _rm_dir(save_dir)
+    semantic_segmentor = SemanticSegmentor(
+        pretrained_model="hovernet_fast-pannuke",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+    )
+
+    output = semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        ioconfig=ioconfig,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    raw_maps = [np.load(f"{output[0][1]}.raw.{head_idx}.npy") for head_idx in range(3)]
+    raw_maps = [[v] for v in raw_maps]  # mask it as patch output
+
+    dummy_reference = {i: {"box": np.array([0, 0, 32, 32])} for i in range(1000)}
+    dummy_flag_mode_list = [
+        [[1, 1, 0, 0], 1],
+        [[0, 0, 1, 1], 2],
+        [[1, 1, 1, 1], 3],
+    ]
+
+    inst_segmentor._wsi_inst_info = copy.deepcopy(dummy_reference)
+    inst_segmentor._futures = [[dummy_reference, dummy_reference.keys()]]
+    inst_segmentor._merge_post_process_results()
+    assert len(inst_segmentor._wsi_inst_info) == 0
+
+    blank_raw_maps = [np.zeros_like(v) for v in raw_maps]
+    _process_tile_predictions(
+        ioconfig=ioconfig,
+        tile_bounds=np.array([0, 0, 512, 512]),
+        tile_flag=dummy_flag_mode_list[0][0],
+        tile_mode=dummy_flag_mode_list[0][1],
+        tile_output=[[np.array([0, 0, 512, 512]), blank_raw_maps]],
+        ref_inst_dict=dummy_reference,
+        postproc=semantic_segmentor.model.postproc_func,
+        merge_predictions=semantic_segmentor.merge_prediction,
+    )
+
+    for tile_flag, tile_mode in dummy_flag_mode_list:
+        _process_tile_predictions(
+            ioconfig=ioconfig,
+            tile_bounds=np.array([0, 0, 512, 512]),
+            tile_flag=tile_flag,
+            tile_mode=tile_mode,
+            tile_output=[[np.array([0, 0, 512, 512]), raw_maps]],
+            ref_inst_dict=dummy_reference,
+            postproc=semantic_segmentor.model.postproc_func,
+            merge_predictions=semantic_segmentor.merge_prediction,
+        )
+
+    # test exception flag
+    with pytest.raises(ValueError, match=r".*Unknown tile mode.*"):
+        _process_tile_predictions(
+            ioconfig=ioconfig,
+            tile_bounds=np.array([0, 0, 512, 512]),
+            tile_flag=tile_flag,
+            tile_mode=-1,
+            tile_output=[[np.array([0, 0, 512, 512]), raw_maps]],
+            ref_inst_dict=dummy_reference,
+            postproc=semantic_segmentor.model.postproc_func,
+            merge_predictions=semantic_segmentor.merge_prediction,
+        )
+    _rm_dir(tmp_path)
+
+
+@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+def test_functionality_local(remote_sample, tmp_path):
+    """Local functionality test for nuclei instance segmentor."""
+    root_save_dir = pathlib.Path(tmp_path)
+    save_dir = pathlib.Path(f"{tmp_path}/output")
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+
+    # * generate full output w/o parallel post processing worker first
+    _rm_dir(save_dir)
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=8,
+        num_postproc_workers=0,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+    output = inst_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=True,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
     inst_dict_a = joblib.load(f"{output[0][1]}.dat")
 
-    # **
-    # then test run when using workers, will then compare results
-    # to ensure the predictions are the same
+    # * then test run when using workers, will then compare results
+    # * to ensure the predictions are the same
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
         pretrained_model="hovernet_fast-pannuke",
@@ -335,8 +452,7 @@ def test_functionality(remote_sample, tmp_path):
     output = inst_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -361,8 +477,7 @@ def test_functionality(remote_sample, tmp_path):
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=save_dir,
     )

@@ -112,7 +112,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         else:
             interpolation = "area"
 
-    if np.float16 == img.dtype:
+    if img.dtype == np.float16:
         img = img.astype(np.float32)
 
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)

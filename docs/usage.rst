@@ -132,6 +132,9 @@ Engine
 .. automodule:: tiatoolbox.models.engine.semantic_segmentor
     :members:
 
+.. automodule:: tiatoolbox.models.engine.nucleus_instance_segmentor
+    :members:
+
 -------
 Dataset
 -------

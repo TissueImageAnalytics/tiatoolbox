@@ -28,7 +28,7 @@ import torch
 import torch.nn as nn
 
 
-def center_crop(
+def centre_crop(
     img: Union[np.ndarray, torch.tensor],
     crop_shape: Union[np.ndarray, torch.tensor],
     data_format: str = "NCHW",
@@ -59,7 +59,7 @@ def center_crop(
     return img
 
 
-def center_crop_to_shape(
+def centre_crop_to_shape(
     x: Union[np.ndarray, torch.tensor],
     y: Union[np.ndarray, torch.tensor],
     data_format: str = "NCHW",
@@ -92,7 +92,7 @@ def center_crop_to_shape(
     if h1 <= h2 or w1 <= w2:
         raise ValueError(
             (
-                "Height width of `x` is smaller than `y` ",
+                "Height or width of `x` is smaller than `y` ",
                 f"{[h1, w1]} vs {[h2, w2]}",
             )
         )
@@ -104,7 +104,7 @@ def center_crop_to_shape(
     else:
         crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
 
-    return center_crop(x, crop_shape, data_format)
+    return centre_crop(x, crop_shape, data_format)
 
 
 class UpSample2x(nn.Module):
