@@ -486,7 +486,7 @@ class AnnotationStoreABC(ABC):
                 For more information see the `shapely documentation on
                 binary predicates`__.
             where:
-                A statment which should evaluate to a boolean value.
+                A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). May
                 be a string, callable, or pickled function as bytes.

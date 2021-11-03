@@ -18,7 +18,40 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Where the magic happens!"""
+"""Predicate construction for annotation store queries.
+
+A predicate is a statement which should evaluate to a boolean value.
+Only annotations for which this predicate is true will
+be returned.
+
+The classes and functions in this module allow for conversion from a 
+restricted subset of python to a domain specific language, in this case
+SQL, usinf `eval`.
+
+This conversion should be assumed to be on a best-effort basis.
+Not every expression valid in python can be evaluated to form a valid
+matching SQL expression.
+However, for many cases this will be possible.
+For example, the simple python expression `props["class"] == 42` can be
+converted to a valid SQL (SQLite flavour) predicate which will access
+the properties JSON column and check that the value under the key of
+"class" equals 42.
+
+This predicate statment can be used as part of an SQL query and
+should be faster than post-query filtering in python or filtering
+during the query via a registered custom function callback.
+
+An additional benefit is that the same input string can be
+used across different backends. For example, the previous
+simple example predicate string can be evaluated as both a valid
+python expression and can be converted to an equivalent valid SQL
+expression simply by running `eval with a different set of global
+variables from this module.
+
+It is important to note that untrusted user input should not be
+accepted, as arbitrary code can be run during the parsing of an
+input string.
+"""
 import json
 import operator
 import re
@@ -30,6 +63,7 @@ from typing import Callable, Optional, Union
 
 @dataclass
 class SQLNone:
+    """Sentinal object for SQL NULL during expressions."""
     def __str__(self) -> str:
         return "NULL"
 
@@ -38,6 +72,7 @@ class SQLNone:
 
 
 class SQLExpression(ABC):
+    """SQL expression base class."""
     def __repr__(self):
         return str(self)  # pragma: no cover
 
@@ -127,6 +162,7 @@ class SQLExpression(ABC):
 
 
 class SQLTriplet(SQLExpression):
+    """SQL triplet expression (LHS, operation, RHS)."""
     def __init__(
         self,
         lhs: Union["SQLTriplet", str],
@@ -172,6 +208,7 @@ class SQLTriplet(SQLExpression):
 
 
 class SQLProperties(SQLExpression):
+    """SQL expression to access JSON properties."""
     def __init__(self, acc: str = None) -> None:
         self.acc = acc or ""
 
@@ -230,10 +267,12 @@ def regexp(pattern: str, string: str, flags: int = 0) -> Optional[str]:
 
 
 def json_list_sum(json_list: str) -> Number:
+    """Return the sum of a list of numbers in a JSON string."""
     return sum(json.loads(json_list))
 
 
 def json_contains(json_str: str, x: object) -> bool:
+    """Return True if a JSON string contains x."""
     return x in json.loads(json_str)
 
 
@@ -268,7 +307,6 @@ SQL_GLOBALS = {
     "has_key": sql_has_key,
     "re": _COMMON_GLOBALS["re"],
 }
-SQL_LOCALS = {}
 PY_GLOBALS = {
     "__builtins__": {**_COMMON_GLOBALS["__builtins__"], "sum": sum},
     "is_none": is_none,
@@ -276,7 +314,4 @@ PY_GLOBALS = {
     "regexp": regexp,
     "has_key": lambda a, b: b in a,
     "re": _COMMON_GLOBALS["re"],
-}
-PY_LOCALS = {
-    "props": [0, 1],
 }
