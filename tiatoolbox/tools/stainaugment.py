@@ -120,8 +120,7 @@ class StainAugmentation(ImageOnlyTransform):
         self.stain_matrix = stain_matrix
 
         if self.method.lower() not in {"macenko", "vahadane"}:
-            raise Exception(f"Invalid stain extractor method: {self.method}")
-
+            raise ValueError(f"Invalid stain extractor method: {self.method}")
         if self.method.lower() == "macenko":
             self.stain_normaliser = MacenkoNormaliser()
         elif self.method.lower() == "vahadane":
@@ -171,6 +170,7 @@ class StainAugmentation(ImageOnlyTransform):
         Returns:
             img_augmented (:class:`numpy.ndarray`): stain augmented image.
         """
+        self.get_params()
         augmented_concentrations = copy.deepcopy(self.source_concentrations)
         for i in range(self.n_stains):
             if self.augment_background:
@@ -179,7 +179,6 @@ class StainAugmentation(ImageOnlyTransform):
             else:
                 augmented_concentrations[self.tissue_mask, i] *= self.alpha
                 augmented_concentrations[self.tissue_mask, i] += self.beta
-
         img_augmented = 255 * np.exp(
             -1 * np.dot(augmented_concentrations, self.stain_matrix)
         )
@@ -204,7 +203,7 @@ class StainAugmentation(ImageOnlyTransform):
         """Returns randomly generated parameters based on input arguments."""
         self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
         self.beta = random.uniform(-self.sigma2, self.sigma2)
-        return {}  # "alpha": self.alpha, "beta": self.beta
+        return {}
 
     def get_params_dependent_on_targets(self, params):
         """Does nothing, added to resolve flake 8 error"""
