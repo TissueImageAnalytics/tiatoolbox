@@ -1059,7 +1059,7 @@ class SQLiteStore(AnnotationStoreABC):
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
-        
+
         Args:
             select(str):
                 The rows to select.
@@ -1076,7 +1076,7 @@ class SQLiteStore(AnnotationStoreABC):
 
         Returns:
             sqlite3.Cursor: A database cursor for the current query.
-            
+
         """
         query_geometry = geometry
         if geometry_predicate not in self._geometry_predicate_names:

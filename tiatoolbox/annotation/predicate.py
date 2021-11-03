@@ -64,6 +64,7 @@ from typing import Callable, Optional, Union
 @dataclass
 class SQLNone:
     """Sentinal object for SQL NULL during expressions."""
+
     def __str__(self) -> str:
         return "NULL"
 
@@ -73,6 +74,7 @@ class SQLNone:
 
 class SQLExpression(ABC):
     """SQL expression base class."""
+
     def __repr__(self):
         return str(self)  # pragma: no cover
 
@@ -163,6 +165,7 @@ class SQLExpression(ABC):
 
 class SQLTriplet(SQLExpression):
     """SQL triplet expression (LHS, operation, RHS)."""
+
     def __init__(
         self,
         lhs: Union["SQLTriplet", str],
@@ -209,6 +212,7 @@ class SQLTriplet(SQLExpression):
 
 class SQLProperties(SQLExpression):
     """SQL expression to access JSON properties."""
+
     def __init__(self, acc: str = None) -> None:
         self.acc = acc or ""
 
