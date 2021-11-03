@@ -1058,7 +1058,26 @@ class SQLiteStore(AnnotationStoreABC):
         geometry_predicate="intersects",
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
     ) -> sqlite3.Cursor:
-        """Common query construction logic for `query` and `iquery`."""
+        """Common query construction logic for `query` and `iquery`.
+        
+        Args:
+            select(str):
+                The rows to select.
+            geometry(tuple or Geometry):
+                The geometry being queries against.
+            select_callable(str):
+                The rows to select when a callable is given to `where`.
+            geometry_predicate(str):
+                The binary predicate to use when compareing `geometry`
+                with each candidate shape.
+            where (str or bytes or Callable):
+                The predicate to evaulate against candidate properties
+                during the query.
+
+        Returns:
+            sqlite3.Cursor: A database cursor for the current query.
+            
+        """
         query_geometry = geometry
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
