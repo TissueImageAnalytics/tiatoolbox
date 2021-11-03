@@ -30,7 +30,7 @@ import pygeos
 import torch
 import tqdm
 
-from tiatoolbox.models.controller.semantic_segmentor import (
+from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
