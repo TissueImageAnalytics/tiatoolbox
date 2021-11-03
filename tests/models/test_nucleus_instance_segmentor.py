@@ -13,7 +13,7 @@ from tiatoolbox.models import (
     NucleusInstanceSegmentor,
     SemanticSegmentor,
 )
-from tiatoolbox.models.controller.nucleus_instance_segmentor import (
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     _process_tile_predictions,
 )
 from tiatoolbox.utils.metrics import f1_detection
