@@ -1408,6 +1408,8 @@ def reset_logging(save_path):
 # training run for X-th epoch.
 #   - `stats.old.json`: the backup file of `stats.json` of previous epoch.
 # - `NUM_EPOCHS`: the number of epoch for training.
+# Additionally, to avoid accidentally over-writing training results, we will
+# skip the training if the `MODEL_DIR` exists.
 
 # %%
 
@@ -1449,23 +1451,24 @@ optim_kwargs = dict(
     weight_decay=1.0e-4,
 )
 
-#
-for split_idx, split in enumerate(splits):
-    new_split = {
-        "train": split['train'],
-        "infer-train": split['train'],
-        "infer-valid-A": split['valid'],
-        "infer-valid-B": split['test'],
-    }
-    split_save_dir = f"{MODEL_DIR}/{split_idx:02d}/"
-    rm_n_mkdir(split_save_dir)
-    reset_logging(split_save_dir)
-    run_once(
-        new_split, NUM_EPOCHS,
-        save_dir=split_save_dir,
-        arch_kwargs=arch_kwargs,
-        loader_kwargs=loader_kwargs,
-        optim_kwargs=optim_kwargs)
+
+if not os.path.exists(MODEL_DIR):
+    for split_idx, split in enumerate(splits):
+        new_split = {
+            "train": split['train'],
+            "infer-train": split['train'],
+            "infer-valid-A": split['valid'],
+            "infer-valid-B": split['test'],
+        }
+        split_save_dir = f"{MODEL_DIR}/{split_idx:02d}/"
+        rm_n_mkdir(split_save_dir)
+        reset_logging(split_save_dir)
+        run_once(
+            new_split, NUM_EPOCHS,
+            save_dir=split_save_dir,
+            arch_kwargs=arch_kwargs,
+            loader_kwargs=loader_kwargs,
+            optim_kwargs=optim_kwargs)
 
 
 # %% [markdown]
@@ -1493,7 +1496,8 @@ for split_idx, split in enumerate(splits):
 def select_checkpoints(
         stat_file_path: str,
         top_k: int = 2,
-        metric: str = "infer-valid-auprc"):
+        metric: str = "infer-valid-auprc",
+        epoch_range: Tuple[int] = [0, 1000]):
     """Select checkpoints basing on training statistics.
 
     Args:
@@ -1502,6 +1506,9 @@ def select_checkpoints(
         top_k (int): Number of top checkpoints to be selected.
         metric (str): The metric name saved within .json to perform
             selection.
+        epoch_range (list): The range of epochs for checking, denoted
+            as [start, end] . Epoch x that is `start <= x <= end` is
+            kept for further selection.
     Returns:
         paths (list): List of paths or info tuple where each point
             to the correspond check point saving location.
@@ -1510,6 +1517,10 @@ def select_checkpoints(
     """
     stats_dict = load_json(stat_file_path)
     # k is the epoch counter in this case
+    stats_dict = {
+        k: v for k, v in stats_dict.items()
+        if int(k) >= epoch_range[0] and int(k) <= epoch_range[1]
+    }
     stats = [[int(k), v[metric], v] for k, v in stats_dict.items()]
     # sort epoch ranking from largest to smallest
     stats = sorted(stats, key=lambda v: v[1], reverse=True)
@@ -1523,6 +1534,7 @@ def select_checkpoints(
         for epoch in epochs
     ]
     chkpt_stats_list = [[v[0], v[2]] for v in chkpt_stats_list]
+    print(paths)
     return paths, chkpt_stats_list
 
 
@@ -1532,6 +1544,7 @@ def select_checkpoints(
 # %%
 
 # default params
+TOP_K = 1
 metric_name = 'infer-valid-B-auroc'
 PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
@@ -1572,7 +1585,7 @@ for split_idx, split in enumerate(splits):
     stat_files = [v for v in stat_files if ".old.json" not in v]
     assert len(stat_files) == 1
     chkpts, chkpt_stats_list = select_checkpoints(
-        stat_files[0], top_k=2, metric=metric_name)
+        stat_files[0], top_k=TOP_K, metric=metric_name)
 
     # Perform ensembling by averaging probabilities
     # across checkpoint predictions
