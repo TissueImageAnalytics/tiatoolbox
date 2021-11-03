@@ -32,46 +32,6 @@ from tiatoolbox.tools.stainnorm import MacenkoNormaliser, VahadaneNormaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
-def stain_augment(
-    image,
-    method="vahadane",
-    stain_matrix=None,
-    alpha=None,
-    beta=None,
-    augment_background=False,
-):
-    if method.lower() == "macenko":
-        stain_normaliser = MacenkoNormaliser()
-    elif method.lower() == "vahadane":
-        stain_normaliser = VahadaneNormaliser()
-    else:
-        raise Exception(f"Invalid stain extractor method: {method}")
-
-    if stain_matrix is None:
-        stain_normaliser.fit(image)
-        stain_matrix = stain_normaliser.stain_matrix_target
-        source_concentrations = stain_normaliser.target_concentrations
-    else:
-        source_concentrations = stain_normaliser.get_concentrations(image, stain_matrix)
-    n_stains = source_concentrations.shape[1]
-    tissue_mask = get_luminosity_tissue_mask(image, threshold=0.85).ravel()
-    image_shape = image.shape
-
-    augmented_concentrations = copy.deepcopy(source_concentrations)
-    for i in range(n_stains):
-        if augment_background:
-            augmented_concentrations[:, i] *= alpha
-            augmented_concentrations[:, i] += beta
-        else:
-            augmented_concentrations[tissue_mask, i] *= alpha
-            augmented_concentrations[tissue_mask, i] += beta
-
-    image_augmented = 255 * np.exp(-1 * np.dot(augmented_concentrations, stain_matrix))
-    image_augmented = image_augmented.reshape(image_shape)
-    image_augmented = np.clip(image_augmented, 0, 255)
-    return np.uint8(image_augmented)
-
-
 class StainAugmentation(ImageOnlyTransform):
     """Stain augmentation using predefined stain matrix or stain extraction methods
     This class contains code inspired by StainTools
@@ -103,6 +63,42 @@ class StainAugmentation(ImageOnlyTransform):
         self.method = method
         self.stain_matrix = stain_matrix
 
+        if self.method.lower() == "macenko":
+            self.stain_normaliser = MacenkoNormaliser()
+        elif self.method.lower() == "vahadane":
+            self.stain_normaliser = VahadaneNormaliser()
+        else:
+            raise Exception(f"Invalid stain extractor method: {self.method}")
+
+    def fit(self, image, threshold=0.85):
+        if self.stain_matrix is None:
+            self.stain_normaliser.fit(image)
+            self.stain_matrix = self.stain_normaliser.stain_matrix_target
+            self.source_concentrations = self.stain_normaliser.target_concentrations
+        else:
+            self.source_concentrations = self.stain_normaliser.get_concentrations(
+                image, self.stain_matrix
+                )
+        self.n_stains = self.source_concentrations.shape[1]
+        self.tissue_mask = get_luminosity_tissue_mask(image, threshold=threshold).ravel()
+        self.image_shape = image.shape
+
+    def augment(self, alpha, beta):
+        augmented_concentrations = copy.deepcopy(self.source_concentrations)
+        for i in range(self.n_stains):
+            if self.augment_background:
+                augmented_concentrations[:, i] *= alpha
+                augmented_concentrations[:, i] += beta
+            else:
+                augmented_concentrations[self.tissue_mask, i] *= alpha
+                augmented_concentrations[self.tissue_mask, i] += beta
+
+        image_augmented = 255 * np.exp(-1 * np.dot(augmented_concentrations,
+                                                   self.stain_matrix))
+        image_augmented = image_augmented.reshape(self.image_shape)
+        image_augmented = np.clip(image_augmented, 0, 255)
+        return np.uint8(image_augmented)
+
     def apply(self, image, alpha=None, beta=None, **params):
         """Return an stain augmented image.
 
@@ -111,14 +107,8 @@ class StainAugmentation(ImageOnlyTransform):
         Returns:
             image_augmented:
         """
-        return stain_augment(
-            image,
-            method=self.method,
-            stain_matrix=self.stain_matrix,
-            augment_background=self.augment_background,
-            alpha=alpha,
-            beta=beta,
-        )
+        self.fit(image, threshold=0.85)
+        return self.augment(alpha, beta)
 
     def get_params(self):
         alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
