@@ -598,7 +598,11 @@ def test_io_config_delegation(remote_sample, tmp_path):
 
     predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
     predictor.predict(
-        [mini_wsi_svs], mode="wsi", merge_predictions=True, save_dir=f"{tmp_path}/dump"
+        [mini_wsi_svs],
+        mode="wsi",
+        merge_predictions=True,
+        save_dir=f"{tmp_path}/dump",
+        on_gpu=ON_GPU,
     )
     _rm_dir(f"{tmp_path}/dump")
 
