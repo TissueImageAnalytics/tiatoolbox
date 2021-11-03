@@ -64,7 +64,7 @@ class StainAugmentation(ImageOnlyTransform):
             of using the augmentation in a 'albumentations' pipeline. . Please refer to
             albumentations documentations for more information.
     Attributes:
-        stain_normaliser: Fitted stain normalization method.
+        stain_normaliser: Fitted stain normalization class.
         stain_matrix (:class:`numpy.ndarray`): extracted stain matrix from the image
         source_concentrations (:class:`numpy.ndarray`): extracted stain
             concentrations from the input image.
@@ -111,7 +111,7 @@ class StainAugmentation(ImageOnlyTransform):
         always_apply=False,
         p=0.5,
     ) -> np.ndarray:
-        super(StainAugmentation, self).__init__(always_apply=always_apply, p=p)
+        super().__init__(always_apply=always_apply, p=p)
 
         self.augment_background = augment_background
         self.sigma1 = sigma1
@@ -187,7 +187,7 @@ class StainAugmentation(ImageOnlyTransform):
         img_augmented = np.clip(img_augmented, 0, 255)
         return np.uint8(img_augmented)
 
-    def apply(self, image, **params):  # alpha=None, beta=None,
+    def apply(self, img, **params):  # alpha=None, beta=None,
         """Call the `fit` and `augment` functions to generate an stain augmented image.
 
         Args:
@@ -197,7 +197,7 @@ class StainAugmentation(ImageOnlyTransform):
             :class:`numpy.ndarray`: Stain augmented image with the same
                 size and format as the input img.
         """
-        self.fit(image, threshold=0.85)
+        self.fit(img, threshold=0.85)
         return self.augment()
 
     def get_params(self):
