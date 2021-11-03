@@ -35,8 +35,8 @@ from skimage.segmentation import watershed
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
-    center_crop,
-    center_crop_to_shape,
+    centre_crop,
+    centre_crop_to_shape,
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
@@ -157,7 +157,7 @@ class DenseBlock(nn.Module):
         """Logic for using layers defined in init."""
         for idx in range(self.nr_unit):
             new_feat = self.units[idx](prev_feat)
-            prev_feat = center_crop_to_shape(prev_feat, new_feat)
+            prev_feat = centre_crop_to_shape(prev_feat, new_feat)
             prev_feat = torch.cat([prev_feat, new_feat], dim=1)
         prev_feat = self.blk_bna(prev_feat)
 
@@ -407,11 +407,11 @@ class HoVerNet(ModelABC):
         d = [d0, d1, d2, d3]
 
         if self.mode == "original":
-            d[0] = center_crop(d[0], [184, 184])
-            d[1] = center_crop(d[1], [72, 72])
+            d[0] = centre_crop(d[0], [184, 184])
+            d[1] = centre_crop(d[1], [72, 72])
         else:
-            d[0] = center_crop(d[0], [92, 92])
-            d[1] = center_crop(d[1], [36, 36])
+            d[0] = centre_crop(d[0], [92, 92])
+            d[1] = centre_crop(d[1], [36, 36])
 
         out_dict = OrderedDict()
         for branch_name, branch_desc in self.decoder.items():
@@ -567,7 +567,7 @@ class HoVerNet(ModelABC):
             inst_contour = inst_contour[0][0].astype(np.int32)
             inst_contour = np.squeeze(inst_contour)
 
-            # < 3 points dont make a contour, so skip, likely artifact too
+            # < 3 points does not make a contour, so skip, likely artifact too
             # as the contours obtained via approximation => too small
             if inst_contour.shape[0] < 3:  # pragma: no cover
                 continue

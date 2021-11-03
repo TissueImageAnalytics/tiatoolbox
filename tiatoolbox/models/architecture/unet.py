@@ -29,7 +29,7 @@ from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.architecture.utils import UpSample2x, center_crop
+from tiatoolbox.models.architecture.utils import UpSample2x, centre_crop
 from tiatoolbox.utils import misc
 
 
@@ -369,7 +369,7 @@ class UNetModel(ModelABC):
             probs = F.interpolate(
                 probs, scale_factor=2, mode="bilinear", align_corners=False
             )
-            probs = center_crop(probs, crop_shape)
+            probs = centre_crop(probs, crop_shape)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 
         probs = probs.cpu().numpy()
