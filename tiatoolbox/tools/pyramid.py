@@ -313,14 +313,16 @@ class TilePyramidGenerator:
             )
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
-                """Write the tile to the output zip."""
+                """Write the tile to the output tar."""
                 bio = BytesIO()
                 tile.save(bio, format="jpeg")
                 bio.seek(0)
-                tar_info = tarfile.TarInfo(name=str(tile_path))
-                tar_info.mtime = time.time()
-                tar_info.size = bio.tell()
-                archive.addfile(tarinfo=tar_info, fileobj=bio)
+                data = bio.read()
+                archive.writestr(
+                    str(tile_path),
+                    data,
+                    compress_type=compression2enum[compression],
+                )
 
         elif container == "tar":
             compression2mode = {
@@ -335,16 +337,14 @@ class TilePyramidGenerator:
             archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
-                """Write the tile to the output tar."""
+                """Write the tile to the output zip."""
                 bio = BytesIO()
                 tile.save(bio, format="jpeg")
                 bio.seek(0)
-                data = bio.read()
-                archive.writestr(
-                    str(tile_path),
-                    data,
-                    compress_type=compression2enum[compression],
-                )
+                tar_info = tarfile.TarInfo(name=str(tile_path))
+                tar_info.mtime = time.time()
+                tar_info.size = bio.tell()
+                archive.addfile(tarinfo=tar_info, fileobj=bio)
 
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
