@@ -24,7 +24,9 @@ def test_stainaugment(source_image, norm_vahadane):
 
     # 1. Testing without stain matrix.
     # Test with Vahadane stain extractor
-    augmentor = StainAugmentation(method="vahadane", sigma1=0.9, sigma2=0.9)
+    augmentor = StainAugmentation(
+        method="vahadane", sigma1=0.9, sigma2=0.9, augment_background=True
+    )
     augmentor.fit(source_img)
     source_img_aug = augmentor.augment()
     assert source_img_aug.dtype == source_img.dtype
@@ -32,7 +34,9 @@ def test_stainaugment(source_image, norm_vahadane):
     assert np.mean(np.absolute(source_img_aug / 255.0 - source_img / 255.0)) > 1e-1
 
     # Test with Vahadane stain extractor
-    augmentor = StainAugmentation(method="macenko", sigma1=0.9, sigma2=0.9)
+    augmentor = StainAugmentation(
+        method="macenko", sigma1=0.9, sigma2=0.9, augment_background=True
+    )
     augmentor.fit(source_img)
     source_img_aug = augmentor.augment()
     assert source_img_aug.dtype == source_img.dtype
@@ -58,20 +62,6 @@ def test_stainaugment(source_image, norm_vahadane):
     augmentor.fit(source_img, threshold=0.8)
     source_img_aug = augmentor.augment()
     assert np.mean(np.absolute(vahadane_img / 255.0 - source_img_aug / 255.0)) < 1e-1
-
-    # Now we augment the the source image with sigma1=0, sigma2=0 to force the augmentor
-    # to act like a normalizer but use `augment_background=True` to make results
-    # different from stain normaization function
-    augmentor = StainAugmentation(
-        method="vahadane",
-        stain_matrix=target_stain_matrix,
-        sigma1=0.0,
-        sigma2=0.0,
-        augment_background=True,
-    )
-    augmentor.fit(source_img)
-    source_img_aug = augmentor.augment()
-    assert np.mean(np.absolute(vahadane_img / 255.0 - source_img_aug / 255.0)) > 1e-1
 
     # 3. Test in albumentation framework
     # Using the same trick as before, augment the image with pre-defined stain matrix
