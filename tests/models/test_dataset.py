@@ -109,12 +109,12 @@ def test_kather_dataset(tmp_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     url = (
         "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
-        "/kather100k-validation-norm-subset-90.zip"
+        "/kather100k-train-nonorm-subset-90.zip"
     )
     save_zip_path = os.path.join(save_dir_path, "Kather.zip")
     download_data(url, save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
-    extracted_dir = os.path.join(save_dir_path, "CRC-VAL-HE-7K/")
+    extracted_dir = os.path.join(save_dir_path, "NCT-CRC-HE-100K-NONORM/")
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
     assert dataset.inputs is not None
     assert dataset.labels is not None

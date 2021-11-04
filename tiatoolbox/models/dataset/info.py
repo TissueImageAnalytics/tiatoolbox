@@ -101,7 +101,7 @@ class KatherPatchDataset(DatasetInfoABC):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
                 url = (
                     "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
-                    "/kather100k-validation.zip"
+                    "/kather100k-train-nonorm-subset-20k.zip"
                 )
                 download_data(url, save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
