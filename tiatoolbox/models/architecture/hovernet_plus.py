@@ -455,9 +455,9 @@ class HoVerNetPlus(ModelABC):
     @staticmethod
     def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
         """Extract Nuclei Instance with NP and HV Map.
-        This method takes the nuclear pixel prediction output (e.g. nuclei vs 
+        This method takes the nuclear pixel prediction output (e.g. nuclei vs
         background) and combines this with the hover branch output. The method then
-        determines nuclear boundaries via a watershed in order to create an 
+        determines nuclear boundaries via a watershed in order to create an
         instance segmentation for each nucleus in the image.
         Args:
             np_map: The nuclear pixel prediction output. E.g. nuclei vs background.
@@ -687,7 +687,7 @@ class HoVerNetPlus(ModelABC):
                         layer_info = {
                                 contour: number[][],
                                 type: number,
-                        }  
+                        }
                         layer_dict = {[layer_uid: number] : layer_info}
                     cnt (int): Counter.
                     type_class (int): The class of the layer to be processed.
