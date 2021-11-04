@@ -28,12 +28,7 @@ import sys
 
 from torch.nn.modules.module import T
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.hovernet_plus import (
-    DenseBlock,
-    HoVerNetPlus,
-    ResidualBlock,
-    TFSamepaddingLayer,
-)
+from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
@@ -49,7 +44,7 @@ def test_functionality(remote_sample, tmp_path):
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
-    fetch_pretrained_weights("hovernet_plus_oed", f"{tmp_path}/weigths.pth")
+    fetch_pretrained_weights("hovernetplus-oed", f"{tmp_path}/weigths.pth")
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
