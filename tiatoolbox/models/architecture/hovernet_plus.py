@@ -546,7 +546,7 @@ class HoVerNetPlus(ModelABC):
         remove spurious segmentations.
         Args:
             ls_map: The input predicted segmentation map.
-        ReturnsL
+        Returns:
             ls_map: The processed segmentation map.
         """
         ls_map = np.squeeze(ls_map.astype("float32"))
