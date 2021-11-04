@@ -21,14 +21,13 @@
 
 
 import numpy as np
+from PIL import Image
 from torchvision import transforms
 
-from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.utils.misc import download_data, imread
-from tiatoolbox.tools.stainnorm import get_normaliser
-
 from tiatoolbox import rcParam
-
+from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.tools.stainnorm import get_normaliser
+from tiatoolbox.utils.misc import download_data, imread
 
 # fit Vahadane stain normalisation
 TARGET_URL = "https://tiatoolbox.dcs.warwick.ac.uk/models/idars/target.jpg"
@@ -36,15 +35,35 @@ stain_normaliser = None
 transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
+        transforms.Normalize(
+            mean=[0.5, 0.5, 0.5],
+            std=[0.1, 0.1, 0.1]),
     ]
 )
+# transform = transforms.Compose([
+#     transforms.Resize(256),
+#     transforms.RandomResizedCrop(224),
+#     transforms.RandomCrop(224),
+#     transforms.CenterCrop(224),
+#     transforms.ToTensor(),
+#     transforms.Normalize(
+#         mean=[0.5, 0.5, 0.5],
+#         std=[0.1, 0.1, 0.1])
+# ])
 
 download_data(TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
 
 target = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-stain_normaliser = get_normaliser(method_name="vahadane")
-stain_normaliser.fit(target)
+# stain_normaliser = get_normaliser(method_name="vahadane")
+# stain_normaliser.fit(target)
+
+import staintools
+
+METHOD = 'vahadane'
+STANDARDIZE_BRIGHTNESS = True
+normalizer = staintools.StainNormalizer(method=METHOD)
+ref = staintools.read_image('/home/tialab-dang/local/project/tiatoolbox/local/idars/source/target.jpg')
+normalizer.fit(ref)
 
 
 class CNNModel1(CNNModel):
@@ -87,21 +106,30 @@ class CNNModel2(CNNModel):
     def __init__(self, backbone, num_classes=1):
         super().__init__(backbone, num_classes=num_classes)
 
-        # download_data(TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-
-        # target = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-        # stain_normaliser = get_normaliser(method_name="vahadane")
-        # stain_normaliser.fit(target)
-
     @staticmethod
     def preproc(img):
         # apply stain normalisation
-        import matplotlib.pyplot as plt
+        # try:
+        #     luminous_normed = staintools.LuminosityStandardizer.standardize(img)
+        #     stain_normed = normalizer.transform(luminous_normed)
+        # except:
+        #     stain_normed = img
 
-        # plt.imsave('stain_normed_orig.png', img)
+        # # toTensor will turn image to CHW so we transpose again
+        # img = img.permute(1, 2, 0)
+        # transform = transforms.Compose([
+        #     transforms.Resize(256),
+        #     transforms.RandomResizedCrop(224),
+        #     transforms.RandomCrop(224),
+        #     transforms.CenterCrop(224),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(
+        #         mean=[0.5, 0.5, 0.5],
+        #         std=[0.1, 0.1, 0.1])
+        # ])
+
+        # img = Image.fromarray(stain_normed.copy())
         # img = stain_normaliser.transform(img.copy())
-        # plt.imsave('stain_normed.png', img)
-        # exit()
 
         img = transform(img)
         # toTensor will turn image to CHW so we transpose again
@@ -109,42 +137,3 @@ class CNNModel2(CNNModel):
 
         return img
 
-
-# class CNNModel2(CNNModel):
-# """Retrieve the model and add custom preprocessing, including
-#   Vahadane stain normalisation.
-
-#   This is named CNNModel2 in line with the original IDaRS paper and
-#   is used for prediction of molecular pathways and key mutations.
-
-# Args:
-#     backbone (str): Model name.
-#     num_classes (int): Number of classes output by model.
-
-# """
-
-#     def __init__(self, backbone, num_classes=1):
-#         super().__init__(backbone, num_classes=num_classes)
-
-#         # global target
-#         # # download stain normalisation target image used for IDaRS
-#         # download_data(
-#         #     TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg"
-#         # )
-#         # target = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-
-#     @staticmethod
-#     def preproc(img):
-#         # global target
-
-#         # get stain normalisation method
-#         # stain_normaliser = get_normaliser(method_name="vahadane")
-#         # stain_normaliser.fit(target)
-#         # # apply stain normalisation
-#         # img = stain_normaliser.transform(img.copy())
-
-#         img = transform(img)
-#         # toTensor will turn image to CHW so we transpose again
-#         img = img.permute(1, 2, 0)
-
-#         return img
