@@ -80,3 +80,14 @@ def test_stainaugment(source_image, norm_vahadane):
     )
     source_img_aug = aug_pipeline(image=source_img)["image"]
     assert np.mean(np.absolute(vahadane_img / 255.0 - source_img_aug / 255.0)) < 1e-1
+
+    # Test for albumentation helper functions
+    params = augmentor.get_transform_init_args_names()
+    augmentor.get_params_dependent_on_targets(params)
+    assert params == (
+        "method",
+        "stain_matrix",
+        "sigma1",
+        "sigma2",
+        "augment_background",
+    )
