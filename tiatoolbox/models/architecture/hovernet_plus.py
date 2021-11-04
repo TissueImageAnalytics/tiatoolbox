@@ -542,8 +542,12 @@ class HoVerNetPlus(ModelABC):
     @staticmethod
     def __proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
+        This function takes the layer segmentation map and applies a gaussian blur to
+        remove spurious segmentations.
         Args:
-            ls_map: prediction output
+            ls_map: The input predicted segmentation map.
+        ReturnsL
+            ls_map: The processed segmentation map.
         """
         ls_map = np.squeeze(ls_map.astype("float32"))
         ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
