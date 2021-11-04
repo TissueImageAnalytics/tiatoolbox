@@ -596,6 +596,16 @@ def test_io_config_delegation(remote_sample, tmp_path):
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
     _rm_dir(f"{tmp_path}/dump")
 
+    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+    predictor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        merge_predictions=True,
+        save_dir=f"{tmp_path}/dump",
+        on_gpu=ON_GPU,
+    )
+    _rm_dir(f"{tmp_path}/dump")
+
 
 def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     """Helper function to get the model output using API 1."""
