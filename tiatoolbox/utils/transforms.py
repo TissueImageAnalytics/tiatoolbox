@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
-from typing import Tuple, Type, Union
+from typing import Tuple, Union
 
 import cv2
 import numpy as np
