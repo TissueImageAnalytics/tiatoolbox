@@ -262,7 +262,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
-    resolution = 2.0
+    resolution = 4.0
 
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
@@ -371,6 +371,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
         [[1, 1, 0, 0], 1],
         [[0, 0, 1, 1], 2],
         [[1, 1, 1, 1], 3],
+        [[0, 0, 0, 0], 0],
     ]
 
     inst_segmentor._wsi_inst_info = copy.deepcopy(dummy_reference)
