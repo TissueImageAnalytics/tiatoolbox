@@ -14,14 +14,14 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
+import cv2
 import numpy as np
 from PIL import Image
-import cv2
 
 from tiatoolbox import utils
 
@@ -76,9 +76,9 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         output_size (tuple(int)): output image size, (width, height)
         interpolation (str or int): interpolation method used to interpolate the image
          using `opencv interpolation flags
-         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`
-         __ default='optimise', uses cv2.INTER_AREA for scale_factor
-         <1.0 otherwise uses cv2.INTER_CUBIC
+         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
+         default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
+         otherwise uses cv2.INTER_CUBIC
 
     Returns:
         :class:`numpy.ndarray`: resized image
@@ -114,6 +114,9 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
     # Resize the image
+    # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
+    if img.shape[0] == img.shape[1] == 1:
+        return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 

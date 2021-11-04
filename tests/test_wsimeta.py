@@ -10,17 +10,19 @@ from tiatoolbox.wsicore import wsimeta, wsireader
 def test_wsimeta_init_fail():
     """Test incorrect init for WSIMeta raises TypeError."""
     with pytest.raises(TypeError):
+        # skipcq: PYL-E1120
         wsimeta.WSIMeta(slide_dimensions=(None, None))
 
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_fail():
     """Test failure cases for WSIMeta validation."""
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), level_dimensions=[])
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS", level_dimensions=[])
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_dimensions=[(512, 512), (256, 256)],
         level_count=3,
     )
@@ -28,33 +30,43 @@ def test_wsimeta_validate_fail():
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_downsamples=[1, 2],
     )
     assert meta.validate() is False
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_downsamples=[1, 2],
     )
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     meta.level_dimensions = None
     assert meta.validate() is False
 
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     meta.level_downsamples = None
+    assert meta.validate() is False
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_wsimeta_validate_invalid_axes():
+    """Test failure cases for WSIMeta validation with invalid axes."""
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXSF")
     assert meta.validate() is False
 
 
 @pytest.mark.filterwarnings("ignore")
 def test_wsimeta_validate_pass():
     """Test WSIMeta validation."""
-    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512))
+    meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     assert meta.validate()
 
     meta = wsimeta.WSIMeta(
         slide_dimensions=(512, 512),
+        axes="YXS",
         level_dimensions=[(512, 512), (256, 256)],
         level_downsamples=[1, 2],
     )
@@ -62,14 +74,14 @@ def test_wsimeta_validate_pass():
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_ndpi(sample_ndpi, tmp_path):
+def test_wsimeta_openslidewsireader_ndpi(sample_ndpi):
     """Test OpenSlide reader metadata for ndpi."""
     wsi_obj = wsireader.OpenSlideWSIReader(sample_ndpi)
     meta = wsi_obj.info
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_svs(sample_svs, tmp_path):
+def test_wsimeta_openslidewsireader_svs(sample_svs):
     """Test OpenSlide reader metadata for svs."""
     wsi_obj = wsireader.OpenSlideWSIReader(sample_svs)
     meta = wsi_obj.info

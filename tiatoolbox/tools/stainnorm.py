@@ -17,23 +17,23 @@
 # This file contains code inspired by StainTools
 # [https://github.com/Peter554/StainTools] written by Peter Byfield.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Stain normalisation classes."""
-import numpy as np
 import cv2
+import numpy as np
 
-from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
-from tiatoolbox.utils.misc import load_stain_matrix
 from tiatoolbox.tools.stainextract import (
     CustomExtractor,
-    RuifrokExtractor,
     MacenkoExtractor,
+    RuifrokExtractor,
     VahadaneExtractor,
 )
+from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.misc import load_stain_matrix
+from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 
 
 class StainNormaliser:

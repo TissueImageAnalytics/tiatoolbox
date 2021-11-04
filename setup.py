@@ -25,6 +25,9 @@ requirements = [
     "torchvision==0.10.1",
     "torch==1.9.1",
     "tqdm==4.60.0",
+    "tifffile",
+    "imagecodecs",
+    "zarr",
     "requests",
 ]
 
@@ -66,6 +69,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/TissueImageAnalytics/tiatoolbox",
-    version="0.7.0",
+    version="0.8.0",
     zip_safe=False,
 )

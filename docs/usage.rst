@@ -105,31 +105,28 @@ Deep Learning Models
 .. automodule:: tiatoolbox.models.abc
     :members:
 
---------
-Backbone
---------
+------------
+Architecture
+------------
 
-.. automodule:: tiatoolbox.models.backbone
+.. automodule:: tiatoolbox.models.architecture
     :members:
 
 --------------
-Classification
+Engine
 --------------
 
-.. automodule:: tiatoolbox.models.classification
+.. automodule:: tiatoolbox.models.engine
     :members:
 
-.. automodule:: tiatoolbox.models.classification.abc
+.. automodule:: tiatoolbox.models.engine.patch_predictor
     :members:
 
-.. automodule:: tiatoolbox.models.classification.patch_predictor
-    :members:
-
-.. automodule:: tiatoolbox.models.classification.pretrained_info
+.. automodule:: tiatoolbox.models.engine.semantic_segmentor
     :members:
 
 -------
-DataSet
+Dataset
 -------
 
 .. automodule:: tiatoolbox.models.dataset

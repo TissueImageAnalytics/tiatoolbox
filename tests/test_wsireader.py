@@ -2,25 +2,33 @@
 
 import os
 import pathlib
+import random
+import re
 import shutil
 from time import time
+
+# When no longer supporting Python <3.9 this should be collections.abc.Iterable
+from typing import Iterable
 
 import cv2
 import numpy as np
 import pytest
+import zarr
 from click.testing import CliRunner
-from pytest import approx
 from skimage.filters import threshold_otsu
 from skimage.morphology import binary_dilation, disk, remove_small_objects
+from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
+    ArrayView,
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
+    TIFFWSIReader,
     VirtualWSIReader,
 )
 
@@ -41,6 +49,32 @@ JP2_TEST_TISSUE_LOCATION = (32768, 42880)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
 # -------------------------------------------------------------------------------------
+# Generate Parameterized Tests
+# -------------------------------------------------------------------------------------
+
+
+def pytest_generate_tests(metafunc):
+    """Generate (parameterize) test scenarios.
+
+    Adapted from pytest documentation. For more information on
+    parameterized tests see:
+    https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+
+    """
+    # Return if the test is not part of a class
+    if metafunc.cls is None:
+        return
+    idlist = []
+    argvalues = []
+    for scenario in metafunc.cls.scenarios:
+        idlist.append(scenario[0])
+        items = scenario[1].items()
+        argnames = [x[0] for x in items]
+        argvalues.append([x[1] for x in items])
+    metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
+
+
+# -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
 
@@ -51,29 +85,29 @@ def _get_temp_folder_path(prefix="temp"):
     return new_dir
 
 
-def strictly_increasing(seq):
+def strictly_increasing(sequence: Iterable) -> bool:
     """Return True if sequence is strictly increasing.
 
     Args:
-        seq: Sequence to check.
+        sequence (Iterable): Sequence to check.
 
     Returns:
         bool: True if strictly increasing.
     """
-    return all(a < b for a, b in zip(seq, seq[1:]))
+    return all(a < b for a, b in zip(sequence, sequence[1:]))
 
 
-def strictly_decreasing(seq):
+def strictly_decreasing(sequence: Iterable) -> bool:
     """Return True if sequence is strictly decreasing.
 
     Args:
-        seq: Sequence to check.
+        sequence (Iterable): Sequence to check.
 
 
     Returns:
         bool: True if strictly decreasing.
     """
-    return all(a > b for a, b in zip(seq, seq[1:]))
+    return all(a > b for a, b in zip(sequence, sequence[1:]))
 
 
 def read_rect_objective_power(wsi, location, size):
@@ -103,7 +137,7 @@ def read_bounds_mpp(wsi, bounds, size, jp2=False):
             np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         if jp2:
-            assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
+            assert im_region.shape[:2] == pytest.approx(expected_output_shape, abs=1)
         else:
             assert im_region.shape[:2] == expected_output_shape
         assert im_region.shape[2] == 3
@@ -126,19 +160,32 @@ def read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False):
             np.round((np.array(size[::-1]) / downsample)).astype(int)
         )
         if jp2:
-            assert im_region.shape[:2] == approx(expected_output_shape[:2], abs=1)
+            assert im_region.shape[:2] == pytest.approx(
+                expected_output_shape[:2], abs=1
+            )
         else:
             assert im_region.shape[:2] == expected_output_shape
         assert im_region.shape[2] == 3
 
 
 def read_bounds_level_consistency(wsi, bounds):
-    """Read bounds level consistency helper."""
-    from skimage.registration import phase_cross_correlation
+    """Read bounds level consistency helper.
 
-    imgs = [wsi.read_bounds(bounds, power, "power") for power in [60, 40, 20, 10, 5]]
+    Reads the same region at each stored resolution level and compares
+    the resulting image using phase cross correlation to check that they
+    are aligned.
+    """
+    # Avoid testing very small levels (e.g. as in Omnyx JP2) becuase
+    # MSE for very small levels is noisy.
+    levels_to_test = [
+        n for n, downsample in enumerate(wsi.info.level_downsamples) if downsample <= 32
+    ]
+    imgs = [wsi.read_bounds(bounds, level, "level") for level in levels_to_test]
     smallest_size = imgs[-1].shape[:2][::-1]
     resized = [cv2.resize(img, smallest_size) for img in imgs]
+    # Some blurring applied to account for changes in sharpness arising
+    # from interpolation when calculating the downsampled levels. This
+    # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
     as_float = [img.astype(np.float) for img in blurred]
 
@@ -146,8 +193,8 @@ def read_bounds_level_consistency(wsi, bounds):
     for i, a in enumerate(as_float):
         for b in as_float[i + 1 :]:
             _, error, phase_diff = phase_cross_correlation(a, b)
-            assert phase_diff < 0.1
-            assert error < 0.1
+            assert phase_diff < 0.125
+            assert error < 0.125
 
 
 def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
@@ -317,7 +364,7 @@ def relative_level_scales_float(wsi):
     """Calculation of relative level scales for fractional level."""
     level_scales = wsi._relative_level_scales(1.5, "level")
     level_scales = np.array(level_scales)
-    assert level_scales[0] == approx([1 / 3, 1 / 3])
+    assert level_scales[0] == pytest.approx([1 / 3, 1 / 3])
     downsamples = np.array(wsi.info.level_downsamples)
     expected = downsamples / downsamples[0] * (1 / 3)
     assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
@@ -353,7 +400,7 @@ def test__relative_level_scales_no_mpp():
 
         @property
         def info(self):
-            return wsireader.WSIMeta((100, 100))
+            return wsireader.WSIMeta((100, 100), axes="YXS")
 
     wsi = DummyWSI()
     with pytest.raises(ValueError):
@@ -370,7 +417,7 @@ def test__relative_level_scales_no_objective_power():
 
         @property
         def info(self):
-            return wsireader.WSIMeta((100, 100))
+            return wsireader.WSIMeta((100, 100), axes="YXS")
 
     wsi = DummyWSI()
     with pytest.raises(ValueError):
@@ -424,7 +471,7 @@ def test_find_optimal_level_and_downsample_mpp(sample_ndpi):
         )
 
         assert read_level == expected_level
-        assert post_read_scale_factor == approx(expected_scale)
+        assert post_read_scale_factor == pytest.approx(expected_scale)
 
 
 def test_find_optimal_level_and_downsample_power(sample_ndpi):
@@ -531,6 +578,30 @@ def test_read_rect_jp2_baseline(sample_jp2):
     assert im_region.shape == (*size[::-1], 3)
 
 
+def test_read_rect_tiffreader_svs_baseline(sample_svs):
+    """Test TIFFWSIReader.read_rect with an SVS file at baseline."""
+    wsi = wsireader.TIFFWSIReader(sample_svs)
+    location = SVS_TEST_TISSUE_LOCATION
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+
+def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff):
+    """Test TIFFWSIReader.read_rect with an OME-TIFF file at baseline."""
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
+    location = SVS_TEST_TISSUE_LOCATION
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+
 def test_read_rect_openslide_levels(sample_ndpi):
     """Test openslide read rect with resolution in levels.
 
@@ -562,7 +633,7 @@ def test_read_rect_jp2_levels(sample_jp2):
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert approx(
+        assert pytest.approx(
             im_region.shape,
             (
                 min(height, level_height),
@@ -700,7 +771,7 @@ def test_read_bounds_jp2_levels(sample_jp2):
         expected_output_shape = tuple(
             np.round([height / downsample, width / downsample])
         )
-        assert im_region.shape[:2] == approx(expected_output_shape, abs=1)
+        assert im_region.shape[:2] == pytest.approx(expected_output_shape, abs=1)
         assert im_region.shape[2] == 3
 
 
@@ -1019,7 +1090,7 @@ def test_VirtualWSIReader_read_bounds_virtual_baseline(source_image):
     img_array = utils.misc.imread(image_path)
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size)
+    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
     wsi = wsireader.VirtualWSIReader(image_path, info=meta)
     location = (0, 0)
     size = (50, 100)
@@ -1043,7 +1114,7 @@ def test_VirtualWSIReader_read_rect_virtual_baseline(source_image):
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size)
+    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100))
     target = cv2.resize(
@@ -1065,7 +1136,9 @@ def test_VirtualWSIReader_read_rect_virtual_levels(source_image):
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
+    meta = wsireader.WSIMeta(
+        slide_dimensions=double_size, level_downsamples=[1, 2, 4], axes="YXS"
+    )
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
     target = img_array[:100, :50, :]
@@ -1090,7 +1163,9 @@ def test_VirtualWSIReader_read_bounds_virtual_levels(source_image):
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size, level_downsamples=[1, 2, 4])
+    meta = wsireader.WSIMeta(
+        slide_dimensions=double_size, level_downsamples=[1, 2, 4], axes="YXS"
+    )
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
@@ -1124,7 +1199,10 @@ def test_VirtualWSIReader_read_rect_virtual_levels_mpp(source_image):
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
-        slide_dimensions=double_size, level_downsamples=[1, 2, 4], mpp=(0.25, 0.25)
+        slide_dimensions=double_size,
+        axes="YXS",
+        level_downsamples=[1, 2, 4],
+        mpp=(0.25, 0.25),
     )
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=0.5, units="mpp")
@@ -1151,7 +1229,10 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp(source_image):
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
-        slide_dimensions=double_size, level_downsamples=[1, 2, 4], mpp=(0.25, 0.25)
+        slide_dimensions=double_size,
+        axes="YXS",
+        level_downsamples=[1, 2, 4],
+        mpp=(0.25, 0.25),
     )
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
     location = (0, 0)
@@ -1224,7 +1305,7 @@ def test_tissue_mask_morphological_levels(sample_svs):
     mask = wsi.tissue_mask("morphological", 0, "level")
     mask_thumb = mask.slide_thumbnail(0, "level")
     assert np.mean(mask_thumb == reference) > 0.99
-    # Custom kernel_size (should still be close to refernce)
+    # Custom kernel_size (should still be close to reference)
     reference = binary_dilation(reference, disk(3))
     mask = wsi.tissue_mask("morphological", 0, "level", kernel_size=3)
     mask_thumb = mask.slide_thumbnail(0, "level")
@@ -1256,7 +1337,9 @@ def test_invalid_masker_method(sample_svs):
         wsi.tissue_mask(method="foo")
 
 
-def test_get_wsireader(sample_svs, sample_ndpi, sample_jp2, source_image):
+def test_get_wsireader(
+    sample_svs, sample_ndpi, sample_jp2, sample_ome_tiff, source_image
+):
     """Test get_wsireader to return correct object."""
     with pytest.raises(FileNotSupported):
         _ = wsireader.get_wsireader("./sample.csv")
@@ -1272,6 +1355,9 @@ def test_get_wsireader(sample_svs, sample_ndpi, sample_jp2, source_image):
 
     wsi = wsireader.get_wsireader(sample_jp2)
     assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
+
+    wsi = wsireader.get_wsireader(sample_ome_tiff)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
     wsi = wsireader.get_wsireader(pathlib.Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
@@ -1663,3 +1749,240 @@ def test_openslide_read_bounds_edge_reflect_padding(sample_svs):
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     region = wsi.read_bounds((-64, -64, 64, 64), pad_mode="reflect")
     assert 0 not in region.min(axis=-1)
+
+
+def test_tiffwsireader_invalid_tiff(sample_ndpi):
+    """Test for TIFF which is not supported by TIFFWSIReader."""
+    with pytest.raises(ValueError, match="Unsupported TIFF"):
+        _ = wsireader.TIFFWSIReader(sample_ndpi)
+
+
+def test_tiffwsireader_invalid_svs_metadata(sample_svs, monkeypatch):
+    """Test for invalid SVS key-value pairs in TIFF escription tag."""
+    wsi = wsireader.TIFFWSIReader(sample_svs)
+    monkeypatch.setattr(
+        wsi.tiff.pages[0],
+        "description",
+        wsi.tiff.pages[0].description.replace("=", "=="),
+    )
+    with pytest.raises(ValueError, match="key=value"):
+        _ = wsi._info()
+
+
+def test_tiffwsireader_invalid_ome_metadata(sample_ome_tiff, monkeypatch):
+    """Test exception raised for invalid OME-XML metadata instrument."""
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
+    monkeypatch.setattr(
+        wsi.tiff.pages[0],
+        "description",
+        wsi.tiff.pages[0].description.replace(
+            '<Objective ID="Objective:0:0" NominalMagnification="20.0"/>', ""
+        ),
+    )
+    with pytest.raises(KeyError, match="No matching Instrument"):
+        _ = wsi._info()
+
+
+def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatch):
+    """Test no exception raised for missing x/y mpp but warning given."""
+    for dim in "XY":
+        wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
+        monkeypatch.setattr(
+            wsi.tiff.pages[0],
+            "description",
+            re.sub(f'PhysicalSize{dim}="[^"]*"', "", wsi.tiff.pages[0].description),
+        )
+        with pytest.warns(UserWarning, match="Only one MPP"):
+            _ = wsi._info()
+
+
+def test_arrayview_unsupported_axes():
+    """Test unsupported axes in ArrayView."""
+    array = zarr.ones((128, 128, 3))
+    array_view = ArrayView(array=array, axes="FOO")
+    with pytest.raises(Exception, match="Unsupported axes"):
+        array_view[:64, :64, :]
+
+
+def test_arrayview_unsupported_axes_shape(sample_ome_tiff, monkeypatch):
+    """Test accessing an unspported axes in TIFFWSIReader._shape_channels_last."""
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
+    monkeypatch.setattr(wsi, "_axes", "FOO")
+    with pytest.raises(Exception, match="Unsupported axes"):
+        _ = wsi._info()
+
+
+def test_arrayview_incomplete_index():
+    """Test reading from ArrayView without specifying all axes slices."""
+    array = zarr.array(np.random.rand(128, 128, 3))
+    array_view = ArrayView(array=array, axes="YXS")
+    view_1 = array_view[:64, :64, :]
+    view_2 = array_view[:64, :64]
+    assert np.array_equal(view_1, view_2)
+
+
+def test_arrayview_single_number_index():
+    """Test reading a column from ArrayView.
+
+    I'm not sure why you would want to do this but it is implemented for
+    consistency with other __getitem__ objects.
+    """
+    array = zarr.array(np.random.rand(128, 128, 3))
+    array_view = ArrayView(array=array, axes="YXS")
+    view_1 = array_view[0]
+    view_2 = array_view[0]
+    assert np.array_equal(view_1, view_2)
+
+
+class TestReader:
+    scenarios = [
+        ("TIFFReader", {"reader_class": TIFFWSIReader}),
+    ]
+
+    @staticmethod
+    def test_wsimeta_attrs(sample_ome_tiff, reader_class):
+        """Check for expected attrs in .info / WSIMeta.
+
+        Checks for existence of expected attrs but not their contents.
+        """
+        wsi = reader_class(sample_ome_tiff)
+        info = wsi.info
+        expected_attrs = [
+            "slide_dimensions",
+            "axes",
+            "level_dimensions",
+            "level_count",
+            "level_downsamples",
+            "vendor",
+            "mpp",
+            "objective_power",
+            "file_path",
+        ]
+        for attr in expected_attrs:
+            assert hasattr(info, attr)
+
+    @staticmethod
+    def test_read_rect_level_consistency(sample_ome_tiff, reader_class):
+        """Compare the same region at each stored resolution level.
+
+        Read the same region at each stored resolution level and compare
+        the resulting image using phase cross correlation to check that
+        they are aligned.
+
+        """
+        wsi = reader_class(sample_ome_tiff)
+        location = (0, 0)
+        size = np.array([1024, 1024])
+
+        # Avoid testing very small levels (e.g. as in Omnyx JP2) because
+        # MSE for very small levels is noisy.
+        level_downsamples = [
+            downsample for downsample in wsi.info.level_downsamples if downsample <= 32
+        ]
+        imgs = [
+            wsi.read_rect(location, size // downsample, level, "level")
+            for level, downsample in enumerate(level_downsamples)
+        ]
+        smallest_size = imgs[-1].shape[:2][::-1]
+        resized = [imresize(img, output_size=smallest_size) for img in imgs]
+        # Some blurring applied to account for changes in sharpness arising
+        # from interpolation when calculating the downsampled levels. This
+        # adds some tolerance for the comparison.
+        blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
+        as_float = [img.astype(np.float) for img in blurred]
+
+        # Pair-wise check resolutions for mean squared error
+        for i, a in enumerate(as_float):
+            for b in as_float[i + 1 :]:
+                _, error, phase_diff = phase_cross_correlation(a, b)
+                assert phase_diff < 0.125
+                assert error < 0.125
+
+    @staticmethod
+    def test_read_bounds_level_consistency(sample_ome_tiff, reader_class):
+        """Compare the same region at each stored resolution level.
+
+        Read the same region at each stored resolution level and compare
+        the resulting image using phase cross correlation to check that
+        they are aligned.
+
+        """
+        wsi = reader_class(sample_ome_tiff)
+        bounds = (0, 0, 1024, 1024)
+        # This logic can be moved from the helper to here when other
+        # reader classes have been parameterised into scenarios also.
+        read_bounds_level_consistency(wsi, bounds)
+
+    @staticmethod
+    def test_fuzz_read_region_baseline_size(sample_ome_tiff, reader_class):
+        """Fuzz test for `read_bounds` output size at level 0 (baseline).
+
+        - Tests that the output image size matches the input bounds size.
+        - 50 random seeded reads are performed.
+        - All test bounds are within the the slide dimensions.
+        - Bounds sizes are randomised between 1 and 512 in width and height.
+        """
+        random.seed(123)
+        wsi = reader_class(sample_ome_tiff)
+        width, height = wsi.info.slide_dimensions
+        iterations = 50
+        for _ in range(iterations):
+            size = (random.randint(1, 512), random.randint(1, 512))
+            location = (
+                random.randint(0, width - size[0]),
+                random.randint(0, height - size[1]),
+            )
+            bounds = locsize2bounds(location, size)
+            region = wsi.read_bounds(bounds, resolution=0, units="level")
+            assert region.shape[:2][::-1] == size
+
+    @staticmethod
+    def test_read_rect_coord_space_consistency(sample_ome_tiff, reader_class):
+        """Test that read_rect coord_space modes are consistent.
+
+        Using `read_rect` with `coord_space="baseline"` and
+        `coord_space="resolution"` should produce the same output when
+        the bounds are a multiple of the scale difference between the two
+        modes. I.E. reading at baseline with a set of coordinates should
+        yield the same region as reading at half the resolution and
+        with coordinates which are half the size. Note that the output
+        will not be of the same size, but the field of view will match.
+
+        """
+        reader = reader_class(sample_ome_tiff)
+        roi1 = reader.read_rect(
+            np.array([500, 500]),
+            np.array([2000, 2000]),
+            coord_space="baseline",
+            resolution=1.00,
+            units="baseline",
+        )
+        roi2 = reader.read_rect(
+            np.array([250, 250]),
+            np.array([1000, 1000]),
+            coord_space="resolution",
+            resolution=0.5,
+            units="baseline",
+        )
+        # Make the regions the same size for comparison of content
+        roi2 = imresize(roi2, output_size=[2000, 2000])
+        cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
+        # This control the harshness of similarity test, how much should be?
+        assert np.min(cc) > 0.95
+
+    @staticmethod
+    def test_region_dump(sample_ome_tiff, reader_class):
+        from matplotlib import pyplot as plt
+
+        wsi = reader_class(sample_ome_tiff)
+        _, axs = plt.subplots(
+            nrows=1,
+            ncols=wsi.info.level_count,
+            figsize=(wsi.info.level_count, 3),
+            squeeze=False,
+        )
+        for level, ax in zip(range(wsi.info.level_count), axs[0]):
+            bounds = (0, 0, 1024, 1024)
+            region = wsi.read_bounds(bounds, resolution=level, units="level")
+            ax.imshow(region)
+        plt.savefig("tiff_level_check.png")
