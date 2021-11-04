@@ -320,7 +320,6 @@ def test_functionality_travis(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
-    del inst_segmentor
 
     # * test run on wsi, test run with worker
     # resolution for travis testing, not the correct ones
