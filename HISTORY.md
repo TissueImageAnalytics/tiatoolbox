@@ -1,6 +1,49 @@
 History
 =======
 
+0.8.0 (2021-10-27)
+------------------
+### Major Updates and Feature Improvements
+- Adds `SemanticSegmentor` which is Predictor equivalent for semantic segmentation.
+-  Add `TIFFWSIReader` class to support OMETiff reading.
+- Adds `FeatureExtractor` API to controller.
+- Adds WSI Serialization Dataset which support changing parallel workers on the fly. This would reduce the time spent to create new worker for every WSI/Tile (costly).
+- Adds IOState data class to contain IO information for loading input to model and assembling model output back to WSI/Tile.
+- Minor updates for `get_coordinates` to pave the way for getting patch IO for segmentation.
+- Migrates old code to new variable names (patch extraction, patch wsi model).
+- Change in API from `pretrained_weight` to `pretrained_weights`.
+- Adds cli for semantic segmentation.
+- Update python notebooks to add `read_rect` and `read_bounds` examples with `mpp` read.
+
+### Changes to API
+- Adds `WSIReader.open`. `get_wsireader` will deprecate in the next release. Please use `WSIReader.open` instead.
+- CLI is now POSIX compatible
+  - Replaces underscores in variable names with hyphens
+- Models API updated to use `pretrained_weights` instead of `pretrained_weight`.
+- Move string_to_tuple to tiatoolbox/utils/misc.py
+
+### Bug Fixes and Other Changes
+- Fixes README git clone instructions.
+- Fixes stain normalisation due to changes in sklearn.
+- Fixes a test in tests/test_slide_info
+- Fixes readthedocs documentation issues
+
+### Development related changes
+- Adds dependencies for tiffile, imagecodecs, zarr.
+- Adds more stringent pre-commit checks
+- Moved local test files into `tiatoolbox/data`.
+- Fixed `Manifest.ini` and added  `tiatoolbox/data`. This means that this directory will be downloaded with the package.
+- Using `pkg_resources` to properly load bundled resources (e.g. `target_image.png`) in `tiatoolbox.data`.
+- Removed duplicate code in `conftest.py` for downloading remote files. This is now in `tiatoolbox.data._fetch_remote_file`.
+- Fixes errors raised by new flake8 rules.
+  - Remove leading underscores from fixtures.
+- Rename some remote sample files to make more sense.
+- Moves all cli commands/options from cli.py to cli_commands to make it clean and easier to add new commands
+- Removes redundant tests
+- Updates to new GitHub organisation name in the repo
+  - Fixes related links
+
+
 0.7.0 (2021-09-16)
 ------------------
 ### Major and Feature Improvements

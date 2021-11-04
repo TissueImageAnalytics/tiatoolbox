@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -244,6 +244,7 @@ class PatchExtractor(ABC):
                 resolution=reader.info.mpp if resolution is None else resolution,
                 units="mpp" if units is None else units,
                 interpolation="nearest",
+                coord_space="resolution",
             )
             return np.sum(roi > 0) > 0
 

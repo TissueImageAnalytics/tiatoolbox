@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -38,25 +38,25 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
-    """Split path of a file to directory path, file name and extension.
+    """Split path of a file to directory path, file name and extensions.
 
     Args:
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
         tuple: Three parts of the input file path:
-            - :py:obj:`pathlib.Path` - parent directory path
-            - :py:obj:`str` - file name
-            - :py:obj:`str` - file extension
+            - :py:obj:`pathlib.Path` - Parent directory path
+            - :py:obj:`str` - File name
+            - :py:obj:`list(str)` - File extensions
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> dir_path, file_name, extension =
+        >>> dir_path, file_name, extensions =
         ...     utils.misc.split_path_name_ext(full_path)
 
     """
     input_path = pathlib.Path(full_path)
-    return input_path.parent.absolute(), input_path.name, input_path.suffix
+    return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
 def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
@@ -178,10 +178,10 @@ def load_stain_matrix(stain_matrix_input):
 
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
-        _, __, ext = split_path_name_ext(stain_matrix_input)
-        if ext == ".csv":
+        _, __, suffixes = split_path_name_ext(stain_matrix_input)
+        if suffixes[-1] == ".csv":
             stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
-        elif ext == ".npy":
+        elif suffixes[-1] == ".npy":
             stain_matrix = np.load(str(stain_matrix_input))
         else:
             raise FileNotSupported(
@@ -376,9 +376,9 @@ def read_locations(input_table):
 
     """
     if isinstance(input_table, (str, pathlib.Path)):
-        _, _, suffix = split_path_name_ext(input_table)
+        _, _, suffixes = split_path_name_ext(input_table)
 
-        if suffix == ".npy":
+        if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
             if out_table.shape[1] == 2:
                 out_table = pd.DataFrame(out_table, columns=["x", "y"])
@@ -390,7 +390,7 @@ def read_locations(input_table):
                     "numpy table should be of format `x, y` or " "`x, y, class`"
                 )
 
-        elif suffix == ".csv":
+        elif suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
@@ -403,7 +403,7 @@ def read_locations(input_table):
             if out_table.shape[1] == 2:
                 out_table["class"] = None
 
-        elif suffix == ".json":
+        elif suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
             if out_table.shape[1] == 2:
                 out_table["class"] = None
