@@ -323,16 +323,30 @@ def test_functionality_travis(remote_sample, tmp_path):
     del inst_segmentor
 
     # * test run on wsi, test run with worker
+    # resolution for travis testing, not the correct ones
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        margin=135,
+        tile_shape=[512, 512],
+        patch_input_shape=[270, 270],
+        patch_output_shape=[80, 80],
+        stride_shape=[80, 80],
+    )
+
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=1,
         num_loader_workers=0,
-        num_postproc_workers=0,
-        pretrained_model="hovernet_fast-pannuke",
+        num_postproc_workers=1,
+        pretrained_model="hovernet_original-kumar",
     )
     inst_segmentor.predict(
         [mini_wsi_svs],
-        mode="tile",
+        mode="wsi",
         ioconfig=ioconfig,
         on_gpu=ON_GPU,
         crash_on_exception=True,
