@@ -340,7 +340,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=1,
         num_loader_workers=0,
-        num_postproc_workers=1,
+        num_postproc_workers=0,
         pretrained_model="hovernet_original-kumar",
     )
     inst_segmentor.predict(
