@@ -262,7 +262,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
-    resolution = 4.0
+    resolution = 2.0
 
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
@@ -288,7 +288,8 @@ def test_functionality_travis(remote_sample, tmp_path):
     # * test run on tile, run without worker first
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
-        batch_size=BATCH_SIZE,
+        batch_size=1,
+        num_loader_workers=0,
         num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
@@ -300,17 +301,19 @@ def test_functionality_travis(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
+    del inst_segmentor
 
     # * test run on wsi, test run with worker
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
-        batch_size=BATCH_SIZE,
-        num_postproc_workers=1,
+        batch_size=1,
+        num_loader_workers=0,
+        num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
     inst_segmentor.predict(
         [mini_wsi_svs],
-        mode="wsi",
+        mode="tile",
         ioconfig=ioconfig,
         on_gpu=ON_GPU,
         crash_on_exception=True,
