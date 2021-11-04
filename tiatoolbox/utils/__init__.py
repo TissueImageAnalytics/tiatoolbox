@@ -14,10 +14,10 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Utils package for toolbox utilities."""
 
-from tiatoolbox.utils import misc, transforms, exceptions, image
+from tiatoolbox.utils import exceptions, image, misc, transforms
