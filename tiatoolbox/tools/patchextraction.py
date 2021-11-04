@@ -244,7 +244,7 @@ class PatchExtractor(ABC):
                 resolution=reader.info.mpp if resolution is None else resolution,
                 units="mpp" if units is None else units,
                 interpolation="nearest",
-                coord_space="resolution"
+                coord_space="resolution",
             )
             return np.sum(roi > 0) > 0
 
