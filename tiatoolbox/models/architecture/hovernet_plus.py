@@ -271,7 +271,11 @@ class ResidualBlock(nn.Module):
 
 
 class HoVerNetPlus(ModelABC):
-    """Initialise HoVer-Net+."""
+    """Initialise HoVer-Net+.
+    HoVer-Net+ takes an RGB input image, and provides the option to simultaneously
+    segment and classify the nuclei present, aswell as semantically segment different
+    regions or layers in the images.
+    """
 
     def __init__(
         self,
@@ -280,6 +284,12 @@ class HoVerNetPlus(ModelABC):
         num_layers: int = None,
         mode: str = "original",
     ):
+        """Initialise HoVer-Net+.
+        Args:
+            num_input_channels (int): The number of input channels, default = 3 for RGB.
+            num_types (int): The number of types of nuclei present in the images.
+            num_layers (int): The number of layers/different regions types present.
+        """
         super().__init__()
         self.mode = mode
         self.num_types = num_types
@@ -445,9 +455,15 @@ class HoVerNetPlus(ModelABC):
     @staticmethod
     def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
         """Extract Nuclei Instance with NP and HV Map.
+        This method takes the nuclear pixel prediction output (e.g. nuclei vs 
+        background) and combines this with the hover branch output. The method then
+        determines nuclear boundaries via a watershed in order to create an 
+        instance segmentation for each nucleus in the image.
         Args:
-            np_map: prediction output
-            hv_map: prediction output
+            np_map: The nuclear pixel prediction output. E.g. nuclei vs background.
+            hv_map: The nuclear horizontal/vertical map prediction output.
+        Returns:
+            proced_pred: The output nculear instance map.
         """
         blb_raw = np_map[..., 0]
         h_dir_raw = hv_map[..., 0]
@@ -662,19 +678,35 @@ class HoVerNetPlus(ModelABC):
         if pred_layer is not None:
 
             def image2contours(image, layer_info_dict, cnt, type_class):
-
+                """Transforms image layers/regions into contours to store in dictionary.
+                Args:
+                    image (ndarray): Semantic segmentation map of different
+                        layers/regions following processing.
+                    layer_info_dict (dict): Dictionary to store layer contours in. It
+                        has the following form:
+                        layer_info = {
+                                contour: number[][],
+                                type: number,
+                        }  
+                        layer_dict = {[layer_uid: number] : layer_info}
+                    cnt (int): Counter.
+                    type_class (int): The class of the layer to be processed.
+                Returns:
+                    layer_info_dict (dict): Updated layer dict.
+                    cnt (int): Counter.
+                """
                 contours, _ = cv2.findContours(
                     image.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
                 )
                 for layer in contours:
                     coords = layer[:, 0, :]
-                    layer_info_dict[str(count)] = {
+                    layer_info_dict[str(cnt)] = {
                         "contours": coords.tolist(),
                         "type": type_class,
                     }
                     cnt += 1
 
-                return layer_info_dict, count
+                return layer_info_dict, cnt
 
             layer_list = np.unique(pred_layer)
             layer_list = np.delete(layer_list, np.where(layer_list == 0))

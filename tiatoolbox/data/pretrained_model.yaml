@@ -314,7 +314,7 @@ fcn_resnet50_unet-bcss:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernetplus-oed:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/mts/hovernetplus-oed.pth
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
     architecture:
         class: hovernet_plus.HoVerNetPlus
         kwargs:
