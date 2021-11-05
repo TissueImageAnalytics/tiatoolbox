@@ -77,6 +77,8 @@ files:
     url: [*modelroot, "samples/wsi2_4k_4k.pred.dat"]
   wsi3_20k_20k_svs:
     url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi4_512_512_svs:
+    url: [*modelroot, "samples/wsi4_512_512.svs"]
   wsi4_1k_1k_svs:
     url: [*modelroot, "samples/wsi4_1k_1k.svs"]
   wsi4_4k_4k_svs:

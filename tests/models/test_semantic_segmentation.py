@@ -464,8 +464,6 @@ def test_functional_segmentor(remote_sample, tmp_path):
     """Functional test for segmentor."""
     save_dir = pathlib.Path(f"{tmp_path}/dump")
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
-
     resolution = 2.0
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
     reader = get_wsireader(mini_wsi_svs)
@@ -634,7 +632,7 @@ def test_subclass(remote_sample, tmp_path):
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
