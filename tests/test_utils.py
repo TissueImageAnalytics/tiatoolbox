@@ -542,9 +542,7 @@ def test_sub_pixel_read_empty_bounds():
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(
-        ValueError, match="Bounds have zero size after padding and integer alignment."
-    ):
+    with pytest.raises(ValueError, match="Bounds have zero size after padding."):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -1059,7 +1057,7 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
             pad_mode="constant",
         )
 
-    with pytest.raises(ValueError, match="max_dimensions must be >= 0"):
+    with pytest.raises(ValueError, match="dimensions must be >= 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, 0, 0),

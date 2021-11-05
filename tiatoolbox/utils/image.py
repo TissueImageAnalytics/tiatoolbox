@@ -528,6 +528,9 @@ def sub_pixel_read(
     if interpolation is None:
         interpolation = "none"
 
+    if 0 in bounds2locsize(bounds)[1]:
+        raise ValueError("Bounds must have non-zero size")
+
     # Normalise padding
     padding = normalise_padding_size(padding)
 
@@ -569,7 +572,7 @@ def sub_pixel_read(
     # Check the padded bounds do not have zero size
     _, padded_bounds_size = bounds2locsize(pad_bounds(bounds, baseline_padding))
     if 0 in padded_bounds_size:
-        raise ValueError()
+        raise ValueError("Bounds have zero size after padding.")
 
     read_bounds = pad_bounds(read_bounds, interpolation_padding + baseline_padding)
     # 0 Expand to integers and find residuals
@@ -593,10 +596,10 @@ def sub_pixel_read(
     else:
         region = read_func(image, valid_int_bounds, stride, **read_kwargs)
         if region is None or 0 in region.shape:
-            raise ValueError()
+            raise ValueError("Read region is empty.")
         region_size = region.shape[:2][::-1]
         if not np.array_equal(region_size, valid_int_size):
-            raise ValueError()
+            raise ValueError("Read function returned a region of incorrect size.")
 
     # 1.5 Pad the region
     pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
