@@ -28,7 +28,7 @@ import random
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
 
-from tiatoolbox.tools.stainnorm import MacenkoNormaliser, VahadaneNormaliser
+from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
@@ -120,11 +120,11 @@ class StainAugmentation(ImageOnlyTransform):
         self.stain_matrix = stain_matrix
 
         if self.method.lower() not in {"macenko", "vahadane"}:
-            raise ValueError(f"Invalid stain extractor method: {self.method}")
-        if self.method.lower() == "macenko":
-            self.stain_normaliser = MacenkoNormaliser()
-        elif self.method.lower() == "vahadane":
-            self.stain_normaliser = VahadaneNormaliser()
+            raise ValueError(
+                f"Unsupported stain extractor method '{self.method}' for "
+                "StainAugmentation. Choose either 'vahadane' or 'macenko'."
+            )
+        self.stain_normaliser = get_normaliser(self.method.lower())
 
         self.alpha = None
         self.beta = None

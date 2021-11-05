@@ -19,29 +19,19 @@ def test_stainaugment(source_image, norm_vahadane):
     vahadane_img = imread(pathlib.Path(norm_vahadane))
 
     # Test invalid method in the input
-    with pytest.raises(ValueError, match=r".*Invalid stain extractor method.*"):
+    with pytest.raises(ValueError, match=r".*Unsupported stain extractor method.*"):
         _ = StainAugmentation(method="mosi")
 
     # 1. Testing without stain matrix.
     # Test with Vahadane stain extractor
     augmentor = StainAugmentation(
-        method="vahadane", sigma1=0.9, sigma2=0.9, augment_background=True
+        method="macenko", sigma1=3.0, sigma2=3.0, augment_background=True
     )
     augmentor.fit(source_img)
     source_img_aug = augmentor.augment()
     assert source_img_aug.dtype == source_img.dtype
     assert np.shape(source_img_aug) == np.shape(source_img)
-    assert np.mean(np.absolute(source_img_aug / 255.0 - source_img / 255.0)) > 1e-1
-
-    # Test with Vahadane stain extractor
-    augmentor = StainAugmentation(
-        method="macenko", sigma1=0.9, sigma2=0.9, augment_background=True
-    )
-    augmentor.fit(source_img)
-    source_img_aug = augmentor.augment()
-    assert source_img_aug.dtype == source_img.dtype
-    assert np.shape(source_img_aug) == np.shape(source_img)
-    assert np.mean(np.absolute(source_img_aug / 255.0 - source_img / 255.0)) > 1e-1
+    assert np.mean(np.absolute(source_img_aug / 255.0 - source_img / 255.0)) > 1e-2
 
     # 2. Testing with predefined stain matrix
     # We first extract the stain matrix of the target image and try to augment the
