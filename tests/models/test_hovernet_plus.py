@@ -25,19 +25,16 @@ import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
-from tiatoolbox.wsicore.wsireader import get_wsireader
-
+from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.transforms import imresize
 
 def test_functionality(remote_sample, tmp_path):
     """Functionality test."""
     tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("stainnorm-source"))
-    reader = get_wsireader(sample_wsi)
-
-    #
-    patch = reader.read_bounds(
-        [0, 0, 256, 256], resolution=0.25, units="mpp", coord_space="resolution"
-    )
+    patch = imread(sample_wsi)
+    patch = imresize(patch, scale_factor=0.5)
+    patch = patch[0:256, 0:256]
     batch = torch.from_numpy(patch)[None]
     model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
     fetch_pretrained_weights("hovernetplus-oed", f"{tmp_path}/weigths.pth")
