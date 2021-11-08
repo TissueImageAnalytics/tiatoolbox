@@ -28,6 +28,7 @@ from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
 
+
 def test_functionality(remote_sample, tmp_path):
     """Functionality test."""
     tmp_path = str(tmp_path)
