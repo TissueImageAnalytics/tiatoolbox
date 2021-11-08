@@ -20,11 +20,8 @@
 
 """Unit test package for HoVerNet+."""
 
-import numpy as np
 import pytest
 import torch
-import torch.nn as nn
-import sys
 
 from torch.nn.modules.module import T
 from tiatoolbox.models.architecture import fetch_pretrained_weights
