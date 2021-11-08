@@ -31,7 +31,7 @@ from tiatoolbox.wsicore.wsireader import get_wsireader
 def test_functionality(remote_sample, tmp_path):
     """Functionality test."""
     tmp_path = str(tmp_path)
-    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    sample_wsi = str(remote_sample("stainnorm-source"))
     reader = get_wsireader(sample_wsi)
 
     #
