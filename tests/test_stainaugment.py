@@ -20,10 +20,10 @@ def test_stainaugment(source_image, norm_vahadane):
 
     # Test invalid method in the input
     with pytest.raises(ValueError, match=r".*Unsupported stain extractor method.*"):
-        _ = StainAugmentation(method="mosi")
+        _ = StainAugmentation(method="invalid")
 
     # 1. Testing without stain matrix.
-    # Test with Vahadane stain extractor
+    # Test with macenko stain extractor
     augmentor = StainAugmentation(
         method="macenko", sigma1=3.0, sigma2=3.0, augment_background=True
     )

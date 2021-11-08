@@ -21,7 +21,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Staing augmentation"""
+"""Stain augmentation"""
 import copy
 import random
 
@@ -63,6 +63,7 @@ class StainAugmentation(ImageOnlyTransform):
         p (0.5): For use with 'albumentations' pipeline which specifies the probability
             of using the augmentation in a 'albumentations' pipeline. . Please refer to
             albumentations documentations for more information.
+
     Attributes:
         stain_normaliser: Fitted stain normalization class.
         stain_matrix (:class:`numpy.ndarray`): extracted stain matrix from the image
@@ -71,6 +72,7 @@ class StainAugmentation(ImageOnlyTransform):
         n_stains (int): number of stain channels in the stain concentrations.
             Expected to be 2 for H&E stained images.
         tissue_mask (:class:`numpy.ndarray`): tissue region mask in the image.
+
     Examples:
         >>> '''Using the stain augmentor in the 'albumentations' pipeline'''
         >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
