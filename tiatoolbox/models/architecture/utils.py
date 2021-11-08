@@ -20,6 +20,7 @@
 
 """Defines utlity layers and operators for models in tiatoolbox."""
 
+
 from typing import Union
 
 import numpy as np
@@ -27,32 +28,29 @@ import torch
 import torch.nn as nn
 
 
-def center_crop(
-    img: Union[np.ndarray, torch.tensor],
-    crop_shape: Union[np.ndarray, torch.tensor],
-    data_format: str = "NCHW",
-):
-    """A function to center crop image with given crop shape.
+def crop_op(x, cropping, data_format="NCHW"):
+    """Center crop image with substracted amount.
     Args:
-        img (ndarray, torch.tensor): input image, should be of 3 channels
-        crop_shape (ndarray, torch.tensor): the substracted amount in the form of
-            [substracted height, substracted width].
-        data_format (str): choose either `NCHW` or `NHWC`
+        x (torch.Tensor): Input images.
+        cropping (list): The substracted amount to center crop
+          on each axis.
+        data_format (str): Denote if the input is of `NCHW` or `NHWC`
+          layout.
     Returns:
-        (ndarray, torch.tensor) Cropped image.
+        x (torch.Tensor): Center cropped images.
     """
     if data_format not in ["NCHW", "NHWC"]:
         raise ValueError(f"Unknown input format `{data_format}`")
 
-    crop_t = crop_shape[0] // 2
-    crop_b = crop_shape[0] - crop_t
-    crop_l = crop_shape[1] // 2
-    crop_r = crop_shape[1] - crop_l
+    crop_t = cropping[0] // 2
+    crop_b = cropping[0] - crop_t
+    crop_l = cropping[1] // 2
+    crop_r = cropping[1] - crop_l
     if data_format == "NCHW":
-        img = img[:, :, crop_t:-crop_b, crop_l:-crop_r]
+        x = x[:, :, crop_t:-crop_b, crop_l:-crop_r]
     else:
-        img = img[:, crop_t:-crop_b, crop_l:-crop_r, :]
-    return img
+        x = x[:, crop_t:-crop_b, crop_l:-crop_r, :]
+    return x
 
 
 def center_crop_to_shape(
@@ -96,7 +94,7 @@ def center_crop_to_shape(
     else:
         crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
 
-    return center_crop(x, crop_shape, data_format)
+    return crop_op(x, crop_shape, data_format)
 
 
 class UpSample2x(nn.Module):

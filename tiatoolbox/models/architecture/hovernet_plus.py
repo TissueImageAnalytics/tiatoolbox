@@ -35,7 +35,7 @@ from skimage.segmentation import watershed
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
-    center_crop,
+    crop_op,
     center_crop_to_shape,
 )
 from tiatoolbox.utils import misc
@@ -430,11 +430,11 @@ class HoVerNetPlus(ModelABC):
         d = [d0, d1, d2, d3]
 
         if self.mode == "original":
-            d[0] = center_crop(d[0], [184, 184])
-            d[1] = center_crop(d[1], [72, 72])
+            d[0] = crop_op(d[0], [184, 184])
+            d[1] = crop_op(d[1], [72, 72])
         else:
-            d[0] = center_crop(d[0], [92, 92])
-            d[1] = center_crop(d[1], [36, 36])
+            d[0] = crop_op(d[0], [92, 92])
+            d[1] = crop_op(d[1], [36, 36])
 
         out_dict = OrderedDict()
         for branch_name, branch_desc in self.decoder.items():
