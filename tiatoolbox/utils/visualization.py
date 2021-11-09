@@ -21,6 +21,7 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
+from typing import Tuple, Union
 
 import cv2
 import matplotlib as mpl
@@ -164,18 +165,30 @@ def overlay_prediction_mask(
 
 
 def overlay_prediction_contours(
-    canvas, inst_dict, draw_dot=False, type_colour=None, line_thickness=2
+    canvas: np.ndarray,
+    inst_dict: dict,
+    draw_dot: bool = False,
+    type_colours: dict = None,
+    inst_colours: Union[np.ndarray, Tuple[int]] = (255, 255, 0),
+    line_thickness: int = 2,
 ):
     """Overlaying instance contours on image.
+
+    Internally, colours from `type_colours` are prioritized over
+    `inst_colours`. However, if `inst_colours` is `None` and `type_colours`
+    is not provided, random colour is generated for each instance.
 
     Args:
         canvas (ndarray): Image to draw predictions on.
         inst_dict (dict): Dictionary of instances. It is expected to be
             in the following format:
             {instance_id: {type: int, contour: List[List[int]], centroid:List[float]}.
-        draw_dot: To draw a dot for each centroid or not.
-        type_colour: A dict of {type_id : (type_name, colour)},
+        draw_dot (bool): To draw a dot for each centroid or not.
+        type_colours (dict): A dict of {type_id : (type_name, colour)},
             `type_id` is from 0-N and `colour` is a tuple of (R, G, B).
+        inst_colours (tuple, np.ndarray): A colour to assign for all instances,
+            or a list of colours to assigned for each instance in `inst_dict`. By
+            default, all instances will have RGB colour `(255, 255, 0).
         line_thickness: line thickness of contours.
 
     Returns:
@@ -184,16 +197,24 @@ def overlay_prediction_contours(
     """
     overlay = np.copy((canvas))
 
-    inst_rng_colors = random_colors(len(inst_dict))
-    inst_rng_colors = np.array(inst_rng_colors) * 255
-    inst_rng_colors = inst_rng_colors.astype(np.uint8)
+    if inst_colours is None:
+        inst_colours = random_colors(len(inst_dict))
+        inst_colours = np.array(inst_colours) * 255
+        inst_colours = inst_colours.astype(np.uint8)
+    elif isinstance(inst_colours, tuple):
+        inst_colours = np.array([inst_colours] * len(inst_dict))
+    elif not isinstance(inst_colours, np.ndarray):
+        raise ValueError(
+            f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
+        )
+    inst_colours = inst_colours.astype(np.uint8)
 
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
         inst_contour = inst_info["contour"]
-        if "type" in inst_info and type_colour is not None:
-            inst_colour = type_colour[inst_info["type"]][1]
+        if "type" in inst_info and type_colours is not None:
+            inst_colour = type_colours[inst_info["type"]][1]
         else:
-            inst_colour = (inst_rng_colors[idx]).tolist()
+            inst_colour = (inst_colours[idx]).tolist()
         cv2.drawContours(
             overlay, [np.array(inst_contour)], -1, inst_colour, line_thickness
         )

@@ -91,7 +91,7 @@ def test_overlay_instance_prediction():
     )
 
     # dummy instance dict
-    type_colour = {
+    type_colours = {
         0: ("A", (1, 0, 1)),
         1: ("B", (2, 0, 2)),
     }
@@ -109,11 +109,24 @@ def test_overlay_instance_prediction():
     }
     canvas = np.zeros(inst_map.shape + (3,), dtype=np.uint8)
     canvas = overlay_prediction_contours(
-        canvas, inst_dict, draw_dot=False, type_colour=type_colour, line_thickness=1
+        canvas, inst_dict, draw_dot=False, type_colours=type_colours, line_thickness=1
     )
     assert np.sum(canvas[..., 0].astype(np.int32) - inst_map) == 0
     assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == -12
     assert np.sum(canvas[..., 2].astype(np.int32) - inst_map) == 0
     canvas = overlay_prediction_contours(
-        canvas, inst_dict, draw_dot=True, type_colour=None, line_thickness=1
+        canvas, inst_dict, draw_dot=True, type_colours=None, line_thickness=1
     )
+
+    # test run with randomized colours
+    canvas = overlay_prediction_contours(canvas, inst_dict, inst_colours=None)
+    # test run with custom colour
+    canvas = overlay_prediction_contours(canvas, inst_dict, inst_colours=(0, 0, 1))
+    # test run with custom colour for each instance
+    inst_colours = [[0, 155, 155] for v in range(len(inst_dict))]
+    canvas = overlay_prediction_contours(
+        canvas, inst_dict, inst_colours=np.array(inst_colours)
+    )
+    # test crash
+    with pytest.raises(ValueError, match=r"`.*inst_colours`.*tuple.*"):
+        overlay_prediction_contours(canvas, inst_dict, inst_colours=inst_colours)

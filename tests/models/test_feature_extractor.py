@@ -53,7 +53,7 @@ def test_functional(remote_sample, tmp_path):
     """Test for feature extraction."""
     save_dir = pathlib.Path(f"{tmp_path}/output/")
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     _rm_dir(save_dir)  # default output dir test
