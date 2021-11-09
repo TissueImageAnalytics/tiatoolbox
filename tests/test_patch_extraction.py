@@ -51,7 +51,7 @@ def read_points_patches(
 
     patches.n = 1870
     with pytest.raises(StopIteration):
-        # skipcq: PTC-W0063
+        # skipcq
         next(patches)
 
     with pytest.raises(IndexError):
@@ -63,7 +63,7 @@ def read_points_patches(
     return data
 
 
-def testpatch_extractor(source_image):
+def test_patch_extractor(source_image):
     """Test base class patch extractor."""
     input_img = misc.imread(pathlib.Path(source_image))
     patches = patchextraction.PatchExtractor(input_img=input_img, patch_size=(20, 20))
@@ -96,7 +96,7 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
         patchextraction.get_patch_extractor("unknown")
 
 
-def test_pointspatch_extractor_image_format(
+def test_points_patch_extractor_image_format(
     sample_svs, sample_jp2, source_image, patch_extr_csv
 ):
     """Test PointsPatchExtractor returns the right object."""
@@ -140,7 +140,7 @@ def test_pointspatch_extractor_image_format(
         )
 
 
-def test_pointspatch_extractor(
+def test_points_patch_extractor(
     patch_extr_vf_image,
     patch_extr_npy_read,
     patch_extr_csv,
@@ -180,7 +180,7 @@ def test_pointspatch_extractor(
     assert np.all(data == saved_data)
 
 
-def test_pointspatch_extractor_svs(
+def test_points_patch_extractor_svs(
     sample_svs, patch_extr_svs_csv, patch_extr_svs_npy_read
 ):
     """Test PointsPatchExtractor for svs image."""
@@ -199,7 +199,9 @@ def test_pointspatch_extractor_svs(
     assert np.all(data == saved_data)
 
 
-def test_pointspatch_extractor_jp2(sample_jp2, patch_extr_jp2_csv, patch_extr_jp2_read):
+def test_points_patch_extractor_jp2(
+    sample_jp2, patch_extr_jp2_csv, patch_extr_jp2_read
+):
     """Test PointsPatchExtractor for jp2 image."""
     locations_list = pathlib.Path(patch_extr_jp2_csv)
     saved_data = np.load(str(pathlib.Path(patch_extr_jp2_read)))
@@ -261,35 +263,6 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
     img_patches_test = np.array(img_patches_test)
     assert np.all(img_patches == img_patches_test)
-
-
-def test_slidingpatch_extractor_ndpi(sample_ndpi):
-    """Test SlidingWindowPatchExtractor for ndpi image."""
-    stride = (40, 20)
-    patch_size = (400, 200)
-    input_img = pathlib.Path(sample_ndpi)
-
-    patches = patchextraction.get_patch_extractor(
-        input_img=input_img,
-        method_name="slidingwindow",
-        patch_size=patch_size,
-        resolution=1,
-        units="level",
-        stride=stride,
-    )
-
-    wsi = OpenSlideWSIReader(input_img=input_img)
-    x = 800
-    y = 0
-    patch = wsi.read_rect(
-        location=(int(x), int(y)),
-        size=patch_size,
-        resolution=1,
-        units="level",
-    )
-
-    assert np.all(patches[10] == patch)
-    assert patches[0].shape == (200, 400, 3)
 
 
 def test_get_coordinates():
@@ -475,7 +448,7 @@ def test_get_coordinates():
         )
 
 
-def test_mask_basedpatch_extractor_ndpi(sample_ndpi):
+def test_mask_based_patch_extractor_ndpi(sample_ndpi):
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
     patch_size = stride = (400, 400)

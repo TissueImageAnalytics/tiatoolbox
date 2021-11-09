@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -63,7 +63,7 @@ class ModelABC(ABC, nn.Module):
     # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
-        ...
+        ...  # pragma: no cover
 
     @staticmethod
     @abstractmethod
@@ -78,7 +78,7 @@ class ModelABC(ABC, nn.Module):
             on_gpu (bool): Whether to run inference on a GPU.
 
         """
-        ...
+        ...  # pragma: no cover
 
     @staticmethod
     def preproc(image):

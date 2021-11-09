@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -38,25 +38,25 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
-    """Split path of a file to directory path, file name and extension.
+    """Split path of a file to directory path, file name and extensions.
 
     Args:
         full_path (str or pathlib.Path): Path to a file
 
     Returns:
         tuple: Three parts of the input file path:
-            - :py:obj:`pathlib.Path` - parent directory path
-            - :py:obj:`str` - file name
-            - :py:obj:`str` - file extension
+            - :py:obj:`pathlib.Path` - Parent directory path
+            - :py:obj:`str` - File name
+            - :py:obj:`list(str)` - File extensions
 
     Examples:
         >>> from tiatoolbox import utils
-        >>> dir_path, file_name, extension =
+        >>> dir_path, file_name, extensions =
         ...     utils.misc.split_path_name_ext(full_path)
 
     """
     input_path = pathlib.Path(full_path)
-    return input_path.parent.absolute(), input_path.name, input_path.suffix
+    return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
 def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
@@ -178,10 +178,10 @@ def load_stain_matrix(stain_matrix_input):
 
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
-        _, __, ext = split_path_name_ext(stain_matrix_input)
-        if ext == ".csv":
+        _, __, suffixes = split_path_name_ext(stain_matrix_input)
+        if suffixes[-1] == ".csv":
             stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
-        elif ext == ".npy":
+        elif suffixes[-1] == ".npy":
             stain_matrix = np.load(str(stain_matrix_input))
         else:
             raise FileNotSupported(
@@ -376,9 +376,9 @@ def read_locations(input_table):
 
     """
     if isinstance(input_table, (str, pathlib.Path)):
-        _, _, suffix = split_path_name_ext(input_table)
+        _, _, suffixes = split_path_name_ext(input_table)
 
-        if suffix == ".npy":
+        if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
             if out_table.shape[1] == 2:
                 out_table = pd.DataFrame(out_table, columns=["x", "y"])
@@ -390,7 +390,7 @@ def read_locations(input_table):
                     "numpy table should be of format `x, y` or " "`x, y, class`"
                 )
 
-        elif suffix == ".csv":
+        elif suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
@@ -403,7 +403,7 @@ def read_locations(input_table):
             if out_table.shape[1] == 2:
                 out_table["class"] = None
 
-        elif suffix == ".json":
+        elif suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
             if out_table.shape[1] == 2:
                 out_table["class"] = None
@@ -671,3 +671,68 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def string_to_tuple(in_str):
+    """Splits input string to tuple at ','.
+
+    Args:
+        in_str (str): input string.
+
+    Returns:
+        tuple (tuple of str): Returns a tuple of strings by splitting in_str at ','.
+
+    """
+    return tuple(substring.strip() for substring in in_str.split(","))
+
+
+def prepare_model_cli(img_input, output_path, masks, file_types, mode):
+    """Prepares cli for running models.
+
+    Checks for existing directories to run tests.
+    Converts file path to list of file paths or
+    creates list of file paths if input is a directory.
+
+    Args:
+        img_input (str or pathlib.Path): file path to images.
+        output_path (str or pathlib.Path): output directory path.
+        masks (str or pathlib.Path): file path to masks.
+        file_types (str): file types to process using cli.
+        mode (str): wsi or tile mode.
+
+    Returns:
+        files_all (list): list of files to process.
+        masks_all (list): list of masks corresponding to input files.
+        output_path (pathlib.Path): output path
+
+    """
+    output_path = pathlib.Path(output_path)
+    file_types = string_to_tuple(in_str=file_types)
+
+    if output_path.exists():
+        raise FileExistsError("Path already exists.")
+
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    if mode not in ["wsi", "tile"]:
+        raise ValueError("Please select wsi or tile mode.")
+
+    files_all = [
+        img_input,
+    ]
+
+    if masks is None:
+        masks_all = None
+    else:
+        masks_all = [
+            masks,
+        ]
+
+    if os.path.isdir(img_input):
+        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
+
+    if os.path.isdir(str(masks)):
+        masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
+
+    return files_all, masks_all, output_path

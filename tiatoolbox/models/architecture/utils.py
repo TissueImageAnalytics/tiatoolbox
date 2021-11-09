@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -35,7 +35,8 @@ def crop_op(x, cropping, data_format="NCHW"):
           on each axis.
         data_format (str): Denote if the input is of `NCHW` or `NHWC`
           layout.
-    Return:
+
+    Returns:
         x (torch.Tensor): Center cropped images.
 
     """
@@ -77,14 +78,14 @@ class UpSample2x(nn.Module):
 
         Returns:
             ret (torch.Tensor): Input images upsampled by a factor of 2
-                via nearest neightbor interpolation. The tensor is in the shape
-                of NCHW.
+                via nearest neighbour interpolation. The tensor is the shape
+                as NCHW.
 
         """
         input_shape = list(x.shape)
-        # un-squeeze is expand_dims equivalent
-        # permute is transpose equivalent
-        # view is reshape equivalent
+        # un-squeeze is the same as expand_dims
+        # permute is the same as transpose
+        # view is the same as reshape
         x = x.unsqueeze(-1)  # bchwx1
         mat = self.unpool_mat.unsqueeze(0)  # 1xshxsw
         ret = torch.tensordot(x, mat, dims=1)  # bxcxhxwxshxsw

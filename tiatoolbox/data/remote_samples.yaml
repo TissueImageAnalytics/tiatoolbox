@@ -11,6 +11,8 @@ aliases:
 files:
   ndpi-1:
     url: [*wsis, "CMU-1.ndpi"]
+  ndpi-2:
+      url: [ *wsis, "bioformatspull2759.ndpi" ]
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
   ome-brightfield-pyramid-1-small:
@@ -75,9 +77,15 @@ files:
     url: [*modelroot, "samples/wsi2_4k_4k.pred.dat"]
   wsi3_20k_20k_svs:
     url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi4_512_512_svs:
+    url: [*modelroot, "samples/wsi4_512_512.svs"]
+  wsi4_1k_1k_svs:
+    url: [*modelroot, "samples/wsi4_1k_1k.svs"]
   wsi4_4k_4k_svs:
     url: [*modelroot, "samples/wsi3_20k_20k.svs"]
   wsi3_20k_20k_pred:
     url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
   wsi4_4k_4k_pred:
     url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
+  small_svs_tissue_mask:
+    url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]
