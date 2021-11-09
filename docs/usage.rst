@@ -57,6 +57,13 @@ Tissue Masking
 - :obj:`Tissue Mask <tiatoolbox.tools.tissuemask>`
 
 ^^^^^^^^^^^^^^^^^^
+Stain Augmentation
+^^^^^^^^^^^^^^^^^^
+
+- :obj:`Augmentation <tiatoolbox.tools.stainaugment>`
+
+
+^^^^^^^^^^^^^^^^^^
 Patch Extraction
 ^^^^^^^^^^^^^^^^^^
 
