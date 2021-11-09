@@ -2,7 +2,9 @@
    :hidden:
 
    Home page <self>
+   Usage <usage.rst>
    Jupyter Notebooks <notebooks.rst>
+   Pre-trained Models <pretrained.rst>
    API reference <_autosummary/tiatoolbox>
 
 Welcome to TIA Toolbox's documentation!

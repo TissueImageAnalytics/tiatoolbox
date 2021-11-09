@@ -63,6 +63,7 @@ coverage: ## check code coverage quickly with the default Python
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/tiatoolbox.rst
 	rm -f docs/modules.rst
+	rm -f docs/_autosummary
 	sphinx-apidoc -o docs/ tiatoolbox
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
