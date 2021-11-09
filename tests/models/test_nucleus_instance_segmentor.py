@@ -329,11 +329,11 @@ def test_functionality_travis(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
             {"units": "mpp", "resolution": resolution},
         ],
-        margin=135,
+        margin=128,
         tile_shape=[512, 512],
-        patch_input_shape=[270, 270],
-        patch_output_shape=[80, 80],
-        stride_shape=[80, 80],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
     )
 
     _rm_dir(save_dir)
