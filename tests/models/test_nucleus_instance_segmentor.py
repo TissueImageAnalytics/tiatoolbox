@@ -341,7 +341,7 @@ def test_functionality_travis(remote_sample, tmp_path):
         batch_size=1,
         num_loader_workers=0,
         num_postproc_workers=0,
-        pretrained_model="hovernet_original-kumar",
+        pretrained_model="hovernet_fast-pannuke",
     )
     inst_segmentor.predict(
         [mini_wsi_svs],
