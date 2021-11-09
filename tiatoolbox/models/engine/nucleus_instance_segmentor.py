@@ -38,7 +38,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 
-# Python has yet being able to natively pickle Object method/static method.
+# Python is yet to be able to natively pickle Object method/static method.
 # Only top-level function is passable to multi-processing as caller.
 # May need 3rd party libraries to use method/static method otherwise.
 def _process_tile_predictions(
@@ -261,7 +261,22 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     `pretrained_model` and `pretrained_weights` arguments. Additionally,
     unlike `SemanticSegmentor`, this engine assumes each input model
     will ultimately predict one single target: the nucleus instance within
-    the tiles/WSIs.
+    the tiles/WSIs. Each WSI prediction will be store under a `.dat` file
+    which contains a dictionary of form:
+
+    .. code-block:: yaml
+
+        inst_uid:
+            # top left and bottom right of bounding box
+            box: (start_x, start_y, end_x, end_y)
+            # centroid coordinates
+            centroid: (x, y)
+            # array/list of points
+            contour: [(x1, y1), (x2, y2), ...]
+            # the type of nuclei
+            type: int
+            # the probabilities of being this nuclei type
+            prob: float
 
     Args:
         model (nn.Module): Use externally defined PyTorch model for prediction with.

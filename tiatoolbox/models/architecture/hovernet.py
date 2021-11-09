@@ -79,10 +79,9 @@ class DenseBlock(nn.Module):
     This convolutional block supports only `valid` padding.
 
     References:
-        Huang, Gao, Zhuang Liu, Laurens Van Der Maaten, and Kilian Q. Weinberger.
-        "Densely connected convolutional networks."
-        2007 IEEE conference on computer vision and pattern
-        recognition. IEEE, 2017.
+        Huang, Gao, et al. "Densely connected convolutional networks."
+        Proceedings of the IEEE conference on computer vision and
+        pattern recognition. 2017.
 
     """
 
@@ -169,10 +168,9 @@ class ResidualBlock(nn.Module):
     """Residual block.
 
     References:
-        He, Kaiming, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
-        "Deep residual learning for image recognition.".
-        2016 IEEE conference on computer vision
-        and pattern recognition. IEEE, 2016.
+        He, Kaiming, et al. "Deep residual learning for image recognition."
+        Proceedings of the IEEE conference on computer vision and
+        pattern recognition. 2016.
 
     """
 
@@ -290,13 +288,13 @@ class HoVerNet(ModelABC):
         mode (str): To use architecture defined in as in original paper
           (`original`) or the one used in Pannuke paper (`fast`).
 
-    Reference:
-        Graham, Simon, et al. "Hover-net: Simultaneous segmentation
-        and classification of nuclei in multi-tissue histology images."
+    References:
+        Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
+        classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
-        Jevgenij, Gamper, et al. "PanNuke Dataset Extension, Insights
-        and Baselines". arXiv:2003.10778. https://arxiv.org/abs/2003.10778
+        Gamper, Jevgenij, et al. "Pannuke dataset extension, insights and baselines."
+        arXiv preprint arXiv:2003.10778 (2020).
 
     """
 
