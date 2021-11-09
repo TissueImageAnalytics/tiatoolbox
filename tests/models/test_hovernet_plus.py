@@ -20,11 +20,18 @@
 
 """Unit test package for HoVerNet+."""
 
+import numpy as np
 import pytest
 import torch
+import torch.nn as nn
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
+from tiatoolbox.models.architecture.hovernet_plus import (
+    DenseBlock,
+    HoVerNetPlus,
+    ResidualBlock,
+    TFSamepaddingLayer,
+)
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
 
@@ -50,3 +57,43 @@ def test_functionality(remote_sample, tmp_path):
     # test crash when providing exotic mode
     with pytest.raises(ValueError, match=r".*Invalid mode.*"):
         model = HoVerNetPlus(num_types=None, num_layers=None, mode="super")
+
+
+def test_unit_blocks():
+    """Tests for blocks within HoVerNet."""
+    # padding
+    model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
+    sample = torch.rand((1, 3, 14, 14), dtype=torch.float32)
+    output = model(sample)
+    assert np.sum(output.shape - np.array([1, 3, 14, 14])) == 0, f"{output.shape}"
+
+    # padding with stride and odd shape
+    model = nn.Sequential(TFSamepaddingLayer(7, 2), nn.Conv2d(3, 3, 7, 2, padding=0))
+    sample = torch.rand((1, 3, 15, 15), dtype=torch.float32)
+    output = model(sample)
+    assert np.sum(output.shape - np.array([1, 3, 8, 8])) == 0, f"{output.shape}"
+
+    # *
+    sample = torch.rand((1, 16, 15, 15), dtype=torch.float32)
+
+    block = ResidualBlock(16, [1, 3, 1], [16, 16, 16], 3)
+
+    assert block.shortcut is None
+    output = block(sample)
+    assert np.sum(output.shape - np.array([1, 16, 15, 15])) == 0, f"{output.shape}"
+
+    block = ResidualBlock(16, [1, 3, 1], [16, 16, 32], 3)
+    assert block.shortcut is not None
+    output = block(sample)
+    assert np.sum(output.shape - np.array([1, 32, 15, 15])) == 0, f"{output.shape}"
+
+    #
+    block = DenseBlock(16, [1, 3], [16, 16], 3)
+    output = block(sample)
+    assert output.shape[1] == 16 * 4, f"{output.shape}"
+
+    # test crash when providing exotic mode
+    with pytest.raises(ValueError, match=r".*Unbalance Unit Info.*"):
+        _ = DenseBlock(16, [1, 3, 1], [16, 16], 3)
+    with pytest.raises(ValueError, match=r".*Unbalance Unit Info.*"):
+        _ = ResidualBlock(16, [1, 3, 1], [16, 16], 3)
