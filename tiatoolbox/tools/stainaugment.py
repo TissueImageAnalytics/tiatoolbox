@@ -101,6 +101,7 @@ class StainAugmentation(ImageOnlyTransform):
         >>> # several augmented instances from the same image.
         >>> for i in range(10):
         ...     img_aug = stain_augmentor.augment()
+
     """
 
     def __init__(
@@ -148,6 +149,7 @@ class StainAugmentation(ImageOnlyTransform):
                 luminosity component of the image. The found `tissue_mask` will be used
                 to filter out background area in stain augmentation process upon user
                 setting `augment_background=False`.
+
         """
         if self.stain_matrix is None:
             self.stain_normaliser.fit(img)
@@ -171,6 +173,7 @@ class StainAugmentation(ImageOnlyTransform):
 
         Returns:
             img_augmented (:class:`numpy.ndarray`): stain augmented image.
+
         """
         augmented_concentrations = copy.deepcopy(self.source_concentrations)
         for i in range(self.n_stains):
@@ -197,6 +200,7 @@ class StainAugmentation(ImageOnlyTransform):
         Returns:
             :class:`numpy.ndarray`: Stain augmented image with the same
                 size and format as the input img.
+
         """
         self.fit(img, threshold=0.85)
         return self.augment()
