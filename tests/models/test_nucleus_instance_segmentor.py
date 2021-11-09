@@ -63,7 +63,7 @@ def _crash_func(x):
 def test_get_tile_info():
     """Test for getting tile info."""
     predictor = NucleusInstanceSegmentor(model="A")
-    # ! assuming the tiles organized as following (coming out from
+    # ! assuming the tiles organized as follows (coming out from
     # ! PatchExtractor). If this is broken, need to check back
     # ! PatchExtractor output ordering first
     # left to right, top to bottom

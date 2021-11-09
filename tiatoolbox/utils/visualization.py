@@ -178,7 +178,7 @@ def overlay_prediction_contours(
             `type_id` is from 0-N and `colour` is a tuple of (R, G, B).
         line_thickness: line thickness of contours.
 
-    Return:
+    Returns:
         (np.ndarray) The overlaid image.
 
     """

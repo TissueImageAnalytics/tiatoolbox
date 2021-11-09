@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""This module defines several metrics used in medical image analyses."""
+"""This module defines several metrics used in computational pathology."""
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -41,7 +41,7 @@ def pair_coordinates(setA, setB, radius):
         radius: valid area around a point in setA to consider a given
             coordinate in setB a candidate for matching.
 
-    Return:
+    Returns:
         pairing (ndarray): an array of shape Kx2, each item in K contains
             indices where point at index [0] in set A paired with
             point in set B at index [1].
