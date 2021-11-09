@@ -16,6 +16,7 @@ import pytest
 import zarr
 from click.testing import CliRunner
 from skimage.filters import threshold_otsu
+from skimage.metrics import peak_signal_noise_ratio
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
 
@@ -1181,8 +1182,11 @@ def test_VirtualWSIReader_read_bounds_virtual_levels(source_image):
     target = cv2.resize(
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
     )
-    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
+    offset, error, _ = phase_cross_correlation(target, region)
+    assert all(offset == 0)
+    assert error < 0.1
+    psnr = peak_signal_noise_ratio(target, region)
+    assert psnr < 50
 
 
 def test_VirtualWSIReader_read_rect_virtual_levels_mpp(source_image):
@@ -1213,7 +1217,11 @@ def test_VirtualWSIReader_read_rect_virtual_levels_mpp(source_image):
     target = cv2.resize(
         img_array[:200, :100, :], (50, 100), interpolation=cv2.INTER_CUBIC
     )
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
+    offset, error, _ = phase_cross_correlation(target, region)
+    assert all(offset == 0)
+    assert error < 0.1
+    psnr = peak_signal_noise_ratio(target, region)
+    assert psnr < 50
 
 
 def test_VirtualWSIReader_read_bounds_virtual_levels_mpp(source_image):
@@ -1249,8 +1257,11 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp(source_image):
     target = cv2.resize(
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
     )
-    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
+    offset, error, _ = phase_cross_correlation(target, region)
+    assert all(offset == 0)
+    assert error < 0.1
+    psnr = peak_signal_noise_ratio(target, region)
+    assert psnr < 50
 
 
 def test_tissue_mask_otsu(sample_svs):
@@ -1969,20 +1980,3 @@ class TestReader:
         cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
         # This control the harshness of similarity test, how much should be?
         assert np.min(cc) > 0.95
-
-    @staticmethod
-    def test_region_dump(sample_ome_tiff, reader_class):
-        from matplotlib import pyplot as plt
-
-        wsi = reader_class(sample_ome_tiff)
-        _, axs = plt.subplots(
-            nrows=1,
-            ncols=wsi.info.level_count,
-            figsize=(wsi.info.level_count, 3),
-            squeeze=False,
-        )
-        for level, ax in zip(range(wsi.info.level_count), axs[0]):
-            bounds = (0, 0, 1024, 1024)
-            region = wsi.read_bounds(bounds, resolution=level, units="level")
-            ax.imshow(region)
-        plt.savefig("tiff_level_check.png")

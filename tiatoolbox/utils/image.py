@@ -24,6 +24,7 @@ from typing import Tuple, Union
 
 import cv2
 import numpy as np
+from PIL import Image
 
 from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.utils.transforms import (
@@ -541,7 +542,8 @@ def sub_pixel_read(
     if fliplr or flipud:
         warnings.warn("Bounds have a negative size, output will be flipped.")
 
-    image = np.array(image)
+    if isinstance(image, Image.Image):
+        image = np.array(image)
 
     # Normalise none pad_mode to None
     if pad_mode.lower() == "none":
