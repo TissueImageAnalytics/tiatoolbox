@@ -24,7 +24,11 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.architecture.utils import UpSample2x, crop_op
+from tiatoolbox.models.architecture.utils import (
+    UpSample2x,
+    center_crop_to_shape,
+    crop_op,
+)
 
 
 def test_all():
@@ -51,4 +55,14 @@ def test_all():
     x = crop_op(_output[None, :, :, None], [2, 2], "NHWC")
     assert np.sum(x[0, :, :, 0] - sample) == 0
     x = crop_op(_output[None, None, :, :], [2, 2], "NCHW")
+    assert np.sum(x[0, 0, :, :] - sample) == 0
+
+    target = crop_op(output[None, :, :, :], [2, 2], "NHWC")
+    with pytest.raises(ValueError, match=r".*Unknown.*format.*"):
+        center_crop_to_shape(_output[None, :, :, None], target, "NHWCT")
+
+    x = center_crop_to_shape(_output[None, :, :, None], target, "NHWC")
+    assert np.sum(x[0, :, :, 0] - sample) == 0
+    target = np.transpose(target, (0, 3, 1, 2))
+    x = center_crop_to_shape(_output[None, None, :, :], target, "NCHW")
     assert np.sum(x[0, 0, :, :] - sample) == 0
