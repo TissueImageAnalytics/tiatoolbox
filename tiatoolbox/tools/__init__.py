@@ -19,4 +19,10 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This package contains various tools for working with WSIs."""
-from tiatoolbox.tools import patchextraction, stainextract, stainnorm
+from tiatoolbox.tools import (
+    patchextraction,
+    stainaugment,
+    stainextract,
+    stainnorm,
+    tissuemask,
+)
