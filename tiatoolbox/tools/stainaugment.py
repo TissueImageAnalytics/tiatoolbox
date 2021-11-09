@@ -107,8 +107,8 @@ class StainAugmentation(ImageOnlyTransform):
         self,
         method: str = "vahadane",
         stain_matrix: np.ndarray = None,
-        sigma1: float = 0.5,
-        sigma2: float = 0.25,
+        sigma1: float = 0.4,
+        sigma2: float = 0.2,
         augment_background: bool = False,
         always_apply=False,
         p=0.5,
@@ -172,9 +172,9 @@ class StainAugmentation(ImageOnlyTransform):
         Returns:
             img_augmented (:class:`numpy.ndarray`): stain augmented image.
         """
-        self.get_params()
         augmented_concentrations = copy.deepcopy(self.source_concentrations)
         for i in range(self.n_stains):
+            self.get_params()
             if self.augment_background:
                 augmented_concentrations[:, i] *= self.alpha
                 augmented_concentrations[:, i] += self.beta
