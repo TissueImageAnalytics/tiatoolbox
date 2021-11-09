@@ -83,6 +83,13 @@ Stain Extraction
     :members:
 
 ^^^^^^^^^^^^^^^^^^
+Stain Augmentation
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.stainaugment
+    :members:
+
+^^^^^^^^^^^^^^^^^^
 Patch Extraction
 ^^^^^^^^^^^^^^^^^^
 
