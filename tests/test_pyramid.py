@@ -9,8 +9,8 @@ from skimage import data
 from skimage.metrics import peak_signal_noise_ratio
 
 from tiatoolbox.tools import pyramid
-from tiatoolbox.wsicore import wsireader
 from tiatoolbox.utils.image import imresize
+from tiatoolbox.wsicore import wsireader
 
 
 def test_zoomify_tile_path():
