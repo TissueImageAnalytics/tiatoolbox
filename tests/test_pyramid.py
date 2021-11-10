@@ -6,9 +6,11 @@ import numpy as np
 import pytest
 from PIL import Image
 from skimage import data
+from skimage.metrics import peak_signal_noise_ratio
 
 from tiatoolbox.tools import pyramid
 from tiatoolbox.wsicore import wsireader
+from tiatoolbox.utils.image import imresize
 
 
 def test_zoomify_tile_path():
@@ -150,3 +152,15 @@ def test_zoomify_dump(tmp_path):
     assert out_path.exists()
     assert len(list((out_path / "TileGroup0").glob("0-*"))) == 1
     assert Image.open(out_path / "TileGroup0" / "0-0-0.jpg").size == (64, 64)
+
+
+def test_get_thumb_tile():
+    """Test getting a thumbnail tile (whole WSI in one tile)."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+    dz = pyramid.ZoomifyGenerator(wsi, tile_size=224)
+    thumb = dz.get_thumb_tile()
+    assert thumb.size == (224, 224)
+    cv2_thumb = imresize(array, output_size=(224, 224))
+    psnr = peak_signal_noise_ratio(cv2_thumb, np.array(thumb.convert("L")))
+    assert np.isinf(psnr) or psnr < 40
