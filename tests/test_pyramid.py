@@ -164,3 +164,19 @@ def test_get_thumb_tile():
     cv2_thumb = imresize(array, output_size=(224, 224))
     psnr = peak_signal_noise_ratio(cv2_thumb, np.array(thumb.convert("L")))
     assert np.isinf(psnr) or psnr < 40
+
+
+def test_sub_tile_levels():
+    """Test sub-tile level generation."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+
+    class MockTileGenerator(pyramid.TilePyramidGenerator):
+        @property
+        def sub_tile_level_count(self):
+            return 1
+
+    dz = MockTileGenerator(wsi, tile_size=224)
+
+    tile = dz.get_tile(0, 0, 0)
+    assert tile.size == (112, 112)
