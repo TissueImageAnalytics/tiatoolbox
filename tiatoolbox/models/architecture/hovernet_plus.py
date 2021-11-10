@@ -35,8 +35,8 @@ from skimage.segmentation import watershed
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
-    crop_op,
     center_crop_to_shape,
+    crop_op,
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
@@ -602,14 +602,22 @@ class HoVerNetPlus(ModelABC):
             ls_map = None
         elif len(raw_maps) == 1:
             # Layer segmentation only
-            ls_map = raw_maps
+            ls_map = raw_maps[0]
             np_map, hv_map, tp_map = None, None, None
 
         pred_type = tp_map
-        pred_inst = HoVerNetPlus.__proc_np_hv(np_map, hv_map)
-        pred_layer = HoVerNetPlus.__proc_ls(ls_map)
+        if np_map is not None:
+            pred_inst = HoVerNetPlus.__proc_np_hv(np_map, hv_map)
+        else:
+            pred_inst = None
+
+        if ls_map is not None:
+            pred_layer = HoVerNetPlus.__proc_ls(ls_map)
+        else:
+            pred_layer = None
 
         inst_info_dict = None
+        layer_dict = None
 
         if pred_type is not None or pred_layer is None:
             inst_id_list = np.unique(pred_inst)[1:]  # exclude background

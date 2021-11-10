@@ -39,11 +39,13 @@ from tiatoolbox.utils.transforms import imresize
 def test_functionality(remote_sample, tmp_path):
     """Functionality test."""
     tmp_path = str(tmp_path)
-    sample_wsi = str(remote_sample("stainnorm-source"))
-    patch = imread(sample_wsi)
+    sample_patch = str(remote_sample("stainnorm-source"))
+    patch = imread(sample_patch)
     patch = imresize(patch, scale_factor=0.5)
     patch = patch[0:256, 0:256]
     batch = torch.from_numpy(patch)[None]
+
+    # Test functionality with both nuclei and layer segmentation
     model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
     fetch_pretrained_weights("hovernetplus-oed", f"{tmp_path}/weigths.pth")
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
@@ -51,8 +53,47 @@ def test_functionality(remote_sample, tmp_path):
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
     output = model.postproc(output)
+    assert len(output[1]) > 0 and len(output[3]) > 0, "Must have some nuclei/layers."
+
+    # Test functionality with both nuclei segmentation and classification alone
+    model = HoVerNetPlus(num_types=6, num_layers=None, mode="fast")
+    fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    model.load_state_dict(pretrained)
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = [v[0] for v in output]
+    output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
-    assert len(output[3]) > 0, "Must have some layers."
+
+    # Test functionality with both nuclei segmentation and classification alone
+    model = HoVerNetPlus(num_types=6, num_layers=None, mode="original")
+    fetch_pretrained_weights("hovernet_original-pannuke", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    model.load_state_dict(pretrained)
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = [v[0] for v in output]
+    output = model.postproc(output)
+    assert len(output[1]) > 0, "Must have some nuclei."
+
+    # Test functionality with nuclei segmentation alone
+    model = HoVerNetPlus(num_types=None, num_layers=None, mode="fast")
+    fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    model.load_state_dict(pretrained)
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = [v[0] for v in output]
+    output = model.postproc(output)
+    assert len(output[1]) > 0, "Must have some nuclei."
+
+    # Test functionality with layer segmentation alone
+    model = HoVerNetPlus(num_types=None, num_layers=5, mode="fast")
+    fetch_pretrained_weights("hovernet-oed", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    model.load_state_dict(pretrained)
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = output[0][np.newaxis, :, :]
+    output = model.postproc(output)
+    assert len(output[1]) > 0, "Must have some layers."
 
     # test crash when providing exotic mode
     with pytest.raises(ValueError, match=r".*Invalid mode.*"):
