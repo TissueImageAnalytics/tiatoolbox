@@ -30,6 +30,8 @@ dependencies:
   - tifffile
   - torchvision
   - tqdm
+  - shapely
+  - pygeos
   - zarr
   - pip:
     - openslide-python
