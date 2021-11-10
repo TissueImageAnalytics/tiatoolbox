@@ -1,3 +1,4 @@
+albumentations>0.5.0
 Click>=7.0
 defusedxml
 glymur
@@ -9,6 +10,7 @@ opencv-python>=4.0
 openslide-python==1.1.2
 pandas
 pillow
+pygeos
 pyyaml>=5.1
 requests
 scikit-image
@@ -19,5 +21,6 @@ torchvision==0.10.1
 torch==1.9.1
 tqdm==4.60.0
 jupyterlab
+shapely
 requests
 zarr
