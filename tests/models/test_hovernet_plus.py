@@ -56,6 +56,7 @@ def test_functionality(remote_sample, tmp_path):
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
+    assert len(output) == 4, "Must contain predictions for: np, hv, tp and ls branches."
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0 and len(output[3]) > 0, "Must have some nuclei/layers."
@@ -70,6 +71,7 @@ def test_functionality(remote_sample, tmp_path):
     assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
     assert len(model.decoder["tp"]) > 0, "Decoder must contain tp branch."
     output = model.infer_batch(model, batch, on_gpu=False)
+    assert len(output) == 3, "Must contain predictions for: np, hv and tp branches."
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
@@ -80,6 +82,7 @@ def test_functionality(remote_sample, tmp_path):
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
+    assert len(output) == 3, "Must contain predictions for: np, hv and tp branches."
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
@@ -93,6 +96,7 @@ def test_functionality(remote_sample, tmp_path):
     assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
     assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
     output = model.infer_batch(model, batch, on_gpu=False)
+    assert len(output) == 2, "Must contain predictions for: np and hv branches."
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
@@ -105,6 +109,7 @@ def test_functionality(remote_sample, tmp_path):
     # Test decoder as expected
     assert len(model.decoder["ls"]) > 0, "Decoder must contain ls branch."
     output = model.infer_batch(model, batch, on_gpu=False)
+    assert len(output) > 0, "Must contain predictions for: ls branch."
     output = output[0][np.newaxis, :, :]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some layers."
