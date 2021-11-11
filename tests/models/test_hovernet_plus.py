@@ -23,7 +23,6 @@
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
