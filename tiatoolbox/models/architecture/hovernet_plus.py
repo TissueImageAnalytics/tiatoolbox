@@ -554,5 +554,3 @@ class HoVerNetPlus(ModelABC):
 
         if "tp" not in pred_dict and "np" in pred_dict:
             return pred_dict["np"], pred_dict["hv"]
-
-        return None
