@@ -148,7 +148,7 @@ def center_crop_to_shape(
     else:
         crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
 
-    return crop_op(x, crop_shape, data_format)
+    return centre_crop(x, crop_shape, data_format)
 
 
 class UpSample2x(nn.Module):
