@@ -172,6 +172,9 @@ def test_sub_tile_levels():
     wsi = wsireader.VirtualWSIReader(array)
 
     class MockTileGenerator(pyramid.TilePyramidGenerator):
+        def tile_path(self, level: int, x: int, y: int) -> Path:
+            return Path(level, x, y)
+
         @property
         def sub_tile_level_count(self):
             return 1

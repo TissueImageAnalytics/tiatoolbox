@@ -215,7 +215,10 @@ class TilePyramidGenerator:
         output_size = [self.output_tile_size] * 2
         coord = [baseline_x, baseline_y]
         if level < self.sub_tile_level_count:
-            output_size = [2 ** level] * 2
+            output_size = self.output_tile_size // 2 ** (
+                self.sub_tile_level_count - level
+            )
+            output_size = np.repeat(output_size, 2).astype(int)
             thumb = self.get_thumb_tile()
             thumb.thumbnail(output_size)
             return thumb
