@@ -47,6 +47,11 @@ def test_functionality(remote_sample, tmp_path):
 
     # Test functionality with both nuclei and layer segmentation
     model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
+    # Test decoder as expected
+    assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
+    assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
+    assert len(model.decoder["tp"]) > 0, "Decoder must contain tp branch."
+    assert len(model.decoder["ls"]) > 0, "Decoder must contain ls branch."
     fetch_pretrained_weights("hovernetplus-oed", f"{tmp_path}/weigths.pth")
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
@@ -60,6 +65,10 @@ def test_functionality(remote_sample, tmp_path):
     fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weigths.pth")
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
+    # Test decoder as expected
+    assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
+    assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
+    assert len(model.decoder["tp"]) > 0, "Decoder must contain tp branch."
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
     output = model.postproc(output)
@@ -80,6 +89,9 @@ def test_functionality(remote_sample, tmp_path):
     fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weigths.pth")
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
+    # Test decoder as expected
+    assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
+    assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
     output = model.postproc(output)
@@ -90,6 +102,8 @@ def test_functionality(remote_sample, tmp_path):
     fetch_pretrained_weights("hovernet-oed", f"{tmp_path}/weigths.pth")
     pretrained = torch.load(f"{tmp_path}/weigths.pth")
     model.load_state_dict(pretrained)
+    # Test decoder as expected
+    assert len(model.decoder["ls"]) > 0, "Decoder must contain ls branch."
     output = model.infer_batch(model, batch, on_gpu=False)
     output = output[0][np.newaxis, :, :]
     output = model.postproc(output)
