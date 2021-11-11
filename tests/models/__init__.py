@@ -18,4 +18,4 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Unit test package for tiatoolbox."""
+"""Unit test package for tiatoolbox models."""

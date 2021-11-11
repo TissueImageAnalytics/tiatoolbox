@@ -19,6 +19,9 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Visualisation and overlay functions used in tiatoolbox."""
+import colorsys
+import random
+from typing import Tuple, Union
 
 import cv2
 import matplotlib as mpl
@@ -26,7 +29,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def overlay_patch_prediction(
+def random_colors(num_colors, bright=True):
+    """Generate a number of random colors.
+
+    To get visually distinct colors, generate them in HSV space then
+    convert to RGB.
+
+    Args:
+        num_colors(int): Number of perceptively different colors to generate.
+        bright(bool): To use bright color or not.
+
+    Returns:
+        List of (r, g, b) colors.
+
+    """
+    brightness = 1.0 if bright else 0.7
+    hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
+    colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+    random.shuffle(colors)
+    return colors
+
+
+def overlay_prediction_mask(
     img: np.ndarray,
     prediction: np.ndarray,
     alpha: float = 0.35,
@@ -138,3 +162,65 @@ def overlay_patch_prediction(
     cbar.ax.tick_params(labelsize=12)
 
     return ax
+
+
+def overlay_prediction_contours(
+    canvas: np.ndarray,
+    inst_dict: dict,
+    draw_dot: bool = False,
+    type_colours: dict = None,
+    inst_colours: Union[np.ndarray, Tuple[int]] = (255, 255, 0),
+    line_thickness: int = 2,
+):
+    """Overlaying instance contours on image.
+
+    Internally, colours from `type_colours` are prioritized over
+    `inst_colours`. However, if `inst_colours` is `None` and `type_colours`
+    is not provided, random colour is generated for each instance.
+
+    Args:
+        canvas (ndarray): Image to draw predictions on.
+        inst_dict (dict): Dictionary of instances. It is expected to be
+            in the following format:
+            {instance_id: {type: int, contour: List[List[int]], centroid:List[float]}.
+        draw_dot (bool): To draw a dot for each centroid or not.
+        type_colours (dict): A dict of {type_id : (type_name, colour)},
+            `type_id` is from 0-N and `colour` is a tuple of (R, G, B).
+        inst_colours (tuple, np.ndarray): A colour to assign for all instances,
+            or a list of colours to assigned for each instance in `inst_dict`. By
+            default, all instances will have RGB colour `(255, 255, 0).
+        line_thickness: line thickness of contours.
+
+    Returns:
+        (np.ndarray) The overlaid image.
+
+    """
+    overlay = np.copy((canvas))
+
+    if inst_colours is None:
+        inst_colours = random_colors(len(inst_dict))
+        inst_colours = np.array(inst_colours) * 255
+        inst_colours = inst_colours.astype(np.uint8)
+    elif isinstance(inst_colours, tuple):
+        inst_colours = np.array([inst_colours] * len(inst_dict))
+    elif not isinstance(inst_colours, np.ndarray):
+        raise ValueError(
+            f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
+        )
+    inst_colours = inst_colours.astype(np.uint8)
+
+    for idx, [_, inst_info] in enumerate(inst_dict.items()):
+        inst_contour = inst_info["contour"]
+        if "type" in inst_info and type_colours is not None:
+            inst_colour = type_colours[inst_info["type"]][1]
+        else:
+            inst_colour = (inst_colours[idx]).tolist()
+        cv2.drawContours(
+            overlay, [np.array(inst_contour)], -1, inst_colour, line_thickness
+        )
+
+        if draw_dot:
+            inst_centroid = inst_info["centroid"]
+            inst_centroid = tuple([int(v) for v in inst_centroid])
+            overlay = cv2.circle(overlay, inst_centroid, 3, (255, 0, 0), -1)
+    return overlay
