@@ -346,6 +346,15 @@ def test_non_baseline_padded_sub_pixel_read(source_image):
         )
 
 
+def test_sub_pixel_read_pad_mode_none():
+    """Test sub_pixel_read with invalid interpolation."""
+    data = np.ones((16, 16))
+
+    bounds = (-1, -1, 5, 5)
+    region = utils.image.sub_pixel_read(data, bounds, (6, 6), pad_mode="none")
+    assert region.shape[:2] == (5, 5)
+
+
 def test_sub_pixel_read_invalid_interpolation():
     """Test sub_pixel_read with invalid interpolation."""
     data = np.zeros((16, 16))
