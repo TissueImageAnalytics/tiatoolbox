@@ -136,8 +136,8 @@ class Annotation:
         return json.dumps(self.to_feature())
 
 
-class AnnotationStoreABC(ABC):
-    """Annotation storage abstract base class."""
+class AnnotationStore(ABC):
+    """Annotation store abstract base class."""
 
     @staticmethod
     def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
@@ -180,7 +180,7 @@ class AnnotationStoreABC(ABC):
     ]
 
     @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStoreABC":
+    def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":
         """Load a store object from a path or file-like object.
 
         Args:
@@ -314,7 +314,7 @@ class AnnotationStoreABC(ABC):
         Partial update of an annotation. Providing only a geometry
         will update the geometry and leave properties unchanged.
         Providing a properties dictionary applies a patch operation to
-        the properties. Only updating the properties which are 
+        the properties. Only updating the properties which are
         given and leaving the rest unchanged. To completely replace an
         annotation use `__setitem__`.
 
@@ -714,7 +714,7 @@ class AnnotationStoreABC(ABC):
                 return file_fn(file_handle)
 
     @classmethod
-    def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStoreABC":
+    def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStore":
         geojson = cls._load_cases(
             fp=fp,
             string_fn=json.loads,
@@ -756,7 +756,7 @@ class AnnotationStoreABC(ABC):
         )
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame) -> "AnnotationStoreABC":
+    def from_dataframe(cls, df: pd.DataFrame) -> "AnnotationStore":
         store = cls()
         for _, row in df.iterrows():
             geometry = row["geometry"]
@@ -854,7 +854,7 @@ class SQLiteMetadata:
         self.con.execute("DELETE FROM metadata WHERE [key] = ?", (key,))
 
 
-class SQLiteStore(AnnotationStoreABC):
+class SQLiteStore(AnnotationStore):
     """SQLite backed annotation store."""
 
     @classmethod  # noqa: A003
@@ -1432,7 +1432,7 @@ class SQLiteStore(AnnotationStoreABC):
         return "\n".join(self.con.iterdump())
 
 
-class DictionaryStore(AnnotationStoreABC):
+class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
