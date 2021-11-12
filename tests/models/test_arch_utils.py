@@ -48,6 +48,15 @@ def test_all():
     )
     assert np.sum(_output - output) == 0
 
+    #
+    with pytest.raises(ValueError, match=r".*Unknown.*format.*"):
+        centre_crop(_output[None, :, :, None], [2, 2], "NHWCT")
+
+    x = centre_crop(_output[None, :, :, None], [2, 2], "NHWC")
+    assert np.sum(x[0, :, :, 0] - sample) == 0
+    x = centre_crop(_output[None, None, :, :], [2, 2], "NCHW")
+    assert np.sum(x[0, 0, :, :] - sample) == 0
+
 
 def test_centre_crop_operators():
     """Test for crop et. al. ."""
