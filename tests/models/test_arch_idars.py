@@ -41,3 +41,6 @@ def test_functional():
     assert tuple(img_.shape) == (224, 224, 3)
     img_ = CNNMutation.preproc(img.numpy())
     assert tuple(img_.shape) == (224, 224, 3)
+    # dummy to make runtime crash
+    img_ = CNNMutation.preproc(img.numpy() / 0.0)
+    assert tuple(img_.shape) == (224, 224, 3)
