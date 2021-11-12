@@ -20,3 +20,15 @@
 
 """Models package for the models implemented in tiatoolbox."""
 from tiatoolbox.models import abc, architecture, dataset
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from tiatoolbox.models.engine.patch_predictor import (
+    CNNPatchPredictor,
+    IOPatchPredictorConfig,
+    PatchDataset,
+    WSIPatchDataset,
+)
+from tiatoolbox.models.engine.semantic_segmentor import (
+    IOSegmentorConfig,
+    SemanticSegmentor,
+    WSIStreamDataset,
+)

@@ -6,6 +6,7 @@ channels:
   - defaults
 dependencies:
   - python=3.7
+  - albumentations
   - Click
   - cython
   - defusedxml
@@ -29,6 +30,8 @@ dependencies:
   - tifffile
   - torchvision
   - tqdm
+  - shapely
+  - pygeos
   - zarr
   - pip:
     - openslide-python
