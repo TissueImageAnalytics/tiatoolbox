@@ -64,6 +64,13 @@ def test_imresize_no_scale_factor():
     assert resized_img.shape == (100, 50, 3)
 
 
+def test_imresize_no_scale_factor_or_output_size():
+    """Test imresize with no scale_factor or output_size."""
+    img = np.zeros((2000, 1000, 3))
+    with pytest.raises(TypeError, match="One of scale_factor and output_size"):
+        utils.transforms.imresize(img)
+
+
 def test_background_composite():
     """Test for background composite."""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
