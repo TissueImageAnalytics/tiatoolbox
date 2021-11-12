@@ -309,7 +309,14 @@ class AnnotationStoreABC(ABC):
         geometry: Optional[Geometry] = None,
         properties: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Update an annotation at given key.
+        """Patch an annotation at given key.
+
+        Partial update of an annotation. Providing only a geometry
+        will update the geometry and leave properties unchanged.
+        Providing a properties dictionary applies a patch operation to
+        the properties. Only updating the properties which are 
+        given and leaving the rest unchanged. To completely replace an
+        annotation use `__setitem__`.
 
         Args:
             key(str):
@@ -317,7 +324,7 @@ class AnnotationStoreABC(ABC):
             geometry(Geometry):
                 The new geometry. If None, the geometry is not updated.
             properties(dict):
-                A dictionary of properties to update and their new
+                A dictionary of properties to patch and their new
                 new values. If None, the existing properties are not
                 altered.
 
@@ -335,9 +342,9 @@ class AnnotationStoreABC(ABC):
         geometries: Optional[Iterable[Geometry]] = None,
         properties_iter: Optional[Iterable[Properties]] = None,
     ) -> None:
-        """Bulk update of annotations.
+        """Bulk patch of annotations.
 
-        This may be more efficient than calling `update` repeatetdy
+        This may be more efficient than calling `patch` repeatetdy
         in a loop.
 
         Args:
