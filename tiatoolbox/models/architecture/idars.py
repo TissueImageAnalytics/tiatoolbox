@@ -20,8 +20,6 @@
 """Defines CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
 
 
-import numpy as np
-from PIL import Image
 from torchvision import transforms
 
 from tiatoolbox import rcParam
@@ -31,42 +29,20 @@ from tiatoolbox.utils.misc import download_data, imread
 
 # fit Vahadane stain normalisation
 TARGET_URL = "https://tiatoolbox.dcs.warwick.ac.uk/models/idars/target.jpg"
-stain_normaliser = None
-transform = transforms.Compose(
+TRANSFORM = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.5, 0.5, 0.5],
-            std=[0.1, 0.1, 0.1]),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
     ]
 )
-# transform = transforms.Compose([
-#     transforms.Resize(256),
-#     transforms.RandomResizedCrop(224),
-#     transforms.RandomCrop(224),
-#     transforms.CenterCrop(224),
-#     transforms.ToTensor(),
-#     transforms.Normalize(
-#         mean=[0.5, 0.5, 0.5],
-#         std=[0.1, 0.1, 0.1])
-# ])
 
 download_data(TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-
-target = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-# stain_normaliser = get_normaliser(method_name="vahadane")
-# stain_normaliser.fit(target)
-
-import staintools
-
-METHOD = 'vahadane'
-STANDARDIZE_BRIGHTNESS = True
-normalizer = staintools.StainNormalizer(method=METHOD)
-ref = staintools.read_image('/home/tialab-dang/local/project/tiatoolbox/local/idars/source/target.jpg')
-normalizer.fit(ref)
+TARGET = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
+STAIN_NORMALIZER = get_normaliser(method_name="vahadane")
+STAIN_NORMALIZER.fit(TARGET)
 
 
-class CNNModel1(CNNModel):
+class CNNTumor(CNNModel):
     """Retrieve the model and add custom preprocessing.
 
     This is named CNNModel1 in line with the original IDaRS paper and
@@ -83,14 +59,14 @@ class CNNModel1(CNNModel):
 
     @staticmethod
     def preproc(img):
-        img = transform(img)
+        img = TRANSFORM(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)
 
         return img
 
 
-class CNNModel2(CNNModel):
+class CNNMutation(CNNModel):
     """Retrieve the model and add custom preprocessing, including
       Vahadane stain normalisation.
 
@@ -108,32 +84,22 @@ class CNNModel2(CNNModel):
 
     @staticmethod
     def preproc(img):
+        img = img.copy()
+
         # apply stain normalisation
         # try:
-        #     luminous_normed = staintools.LuminosityStandardizer.standardize(img)
-        #     stain_normed = normalizer.transform(luminous_normed)
-        # except:
+        #     stain_normed = STAIN_NORMALIZER.transform(img)
+        # # skipcq:
+        # except:  # noqa
+        #     # bad behavior when encountering blank image
+        #     # which leads to numerical error problems,
+        #     # we do not stain-normalize these cases
         #     stain_normed = img
+        # stain_normed = STAIN_NORMALIZER.transform(img)
+        # img = TRANSFORM(stain_normed)
 
-        # # toTensor will turn image to CHW so we transpose again
-        # img = img.permute(1, 2, 0)
-        # transform = transforms.Compose([
-        #     transforms.Resize(256),
-        #     transforms.RandomResizedCrop(224),
-        #     transforms.RandomCrop(224),
-        #     transforms.CenterCrop(224),
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(
-        #         mean=[0.5, 0.5, 0.5],
-        #         std=[0.1, 0.1, 0.1])
-        # ])
-
-        # img = Image.fromarray(stain_normed.copy())
-        # img = stain_normaliser.transform(img.copy())
-
-        img = transform(img)
+        img = TRANSFORM(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)
 
         return img
-

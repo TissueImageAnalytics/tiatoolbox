@@ -240,7 +240,7 @@ googlenet-kather100k:
 resnet18-idars-tumour:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
     architecture:
-        class: idars.CNNModel1
+        class: idars.CNNTumor
         kwargs:
             backbone: resnet18
             num_classes: 2
@@ -253,7 +253,7 @@ resnet18-idars-tumour:
 resnet34-idars-msi-fold1:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold1.pth
     architecture:
-        class: idars.CNNModel2
+        class: idars.CNNMutation
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -262,11 +262,11 @@ resnet34-idars-msi-fold1:
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+            input_resolutions: [{"resolution": 1.05, "units": "mpp"}]
 resnet34-idars-msi-fold2:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold2.pth
     architecture:
-        class: idars.CNNModel2
+        class: idars.CNNMutation
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -275,11 +275,11 @@ resnet34-idars-msi-fold2:
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+            input_resolutions: [{"resolution": 1.05, "units": "mpp"}]
 resnet34-idars-msi-fold3:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold3.pth
     architecture:
-        class: idars.CNNModel2
+        class: idars.CNNMutation
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -288,11 +288,11 @@ resnet34-idars-msi-fold3:
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+            input_resolutions: [{"resolution": 1.05, "units": "mpp"}]
 resnet34-idars-msi-fold4:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi-fold4.pth
     architecture:
-        class: idars.CNNModel2
+        class: idars.CNNMutation
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -301,7 +301,7 @@ resnet34-idars-msi-fold4:
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+            input_resolutions: [{"resolution": 1.05, "units": "mpp"}]
 
 fcn-tissue_mask:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
