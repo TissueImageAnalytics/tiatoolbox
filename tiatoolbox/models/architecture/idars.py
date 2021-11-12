@@ -19,7 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 """Defines CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
 
-
+import numpy as np
 from torchvision import transforms
 
 from tiatoolbox import rcParam
@@ -38,7 +38,7 @@ TRANSFORM = transforms.Compose(
 
 download_data(TARGET_URL, save_path=f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
 TARGET = imread(f"{rcParam['TIATOOLBOX_HOME']}/idars_target.jpg")
-STAIN_NORMALIZER = get_normaliser(method_name="vahadane")
+STAIN_NORMALIZER = get_normaliser(method_name="macenko")
 STAIN_NORMALIZER.fit(TARGET)
 
 
@@ -58,7 +58,17 @@ class CNNTumor(CNNModel):
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
-    def preproc(img):
+    # skipcq: PYL-W0221
+    def preproc(img: np.ndarray):
+        """Define preprocessing steps.
+
+        Args:
+            img (np.ndarray): An image of shape HWC.
+
+        Return:
+            img (torch.Tensor): An image of shape HWC.
+
+        """
         img = img.copy()
         img = TRANSFORM(img)
         # toTensor will turn image to CHW so we transpose again
@@ -84,22 +94,32 @@ class CNNMutation(CNNModel):
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
-    def preproc(img):
+    # skipcq: PYL-W0221
+    def preproc(img: np.ndarray):
+        """Define preprocessing steps.
+
+        Args:
+            img (np.ndarray): An image of shape HWC.
+
+        Return:
+            img (torch.Tensor): An image of shape HWC.
+
+        """
         img = img.copy()
 
         # apply stain normalisation
-        # try:
-        #     stain_normed = STAIN_NORMALIZER.transform(img)
-        # # skipcq:
-        # except:  # noqa
-        #     # bad behavior when encountering blank image
-        #     # which leads to numerical error problems,
-        #     # we do not stain-normalize these cases
-        #     stain_normed = img
-        # stain_normed = STAIN_NORMALIZER.transform(img)
-        # img = TRANSFORM(stain_normed)
+        try:
+            stain_normed = STAIN_NORMALIZER.transform(img)
+        # skipcq:
+        except:  # noqa
+            # bad behavior when encountering blank image
+            # which leads to numerical error problems,
+            # we do not stain-normalize these cases
+            stain_normed = img
+        stain_normed = STAIN_NORMALIZER.transform(img)
+        img = TRANSFORM(stain_normed)
 
-        img = TRANSFORM(img)
+        # img = TRANSFORM(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)
 
