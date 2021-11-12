@@ -46,6 +46,7 @@ import uuid
 import warnings
 import zlib
 from abc import ABC
+from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
 from numbers import Number
@@ -136,7 +137,7 @@ class Annotation:
         return json.dumps(self.to_feature())
 
 
-class AnnotationStore(ABC):
+class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
 
     @staticmethod
@@ -963,7 +964,6 @@ class SQLiteStore(AnnotationStore):
             return zlib.compress(data, level=self.metadata["compression_level"])
         raise Exception("Unsupported compression method.")
 
-    @lru_cache(32)
     def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
@@ -988,7 +988,6 @@ class SQLiteStore(AnnotationStore):
             return Point(cx, cy)
         return self.deserialise_geometry(data)
 
-    @lru_cache(32)
     def deserialise_geometry(self, data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes.
 
