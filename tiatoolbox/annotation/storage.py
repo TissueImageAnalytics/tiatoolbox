@@ -303,7 +303,7 @@ class AnnotationStoreABC(ABC):
             result.append(key)
         return result
 
-    def update(
+    def patch(
         self,
         key: str,
         geometry: Optional[Geometry] = None,
@@ -327,9 +327,9 @@ class AnnotationStoreABC(ABC):
             return
         geometry = geometry if geometry is None else [geometry]
         properties = properties if properties is None else [properties]
-        self.update_many([key], geometry, properties)
+        self.patch_many([key], geometry, properties)
 
-    def update_many(
+    def patch_many(
         self,
         keys: Iterable[int],
         geometries: Optional[Iterable[Geometry]] = None,
@@ -358,7 +358,7 @@ class AnnotationStoreABC(ABC):
             geometries = (None for _ in keys)
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             properties = copy.deepcopy(properties)
-            self.update(key, geometry, properties)
+            self.patch(key, geometry, properties)
 
     def remove(self, key: str) -> None:
         """Remove annotation from the store with its unique key.
@@ -1295,7 +1295,7 @@ class SQLiteStore(AnnotationStoreABC):
             properties = json.loads(properties)
             yield key, Annotation(geometry, properties)
 
-    def update_many(
+    def patch_many(
         self,
         keys: Iterable[int],
         geometries: Optional[Iterable[Geometry]] = None,
@@ -1385,7 +1385,7 @@ class SQLiteStore(AnnotationStoreABC):
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
         if key in self:
-            self.update(key, annotation.geometry, annotation.properties)
+            self.patch(key, annotation.geometry, annotation.properties)
             return
         self.append(annotation, key)
 
@@ -1444,7 +1444,7 @@ class DictionaryStore(AnnotationStoreABC):
         self._rows[key] = {"annotation": annotation}
         return key
 
-    def update(
+    def patch(
         self,
         key: str,
         geometry: Optional[Geometry] = None,

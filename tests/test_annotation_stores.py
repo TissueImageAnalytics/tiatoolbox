@@ -308,10 +308,10 @@ class TestStore:
         key = keys[0]
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         # Geometry update
-        store.update(key, new_geometry)
+        store.patch(key, new_geometry)
         assert store[key].geometry == new_geometry
         # Properties update
-        store.update(key, properties={"abc": 123})
+        store.patch(key, properties={"abc": 123})
         assert store[key].properties["abc"] == 123
 
     @staticmethod
@@ -320,9 +320,9 @@ class TestStore:
         keys, store = fill_store(store, tmp_path / "polygon.db")
         # Geometry update
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
-        store.update_many(keys, repeat(new_geometry, 10))
+        store.patch_many(keys, repeat(new_geometry, 10))
         # Properties update
-        store.update_many(keys, properties_iter=repeat({"abc": 123}, 10))
+        store.patch_many(keys, properties_iter=repeat({"abc": 123}, 10))
 
         for _, key in enumerate(keys[:10]):
             assert store[key].geometry == new_geometry
@@ -590,7 +590,7 @@ class TestStore:
     def test_iquery_predicate_str(fill_store, store):
         """Test iquering with a predicate string."""
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], properties={"class": 123})
+        store.patch(keys[0], properties={"class": 123})
         results = store.iquery((0, 0, 1024, 1024), where="props.get('class') == 123")
         assert len(results) == 1
         assert results[0] == keys[0]
@@ -599,7 +599,7 @@ class TestStore:
     def test_iquery_predicate_callable(fill_store, store):
         """Test iquering with a predicate function."""
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], properties={"class": 123})
+        store.patch(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024),
             where=lambda props: props.get("class") == 123,
@@ -611,7 +611,7 @@ class TestStore:
     def test_iquery_predicate_pickle(fill_store, store):
         """Test iquering with a pickled predicate function."""
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], properties={"class": 123})
+        store.patch(keys[0], properties={"class": 123})
 
         results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
         assert len(results) == 1
@@ -620,7 +620,7 @@ class TestStore:
     def test_query_predicate_str(fill_store, store):
         """Test quering with a predicate string."""
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], properties={"class": 123})
+        store.patch(keys[0], properties={"class": 123})
         results = store.query((0, 0, 1024, 1024), where="props.get('class') == 123")
         assert len(results) == 1
 
@@ -628,7 +628,7 @@ class TestStore:
     def test_query_predicate_callable(fill_store, store):
         """Test quering with a predicate function."""
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], properties={"class": 123})
+        store.patch(keys[0], properties={"class": 123})
         results = store.iquery(
             (0, 0, 1024, 1024),
             where=lambda props: props.get("class") == 123,
@@ -639,7 +639,7 @@ class TestStore:
     def test_query_predicate_pickle(fill_store, store):
         """Test quering with a pickled predicate function."""
         keys, store = fill_store(store, ":memory:")
-        store.update(keys[0], properties={"class": 123})
+        store.patch(keys[0], properties={"class": 123})
 
         results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
         assert len(results) == 1
@@ -657,4 +657,4 @@ class TestStore:
         store = store()
         key = "foo"
         with pytest.raises((TypeError, AttributeError)):
-            store.update(key, geometry=None, properties={"class": 123})
+            store.patch(key, geometry=None, properties={"class": 123})
