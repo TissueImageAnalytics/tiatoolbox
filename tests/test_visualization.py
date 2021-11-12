@@ -4,6 +4,7 @@ import copy
 import pathlib
 
 import joblib
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -11,6 +12,7 @@ import pytest
 from tiatoolbox.utils.visualization import (
     overlay_prediction_contours,
     overlay_prediction_mask,
+    overlay_probability_map,
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
@@ -74,6 +76,44 @@ def test_overlay_prediction_mask(sample_wsi_dict):
     _ = overlay_prediction_mask(thumb, merged, label_info=label_info_full)
     ax = plt.subplot(1, 2, 1)
     _ = overlay_prediction_mask(thumb, merged, ax=ax)
+    _ = overlay_prediction_mask(thumb_float, merged, min_val=0.5, return_ax=False)
+
+
+def test_overlay_probability_map(sample_wsi_dict):
+    """Test functional run for overlaying merged patch prediction of wsi."""
+    mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    reader = get_wsireader(mini_wsi_svs)
+
+    thumb = reader.slide_thumbnail(resolution=2.77, units="mpp")
+
+    # * Test normal run, should not crash.
+    thumb_float = np.mean(thumb, axis=-1) / 255.0
+    output = overlay_probability_map(thumb, thumb_float, min_val=0.5)
+    output = overlay_probability_map(thumb / 256.0, thumb_float, min_val=0.5)
+    output = overlay_probability_map(thumb, thumb_float, return_ax=False)
+    assert isinstance(output, np.ndarray)
+    output = overlay_probability_map(thumb, thumb_float, return_ax=True)
+    assert isinstance(output, matplotlib.axes.Axes)
+    output = overlay_probability_map(thumb, thumb_float, ax=output)
+    assert isinstance(output, matplotlib.axes.Axes)
+
+    # * Test crash mode
+    with pytest.raises(ValueError, match=r".*min_val.*0, 1*"):
+        overlay_probability_map(thumb, thumb_float, min_val=-0.5)
+    with pytest.raises(ValueError, match=r".*min_val.*0, 1*"):
+        overlay_probability_map(thumb, thumb_float, min_val=1.5)
+    with pytest.raises(ValueError, match=r".*float `img`.*0, 1*"):
+        overlay_probability_map(np.full_like(thumb, 1.5, dtype=float), thumb_float)
+    with pytest.raises(ValueError, match=r".*float `img`.*0, 1*"):
+        overlay_probability_map(np.full_like(thumb, -0.5, dtype=float), thumb_float)
+    with pytest.raises(ValueError, match=r".*prediction.*0, 1*"):
+        overlay_probability_map(thumb, thumb_float + 1.05, thumb_float)
+    with pytest.raises(ValueError, match=r".*prediction.*0, 1*"):
+        overlay_probability_map(thumb, thumb_float - 1.05, thumb_float)
+    with pytest.raises(ValueError, match=r".*Mismatch shape*"):
+        overlay_probability_map(np.zeros([2, 2, 3]), thumb_float)
+    with pytest.raises(ValueError, match=r".*2-dimensional*"):
+        overlay_probability_map(thumb, thumb_float[..., None])
 
 
 def test_overlay_instance_prediction():

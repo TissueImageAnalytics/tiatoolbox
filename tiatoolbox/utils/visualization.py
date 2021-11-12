@@ -184,7 +184,7 @@ def overlay_prediction_mask(
     return ax
 
 
-def overlay_patch_probmap(
+def overlay_probability_map(
     img: np.ndarray,
     prediction: np.ndarray,
     alpha: float = 0.35,
@@ -197,13 +197,12 @@ def overlay_patch_probmap(
 
     Args:
         img (ndarray): Input image to overlay the results on top of. Assumed to be HW.
-        prediction (ndarray): 2D prediction map. Multi-class prediction should have
-          values ranging from 0 to N-1, where N is the number of classes.
+        prediction (ndarray): 2D prediction map. Values are expected to be between 0-1.
         alpha (float): Opacity value used for the overlay.
         colour_map (string): The colour map to use for the heatmap. `jet`
           is used as the default.
-        min_val (float): Only consider predictions greater than or equal to `min_val`. Otherwise,
-          the original WSI in those regions will be displayed.
+        min_val (float): Only consider pixels that are greater than or equal to `min_val`.
+          Otherwise, the original WSI in those regions will be displayed.
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
         return_ax (bool): Whether to return the matplotlib ax object. If not,
@@ -236,11 +235,9 @@ def overlay_patch_probmap(
         img = np.array(img * 255, dtype=np.uint8)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
-    if min_val > 0.0:
-        assert (
-            min_val >= 0 and min_val <= 1
-        ), "`min_val` must be a probability between 0 and 1"
-        prediction_sel = prediction >= min_val
+    if not (min_val >= 0.0 and min_val <= 1.0):
+        raise ValueError(f"`min_val={min_val}` is not between [0, 1]")
+    prediction_sel = prediction >= min_val
 
     overlay = img.copy()
 
