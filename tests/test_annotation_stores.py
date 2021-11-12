@@ -13,8 +13,10 @@ import pandas as pd
 import pytest
 from shapely import affinity
 from shapely.geometry import Polygon
+from shapely.geometry.point import Point
 
 from tiatoolbox.annotation.storage import (
+    Annotation,
     AnnotationStoreABC,
     DictionaryStore,
     SQLiteStore,
@@ -25,7 +27,7 @@ sqlite3.enable_callback_tracebacks(True)
 # Constants
 
 GRID_SIZE = (10, 10)
-FILLED_LEN = GRID_SIZE[0] * GRID_SIZE[1]
+FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
 
 # Helper Functions
 
@@ -92,8 +94,14 @@ def sample_predicate(props: Dict[str, Any]) -> bool:
 
 @pytest.fixture(scope="session")
 def cell_grid() -> List[Polygon]:
-    """Generate a 100x100 grid of fake cell boundary polygon annotations."""
+    """Generate a grid of fake cell boundary polygon annotations."""
     return [cell_polygon((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
+
+
+@pytest.fixture(scope="session")
+def points_grid() -> List[Polygon]:
+    """Generate a grid of fake point annotations."""
+    return [Point((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
 @pytest.fixture(scope="session")
@@ -103,7 +111,7 @@ def sample_triangle() -> Polygon:
 
 
 @pytest.fixture()
-def fill_store(cell_grid):
+def fill_store(cell_grid, points_grid):
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
@@ -111,7 +119,10 @@ def fill_store(cell_grid):
         path: Union[str, Path],
     ):
         store = store_class(path)
-        keys = store.append_many(cell_grid)
+        annotations = [Annotation(cell) for cell in cell_grid] + [
+            Annotation(point) for point in points_grid
+        ]
+        keys = store.append_many(annotations)
         return keys, store
 
     return _fill_store
@@ -261,10 +272,10 @@ class TestStore:
     def test_append_many(cell_grid, tmp_path, store):
         """Test bulk append of annotations."""
         store = store(tmp_path / "polygons")
-        keys = store.append_many(
-            cell_grid,
-            ({"class": random.randint(0, 6)} for _ in cell_grid),
-        )
+        annotations = [
+            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+        ]
+        keys = store.append_many(annotations)
         assert len(keys) == len(cell_grid)
 
     @staticmethod
@@ -272,14 +283,14 @@ class TestStore:
         """Test query with a bounding box."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.query((0, 0, 25, 25))
-        assert len(results) == 4
+        assert len(results) == 8
 
     @staticmethod
     def test_iquery_bbox(fill_store, tmp_path, store):
         """Test iquery with a bounding box."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.iquery((0, 0, 25, 25))
-        assert len(results) == 4
+        assert len(results) == 8
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
@@ -287,7 +298,7 @@ class TestStore:
         """Test iquery with a non-rectangular geometry."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         results = store.iquery(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
-        assert len(results) == 3
+        assert len(results) == 6
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
@@ -298,10 +309,10 @@ class TestStore:
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         # Geometry update
         store.update(key, new_geometry)
-        assert store[key][0] == new_geometry
+        assert store[key].geometry == new_geometry
         # Properties update
         store.update(key, properties={"abc": 123})
-        assert store[key][1]["abc"] == 123
+        assert store[key].properties["abc"] == 123
 
     @staticmethod
     def test_update_many(fill_store, tmp_path, store):
@@ -314,8 +325,8 @@ class TestStore:
         store.update_many(keys, properties_iter=repeat({"abc": 123}, 10))
 
         for _, key in enumerate(keys[:10]):
-            assert store[key][0] == new_geometry
-            assert store[key][1]["abc"] == 123
+            assert store[key].geometry == new_geometry
+            assert store[key].properties["abc"] == 123
 
     @staticmethod
     def test_keys(fill_store, tmp_path, store):
@@ -372,29 +383,29 @@ class TestStore:
     def test_getitem(fill_store, tmp_path, sample_triangle, store):
         """Test the getitem syntax."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        key = store.append(sample_triangle)
-        geometry, properties = store[key]
-        assert geometry == sample_triangle
-        assert properties == {}
+        key = store.append(Annotation(sample_triangle))
+        annotation = store[key]
+        assert annotation.geometry == sample_triangle
+        assert annotation.properties == {}
 
     @staticmethod
     def test_setitem(fill_store, tmp_path, sample_triangle, store):
         """Test the setitem syntax."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        key = store.append(sample_triangle)
+        key = store.append(Annotation(sample_triangle))
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         new_properties = {"abc": 123}
-        store[key] = (new_geometry, new_properties)
-        assert store[key] == (new_geometry, new_properties)
+        store[key] = Annotation(new_geometry, new_properties)
+        assert store[key] == Annotation(new_geometry, new_properties)
 
     @staticmethod
     def test_getitem_setitem_cycle(fill_store, tmp_path, sample_triangle, store):
         """Test getting an setting an annotation."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        key = store.append(sample_triangle, {"class": 0})
-        geometry, properties = store[key]
-        store[key] = (geometry, properties)
-        assert store[key] == (geometry, properties)
+        key = store.append(Annotation(sample_triangle, {"class": 0}))
+        annotation = store[key]
+        store[key] = annotation
+        assert store[key] == annotation
 
     @staticmethod
     def test_from_dataframe(cell_grid, store):
@@ -410,8 +421,8 @@ class TestStore:
         )
         store = store.from_dataframe(df)
         keys = list(store.keys())
-        _, properties = store[keys[0]]
-        assert "row_id" in properties
+        annotation = store[keys[0]]
+        assert "row_id" in annotation.properties
 
     @staticmethod
     def test_to_dataframe(fill_store, tmp_path, store):

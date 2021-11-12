@@ -41,10 +41,12 @@ Properties
 import copy
 import pickle
 import sqlite3
+import sys
 import uuid
 import warnings
 import zlib
 from abc import ABC
+from dataclasses import dataclass, field
 from functools import lru_cache
 from numbers import Number
 from pathlib import Path
@@ -82,7 +84,6 @@ if speedups.available:
 
 Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
-Annotation = Tuple[Geometry, Properties]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
 
@@ -92,6 +93,47 @@ ASCII_RECORD_SEP = "\x1e"
 ASCII_UNIT_SEP = "\x1f"
 ASCII_NULL = "\0"
 ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
+
+
+# Only Python 3.10+ supports using slots for dataclasses
+# https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass
+# therefore we use the following workaround to only use them when available.
+# Using slots gives a performance boost at object creation time.
+_DATACLASS_KWARGS = {"frozen": True}
+if sys.version_info >= (3, 10):
+    _DATACLASS_KWARGS["slots"] = True
+
+
+@dataclass(**_DATACLASS_KWARGS)
+class Annotation:
+    geometry: Geometry
+    properties: Properties = field(default_factory=dict)
+
+    def to_feature(self) -> Dict:
+        """
+        Return a feature representation of this annotation.
+
+        Returns
+        -------
+        feature: dict
+            A feature representation of this annotation.
+        """
+        return {
+            "type": "Feature",
+            "geometry": geometry2feature(self.geometry),
+            "properties": self.properties,
+        }
+
+    def to_geojson(self) -> str:
+        """
+        Return a GeoJSON representation of this annotation.
+
+        Returns
+        -------
+        geojson: str
+            A GeoJSON representation of this annotation.
+        """
+        return json.dumps(self.to_feature())
 
 
 class AnnotationStoreABC(ABC):
@@ -214,18 +256,14 @@ class AnnotationStoreABC(ABC):
 
     def append(
         self,
-        geometry: Geometry,
-        properties: Optional[Dict[str, Any]] = None,
+        annotation: Annotation,
         key: Optional[str] = None,
     ) -> int:
         """Insert a new annotation, returning the key.
 
         Args:
-            geometry(Geometry):
-                The shapely geometry to insert.
-            properties(dict):
-                A dictionary of JSON serialisable data associated with
-                the geometry.
+            annotation(Annotation):
+                The shapely annotation to insert.
             key(str):
                 Optional. The uniqure key used to identify the
                 annotation in the store. If not given a new UUID4 will
@@ -234,14 +272,12 @@ class AnnotationStoreABC(ABC):
         Returns:
             str: The unique key of the newly inserted annotation.
         """
-        properties_iter = properties if properties is None else [properties]
         keys = key if key is None else [key]
-        return self.append_many([geometry], properties_iter, keys)[0]
+        return self.append_many([annotation], keys)[0]
 
     def append_many(
         self,
-        geometries: Iterable[Geometry],
-        properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+        annotations: Iterable[Annotation],
         keys: Optional[Iterable[str]] = None,
     ) -> List[str]:
         """Bulk append of annotations.
@@ -249,13 +285,9 @@ class AnnotationStoreABC(ABC):
         This may be more performant than repeated calls to `append`.
 
         Args:
-            geometries(iter(Geometry)):
-                An iterable of Shapely geometries to insert.
-            properties_iter(iter(dict)):
-                An iterable of JSON serialisable properties associaed
-                with each geomettry. If None,it is assumed that each
-                geometry has no properties.
-            keys:
+            annotations(iter(Annotation)):
+                An iterable of annotations.
+            keys(iter(str)):
                 An interable of unique keys associatetd with each
                 geometry being inserted. If None, a new UUID4 is
                 generated for each geometry.
@@ -265,13 +297,9 @@ class AnnotationStoreABC(ABC):
                 A list of unqiue keys for the inserted geometries.
 
         """
-        if properties_iter is None:
-            properties_iter = ({} for _ in geometries)
-        if keys is None:
-            keys = (str(uuid.uuid4()) for _ in geometries)
         result = []
-        for geometry, properties in zip(geometries, properties_iter):
-            key = self.append(geometry, properties)
+        for annotation in annotations:
+            key = self.append(annotation)
             result.append(key)
         return result
 
@@ -295,7 +323,7 @@ class AnnotationStoreABC(ABC):
 
         """
         if key not in self:
-            self.append(geometry, properties, key)
+            self.append(Annotation(geometry, properties), key)
             return
         geometry = geometry if geometry is None else [geometry]
         properties = properties if properties is None else [properties]
@@ -364,9 +392,7 @@ class AnnotationStoreABC(ABC):
         """
         raise NotImplementedError()
 
-    def __setitem__(
-        self, key: int, annoation: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
-    ) -> None:
+    def __setitem__(self, key: int, annoation: Annotation) -> None:
         """Set an annotation in the store.
 
         If an annotation with this key already exists, it is replaced.
@@ -375,9 +401,8 @@ class AnnotationStoreABC(ABC):
         Args:
             key(str):
                 The key of he annotation to be set.
-            annotation(tuple):
-                The annotation being set, i.e. a tuple of
-                (geometry, properties).
+            annotation(Annotation):
+                The annotation being set.
 
         """
         raise NotImplementedError()
@@ -411,8 +436,8 @@ class AnnotationStoreABC(ABC):
             iter: An iterable of annotations.
 
         """
-        for _, value in self.items():
-            yield value
+        for _, annotation in self.items():
+            yield annotation
 
     def items(self) -> Iterable[Tuple[str, Annotation]]:
         """Return an iterable of all keys and annotation in the store.
@@ -468,9 +493,9 @@ class AnnotationStoreABC(ABC):
     def query(
         self,
         geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
-    ) -> List[Tuple[Geometry, Dict[str, Any]]]:
+    ) -> List[Annotation]:
         """Query the store for annotations.
 
         Args:
@@ -526,18 +551,20 @@ class AnnotationStoreABC(ABC):
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
-            (geometry, properties)
-            for geometry, properties in self.values()
+            annotation
+            for annotation in self.values()
             if (
-                self._geometry_predicate(geometry_predicate, query_geometry, geometry)
-                and self._eval_where(where, properties)
+                self._geometry_predicate(
+                    geometry_predicate, query_geometry, annotation.geometry
+                )
+                and self._eval_where(where, annotation.properties)
             )
         ]
 
     def iquery(
         self,
         geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
     ) -> List[int]:
         """Query the store for annotation keys.
@@ -599,10 +626,12 @@ class AnnotationStoreABC(ABC):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             key
-            for key, (geometry, properties) in self.items()
+            for key, annotation in self.items()
             if (
-                self._geometry_predicate(geometry_predicate, query_geometry, geometry)
-                and self._eval_where(where, properties)
+                self._geometry_predicate(
+                    geometry_predicate, query_geometry, annotation.geometry
+                )
+                and self._eval_where(where, annotation.properties)
             )
         ]
 
@@ -613,7 +642,8 @@ class AnnotationStoreABC(ABC):
             list: List of features as dictionaries.
 
         """
-        raise NotImplementedError()
+        for a in self.values():
+            yield a.to_feature()
 
     def to_geodict(self) -> Dict[str, Any]:
         """Return annotations as a dictionary in geoJSON format.
@@ -687,7 +717,7 @@ class AnnotationStoreABC(ABC):
         for feature in geojson["features"]:
             geometry = feature2geometry(feature["geometry"])
             properties = feature["properties"]
-            store.append(geometry, properties)
+            store.append(Annotation(geometry, properties))
         return store
 
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
@@ -724,13 +754,17 @@ class AnnotationStoreABC(ABC):
         for _, row in df.iterrows():
             geometry = row["geometry"]
             properties = dict(row.filter(regex="^(?!geometry|key).*$"))
-            store.append(geometry, properties)
+            store.append(Annotation(geometry, properties))
         return store
 
     def to_dataframe(self) -> pd.DataFrame:
         features = (
-            {"key": key, "geometry": geometry, "properties": properties}
-            for key, (geometry, properties) in self.items()
+            {
+                "key": key,
+                "geometry": annotation.geometry,
+                "properties": annotation.properties,
+            }
+            for key, annotation in self.items()
         )
         return pd.json_normalize(features).set_index("key")
 
@@ -846,10 +880,10 @@ class SQLiteStore(AnnotationStoreABC):
         self.metadata["compression_level"] = compression_level
 
         # Register predicate functions as custom SQLite functions
-        def wkb_predicate(name: str, wkb_a: bytes, b: bytes) -> bool:
+        def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
             a = wkb.loads(wkb_a)
-            b = self.deserialise_geometry(b)
+            b = self._unpack_geometry(b, cx, cy)
             return self._geometry_predicate(name, a, b)
 
         def pickle_where(pickle_bytes: bytes, properties: str) -> bool:
@@ -859,7 +893,7 @@ class SQLiteStore(AnnotationStoreABC):
 
         try:
             self.con.create_function(
-                "geometry_predicate", 3, wkb_predicate, deterministic=True
+                "geometry_predicate", 5, wkb_predicate, deterministic=True
             )
             self.con.create_function(
                 "pickle_where",
@@ -870,7 +904,7 @@ class SQLiteStore(AnnotationStoreABC):
         # Only Python >= 3.8 supports deterministic, fallback
         # to without this argument.
         except TypeError:
-            self.con.create_function("geometry_predicate", 3, wkb_predicate)
+            self.con.create_function("geometry_predicate", 5, wkb_predicate)
             self.con.create_function("pickle_where", 2, pickle_where)
 
         if exists:
@@ -894,7 +928,7 @@ class SQLiteStore(AnnotationStoreABC):
                 objtype TEXT,            -- Object type
                 cx INTEGER NOT NULL,     -- X of centroid/representative point
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
-                boundary BLOB NOT NULL,  -- Detailed boundary
+                boundary BLOB,           -- Detailed boundary
                 properties TEXT          -- JSON properties
             )
             """
@@ -923,12 +957,33 @@ class SQLiteStore(AnnotationStoreABC):
         raise Exception("Unsupported compression method.")
 
     @lru_cache(32)
+    def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
+        """Return the geometry using WKB data and rtree bounds index.
+
+        For space optimisation, points are stored as centroids and all
+        other geometry types are stored as WKB. This function unpacks
+        the WKB data and uses the rtree index to find the centroid for
+        points where the data is null.
+
+        Args:
+            data(bytes or str):
+                The WKB data to be unpacked.
+            cx(int):
+                The X coordinate of the centroid/representative point.
+            cy(int):
+                The Y coordinate of the centroid/representative point.
+
+        Returns:
+            Geometry: The Shapely geometry.
+
+        """
+        if data is None:
+            return Point(cx, cy)
+        return self.deserialise_geometry(data)
+
+    @lru_cache(32)
     def deserialise_geometry(self, data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes.
-
-        This default implementaion will deserialise bytes as well-known
-        binary (WKB) and srings as well-known text (WKT). This can be
-        overriden to deserialise other formats such as geoJSON etc.
 
         Args:
             data(bytes or str):
@@ -989,11 +1044,10 @@ class SQLiteStore(AnnotationStoreABC):
         self.con.commit()
         self.con.close()
 
-    def _make_token(
-        self, geometry: Geometry, properties: Dict, key: Optional[str]
-    ) -> Dict:
+    def _make_token(self, annotation: Annotation, key: Optional[str]) -> Dict:
         """Create token data dict for tokenised SQL transaction."""
         key = key or str(uuid.uuid4())
+        geometry = annotation.geometry
         if geometry.geom_type == "Point":
             boundary = None
         else:
@@ -1008,26 +1062,22 @@ class SQLiteStore(AnnotationStoreABC):
             "max_x": geometry.bounds[2],
             "max_y": geometry.bounds[3],
             "geom_type": geometry.geom_type,
-            "properties": json.dumps(properties, separators=(",", ":")),
+            "properties": json.dumps(annotation.properties, separators=(",", ":")),
         }
 
     def append_many(
         self,
-        geometries: Iterable[Geometry],
-        properties_iter: Optional[Iterable[Dict[str, Any]]] = None,
+        annotations: Iterable[Annotation],
         keys: Optional[Iterable[str]] = None,
     ) -> List[str]:
-        if properties_iter is None:
-            properties_iter = ({} for _ in geometries)
         if keys is None:
-            keys = (str(uuid.uuid4()) for _ in geometries)
+            keys = (str(uuid.uuid4()) for _ in annotations)
         cur = self.con.cursor()
         cur.execute("BEGIN")
         result = []
-        for geometry, properties, key in zip(geometries, properties_iter, keys):
+        for annotation, key in zip(annotations, keys):
             token = self._make_token(
-                geometry=geometry,
-                properties=properties,
+                annotation=annotation,
                 key=key,
             )
             cur.execute(
@@ -1105,7 +1155,7 @@ class SQLiteStore(AnnotationStoreABC):
           AND min_x <= :max_x
           AND max_y >= :min_y
           AND min_y <= :max_y
-          AND geometry_predicate(:geometry_predicate, :query_geometry, boundary)
+          AND geometry_predicate(:geometry_predicate, :query_geometry, boundary, cx, cy)
         """
         )
         query_parameters = {
@@ -1155,7 +1205,7 @@ class SQLiteStore(AnnotationStoreABC):
     ) -> List[Annotation]:
         query_geometry = geometry
         cur = self._query(
-            "boundary, properties",
+            "boundary, properties, cx, cy",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
@@ -1168,10 +1218,10 @@ class SQLiteStore(AnnotationStoreABC):
             ]
         return [
             (
-                self.deserialise_geometry(blob),
+                self._unpack_geometry(blob, cx, cy),
                 json.loads(properties),
             )
-            for blob, properties in cur.fetchall()
+            for blob, properties, cx, cy in cur.fetchall()
         ]
 
     def __len__(self) -> int:
@@ -1189,19 +1239,19 @@ class SQLiteStore(AnnotationStoreABC):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT boundary, properties
+            SELECT boundary, properties, cx, cy
               FROM annotations
              WHERE [key] = :key
             """,
             {"key": key},
         )
-        boundary, properties = cur.fetchone()
+        boundary, properties, cx, cy = cur.fetchone()
         if properties is None:
             properties = {}
         else:
             properties = json.loads(properties)
-        geometry = self.deserialise_geometry(boundary)
-        return geometry, properties
+        geometry = self._unpack_geometry(boundary, cx, cy)
+        return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
         yield from self
@@ -1239,11 +1289,11 @@ class SQLiteStore(AnnotationStoreABC):
                 break
             key, cx, cy, boundary, properties = row
             if boundary is not None:
-                geometry = self.deserialise_geometry(boundary)
+                geometry = self._unpack_geometry(boundary, cx, cy)
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(properties)
-            yield key, (geometry, properties)
+            yield key, Annotation(geometry, properties)
 
     def update_many(
         self,
@@ -1333,43 +1383,33 @@ class SQLiteStore(AnnotationStoreABC):
             )
         self.con.commit()
 
-    def __setitem__(
-        self, key: str, annotation: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
-    ) -> None:
-        geometry, properties = annotation
-        properties = copy.deepcopy(properties)
+    def __setitem__(self, key: str, annotation: Annotation) -> None:
         if key in self:
-            self.update(key, geometry, properties)
+            self.update(key, annotation.geometry, annotation.properties)
             return
-        self.append(geometry, properties, key)
+        self.append(annotation, key)
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame()
-        cur = self.con.cursor()
-        cur.execute("SELECT [key], boundary, properties FROM annotations")
-        while True:
-            rows = cur.fetchmany(100)
-            if len(rows) == 0:
-                break
-            rows = (
-                {
-                    "key": key,
-                    "geometry": geometry,
-                    "properties": properties,
-                }
-                for key, (geometry, properties) in self.items()
-            )
-            df = df.append(pd.json_normalize(rows))
+        df_rows = (
+            {
+                "key": key,
+                "geometry": annotation.geometry,
+                "properties": annotation.properties,
+            }
+            for key, annotation in self.items()
+        )
+        df = df.append(pd.json_normalize(df_rows))
         return df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         return (
             {
                 "type": "Feature",
-                "geometry": geometry2feature(geometry),
-                "properties": properties,
+                "geometry": geometry2feature(annotation.geometry),
+                "properties": annotation.properties,
             }
-            for geometry, properties in self.values()
+            for annotation in self.values()
         )
 
     def commit(self) -> None:
@@ -1390,24 +1430,18 @@ class DictionaryStore(AnnotationStoreABC):
 
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
         super().__init__()
-        self._features = {}
+        self._rows = {}
         self.connection = connection
 
     def append(
         self,
-        geometry: Geometry,
-        properties: Optional[Dict[str, Any]] = None,
+        annotation: Annotation,
         key: Optional[str] = None,
     ) -> int:
-        if properties is None:
-            properties = {}
-        if not isinstance(geometry, (Polygon, Point, LineString)):
+        if not isinstance(annotation.geometry, (Polygon, Point, LineString)):
             raise TypeError("Invalid geometry type.")
         key = key or str(uuid.uuid4())
-        self._features[key] = {
-            "geometry": geometry,
-            "properties": properties,
-        }
+        self._rows[key] = {"annotation": annotation}
         return key
 
     def update(
@@ -1417,50 +1451,38 @@ class DictionaryStore(AnnotationStoreABC):
         properties: Optional[Dict[str, Any]] = None,
     ) -> None:
         if key not in self:
-            self.append(geometry, properties, key)
+            self.append(Annotation(geometry, properties), key)
             return
-        existing_geometry, existing_properties = self[key]
-        geometry = geometry or existing_geometry
-        update = copy.copy(properties or {})
-        existing_properties.update(update)
-        self[key] = (geometry, existing_properties)
+        existing = self[key]
+        geometry = geometry or existing.geometry
+        properties = properties or {}
+        new_properties = copy.deepcopy(existing.properties)
+        new_properties.update(properties)
+        self[key] = Annotation(geometry, new_properties)
 
     def remove(self, key: str) -> None:
-        del self._features[key]
-
-    def features(self) -> Generator[Dict[str, Any], None, None]:
-        return (
-            {
-                "type": "Feature",
-                "geometry": geometry2feature(feature["geometry"]),
-                "properties": feature["properties"],
-            }
-            for feature in self._features.values()
-        )
+        del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
-        feature = self._features[key]
-        return feature["geometry"], feature["properties"]
+        return self._rows[key]["annotation"]
 
-    def __setitem__(
-        self, key: str, record: Tuple[Geometry, Union[Dict[str, Any], pd.Series]]
-    ) -> None:
-        geometry, properties = record
-        properties = dict(properties)
-        self._features[key] = {"geometry": geometry, "properties": properties}
+    def __setitem__(self, key: str, annotation: Annotation) -> None:
+        if key in self._rows:
+            self._rows[key]["annotation"] = annotation
+        self._rows[key]["annotation"] = annotation
 
     def __contains__(self, key: str) -> bool:
-        return key in self._features
+        return key in self._rows
 
     def __iter__(self) -> Iterable[str]:
         yield from self.keys()
 
     def items(self) -> Generator[Tuple[str, Annotation], None, None]:
-        for key, value in self._features.items():
-            yield key, (value["geometry"], value["properties"])
+        for key, row in self._rows.items():
+            yield key, row["annotation"]
 
     def __len__(self) -> int:
-        return len(self._features)
+        return len(self._rows)
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
