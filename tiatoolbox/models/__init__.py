@@ -14,9 +14,21 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Models package for the models implemented in tiatoolbox."""
 from tiatoolbox.models import abc, architecture, dataset
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from tiatoolbox.models.engine.patch_predictor import (
+    CNNPatchPredictor,
+    IOPatchPredictorConfig,
+    PatchDataset,
+    WSIPatchDataset,
+)
+from tiatoolbox.models.engine.semantic_segmentor import (
+    IOSegmentorConfig,
+    SemanticSegmentor,
+    WSIStreamDataset,
+)

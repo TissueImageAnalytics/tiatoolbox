@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -111,6 +111,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
             interpolation = "cubic"
         else:
             interpolation = "area"
+
+    if img.dtype == np.float16:
+        img = img.astype(np.float32)
+
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
     # Resize the image

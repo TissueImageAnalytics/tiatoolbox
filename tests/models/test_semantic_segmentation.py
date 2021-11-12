@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 """Tests for Semantic Segmentor."""
@@ -36,8 +36,8 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import crop_op
-from tiatoolbox.models.controller.semantic_segmentor import (
+from tiatoolbox.models.architecture.utils import centre_crop
+from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
@@ -45,7 +45,8 @@ from tiatoolbox.models.controller.semantic_segmentor import (
 from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_TRAVIS = True
+ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 # ----------------------------------------------------
 
 
@@ -106,7 +107,7 @@ class _CNNTo1(ModelABC):
         hw = np.array(img_list.shape[2:])
         with torch.inference_mode():  # do not compute gradient
             logit_list = model(img_list)
-            logit_list = crop_op(logit_list, hw // 2)
+            logit_list = centre_crop(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
             prob_list = F.relu(logit_list)
 
@@ -259,7 +260,7 @@ def test_functional_wsi_stream_dataset(remote_sample):
 
 
 # -------------------------------------------------------------------------------------
-# Controller
+# Engine
 # -------------------------------------------------------------------------------------
 
 
@@ -461,11 +462,16 @@ def test_functional_segmentor_merging(tmp_path):
 
 def test_functional_segmentor(remote_sample, tmp_path):
     """Functional test for segmentor."""
-    save_dir = pathlib.Path(tmp_path)
+    save_dir = pathlib.Path(f"{tmp_path}/dump")
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
-    mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
-    mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
+    resolution = 2.0
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    reader = get_wsireader(mini_wsi_svs)
+    thumb = reader.slide_thumbnail(resolution=resolution, units="baseline")
+    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    imwrite(mini_wsi_jpg, thumb)
+    mini_wsi_msk = f"{tmp_path}/mini_mask.jpg"
+    imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
     _rm_dir("output")  # default output dir test
@@ -482,8 +488,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        resolution=1.0,
+        patch_input_shape=(512, 512),
+        resolution=resolution,
         units="mpp",
         crash_on_exception=False,
     )
@@ -493,8 +499,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[2048, 2048],
-        resolution=1.0,
+        patch_input_shape=[512, 512],
+        resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,
     )
@@ -506,10 +512,10 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        patch_output_shape=(1024, 1024),
+        patch_input_shape=(512, 512),
+        patch_output_shape=(512, 512),
         stride_shape=(512, 512),
-        resolution=1.0,
+        resolution=1 / resolution,
         units="baseline",
         crash_on_exception=False,
     )
@@ -520,8 +526,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
     ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
+        patch_input_shape=[512, 512],
+        patch_output_shape=[512, 512],
         stride_shape=[512, 512],
     )
 
@@ -550,11 +556,11 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # * test running with mask and svs
     # * also test merging prediction at designated resolution
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        save_resolution={"units": "baseline", "resolution": 0.25},
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[{"units": "mpp", "resolution": resolution}],
+        save_resolution={"units": "mpp", "resolution": resolution},
+        patch_input_shape=[512, 512],
+        patch_output_shape=[256, 256],
         stride_shape=[512, 512],
     )
     _rm_dir(save_dir)
@@ -626,10 +632,9 @@ def test_subclass(remote_sample, tmp_path):
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
-    thumb = thumb[1024:1536, 1024:1536, :]
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
@@ -637,14 +642,14 @@ def test_functional_pretrained(remote_sample, tmp_path):
         batch_size=1, pretrained_model="fcn-tissue_mask"
     )
 
-    # _rm_dir(save_dir)
-    # semantic_segmentor.predict(
-    #     [mini_wsi_svs],
-    #     mode="wsi",
-    #     on_gpu=ON_GPU,
-    #     crash_on_exception=True,
-    #     save_dir=f"{save_dir}/raw/",
-    # )
+    _rm_dir(save_dir)
+    semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=f"{save_dir}/raw/",
+    )
 
     _rm_dir(save_dir)
 
@@ -707,7 +712,7 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     _rm_dir(save_dir)
-    wsi_breast = pathlib.Path(remote_sample)
+    wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     semantic_segmentor = SemanticSegmentor(
         num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
     )
@@ -722,7 +727,7 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
     _cache_pred = np.load(pathlib.Path(remote_sample("wsi4_4k_4k_pred")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = np.argmax(_test_pred, axis=-1)
-    assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-6
+    assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-2
     _rm_dir(save_dir)
 
 
