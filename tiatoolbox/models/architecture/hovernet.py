@@ -277,6 +277,53 @@ class ResidualBlock(nn.Module):
         return feat
 
 
+def create_decoder_branch(out_ch=2, ksize=5):
+    """Helper to create a decoder branch."""
+    modules = [
+        ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
+        ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
+        (
+            "convf",
+            nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
+        ),
+    ]
+    u3 = nn.Sequential(OrderedDict(modules))
+
+    modules = [
+        ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
+        ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
+        (
+            "convf",
+            nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
+        ),
+    ]
+    u2 = nn.Sequential(OrderedDict(modules))
+
+    modules = [
+        ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
+        (
+            "conva",
+            nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
+        ),
+    ]
+    u1 = nn.Sequential(OrderedDict(modules))
+
+    modules = [
+        ("bn", nn.BatchNorm2d(64, eps=1e-5)),
+        ("relu", nn.ReLU(inplace=True)),
+        (
+            "conv",
+            nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
+        ),
+    ]
+    u0 = nn.Sequential(OrderedDict(modules))
+
+    decoder = nn.Sequential(
+        OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
+    )
+    return decoder
+
+
 class HoVerNet(ModelABC):
     """HoVer-Net Architecture.
 
@@ -330,52 +377,6 @@ class HoVerNet(ModelABC):
         self.d3 = ResidualBlock(1024, [1, 3, 1], [512, 512, 2048], 3, stride=2)
 
         self.conv_bot = nn.Conv2d(2048, 1024, 1, stride=1, padding=0, bias=False)
-
-        def create_decoder_branch(out_ch=2, ksize=5):
-            """Helper to create a decoder branch."""
-            modules = [
-                ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
-                ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
-                (
-                    "convf",
-                    nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u3 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
-                ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
-                (
-                    "convf",
-                    nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u2 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
-                (
-                    "conva",
-                    nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u1 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("bn", nn.BatchNorm2d(64, eps=1e-5)),
-                ("relu", nn.ReLU(inplace=True)),
-                (
-                    "conv",
-                    nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
-                ),
-            ]
-            u0 = nn.Sequential(OrderedDict(modules))
-
-            decoder = nn.Sequential(
-                OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
-            )
-            return decoder
 
         ksize = 5 if mode == "original" else 3
         if num_types is None:

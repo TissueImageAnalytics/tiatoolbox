@@ -34,20 +34,23 @@ from skimage.segmentation import watershed
 
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.hovernet import (
-    DenseBlock,
+    HoVerNet,
     ResidualBlock,
     TFSamepaddingLayer,
+    create_decoder_branch,
 )
-from tiatoolbox.models.architecture.utils import UpSample2x, centre_crop
+from tiatoolbox.models.architecture.utils import UpSample2x
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
 
 
-class HoVerNetPlus(ModelABC):
+class HoVerNetPlus(HoVerNet):
     """Initialise HoVer-Net+.
+
     HoVer-Net+ takes an RGB input image, and provides the option to simultaneously
     segment and classify the nuclei present, aswell as semantically segment different
     regions or layers in the images.
+
     """
 
     def __init__(
@@ -58,15 +61,18 @@ class HoVerNetPlus(ModelABC):
         mode: str = "original",
     ):
         """Initialise HoVer-Net+.
+
         Args:
             num_input_channels (int): The number of input channels, default = 3 for RGB.
             num_types (int): The number of types of nuclei present in the images.
             num_layers (int): The number of layers/different regions types present.
+
         """
         super().__init__()
         self.mode = mode
         self.num_types = num_types
         self.num_layers = num_layers
+        ksize = 5 if mode == "original" else 3
 
         if mode not in ["original", "fast"]:
             raise ValueError(
@@ -94,53 +100,6 @@ class HoVerNetPlus(ModelABC):
 
         self.conv_bot = nn.Conv2d(2048, 1024, 1, stride=1, padding=0, bias=False)
 
-        def create_decoder_branch(out_ch=2, ksize=5):
-            """Helper to create a decoder branch."""
-            modules = [
-                ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
-                ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
-                (
-                    "convf",
-                    nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u3 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
-                ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
-                (
-                    "convf",
-                    nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u2 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
-                (
-                    "conva",
-                    nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u1 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("bn", nn.BatchNorm2d(64, eps=1e-5)),
-                ("relu", nn.ReLU(inplace=True)),
-                (
-                    "conv",
-                    nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
-                ),
-            ]
-            u0 = nn.Sequential(OrderedDict(modules))
-
-            decoder = nn.Sequential(
-                OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
-            )
-            return decoder
-
-        ksize = 5 if mode == "original" else 3
         if num_types is None and num_layers is None:
             self.decoder = nn.ModuleDict(
                 OrderedDict(
@@ -182,145 +141,19 @@ class HoVerNetPlus(ModelABC):
 
         self.upsample2x = UpSample2x()
 
-    # skipcq: PYL-W0221
-    def forward(self, imgs: torch.Tensor):
-        """Logic for using layers defined in init.
-        This method defines how layers are used in forward operation.
-        Args:
-            imgs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
-        Returns:
-            output (dict): A dictionary containing the inference output.
-                The expected format os {decoder_name: prediction}.
-        """
-        imgs = imgs / 255.0  # to 0-1 range to match XY
-
-        d0 = self.conv0(imgs)
-        d0 = self.d0(d0)
-        d1 = self.d1(d0)
-        d2 = self.d2(d1)
-        d3 = self.d3(d2)
-        d3 = self.conv_bot(d3)
-        d = [d0, d1, d2, d3]
-
-        if self.mode == "original":
-            d[0] = centre_crop(d[0], [184, 184])
-            d[1] = centre_crop(d[1], [72, 72])
-        else:
-            d[0] = centre_crop(d[0], [92, 92])
-            d[1] = centre_crop(d[1], [36, 36])
-
-        out_dict = OrderedDict()
-        for branch_name, branch_desc in self.decoder.items():
-            u3 = self.upsample2x(d[-1]) + d[-2]
-            u3 = branch_desc[0](u3)
-
-            u2 = self.upsample2x(u3) + d[-3]
-            u2 = branch_desc[1](u2)
-
-            u1 = self.upsample2x(u2) + d[-4]
-            u1 = branch_desc[2](u1)
-
-            u0 = branch_desc[3](u1)
-            out_dict[branch_name] = u0
-
-        return out_dict
-
-    @staticmethod
-    def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
-        """Extract Nuclei Instance with NP and HV Map.
-        This method takes the nuclear pixel prediction output (e.g. nuclei vs
-        background) and combines this with the hover branch output. The method then
-        determines nuclear boundaries via a watershed in order to create an
-        instance segmentation for each nucleus in the image.
-        Args:
-            np_map: The nuclear pixel prediction output. E.g. nuclei vs background.
-            hv_map: The nuclear horizontal/vertical map prediction output.
-        Returns:
-            proced_pred: The output nculear instance map.
-        """
-        blb_raw = np_map[..., 0]
-        h_dir_raw = hv_map[..., 0]
-        v_dir_raw = hv_map[..., 1]
-
-        # processing
-        blb = np.array(blb_raw >= 0.5, dtype=np.int32)
-
-        blb = measurements.label(blb)[0]
-        blb = remove_small_objects(blb, min_size=10)
-        blb[blb > 0] = 1  # background is 0 already
-
-        h_dir = cv2.normalize(
-            h_dir_raw,
-            None,
-            alpha=0,
-            beta=1,
-            norm_type=cv2.NORM_MINMAX,
-            dtype=cv2.CV_32F,
-        )
-        v_dir = cv2.normalize(
-            v_dir_raw,
-            None,
-            alpha=0,
-            beta=1,
-            norm_type=cv2.NORM_MINMAX,
-            dtype=cv2.CV_32F,
-        )
-
-        sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=21)
-        sobelv = cv2.Sobel(v_dir, cv2.CV_64F, 0, 1, ksize=21)
-
-        sobelh = 1 - (
-            cv2.normalize(
-                sobelh,
-                None,
-                alpha=0,
-                beta=1,
-                norm_type=cv2.NORM_MINMAX,
-                dtype=cv2.CV_32F,
-            )
-        )
-        sobelv = 1 - (
-            cv2.normalize(
-                sobelv,
-                None,
-                alpha=0,
-                beta=1,
-                norm_type=cv2.NORM_MINMAX,
-                dtype=cv2.CV_32F,
-            )
-        )
-
-        overall = np.maximum(sobelh, sobelv)
-        overall = overall - (1 - blb)
-        overall[overall < 0] = 0
-
-        dist = (1.0 - overall) * blb
-        # * nuclei values form mountains so inverse to get basins
-        dist = -cv2.GaussianBlur(dist, (3, 3), 0)
-
-        overall = np.array(overall >= 0.4, dtype=np.int32)
-
-        marker = blb - overall
-        marker[marker < 0] = 0
-        marker = binary_fill_holes(marker).astype("uint8")
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
-        marker = measurements.label(marker)[0]
-        marker = remove_small_objects(marker, min_size=10)
-
-        proced_pred = watershed(dist, markers=marker, mask=blb)
-
-        return proced_pred
-
     @staticmethod
     def __proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
+
         This function takes the layer segmentation map and applies a gaussian blur to
         remove spurious segmentations.
+
         Args:
             ls_map: The input predicted segmentation map.
+
         Returns:
             ls_map: The processed segmentation map.
+
         """
         ls_map = np.squeeze(ls_map.astype("float32"))
         ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
@@ -333,10 +166,12 @@ class HoVerNetPlus(ModelABC):
     # skipcq: PYL-W0221
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
+
         Args:
             raw_maps (list(ndarray)): list of prediction output of each head and
                 assumed to be in the order of [np, hv, tp, ls] (match with the output
                 of `infer_batch`).
+
         Returns:
             inst_map (ndarray): pixel-wise nuclear instance segmentation
                 prediction.
@@ -360,6 +195,7 @@ class HoVerNetPlus(ModelABC):
             >>>         type: number,
             >>> }
             >>> layer_dict = {[layer_uid: number] : layer_info}
+
         """
         if len(raw_maps) == 4:
             # Nuclei and layer segmentation
@@ -464,6 +300,7 @@ class HoVerNetPlus(ModelABC):
 
             def image2contours(image, layer_info_dict, cnt, type_class):
                 """Transforms image layers/regions into contours to store in dictionary.
+
                 Args:
                     image (ndarray): Semantic segmentation map of different
                         layers/regions following processing.
@@ -476,9 +313,11 @@ class HoVerNetPlus(ModelABC):
                         layer_dict = {[layer_uid: number] : layer_info}
                     cnt (int): Counter.
                     type_class (int): The class of the layer to be processed.
+
                 Returns:
                     layer_info_dict (dict): Updated layer dict.
                     cnt (int): Counter.
+
                 """
                 contours, _ = cv2.findContours(
                     image.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
@@ -507,13 +346,16 @@ class HoVerNetPlus(ModelABC):
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch.
+
         This contains logic for forward operation as well as batch i/o
         aggregation.
+
         Args:
             model (nn.Module): PyTorch defined model.
             batch_data (ndarray): a batch of data generated by
                 torch.utils.data.DataLoader.
             on_gpu (bool): Whether to run inference on a GPU.
+
         """
         patch_imgs = batch_data
 
