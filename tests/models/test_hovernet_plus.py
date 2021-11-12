@@ -93,19 +93,6 @@ def test_functionality(remote_sample, tmp_path):
     output = model.postproc(output)
     assert len(output[3]) > 0, "Must have some layers."
 
-    patch = patch_pre[0:270, 0:270]
-    batch = torch.from_numpy(patch)[None]
-    # Test functionality with nuclei segmentation alone for original mode
-    model = HoVerNetPlus(num_types=None, num_layers=None, mode="original")
-    fetch_pretrained_weights("hovernet_original-kumar", f"{tmp_path}/weigths.pth")
-    pretrained = torch.load(f"{tmp_path}/weigths.pth")
-    model.load_state_dict(pretrained, strict=False)
-    output = model.infer_batch(model, batch, on_gpu=False)
-    assert len(output) == 2, "Must contain predictions for: np and hv branches."
-    output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
-
     # test crash when providing exotic mode
     with pytest.raises(ValueError, match=r".*Invalid mode.*"):
         model = HoVerNetPlus(num_types=None, num_layers=None, mode="super")
