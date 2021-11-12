@@ -17,7 +17,7 @@ from shapely.geometry.point import Point
 
 from tiatoolbox.annotation.storage import (
     Annotation,
-    AnnotationStoreABC,
+    AnnotationStore,
     DictionaryStore,
     SQLiteStore,
 )
@@ -115,7 +115,7 @@ def fill_store(cell_grid, points_grid):
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
-        store_class: AnnotationStoreABC,
+        store_class: AnnotationStore,
         path: Union[str, Path],
     ):
         store = store_class(path)
