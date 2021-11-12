@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -386,12 +386,13 @@ class CNNPatchPredictor:
             return_probabilities (bool): Whether to return per-class probabilities.
             return_labels (bool): Whether to return the labels with the predictions.
             on_gpu (bool): whether to run model on the GPU.
-            patch_input_shape (tuple): Size of patches input to the model. Patches are at
-              requested read resolution, not with respect to level 0, and must be
+            patch_input_shape (tuple): Size of patches input to the model. Patches
+              are at requested read resolution, not with respect to level 0, and must be
               positive.
             stride_shape (tuple): Stride using during tile and WSI processing.
               Stride is at requested read resolution, not with respect to to level
-              0, and must be positive. If not provided, `stride_shape=patch_input_shape`.
+              0, and must be positive. If not provided,
+              `stride_shape=patch_input_shape`.
             resolution (float): Resolution used for reading the image. Please see
                 :obj:`WSIReader` for details.
             units (str): Units of resolution used for reading the image. Choose from

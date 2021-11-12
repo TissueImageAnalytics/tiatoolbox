@@ -59,6 +59,7 @@ class CNNTumor(CNNModel):
 
     @staticmethod
     def preproc(img):
+        img = img.copy()
         img = TRANSFORM(img)
         # toTensor will turn image to CHW so we transpose again
         img = img.permute(1, 2, 0)

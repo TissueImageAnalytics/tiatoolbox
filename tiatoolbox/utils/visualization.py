@@ -68,8 +68,8 @@ def overlay_prediction_mask(
         label_info (dict): A dictionary contains the mapping for each integer value
           within `prediction` to its string and color. [int] : (str, (int, int, int)).
           By default, integer will be taken as label and color will be random.
-        min_val (float): Only consider predictions greater than or equal to `min_val`. Otherwise,
-          the original WSI in those regions will be displayed.
+        min_val (float): Only consider predictions greater than or equal to `min_val`.
+          Otherwise, the original WSI in those regions will be displayed.
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
         return_ax (bool): Whether to return the matplotlib ax object. If not,
@@ -201,8 +201,8 @@ def overlay_probability_map(
         alpha (float): Opacity value used for the overlay.
         colour_map (string): The colour map to use for the heatmap. `jet`
           is used as the default.
-        min_val (float): Only consider pixels that are greater than or equal to `min_val`.
-          Otherwise, the original WSI in those regions will be displayed.
+        min_val (float): Only consider pixels that are greater than or equal to
+          `min_val`. Otherwise, the original WSI in those regions will be displayed.
         alpha (float): Opacity value used for the overlay.
         ax (ax): Matplotlib ax object.
         return_ax (bool): Whether to return the matplotlib ax object. If not,
@@ -223,19 +223,23 @@ def overlay_probability_map(
             )
         )
 
-    assert np.issubdtype(
-        prediction.dtype, np.floating
-    ), "`prediction` must be of type float"
-    if not (prediction.max() <= 1.0 and prediction.min() >= 0):
+    prediction = prediction.astype(np.float32)
+    if prediction.max() > 1.0:
+        raise ValueError("Not support float `prediction` outside [0, 1].")
+    if prediction.min() < 0:
         raise ValueError("Not support float `prediction` outside [0, 1].")
 
     if np.issubdtype(img.dtype, np.floating):
-        if not (img.max() <= 1.0 and img.min() >= 0):
+        if img.max() > 1.0:
+            raise ValueError("Not support float `img` outside [0, 1].")
+        if img.min() < 0:
             raise ValueError("Not support float `img` outside [0, 1].")
         img = np.array(img * 255, dtype=np.uint8)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
-    if not (min_val >= 0.0 and min_val <= 1.0):
+    if min_val < 0.0:
+        raise ValueError(f"`min_val={min_val}` is not between [0, 1]")
+    if min_val > 1.0:
         raise ValueError(f"`min_val={min_val}` is not between [0, 1]")
     prediction_sel = prediction >= min_val
 
