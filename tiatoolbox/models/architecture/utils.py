@@ -21,37 +21,90 @@
 """Defines utlity layers and operators for models in tiatoolbox."""
 
 
+from typing import Union
+
 import numpy as np
 import torch
 import torch.nn as nn
 
 
-def crop_op(x, cropping, data_format="NCHW"):
-    """Center crop image with substracted amount.
+def centre_crop(
+    img: Union[np.ndarray, torch.tensor],
+    crop_shape: Union[np.ndarray, torch.tensor],
+    data_format: str = "NCHW",
+):
+    """A function to center crop image with given crop shape.
 
     Args:
-        x (torch.Tensor): Input images.
-        cropping (list): The substracted amount to center crop
-          on each axis.
-        data_format (str): Denote if the input is of `NCHW` or `NHWC`
-          layout.
+        img (ndarray, torch.tensor): input image, should be of 3 channels
+        crop_shape (ndarray, torch.tensor): the substracted amount in the form of
+            [substracted height, substracted width].
+        data_format (str): choose either `NCHW` or `NHWC`
 
     Returns:
-        x (torch.Tensor): Center cropped images.
+        (ndarray, torch.tensor) Cropped image.
 
     """
     if data_format not in ["NCHW", "NHWC"]:
         raise ValueError(f"Unknown input format `{data_format}`")
 
-    crop_t = cropping[0] // 2
-    crop_b = cropping[0] - crop_t
-    crop_l = cropping[1] // 2
-    crop_r = cropping[1] - crop_l
+    crop_t = crop_shape[0] // 2
+    crop_b = crop_shape[0] - crop_t
+    crop_l = crop_shape[1] // 2
+    crop_r = crop_shape[1] - crop_l
     if data_format == "NCHW":
-        x = x[:, :, crop_t:-crop_b, crop_l:-crop_r]
+        img = img[:, :, crop_t:-crop_b, crop_l:-crop_r]
     else:
-        x = x[:, crop_t:-crop_b, crop_l:-crop_r, :]
-    return x
+        img = img[:, crop_t:-crop_b, crop_l:-crop_r, :]
+    return img
+
+
+def centre_crop_to_shape(
+    x: Union[np.ndarray, torch.tensor],
+    y: Union[np.ndarray, torch.tensor],
+    data_format: str = "NCHW",
+):
+    """A function to center crop image to shape.
+
+    Centre crop `x` so that `x` has shape of `y` and `y` height and width must
+    be smaller than `x` heigh width.
+
+    Args:
+        x (ndarray, torch.tensor): Image to be cropped.
+        y (ndarray, torch.tensor): Reference image for getting cropping shape,
+            should be of 3 channels.
+        data_format: Should either be `NCHW` or `NHWC`.
+
+    Returns:
+        (ndarray, torch.tensor) Cropped image.
+
+    """
+    if data_format not in ["NCHW", "NHWC"]:
+        raise ValueError(f"Unknown input format `{data_format}`")
+
+    if data_format == "NCHW":
+        _, _, h1, w1 = x.shape
+        _, _, h2, w2 = y.shape
+    else:
+        _, h1, w1, _ = x.shape
+        _, h2, w2, _ = y.shape
+
+    if h1 <= h2 or w1 <= w2:
+        raise ValueError(
+            (
+                "Height or width of `x` is smaller than `y` ",
+                f"{[h1, w1]} vs {[h2, w2]}",
+            )
+        )
+
+    x_shape = x.shape
+    y_shape = y.shape
+    if data_format == "NCHW":
+        crop_shape = (x_shape[2] - y_shape[2], x_shape[3] - y_shape[3])
+    else:
+        crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
+
+    return centre_crop(x, crop_shape, data_format)
 
 
 class UpSample2x(nn.Module):

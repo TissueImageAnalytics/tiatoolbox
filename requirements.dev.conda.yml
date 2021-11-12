@@ -5,6 +5,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
+  - albumentations
   - black
   - Click
   - cython
@@ -25,6 +26,7 @@ dependencies:
   - pip
   - pixman<0.38.0
   - pre-commit
+  - pygeos
   - pytest-cov
   - pytest-runner==5.2
   - pytest==6.2.5
@@ -35,6 +37,7 @@ dependencies:
   - requests
   - scikit-image
   - scikit-learn>=0.23.2
+  - shapely
   - tifffile
   - torchvision
   - torchvision>=0.10.1

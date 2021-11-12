@@ -11,6 +11,7 @@ with open("HISTORY.md") as history_file:
     history = history_file.read()
 
 requirements = [
+    "albumentations>0.5.0",
     "Click>=7.0",
     "numpy",
     "pillow",
