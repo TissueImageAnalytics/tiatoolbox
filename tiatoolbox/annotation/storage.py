@@ -400,6 +400,54 @@ class AnnotationStore(ABC, MutableMapping):
         """
         raise NotImplementedError()
 
+    def pop(self, key: str, default: Optional[Any]) -> Any:
+        """Remove and return an annotation by key.
+
+        Args:
+            key(str):
+                The key of the annoation to be removed.
+            default:
+                The value to return if the key is not found.
+
+        Returns:
+            The annotation or default if the key is not found.
+        """
+        del self[key]
+        return self[key]
+
+    def popitem(self) -> Tuple[str, Annotation]:
+        """Remove and return an annotation by key.
+
+        Args:
+            key(str):
+                The key of the annoation to be removed.
+
+        Returns:
+            The annotation and its key.
+        """
+        key = next(self.keys())
+        return key, self.pop(key)
+
+    def setdefault(self, key: str, default: Any = None) -> Any:
+        """Return the value of the annotation with the given key.
+
+        If the key does not exist, insert the default value and return
+        it.
+
+        Args:
+            key(str):
+                The key of the annoation to be fetchedd.
+            default:
+                The value to return if the key is not found.
+
+        Returns:
+            The annotation or default if the key is not found.
+        """
+        if key in self:
+            return self[key]
+        self[key] = default
+        return default
+
     def __setitem__(self, key: int, annoation: Annotation) -> None:
         """Set an annotation in the store.
 
