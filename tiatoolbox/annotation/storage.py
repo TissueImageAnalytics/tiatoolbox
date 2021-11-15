@@ -444,14 +444,6 @@ class AnnotationStore(ABC, MutableMapping):
         for _, annotation in self.items():
             yield annotation
 
-    def items(self) -> Iterable[Tuple[str, Annotation]]:
-        """Return an iterable of all keys and annotation in the store.
-
-        Returns:
-            iter: An iterable of keys and annotations.
-        """
-        raise NotImplementedError()
-
     def __iter__(self) -> Iterable[int]:
         """Return an iterable of keys in the store.
 
