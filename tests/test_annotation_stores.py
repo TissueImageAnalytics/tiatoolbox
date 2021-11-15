@@ -763,3 +763,11 @@ class TestStore:
         store.update(annotations)
         assert "foo" in store
         assert store["foo"] == annotations["foo"]
+
+    @staticmethod
+    def test_cast_dict(fill_store, store):
+        """Test casting a store to a dictionary."""
+        keys, store = fill_store(store, ":memory:")
+        store_dict = dict(store)
+        assert keys[0] in store_dict
+        assert store[keys[0]] in store_dict.values()
