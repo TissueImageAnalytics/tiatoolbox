@@ -434,7 +434,10 @@ class AnnotationStore(ABC, MutableMapping):
         Returns:
             The annotation and its key.
         """
-        key = next(self.keys())
+        try:
+            key = next(self.keys())
+        except StopIteration:
+            raise KeyError("popitem(): annotation store is empty")
         return key, self.pop(key)
 
     def setdefault(self, key: str, default: Any = None) -> Any:

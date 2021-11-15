@@ -685,6 +685,13 @@ class TestStore:
         assert annotation not in store.values()
 
     @staticmethod
+    def test_popitem_empty_error(fill_store, store):
+        """Test that popping an empty store raises an exception."""
+        store = store()
+        with pytest.raises(KeyError):
+            store.popitem()
+
+    @staticmethod
     def test_setdefault(fill_store, store, sample_triangle):
         """Test setting a default value for a key."""
         store = store()
