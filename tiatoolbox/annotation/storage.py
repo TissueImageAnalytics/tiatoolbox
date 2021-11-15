@@ -300,9 +300,12 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         result = []
+        if keys:
+            for key, annotation in zip(keys, annotations):
+                result.append(self.append(annotation, key))
+            return result
         for annotation in annotations:
-            key = self.append(annotation)
-            result.append(key)
+            result.append(self.append(annotation))
         return result
 
     def patch(
