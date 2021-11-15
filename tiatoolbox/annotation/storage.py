@@ -312,6 +312,8 @@ class AnnotationStore(ABC, MutableMapping):
         """
         result = []
         if keys:
+            if len(keys) != len(annotations):
+                raise ValueError("Number of keys must match number of annotations")
             for key, annotation in zip(keys, annotations):
                 result.append(self.append(annotation, key))
             return result
@@ -1102,6 +1104,8 @@ class SQLiteStore(AnnotationStore):
     ) -> List[str]:
         if keys is None:
             keys = (str(uuid.uuid4()) for _ in annotations)
+        if len(keys) != len(annotations):
+            raise ValueError("Number of keys must match number of annotations")
         cur = self.con.cursor()
         cur.execute("BEGIN")
         result = []

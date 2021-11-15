@@ -298,6 +298,29 @@ class TestStore:
         assert len(keys) == len(cell_grid)
 
     @staticmethod
+    def test_append_many_with_keys(cell_grid, tmp_path, store):
+        """Test bulk append of annotations with keys."""
+        store = store(tmp_path / "polygons")
+        annotations = [
+            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+        ]
+        keys = [chr(n) for n, _ in enumerate(annotations)]
+        returned_keys = store.append_many(annotations, keys=keys)
+        assert len(returned_keys) == len(cell_grid)
+        assert keys == returned_keys
+
+    @staticmethod
+    def test_append_many_with_keys_len_mismatch(cell_grid, tmp_path, store):
+        """Test bulk append of annotations with keys of wrong length."""
+        store = store(tmp_path / "polygons")
+        annotations = [
+            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+        ]
+        keys = ["foo"]
+        with pytest.raises(ValueError, match="Number of keys"):
+            store.append_many(annotations, keys=keys)
+
+    @staticmethod
     def test_query_bbox(fill_store, tmp_path, store):
         """Test query with a bounding box."""
         _, store = fill_store(store, tmp_path / "polygon.db")
