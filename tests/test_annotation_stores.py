@@ -19,6 +19,7 @@ from tiatoolbox.annotation.storage import (
     Annotation,
     AnnotationStore,
     DictionaryStore,
+    SQLiteMetadata,
     SQLiteStore,
 )
 
@@ -248,6 +249,24 @@ def test_sqlitestore_metadata_delete():
     assert "foo" in store.metadata
     del store.metadata["foo"]
     assert "foo" not in store.metadata
+
+
+def test_sqlitestore_metadata_iter():
+    """Test iterating over metadata entries."""
+    conn = sqlite3.Connection(":memory:")
+    metadata = SQLiteMetadata(conn)
+    metadata["foo"] = 1
+    metadata["bar"] = 2
+    assert set(metadata.keys()) == {"foo", "bar"}
+
+
+def test_sqlitestore_metadata_len():
+    """Test len of metadata entries."""
+    conn = sqlite3.Connection(":memory:")
+    metadata = SQLiteMetadata(conn)
+    metadata["foo"] = 1
+    metadata["bar"] = 2
+    assert len(metadata) == 2
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)

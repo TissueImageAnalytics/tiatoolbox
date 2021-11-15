@@ -58,6 +58,7 @@ from typing import (
     Dict,
     Generator,
     Iterable,
+    Iterator,
     List,
     Optional,
     Tuple,
@@ -108,6 +109,16 @@ if sys.version_info >= (3, 10):
 
 @dataclass(**_DATACLASS_KWARGS)
 class Annotation:
+    """An annotation: a geometry and associated properties.
+
+    Attributes:
+        geometry(Geometry):
+            The geometry of the annotation.
+        properties(dict):
+            The properties of the annotation.
+
+    """
+
     geometry: Geometry
     properties: Properties = field(default_factory=dict)
 
@@ -817,7 +828,7 @@ class AnnotationStore(ABC, MutableMapping):
             del self[key]
 
 
-class SQLiteMetadata:
+class SQLiteMetadata(MutableMapping):
     """Metadata storage for an SQLiteStore."""
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -853,9 +864,23 @@ class SQLiteMetadata:
             raise KeyError(key)
         self.con.execute("DELETE FROM metadata WHERE [key] = ?", (key,))
 
+    def __iter__(self) -> Iterator[str]:
+        """Iterate over all keys."""
+        cursor = self.con.execute("SELECT [key] FROM metadata")
+        for row in cursor:
+            yield row[0]
+
+    def __len__(self) -> int:
+        """Return the number of metadata entries."""
+        cursor = self.con.execute("SELECT COUNT(*) FROM metadata")
+        return cursor.fetchone()[0]
+
 
 class SQLiteStore(AnnotationStore):
-    """SQLite backed annotation store."""
+    """SQLite backed annotation store.
+
+    Uses and rtree index for fast spatial queries.
+    """
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str]) -> "SQLiteStore":
