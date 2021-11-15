@@ -302,8 +302,8 @@ class TestStore:
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
-    def test_update(fill_store, tmp_path, store):
-        """Test updating an annotation."""
+    def test_pach(fill_store, tmp_path, store):
+        """Test patching an annotation."""
         keys, store = fill_store(store, tmp_path / "polygon.db")
         key = keys[0]
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
@@ -665,6 +665,8 @@ class TestStore:
         keys, store = fill_store(store, ":memory:")
         assert keys[0] in store
         annotation = store.pop(keys[0])
+        assert keys[0] not in store
+        assert annotation not in store.values()
 
     @staticmethod
     def test_pop_key_error(fill_store, store):
@@ -691,3 +693,66 @@ class TestStore:
         assert store.setdefault("foo", default) == default
         assert "foo" in store
         assert default in store.values()
+
+    @staticmethod
+    def test_setdefault_error(fill_store, store, sample_triangle):
+        """Test setting a default value for a key with invalid type."""
+        store = store()
+        with pytest.raises(TypeError):
+            store.setdefault("foo", {})
+
+    @staticmethod
+    def test_get(fill_store, store):
+        """Test getting an annotation by key."""
+        keys, store = fill_store(store, ":memory:")
+        assert keys[0] in store
+        assert store.get(keys[0]) == store[keys[0]]
+
+    @staticmethod
+    def test_get_default(fill_store, store):
+        """Test getting a default value for a key."""
+        store = store()
+        assert "foo" not in store
+        assert store.get("foo") is None
+
+    @staticmethod
+    def test_eq(fill_store, store):
+        """Test comparing two stores for equality."""
+        store1 = store()
+        store2 = store()
+        assert store1 == store2
+
+        store1 = fill_store(store, ":memory:")[1]
+        assert store1 != store2
+
+        for key, value in store1.items():
+            store2[key] = value
+        assert store1 == store2
+
+    @staticmethod
+    def test_ne(fill_store, store):
+        """Test comparing two stores for inequality."""
+        store1 = fill_store(store, ":memory:")[1]
+        store2 = fill_store(store, ":memory:")[1]
+        assert store1 != store2
+
+    @staticmethod
+    def test_clear(fill_store, store):
+        """Test clearing a store."""
+        keys, store = fill_store(store, ":memory:")
+        store.clear()
+        assert keys[0] not in store
+        assert len(store) == 0
+        assert not store
+
+    @staticmethod
+    def test_update(fill_store, store, sample_triangle):
+        """Test updating a store with a dictionary."""
+        _, store = fill_store(store, ":memory:")
+        annotations = {
+            "foo": Annotation(sample_triangle),
+        }
+        assert "foo" not in store
+        store.update(annotations)
+        assert "foo" in store
+        assert store["foo"] == annotations["foo"]

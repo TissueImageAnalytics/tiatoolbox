@@ -401,7 +401,14 @@ class AnnotationStore(ABC, MutableMapping):
         """
         raise NotImplementedError()
 
-    def pop(self, key: str, default: Optional[Any] = POP_SENTINAL) -> Any:
+    def get(self, key: str, default: Any = None) -> Any:
+        """Return the value for key if key is in the dictionary, else default."""
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def pop(self, key: str, default: Any = POP_SENTINAL) -> Any:
         """Remove and return an annotation by key.
 
         Args:
@@ -447,6 +454,8 @@ class AnnotationStore(ABC, MutableMapping):
         """
         if key in self:
             return self[key]
+        if not isinstance(default, Annotation):
+            raise TypeError("default value must be an Annotation instance.")
         self[key] = default
         return default
 
@@ -866,6 +875,65 @@ class AnnotationStore(ABC, MutableMapping):
             )
             return
         raise TypeError("Invalid type for where")
+
+    def __eq__(self, o: object) -> bool:
+        """Compare two annotation stores for equality.
+
+        This is a naive equality check, it simply iterates over all
+        keys and values to check for equality. Faster checks may be
+        possible in specific cases and may be implemented by subclasses.
+
+        Args:
+            o: The object to compare to.
+
+        Returns:
+            bool: True if the objects are equal, False otherwise.
+
+        """
+        return not any(
+            key not in o or annotation != o[key] for key, annotation in self.items()
+        )
+
+    def __ne__(self, o: object) -> bool:
+        """Compare two annotation stores for inequality.
+
+        This is a naive inequality check, it simply iterates over all
+        keys and values to check for inequality. Faster checks may be
+        possible in specific cases and may be implemented by subclasses.
+
+        Args:
+            o: The object to compare to.
+
+        Returns:
+            bool: True if the objects are not equal, False otherwise.
+
+        """
+        return not self == o  # noqa: SIM201
+
+    def clear(self) -> None:
+        """Remove all annotations from the store.
+
+        This is a naive implementation, it simply iterates over all
+        annotations and removes them. Faster implementations may be
+        possible in specific cases and may be implemented by subclasses.
+        """
+        for key in list(self.keys()):
+            del self[key]
+
+    def update(self, other: "AnnotationStore") -> None:
+        """Update the annotation store with the contents of another.
+
+        This is a naive implementation, it simply iterates over all
+        annotations and updates the store with them. Faster implementations
+        may be possible in specific cases and may be implemented by
+        subclasses.
+
+        Args:
+            other: The annotation store to update from.
+
+        """
+        for key, annotation in other.items():
+            self[key] = annotation
 
 
 class SQLiteMetadata:
