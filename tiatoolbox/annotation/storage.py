@@ -45,7 +45,7 @@ import sys
 import uuid
 import warnings
 import zlib
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -193,6 +193,7 @@ class AnnotationStore(ABC, MutableMapping):
     ]
 
     @classmethod  # noqa: A003
+    @abstractmethod
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":
         """Load a store object from a path or file-like object.
 
@@ -203,7 +204,6 @@ class AnnotationStore(ABC, MutableMapping):
             AnnotationStoreABC: An instance of an annotation store.
 
         """
-        raise NotImplementedError()
 
     @staticmethod
     def serialise_geometry(geometry: Geometry) -> Union[str, bytes]:
@@ -244,10 +244,11 @@ class AnnotationStore(ABC, MutableMapping):
             return wkt.loads(data)
         return wkb.loads(data)
 
+    @abstractmethod
     def commit(self) -> None:
         """Commit any in-memory changes to disk."""
-        raise NotImplementedError()
 
+    @abstractmethod
     def dump(self, fp: Union[Path, str, IO]) -> None:
         """Serialise a copy of the whole store to a file-like object.
 
@@ -256,8 +257,8 @@ class AnnotationStore(ABC, MutableMapping):
                 A file path or file handle object for output to disk.
 
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def dumps(self) -> Union[str, bytes]:
         """Serialise and return a copy of store as a string or bytes.
 
@@ -265,7 +266,6 @@ class AnnotationStore(ABC, MutableMapping):
             str or bytes: The serialised store.
 
         """
-        raise NotImplementedError()
 
     def append(
         self,
