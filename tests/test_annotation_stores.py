@@ -658,3 +658,36 @@ class TestStore:
         key = "foo"
         with pytest.raises((TypeError, AttributeError)):
             store.patch(key, geometry=None, properties={"class": 123})
+
+    @staticmethod
+    def test_pop_key(fill_store, store):
+        """Test popping an annotation by key."""
+        keys, store = fill_store(store, ":memory:")
+        assert keys[0] in store
+        annotation = store.pop(keys[0])
+
+    @staticmethod
+    def test_pop_key_error(fill_store, store):
+        """Test that popping a key that is not in the store raises an exception."""
+        store = store()
+        with pytest.raises(KeyError):
+            store.pop("foo")
+
+    @staticmethod
+    def test_popitem(fill_store, store):
+        """Test popping a key and annotation by key."""
+        keys, store = fill_store(store, ":memory:")
+        key, annotation = store.popitem()
+        assert key in keys
+        assert key not in store
+        assert annotation not in store.values()
+
+    @staticmethod
+    def test_setdefault(fill_store, store, sample_triangle):
+        """Test setting a default value for a key."""
+        store = store()
+        default = Annotation(sample_triangle)
+        assert "foo" not in store
+        assert store.setdefault("foo", default) == default
+        assert "foo" in store
+        assert default in store.values()

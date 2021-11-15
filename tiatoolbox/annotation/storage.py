@@ -95,6 +95,7 @@ ASCII_UNIT_SEP = "\x1f"
 ASCII_NULL = "\0"
 ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 
+POP_SENTINAL = object()
 
 # Only Python 3.10+ supports using slots for dataclasses
 # https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass
@@ -400,7 +401,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         raise NotImplementedError()
 
-    def pop(self, key: str, default: Optional[Any]) -> Any:
+    def pop(self, key: str, default: Optional[Any] = POP_SENTINAL) -> Any:
         """Remove and return an annotation by key.
 
         Args:
@@ -412,8 +413,9 @@ class AnnotationStore(ABC, MutableMapping):
         Returns:
             The annotation or default if the key is not found.
         """
+        result = self[key]
         del self[key]
-        return self[key]
+        return result  # noqa: R504
 
     def popitem(self) -> Tuple[str, Annotation]:
         """Remove and return an annotation by key.
@@ -1299,7 +1301,10 @@ class SQLiteStore(AnnotationStore):
             """,
             {"key": key},
         )
-        boundary, properties, cx, cy = cur.fetchone()
+        row = cur.fetchone()
+        if row is None:
+            raise KeyError(key)
+        boundary, properties, cx, cy = row
         if properties is None:
             properties = {}
         else:
@@ -1523,7 +1528,7 @@ class DictionaryStore(AnnotationStore):
     def __setitem__(self, key: str, annotation: Annotation) -> None:
         if key in self._rows:
             self._rows[key]["annotation"] = annotation
-        self._rows[key]["annotation"] = annotation
+        self._rows[key] = {"annotation": annotation}
 
     def __contains__(self, key: str) -> bool:
         return key in self._rows
