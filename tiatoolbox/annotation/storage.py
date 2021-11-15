@@ -391,58 +391,6 @@ class AnnotationStore(ABC, MutableMapping):
         for key in keys:
             self.remove(key)
 
-    def __len__(self) -> int:
-        """Return the number of annotations in the store."""
-        raise NotImplementedError()
-
-    def __getitem__(self, key: str) -> Annotation:
-        """Fetch a single annotation by key.
-
-        Args:
-            key(str):
-                The key of the annoation to be fetchedd.
-        """
-        raise NotImplementedError()
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Return the value for key if key is in the dictionary, else default."""
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def pop(self, key: str, default: Any = POP_SENTINAL) -> Any:
-        """Remove and return an annotation by key.
-
-        Args:
-            key(str):
-                The key of the annoation to be removed.
-            default:
-                The value to return if the key is not found.
-
-        Returns:
-            The annotation or default if the key is not found.
-        """
-        result = self[key]
-        del self[key]
-        return result  # noqa: R504
-
-    def popitem(self) -> Tuple[str, Annotation]:
-        """Remove and return an annotation by key.
-
-        Args:
-            key(str):
-                The key of the annoation to be removed.
-
-        Returns:
-            The annotation and its key.
-        """
-        try:
-            key = next(self.keys())
-        except StopIteration:
-            raise KeyError("popitem(): annotation store is empty")
-        return key, self.pop(key)
-
     def setdefault(self, key: str, default: Any = None) -> Any:
         """Return the value of the annotation with the given key.
 
@@ -451,34 +399,18 @@ class AnnotationStore(ABC, MutableMapping):
 
         Args:
             key(str):
-                The key of the annoation to be fetchedd.
+                The key of the annotation to be fetched.
             default:
                 The value to return if the key is not found.
 
         Returns:
             The annotation or default if the key is not found.
         """
-        if key in self:
-            return self[key]
         if not isinstance(default, Annotation):
             raise TypeError("default value must be an Annotation instance.")
-        self[key] = default
-        return default
-
-    def __setitem__(self, key: int, annoation: Annotation) -> None:
-        """Set an annotation in the store.
-
-        If an annotation with this key already exists, it is replaced.
-        Otherwise, it is inserted as a new annotation.
-
-        Args:
-            key(str):
-                The key of he annotation to be set.
-            annotation(Annotation):
-                The annotation being set.
-
-        """
-        raise NotImplementedError()
+        if default:
+            return super().setdefault(key, default)
+        return super().setdefault(key)
 
     def __delitem__(self, key: str) -> None:
         """Delete an annotation by key.
@@ -882,40 +814,6 @@ class AnnotationStore(ABC, MutableMapping):
             return
         raise TypeError("Invalid type for where")
 
-    def __eq__(self, o: object) -> bool:
-        """Compare two annotation stores for equality.
-
-        This is a naive equality check, it simply iterates over all
-        keys and values to check for equality. Faster checks may be
-        possible in specific cases and may be implemented by subclasses.
-
-        Args:
-            o: The object to compare to.
-
-        Returns:
-            bool: True if the objects are equal, False otherwise.
-
-        """
-        return not any(
-            key not in o or annotation != o[key] for key, annotation in self.items()
-        )
-
-    def __ne__(self, o: object) -> bool:
-        """Compare two annotation stores for inequality.
-
-        This is a naive inequality check, it simply iterates over all
-        keys and values to check for inequality. Faster checks may be
-        possible in specific cases and may be implemented by subclasses.
-
-        Args:
-            o: The object to compare to.
-
-        Returns:
-            bool: True if the objects are not equal, False otherwise.
-
-        """
-        return not self == o  # noqa: SIM201
-
     def clear(self) -> None:
         """Remove all annotations from the store.
 
@@ -925,21 +823,6 @@ class AnnotationStore(ABC, MutableMapping):
         """
         for key in list(self.keys()):
             del self[key]
-
-    def update(self, other: "AnnotationStore") -> None:
-        """Update the annotation store with the contents of another.
-
-        This is a naive implementation, it simply iterates over all
-        annotations and updates the store with them. Faster implementations
-        may be possible in specific cases and may be implemented by
-        subclasses.
-
-        Args:
-            other: The annotation store to update from.
-
-        """
-        for key, annotation in other.items():
-            self[key] = annotation
 
 
 class SQLiteMetadata:
