@@ -1557,6 +1557,13 @@ class SQLiteStore(AnnotationStore):
     def dumps(self) -> str:
         return "\n".join(self.con.iterdump())
 
+    def clear(self) -> None:
+        """Remove all annotations from the store."""
+        cur = self.con.cursor()
+        cur.execute("DELETE FROM rtree")
+        cur.execute("DELETE FROM annotations")
+        self.con.commit()
+
 
 class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
