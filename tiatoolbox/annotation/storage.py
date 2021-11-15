@@ -153,6 +153,13 @@ class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
 
     @staticmethod
+    def _validate_equal_lengths(*args):
+        """Validate that all given args are either None or have the same length."""
+        lengths = [len(v) for v in args if v is not None]
+        if lengths and not all(length == lengths[0] for length in lengths):
+            raise ValueError("All arguments must be None or of equal length.")
+
+    @staticmethod
     def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
         """Apply a binary geometry predicate.
 
@@ -310,10 +317,11 @@ class AnnotationStore(ABC, MutableMapping):
                 A list of unqiue keys for the inserted geometries.
 
         """
+        annotations = list(annotations)
+        keys = list(keys) if keys else [str(uuid.uuid4()) for _ in annotations]
+        self._validate_equal_lengths(keys, annotations)
         result = []
         if keys:
-            if len(keys) != len(annotations):
-                raise ValueError("Number of keys must match number of annotations")
             for key, annotation in zip(keys, annotations):
                 result.append(self.append(annotation, key))
             return result
@@ -373,10 +381,10 @@ class AnnotationStore(ABC, MutableMapping):
             key(iter(str)):
                 An iterable of keys for each annotation to be updated.
         """
-        if geometries and properties_iter and len(geometries) != len(properties_iter):
-            raise ValueError(
-                "geometries and properties_iter must have the same length."
-            )
+        keys = list(keys)
+        geometries = list(geometries) if geometries else None
+        properties_iter = list(properties_iter) if properties_iter else None
+        self._validate_equal_lengths(keys, geometries, properties_iter)
         if properties_iter is None:
             properties_iter = ({} for _ in keys)
         if geometries is None:
@@ -1102,10 +1110,9 @@ class SQLiteStore(AnnotationStore):
         annotations: Iterable[Annotation],
         keys: Optional[Iterable[str]] = None,
     ) -> List[str]:
-        if keys is None:
-            keys = (str(uuid.uuid4()) for _ in annotations)
-        if len(keys) != len(annotations):
-            raise ValueError("Number of keys must match number of annotations")
+        annotations = list(annotations)
+        keys = list(keys) if keys else [str(uuid.uuid4()) for _ in annotations]
+        self._validate_equal_lengths(keys, annotations)
         cur = self.con.cursor()
         cur.execute("BEGIN")
         result = []
@@ -1338,10 +1345,10 @@ class SQLiteStore(AnnotationStore):
         geometries: Optional[Iterable[Geometry]] = None,
         properties_iter: Optional[Iterable[Properties]] = None,
     ) -> None:
-        if geometries and properties_iter and len(geometries) != len(properties_iter):
-            raise ValueError(
-                "geometries and properties_iter must have the same length."
-            )
+        keys = list(keys)
+        geometries = list(geometries) if geometries else None
+        properties_iter = list(properties_iter) if properties_iter else None
+        self._validate_equal_lengths(keys, geometries, properties_iter)
         if properties_iter is None:
             properties_iter = ({} for _ in keys)
         if geometries is None:

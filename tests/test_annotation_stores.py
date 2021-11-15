@@ -317,7 +317,7 @@ class TestStore:
             Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
         ]
         keys = ["foo"]
-        with pytest.raises(ValueError, match="Number of keys"):
+        with pytest.raises(ValueError, match="equal"):
             store.append_many(annotations, keys=keys)
 
     @staticmethod
@@ -357,18 +357,26 @@ class TestStore:
         assert store[key].properties["abc"] == 123
 
     @staticmethod
-    def test_update_many(fill_store, tmp_path, store):
-        """Test bulk update."""
+    def test_patch_many(fill_store, tmp_path, store):
+        """Test bulk patch."""
         keys, store = fill_store(store, tmp_path / "polygon.db")
         # Geometry update
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
-        store.patch_many(keys, repeat(new_geometry, 10))
+        store.patch_many(keys, repeat(new_geometry, len(keys)))
         # Properties update
-        store.patch_many(keys, properties_iter=repeat({"abc": 123}, 10))
+        store.patch_many(keys, properties_iter=repeat({"abc": 123}, len(keys)))
 
         for _, key in enumerate(keys[:10]):
             assert store[key].geometry == new_geometry
             assert store[key].properties["abc"] == 123
+
+    @staticmethod
+    def test_patch_many_len_mismatch(fill_store, tmp_path, store):
+        """Test bulk patch with wrong number of keys."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
+        with pytest.raises(ValueError, match="equal"):
+            store.patch_many(keys[1:], repeat(new_geometry, 10))
 
     @staticmethod
     def test_keys(fill_store, tmp_path, store):
