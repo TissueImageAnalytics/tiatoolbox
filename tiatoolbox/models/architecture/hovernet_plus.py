@@ -27,12 +27,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy.ndimage import measurements
-from scipy.ndimage.morphology import binary_fill_holes
-from skimage.morphology import remove_small_objects
-from skimage.segmentation import watershed
 
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.hovernet import (
     HoVerNet,
     ResidualBlock,
