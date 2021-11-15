@@ -1440,7 +1440,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("BEGIN")
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             if key not in self:
-                self.append(geometry, properties, key)
+                self.append(Annotation(geometry, properties), key)
                 continue
             if geometry is not None:
                 bounds = dict(
