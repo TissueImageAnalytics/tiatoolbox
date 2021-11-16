@@ -30,13 +30,60 @@ import torch.nn.functional as F
 
 from tiatoolbox.models.architecture.hovernet import (
     HoVerNet,
-    ResidualBlock,
-    TFSamepaddingLayer,
     create_decoder_branch,
+    get_instance_info,
 )
 from tiatoolbox.models.architecture.utils import UpSample2x
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
+
+
+# check for semantic segmentation function (outside class)
+def get_layer_info(pred_layer):
+    def image2contours(image, layer_info_dict, cnt, type_class):
+        """Transforms image layers/regions into contours to store in dictionary.
+
+        Args:
+            image (ndarray): Semantic segmentation map of different
+                layers/regions following processing.
+            layer_info_dict (dict): Dictionary to store layer contours in. It
+                has the following form:
+                layer_info = {
+                        contour: number[][],
+                        type: number,
+                }
+                layer_dict = {[layer_uid: number] : layer_info}
+            cnt (int): Counter.
+            type_class (int): The class of the layer to be processed.
+
+        Returns:
+            layer_info_dict (dict): Updated layer dict.
+            cnt (int): Counter.
+
+        """
+        contours, _ = cv2.findContours(
+            image.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+        )
+        for layer in contours:
+            coords = layer[:, 0, :]
+            layer_info_dict[str(cnt)] = {
+                "contours": coords.tolist(),
+                "type": type_class,
+            }
+            cnt += 1
+
+        return layer_info_dict, cnt
+
+    layer_list = np.unique(pred_layer)
+    layer_list = np.delete(layer_list, np.where(layer_list == 0))
+    layer_dict = {}
+    count = 1
+
+    for lyr in layer_list:
+        layer = np.where(pred_layer == lyr, 1, 0).astype("uint8")
+        layer_dict, count = image2contours(layer, layer_dict, count, lyr)
+
+    return layer_dict
 
 
 class HoVerNetPlus(HoVerNet):
@@ -63,7 +110,7 @@ class HoVerNetPlus(HoVerNet):
             num_layers (int): The number of layers/different regions types present.
 
         """
-        super().__init__()
+        super().__init__(mode=mode)
         self.mode = mode
         self.num_types = num_types
         self.num_layers = num_layers
@@ -75,69 +122,21 @@ class HoVerNetPlus(HoVerNet):
                 "Only support `original` or `fast`."
             )
 
-        modules = [
-            (
-                "/",
-                nn.Conv2d(num_input_channels, 64, 7, stride=1, padding=0, bias=False),
-            ),
-            ("bn", nn.BatchNorm2d(64, eps=1e-5)),
-            ("relu", nn.ReLU(inplace=True)),
-        ]
-        # pre-pend the padding for `fast` mode
-        if mode == "fast":
-            modules = [("pad", TFSamepaddingLayer(ksize=7, stride=1)), *modules]
-
-        self.conv0 = nn.Sequential(OrderedDict(modules))
-        self.d0 = ResidualBlock(64, [1, 3, 1], [64, 64, 256], 3, stride=1)
-        self.d1 = ResidualBlock(256, [1, 3, 1], [128, 128, 512], 4, stride=2)
-        self.d2 = ResidualBlock(512, [1, 3, 1], [256, 256, 1024], 6, stride=2)
-        self.d3 = ResidualBlock(1024, [1, 3, 1], [512, 512, 2048], 3, stride=2)
-
-        self.conv_bot = nn.Conv2d(2048, 1024, 1, stride=1, padding=0, bias=False)
-
-        if num_types is None and num_layers is None:
-            self.decoder = nn.ModuleDict(
-                OrderedDict(
-                    [
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
-                    ]
-                )
+        self.decoder = nn.ModuleDict(
+            OrderedDict(
+                [
+                    ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
+                    ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
+                    ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                    ("ls", create_decoder_branch(ksize=ksize, out_ch=num_layers)),
+                ]
             )
-        elif num_types is not None and num_layers is None:
-            self.decoder = nn.ModuleDict(
-                OrderedDict(
-                    [
-                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
-                    ]
-                )
-            )
-        elif num_types is not None and num_layers is not None:
-            self.decoder = nn.ModuleDict(
-                OrderedDict(
-                    [
-                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("ls", create_decoder_branch(ksize=ksize, out_ch=num_layers)),
-                    ]
-                )
-            )
-        elif num_types is None and num_layers is not None:
-            self.decoder = nn.ModuleDict(
-                OrderedDict(
-                    [
-                        ("ls", create_decoder_branch(ksize=ksize, out_ch=num_layers)),
-                    ]
-                )
-            )
+        )
 
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def __proc_ls(ls_map: np.ndarray):
+    def _proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies a gaussian blur to
@@ -192,151 +191,20 @@ class HoVerNetPlus(HoVerNet):
             >>> layer_dict = {[layer_uid: number] : layer_info}
 
         """
-        if len(raw_maps) == 4:
-            # Nuclei and layer segmentation
-            np_map, hv_map, tp_map, ls_map = raw_maps
-        elif len(raw_maps) == 3:
-            # Nuclei segmentation (with classes) only
-            np_map, hv_map, tp_map = raw_maps
-            ls_map = None
-        elif len(raw_maps) == 2:
-            # Nuclei segmentation (no classes) only
-            tp_map = None
-            np_map, hv_map = raw_maps
-            ls_map = None
-        elif len(raw_maps) == 1:
-            # Layer segmentation only
-            ls_map = raw_maps[0]
-            np_map, hv_map, tp_map = None, None, None
+        np_map, hv_map, tp_map, ls_map = raw_maps
 
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
+        pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
-        if np_map is not None:
-            pred_inst = super(HoVerNetPlus, HoVerNetPlus).__proc_np_hv(np_map, hv_map)
-        else:
-            pred_inst = None
 
-        if ls_map is not None:
-            pred_layer = HoVerNetPlus.__proc_ls(ls_map)
-        else:
-            pred_layer = None
+        print(pred_inst.shape)
+        print(pred_layer.shape)
+        print(pred_type.shape)
 
-        inst_info_dict = None
-        layer_dict = None
+        nuc_inst_info_dict = get_instance_info(pred_inst, pred_type)
+        layer_info_dict = get_layer_info(pred_layer)
 
-        if pred_type is not None or pred_layer is None:
-            inst_id_list = np.unique(pred_inst)[1:]  # exclude background
-            inst_info_dict = {}
-            for inst_id in inst_id_list:
-                inst_map = pred_inst == inst_id
-                inst_box = get_bounding_box(inst_map)
-                inst_box_tl = inst_box[:2]
-                inst_map = inst_map[
-                    inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]
-                ]
-                inst_map = inst_map.astype(np.uint8)
-                inst_moment = cv2.moments(inst_map)
-                inst_contour = cv2.findContours(
-                    inst_map, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-                )
-                # * opencv protocol format may break
-                inst_contour = inst_contour[0][0].astype(np.int32)
-                inst_contour = np.squeeze(inst_contour)
-
-                # < 3 points dont make a contour, so skip, likely artifact too
-                # as the contours obtained via approximation => too small
-                if inst_contour.shape[0] < 3:  # pragma: no cover
-                    continue
-                # ! check for trickery shape
-                if len(inst_contour.shape) != 2:  # pragma: no cover
-                    continue
-
-                inst_centroid = [
-                    (inst_moment["m10"] / inst_moment["m00"]),
-                    (inst_moment["m01"] / inst_moment["m00"]),
-                ]
-                inst_centroid = np.array(inst_centroid)
-                inst_contour += inst_box_tl[None]
-                inst_centroid += inst_box_tl  # X
-                inst_info_dict[inst_id] = {  # inst_id should start at 1
-                    "box": inst_box,
-                    "centroid": inst_centroid,
-                    "contour": inst_contour,
-                    "prob": None,
-                    "type": None,
-                }
-
-        if pred_type is not None:
-            # * Get class of each instance id, stored at index id-1
-            for inst_id in list(inst_info_dict.keys()):
-                cmin, rmin, cmax, rmax = inst_info_dict[inst_id]["box"]
-                inst_map_crop = pred_inst[rmin:rmax, cmin:cmax]
-                inst_type_crop = pred_type[rmin:rmax, cmin:cmax]
-
-                inst_map_crop = inst_map_crop == inst_id
-                inst_type = inst_type_crop[inst_map_crop]
-
-                (type_list, type_pixels) = np.unique(inst_type, return_counts=True)
-                type_list = list(zip(type_list, type_pixels))
-                type_list = sorted(type_list, key=lambda x: x[1], reverse=True)
-
-                inst_type = type_list[0][0]
-
-                # ! pick the 2nd most dominant if it exists
-                if inst_type == 0 and len(type_list) > 1:  # pragma: no cover
-                    inst_type = type_list[1][0]
-
-                type_dict = {v[0]: v[1] for v in type_list}
-                type_prob = type_dict[inst_type] / (np.sum(inst_map_crop) + 1.0e-6)
-
-                inst_info_dict[inst_id]["type"] = int(inst_type)
-                inst_info_dict[inst_id]["prob"] = float(type_prob)
-
-        if pred_layer is not None:
-
-            def image2contours(image, layer_info_dict, cnt, type_class):
-                """Transforms image layers/regions into contours to store in dictionary.
-
-                Args:
-                    image (ndarray): Semantic segmentation map of different
-                        layers/regions following processing.
-                    layer_info_dict (dict): Dictionary to store layer contours in. It
-                        has the following form:
-                        layer_info = {
-                                contour: number[][],
-                                type: number,
-                        }
-                        layer_dict = {[layer_uid: number] : layer_info}
-                    cnt (int): Counter.
-                    type_class (int): The class of the layer to be processed.
-
-                Returns:
-                    layer_info_dict (dict): Updated layer dict.
-                    cnt (int): Counter.
-
-                """
-                contours, _ = cv2.findContours(
-                    image.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
-                )
-                for layer in contours:
-                    coords = layer[:, 0, :]
-                    layer_info_dict[str(cnt)] = {
-                        "contours": coords.tolist(),
-                        "type": type_class,
-                    }
-                    cnt += 1
-
-                return layer_info_dict, cnt
-
-            layer_list = np.unique(pred_layer)
-            layer_list = np.delete(layer_list, np.where(layer_list == 0))
-            layer_dict = {}
-            count = 1
-
-            for lyr in layer_list:
-                layer = np.where(pred_layer == lyr, 1, 0).astype("uint8")
-                layer_dict, count = image2contours(layer, layer_dict, count, lyr)
-
-        return pred_inst, inst_info_dict, pred_layer, layer_dict
+        return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -391,3 +259,4 @@ class HoVerNetPlus(HoVerNet):
 
         if "tp" not in pred_dict and "np" in pred_dict:
             return pred_dict["np"], pred_dict["hv"]
+            # remove other 3 options
