@@ -211,7 +211,7 @@ class HoVerNetPlus(HoVerNet):
 
         pred_type = tp_map
         if np_map is not None:
-            pred_inst = HoVerNetPlus.__proc_np_hv(np_map, hv_map)
+            pred_inst = super(HoVerNetPlus, HoVerNetPlus).__proc_np_hv(np_map, hv_map)
         else:
             pred_inst = None
 
