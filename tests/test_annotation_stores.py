@@ -269,6 +269,18 @@ def test_sqlitestore_metadata_len():
     assert len(metadata) == 2
 
 
+def test_annotation_to_geojson():
+    """Test converting an annotation to geojson."""
+    annotation = Annotation(
+        geometry=Point(0, 0),
+        properties={"foo": "bar", "baz": "qux"},
+    )
+    geojson = json.loads(annotation.to_geojson())
+    assert geojson["type"] == "Feature"
+    assert geojson["geometry"]["type"] == "Point"
+    assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 
@@ -355,6 +367,14 @@ class TestStore:
         # Properties update
         store.patch(key, properties={"abc": 123})
         assert store[key].properties["abc"] == 123
+
+    @staticmethod
+    def test_patch_append(fill_store, tmp_path, store):
+        """Test patching an annotation that does not exist."""
+        _, store = fill_store(store, tmp_path / "polygon.db")
+        new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
+        store.patch("foo", new_geometry)
+        assert store["foo"].geometry == new_geometry
 
     @staticmethod
     def test_patch_many(fill_store, tmp_path, store):
@@ -821,3 +841,30 @@ class TestStore:
         store_dict = dict(store)
         assert keys[0] in store_dict
         assert store[keys[0]] in store_dict.values()
+
+    @staticmethod
+    def test_query_invalid_geometry_predicate(fill_store, store):
+        """Test that invalid geometry predicate raises an exception."""
+        store = store()
+        with pytest.raises(ValueError, match="Invalid geometry predicate"):
+            store.query((0, 0, 1024, 1024), geometry_predicate="foo")
+
+    @staticmethod
+    def test_iquery_invalid_geometry_predicate(fill_store, store):
+        """Test that invalid geometry predicate raises an exception."""
+        store = store()
+        with pytest.raises(ValueError, match="Invalid geometry predicate"):
+            store.iquery((0, 0, 1024, 1024), geometry_predicate="foo")
+
+    @staticmethod
+    def test_serialise_deseialise_geometry(fill_store, store):
+        """Test that geometry can be serialised and deserialised."""
+        _, store = fill_store(store, ":memory:")
+        for _, annotation in store.items():
+            geometry = annotation.geometry
+            serialised = store.serialise_geometry(geometry)
+            deserialised = store.deserialise_geometry(serialised)
+            if isinstance(serialised, str):
+                assert geometry.wkt == deserialised.wkt
+            else:
+                assert geometry.wkb == deserialised.wkb

@@ -318,7 +318,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         annotations = list(annotations)
-        keys = list(keys) if keys else [str(uuid.uuid4()) for _ in annotations]
+        keys = list(keys) if keys else None
         self._validate_equal_lengths(keys, annotations)
         result = []
         if keys:
@@ -412,7 +412,7 @@ class AnnotationStore(ABC, MutableMapping):
         for key in keys:
             self.remove(key)
 
-    def setdefault(self, key: str, default: Any = None) -> Any:
+    def setdefault(self, key: str, default: Annotation) -> Any:
         """Return the value of the annotation with the given key.
 
         If the key does not exist, insert the default value and return
@@ -429,9 +429,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         if not isinstance(default, Annotation):
             raise TypeError("default value must be an Annotation instance.")
-        if default:
-            return super().setdefault(key, default)
-        return super().setdefault(key)
+        return super().setdefault(key, default)
 
     def __delitem__(self, key: str) -> None:
         """Delete an annotation by key.
@@ -565,6 +563,11 @@ class AnnotationStore(ABC, MutableMapping):
             __ BP_
 
         """
+        if geometry_predicate not in self._geometry_predicate_names:
+            raise ValueError(
+                "Invalid geometry predicate."
+                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
+            )
         query_geometry = geometry
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
@@ -639,6 +642,11 @@ class AnnotationStore(ABC, MutableMapping):
             __ BP_
 
         """
+        if geometry_predicate not in self._geometry_predicate_names:
+            raise ValueError(
+                "Invalid geometry predicate."
+                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
+            )
         query_geometry = geometry
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
@@ -1524,9 +1532,6 @@ class DictionaryStore(AnnotationStore):
 
     def __contains__(self, key: str) -> bool:
         return key in self._rows
-
-    def __iter__(self) -> Iterable[str]:
-        yield from self.keys()
 
     def items(self) -> Generator[Tuple[str, Annotation], None, None]:
         for key, row in self._rows.items():
