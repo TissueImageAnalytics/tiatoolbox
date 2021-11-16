@@ -35,7 +35,6 @@ from tiatoolbox.models.architecture.hovernet import (
 )
 from tiatoolbox.models.architecture.utils import UpSample2x
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import get_bounding_box
 
 
 # TODO: check for semantic segmentation function (outside class)
