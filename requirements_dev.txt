@@ -1,3 +1,4 @@
+albumentations
 black
 bump2version==0.5.11
 Click>=7.0

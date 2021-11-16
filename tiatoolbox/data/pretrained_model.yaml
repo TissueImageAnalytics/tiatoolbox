@@ -317,10 +317,9 @@ hovernet_original-kumar:
             output_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
                 - {"units": "mpp", "resolution": 0.25}
-                - {"units": "mpp", "resolution": 0.25}
-            margin: 128
+            margin: 235
             tile_shape: [1024, 1024]
-            patch_input_shape: [256, 256]
-            patch_output_shape: [164, 164]
-            stride_shape: [164, 164]
+            patch_input_shape: [270, 270]
+            patch_output_shape: [80, 80]
+            stride_shape: [80, 80]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}

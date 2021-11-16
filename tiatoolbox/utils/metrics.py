@@ -14,11 +14,11 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""This module defines several metrics used in medical image analyses."""
+"""This module defines several metrics used in computational pathology."""
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -41,7 +41,7 @@ def pair_coordinates(setA, setB, radius):
         radius: valid area around a point in setA to consider a given
             coordinate in setB a candidate for matching.
 
-    Return:
+    Returns:
         pairing (ndarray): an array of shape Kx2, each item in K contains
             indices where point at index [0] in set A paired with
             point in set B at index [1].

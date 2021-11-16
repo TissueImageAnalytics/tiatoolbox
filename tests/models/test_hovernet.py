@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -41,7 +41,7 @@ def test_functionality(remote_sample, tmp_path):
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = get_wsireader(sample_wsi)
 
-    # * test fast mode
+    # * test fast mode (architecture used in Pannuke paper)
     patch = reader.read_bounds(
         [0, 0, 256, 256], resolution=0.25, units="mpp", coord_space="resolution"
     )
@@ -55,7 +55,7 @@ def test_functionality(remote_sample, tmp_path):
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
 
-    # * test original mode
+    # * test original mode (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
         [0, 0, 270, 270], resolution=0.25, units="mpp", coord_space="resolution"
     )

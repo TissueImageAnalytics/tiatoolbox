@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 """Tests for Semantic Segmentor."""
@@ -462,11 +462,16 @@ def test_functional_segmentor_merging(tmp_path):
 
 def test_functional_segmentor(remote_sample, tmp_path):
     """Functional test for segmentor."""
-    save_dir = pathlib.Path(tmp_path)
+    save_dir = pathlib.Path(f"{tmp_path}/dump")
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
-    mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
-    mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
+    resolution = 2.0
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    reader = get_wsireader(mini_wsi_svs)
+    thumb = reader.slide_thumbnail(resolution=resolution, units="baseline")
+    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    imwrite(mini_wsi_jpg, thumb)
+    mini_wsi_msk = f"{tmp_path}/mini_mask.jpg"
+    imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
     _rm_dir("output")  # default output dir test
@@ -483,8 +488,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        resolution=1.0,
+        patch_input_shape=(512, 512),
+        resolution=resolution,
         units="mpp",
         crash_on_exception=False,
     )
@@ -494,8 +499,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[2048, 2048],
-        resolution=1.0,
+        patch_input_shape=[512, 512],
+        resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,
     )
@@ -507,10 +512,10 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        patch_output_shape=(1024, 1024),
+        patch_input_shape=(512, 512),
+        patch_output_shape=(512, 512),
         stride_shape=(512, 512),
-        resolution=1.0,
+        resolution=1 / resolution,
         units="baseline",
         crash_on_exception=False,
     )
@@ -521,8 +526,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
     ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
+        patch_input_shape=[512, 512],
+        patch_output_shape=[512, 512],
         stride_shape=[512, 512],
     )
 
@@ -551,11 +556,11 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # * test running with mask and svs
     # * also test merging prediction at designated resolution
     ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        save_resolution={"units": "baseline", "resolution": 0.25},
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[{"units": "mpp", "resolution": resolution}],
+        save_resolution={"units": "mpp", "resolution": resolution},
+        patch_input_shape=[512, 512],
+        patch_output_shape=[256, 256],
         stride_shape=[512, 512],
     )
     _rm_dir(save_dir)
@@ -627,7 +632,7 @@ def test_subclass(remote_sample, tmp_path):
 def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
     reader = get_wsireader(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"

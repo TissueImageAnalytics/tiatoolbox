@@ -1,3 +1,22 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
 """Tests for Nucleus Instance Segmentor."""
 
 import copy
@@ -44,7 +63,7 @@ def _crash_func(x):
 def test_get_tile_info():
     """Test for getting tile info."""
     predictor = NucleusInstanceSegmentor(model="A")
-    # ! assuming the tiles organized as following (coming out from
+    # ! assuming the tiles organized as follows (coming out from
     # ! PatchExtractor). If this is broken, need to check back
     # ! PatchExtractor output ordering first
     # left to right, top to bottom
@@ -288,7 +307,8 @@ def test_functionality_travis(remote_sample, tmp_path):
     # * test run on tile, run without worker first
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
-        batch_size=BATCH_SIZE,
+        batch_size=1,
+        num_loader_workers=0,
         num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
@@ -302,10 +322,25 @@ def test_functionality_travis(remote_sample, tmp_path):
     )
 
     # * test run on wsi, test run with worker
+    # resolution for travis testing, not the correct ones
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        margin=128,
+        tile_shape=[512, 512],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
+    )
+
     _rm_dir(save_dir)
     inst_segmentor = NucleusInstanceSegmentor(
-        batch_size=BATCH_SIZE,
-        num_postproc_workers=1,
+        batch_size=1,
+        num_loader_workers=0,
+        num_postproc_workers=0,
         pretrained_model="hovernet_fast-pannuke",
     )
     inst_segmentor.predict(
@@ -371,6 +406,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
         [[1, 1, 0, 0], 1],
         [[0, 0, 1, 1], 2],
         [[1, 1, 1, 1], 3],
+        [[0, 0, 0, 0], 0],
     ]
 
     inst_segmentor._wsi_inst_info = copy.deepcopy(dummy_reference)

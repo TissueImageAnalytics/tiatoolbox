@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -38,9 +38,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 
-# till the day Python could natively pickle Object method/static method
-# the only way to passing function is top-level. Or we have to jump to
-# another third party solution
+# Python is yet to be able to natively pickle Object method/static method.
+# Only top-level function is passable to multi-processing as caller.
+# May need 3rd party libraries to use method/static method otherwise.
 def _process_tile_predictions(
     ioconfig,
     tile_bounds,
@@ -78,7 +78,7 @@ def _process_tile_predictions(
             - 2: Horizontal tile strip that stands between two normal tiles
                 (flag 0). It has the the same width as normal tile but
                 less height (hence vertical strip).
-            - 3: Tile strip stands at the cross section of four normal tiles
+            - 3: tile strip stands at the cross section of four normal tiles
                 (flag 0).
         tile_output (list): A list of patch predictions, that lie within this
             tile, to be merged and processed.
@@ -100,7 +100,7 @@ def _process_tile_predictions(
     """
     locations, predictions = list(zip(*tile_output))
 
-    # convert from WSI space to Tile space
+    # convert from WSI space to tile space
     tile_tl = tile_bounds[:2]
     tile_br = tile_bounds[2:]
     locations = [np.reshape(loc, (2, -1)) for loc in locations]
@@ -130,7 +130,7 @@ def _process_tile_predictions(
         head_raws.append(head_raw)
     _, inst_dict = postproc(head_raws)
 
-    # should be extremely rare
+    # should be rare, no nuclei detected in input images
     if len(inst_dict) == 0:
         return {}, []
 
@@ -161,7 +161,7 @@ def _process_tile_predictions(
         pygeos.box(0, 0, m, h),  # noqa left
         pygeos.box(w - m, 0, w, h),  # noqa right
     ]
-    # ! this is wrt to WSI coord space, not Tile
+    # ! this is wrt to WSI coord space, not tile
     margin_lines = [
         [[m, m], [w - m, m]],  # noqa top egde
         [[m, h - m], [w - m, h - m]],  # noqa bottom edge
@@ -240,7 +240,7 @@ def _process_tile_predictions(
         ]
         remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
 
-    # move inst position from Tile space back to WSI space
+    # move inst position from tile space back to WSI space
     # an also generate universal uid as replacement for storage
     new_inst_dict = {}
     for inst_uid, inst_info in inst_dict.items():
@@ -255,13 +255,28 @@ def _process_tile_predictions(
 
 
 class NucleusInstanceSegmentor(SemanticSegmentor):
-    """An engine specifically designed to handle WSI inference.
+    """An engine specifically designed to handle tiles or WSIs inference.
 
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments. Additionally,
     unlike `SemanticSegmentor`, this engine assumes each input model
     will ultimately predict one single target: the nucleus instance within
-    the tiles/WSIs.
+    the tiles/WSIs. Each WSI prediction will be store under a `.dat` file
+    which contains a dictionary of form:
+
+    .. code-block:: yaml
+
+        inst_uid:
+            # top left and bottom right of bounding box
+            box: (start_x, start_y, end_x, end_y)
+            # centroid coordinates
+            centroid: (x, y)
+            # array/list of points
+            contour: [(x1, y1), (x2, y2), ...]
+            # the type of nuclei
+            type: int
+            # the probabilities of being this nuclei type
+            prob: float
 
     Args:
         model (nn.Module): Use externally defined PyTorch model for prediction with.
@@ -505,7 +520,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         execution order in the main thread.
 
         Args:
-            wsi_idx (int): The index of the WSI to be processed. This is used to
+            wsi_idx (int): The index of the WSI to be processed. This is used
                 to retrieve the file path.
             patch_inputs (list): A list of corrdinates in
                 [start_x, start_y, end_x, end_y] format indicating the read location
