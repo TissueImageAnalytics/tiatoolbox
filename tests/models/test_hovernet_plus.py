@@ -20,7 +20,6 @@
 
 """Unit test package for HoVerNet+."""
 
-import numpy as np
 import pytest
 import torch
 
@@ -39,21 +38,6 @@ def test_functionality(remote_sample, tmp_path):
     patch = patch_pre[0:256, 0:256]
     batch = torch.from_numpy(patch)[None]
 
-    # Test functionality with both nuclei segmentation and classification alone
-    model = HoVerNetPlus(num_types=6, num_layers=None, mode="fast")
-    fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weigths.pth")
-    pretrained = torch.load(f"{tmp_path}/weigths.pth")
-    model.load_state_dict(pretrained)
-    # Test decoder as expected
-    assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
-    assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
-    assert len(model.decoder["tp"]) > 0, "Decoder must contain tp branch."
-    output = model.infer_batch(model, batch, on_gpu=False)
-    assert len(output) == 3, "Must contain predictions for: np, hv and tp branches."
-    output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
-
     # Test functionality with both nuclei and layer segmentation
     model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
     # Test decoder as expected
@@ -69,29 +53,6 @@ def test_functionality(remote_sample, tmp_path):
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0 and len(output[3]) > 0, "Must have some nuclei/layers."
-
-    # Test functionality with nuclei segmentation alone
-    model = HoVerNetPlus(num_types=None, num_layers=None, mode="fast")
-    model.load_state_dict(pretrained, strict=False)
-    # Test decoder as expected
-    assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
-    assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
-    output = model.infer_batch(model, batch, on_gpu=False)
-    assert len(output) == 2, "Must contain predictions for: np and hv branches."
-    output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
-
-    # Test functionality with layer segmentation alone
-    model = HoVerNetPlus(num_types=None, num_layers=5, mode="fast")
-    model.load_state_dict(pretrained, strict=False)
-    # Test decoder as expected
-    assert len(model.decoder["ls"]) > 0, "Decoder must contain ls branch."
-    output = model.infer_batch(model, batch, on_gpu=False)
-    assert len(output) > 0, "Must contain predictions for: ls branch."
-    output = output[0][np.newaxis, :, :]
-    output = model.postproc(output)
-    assert len(output[3]) > 0, "Must have some layers."
 
     # test crash when providing exotic mode
     with pytest.raises(ValueError, match=r".*Invalid mode.*"):
