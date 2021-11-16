@@ -42,7 +42,6 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
 
 
-# Make function: get_instance_info
 def get_instance_info(pred_inst, pred_type=None):
     """To collect instance information and store it within a dictionary.
 

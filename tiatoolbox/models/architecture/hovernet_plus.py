@@ -38,52 +38,44 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
 
 
-# check for semantic segmentation function (outside class)
+# TODO: check for semantic segmentation function (outside class)
 def get_layer_info(pred_layer):
-    def image2contours(image, layer_info_dict, cnt, type_class):
-        """Transforms image layers/regions into contours to store in dictionary.
+    """Transforms image layers/regions into contours to store in dictionary.
 
-        Args:
-            image (ndarray): Semantic segmentation map of different
-                layers/regions following processing.
-            layer_info_dict (dict): Dictionary to store layer contours in. It
-                has the following form:
-                layer_info = {
-                        contour: number[][],
-                        type: number,
-                }
-                layer_dict = {[layer_uid: number] : layer_info}
-            cnt (int): Counter.
-            type_class (int): The class of the layer to be processed.
+    Args:
+        image (ndarray): Semantic segmentation map of different
+            layers/regions following processing.
 
-        Returns:
-            layer_info_dict (dict): Updated layer dict.
-            cnt (int): Counter.
-
-        """
-        contours, _ = cv2.findContours(
-            image.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
-        )
-        for layer in contours:
-            coords = layer[:, 0, :]
-            layer_info_dict[str(cnt)] = {
-                "contours": coords.tolist(),
-                "type": type_class,
+    Returns:
+        layer_info_dict (dict): Dictionary to store layer contours in. It
+            has the following form:
+            layer_info = {
+                    contour: number[][],
+                    type: number,
             }
-            cnt += 1
+            layer_dict = {[layer_uid: number] : layer_info}
 
-        return layer_info_dict, cnt
+    """
 
     layer_list = np.unique(pred_layer)
     layer_list = np.delete(layer_list, np.where(layer_list == 0))
-    layer_dict = {}
+    layer_info_dict = {}
     count = 1
 
-    for lyr in layer_list:
-        layer = np.where(pred_layer == lyr, 1, 0).astype("uint8")
-        layer_dict, count = image2contours(layer, layer_dict, count, lyr)
+    for type_class in layer_list:
+        layer = np.where(pred_layer == type_class, 1, 0).astype("uint8")
+        contours, _ = cv2.findContours(
+            layer.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+        )
+        for layer in contours:
+            coords = layer[:, 0, :]
+            layer_info_dict[count] = {
+                "contours": coords,
+                "type": type_class,
+            }
+            count += 1
 
-    return layer_dict
+    return layer_info_dict
 
 
 class HoVerNetPlus(HoVerNet):
@@ -196,10 +188,6 @@ class HoVerNetPlus(HoVerNet):
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
-
-        print(pred_inst.shape)
-        print(pred_layer.shape)
-        print(pred_type.shape)
 
         nuc_inst_info_dict = get_instance_info(pred_inst, pred_type)
         layer_info_dict = get_layer_info(pred_layer)
