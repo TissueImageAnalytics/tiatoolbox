@@ -214,18 +214,18 @@ class HoVerNetPlus(HoVerNet):
             pred_dict = OrderedDict(
                 [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()]
             )
-            if "np" in pred_dict:
-                pred_dict["np"] = F.softmax(pred_dict["np"], dim=-1)[..., 1:]
-            if "tp" in pred_dict:
-                type_map = F.softmax(pred_dict["tp"], dim=-1)
-                type_map = torch.argmax(type_map, dim=-1, keepdim=True)
-                type_map = type_map.type(torch.float32)
-                pred_dict["tp"] = type_map
-            if "ls" in pred_dict:
-                layer_map = F.softmax(pred_dict["ls"], dim=-1)
-                layer_map = torch.argmax(layer_map, dim=-1, keepdim=True)
-                layer_map = layer_map.type(torch.float32)
-                pred_dict["ls"] = layer_map
+            pred_dict["np"] = F.softmax(pred_dict["np"], dim=-1)[..., 1:]
+
+            type_map = F.softmax(pred_dict["tp"], dim=-1)
+            type_map = torch.argmax(type_map, dim=-1, keepdim=True)
+            type_map = type_map.type(torch.float32)
+            pred_dict["tp"] = type_map
+
+            layer_map = F.softmax(pred_dict["ls"], dim=-1)
+            layer_map = torch.argmax(layer_map, dim=-1, keepdim=True)
+            layer_map = layer_map.type(torch.float32)
+            pred_dict["ls"] = layer_map
+
             pred_dict = {k: v.cpu().numpy() for k, v in pred_dict.items()}
 
         return pred_dict["np"], pred_dict["hv"], pred_dict["tp"], pred_dict["ls"]
