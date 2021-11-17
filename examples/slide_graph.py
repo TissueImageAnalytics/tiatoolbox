@@ -151,13 +151,16 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 
-# * Query for paths
-ROOT_OUTPUT_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/"
-WSI_DIR = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/wsis/"
+# %%
+# Set these variables to run next cell either
+# seperately or with customized parameters
+ROOT_OUTPUT_DIR = 'PATH'
+WSI_DIR = 'PATH'
 MSK_DIR = None
-CLINICAL_FILE = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dummy/label.csv"
-)
+CLINICAL_FILE = 'PATH'
+
+# %%
+# * Query for paths
 
 wsi_paths = recur_find_ext(WSI_DIR, [".svs", ".ndpi"])
 wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
@@ -616,14 +619,18 @@ FEATURE_MODE = "cnn"
 CACHE_PATH = None
 WSI_FEATURE_DIR = f"{ROOT_OUTPUT_DIR}/features/"
 
-# !- debug injection, remove later
-# CACHE_PATH = '/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/dump/features'
-CACHE_PATH = f"{ROOT_OUTPUT_DIR}/features/"
-# wsi_names = wsi_names[:2]
-# wsi_paths = wsi_paths[:2]
-# msk_paths = msk_paths[:2] if msk_paths else None
-# !-
+# %%
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# NUM_NODE_FEATURES = 2048
+# FEATURE_MODE = "cnn"
+# CACHE_PATH = 'PATH'
+# WSI_FEATURE_DIR = 'PATH'
+# wsi_names = []
+# wsi_paths = []
+# msk_paths = []  # Set to None if there is no mask
 
+# %%
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     output_list = recur_find_ext(f"{CACHE_PATH}/", [".npy"])
 elif FEATURE_MODE == "composition":
@@ -653,6 +660,16 @@ else:
 # > within `construct_graph` to fit with your objectives.
 
 # %%
+CACHE_PATH = None
+GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
+
+# %%
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# CACHE_PATH = 'PATH'
+# GRAPH_DIR = 'PATH'
+
+# %%
 from tiatoolbox.tools.graph import hybrid_clustered_graph
 
 
@@ -669,9 +686,6 @@ def construct_graph(wsi_name, save_path):
         graph_dict = {k: v.tolist() for k, v in graph_dict.items()}
         json.dump(graph_dict, handle)
 
-
-CACHE_PATH = None
-GRAPH_DIR = f"{ROOT_OUTPUT_DIR}/graph/"
 
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     GRAPH_DIR = CACHE_PATH  # assignment for follow up loading
@@ -700,10 +714,19 @@ from torch_geometric.data import Data
 from tiatoolbox.utils.visualization import plot_graph
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-
-# we should use .read_json or sthg for this
+# %%
+# By default, we visualize the first WSI within the dataset
 sample_idx = 0
+wsi_path = wsi_paths[sample_idx]
 graph_path = f"{ROOT_OUTPUT_DIR}/graph/{wsi_names[sample_idx]}.json"
+
+# %%
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# wsi_path = 'PATH
+# graph_path = 'PATH'
+
+# %%
 graph_dict = load_json(graph_path)
 graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
 graph = Data(**graph_dict)
@@ -718,7 +741,7 @@ for channel in range(graph.c.shape[-1]):
     )
 graph.c = (graph.c * 255).astype(np.uint8)
 
-reader = get_wsireader(wsi_paths[sample_idx])
+reader = get_wsireader(wsi_path)
 thumb = reader.slide_thumbnail(4.0, 'mpp')
 thumb_overlaid = plot_graph(
     thumb.copy(), graph.coords, graph.edge_index.T,
@@ -811,17 +834,15 @@ from sklearn.preprocessing import StandardScaler
 CACHE_PATH = None
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 
+# %%
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# GRAPH_DIR = 'PATH
+# CACHE_PATH = 'PATH'
+# SCALER_PATH = 'PATH'
+# wsi_names = []
 
-# !- debug injection, remove later
-# GRAPH_DIR = (
-#     "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
-#     "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
-# )
-# wsi_paths = recur_find_ext(GRAPH_DIR, ['.json'])
-# wsi_names = [pathlib.Path(v).stem for v in wsi_paths]
-# !-
-
-
+# %%
 if CACHE_PATH and os.path.exists(CACHE_PATH):
     SCALER_PATH = CACHE_PATH  # assignment for follow up loading
     node_scaler = joblib.load(SCALER_PATH)
@@ -1029,10 +1050,13 @@ class SlideGraphArch(nn.Module):
 #  out the output predictions.
 
 # %%
-# !- debug injection, remove later
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# GRAPH_DIR = 'PATH'
 # NUM_NODE_FEATURES = 4
-# !-
+# wsi_names = []
 
+# %%
 dummy_ds = SlideGraphDataset(wsi_names, mode="infer")
 loader = DataLoader(
     dummy_ds,
@@ -1440,24 +1464,23 @@ def reset_logging(save_path):
 # skip the training if the `MODEL_DIR` already exists.
 
 # %%
-# % default param
+# Default parameters
 NUM_EPOCHS = 100
 NUM_NODE_FEATURES = 4
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 
-# !- debug injection, remove later
-NUM_EPOCHS = 100
-NUM_NODE_FEATURES = 4
-GRAPH_DIR = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
-    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
-)
-SCALER_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/node_scaler_composition.dat"
-SPLIT_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/splits_fixed.dat"
-MODEL_DIR = f"{ROOT_OUTPUT_DIR}/model/"
-# !-
+# %%
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# NUM_EPOCHS = 100
+# NUM_NODE_FEATURES = 4
+# GRAPH_DIR = 'PATH'
+# SCALER_PATH = 'PATH'
+# SPLIT_PATH = 'PATH'
+# MODEL_DIR = 'PATH'
 
+# %%
 splits = joblib.load(SPLIT_PATH)
 node_scaler = joblib.load(SCALER_PATH)
 loader_kwargs = dict(
@@ -1568,22 +1591,26 @@ def select_checkpoints(
 # ### Bulk Inference & Ensemble Results
 
 # %%
-# default params
+# default parameters
 TOP_K = 1
 metric_name = 'infer-valid-B-auroc'
 PRETRAINED_DIR = f"{ROOT_OUTPUT_DIR}/model/"
 SCALER_PATH = f"{ROOT_OUTPUT_DIR}/node_scaler.dat"
 
-# !- debug injection, remove later
-NUM_NODE_FEATURES = 4
-GRAPH_DIR = (
-    "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/"
-    "storage/nima/graphs/[Cell-Composition]-[HoverNet]/"
-)
-SCALER_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/node_scaler_composition.dat"
-SPLIT_PATH = "/home/dang/storage_1/workspace/tiatoolbox/local/slidegraph/storage/nima/splits_fixed.dat"
-# !-
+# %%
+# Uncomment and set these variables to run next cell either
+# seperately or with customized parameters
+# TOP_K = 1
+# NUM_NODE_FEATURES = 4
 
+# PRETRAINED_DIR = 'PATH'
+# GRAPH_DIR = 'PATH'
+# SCALER_PATH = 'PATH'
+# SPLIT_PATH = 'PATH'
+
+# metric_name = 'name'
+
+# %%
 splits = joblib.load(SPLIT_PATH)
 node_scaler = joblib.load(SCALER_PATH)
 loader_kwargs = dict(
@@ -1659,5 +1686,133 @@ for metric in stat_df.columns:
     mu = np.mean(vals)
     va = np.std(vals)
     print(f'{metric}: {mu:0.4f}±{va:0.4f}')
+
+# %% [markdown]
+# ### Visualizing Node Activation of Graph Neural Network
+
+# %% [markdown]
+# Visualizing the activations of each node within the graph is sometimes necessary to either debug or
+# verify the predictions of the graph neural network. Here, we demonstrate
+# 
+# 1. Loading pretrained model and run inference on one single sample graph.
+# 2. Retrieving the node activations and plot it on the original WSI.
+# 
+# By default, notice that node activations are output when running the `mode.forward(input)` (Or
+# simply `model(input)` in pytorch).
+# 
+# By default, we download the pretrained model as well as samples from the tiatoolbox server to
+# `DOWNLOAD_DIR`. However, if you want to use your own set of input, you can comment next cell out
+# and provide your own data accordingly later.
+
+# %%
+from tiatoolbox.utils.misc import download_data
+
+# ! If you want to run your own set of input, comment this cell and 
+# ! check out the next cell
+DOWNLOAD_DIR = 'local/dump/'
+WSI_PATH = f"{DOWNLOAD_DIR}/sample.svs"
+GRAPH_PATH = f"{DOWNLOAD_DIR}/graph.json"
+SCALER_PATH = f"{DOWNLOAD_DIR}/node_scaler.dat"
+MODEL_WEIGHTS_PATH = f"{DOWNLOAD_DIR}/model.weigths.pth"
+MODEL_AUX_PATH = f"{DOWNLOAD_DIR}/model.aux.dat"
+rm_n_mkdir(DOWNLOAD_DIR)
+
+# Downloading sample image tile
+URL_HOME = "https://tiatoolbox.dcs.warwick.ac.uk/models/slide_graph/cell-composition"
+download_data(f"{URL_HOME}/TCGA-C8-A278-01Z-00-DX1.188B3FE0-7B20-401A-A6B7-8F1798018162.svs", WSI_PATH)
+download_data(f"{URL_HOME}/TCGA-C8-A278-01Z-00-DX1.188B3FE0-7B20-401A-A6B7-8F1798018162.json", GRAPH_PATH)
+download_data(f"{URL_HOME}/node_scaler.dat", SCALER_PATH)
+download_data(f"{URL_HOME}/model.aux.dat", MODEL_AUX_PATH)
+download_data(f"{URL_HOME}/model.weights.pth", MODEL_WEIGHTS_PATH)
+
+# %%
+# If you want to run your own set of input, 
+# uncomment these lines and then set variables to run next cell
+# WSI_PATH = "PATH"
+# GRAPH_PATH = "PATH"
+# SCALER_PATH = "PATH"
+# MODEL_WEIGHTS_PATH = "PATH"
+# MODEL_AUX_PATH = "PATH"
+
+# %%
+from torch_geometric.data import Batch, Data
+import matplotlib.pyplot as plt
+from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader
+from tiatoolbox.utils.visualization import plot_graph
+
+NODE_SIZE = 13
+NUM_NODE_FEATURES = 4
+NODE_RESOLUTION = dict(resolution=0.5, units='mpp')
+PLOT_RESOLUTION = dict(resolution=4.0, units='mpp')
+
+node_scaler = joblib.load(SCALER_PATH)
+loader_kwargs = dict(
+    num_workers=8,
+    batch_size=16,
+)
+arch_kwargs = dict(
+    dim_features=NUM_NODE_FEATURES,
+    dim_target=1,
+    layers=[16, 16, 8],
+    dropout=0.5,
+    pooling="mean",
+    conv="EdgeConv",
+    aggr="max",
+)
+
+
+with open(GRAPH_PATH, "r") as fptr:
+    graph_dict = json.load(fptr)
+graph_dict = {k: np.array(v) for k, v in graph_dict.items()}
+graph_dict["x"] = node_scaler.transform(graph_dict["x"])
+graph_dict = {k: torch.tensor(v) for k, v in graph_dict.items()}
+graph = Data(**graph_dict)
+batch = Batch.from_data_list([graph])
+
+model = SlideGraphArch(**arch_kwargs)
+model.load(MODEL_WEIGHTS_PATH, MODEL_AUX_PATH)
+model = model.to('cuda')
+
+# Data type conversion
+batch = batch.to('cuda')
+batch.x = batch.x.type(torch.float32)
+predictions, node_activations = model(batch)
+node_activations = node_activations.detach().cpu().numpy()
+
+reader = OpenSlideWSIReader(WSI_PATH)
+node_resolution = reader.slide_dimensions(**NODE_RESOLUTION)
+plot_resolution = reader.slide_dimensions(**PLOT_RESOLUTION)
+fx = np.array(node_resolution) / np.array(plot_resolution)
+
+cmap = plt.get_cmap('jet')
+graph = graph.to('cpu')
+
+node_coordinates = np.array(graph.coords) / fx
+node_colors = (
+    cmap(np.squeeze(node_activations))
+        [..., :3] * 255).astype(np.uint8
+)
+edges = graph.edge_index.T
+
+thumb = reader.slide_thumbnail(**PLOT_RESOLUTION)
+thumb_overlaid = plot_graph(
+    thumb.copy(), node_coordinates, edges,
+    node_colors=node_colors, node_size=NODE_SIZE
+)
+
+ax = plt.subplot(1, 1, 1)
+plt.imshow(thumb_overlaid)
+plt.axis('off')
+# Add minorticks on the colorbar to make it easy to read the
+# values off the colorbar.
+fig = plt.gcf()
+norm = mpl.colors.Normalize(
+    vmin=np.min(node_activations),
+    vmax=np.max(node_activations)
+)
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+cbar = fig.colorbar(sm, ax=ax, extend='both')
+cbar.minorticks_on()
+plt.show()
 
 
