@@ -129,9 +129,6 @@ class SQLExpression(ABC):
     def __abs__(self):
         return SQLTriplet(self, operator.abs)
 
-    def __not__(self):
-        return SQLTriplet(self, operator.not_)
-
     def __eq__(self, other):
         return SQLTriplet(self, operator.eq, other)
 
