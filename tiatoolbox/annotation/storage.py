@@ -413,7 +413,7 @@ class AnnotationStore(ABC, MutableMapping):
         for key in keys:
             self.remove(key)
 
-    def setdefault(self, key: str, default: Annotation) -> Any:
+    def setdefault(self, key: str, default: Annotation) -> Annotation:
         """Return the value of the annotation with the given key.
 
         If the key does not exist, insert the default value and return
