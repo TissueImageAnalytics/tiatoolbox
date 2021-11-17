@@ -38,6 +38,7 @@ Properties
     Key-value pairs associated with a geometry.
 
 """
+import contextlib
 import copy
 import pickle
 import sqlite3
@@ -724,13 +725,15 @@ class AnnotationStore(ABC, MutableMapping):
         string_fn: Callable[[Union[str, bytes]], Any],
         file_fn: Callable[[IO], Any],
     ) -> Any:
-        try:
+        with contextlib.suppress(OSError):
+            if isinstance(fp, (Path, str)) and Path(fp).exists():
+                with open(fp) as file_handle:
+                    return file_fn(file_handle)
+        if isinstance(fp, (str, bytes)):
             return string_fn(fp)
-        except TypeError:
-            if hasattr(fp, "read"):
-                return file_fn(fp)
-            with open(fp) as file_handle:
-                return file_fn(file_handle)
+        if hasattr(fp, "read"):
+            return file_fn(fp)
+        raise IOError("Invalid file handle or path.")
 
     @classmethod
     def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStore":
@@ -749,6 +752,10 @@ class AnnotationStore(ABC, MutableMapping):
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise the store to geoJSON.
 
+        For more information on the geoJSON format see:
+        - https://geojson.org/
+        - https://tools.ietf.org/html/rfc7946
+
         Args:
              fp (IO): A file-like object supporting `.read`. Defaults to
                 None which returns geoJSON as a string.
@@ -763,16 +770,91 @@ class AnnotationStore(ABC, MutableMapping):
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
 
-    def to_ldjson(self, fp: Optional[IO] = None) -> Union[str, None]:
-        """Serialise to Line-Delimited (Geo)JSON."""
+    def to_ndjson(self, fp: Optional[IO] = None) -> Union[str, None]:
+        """Serialise to New Line Delimited JSON.
+
+        Each line contains a JSON object with the following format:
+        ```json
+        {
+            "key": "...",
+            "geometry": {
+                "type": "...",
+                "coordinates": [...]
+            },
+            "properties": {
+                "...": "..."
+            }
+        }
+        ```
+        That is a geoJSON object with an additional key field.
+
+        For more information on the NDJSON format see:
+        - ndjson Specification: http://ndjson.org
+        - JSON Lines Documentation: https://jsonlines.org
+        - Streaming JSON: https://w.wiki/4Qan
+        - GeoJSON RFC: https://tools.ietf.org/html/rfc7946
+        - JSON RFC: https://tools.ietf.org/html/rfc7159
+
+
+        Args:
+            fp (IO): A file-like object supporting `.read`. Defaults to
+                None which returns geoJSON as a string.
+
+        Returns:
+            None or str: None if writing to file or the geoJSON string.
+
+        """
         string_lines_generator = (
-            json.dumps(line, separators=(",", ":")) + "\n" for line in self.features()
+            json.dumps({"key": key, **annotation.to_feature()}, separators=(",", ":"))
+            + "\n"
+            for key, annotation in self.items()
         )
         return self._dump_cases(
             fp=fp,
             file_fn=lambda fp: fp.writelines(string_lines_generator),
             none_fn=lambda: "".join(string_lines_generator),
         )
+
+    @classmethod
+    def from_ndjson(cls, fp: Union[IO, str]) -> "AnnotationStore":
+        """Load annotations from NDJSON.
+
+        Expects each line to be a JSON object with the following format:
+        ```json
+        {
+            "key": "...",
+            "geometry": {
+                "type": "...",
+                "coordinates": [...]
+            },
+            "properties": {
+                "...": "..."
+            }
+        }
+        ```
+        That is a geoJSON object with an additional key field. If this
+        key field is missing, then a new UUID4 key will be generated for
+        this annotation.
+
+        Args:
+            fp (IO): A file-like object supporting `.read`.
+
+        Returns:
+            AnnotationStore: The loaded annotations.
+
+        """
+        store = cls()
+        for line in cls._load_cases(
+            fp=fp,
+            string_fn=lambda fp: fp.splitlines(),
+            file_fn=lambda fp: fp.readlines(),
+        ):
+            dictionary = json.loads(line)
+            key = dictionary.get("key", uuid.uuid4().hex)
+            geometry = feature2geometry(dictionary["geometry"])
+            properties = dictionary["properties"]
+            store.append(Annotation(geometry, properties), key=key)
+        return store
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame) -> "AnnotationStore":
@@ -1365,7 +1447,29 @@ class SQLiteStore(AnnotationStore):
         cur.execute("BEGIN")
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             if key not in self:
-                self.append(Annotation(geometry, properties), key)
+                token = self._make_token(
+                    annotation=Annotation(geometry, properties),
+                    key=key,
+                )
+                cur.execute(
+                    """
+                    INSERT INTO annotations VALUES(
+                        NULL, :key, :geom_type,
+                        :cx, :cy, :boundary, :properties
+                    )
+                    """,
+                    token,
+                )
+                rowid = cur.lastrowid
+                token.update({"rowid": rowid})
+                cur.execute(
+                    """
+                    INSERT INTO rtree VALUES(
+                        :rowid, :min_x, :max_x, :min_y, :max_y
+                    )
+                    """,
+                    token,
+                )
                 continue
             if geometry is not None:
                 bounds = dict(
@@ -1490,7 +1594,18 @@ class DictionaryStore(AnnotationStore):
     def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
         super().__init__()
         self._rows = {}
-        self.connection = connection
+        self.connection = Path(connection)
+        if connection not in [None, ":memory:"] and connection.exists():
+            for line in self._load_cases(
+                fp=self.connection,
+                string_fn=lambda fp: fp.splitlines(),
+                file_fn=lambda fp: fp.readlines(),
+            ):
+                dictionary = json.loads(line)
+                key = dictionary.get("key", uuid.uuid4().hex)
+                geometry = feature2geometry(dictionary["geometry"])
+                properties = dictionary["properties"]
+                self.append(Annotation(geometry, properties), key=key)
 
     def append(
         self,
@@ -1542,19 +1657,21 @@ class DictionaryStore(AnnotationStore):
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
-        return cls.from_geojson(fp)
+        return cls.from_ndjson(fp)
 
     def commit(self) -> None:
-        if self.connection == ":memory:":
+        if str(self.connection) == ":memory:":
             warnings.warn("In-memory store. Nothing to commit.")
             return
+        if not self.connection.exists():
+            self.connection.touch()
         self.dump(self.connection)
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
-        return self.to_geojson(fp)
+        return self.to_ndjson(fp)
 
     def dumps(self) -> str:
-        return self.to_geojson()
+        return self.to_ndjson()
 
     def close(self) -> None:
         warnings.simplefilter("ignore")

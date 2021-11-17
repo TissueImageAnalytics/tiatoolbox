@@ -356,7 +356,7 @@ class TestStore:
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
-    def test_pach(fill_store, tmp_path, store):
+    def test_patch(fill_store, tmp_path, store):
         """Test patching an annotation."""
         keys, store = fill_store(store, tmp_path / "polygon.db")
         key = keys[0]
@@ -389,6 +389,15 @@ class TestStore:
         for _, key in enumerate(keys[:10]):
             assert store[key].geometry == new_geometry
             assert store[key].properties["abc"] == 123
+
+    @staticmethod
+    def test_patch_many_append(fill_store, tmp_path, store):
+        """Test bulk patching annotations that do not exist."""
+        _, store = fill_store(store, tmp_path / "polygon.db")
+        new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
+        store.patch_many(["foo", "bar"], repeat(new_geometry, 2))
+        assert store["foo"].geometry == new_geometry
+        assert store["bar"].geometry == new_geometry
 
     @staticmethod
     def test_patch_many_len_mismatch(fill_store, tmp_path, store):
@@ -556,7 +565,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_str(fill_store, tmp_path, store):
-        """Test exporting to ldjson with a file path string."""
+        """Test exporting to ndjson with a file path string."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         geojson = store.to_geojson()
         assert isinstance(geojson, str)
@@ -568,7 +577,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_file(fill_store, tmp_path, store):
-        """Test exporting to ldjson with a file handle."""
+        """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.json", "w") as fh:
             geojson = store.to_geojson(fp=fh)
@@ -594,11 +603,11 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_ldjson_str(fill_store, tmp_path, store):
-        """Test exporting to ldjson with a file path string."""
+    def test_to_ndjson_str(fill_store, tmp_path, store):
+        """Test exporting to ndjson with a file path string."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        ldjson = store.to_ldjson()
-        for line in ldjson.split():
+        ndjson = store.to_ndjson()
+        for line in ndjson.split():
             assert isinstance(line, str)
             feature = json.loads(line)
             assert "type" in feature
@@ -606,13 +615,13 @@ class TestStore:
             assert "properties" in feature
 
     @staticmethod
-    def test_to_ldjson_file(fill_store, tmp_path, store):
-        """Test exporting to ldjson with a file handle."""
+    def test_to_ndjson_file(fill_store, tmp_path, store):
+        """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        with open(tmp_path / "polygon.ldjson", "w") as fh:
-            ldjson = store.to_ldjson(fp=fh)
-        assert ldjson is None
-        with open(tmp_path / "polygon.ldjson", "r") as fh:
+        with open(tmp_path / "polygon.ndjson", "w") as fh:
+            ndjson = store.to_ndjson(fp=fh)
+        assert ndjson is None
+        with open(tmp_path / "polygon.ndjson", "r") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
@@ -621,12 +630,12 @@ class TestStore:
                 assert "properties" in feature
 
     @staticmethod
-    def test_to_ldjson_path(fill_store, tmp_path, store):
-        """Test exporting to ldjson with a file path."""
+    def test_to_ndjson_path(fill_store, tmp_path, store):
+        """Test exporting to ndjson with a file path."""
         _, store = fill_store(store, tmp_path / "polygon.db")
-        ldjson = store.to_ldjson(fp=tmp_path / "polygon.ldjson")
-        assert ldjson is None
-        with open(tmp_path / "polygon.ldjson", "r") as fh:
+        ndjson = store.to_ndjson(fp=tmp_path / "polygon.ndjson")
+        assert ndjson is None
+        with open(tmp_path / "polygon.ndjson", "r") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
@@ -868,3 +877,23 @@ class TestStore:
                 assert geometry.wkt == deserialised.wkt
             else:
                 assert geometry.wkb == deserialised.wkb
+
+    @staticmethod
+    def test_commit(fill_store, store, tmp_path):
+        """Test committing a store."""
+        store_path = tmp_path / "test_store"
+        test_store = store(store_path)
+        test_store["foo"] = Annotation(Point(0, 0))
+        test_store.commit()
+        assert store_path.exists()
+        test_store.close()
+        del test_store
+        test_store = store(store_path)
+        assert "foo" in test_store
+
+    @staticmethod
+    def test_load_cases_error(fill_store, store):
+        """Test that loading a store with an invalid file handle raises an exception."""
+        store = store()
+        with pytest.raises(IOError, match="Invalid file handle or path"):
+            store._load_cases(["foo"], lambda: None, lambda: None)
