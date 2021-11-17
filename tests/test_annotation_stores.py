@@ -895,7 +895,7 @@ class TestStore:
         test_store.commit()
         assert store_path.exists()
         test_store.close()
-        del test_store  # nocq: PTC-W0043
+        del test_store  # skipcq: PTC-W0043
         test_store = store(store_path)
         assert "foo" in test_store
 
