@@ -213,6 +213,14 @@ def test_sqlitestore_unsupported_compression(sample_triangle):
         _ = store.serialise_geometry(sample_triangle)
 
 
+def test_sqlitestore_no_compression(sample_triangle):
+    """Test that using no compression raises no error."""
+    store = SQLiteStore(compression=None)
+    serialised = store.serialise_geometry(sample_triangle)
+    deserialised = store.deserialise_geometry(serialised)
+    assert deserialised.wkb == sample_triangle.wkb
+
+
 def test_sqlitestore_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
