@@ -107,50 +107,6 @@ def centre_crop_to_shape(
     return centre_crop(x, crop_shape, data_format)
 
 
-def center_crop_to_shape(
-    x: Union[np.ndarray, torch.tensor],
-    y: Union[np.ndarray, torch.tensor],
-    data_format: str = "NCHW",
-):
-    """A function to center crop image to shape.
-    Centre crop `x` so that `x` has shape of `y` and `y` height and width must
-    be smaller than `x` heigh width.
-    Args:
-        x (ndarray, torch.tensor): Image to be cropped.
-        y (ndarray, torch.tensor): Reference image for getting cropping shape,
-            should be of 3 channels.
-        data_format: Should either be `NCHW` or `NHWC`.
-    Returns:
-        (ndarray, torch.tensor) Cropped image.
-    """
-    if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`")
-
-    if data_format == "NCHW":
-        _, _, h1, w1 = x.shape
-        _, _, h2, w2 = y.shape
-    else:
-        _, h1, w1, _ = x.shape
-        _, h2, w2, _ = y.shape
-
-    if h1 <= h2 or w1 <= w2:
-        raise ValueError(
-            (
-                "Height width of `x` is smaller than `y` ",
-                f"{[h1, w1]} vs {[h2, w2]}",
-            )
-        )
-
-    x_shape = x.shape
-    y_shape = y.shape
-    if data_format == "NCHW":
-        crop_shape = (x_shape[2] - y_shape[2], x_shape[3] - y_shape[3])
-    else:
-        crop_shape = (x_shape[1] - y_shape[1], x_shape[2] - y_shape[2])
-
-    return centre_crop(x, crop_shape, data_format)
-
-
 class UpSample2x(nn.Module):
     """A layer to scale input by a factor of 2.
 
