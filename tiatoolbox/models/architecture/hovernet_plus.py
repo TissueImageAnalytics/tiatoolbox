@@ -91,7 +91,7 @@ class HoVerNetPlus(HoVerNet):
         num_input_channels: int = 3,
         num_types: int = None,
         num_layers: int = None,
-        mode: str = "original",
+        mode: str = "fast",
     ):
         """Initialise HoVer-Net+.
 
@@ -102,16 +102,9 @@ class HoVerNetPlus(HoVerNet):
 
         """
         super().__init__(mode=mode)
-        self.mode = mode
         self.num_types = num_types
         self.num_layers = num_layers
-        ksize = 5 if mode == "original" else 3
-
-        if mode not in ["original", "fast"]:
-            raise ValueError(
-                f"Invalid mode {mode} for HoVerNet. "
-                "Only support `original` or `fast`."
-            )
+        ksize = 3
 
         self.decoder = nn.ModuleDict(
             OrderedDict(
@@ -235,15 +228,4 @@ class HoVerNetPlus(HoVerNet):
                 pred_dict["ls"] = layer_map
             pred_dict = {k: v.cpu().numpy() for k, v in pred_dict.items()}
 
-        if "tp" in pred_dict and "ls" not in pred_dict:
-            return pred_dict["np"], pred_dict["hv"], pred_dict["tp"]
-
-        if "tp" in pred_dict and "ls" in pred_dict:
-            return pred_dict["np"], pred_dict["hv"], pred_dict["tp"], pred_dict["ls"]
-
-        if "tp" not in pred_dict and "ls" in pred_dict:
-            return pred_dict["ls"]
-
-        if "tp" not in pred_dict and "np" in pred_dict:
-            return pred_dict["np"], pred_dict["hv"]
-            # remove other 3 options
+        return pred_dict["np"], pred_dict["hv"], pred_dict["tp"], pred_dict["ls"]
