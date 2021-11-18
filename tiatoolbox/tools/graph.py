@@ -102,7 +102,8 @@ def edge_index_to_traingles(edge_index: ArrayLike) -> ArrayLike:
 
     """
     # Validate inputs
-    if len(np.shape(edge_index)) != 2:
+    edge_index_shape = np.shape(edge_index)
+    if edge_index_shape[0] != 2 or len(edge_index_shape) != 2:
         raise ValueError("Input edge_index must be a 2xM matrix.")
     nodes = np.unique(edge_index).tolist()
     neighbours = defaultdict(set)
