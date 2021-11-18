@@ -386,7 +386,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             >>> fig, ax = plt.subplots()
             >>> slide_dims = wsi.info.slide_dimensions
             >>> ax.imshow(wsi.get_thumbnail(), extent=(0, *slide_dims, 0))
-            >>> ax = SlideGraphConstructor.visualise(graph_dict)
+            >>> SlideGraphConstructor.visualise(graph_dict, ax=ax)
             >>> plt.show()
 
         """
