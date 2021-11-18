@@ -95,11 +95,20 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     return adjacency
 
 
-def edge_index_to_traingles(edge_index: ArrayLike) -> ArrayLike:
+def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     """Convert an edged index to anti-clockwise traingle simplices.
 
     Args:
+        edge_index (ArrayLike): An Nx2 array of edges.
 
+    Returns:
+        ArrayLike: An Nx3 array of triangles.
+
+    Example:
+        >>> points = np.random.rand(100, 2)
+        >>> adjacency = delaunay_adjacency(points)
+        >>> edge_index = affinity_to_edge_index(adjacency)
+        >>> triangles = edge_index_to_triangles(edge_index)
     """
     # Validate inputs
     edge_index_shape = np.shape(edge_index)
@@ -114,13 +123,14 @@ def edge_index_to_traingles(edge_index: ArrayLike) -> ArrayLike:
         neighbours[b].add(a)
     # Remove any nodes with less than two neighbours
     nodes = [node for node in nodes if len(neighbours[node]) >= 2]
-    traingles = []
+    # Find the triangles
+    triangles = []
     for node in nodes:
         for neighbour in neighbours[node]:
             overlap = neighbours[node].intersection(neighbours[neighbour])
             if overlap:
-                traingles.append([node, neighbour, overlap.pop()])
-    return np.array(traingles, dtype=np.int32, order="C")
+                triangles.append([node, neighbour, overlap.pop()])
+    return np.array(triangles, dtype=np.int32, order="C")
 
 
 def affinity_to_edge_index(
@@ -431,7 +441,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             color = cls._umap_reducer
 
         # Plot the edges
-        triangles = edge_index_to_traingles(graph["edge_index"])
+        triangles = edge_index_to_triangles(graph["edge_index"])
         ax.triplot(
             graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
         )
