@@ -43,7 +43,7 @@ from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 BATCH_SIZE = 2
-ON_TRAVIS = True
+ON_TRAVIS = False
 ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
 # ----------------------------------------------------
@@ -528,11 +528,12 @@ def test_functionality_local(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
+def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     """Test for nucleus segmentation."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    output_path = tmp_path / "output"
     runner = CliRunner()
-    semantic_segment_result = runner.invoke(
+    nucleus_instance_segment_result = runner.invoke(
         cli.main,
         [
             "nucleus-instance-segment",
@@ -541,10 +542,11 @@ def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
             "--mode",
             "wsi",
             "--output-path",
-            tmp_path,
+            str(output_path),
         ],
     )
 
-    assert semantic_segment_result.output == ""
-    assert semantic_segment_result.exit_code == 1
-    assert isinstance(semantic_segment_result.exception, FileExistsError)
+    assert nucleus_instance_segment_result.exit_code == 0
+    assert output_path.joinpath("output/0.dat").exists()
+    assert output_path.joinpath("output/file_map.dat").exists()
+    assert output_path.joinpath("output/results.json").exists()
