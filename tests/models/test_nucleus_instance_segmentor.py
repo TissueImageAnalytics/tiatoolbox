@@ -547,6 +547,6 @@ def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     )
 
     assert nucleus_instance_segment_result.exit_code == 0
-    assert output_path.joinpath("output/0.dat").exists()
-    assert output_path.joinpath("output/file_map.dat").exists()
-    assert output_path.joinpath("output/results.json").exists()
+    assert output_path.joinpath("0.dat").exists()
+    assert output_path.joinpath("file_map.dat").exists()
+    assert output_path.joinpath("results.json").exists()
