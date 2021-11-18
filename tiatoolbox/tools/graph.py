@@ -339,7 +339,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         graph: Dict[str, ArrayLike],
         color: Union[ArrayLike, str, Callable] = None,
         node_size: Union[Number, ArrayLike, Callable] = 25,
-        edge_color: str = (0, 0, 0, 0.33),
+        edge_color: Union[str, ArrayLike] = (0, 0, 0, 0.33),
         ax: Axes = None,
     ) -> Axes:
         """Visualise a graph.
