@@ -36,7 +36,7 @@ from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
 
 
-def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
+def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     Points which are further apart than dthresh will not be connected.
@@ -93,6 +93,35 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> ArrayLike:
     # Return neighbours of each coordinate as an affinity (adjacency
     # in this case) matrix.
     return adjacency
+
+
+def edge_index_to_traingles(edge_index: ArrayLike) -> ArrayLike:
+    """Convert an edged index to anti-clockwise traingle simplices.
+
+    Args:
+
+    """
+    # Validate inputs
+    if len(np.shape(edge_index)) != 2:
+        raise ValueError("Input edge_index must be a 2xM matrix.")
+    nodes = np.unique(edge_index).tolist()
+    neighbours = defaultdict(set)
+    edges = edge_index.T.tolist()
+    # Find the neighbours of each node
+    for a, b in edges:
+        neighbours[a].add(b)
+        neighbours[b].add(a)
+    # Remove any nodes with less than two neighbours
+    nodes = [node for node in nodes if len(neighbours[node]) >= 2]
+    # Sort node by the degree of the node
+    nodes.sort(key=lambda node: len(neighbours[node]))
+    traingles = []
+    for node in nodes:
+        for neighbour in neighbours[node]:
+            overlap = neighbours[node].intersection(neighbours[neighbour])
+            if overlap:
+                traingles.append([node, neighbour, overlap.pop()])
+    return np.array(traingles, dtype=np.int32, order="C")
 
 
 def affinity_to_edge_index(
@@ -403,13 +432,10 @@ class SlideGraphConstructor:  # noqa: PIE798
             color = cls._umap_reducer
 
         # Plot the edges
-        for i, j in graph["edge_index"].T:
-            ax.plot(
-                [graph["coords"][i, 0], graph["coords"][j, 0]],
-                [graph["coords"][i, 1], graph["coords"][j, 1]],
-                color=edge_color,
-                zorder=0,
-            )
+        triangles = edge_index_to_traingles(graph["edge_index"])
+        ax.triplot(
+            graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
+        )
 
         # Plot the nodes
         ax.scatter(
