@@ -27,7 +27,9 @@ import joblib
 import numpy as np
 import pytest
 import torch
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.models import (
     IOSegmentorConfig,
     NucleusInstanceSegmentor,
@@ -38,7 +40,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
 )
 from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 BATCH_SIZE = 2
 ON_TRAVIS = True
@@ -278,12 +280,11 @@ def test_crash_segmentor(remote_sample, tmp_path):
 def test_functionality_travis(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
-    save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
     resolution = 2.0
 
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
@@ -525,3 +526,25 @@ def test_functionality_local(remote_sample, tmp_path):
     score = f1_detection(inst_coords_b, inst_coords_a, radius=1.0)
     assert score > 0.9, "Heavy loss of precision!"
     _rm_dir(tmp_path)
+
+
+def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
+    """Test for nucleus segmentation."""
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    runner = CliRunner()
+    semantic_segment_result = runner.invoke(
+        cli.main,
+        [
+            "nucleus-instance-segment",
+            "--img-input",
+            str(mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--output-path",
+            tmp_path,
+        ],
+    )
+
+    assert semantic_segment_result.output == ""
+    assert semantic_segment_result.exit_code == 1
+    assert isinstance(semantic_segment_result.exception, FileExistsError)

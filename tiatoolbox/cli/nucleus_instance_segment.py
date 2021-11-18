@@ -38,13 +38,13 @@ def main():  # pragma: no cover
 @main.command()
 @click.option(
     "--pretrained-model",
-    help="Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
-    "resnet18 model trained on the kather dataset. For a detailed list of "
-    "available pretrained models please see "
-    "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
-    "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
-    default="fcn-tissue_mask",
+    help="Name of the existing models support by tiatoolbox"
+    "for processing the data. Refer to [URL] for details."
+    "By default, the corresponding pretrained weights will also be"
+    "downloaded. However, you can override with your own set of weights"
+    "via the `pretrained_weights` argument. Argument is case insensitive. "
+    "default = 'hovernet_fast-pannuke'",
+    default="hovernet_fast-pannuke",
 )
 @click.option(
     "--pretrained-weights",
