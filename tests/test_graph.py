@@ -9,7 +9,7 @@ from tiatoolbox.tools.graph import (
     SlideGraphConstructor,
     affinity_to_edge_index,
     delaunay_adjacency,
-    edge_index_to_traingles,
+    edge_index_to_triangles,
 )
 
 
@@ -110,11 +110,11 @@ def test_affinity_to_edge_index_invalid_fuzz_input_shape():
             _ = affinity_to_edge_index(affinity_matrix, threshold=threshold)
 
 
-def test_edge_index_to_traingles_invalid_input():
+def test_edge_index_to_triangles_invalid_input():
     """Test edge_index_to_triangles fails with invalid input."""
     edge_index = torch.tensor([[0, 1], [0, 2], [1, 2]])
     with pytest.raises(ValueError, match="must be a 2xM"):
-        edge_index_to_traingles(edge_index)
+        edge_index_to_triangles(edge_index)
 
 
 def pytest_generate_tests(metafunc):
