@@ -113,8 +113,6 @@ def edge_index_to_traingles(edge_index: ArrayLike) -> ArrayLike:
         neighbours[b].add(a)
     # Remove any nodes with less than two neighbours
     nodes = [node for node in nodes if len(neighbours[node]) >= 2]
-    # Sort node by the degree of the node
-    nodes.sort(key=lambda node: len(neighbours[node]))
     traingles = []
     for node in nodes:
         for neighbour in neighbours[node]:
