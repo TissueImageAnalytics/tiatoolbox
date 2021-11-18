@@ -95,11 +95,37 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     return adjacency
 
 
-def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
-    """Convert an edged index to anti-clockwise traingle simplices.
+def traingle_signed_area(triangle: ArrayLike) -> int:
+    """Determine the signed area of a triangle.
 
     Args:
-        edge_index (ArrayLike): An Nx2 array of edges.
+        triangle (ArrayLike): A 3x2 list of coordinates.
+
+    Returns:
+        int: The signed area of the triange. It will be negative if
+             the triangle has a clockwise winding, negative if the
+             triangle has a counter-clockwise winding, and zero if the
+             triangles points are collinear.
+
+    """
+    # Validate inputs
+    triangle = np.asarray(triangle)
+    if triangle.shape != (3, 2):
+        raise ValueError("Input triangle must be a 3x2 array.")
+    # Calculate the area of the triangle
+    return 0.5 * (  # noqa: ECE001
+        triangle[0, 0] * (triangle[1, 1] - triangle[2, 1])
+        + triangle[1, 0] * (triangle[2, 1] - triangle[0, 1])
+        + triangle[2, 0] * (triangle[0, 1] - triangle[1, 1])
+    )
+
+
+def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
+    """Convert an edged index to traingle simplices.
+
+    Args:
+        edge_index (ArrayLike):
+            An Nx2 array of edges.
 
     Returns:
         ArrayLike: An Nx3 array of triangles.
@@ -442,6 +468,10 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         # Plot the edges
         triangles = edge_index_to_triangles(graph["edge_index"])
+        # Ensure triangles are counter-clockwise
+        for i, tri in enumerate(triangles):
+            if traingle_signed_area(graph["coords"][tri]) < 0:
+                triangles[i] = triangles[i][::-1]
         ax.triplot(
             graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
         )
