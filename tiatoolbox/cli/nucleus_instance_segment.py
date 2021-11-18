@@ -103,6 +103,19 @@ def main():  # pragma: no cover
     default=0,
 )
 @click.option(
+    "--num-postproc-workers",
+    help="Number of workers to post-process the network output.",
+    type=int,
+    default=0,
+)
+@click.option(
+    "--auto-generate-mask",
+    help="If set to True, it automatically generates tile/WSI tissue mask. "
+    "default=False",
+    type=bool,
+    default=False,
+)
+@click.option(
     "--on-gpu",
     type=bool,
     default=False,
@@ -125,6 +138,8 @@ def nucleus_instance_segment(
     batch_size,
     yaml_config_path,
     num_loader_workers,
+    num_postproc_workers,
+    auto_generate_mask,
     on_gpu,
     verbose,
 ):
@@ -150,6 +165,8 @@ def nucleus_instance_segment(
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,
+        num_postproc_workers=num_postproc_workers,
+        auto_generate_mask=auto_generate_mask,
         verbose=verbose,
     )
 
