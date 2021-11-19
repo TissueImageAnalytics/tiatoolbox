@@ -22,7 +22,6 @@
 import warnings
 from typing import Tuple, Union
 
-import cv2
 import numpy as np
 from PIL import Image
 
@@ -360,8 +359,6 @@ def safe_padded_read(
     # Check if the padded coords outside of the image bounds
     # (over the width/height or under 0)
     padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
-    _, bounds_size = bounds2locsize(padded_bounds)
-    out_size = tuple(conv_out_size(bounds_size, stride=stride))
     img_size = np.array(image.shape[:2][::-1])
     hw_limits = np.tile(img_size, 2)  # height/width limits
     zeros = np.zeros(hw_limits.shape)
@@ -401,18 +398,15 @@ def safe_padded_read(
     if len(region.shape) == 3:
         pad_width += [(0, 0)]
     # Pad the image region at the edges
-    region = np.pad(
+    return np.pad(
         region,
         pad_width,
         mode=pad_mode,
         **pad_kwargs,
     )
-    if region.shape[:2] != out_size[::-1]:
-        return cv2.resize(region, out_size, interpolation=cv2.INTER_LINEAR)
-    return region
 
 
-def sub_pixel_read(
+def sub_pixel_read(  # noqa: CCR001
     image,
     bounds,
     output_size,
@@ -598,7 +592,7 @@ def sub_pixel_read(
     else:
         region = read_func(image, valid_int_bounds, stride, **read_kwargs)
         if region is None or 0 in region.shape:
-            raise ValueError("Read region is empty.")
+            raise ValueError("Read region is empty or None.")
         region_size = region.shape[:2][::-1]
         if not np.array_equal(region_size, valid_int_size):
             raise ValueError("Read function returned a region of incorrect size.")

@@ -235,6 +235,7 @@ def test_fuzz_safe_padded_read_edge_padding():
     it. A region is read using safe_padded_read with a constant padding
     of 0 and an offset by some random 'shift' amount between 1 and 16.
     The resulting image is checked for the correct number of 0 values.
+
     """
     random.seed(0)
     for _ in range(1000):
@@ -251,6 +252,20 @@ def test_fuzz_safe_padded_read_edge_padding():
         region = utils.image.safe_padded_read(data, bounds)
 
         assert np.sum(region == 0) == (16 * shift_magnitude)
+
+
+def test_fuzz_safe_padded_read():
+    """Fuzz test for safe_padded_read."""
+    random.seed(0)
+    for _ in range(1000):
+        data = np.random.randint(0, 255, (16, 16))
+
+        loc = np.random.randint(0, 16, 2)
+        size = (16, 16)
+        bounds = locsize2bounds(loc, size)
+        padding = np.random.randint(0, 16)
+        region = utils.image.safe_padded_read(data, bounds, padding=padding)
+        assert all(np.array(region.shape) == 16 + 2 * padding)
 
 
 def test_safe_padded_read_padding_shape():
@@ -423,7 +438,7 @@ def test_sub_pixel_read_bad_read_func():
     def bad_read_func(img, bounds, *kwargs):
         return None
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="None"):
         utils.image.sub_pixel_read(
             data,
             bounds,
@@ -630,7 +645,7 @@ def test_bounds2size_value_error():
 def test_bounds2slices_invalid_stride():
     """Test bounds2slices raises ValueError with invalid stride."""
     bounds = (0, 0, 10, 10)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid stride"):
         utils.transforms.bounds2slices(bounds, stride=(1, 1, 1))
 
 
@@ -645,10 +660,10 @@ def test_pad_bounds_sample_cases():
 
 def test_pad_bounds_invalid_inputs():
     """Test invalid inputs for pad_bounds."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="even"):
         utils.transforms.pad_bounds(bounds=(0, 0, 10), padding=1)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid number of padding"):
         utils.transforms.pad_bounds(bounds=(0, 0, 10, 10), padding=(1, 1, 1))
 
     # Normal case for control
@@ -1141,7 +1156,7 @@ def test_save_as_json():
         "a1": {"name": "John", "age": 23, "sex": "male"},
         "a2": {"name": "John", "age": 23, "sex": "male"},
     }
-    sample = {
+    sample = {  # noqa: ECE001
         "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
         "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
         "c": {
@@ -1171,7 +1186,7 @@ def test_save_as_json():
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test complex list of data
     misc.save_as_json(list(sample.values()), "sample_json.json")
@@ -1179,7 +1194,7 @@ def test_save_as_json():
     with open("sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test numpy generic
     misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
