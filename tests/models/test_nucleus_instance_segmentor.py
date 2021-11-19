@@ -101,7 +101,7 @@ def helper_tile_info():
 def test_get_tile_info():
     """Test for getting tile info."""
     info = helper_tile_info()
-    boxes, flag = info[0]  # index 0 should be full grid, removal
+    _, flag = info[0]  # index 0 should be full grid, removal
     # removal flag at top edges
     assert (
         np.sum(
