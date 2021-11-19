@@ -36,6 +36,7 @@ from tiatoolbox.models import (
     NucleusInstanceSegmentor,
     SemanticSegmentor,
 )
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     _process_tile_predictions,
 )
@@ -60,11 +61,8 @@ def _crash_func(x):
     raise ValueError("Propataion Crash.")
 
 
-# ----------------------------------------------------
-
-
-def test_get_tile_info():
-    """Test for getting tile info."""
+def helper_tile_info():
+    """Helper function for tile information."""
     predictor = NucleusInstanceSegmentor(model="A")
     # ! assuming the tiles organized as follows (coming out from
     # ! PatchExtractor). If this is broken, need to check back
@@ -79,7 +77,6 @@ def test_get_tile_info():
     # ---------------------
     # | 12 | 13 | 14 | 15 |
     # ---------------------
-
     # ! assume flag index ordering: left right top bottom
     ioconfig = IOSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.25}],
@@ -95,6 +92,16 @@ def test_get_tile_info():
         patch_output_shape=[4, 4],
     )
     info = predictor._get_tile_info([16, 16], ioconfig)
+
+    return info
+
+
+# ----------------------------------------------------
+
+
+def test_get_tile_info():
+    """Test for getting tile info."""
+    info = helper_tile_info()
     boxes, flag = info[0]  # index 0 should be full grid, removal
     # removal flag at top edges
     assert (
@@ -127,7 +134,10 @@ def test_get_tile_info():
         == 0
     ), "Fail Right"
 
-    # test for vertical boundary boxes
+
+def test_vertical_boundary_boxes():
+    """Test for vertical boundary boxes."""
+    info = helper_tile_info()
     _boxes = np.array(
         [
             [3, 0, 5, 4],
@@ -164,7 +174,10 @@ def test_get_tile_info():
     assert np.sum(_boxes - boxes) == 0, "Wrong Vertical Bounds"
     assert np.sum(flag - _flag) == 0, "Fail Vertical Flag"
 
-    # test for horizontal boundary boxes
+
+def test_horizontal_boundary_boxes():
+    """Test for horizontal boundary boxes."""
+    info = helper_tile_info()
     _boxes = np.array(
         [
             [0, 3, 4, 5],
@@ -201,7 +214,10 @@ def test_get_tile_info():
     assert np.sum(_boxes - boxes) == 0, "Wrong Horizontal Bounds"
     assert np.sum(flag - _flag) == 0, "Fail Horizontal Flag"
 
-    # test for cross-section boundary boxes
+
+def test_cross_section_boundary_boxes():
+    """Test for cross-section boundary boxes."""
+    info = helper_tile_info()
     _boxes = np.array(
         [
             [2, 2, 6, 6],
@@ -236,8 +252,11 @@ def test_get_tile_info():
 def test_crash_segmentor(remote_sample, tmp_path):
     """Test engine crash when given malformed input."""
     root_save_dir = pathlib.Path(tmp_path)
-    sample_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
-    sample_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
+    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     save_dir = f"{root_save_dir}/instance/"
 
@@ -290,38 +309,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
-    # resolution for travis testing, not the correct ones
-    ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": resolution}],
-        output_resolutions=[
-            {"units": "mpp", "resolution": resolution},
-            {"units": "mpp", "resolution": resolution},
-            {"units": "mpp", "resolution": resolution},
-        ],
-        margin=128,
-        tile_shape=[512, 512],
-        patch_input_shape=[256, 256],
-        patch_output_shape=[164, 164],
-        stride_shape=[164, 164],
-    )
-
     save_dir = f"{root_save_dir}/instance/"
-    # * test run on tile, run without worker first
-    _rm_dir(save_dir)
-    inst_segmentor = NucleusInstanceSegmentor(
-        batch_size=1,
-        num_loader_workers=0,
-        num_postproc_workers=0,
-        pretrained_model="hovernet_fast-pannuke",
-    )
-    inst_segmentor.predict(
-        [mini_wsi_jpg],
-        mode="tile",
-        ioconfig=ioconfig,
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=save_dir,
-    )
 
     # * test run on wsi, test run with worker
     # resolution for travis testing, not the correct ones
@@ -441,6 +429,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
         )
 
     # test exception flag
+    tile_flag = [0, 0, 0, 0]
     with pytest.raises(ValueError, match=r".*Unknown tile mode.*"):
         _process_tile_predictions(
             ioconfig=ioconfig,
@@ -541,6 +530,11 @@ def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
+    fetch_pretrained_weights(
+        "hovernet_fast-pannuke", str(tmp_path.joinpath("hovernet_fast-pannuke.pth"))
+    )
+
+    # resolution for travis testing, not the correct ones
     config = {
         "input_resolutions": [{"units": "mpp", "resolution": resolution}],
         "output_resolutions": [
@@ -566,6 +560,8 @@ def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
             "nucleus-instance-segment",
             "--img-input",
             str(mini_wsi_jpg),
+            "--pretrained-weights",
+            str(tmp_path.joinpath("hovernet_fast-pannuke.pth")),
             "--mode",
             "tile",
             "--output-path",
