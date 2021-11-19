@@ -57,6 +57,13 @@ def test_imresize():
     assert resized_img.dtype == np.float32
 
 
+def test_imresize_1x1():
+    """Test imresize with 1x1 image."""
+    img = np.zeros((1, 1, 3))
+    resized_img = utils.transforms.imresize(img, scale_factor=10)
+    assert resized_img.shape == (10, 10, 3)
+
+
 def test_imresize_no_scale_factor():
     """Test for imresize with no scale_factor given."""
     img = np.zeros((2000, 1000, 3))
