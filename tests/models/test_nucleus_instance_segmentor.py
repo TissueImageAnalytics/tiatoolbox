@@ -91,9 +91,8 @@ def helper_tile_info():
         patch_input_shape=[4, 4],
         patch_output_shape=[4, 4],
     )
-    info = predictor._get_tile_info([16, 16], ioconfig)
 
-    return info
+    return predictor._get_tile_info([16, 16], ioconfig)
 
 
 # ----------------------------------------------------
@@ -300,7 +299,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
 def test_functionality_travis(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 2.0
 
@@ -327,6 +326,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     )
 
     _rm_dir(save_dir)
+
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=1,
         num_loader_workers=0,
