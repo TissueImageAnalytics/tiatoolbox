@@ -267,3 +267,21 @@ class TestPredicate:
         query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
+
+    @staticmethod
+    def test_contains_list(eval_globals, eval_locals, check):
+        query = "1 in props['list']"
+        result = eval(query, eval_globals, eval_locals)
+        assert bool(check(result)) is True
+
+    @staticmethod
+    def test_contains_dict(eval_globals, eval_locals, check):
+        query = "'a' in props['dict']"
+        result = eval(query, eval_globals, eval_locals)
+        assert bool(check(result)) is True
+
+    @staticmethod
+    def test_contains_str(eval_globals, eval_locals, check):
+        query = "'Hello' in props['string']"
+        result = eval(query, eval_globals, eval_locals)
+        assert bool(check(result)) is True
