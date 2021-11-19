@@ -904,17 +904,6 @@ class AnnotationStore(ABC, MutableMapping):
             sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
             cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
             return
-        if isinstance(where, bytes):
-            cur.execute(
-                f"""
-                CREATE INDEX {name}
-                    ON annotations(
-                        pickle_where(:pickle_bytes, properties)
-                    )
-                """,
-                {"name": name, "pickle_bytes": where},
-            )
-            return
         raise TypeError("Invalid type for where")
 
     def clear(self) -> None:

@@ -173,11 +173,19 @@ def test_sqlitestore_multiple_connection(tmp_path):
     assert len(store) == len(store2)
 
 
-def test_sqlitestore_index_error():
+def test_sqlitestore_index_type_error():
     """Test adding an index of invalid type."""
     store = SQLiteStore()
     with pytest.raises(TypeError, match="where"):
         store.create_index("foo", lambda g, p: "foo" in p)
+
+
+def test_sqlitestore_index_version_error(monkeypatch):
+    """Test adding an index with SQlite <3.9."""
+    store = SQLiteStore()
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
+    with pytest.raises(Exception, match="Requires sqlite version 3.9.0"):
+        store.create_index("foo", lambda _, p: "foo" in p)
 
 
 def test_sqlitestore_index_str(fill_store, tmp_path):
