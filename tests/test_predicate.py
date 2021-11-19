@@ -70,6 +70,15 @@ def pytest_generate_tests(metafunc):
 
 
 def sqlite_eval(query: Union[str, Number]):
+    """Evaluate an SQL predicate on dummpy data and return the result.
+
+    Args:
+        query (Union[str, Number]): SQL predicate to evaluate.
+
+    Returns:
+        bool: Result of the evaluation.
+
+    """
     with sqlite3.connect(":memory:") as con:
         con.create_function("REGEXP", 2, regexp)
         con.create_function("REGEXP", 3, regexp)
@@ -91,6 +100,8 @@ def sqlite_eval(query: Union[str, Number]):
 
 
 class TestPredicate:
+    """Test predicate statments with various backends."""
+
     scenarios = [
         (
             "Python",
@@ -136,6 +147,7 @@ class TestPredicate:
 
     @staticmethod
     def test_number_prefix_operations(eval_globals, eval_locals, check):
+        """Test prefix operations on numbers."""
         for op in PREFIX_OP_STRINGS:
             query = f"{op}1"
             result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
@@ -143,6 +155,7 @@ class TestPredicate:
 
     @staticmethod
     def test_property_prefix_operations(eval_globals, eval_locals, check):
+        """Test prefix operations on properties."""
         for op in PREFIX_OP_STRINGS:
             query = f"{op}props['int']"
             result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
@@ -150,138 +163,161 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_nested_props(eval_globals, eval_locals, check):
+        """Test regex on nested properties."""
         query = "props['nesting']['fib'][4]"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 5
 
     @staticmethod
     def test_regex_str_props(eval_globals, eval_locals, check):
+        """Test regex on string properties."""
         query = "regexp('Hello', props['string'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"
 
     @staticmethod
     def test_regex_str_str(eval_globals, eval_locals, check):
+        """Test regex on string and string."""
         query = "regexp('Hello', 'Hello world!')"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"
 
     @staticmethod
     def test_regex_ignorecase(eval_globals, eval_locals, check):
+        """Test regex with ignorecase."""
         query = "regexp('hello', props['string'], re.IGNORECASE)"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"
 
     @staticmethod
     def test_regex_no_match(eval_globals, eval_locals, check):
+        """Test regex with no match."""
         query = "regexp('Yello', props['string'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) is None
 
     @staticmethod
     def test_has_key(eval_globals, eval_locals, check):
+        """Test has_key function."""
         query = "has_key(props, 'foo')"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is False
 
     @staticmethod
     def test_is_none(eval_globals, eval_locals, check):
+        """Test is_none function."""
         query = "is_none(props['null'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_is_not_none(eval_globals, eval_locals, check):
+        """Test is_not_none function."""
         query = "is_not_none(props['int'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_nested_has_key(eval_globals, eval_locals, check):
+        """Test nested has_key function."""
         query = "has_key(props['dict'], 'a')"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_list_sum(eval_globals, eval_locals, check):
+        """Test sum function on a list."""
         query = "sum(props['list'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == sum(SAMPLE_PROPERTIES["list"])
 
     @staticmethod
     def test_abs(eval_globals, eval_locals, check):
+        """Test abs function."""
         query = "abs(props['neg'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 1
 
     @staticmethod
     def test_not(eval_globals, eval_locals, check):
+        """Test not operator."""
         query = "not props['bool']"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is False
 
     @staticmethod
     def test_props_int_keys(eval_globals, eval_locals, check):
+        """Test props with int keys."""
         query = "props['list'][1]"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 1
 
     @staticmethod
     def test_props_get(eval_globals, eval_locals, check):
+        """Test props.get function."""
         query = "is_none(props.get('foo'))"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_props_get_default(eval_globals, eval_locals, check):
+        """Test props.get function with default."""
         query = "props.get('foo', 42)"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == 42
 
     @staticmethod
     def test_in_list(eval_globals, eval_locals, check):
+        """Test in operator for list."""
         query = "1 in props.get('list')"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_has_key_exception(eval_globals, eval_locals, check):
+        """Test has_key function with exception."""
         query = "has_key(1, 'a')"
         with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):
             _ = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
 
     @staticmethod
     def test_logical_and(eval_globals, eval_locals, check):
+        """Test logical and operator."""
         query = "props['bool'] & is_none(props['null'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_logical_or(eval_globals, eval_locals, check):
+        """Test logical or operator."""
         query = "props['bool'] | (props['int'] < 2)"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_nested_logic(eval_globals, eval_locals, check):
+        """Test nested logical operators."""
         query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_contains_list(eval_globals, eval_locals, check):
+        """Test contains operator for list."""
         query = "1 in props['list']"
         result = eval(query, eval_globals, eval_locals)
         assert bool(check(result)) is True
 
     @staticmethod
     def test_contains_dict(eval_globals, eval_locals, check):
+        """Test contains operator for dict."""
         query = "'a' in props['dict']"
         result = eval(query, eval_globals, eval_locals)
         assert bool(check(result)) is True
 
     @staticmethod
     def test_contains_str(eval_globals, eval_locals, check):
+        """Test contains operator for str."""
         query = "'Hello' in props['string']"
         result = eval(query, eval_globals, eval_locals)
         assert bool(check(result)) is True
