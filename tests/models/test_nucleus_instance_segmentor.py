@@ -518,8 +518,8 @@ def test_functionality_local(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
-    """Test for nucleus segmentation."""
+def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
+    """Test for nucleus segmentation with IOconfig."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
@@ -568,6 +568,31 @@ def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
             str(output_path),
             "--yaml-config-path",
             tmp_path.joinpath("config.yaml"),
+        ],
+    )
+
+    assert nucleus_instance_segment_result.exit_code == 0
+    assert output_path.joinpath("0.dat").exists()
+    assert output_path.joinpath("file_map.dat").exists()
+    assert output_path.joinpath("results.json").exists()
+
+
+def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
+    """Test for nucleus segmentation."""
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    output_path = tmp_path / "output"
+
+    runner = CliRunner()
+    nucleus_instance_segment_result = runner.invoke(
+        cli.main,
+        [
+            "nucleus-instance-segment",
+            "--img-input",
+            str(mini_wsi_svs),
+            "--mode",
+            "wsi",
+            "--output-path",
+            str(output_path),
         ],
     )
 
