@@ -3,6 +3,7 @@ defusedxml
 glymur
 imagecodecs
 jupyterlab
+jupyterlab
 matplotlib
 numpy
 opencv-python>=4.0
@@ -11,13 +12,13 @@ pandas
 pillow
 pyyaml>=5.1
 requests
+requests
 scikit-image
 scikit-learn>=0.23.2
 sphinx==4.1.2
 tifffile
-torchvision==0.10.1
 torch==1.9.1
+torchvision==0.10.1
 tqdm==4.60.0
-jupyterlab
-requests
+umap-learn
 zarr
