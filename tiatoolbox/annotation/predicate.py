@@ -204,7 +204,7 @@ class SQLTriplet(SQLExpression):
         rhs = self.rhs
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
-        return f" {lhs} "
+        raise ValueError("Invalid SQLTriplet")
 
 
 class SQLProperties(SQLExpression):

@@ -11,6 +11,7 @@ from tiatoolbox.annotation.predicate import (
     PY_GLOBALS,
     SQL_GLOBALS,
     SQLProperties,
+    SQLTriplet,
     json_contains,
     json_list_sum,
     regexp,
@@ -45,6 +46,21 @@ SAMPLE_PROPERTIES = {
     "bool": True,
     "nesting": {"fib": [1, 1, 2, 3, 5], "foo": {"bar": "baz"}},
 }
+
+
+def test_invalid_sqltriplet():
+    """Test invalid SQLTriplet."""
+    with pytest.raises(ValueError, match="Invalid SQLTriplet"):
+        str(SQLTriplet(SQLProperties()))
+
+
+def test_json_contains():
+    """Test json_contains function."""
+    properties = json.dumps(SAMPLE_PROPERTIES)
+    assert json_contains(properties, "int")
+    assert json_contains(json.dumps([1]), 1)
+    assert not json_contains(properties, "foo")
+
 
 # Generate Parameterized Tests
 
