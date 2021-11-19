@@ -27,6 +27,7 @@ import joblib
 import numpy as np
 import pytest
 import torch
+import yaml
 from click.testing import CliRunner
 
 from tiatoolbox import cli
@@ -532,17 +533,45 @@ def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     """Test for nucleus segmentation."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
     output_path = tmp_path / "output"
+
+    resolution = 2.0
+
+    reader = WSIReader.open(mini_wsi_svs)
+    thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
+    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    imwrite(mini_wsi_jpg, thumb)
+
+    config = {
+        "input_resolutions": [{"units": "mpp", "resolution": resolution}],
+        "output_resolutions": [
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        "margin": 128,
+        "tile_shape": [512, 512],
+        "patch_input_shape": [256, 256],
+        "patch_output_shape": [164, 164],
+        "stride_shape": [164, 164],
+        "save_resolution": {"units": "mpp", "resolution": 8.0},
+    }
+
+    with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+        yaml.dump(config, fptr)
+
     runner = CliRunner()
     nucleus_instance_segment_result = runner.invoke(
         cli.main,
         [
             "nucleus-instance-segment",
             "--img-input",
-            str(mini_wsi_svs),
+            str(mini_wsi_jpg),
             "--mode",
-            "wsi",
+            "tile",
             "--output-path",
             str(output_path),
+            "--yaml-config-path",
+            tmp_path.joinpath("config.yaml"),
         ],
     )
 
