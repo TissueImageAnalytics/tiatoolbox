@@ -45,7 +45,7 @@ from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 BATCH_SIZE = 2
-ON_TRAVIS = False
+ON_TRAVIS = True
 ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
 # ----------------------------------------------------
