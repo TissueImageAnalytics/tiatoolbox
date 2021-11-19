@@ -104,7 +104,7 @@ POP_SENTINAL = object()
 # therefore we use the following workaround to only use them when available.
 # Using slots gives a performance boost at object creation time.
 _DATACLASS_KWARGS = {"frozen": True}
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 10):  # pragma: no cover
     _DATACLASS_KWARGS["slots"] = True
 
 
@@ -980,6 +980,7 @@ class SQLiteStore(AnnotationStore):
     """SQLite backed annotation store.
 
     Uses and rtree index for fast spatial queries.
+
     """
 
     @classmethod  # noqa: A003
@@ -1263,6 +1264,8 @@ class SQLiteStore(AnnotationStore):
 
         """
         query_geometry = geometry
+        if select_callable is None:
+            select_callable = select
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
@@ -1343,12 +1346,12 @@ class SQLiteStore(AnnotationStore):
         )
         if isinstance(where, Callable):
             return [
-                (boundary, properties)
-                for boundary, properties in cur.fetchall()
+                Annotation(self._unpack_geometry(blob, cx, cy), properties)
+                for blob, properties, cx, cy in cur.fetchall()
                 if where(json.loads(properties))
             ]
         return [
-            (
+            Annotation(
                 self._unpack_geometry(blob, cx, cy),
                 json.loads(properties),
             )
@@ -1380,10 +1383,7 @@ class SQLiteStore(AnnotationStore):
         if row is None:
             raise KeyError(key)
         boundary, properties, cx, cy = row
-        if properties is None:
-            properties = {}
-        else:
-            properties = json.loads(properties)
+        properties = json.loads(properties or "{}")
         geometry = self._unpack_geometry(boundary, cx, cy)
         return Annotation(geometry, properties)
 
@@ -1446,6 +1446,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute("BEGIN")
         for key, geometry, properties in zip(keys, geometries, properties_iter):
+            # Annotation is not in DB:
             if key not in self:
                 token = self._make_token(
                     annotation=Annotation(geometry, properties),
@@ -1471,7 +1472,8 @@ class SQLiteStore(AnnotationStore):
                     token,
                 )
                 continue
-            if geometry is not None:
+            # Annotation is in DB:
+            if geometry:
                 bounds = dict(
                     zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds)
                 )
@@ -1503,7 +1505,7 @@ class SQLiteStore(AnnotationStore):
                     """,
                     query_parameters,
                 )
-            if len(properties) > 0:
+            if properties:
                 cur.execute(
                     """
                     UPDATE annotations

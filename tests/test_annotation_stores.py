@@ -237,6 +237,16 @@ def test_sqlitestore_wkt_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
+def test_sqlitestore_wkb_deserialisation(sample_triangle):
+    """Test WKB deserialisation.
+
+    Test the defaul stattic method in the ABC.
+    """
+    wkb = sample_triangle.wkb
+    geom = AnnotationStore.deserialise_geometry(wkb)
+    assert geom == sample_triangle
+
+
 def test_sqlitestore_metadata_get_keyerror():
     """Test getting a metadata entry that does not exists."""
     store = SQLiteStore()
@@ -389,14 +399,34 @@ class TestStore:
     def test_patch_many(fill_store, tmp_path, store):
         """Test bulk patch."""
         keys, store = fill_store(store, tmp_path / "polygon.db")
-        # Geometry update
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
-        store.patch_many(keys, repeat(new_geometry, len(keys)))
-        # Properties update
-        store.patch_many(keys, properties_iter=repeat({"abc": 123}, len(keys)))
+        store.patch_many(
+            keys, repeat(new_geometry, len(keys)), repeat({"abc": 123}, len(keys))
+        )
 
         for _, key in enumerate(keys[:10]):
             assert store[key].geometry == new_geometry
+            assert store[key].properties["abc"] == 123
+
+    @staticmethod
+    def test_patch_many_no_properies(fill_store, tmp_path, store):
+        """Test bulk patch with no properties."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
+        store.patch_many(keys, repeat(new_geometry, len(keys)))
+
+        for _, key in enumerate(keys[:10]):
+            assert store[key].geometry == new_geometry
+            assert store[key].properties == {}
+
+    @staticmethod
+    def test_patch_many_no_geometry(fill_store, tmp_path, store):
+        """Test bulk patch with no geometry."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        store.patch_many(keys, properties_iter=repeat({"abc": 123}, len(keys)))
+
+        for _, key in enumerate(keys[:10]):
+            assert store[key].geometry is not None
             assert store[key].properties["abc"] == 123
 
     @staticmethod
@@ -717,7 +747,7 @@ class TestStore:
         """Test quering with a predicate function."""
         keys, store = fill_store(store, ":memory:")
         store.patch(keys[0], properties={"class": 123})
-        results = store.iquery(
+        results = store.query(
             (0, 0, 1024, 1024),
             where=lambda props: props.get("class") == 123,
         )
