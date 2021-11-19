@@ -520,7 +520,7 @@ def test_functionality_local(remote_sample, tmp_path):
 
 def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     """Test for nucleus segmentation."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
     resolution = 2.0
