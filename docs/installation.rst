@@ -29,7 +29,8 @@ Windows
 1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_. Extract the folder and add `bin` and `lib` subdirectories to
 Windows `system path <https://docs.microsoft.com/en-us/previous-versions/office/developer/sharepoint-2010/ee537574(v=office.14)>`_.
 
-2. Install TIAToolbox
+2. Install
+TIAToolbox.
 
 .. code-block:: console
 
