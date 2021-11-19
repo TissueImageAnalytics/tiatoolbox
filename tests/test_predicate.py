@@ -306,19 +306,19 @@ class TestPredicate:
     def test_contains_list(eval_globals, eval_locals, check):
         """Test contains operator for list."""
         query = "1 in props['list']"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_contains_dict(eval_globals, eval_locals, check):
         """Test contains operator for dict."""
         query = "'a' in props['dict']"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
 
     @staticmethod
     def test_contains_str(eval_globals, eval_locals, check):
         """Test contains operator for str."""
         query = "'Hello' in props['string']"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert bool(check(result)) is True
