@@ -907,8 +907,8 @@ class AnnotationStore(ABC, MutableMapping):
         if isinstance(where, bytes):
             cur.execute(
                 f"""
-                CREATE INDEX{name}
-                    ON annotaions(
+                CREATE INDEX {name}
+                    ON annotations(
                         pickle_where(:pickle_bytes, properties)
                     )
                 """,
