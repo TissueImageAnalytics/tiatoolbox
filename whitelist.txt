@@ -58,3 +58,6 @@ NHWC
 binarize
 PTC
 W0063
+cv2
+1x1
+v4

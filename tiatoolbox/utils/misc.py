@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -671,6 +671,32 @@ def model_to(on_gpu, model):
         model = model.to("cpu")
 
     return model
+
+
+def get_bounding_box(img):
+    """Get bounding box coordinate information.
+
+    Given an image with zero and non-zero values. This function
+    will return the the minimal box that contains all non-zero
+    values.
+
+    Args:
+        img (ndarray): Image to get the bounding box.
+
+    Returns:
+        bound (ndarray): Coordinates of the box in the form of
+            [start_x, start_y, end_x, end_y].
+
+    """
+    rows = np.any(img, axis=1)
+    cols = np.any(img, axis=0)
+    rmin, rmax = np.where(rows)[0][[0, -1]]
+    cmin, cmax = np.where(cols)[0][[0, -1]]
+    # due to python indexing, need to add 1 to max
+    # else accessing will be 1px in the box, not out
+    rmax += 1
+    cmax += 1
+    return np.array([cmin, rmin, cmax, rmax])
 
 
 def string_to_tuple(in_str):

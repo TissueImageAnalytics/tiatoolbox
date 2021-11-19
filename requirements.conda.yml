@@ -5,6 +5,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
+  - albumentations
   - Click
   - cython
   - defusedxml
@@ -22,9 +23,11 @@ dependencies:
   - pip
   - pixman<0.38.0
   - python=3.7
+  - pygeos
   - pytorch
   - pyyaml>=5.1
   - requests
+  - shapely
   - scikit-image
   - scikit-learn>=0.23.2
   - tifffile

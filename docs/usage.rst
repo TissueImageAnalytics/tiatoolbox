@@ -43,7 +43,6 @@ obtaining information about a slide or generating tiles.
 .. automodule:: tiatoolbox.wsicore.save_tiles
     :members: save_tiles
 
-
 ^^^^^^^^^^^^^^^^^^^
 Stain Normalisation
 ^^^^^^^^^^^^^^^^^^^
@@ -66,7 +65,6 @@ Stain Normalisation
 .. autoclass:: ReinhardNormaliser
     :show-inheritance:
 
-
 ^^^^^^^^^^^^^^^
 Tissue Masking
 ^^^^^^^^^^^^^^^
@@ -74,13 +72,20 @@ Tissue Masking
 .. automodule:: tiatoolbox.tools.tissuemask
     :members:
 
-
 ^^^^^^^^^^^^^^^^^^
 Stain Extraction
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: tiatoolbox.tools.stainextract
     :members:
+
+^^^^^^^^^^^^^^^^^^
+Stain Augmentation
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.stainaugment
+    :members:
+
 
 ^^^^^^^^^^^^^^^^^^
 Patch Extraction
@@ -112,31 +117,31 @@ Deep Learning Models
 .. automodule:: tiatoolbox.models.abc
     :members:
 
---------
-Backbone
---------
+------------
+Architecture
+------------
 
-.. automodule:: tiatoolbox.models.backbone
+.. automodule:: tiatoolbox.models.architecture
     :members:
 
 --------------
-Classification
+Engine
 --------------
 
-.. automodule:: tiatoolbox.models.classification
+.. automodule:: tiatoolbox.models.engine
     :members:
 
-.. automodule:: tiatoolbox.models.classification.abc
+.. automodule:: tiatoolbox.models.engine.patch_predictor
     :members:
 
-.. automodule:: tiatoolbox.models.classification.patch_predictor
+.. automodule:: tiatoolbox.models.engine.semantic_segmentor
     :members:
 
-.. automodule:: tiatoolbox.models.classification.pretrained_info
+.. automodule:: tiatoolbox.models.engine.nucleus_instance_segmentor
     :members:
 
 -------
-DataSet
+Dataset
 -------
 
 .. automodule:: tiatoolbox.models.dataset
