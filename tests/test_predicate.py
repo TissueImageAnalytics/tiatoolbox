@@ -1,3 +1,4 @@
+"""Tests for predicate module."""
 # skipcq: PYL-W0123
 import json
 import sqlite3
