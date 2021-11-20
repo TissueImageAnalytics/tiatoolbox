@@ -169,6 +169,19 @@ def pytest_generate_tests(metafunc):
     metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
 
 
+def test_slidegraph_build_feature_range_thresh_none():
+    """Test SlideGraphConstructor builds a graph without removing features."""
+    # Generate random points and features
+    np.random.seed(0)
+    points = np.random.rand(100, 2)
+    features = np.random.rand(100, 100) / 1e-5
+    # Build the graph
+    graph = SlideGraphConstructor.build(
+        points=points, features=features, feature_range_thresh=None
+    )
+    assert graph["x"].shape[1] == 100
+
+
 class TestConstructor:
     scenarios = [
         ("SlideGraph", {"graph_constructor": SlideGraphConstructor}),
@@ -211,6 +224,52 @@ class TestConstructor:
         )
         graph = graph_constructor.build(points, features)
         graph_constructor.visualise(graph)
+        plt.close()
+
+    @staticmethod
+    def test_visualise_ax(graph_constructor):
+        """Test visualising a graph on a given axis."""
+        np.random.seed(123)
+        points = np.concatenate(
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+        )
+        features = np.concatenate(
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+        )
+        _, ax = plt.subplots()
+        graph = graph_constructor.build(points, features)
+        graph_constructor.visualise(graph, ax=ax)
+        plt.close()
+
+    @staticmethod
+    def test_visualise_custom_color_function(graph_constructor):
+        """Test visualising a graph with a custom color function."""
+        np.random.seed(123)
+        points = np.concatenate(
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+        )
+        features = np.concatenate(
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+        )
+        graph = graph_constructor.build(points, features)
+        cmap = plt.get_cmap("viridis")
+        graph_constructor.visualise(
+            graph, color=lambda g: cmap(np.mean(g["x"], axis=1))
+        )
+        plt.close()
+
+    @staticmethod
+    def test_visualise_static_color(graph_constructor):
+        """Test visualising a graph with a custom color function."""
+        np.random.seed(123)
+        points = np.concatenate(
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+        )
+        features = np.concatenate(
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+        )
+        graph = graph_constructor.build(points, features)
+        graph_constructor.visualise(graph, color="orange")
         plt.close()
 
     @staticmethod

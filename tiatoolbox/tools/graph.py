@@ -282,8 +282,8 @@ class SlideGraphConstructor:  # noqa: PIE798
             feature_range_thresh (Number):
                 Minimal range for which a feature is considered significant.
                 Features which have a range less than this are ignored.
-                Defaults to 1e-4. If set to None or 0, no features are
-                removed.
+                Defaults to 1e-4. If falsey (None, False, 0, etc.), then
+                no features are removed.
 
         Returns:
             dict: A dictionary defining a graph for serialisation (e.g.
@@ -310,7 +310,7 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         """
         # Remove features which do not change significantly between patches
-        if feature_range_thresh and feature_range_thresh != 0:
+        if feature_range_thresh:
             feature_ranges = np.max(features, axis=0) - np.min(features, axis=0)
             where_significant = feature_ranges > feature_range_thresh
             features = features[:, where_significant]
