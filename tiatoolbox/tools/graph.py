@@ -196,10 +196,10 @@ def affinity_to_edge_index(
 
 
 class SlideGraphConstructor:  # noqa: PIE798
-    """Construct a graph using the method in SlideGraph (Liu et al. 2021).
+    """Construct a graph using the SlideGraph (Liu et al. 2021) method.
 
     This uses a hybrid agglomerative clustering which uses a weighted
-    combination of spatial distance (in the WSI) and feature-space
+    combination of spatial distance (within the WSI) and feature-space
     distance to group patches into nodes.
     See the `build` function for more details on the graph construction
     method.
@@ -408,6 +408,14 @@ class SlideGraphConstructor:  # noqa: PIE798
         ax: Axes = None,
     ) -> Axes:
         """Visualise a graph.
+
+        The visualisation is a scatter plot of the graph nodes
+        and the connections bneewn them. By default, nodes are coloured
+        according to the features of the graph via a UMAP embedding to
+        the sRGB color space. This can be customised by passing a color
+        argument which can be a single color, a list of colors, or a
+        function which takes the graph and returns a list of colors for
+        each node. The edge color(s) can be customised in the same way.
 
         Args:
             graph (dict):
