@@ -287,8 +287,9 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         Returns:
             dict: A dictionary defining a graph for serialisation (e.g.
-            JSON) or converting into a torch-geometric Data object where
-            each node is the centroid (mean) if the features in a cluster.
+            JSON or msgpack) or converting into a torch-geometric Data
+            object where each node is the centroid (mean) of the features
+            in a cluster.
             The dictionary has the following entries:
                 - :class:`numpy.ndarray` - x:
                     Features of each node (mean of features in a cluster).
