@@ -216,7 +216,7 @@ def crop_and_pad_edges(
         :class:`numpy.ndarray`: The cropped and padded image.
 
     Examples:
-        >>> from tiatoolbox.utils.image import crop_and_pad_image
+        >>> from tiatoolbox.utils.image import crop_and_pad_edges
         >>> import numpy as np
         >>> region = np.ones((10, 10, 3))
         >>> padded_region = crop_and_pad_edges(
@@ -468,8 +468,14 @@ def sub_pixel_read(  # noqa: CCR001
             :func:`safe_padded_read`. See :func:`safe_padded_read`
             for supported pad modes. Setting to "none" or None will
             result in no padding being applied.
+        pad_constant_values (int, tuple(int)): Constant values to use
+            when padding with constant pad mode. Passed to the
+            :func:`numpy.pad` `constant_values` argument. Default is 0.
         **read_kwargs (dict):
             Arbitrary keyword arguments passed through to `read_func`.
+        **pad_kwargs (dict):
+            Arbitrary keyword arguments passed through to the
+            padding function :func:`numpy.pad`.
 
     Returns:
         :class:`numpy.ndimage`: Output image region.
@@ -522,6 +528,9 @@ def sub_pixel_read(  # noqa: CCR001
         read_kwargs = {}
     if interpolation is None:
         interpolation = "none"
+
+    if pad_mode == "constant" and "constant_values" not in pad_kwargs:
+        pad_kwargs["constant_values"] = pad_constant_values
 
     if 0 in bounds2locsize(bounds)[1]:
         raise ValueError("Bounds must have non-zero size")
@@ -612,7 +621,6 @@ def sub_pixel_read(  # noqa: CCR001
             region,
             pad_width.astype(int),
             mode=pad_mode or "constant",
-            constant_values=pad_constant_values,
             **pad_kwargs,
         )
     else:

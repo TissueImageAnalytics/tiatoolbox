@@ -536,6 +536,7 @@ def test_fuzz_padded_sub_pixel_read(source_image):
             (ow, oh),
             interpolation="linear",
             padding=padding,
+            pad_kwargs={"constant_values": 0},
         )
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
