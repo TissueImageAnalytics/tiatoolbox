@@ -196,7 +196,7 @@ def affinity_to_edge_index(
 
 
 class SlideGraphConstructor:  # noqa: PIE798
-    """Construct a graph using the SlideGraph (Liu et al. 2021) method.
+    """Construct a graph using the SlideGraph+ (Liu et al. 2021) method.
 
     This uses a hybrid agglomerative clustering which uses a weighted
     combination of spatial distance (within the WSI) and feature-space
@@ -238,7 +238,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         neighbour_search_radius: Number = 2000,
         feature_range_thresh: Optional[Number] = 1e-4,
     ) -> Dict[str, ArrayLike]:
-        """Builds a graph via hybrid clustering in spatial and feature space.
+        """Build a graph via hybrid clustering in spatial and feature space.
 
         The graph is constructed via hybrid heirachical clustering followed
         by Delaunay triangulation of these cluster centroids.
