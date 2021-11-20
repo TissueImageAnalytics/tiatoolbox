@@ -332,6 +332,31 @@ def test_aligned_padded_sub_pixel_read(source_image):
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
+def test_sub_pixel_read_with_pad_kwargs(source_image):
+    """Test sub-pixel numpy image reads with pad kwargs."""
+    image_path = Path(source_image)
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    x = 1
+    y = 1
+    w = 5
+    h = 5
+    padding = 1
+    bounds = (x, y, x + w, y + h)
+    ow = 4
+    oh = 4
+    output = utils.image.sub_pixel_read(
+        test_image,
+        bounds,
+        (ow, oh),
+        padding=padding,
+        pad_mode="reflect",
+        pad_kwargs={"reflect_type": "even"},
+    )
+    assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
+
+
 def test_non_aligned_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
     image_path = Path(source_image)
