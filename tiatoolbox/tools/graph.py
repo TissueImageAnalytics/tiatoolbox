@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Functions to help with constructing graphs."""
+"""Construction and visualisation of graphs for WSI prediction."""
 
 from __future__ import annotations
 
