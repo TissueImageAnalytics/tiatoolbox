@@ -955,6 +955,7 @@ class TestStore:
             """Mock SQLite connection."""
 
             def create_function(self, name: str, num_params: int, func: Any) -> None:
+                """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
         monkeypatch.setattr(sys, "version_info", py37_version)
