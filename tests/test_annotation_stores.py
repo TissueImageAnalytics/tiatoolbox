@@ -3,6 +3,7 @@ import json
 import pickle
 import random
 import sqlite3
+import sys
 from itertools import repeat
 from numbers import Number
 from pathlib import Path
@@ -944,3 +945,18 @@ class TestStore:
         store = store()
         with pytest.raises(IOError, match="Invalid file handle or path"):
             store._load_cases(["foo"], lambda: None, lambda: None)
+
+    @staticmethod
+    def test_py37_init(fill_store, store, monkeypatch):
+        """Test that __init__ is compatible with Python 3.7."""
+        py37_version = (3, 7, 0)
+
+        class Connection(sqlite3.Connection):
+            """Mock SQLite connection."""
+
+            def create_function(self, name: str, num_params: int, func: Any) -> None:
+                return self.create_function(self, name, num_params)
+
+        monkeypatch.setattr(sys, "version_info", py37_version)
+        monkeypatch.setattr(sqlite3, "Connection", Connection)
+        store = store()
