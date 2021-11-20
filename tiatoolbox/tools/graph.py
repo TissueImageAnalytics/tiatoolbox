@@ -154,7 +154,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     for node in nodes:
         for neighbour in neighbours[node]:
             overlap = neighbours[node].intersection(neighbours[neighbour])
-            if overlap:
+            while overlap:
                 triangles.append([node, neighbour, overlap.pop()])
     return np.array(triangles, dtype=np.int32, order="C")
 
