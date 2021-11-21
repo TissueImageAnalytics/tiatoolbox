@@ -98,12 +98,14 @@ def sample_predicate(props: Dict[str, Any]) -> bool:
 @pytest.fixture(scope="session")
 def cell_grid() -> List[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
+    np.random.seed(0)
     return [cell_polygon((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
 @pytest.fixture(scope="session")
 def points_grid() -> List[Polygon]:
     """Generate a grid of fake point annotations."""
+    np.random.seed(0)
     return [Point((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
