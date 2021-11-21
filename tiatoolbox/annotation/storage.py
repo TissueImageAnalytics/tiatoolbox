@@ -78,7 +78,13 @@ try:
 except ImportError:
     import json
 
-from tiatoolbox.annotation.predicate import PY_GLOBALS, SQL_GLOBALS
+from tiatoolbox.annotation.predicate import (
+    PY_GLOBALS,
+    SQL_GLOBALS,
+    json_contains,
+    json_list_sum,
+    regexp,
+)
 
 sqlite3.enable_callback_tracebacks(True)
 
@@ -1013,21 +1019,39 @@ class SQLiteStore(AnnotationStore):
             properties = json.loads(properties)
             return fn(properties)
 
-        try:
-            self.con.create_function(
-                "geometry_predicate", 5, wkb_predicate, deterministic=True
-            )
-            self.con.create_function(
-                "pickle_where",
-                2,
-                pickle_where,
-                deterministic=True,
-            )
-        # Only Python >= 3.8 supports deterministic, fallback
-        # to without this argument.
-        except TypeError:
-            self.con.create_function("geometry_predicate", 5, wkb_predicate)
-            self.con.create_function("pickle_where", 2, pickle_where)
+        # Register custom functions
+        def register_custom_function(
+            name: str, nargs: int, fn: Callable, deterministic: bool = False
+        ) -> None:
+            """Register a custom SQLite function.
+
+            Only Python >= 3.8 supports deterministic functions,
+            fallback to without this argument if not available.
+
+            Args:
+                name:
+                    The name of the function.
+                nargs:
+                    The number of arguments the function takes.
+                fn:
+                    The function to register.
+                deterministic:
+                    Whether the function is deterministic.
+
+            """
+            try:
+                self.con.create_function(name, nargs, fn, deterministic=deterministic)
+            except TypeError:
+                self.con.create_function(name, nargs, fn)
+
+        register_custom_function(
+            "geometry_predicate", 5, wkb_predicate, deterministic=True
+        )
+        register_custom_function("pickle_where", 2, pickle_where, deterministic=True)
+        register_custom_function("REGEXP", 2, regexp)
+        register_custom_function("REGEXP", 3, regexp)
+        register_custom_function("LISTSUM", 1, json_list_sum)
+        register_custom_function("CONTAINS", 1, json_contains)
 
         if exists:
             return
