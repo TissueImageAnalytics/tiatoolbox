@@ -200,6 +200,13 @@ class TestPredicate:
         assert check(result) == "Hello"
 
     @staticmethod
+    def test_regex_props_str(eval_globals, eval_locals, check):
+        """Test regex on property and string."""
+        query = "regexp(props['string'], 'Hello world!')"
+        result = eval(query, eval_globals, eval_locals)
+        assert check(result) == "Hello world!"
+
+    @staticmethod
     def test_regex_ignorecase(eval_globals, eval_locals, check):
         """Test regex with ignorecase."""
         query = "regexp('hello', props['string'], re.IGNORECASE)"
