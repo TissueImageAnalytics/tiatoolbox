@@ -441,6 +441,13 @@ class TestStore:
             assert store[key].properties["abc"] == 123
 
     @staticmethod
+    def test_patch_many_no_geometry_no_properties(fill_store, tmp_path, store):
+        """Test bulk patch with no geometry and no properties."""
+        keys, store = fill_store(store, tmp_path / "polygon.db")
+        with pytest.raises(ValueError, match="At least one"):
+            store.patch_many(keys)
+
+    @staticmethod
     def test_patch_many_append(fill_store, tmp_path, store):
         """Test bulk patching annotations that do not exist."""
         _, store = fill_store(store, tmp_path / "polygon.db")

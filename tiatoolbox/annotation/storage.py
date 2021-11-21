@@ -388,6 +388,10 @@ class AnnotationStore(ABC, MutableMapping):
             key(iter(str)):
                 An iterable of keys for each annotation to be updated.
         """
+        if not any([geometries, properties_iter]):
+            raise ValueError(
+                "At least one of geometries or properties_iter must be given"
+            )
         keys = list(keys)
         geometries = list(geometries) if geometries else None
         properties_iter = list(properties_iter) if properties_iter else None
@@ -1221,32 +1225,46 @@ class SQLiteStore(AnnotationStore):
         cur.execute("BEGIN")
         result = []
         for annotation, key in zip(annotations, keys):
-            token = self._make_token(
-                annotation=annotation,
-                key=key,
-            )
-            cur.execute(
-                """
+            self._append(key, annotation, cur)
+            result.append(key)
+        self.con.commit()
+        return result
+
+    def _append(self, key: str, annotation: Annotation, cur: sqlite3.Cursor) -> None:
+        """Append without starting a transaction.
+
+        Args:
+            key(str):
+                The unique identifier (UUID) for the annotation.
+            annotation(Annotation):
+                The annotation to be appended.
+            cur(sqlite3.Cursor):
+                The cursor to use for the transaction.
+
+        """
+        token = self._make_token(
+            annotation=annotation,
+            key=key,
+        )
+        cur.execute(
+            """
                 INSERT INTO annotations VALUES(
                     NULL, :key, :geom_type,
                     :cx, :cy, :boundary, :properties
                 )
                 """,
-                token,
-            )
-            rowid = cur.lastrowid
-            token.update({"rowid": rowid})
-            cur.execute(
-                """
+            token,
+        )
+        rowid = cur.lastrowid
+        token.update({"rowid": rowid})
+        cur.execute(
+            """
                 INSERT INTO rtree VALUES(
                     :rowid, :min_x, :max_x, :min_y, :max_y
                 )
                 """,
-                token,
-            )
-            result.append(key)
-        self.con.commit()
-        return result
+            token,
+        )
 
     def _query(
         self,
@@ -1448,76 +1466,29 @@ class SQLiteStore(AnnotationStore):
         geometries: Optional[Iterable[Geometry]] = None,
         properties_iter: Optional[Iterable[Properties]] = None,
     ) -> None:
+        # Validate inputs
+        if not any([geometries, properties_iter]):
+            raise ValueError(
+                "At least one of geometries or properties_iter must be given"
+            )
         keys = list(keys)
         geometries = list(geometries) if geometries else None
         properties_iter = list(properties_iter) if properties_iter else None
         self._validate_equal_lengths(keys, geometries, properties_iter)
-        if properties_iter is None:
-            properties_iter = ({} for _ in keys)
-        if geometries is None:
-            geometries = (None for _ in keys)
+        properties_iter = properties_iter or ({} for _ in keys)
+        geometries = geometries or (None for _ in keys)
+        # Update the database
         cur = self.con.cursor()
+        # Begin a transaction
         cur.execute("BEGIN")
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             # Annotation is not in DB:
             if key not in self:
-                token = self._make_token(
-                    annotation=Annotation(geometry, properties),
-                    key=key,
-                )
-                cur.execute(
-                    """
-                    INSERT INTO annotations VALUES(
-                        NULL, :key, :geom_type,
-                        :cx, :cy, :boundary, :properties
-                    )
-                    """,
-                    token,
-                )
-                rowid = cur.lastrowid
-                token.update({"rowid": rowid})
-                cur.execute(
-                    """
-                    INSERT INTO rtree VALUES(
-                        :rowid, :min_x, :max_x, :min_y, :max_y
-                    )
-                    """,
-                    token,
-                )
+                self._append(key, Annotation(geometry, properties), cur)
                 continue
             # Annotation is in DB:
             if geometry:
-                bounds = dict(
-                    zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds)
-                )
-                xy = dict(zip("xy", np.array(geometry.centroid)))
-                query_parameters = dict(
-                    **bounds,
-                    **xy,
-                    key=key,
-                    boundary=self.serialise_geometry(geometry),
-                )
-                cur.execute(
-                    """
-                    UPDATE rtree
-                       SET min_x = :min_x, min_y = :min_y,
-                           max_x = :max_x, max_y = :max_y
-                     WHERE EXISTS
-                           (SELECT 1
-                              FROM annotations
-                             WHERE rtree.id = annotations.id
-                               AND annotations.key == :key);
-                    """,
-                    query_parameters,
-                )
-                cur.execute(
-                    """
-                    UPDATE annotations
-                       SET cx = :x, cy = :y, boundary = :boundary
-                     WHERE [key] = :key
-                    """,
-                    query_parameters,
-                )
+                self._patch_geometry(key, geometry, cur)
             if properties:
                 cur.execute(
                     """
@@ -1531,6 +1502,50 @@ class SQLiteStore(AnnotationStore):
                     },
                 )
         self.con.commit()
+
+    def _patch_geometry(
+        self, key: str, geometry: Geometry, cur: sqlite3.Cursor
+    ) -> None:
+        """Patch a geometry in the database.
+
+        Update the geometry of the annotation with the given key but
+        leave the properties untouched.
+
+        Args:
+            key: The key of the annotation to patch.
+            geometry: The new geometry.
+            cur: The cursor to use.
+
+        """
+        bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
+        xy = dict(zip("xy", np.array(geometry.centroid)))
+        query_parameters = dict(
+            **bounds,
+            **xy,
+            key=key,
+            boundary=self.serialise_geometry(geometry),
+        )
+        cur.execute(
+            """
+            UPDATE rtree
+               SET min_x = :min_x, min_y = :min_y,
+                   max_x = :max_x, max_y = :max_y
+             WHERE EXISTS
+                   (SELECT 1
+                      FROM annotations
+                     WHERE rtree.id = annotations.id
+                       AND annotations.key == :key);
+            """,
+            query_parameters,
+        )
+        cur.execute(
+            """
+            UPDATE annotations
+               SET cx = :x, cy = :y, boundary = :boundary
+             WHERE [key] = :key
+            """,
+            query_parameters,
+        )
 
     def remove_many(self, keys: Iterable[str]) -> None:
         cur = self.con.cursor()
