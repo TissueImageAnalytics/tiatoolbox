@@ -10,11 +10,11 @@ import pytest
 from tiatoolbox.annotation.predicate import (
     PY_GLOBALS,
     SQL_GLOBALS,
-    SQLProperties,
+    SQLJSONDictionary,
     SQLTriplet,
     json_contains,
     json_list_sum,
-    regexp,
+    py_regexp,
 )
 
 BINARY_OP_STRINGS = [
@@ -51,7 +51,7 @@ SAMPLE_PROPERTIES = {
 def test_invalid_sqltriplet():
     """Test invalid SQLTriplet."""
     with pytest.raises(ValueError, match="Invalid SQLTriplet"):
-        str(SQLTriplet(SQLProperties()))
+        str(SQLTriplet(SQLJSONDictionary()))
 
 
 def test_json_contains():
@@ -97,8 +97,8 @@ def sqlite_eval(query: Union[str, Number]):
 
     """
     with sqlite3.connect(":memory:") as con:
-        con.create_function("REGEXP", 2, regexp)
-        con.create_function("REGEXP", 3, regexp)
+        con.create_function("REGEXP", 2, py_regexp)
+        con.create_function("REGEXP", 3, py_regexp)
         con.create_function("LISTSUM", 1, json_list_sum)
         con.create_function("CONTAINS", 1, json_contains)
         cur = con.cursor()
@@ -132,7 +132,7 @@ class TestPredicate:
             "SQLite",
             {
                 "eval_globals": SQL_GLOBALS,
-                "eval_locals": {"props": SQLProperties()},
+                "eval_locals": {"props": SQLJSONDictionary()},
                 "check": sqlite_eval,
             },
         ),

@@ -58,12 +58,12 @@ import re
 from abc import ABC
 from dataclasses import dataclass
 from numbers import Number
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 
 @dataclass
 class SQLNone:
-    """Sentinal object for SQL NULL during expressions."""
+    """Sentinal object for SQL NULL within expressions."""
 
     def __str__(self) -> str:
         return "NULL"
@@ -161,7 +161,14 @@ class SQLExpression(ABC):
 
 
 class SQLTriplet(SQLExpression):
-    """SQL triplet expression (LHS, operation, RHS)."""
+    """Representation of an SQL triplet expression (LHS, operator, RHS).
+
+    Attributes:
+        lhs (SQLExpression): Left hand side of expression.
+        op (str): Operator string.
+        rhs (SQLExpression): Right hand side of expression.
+
+    """
 
     def __init__(
         self,
@@ -207,8 +214,8 @@ class SQLTriplet(SQLExpression):
         raise ValueError("Invalid SQLTriplet")
 
 
-class SQLProperties(SQLExpression):
-    """SQL expression to access JSON properties."""
+class SQLJSONDictionary(SQLExpression):
+    """Representation of an SQL expression to access JSON properties."""
 
     def __init__(self, acc: str = None) -> None:
         self.acc = acc or ""
@@ -216,19 +223,21 @@ class SQLProperties(SQLExpression):
     def __str__(self) -> str:
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
-    def __getitem__(self, key: str) -> "SQLProperties":
+    def __getitem__(self, key: str) -> "SQLJSONDictionary":
         if isinstance(key, (int,)):
             key_str = f"[{key}]"
         else:
             key_str = str(key)
         joiner = "." if self.acc and not isinstance(key, (int)) else ""
-        return SQLProperties(acc=self.acc + joiner + f"{key_str}")
+        return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
         return SQLTriplet(self[key], "ifnull", default or SQLNone())
 
 
 class SQLRegex(SQLExpression):
+    """Representation of an SQL expression to match a string against a regex."""
+
     def __init__(self, pattern: str, string: str, flags: int = 0) -> None:
         self.pattern = pattern
         self.string = string
@@ -251,15 +260,18 @@ class SQLRegex(SQLExpression):
         return SQLRegex(pattern, string, int(flags))
 
 
-def is_none(x) -> bool:
+def py_is_none(x: Any) -> bool:
+    """Check if x is None."""
     return x is None
 
 
-def is_not_none(x) -> bool:
+def py_is_not_none(x: Any) -> bool:
+    """Check if x is not None."""
     return x is not None
 
 
-def regexp(pattern: str, string: str, flags: int = 0) -> Optional[str]:
+def py_regexp(pattern: str, string: str, flags: int = 0) -> Optional[str]:
+    """Check if string matches pattern."""
     reg = re.compile(pattern, flags=flags)
     match = reg.search(string)
     if match:
@@ -268,32 +280,81 @@ def regexp(pattern: str, string: str, flags: int = 0) -> Optional[str]:
 
 
 def json_list_sum(json_list: str) -> Number:
-    """Return the sum of a list of numbers in a JSON string."""
+    """Return the sum of a list of numbers in a JSON string.
+
+    Args:
+        json_list: JSON string containing a list of numbers.
+
+    Returns:
+        Number: The sum of the numbers in the list.
+
+    """
     return sum(json.loads(json_list))
 
 
 def json_contains(json_str: str, x: object) -> bool:
-    """Return True if a JSON string contains x."""
+    """Return True if a JSON string contains x.
+
+    Args:
+        json_str: JSON string.
+        x: Value to search for.
+
+    Returns:
+        True if x is in json_str.
+
+    """
     return x in json.loads(json_str)
 
 
-def sql_is_none(x) -> SQLTriplet:
+def sql_is_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
+    """Check if x is None.
+
+    Returns:
+        SQLTriplet: SQLTriplet representing None check.
+    """
     return SQLTriplet(x, "is none")
 
 
-def sql_is_not_none(x) -> SQLTriplet:
+def sql_is_not_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
+    """Check if x is not None.
+
+    Returns:
+        SQLTriplet: SQLTriplet representing not None check.
+    """
     return SQLTriplet(x, "is not none")
 
 
-def sql_list_sum(x) -> SQLTriplet:
+def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
+    """Return a representation of the sum of a list.
+
+    Args:
+        x: The list to sum.
+
+    Returns:
+        SQLTriplet: SQLTriplet for a function call to sum the list.
+    """
     return SQLTriplet(x, "listsum")
 
 
-def sql_has_key(a, b) -> SQLTriplet:
-    if not isinstance(a, (SQLProperties,)):
-        raise TypeError("Unsupported type for has_key.")
-    return SQLTriplet(a[b], "is not none")
+def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTriplet:
+    """Check if a dictionary has a key.
 
+    Args:
+        dictionary (SQLProperties):
+            SQLProperties object representing a JSON dict.
+        key(str or int):
+            Key to check for.
+
+    Returns:
+        SQLTriplet: SQLTriplet representing key check.
+    """
+    if not isinstance(dictionary, (SQLJSONDictionary,)):
+        raise TypeError("Unsupported type for has_key.")
+    return SQLTriplet(dictionary[key], "is not none")
+
+
+# Constants defining the global variables for use in eval() when
+# evaluating expressions.
 
 _COMMON_GLOBALS = {
     "__builtins__": {"abs": abs},
@@ -301,7 +362,7 @@ _COMMON_GLOBALS = {
 }
 SQL_GLOBALS = {
     "__builtins__": {**_COMMON_GLOBALS["__builtins__"], "sum": sql_list_sum},
-    "props": SQLProperties(),
+    "props": SQLJSONDictionary(),
     "is_none": sql_is_none,
     "is_not_none": sql_is_not_none,
     "regexp": SQLRegex.search,
@@ -310,9 +371,9 @@ SQL_GLOBALS = {
 }
 PY_GLOBALS = {
     "__builtins__": {**_COMMON_GLOBALS["__builtins__"], "sum": sum},
-    "is_none": is_none,
-    "is_not_none": is_not_none,
-    "regexp": regexp,
+    "is_none": py_is_none,
+    "is_not_none": py_is_not_none,
+    "regexp": py_regexp,
     "has_key": lambda a, b: b in a,
     "re": _COMMON_GLOBALS["re"],
 }

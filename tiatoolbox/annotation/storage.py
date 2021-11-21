@@ -83,7 +83,7 @@ from tiatoolbox.annotation.predicate import (
     SQL_GLOBALS,
     json_contains,
     json_list_sum,
-    regexp,
+    py_regexp,
 )
 
 sqlite3.enable_callback_tracebacks(True)
@@ -1048,8 +1048,8 @@ class SQLiteStore(AnnotationStore):
             "geometry_predicate", 5, wkb_predicate, deterministic=True
         )
         register_custom_function("pickle_where", 2, pickle_where, deterministic=True)
-        register_custom_function("REGEXP", 2, regexp)
-        register_custom_function("REGEXP", 3, regexp)
+        register_custom_function("REGEXP", 2, py_regexp)
+        register_custom_function("REGEXP", 3, py_regexp)
         register_custom_function("LISTSUM", 1, json_list_sum)
         register_custom_function("CONTAINS", 1, json_contains)
 
