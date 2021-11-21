@@ -209,7 +209,7 @@ def test_segmentor_ioconfig():
 
 def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
