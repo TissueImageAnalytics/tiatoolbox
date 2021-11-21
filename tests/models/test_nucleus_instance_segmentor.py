@@ -44,7 +44,7 @@ from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 ON_TRAVIS = True
 ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
@@ -575,6 +575,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
     assert output_path.joinpath("0.dat").exists()
     assert output_path.joinpath("file_map.dat").exists()
     assert output_path.joinpath("results.json").exists()
+    _rm_dir(tmp_path)
 
 
 def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
@@ -600,3 +601,4 @@ def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     assert output_path.joinpath("0.dat").exists()
     assert output_path.joinpath("file_map.dat").exists()
     assert output_path.joinpath("results.json").exists()
+    _rm_dir(tmp_path)
