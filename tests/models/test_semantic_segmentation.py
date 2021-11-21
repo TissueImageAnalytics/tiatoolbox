@@ -77,8 +77,7 @@ class _CNNTo1(ModelABC):
 
     def forward(self, img):
         """Define how to use layer."""
-        output = self.conv(img)
-        return output
+        return self.conv(img)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -136,6 +135,7 @@ def test_segmentor_ioconfig():
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
+
     # error when uniform resolution units are not uniform
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
         xconfig = copy.deepcopy(default_config)
@@ -143,7 +143,7 @@ def test_segmentor_ioconfig():
             {"units": "mpp", "resolution": 0.25},
             {"units": "power", "resolution": 0.50},
         ]
-        ioconfig = IOSegmentorConfig(**xconfig)
+        _ = IOSegmentorConfig(**xconfig)
     # error when uniform resolution units are not supported
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
         xconfig = copy.deepcopy(default_config)
@@ -151,7 +151,7 @@ def test_segmentor_ioconfig():
             {"units": "alpha", "resolution": 0.25},
             {"units": "alpha", "resolution": 0.50},
         ]
-        ioconfig = IOSegmentorConfig(**xconfig)
+        _ = IOSegmentorConfig(**xconfig)
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
@@ -209,7 +209,7 @@ def test_segmentor_ioconfig():
 
 def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
