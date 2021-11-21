@@ -290,7 +290,7 @@ class TilePyramidGenerator:
         if container not in [None, "zip", "tar"]:
             raise ValueError("Unsupported container")
 
-        if container is None:
+        elif container is None:
             path.mkdir(parents=False)
             if compression is not None:
                 raise ValueError("Unsupported compression for container None")
@@ -327,7 +327,7 @@ class TilePyramidGenerator:
                     compress_type=compression2enum[compression],
                 )
 
-        elif container == "tar":
+        else:  # container == "tar":
             compression2mode = {
                 None: "w",
                 "gzip": "w:gz",
