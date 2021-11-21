@@ -203,7 +203,7 @@ class TestPredicate:
     def test_regex_props_str(eval_globals, eval_locals, check):
         """Test regex on property and string."""
         query = "regexp(props['string'], 'Hello world!')"
-        result = eval(query, eval_globals, eval_locals)
+        result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello world!"
 
     @staticmethod
