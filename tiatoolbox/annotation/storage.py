@@ -388,6 +388,7 @@ class AnnotationStore(ABC, MutableMapping):
             key(iter(str)):
                 An iterable of keys for each annotation to be updated.
         """
+        # Validate inputs
         if not any([geometries, properties_iter]):
             raise ValueError(
                 "At least one of geometries or properties_iter must be given"
@@ -396,10 +397,9 @@ class AnnotationStore(ABC, MutableMapping):
         geometries = list(geometries) if geometries else None
         properties_iter = list(properties_iter) if properties_iter else None
         self._validate_equal_lengths(keys, geometries, properties_iter)
-        if properties_iter is None:
-            properties_iter = ({} for _ in keys)
-        if geometries is None:
-            geometries = (None for _ in keys)
+        properties_iter = properties_iter or ({} for _ in keys)
+        geometries = geometries or (None for _ in keys)
+        # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             properties = copy.deepcopy(properties)
             self.patch(key, geometry, properties)

@@ -378,6 +378,14 @@ class TestStore:
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
+    def test_query_polygon(fill_store, tmp_path, store):
+        """Test query with a non-rectangular geometry."""
+        _, store = fill_store(store, tmp_path / "polygon.db")
+        results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
+        assert len(results) == 6
+        assert all(isinstance(ann, Annotation) for ann in results)
+
+    @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store):
         """Test iquery with a non-rectangular geometry."""
         _, store = fill_store(store, tmp_path / "polygon.db")
