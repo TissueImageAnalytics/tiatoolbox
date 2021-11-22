@@ -22,7 +22,7 @@
 import click
 
 from tiatoolbox import utils
-from tiatoolbox.models.engine.patch_predictor import CNNPatchPredictor
+from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
 
 @click.group()
@@ -160,7 +160,7 @@ def patch_predictor(
         mode=mode,
     )
 
-    predictor = CNNPatchPredictor(
+    predictor = PatchPredictor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
