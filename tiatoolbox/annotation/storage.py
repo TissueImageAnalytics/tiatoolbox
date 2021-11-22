@@ -88,7 +88,7 @@ from tiatoolbox.annotation.predicate import (
 
 sqlite3.enable_callback_tracebacks(True)
 
-if speedups.available:
+if speedups.available:  # pragma: no branch
     speedups.enable()
 
 Geometry = Union[Point, Polygon, LineString]
@@ -397,8 +397,8 @@ class AnnotationStore(ABC, MutableMapping):
         geometries = list(geometries) if geometries else None
         properties_iter = list(properties_iter) if properties_iter else None
         self._validate_equal_lengths(keys, geometries, properties_iter)
-        properties_iter = properties_iter or ({} for _ in keys)
-        geometries = geometries or (None for _ in keys)
+        properties_iter = properties_iter or ({} for _ in keys)  # pragma: no branch
+        geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             properties = copy.deepcopy(properties)
@@ -1475,8 +1475,8 @@ class SQLiteStore(AnnotationStore):
         geometries = list(geometries) if geometries else None
         properties_iter = list(properties_iter) if properties_iter else None
         self._validate_equal_lengths(keys, geometries, properties_iter)
-        properties_iter = properties_iter or ({} for _ in keys)
-        geometries = geometries or (None for _ in keys)
+        properties_iter = properties_iter or ({} for _ in keys)  # pragma: no branch
+        geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the database
         cur = self.con.cursor()
         # Begin a transaction
