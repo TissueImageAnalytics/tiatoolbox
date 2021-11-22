@@ -24,6 +24,8 @@ import os
 import pathlib
 import shutil
 
+# ! The garbage collector
+import gc
 import numpy as np
 import pytest
 import torch
@@ -209,6 +211,7 @@ def test_segmentor_ioconfig():
 
 def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
+    gc.collect()  # Force clean up everything on hold
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     ioconfig = IOSegmentorConfig(
