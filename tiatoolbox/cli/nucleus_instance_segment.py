@@ -18,14 +18,14 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Command line interface for semantic segmentation."""
+"""Command line interface for nucleus instance segmentation."""
 import click
 import yaml
 
 from tiatoolbox import utils
-from tiatoolbox.models.engine.semantic_segmentor import (
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     IOSegmentorConfig,
-    SemanticSegmentor,
+    NucleusInstanceSegmentor,
 )
 
 
@@ -38,13 +38,13 @@ def main():  # pragma: no cover
 @main.command()
 @click.option(
     "--pretrained-model",
-    help="Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
-    "resnet18 model trained on the kather dataset. For a detailed list of "
-    "available pretrained models please see "
-    "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
-    "#deep-learning-models.architecture.get_pretrained_model",
-    default="fcn-tissue_mask",
+    help="Name of the existing models support by tiatoolbox"
+    "for processing the data. Refer to [URL] for details."
+    "By default, the corresponding pretrained weights will also be"
+    "downloaded. However, you can override with your own set of weights"
+    "via the `pretrained_weights` argument. Argument is case insensitive. "
+    "default = 'hovernet_fast-pannuke'",
+    default="hovernet_fast-pannuke",
 )
 @click.option(
     "--pretrained-weights",
@@ -103,6 +103,19 @@ def main():  # pragma: no cover
     default=0,
 )
 @click.option(
+    "--num-postproc-workers",
+    help="Number of workers to post-process the network output.",
+    type=int,
+    default=0,
+)
+@click.option(
+    "--auto-generate-mask",
+    help="If set to True, it automatically generates tile/WSI tissue mask. "
+    "default=False",
+    type=bool,
+    default=False,
+)
+@click.option(
     "--on-gpu",
     type=bool,
     default=False,
@@ -114,7 +127,7 @@ def main():  # pragma: no cover
     default=True,
     help="Print output, default=True",
 )
-def semantic_segment(
+def nucleus_instance_segment(
     pretrained_model,
     pretrained_weights,
     img_input,
@@ -125,6 +138,8 @@ def semantic_segment(
     batch_size,
     yaml_config_path,
     num_loader_workers,
+    num_postproc_workers,
+    auto_generate_mask,
     on_gpu,
     verbose,
 ):
@@ -145,11 +160,13 @@ def semantic_segment(
 
         ioconfig = IOSegmentorConfig(**ioconfig)
 
-    predictor = SemanticSegmentor(
+    predictor = NucleusInstanceSegmentor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,
+        num_postproc_workers=num_postproc_workers,
+        auto_generate_mask=auto_generate_mask,
         verbose=verbose,
     )
 
