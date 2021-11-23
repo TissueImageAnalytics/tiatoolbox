@@ -215,8 +215,8 @@ class SQLTriplet(SQLExpression):
             operator.ne: lambda a, b: f"({a} != {b})",
             operator.pow: lambda a, p: f"POWER({a}, {p})",
             operator.mod: lambda a, b: f"({a} % {b})",
-            "is none": lambda a, _: f"({a} IS NULL)",
-            "is not none": lambda a, _: f"({a} IS NOT NULL)",
+            "is_none": lambda a, _: f"({a} IS NULL)",
+            "is_not_none": lambda a, _: f"({a} IS NOT NULL)",
             "list_sum": lambda a, _: f"LISTSUM({a})",
             "if_null": lambda x, d: f"IFNULL({x}, {d})",
             "contains": lambda j, o: f"CONTAINS({j}, {o})",
@@ -329,7 +329,7 @@ def sql_is_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     Returns:
         SQLTriplet: SQLTriplet representing None check.
     """
-    return SQLTriplet(x, "is none")
+    return SQLTriplet(x, "is_none")
 
 
 def sql_is_not_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
@@ -338,7 +338,7 @@ def sql_is_not_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     Returns:
         SQLTriplet: SQLTriplet representing not None check.
     """
-    return SQLTriplet(x, "is not none")
+    return SQLTriplet(x, "is_not_none")
 
 
 def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
@@ -367,7 +367,7 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTripl
     """
     if not isinstance(dictionary, (SQLJSONDictionary,)):
         raise TypeError("Unsupported type for has_key.")
-    return SQLTriplet(dictionary[key], "is not none")
+    return SQLTriplet(dictionary[key], "is_not_none")
 
 
 # Constants defining the global variables for use in eval() when
