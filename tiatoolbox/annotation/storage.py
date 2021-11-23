@@ -20,14 +20,14 @@
 
 """
 This module contains a collection of classes for handling storage of
-annotations in memeory in addition to serialisation/deserialisaion
+annotations in memory in addition to serialisation/deserialisaion
 to/from disk.
 
 Definitions
 -----------
 
 For the sake of clarity it is helpful to define a few terms used
-throught this documentation.
+throughout this documentation.
 
 Annotation
     A geometry and associated properties.
@@ -103,7 +103,7 @@ ASCII_UNIT_SEP = "\x1f"
 ASCII_NULL = "\0"
 ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 
-POP_SENTINAL = object()
+POP_SENTINEL = object()
 
 # Only Python 3.10+ supports using slots for dataclasses
 # https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass
@@ -119,9 +119,9 @@ class Annotation:
     """An annotation: a geometry and associated properties.
 
     Attributes:
-        geometry(Geometry):
+        geometry (Geometry):
             The geometry of the annotation.
-        properties(dict):
+        properties (dict):
             The properties of the annotation.
 
     """
@@ -152,6 +152,7 @@ class Annotation:
         -------
         geojson: str
             A GeoJSON representation of this annotation.
+
         """
         return json.dumps(self.to_feature())
 
@@ -189,6 +190,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Returns:
             bool: True if the predicate holds.
+
         """
         return getattr(a, name)(b)
 
@@ -223,7 +225,7 @@ class AnnotationStore(ABC, MutableMapping):
     def serialise_geometry(geometry: Geometry) -> Union[str, bytes]:
         """Serialise a geometry to a string or bytes.
 
-        This defaults to well-known text (WKT) but may be overriden to
+        This defaults to well-known text (WKT) but may be overridden to
         any other format which a Shapely geometry could be serialised to
         e.g. well-known binary (WKB) or geoJSON etc.
 
@@ -242,13 +244,13 @@ class AnnotationStore(ABC, MutableMapping):
     def deserialise_geometry(data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes.
 
-        This default implementaion will deserialise bytes as well-known
-        binary (WKB) and srings as well-known text (WKT). This can be
-        overriden to deserialise other formats such as geoJSON etc.
+        This default implementation will deserialise bytes as well-known
+        binary (WKB) and strings as well-known text (WKT). This can be
+        overridden to deserialise other formats such as geoJSON etc.
 
         Args:
             data(bytes or str):
-                The serialised representaion of a Shapely geometry.
+                The serialised representation of a Shapely geometry.
 
         Returns:
             Geometry: The deserialised Shapely geometry.
@@ -289,15 +291,16 @@ class AnnotationStore(ABC, MutableMapping):
         """Insert a new annotation, returning the key.
 
         Args:
-            annotation(Annotation):
+            annotation (Annotation):
                 The shapely annotation to insert.
-            key(str):
-                Optional. The uniqure key used to identify the
+            key (str):
+                Optional. The unique key used to identify the
                 annotation in the store. If not given a new UUID4 will
                 be generated and returned instead.
 
         Returns:
             str: The unique key of the newly inserted annotation.
+
         """
         keys = key if key is None else [key]
         return self.append_many([annotation], keys)[0]
@@ -312,16 +315,16 @@ class AnnotationStore(ABC, MutableMapping):
         This may be more performant than repeated calls to `append`.
 
         Args:
-            annotations(iter(Annotation)):
+            annotations (iter(Annotation)):
                 An iterable of annotations.
-            keys(iter(str)):
-                An interable of unique keys associatetd with each
+            keys (iter(str)):
+                An iterable of unique keys associated with each
                 geometry being inserted. If None, a new UUID4 is
                 generated for each geometry.
 
         Returns:
             list(str):
-                A list of unqiue keys for the inserted geometries.
+                A list of unique keys for the inserted geometries.
 
         """
         annotations = list(annotations)
@@ -377,15 +380,15 @@ class AnnotationStore(ABC, MutableMapping):
     ) -> None:
         """Bulk patch of annotations.
 
-        This may be more efficient than calling `patch` repeatetdy
+        This may be more efficient than calling `patch` repeatedly
         in a loop.
 
         Args:
-            geometries(iter(Geometry)):
+            geometries (iter(Geometry)):
                 An iterable of geometries to update.
-            properties_iter(iter(dict)):
+            properties_iter (iter(dict)):
                 An iterable of properties to update.
-            key(iter(str)):
+            keys (iter(str)):
                 An iterable of keys for each annotation to be updated.
         """
         # Validate inputs
@@ -408,8 +411,9 @@ class AnnotationStore(ABC, MutableMapping):
         """Remove annotation from the store with its unique key.
 
         Args:
-            key(str):
-                The key of the annoation to be removed.
+            key (str):
+                The key of the annotation to be removed.
+
         """
         self.remove_many([key])
 
@@ -417,8 +421,9 @@ class AnnotationStore(ABC, MutableMapping):
         """Bulk removal of annotations by keys.
 
         Args:
-            keys(iter(str)):
+            keys (iter(str)):
                 An iterable of keys for the annotation to be removed.
+
         """
         for key in keys:
             self.remove(key)
@@ -430,13 +435,14 @@ class AnnotationStore(ABC, MutableMapping):
         it.
 
         Args:
-            key(str):
+            key (str):
                 The key of the annotation to be fetched.
-            default:
+            default (Annotation):
                 The value to return if the key is not found.
 
         Returns:
             The annotation or default if the key is not found.
+
         """
         if not isinstance(default, Annotation):
             raise TypeError("default value must be an Annotation instance.")
@@ -448,7 +454,7 @@ class AnnotationStore(ABC, MutableMapping):
         An alias of `remove`.
 
         Args:
-            key(str):
+            key (str):
                 The key of the annotation to be removed.
 
         """
@@ -465,7 +471,7 @@ class AnnotationStore(ABC, MutableMapping):
             yield key
 
     def values(self) -> Iterable[Annotation]:
-        """Return an iterable of all annotattion in the store.
+        """Return an iterable of all annotation in the store.
 
         Returns:
             iter: An iterable of annotations.
@@ -495,11 +501,11 @@ class AnnotationStore(ABC, MutableMapping):
         """Evaluate properties predicate against properties.
 
         Args:
-            predicate(strt or bytes or Callable):
+            predicate (str or bytes or Callable):
                 The predicate to evaluate on properties. The predicate
                 may be a string, pickled bytes, or a callable
                 (e.g. a function).
-            properties(dict):
+            properties (dict):
                 A dictionary of JSON serialisable
                 properties on which to evaluate the predicate.
 
@@ -526,18 +532,10 @@ class AnnotationStore(ABC, MutableMapping):
         """Query the store for annotations.
 
         Args:
-            geometry:
+            geometry (QueryGeometry):
                 Geometry to use when querying. This can be a bounds or
                 a Shapely geometry (e.g. Polygon).
-            geometry_predicate:
-                A string which define which binary geometry predicate to
-                use when comparing the query geometry and a geometry in
-                the store. Only annotations for which this binary
-                predicate is true will be returned. Defaults to
-                intersects.
-                For more information see the `shapely documentation on
-                binary predicates`__.
-            where:
+            where (str or bytes or Callable):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). May
@@ -561,6 +559,14 @@ class AnnotationStore(ABC, MutableMapping):
                 to note that untrusted user input should never be
                 accepted to this argument as arbitrary code can be run
                 via pickle or the parsing of the string statement.
+            geometry_predicate (str):
+                A string which define which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                intersects.
+                For more information see the `shapely documentation on
+                binary predicates`__.
 
             Returns:
                 list: A list of 2-tuples containing:
@@ -602,7 +608,7 @@ class AnnotationStore(ABC, MutableMapping):
         """Query the store for annotation keys.
 
         Acts the same as `AnnotationStore.query` except returns keys
-        insteaf the annotations (geometry, properties).
+        instead of annotations.
 
         Args:
             geometry:
@@ -617,7 +623,7 @@ class AnnotationStore(ABC, MutableMapping):
                 For more information see the `shapely documentation on
                 binary predicates`__.
             where:
-                A statment which should evaluate to a boolean value.
+                A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). May
                 be a string, callable, or pickled function as bytes.
@@ -673,7 +679,7 @@ class AnnotationStore(ABC, MutableMapping):
         ]
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
-        """Return anotations as a list of geoJSON features.
+        """Return annotations as a list of geoJSON features.
 
         Returns:
             list: List of features as dictionaries.
@@ -684,12 +690,6 @@ class AnnotationStore(ABC, MutableMapping):
 
     def to_geodict(self) -> Dict[str, Any]:
         """Return annotations as a dictionary in geoJSON format.
-
-        Args:
-            int_coords(bool): Make coordinates intergers. Defaults to
-                True.
-            drop_na(bool): Don't include keys for None/NaN values.
-                Defaults to True.
 
         Returns:
             dict: Dictionary of annotations in geoJSON format.
@@ -901,10 +901,11 @@ class AnnotationStore(ABC, MutableMapping):
         higher.
 
         Args:
-            name(str):
+            name (str):
                 Name of the index to create.
             where:
                 The predicate used to create the index.
+
         """
         _, minor, _ = sqlite3.sqlite_version_info
         if minor < 9:
@@ -922,6 +923,7 @@ class AnnotationStore(ABC, MutableMapping):
         This is a naive implementation, it simply iterates over all
         annotations and removes them. Faster implementations may be
         possible in specific cases and may be implemented by subclasses.
+
         """
         for key in list(self.keys()):
             del self[key]
@@ -1135,7 +1137,7 @@ class SQLiteStore(AnnotationStore):
 
         Args:
             data(bytes or str):
-                The serialised representaion of a Shapely geometry.
+                The serialised representation of a Shapely geometry.
 
         Returns:
             Geometry: The deserialised Shapely geometry.
@@ -1255,12 +1257,12 @@ class SQLiteStore(AnnotationStore):
                 """,
             token,
         )
-        rowid = cur.lastrowid
-        token.update({"rowid": rowid})
+        row_id = cur.lastrowid
+        token.update({"row_id": row_id})
         cur.execute(
             """
                 INSERT INTO rtree VALUES(
-                    :rowid, :min_x, :max_x, :min_y, :max_y
+                    :row_id, :min_x, :max_x, :min_y, :max_y
                 )
                 """,
             token,
@@ -1287,7 +1289,7 @@ class SQLiteStore(AnnotationStore):
                 The binary predicate to use when compareing `geometry`
                 with each candidate shape.
             where (str or bytes or Callable):
-                The predicate to evaulate against candidate properties
+                The predicate to evaluate against candidate properties
                 during the query.
 
         Returns:
