@@ -337,8 +337,8 @@ class HoVerNet(ModelABC):
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("np", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("np", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
                 )
             )
@@ -348,12 +348,12 @@ class HoVerNet(ModelABC):
                     [
                         (
                             "tp",
-                            HoVerNet.__create_decoder_branch(
+                            HoVerNet._create_decoder_branch(
                                 ksize=ksize, out_ch=num_types
                             ),
                         ),
-                        ("np", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("np", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
                 )
             )
@@ -408,7 +408,7 @@ class HoVerNet(ModelABC):
         return out_dict
 
     @staticmethod
-    def __create_decoder_branch(out_ch=2, ksize=5):
+    def _create_decoder_branch(out_ch=2, ksize=5):
         """Helper to create a decoder branch."""
         modules = [
             ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
@@ -455,7 +455,7 @@ class HoVerNet(ModelABC):
         return decoder
 
     @staticmethod
-    def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
@@ -551,7 +551,7 @@ class HoVerNet(ModelABC):
         return proced_pred
 
     @staticmethod
-    def __get_instance_info(pred_inst, pred_type=None):
+    def _get_instance_info(pred_inst, pred_type=None):
         """To collect instance information and store it within a dictionary.
 
         Args:
@@ -680,8 +680,8 @@ class HoVerNet(ModelABC):
             np_map, hv_map = raw_maps
 
         pred_type = tp_map
-        pred_inst = HoVerNet.__proc_np_hv(np_map, hv_map)
-        nuc_inst_info_dict = HoVerNet.__get_instance_info(pred_inst, pred_type)
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
+        nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
 
         return pred_inst, nuc_inst_info_dict
 

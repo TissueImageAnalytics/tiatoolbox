@@ -67,27 +67,19 @@ class HoVerNetPlus(HoVerNet):
                 [
                     (
                         "tp",
-                        HoVerNet._HoVerNet__create_decoder_branch(
-                            ksize=ksize, out_ch=num_types
-                        ),
+                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=num_types),
                     ),
                     (
                         "np",
-                        HoVerNet._HoVerNet__create_decoder_branch(
-                            ksize=ksize, out_ch=2
-                        ),
+                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2),
                     ),
                     (
                         "hv",
-                        HoVerNet._HoVerNet__create_decoder_branch(
-                            ksize=ksize, out_ch=2
-                        ),
+                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2),
                     ),
                     (
                         "ls",
-                        HoVerNet._HoVerNet__create_decoder_branch(
-                            ksize=ksize, out_ch=num_layers
-                        ),
+                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=num_layers),
                     ),
                 ]
             )
@@ -96,7 +88,7 @@ class HoVerNetPlus(HoVerNet):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def __proc_ls(ls_map: np.ndarray):
+    def _proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies a gaussian blur to
@@ -117,7 +109,7 @@ class HoVerNetPlus(HoVerNet):
         return ls_map
 
     @staticmethod
-    def __get_layer_info(pred_layer):
+    def _get_layer_info(pred_layer):
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
@@ -192,12 +184,12 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._HoVerNet__proc_np_hv(np_map, hv_map)
-        pred_layer = HoVerNetPlus.__proc_ls(ls_map)
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
+        pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
 
-        nuc_inst_info_dict = HoVerNet._HoVerNet__get_instance_info(pred_inst, pred_type)
-        layer_info_dict = HoVerNetPlus.__get_layer_info(pred_layer)
+        nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
+        layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
 
         return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict
 
