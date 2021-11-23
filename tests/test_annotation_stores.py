@@ -161,31 +161,31 @@ def pytest_generate_tests(metafunc):
 # Class Specific Tests
 
 
-def test_sqlitestore_compile_options():
+def test_sqlite_store_compile_options():
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
-def test_sqlitestore_compile_options_exception(monkeypatch):
+def test_sqlite_store_compile_options_exception(monkeypatch):
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
     with pytest.raises(Exception, match="RTREE and JSON1"):
         SQLiteStore()
 
 
-def test_sqlitestore_multiple_connection(tmp_path):
+def test_sqlite_store_multiple_connection(tmp_path):
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
 
 
-def test_sqlitestore_index_type_error():
+def test_sqlite_store_index_type_error():
     """Test adding an index of invalid type."""
     store = SQLiteStore()
     with pytest.raises(TypeError, match="where"):
         store.create_index("foo", lambda g, p: "foo" in p)
 
 
-def test_sqlitestore_index_version_error(monkeypatch):
+def test_sqlite_store_index_version_error(monkeypatch):
     """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
@@ -193,7 +193,7 @@ def test_sqlitestore_index_version_error(monkeypatch):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
-def test_sqlitestore_index_str(fill_store, tmp_path):
+def test_sqlite_store_index_str(fill_store, tmp_path):
     """Test that adding an index improves performance."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
 
@@ -220,14 +220,14 @@ def test_sqlitestore_index_str(fill_store, tmp_path):
     assert t2 < t1
 
 
-def test_sqlitestore_unsupported_compression(sample_triangle):
+def test_sqlite_store_unsupported_compression(sample_triangle):
     """Test that using an unsupported compression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(Exception, match="Unsupported"):
         _ = store.serialise_geometry(sample_triangle)
 
 
-def test_sqlitestore_no_compression(sample_triangle):
+def test_sqlite_store_no_compression(sample_triangle):
     """Test that using no compression raises no error."""
     store = SQLiteStore(compression=None)
     serialised = store.serialise_geometry(sample_triangle)
@@ -235,14 +235,14 @@ def test_sqlitestore_no_compression(sample_triangle):
     assert deserialised.wkb == sample_triangle.wkb
 
 
-def test_sqlitestore_unsupported_decompression():
+def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(Exception, match="Unsupported"):
         _ = store.deserialise_geometry(bytes())
 
 
-def test_sqlitestore_wkt_deserialisation(sample_triangle):
+def test_sqlite_store_wkt_deserialisation(sample_triangle):
     """Test WKT deserialisation."""
     store = SQLiteStore(compression=None)
     wkt = sample_triangle.wkt
@@ -250,7 +250,7 @@ def test_sqlitestore_wkt_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
-def test_sqlitestore_wkb_deserialisation(sample_triangle):
+def test_sqlite_store_wkb_deserialisation(sample_triangle):
     """Test WKB deserialisation.
 
     Test the default stattic method in the ABC.
@@ -261,21 +261,21 @@ def test_sqlitestore_wkb_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
-def test_sqlitestore_metadata_get_keyerror():
+def test_sqlite_store_metadata_get_keyerror():
     """Test getting a metadata entry that does not exists."""
     store = SQLiteStore()
     with pytest.raises(KeyError):
         store.metadata["foo"]
 
 
-def test_sqlitestore_metadata_delete_keyerror():
+def test_sqlite_store_metadata_delete_keyerror():
     """Test deleting a metadata entry that does not exists."""
     store = SQLiteStore(compression=None)
     with pytest.raises(KeyError):
         del store.metadata["foo"]
 
 
-def test_sqlitestore_metadata_delete():
+def test_sqlite_store_metadata_delete():
     """Test adding and deleting a metadata entry."""
     store = SQLiteStore(compression=None)
     store.metadata["foo"] = 1
@@ -284,7 +284,7 @@ def test_sqlitestore_metadata_delete():
     assert "foo" not in store.metadata
 
 
-def test_sqlitestore_metadata_iter():
+def test_sqlite_store_metadata_iter():
     """Test iterating over metadata entries."""
     conn = sqlite3.Connection(":memory:")
     metadata = SQLiteMetadata(conn)
@@ -293,7 +293,7 @@ def test_sqlitestore_metadata_iter():
     assert set(metadata.keys()) == {"foo", "bar"}
 
 
-def test_sqlitestore_metadata_len():
+def test_sqlite_store_metadata_len():
     """Test len of metadata entries."""
     conn = sqlite3.Connection(":memory:")
     metadata = SQLiteMetadata(conn)
