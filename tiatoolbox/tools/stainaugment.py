@@ -32,7 +32,7 @@ from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
-class StainAugmentator(ImageOnlyTransform):
+class StainAugmentor(ImageOnlyTransform):
     """Stain augmentation using predefined stain matrix or stain extraction methods.
 
     This stain augmentation class can be used in 'albumentations' augmentation pipelines
