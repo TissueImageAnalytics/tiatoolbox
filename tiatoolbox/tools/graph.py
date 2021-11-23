@@ -135,6 +135,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
         >>> adjacency = delaunay_adjacency(points)
         >>> edge_index = affinity_to_edge_index(adjacency)
         >>> triangles = edge_index_to_triangles(edge_index)
+
     """
     # Validate inputs
     edge_index_shape = np.shape(edge_index)
