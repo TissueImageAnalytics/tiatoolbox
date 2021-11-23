@@ -62,13 +62,42 @@ tiatoolbox supports various features through command line. For more information,
 ### Prepare for development
 
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
-1. Open a `bash` terminal window<br/>
-`cd <future-home-of-tiatoolbox-directory>` <br/>
-2. Download a complete copy of the `tiatoolbox`.<br/>`git clone https://github.com/TissueImageAnalytics/tiatoolbox.git`<br/>
-3. `cd tiatoolbox`
-4. `conda env create -f requirements.conda.yml`<br/>
-creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
-5. To use the packages installed in the environment, run the command:<br/>`conda activate tiatoolbox`
+1. Install [pre-requisite software](https://tia-toolbox.readthedocs.io/en/latest/installation.html)
+2. Open a terminal window<br/>
+
+
+    $ cd <future-home-of-tiatoolbox-directory>
+
+
+3. Download a complete copy of the `tiatoolbox`.
+
+
+    $ git clone https://github.com/TissueImageAnalytics/tiatoolbox.git
+
+
+4. Change directory to `tiatoolbox`
+
+
+    $ cd tiatoolbox
+
+
+5. Create virtual environment for TIAToolbox using
+
+
+    $ conda env create -f requirements.dev.conda.yml
+    $ conda activate tiatoolbox_dev
+
+or
+
+
+    $ conda create -n tiatoolbox_dev python=3.8 # select version of your choice
+    $ conda activate tiatoolbox_dev
+    $ pip install -r requirements_dev.txt
+
+6. To use the packages installed in the environment, run the command:
+
+
+    $ conda activate tiatoolbox_dev
 
 ### License
 
