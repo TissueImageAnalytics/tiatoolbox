@@ -51,6 +51,23 @@ It is important to note that untrusted user input should not be
 accepted, as arbitrary code can be run during the parsing of an
 input string.
 
+Supported operators and functions:
+    - Property access: `props["key"]`
+    - Math operations (`+`, `-`, `*`, `/`, `**`, `%`): `props["key"] + 1`
+    - Boolean operations (`and`, `or`, `not`): `props["key"] and props["key"] == 1`
+    - Key checking: `"key" in props`
+    - List indexing: `props["key"][0]`
+    - List sum: `sum(props["key"])`
+    - List contains: `"value" in props["key"]`
+    - None check (with a provided function): `is_none(props["key"])`
+      `is_not_none(props["key"])`
+    - Regex (with a provided function): `regexp(pattern, props["key"])`
+
+Unsupported operations:
+    - The `is` operator: `props["key"] is None`
+    - Imports: `import re`
+    - List length: `len(props["key"])` (support planned)
+
 """
 import json
 import operator
