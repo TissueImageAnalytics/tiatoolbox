@@ -103,8 +103,6 @@ ASCII_UNIT_SEP = "\x1f"
 ASCII_NULL = "\0"
 ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 
-POP_SENTINEL = object()
-
 # Only Python 3.10+ supports using slots for dataclasses
 # https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass
 # therefore we use the following workaround to only use them when available.
