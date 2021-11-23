@@ -173,3 +173,11 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
 }
+
+# -- Options for autodoc -----------------------------------------------
+
+autodoc_typehints = "description"
+autodoc_type_aliases = {
+    "Iterable": "Iterable",
+    "ArrayLike": "ArrayLike",
+}

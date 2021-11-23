@@ -100,6 +100,13 @@ Patch Extraction
 .. autoclass:: SlidingWindowPatchExtractor
     :show-inheritance:
 
+^^^^^^^^^^^^^^^^^^
+Graph Construction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.graph
+    :members:
+
 ^^^^^^^^^^^^^^^^^^^^^^^
 Tile Pyramid Generation
 ^^^^^^^^^^^^^^^^^^^^^^^
