@@ -147,7 +147,7 @@ class TestPredicate:
             assert isinstance(check(result), Number)
 
     @staticmethod
-    def test_propery_binary_operations(eval_globals, eval_locals, check):
+    def test_property_binary_operations(eval_globals, eval_locals, check):
         """Check that binary operations between properties does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"props['int'] {op} props['int']"
@@ -207,8 +207,8 @@ class TestPredicate:
         assert check(result) == "Hello world!"
 
     @staticmethod
-    def test_regex_ignorecase(eval_globals, eval_locals, check):
-        """Test regex with ignorecase."""
+    def test_regex_ignore_case(eval_globals, eval_locals, check):
+        """Test regex with ignorecase flag."""
         query = "regexp('hello', props['string'], re.IGNORECASE)"
         result = eval(query, eval_globals, eval_locals)  # skipcq: PYL-W0123
         assert check(result) == "Hello"

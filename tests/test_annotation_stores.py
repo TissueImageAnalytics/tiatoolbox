@@ -59,6 +59,7 @@ def cell_polygon(
         repeat_first (bool): Enforce that the last point is equal to the first.
         direction (str): Ordering of the points. Defaults to "CCW". Valid options
             are: counter-clockwise "CCW", and clockwise "CW".
+
     """
     if repeat_first:
         n_points -= 1
@@ -111,7 +112,7 @@ def points_grid() -> List[Polygon]:
 
 @pytest.fixture(scope="session")
 def sample_triangle() -> Polygon:
-    """Simple traingle polygon used for testing."""
+    """Simple triangle polygon used for testing."""
     return Polygon([(0, 0), (1, 1), (2, 0)])
 
 
@@ -142,18 +143,19 @@ def pytest_generate_tests(metafunc):
     Adapted from pytest documentation. For more information on
     parameterized tests see:
     https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+
     """
     # Return if the test is not part of a class
     if metafunc.cls is None:
         return
-    idlist = []
-    argvalues = []
+    id_list = []
+    arg_values = []
     for scenario in metafunc.cls.scenarios:
-        idlist.append(scenario[0])
+        id_list.append(scenario[0])
         items = scenario[1].items()
-        argnames = [x[0] for x in items]
-        argvalues.append([x[1] for x in items])
-    metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
+        arg_names = [x[0] for x in items]
+        arg_values.append([x[1] for x in items])
+    metafunc.parametrize(arg_names, arg_values, ids=id_list, scope="class")
 
 
 # Class Specific Tests
@@ -251,7 +253,8 @@ def test_sqlitestore_wkt_deserialisation(sample_triangle):
 def test_sqlitestore_wkb_deserialisation(sample_triangle):
     """Test WKB deserialisation.
 
-    Test the defaul stattic method in the ABC.
+    Test the default stattic method in the ABC.
+
     """
     wkb = sample_triangle.wkb
     geom = AnnotationStore.deserialise_geometry(wkb)
