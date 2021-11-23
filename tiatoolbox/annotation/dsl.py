@@ -217,8 +217,8 @@ class SQLTriplet(SQLExpression):
             operator.mod: lambda a, b: f"({a} % {b})",
             "is none": lambda a, _: f"({a} IS NULL)",
             "is not none": lambda a, _: f"({a} IS NOT NULL)",
-            "listsum": lambda a, _: f"LISTSUM({a})",
-            "ifnull": lambda x, d: f"IFNULL({x}, {d})",
+            "list_sum": lambda a, _: f"LISTSUM({a})",
+            "if_null": lambda x, d: f"IFNULL({x}, {d})",
             "contains": lambda j, o: f"CONTAINS({j}, {o})",
             "bool": lambda x, _: f"({x} != 0)",
         }
@@ -249,7 +249,7 @@ class SQLJSONDictionary(SQLExpression):
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
-        return SQLTriplet(self[key], "ifnull", default or SQLNone())
+        return SQLTriplet(self[key], "if_null", default or SQLNone())
 
 
 class SQLRegex(SQLExpression):
@@ -350,7 +350,7 @@ def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
     Returns:
         SQLTriplet: SQLTriplet for a function call to sum the list.
     """
-    return SQLTriplet(x, "listsum")
+    return SQLTriplet(x, "list_sum")
 
 
 def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTriplet:
