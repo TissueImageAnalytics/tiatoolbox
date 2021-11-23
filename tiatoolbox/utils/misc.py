@@ -675,29 +675,18 @@ def model_to(on_gpu, model):
 
 def get_bounding_box(img):
     """Get bounding box coordinate information.
-    <<<<<<< HEAD
-        Given an image with zero and non-zero values. This function
-        will return the the minimal box that contains all non-zero
-        values.
-        Args:
-            img (ndarray): Image to get the bounding box.
-        Returns:
-            bound (ndarray): Coordinates of the box in the form of
-                [start_x, start_y, end_x, end_y].
-    =======
 
-        Given an image with zero and non-zero values. This function
-        will return the the minimal box that contains all non-zero
-        values.
+    Given an image with zero and non-zero values. This function
+    will return the the minimal box that contains all non-zero
+    values.
 
-        Args:
-            img (ndarray): Image to get the bounding box.
+    Args:
+        img (ndarray): Image to get the bounding box.
 
-        Returns:
-            bound (ndarray): Coordinates of the box in the form of
-                [start_x, start_y, end_x, end_y].
+    Returns:
+        bound (ndarray): Coordinates of the box in the form of
+            [start_x, start_y, end_x, end_y].
 
-    >>>>>>> develop
     """
     rows = np.any(img, axis=1)
     cols = np.any(img, axis=0)
