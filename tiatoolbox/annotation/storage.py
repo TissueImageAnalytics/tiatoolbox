@@ -20,7 +20,7 @@
 
 """
 This module contains a collection of classes for handling storage of
-annotations in memory in addition to serialisation/deserialisaion
+annotations in memory in addition to serialisation/deserialisation
 to/from disk.
 
 Definitions
@@ -78,7 +78,7 @@ try:
 except ImportError:
     import json
 
-from tiatoolbox.annotation.predicate import (
+from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
     json_contains,

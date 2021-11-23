@@ -7,7 +7,7 @@ from typing import Union
 
 import pytest
 
-from tiatoolbox.annotation.predicate import (
+from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
     SQLJSONDictionary,
