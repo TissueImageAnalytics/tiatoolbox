@@ -28,53 +28,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tiatoolbox.models.architecture.hovernet import (
-    HoVerNet,
-    create_decoder_branch,
-    get_instance_info,
-)
+from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.architecture.utils import UpSample2x
 from tiatoolbox.utils import misc
-
-
-# TODO: check for semantic segmentation function (outside class)
-def get_layer_info(pred_layer):
-    """Transforms image layers/regions into contours to store in dictionary.
-
-    Args:
-        image (ndarray): Semantic segmentation map of different
-            layers/regions following processing.
-
-    Returns:
-        layer_info_dict (dict): Dictionary to store layer contours in. It
-            has the following form:
-            layer_info = {
-                    contour: number[][],
-                    type: number,
-            }
-            layer_dict = {[layer_uid: number] : layer_info}
-
-    """
-
-    layer_list = np.unique(pred_layer)
-    layer_list = np.delete(layer_list, np.where(layer_list == 0))
-    layer_info_dict = {}
-    count = 1
-
-    for type_class in layer_list:
-        layer = np.where(pred_layer == type_class, 1, 0).astype("uint8")
-        contours, _ = cv2.findContours(
-            layer.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
-        )
-        for layer in contours:
-            coords = layer[:, 0, :]
-            layer_info_dict[count] = {
-                "contours": coords,
-                "type": type_class,
-            }
-            count += 1
-
-    return layer_info_dict
 
 
 class HoVerNetPlus(HoVerNet):
@@ -109,10 +65,30 @@ class HoVerNetPlus(HoVerNet):
         self.decoder = nn.ModuleDict(
             OrderedDict(
                 [
-                    ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
-                    ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                    ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
-                    ("ls", create_decoder_branch(ksize=ksize, out_ch=num_layers)),
+                    (
+                        "tp",
+                        HoVerNet._HoVerNet__create_decoder_branch(
+                            ksize=ksize, out_ch=num_types
+                        ),
+                    ),
+                    (
+                        "np",
+                        HoVerNet._HoVerNet__create_decoder_branch(
+                            ksize=ksize, out_ch=2
+                        ),
+                    ),
+                    (
+                        "hv",
+                        HoVerNet._HoVerNet__create_decoder_branch(
+                            ksize=ksize, out_ch=2
+                        ),
+                    ),
+                    (
+                        "ls",
+                        HoVerNet._HoVerNet__create_decoder_branch(
+                            ksize=ksize, out_ch=num_layers
+                        ),
+                    ),
                 ]
             )
         )
@@ -120,7 +96,7 @@ class HoVerNetPlus(HoVerNet):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def _proc_ls(ls_map: np.ndarray):
+    def __proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies a gaussian blur to
@@ -139,6 +115,45 @@ class HoVerNetPlus(HoVerNet):
         ls_map = ls_map.astype("int")
 
         return ls_map
+
+    @staticmethod
+    def __get_layer_info(pred_layer):
+        """Transforms image layers/regions into contours to store in dictionary.
+
+        Args:
+            image (ndarray): Semantic segmentation map of different
+                layers/regions following processing.
+
+        Returns:
+            layer_info_dict (dict): Dictionary to store layer contours in. It
+                has the following form:
+                layer_info = {
+                        contour: number[][],
+                        type: number,
+                }
+                layer_dict = {[layer_uid: number] : layer_info}
+
+        """
+
+        layer_list = np.unique(pred_layer)
+        layer_list = np.delete(layer_list, np.where(layer_list == 0))
+        layer_info_dict = {}
+        count = 1
+
+        for type_class in layer_list:
+            layer = np.where(pred_layer == type_class, 1, 0).astype("uint8")
+            contours, _ = cv2.findContours(
+                layer.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+            )
+            for layer in contours:
+                coords = layer[:, 0, :]
+                layer_info_dict[count] = {
+                    "contours": coords,
+                    "type": type_class,
+                }
+                count += 1
+
+        return layer_info_dict
 
     @staticmethod
     # skipcq: PYL-W0221
@@ -177,12 +192,12 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
-        pred_layer = HoVerNetPlus._proc_ls(ls_map)
+        pred_inst = HoVerNet._HoVerNet__proc_np_hv(np_map, hv_map)
+        pred_layer = HoVerNetPlus.__proc_ls(ls_map)
         pred_type = tp_map
 
-        nuc_inst_info_dict = get_instance_info(pred_inst, pred_type)
-        layer_info_dict = get_layer_info(pred_layer)
+        nuc_inst_info_dict = HoVerNet._HoVerNet__get_instance_info(pred_inst, pred_type)
+        layer_info_dict = HoVerNetPlus.__get_layer_info(pred_layer)
 
         return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict
 

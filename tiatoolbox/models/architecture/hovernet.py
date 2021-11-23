@@ -42,100 +42,6 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
 
 
-def get_instance_info(pred_inst, pred_type=None):
-    """To collect instance information and store it within a dictionary.
-
-    Args:
-        pred_inst (np.ndarray): An image of shape (heigh, width) which
-              contains the probabilities of a pixel being a nuclei.
-        pred_type (np.ndarray): An image of shape (heigh, width, 1) which
-              contains the probabilities of a pixel being a certain type of nuclei.
-
-    Returns:
-        inst_info_dict (dict): A dictionary containing a mapping of each instance
-                within `pred_inst` instance information. It has following form
-
-            >>> inst_info = {
-            >>>         box: number[],
-            >>>         centroids: number[],
-            >>>         contour: number[][],
-            >>>         type: number,
-            >>>         prob: number,
-            >>> }
-            >>> inst_info_dict = {[inst_uid: number] : inst_info}
-
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `pred_inst`.
-
-    """
-    inst_id_list = np.unique(pred_inst)[1:]  # exclude background
-    inst_info_dict = {}
-    for inst_id in inst_id_list:
-        inst_map = pred_inst == inst_id
-        inst_box = get_bounding_box(inst_map)
-        inst_box_tl = inst_box[:2]
-        inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
-        inst_map = inst_map.astype(np.uint8)
-        inst_moment = cv2.moments(inst_map)
-        inst_contour = cv2.findContours(
-            inst_map, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-        )
-        # * opencv protocol format may break
-        inst_contour = inst_contour[0][0].astype(np.int32)
-        inst_contour = np.squeeze(inst_contour)
-
-        # < 3 points does not make a contour, so skip, likely artifact too
-        # as the contours obtained via approximation => too small
-        if inst_contour.shape[0] < 3:  # pragma: no cover
-            continue
-        # ! check for trickery shape
-        if len(inst_contour.shape) != 2:  # pragma: no cover
-            continue
-
-        inst_centroid = [
-            (inst_moment["m10"] / inst_moment["m00"]),
-            (inst_moment["m01"] / inst_moment["m00"]),
-        ]
-        inst_centroid = np.array(inst_centroid)
-        inst_contour += inst_box_tl[None]
-        inst_centroid += inst_box_tl  # X
-        inst_info_dict[inst_id] = {  # inst_id should start at 1
-            "box": inst_box,
-            "centroid": inst_centroid,
-            "contour": inst_contour,
-            "prob": None,
-            "type": None,
-        }
-
-    if pred_type is not None:
-        # * Get class of each instance id, stored at index id-1
-        for inst_id in list(inst_info_dict.keys()):
-            cmin, rmin, cmax, rmax = inst_info_dict[inst_id]["box"]
-            inst_map_crop = pred_inst[rmin:rmax, cmin:cmax]
-            inst_type_crop = pred_type[rmin:rmax, cmin:cmax]
-
-            inst_map_crop = inst_map_crop == inst_id
-            inst_type = inst_type_crop[inst_map_crop]
-
-            (type_list, type_pixels) = np.unique(inst_type, return_counts=True)
-            type_list = list(zip(type_list, type_pixels))
-            type_list = sorted(type_list, key=lambda x: x[1], reverse=True)
-
-            inst_type = type_list[0][0]
-
-            # ! pick the 2nd most dominant if it exists
-            if inst_type == 0 and len(type_list) > 1:  # pragma: no cover
-                inst_type = type_list[1][0]
-
-            type_dict = {v[0]: v[1] for v in type_list}
-            type_prob = type_dict[inst_type] / (np.sum(inst_map_crop) + 1.0e-6)
-
-            inst_info_dict[inst_id]["type"] = int(inst_type)
-            inst_info_dict[inst_id]["prob"] = float(type_prob)
-
-    return inst_info_dict
-
-
 class TFSamepaddingLayer(nn.Module):
     """To align with tensorflow `same` padding.
 
@@ -371,53 +277,6 @@ class ResidualBlock(nn.Module):
         return feat
 
 
-def create_decoder_branch(out_ch=2, ksize=5):
-    """Helper to create a decoder branch."""
-    modules = [
-        ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
-        ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
-        (
-            "convf",
-            nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
-        ),
-    ]
-    u3 = nn.Sequential(OrderedDict(modules))
-
-    modules = [
-        ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
-        ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
-        (
-            "convf",
-            nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
-        ),
-    ]
-    u2 = nn.Sequential(OrderedDict(modules))
-
-    modules = [
-        ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
-        (
-            "conva",
-            nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
-        ),
-    ]
-    u1 = nn.Sequential(OrderedDict(modules))
-
-    modules = [
-        ("bn", nn.BatchNorm2d(64, eps=1e-5)),
-        ("relu", nn.ReLU(inplace=True)),
-        (
-            "conv",
-            nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
-        ),
-    ]
-    u0 = nn.Sequential(OrderedDict(modules))
-
-    decoder = nn.Sequential(
-        OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
-    )
-    return decoder
-
-
 class HoVerNet(ModelABC):
     """HoVer-Net Architecture.
 
@@ -478,8 +337,8 @@ class HoVerNet(ModelABC):
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("np", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
                 )
             )
@@ -487,9 +346,14 @@ class HoVerNet(ModelABC):
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                        (
+                            "tp",
+                            HoVerNet.__create_decoder_branch(
+                                ksize=ksize, out_ch=num_types
+                            ),
+                        ),
+                        ("np", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", HoVerNet.__create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
                 )
             )
@@ -544,7 +408,54 @@ class HoVerNet(ModelABC):
         return out_dict
 
     @staticmethod
-    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
+    def __create_decoder_branch(out_ch=2, ksize=5):
+        """Helper to create a decoder branch."""
+        modules = [
+            ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
+            ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
+            (
+                "convf",
+                nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
+            ),
+        ]
+        u3 = nn.Sequential(OrderedDict(modules))
+
+        modules = [
+            ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
+            ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
+            (
+                "convf",
+                nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
+            ),
+        ]
+        u2 = nn.Sequential(OrderedDict(modules))
+
+        modules = [
+            ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
+            (
+                "conva",
+                nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
+            ),
+        ]
+        u1 = nn.Sequential(OrderedDict(modules))
+
+        modules = [
+            ("bn", nn.BatchNorm2d(64, eps=1e-5)),
+            ("relu", nn.ReLU(inplace=True)),
+            (
+                "conv",
+                nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
+            ),
+        ]
+        u0 = nn.Sequential(OrderedDict(modules))
+
+        decoder = nn.Sequential(
+            OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
+        )
+        return decoder
+
+    @staticmethod
+    def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
@@ -640,6 +551,100 @@ class HoVerNet(ModelABC):
         return proced_pred
 
     @staticmethod
+    def __get_instance_info(pred_inst, pred_type=None):
+        """To collect instance information and store it within a dictionary.
+
+        Args:
+            pred_inst (np.ndarray): An image of shape (heigh, width) which
+                contains the probabilities of a pixel being a nuclei.
+            pred_type (np.ndarray): An image of shape (heigh, width, 1) which
+                contains the probabilities of a pixel being a certain type of nuclei.
+
+        Returns:
+            inst_info_dict (dict): A dictionary containing a mapping of each instance
+                    within `pred_inst` instance information. It has following form
+
+                >>> inst_info = {
+                >>>         box: number[],
+                >>>         centroids: number[],
+                >>>         contour: number[][],
+                >>>         type: number,
+                >>>         prob: number,
+                >>> }
+                >>> inst_info_dict = {[inst_uid: number] : inst_info}
+
+                    and `inst_uid` is an integer corresponds to the instance
+                    having the same pixel value within `pred_inst`.
+
+        """
+        inst_id_list = np.unique(pred_inst)[1:]  # exclude background
+        inst_info_dict = {}
+        for inst_id in inst_id_list:
+            inst_map = pred_inst == inst_id
+            inst_box = get_bounding_box(inst_map)
+            inst_box_tl = inst_box[:2]
+            inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
+            inst_map = inst_map.astype(np.uint8)
+            inst_moment = cv2.moments(inst_map)
+            inst_contour = cv2.findContours(
+                inst_map, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            )
+            # * opencv protocol format may break
+            inst_contour = inst_contour[0][0].astype(np.int32)
+            inst_contour = np.squeeze(inst_contour)
+
+            # < 3 points does not make a contour, so skip, likely artifact too
+            # as the contours obtained via approximation => too small
+            if inst_contour.shape[0] < 3:  # pragma: no cover
+                continue
+            # ! check for trickery shape
+            if len(inst_contour.shape) != 2:  # pragma: no cover
+                continue
+
+            inst_centroid = [
+                (inst_moment["m10"] / inst_moment["m00"]),
+                (inst_moment["m01"] / inst_moment["m00"]),
+            ]
+            inst_centroid = np.array(inst_centroid)
+            inst_contour += inst_box_tl[None]
+            inst_centroid += inst_box_tl  # X
+            inst_info_dict[inst_id] = {  # inst_id should start at 1
+                "box": inst_box,
+                "centroid": inst_centroid,
+                "contour": inst_contour,
+                "prob": None,
+                "type": None,
+            }
+
+        if pred_type is not None:
+            # * Get class of each instance id, stored at index id-1
+            for inst_id in list(inst_info_dict.keys()):
+                cmin, rmin, cmax, rmax = inst_info_dict[inst_id]["box"]
+                inst_map_crop = pred_inst[rmin:rmax, cmin:cmax]
+                inst_type_crop = pred_type[rmin:rmax, cmin:cmax]
+
+                inst_map_crop = inst_map_crop == inst_id
+                inst_type = inst_type_crop[inst_map_crop]
+
+                (type_list, type_pixels) = np.unique(inst_type, return_counts=True)
+                type_list = list(zip(type_list, type_pixels))
+                type_list = sorted(type_list, key=lambda x: x[1], reverse=True)
+
+                inst_type = type_list[0][0]
+
+                # ! pick the 2nd most dominant if it exists
+                if inst_type == 0 and len(type_list) > 1:  # pragma: no cover
+                    inst_type = type_list[1][0]
+
+                type_dict = {v[0]: v[1] for v in type_list}
+                type_prob = type_dict[inst_type] / (np.sum(inst_map_crop) + 1.0e-6)
+
+                inst_info_dict[inst_id]["type"] = int(inst_type)
+                inst_info_dict[inst_id]["prob"] = float(type_prob)
+
+        return inst_info_dict
+
+    @staticmethod
     # skipcq: PYL-W0221
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
@@ -675,8 +680,8 @@ class HoVerNet(ModelABC):
             np_map, hv_map = raw_maps
 
         pred_type = tp_map
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
-        nuc_inst_info_dict = get_instance_info(pred_inst, pred_type)
+        pred_inst = HoVerNet.__proc_np_hv(np_map, hv_map)
+        nuc_inst_info_dict = HoVerNet.__get_instance_info(pred_inst, pred_type)
 
         return pred_inst, nuc_inst_info_dict
 
