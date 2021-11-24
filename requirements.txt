@@ -15,6 +15,7 @@ pyyaml>=5.1
 requests
 scikit-image
 scikit-learn>=0.23.2
+shapely
 sphinx==4.1.2
 shapely
 tifffile
