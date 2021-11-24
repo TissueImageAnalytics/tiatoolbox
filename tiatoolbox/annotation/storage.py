@@ -719,6 +719,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Returns:
             Any: The result of dump. Depends on the provided functions.
+
         """
         if fp is not None:
             # It is a file-like object, write to it
