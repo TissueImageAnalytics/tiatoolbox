@@ -497,6 +497,18 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
         stride=stride[0],
     )
 
+    # Test passing a VirtualWSI for mask
+    mask_wsi = VirtualWSIReader(wsi_mask, info=wsi._m_info, mode="bool")
+    patches = patchextraction.get_patch_extractor(
+        input_img=wsi,
+        input_mask=mask_wsi,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=None,
+    )
+
     # Test `otsu` option for mask
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,

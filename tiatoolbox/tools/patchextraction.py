@@ -122,6 +122,8 @@ class PatchExtractor(ABC):
                 self.mask = self.wsi.tissue_mask(
                     method=input_mask, resolution=1.25, units="power"
                 )
+        elif isinstance(input_mask, wsireader.VirtualWSIReader):
+            self.mask = input_mask
         else:
             self.mask = wsireader.VirtualWSIReader(
                 input_mask, info=self.wsi.info, mode="bool"
@@ -241,10 +243,7 @@ class PatchExtractor(ABC):
             """Accept coord as long as its box contains bits of mask."""
             roi = reader.read_bounds(
                 coord,
-                resolution=reader.info.mpp if resolution is None else resolution,
-                units="mpp" if units is None else units,
                 interpolation="nearest",
-                coord_space="resolution",
             )
             return np.sum(roi > 0) > 0
 
