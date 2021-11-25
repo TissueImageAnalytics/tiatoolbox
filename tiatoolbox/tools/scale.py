@@ -123,7 +123,7 @@ class PlattScaling:
                 diff = err - olderr
                 scale = 0.5 * (err + olderr + 1)
 
-                flag = diff > -1e-3 * scale and diff < 1e-7 * scale
+                flag = -1e-3 * scale < diff < 1e-7 * scale
                 if flag:
                     count += 1
                 else:
