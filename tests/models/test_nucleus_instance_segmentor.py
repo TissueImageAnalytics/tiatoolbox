@@ -20,6 +20,7 @@
 """Tests for Nucleus Instance Segmentor."""
 
 import copy
+import gc
 import pathlib
 import shutil
 
@@ -358,6 +359,7 @@ def test_functionality_travis(remote_sample, tmp_path):
 
 def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
     """Functional tests for merging tile predictions."""
+    gc.collect()  # Force clean up everything on hold
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
