@@ -1,60 +1,87 @@
-
-
 import numpy as np
 
 
 # Fit model output to the label range
 class PlattScaling:
-    def __init__(self):
-        self.A = None
-        self.B = None
+    """Platt scaling.
 
-    def fit(self, L, V):
+    Fitting a logistic regression model to a classifier scores such that
+    the model outputs are transformed into a probability distribution over classes.
+
+    Args:
+        num_iters (int): Number of iterations for training.
+
+    Examples:
+        >>> import numpy as np
+        >>> logit = np.random.rand(10)
+        >>> # binary class
+        >>> label = np.random.randint(0, 2, 10)
+        >>> scaler = PlattScaling()
+        >>> probabilities = scaler.fit_transform(label, logit)
+
+    """
+
+    def __init__(self, num_iters=100):
+        self.a = None
+        self.b = None
+        self.num_iters = num_iters + 1
+        self._fixer_a = 1.0
+        self._fixer_b = 1.0
+
+    def fit(self, logits, labels):
         """Fit function like sklearn.
 
-        Fit the sigmoid to the classifier scores V and labels L using the Platt Method.
+        Fit the sigmoid to the classifier scores logits and labels
+        using the Platt Method.
 
-        Args:  
-            L (array like): Classifier labels (+1/-1 pr +1/0).
-            V (array-like): Classifier output scores.
+        Args:
+            logits (array-like): Classifier output scores.
+            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
         Returns:
-            Coefficients A and B for the sigmoid function
+            Model with fitted coefficients a and b for the sigmoid function.
 
         """
-        def mylog(v):
-            if v == 0:
-                return -200
-            else:
-                return np.log(v)
 
-        out = np.array(V)
-        L = np.array(L)
-        assert len(V) == len(L)
-        target = L == 1
+        def mylog(v):
+            return np.log(v + 1.0e-200)
+
+        out = np.array(logits)
+        labels = np.array(labels)
+
+        if len(logits) != len(labels):
+            raise ValueError(
+                (
+                    f"`logits` and `labels` must have same shape: "
+                    f"{len(logits)} vs {len(labels)}"
+                )
+            )
+
+        target = labels == 1
         prior1 = float(np.sum(target))
         prior0 = len(target) - prior1
-        A = 0
-        B = np.log((prior0 + 1) / (prior1 + 1))
-        self.A, self.B = A, B
-        hiTarget = (prior1 + 1) / (prior1 + 2)
-        loTarget = 1 / (prior0 + 2)
+        a = 0
+        b = np.log((prior0 + 1) / (prior1 + 1))
+        self.a, self.b = a, b
+
+        hi_target = (prior1 + 1) / (prior1 + 2)
+        lo_target = 1 / (prior0 + 2)
         labda = 1e-3
         olderr = 1e300
         pp = np.ones(out.shape) * (prior1 + 1) / (prior0 + prior1 + 2)
-        T = np.zeros(target.shape)
-        for it in range(1, 100):
+        idx_t = np.zeros(target.shape)
+        for _ in range(1, self.num_iters):
             a = 0
             b = 0
             c = 0
             d = 0
             e = 0
-            for i in range(len(out)):
+            for i, _ in enumerate(out):
                 if target[i]:
-                    t = hiTarget
-                    T[i] = t
+                    t = hi_target
+                    idx_t[i] = t
                 else:
-                    t = loTarget
-                    T[i] = t
+                    t = lo_target
+                    idx_t[i] = t
                 d1 = pp[i] - t
                 d2 = pp[i] * (1 - pp[i])
                 a += out[i] * out[i] * d2
@@ -62,49 +89,75 @@ class PlattScaling:
                 c += out[i] * d2
                 d += out[i] * d1
                 e += d1
-            if (abs(d) < 1e-9 and abs(e) < 1e-9):
+
+            flag = abs(d) < 1.0e-9 and abs(e) < 1.0e-9
+            if flag:
                 break
-            oldA = A
-            oldB = B
+
+            old_a = a
+            old_b = b
             count = 0
             while 1:
                 det = (a + labda) * (b + labda) - c * c
-                if det == 0:
+                if self._fixer_a * det == 0:
                     labda *= 10
                     continue
-                A = oldA + ((b + labda) * d - c * e) / det
-                B = oldB + ((a + labda) * e - c * d) / det
-                self.A, self.B = A, B
+                a = old_a + ((b + labda) * d - c * e) / det
+                b = old_b + ((a + labda) * e - c * d) / det
+
+                self.a, self.b = a, b
                 err = 0
-                for i in range(len(out)):
+                for i, _ in enumerate(out):
                     p = self.transform(out[i])
                     pp[i] = p
-                    t = T[i]
+                    t = idx_t[i]
                     err -= t * mylog(p) + (1 - t) * mylog(1 - p)
-                if err < olderr * (1 + 1e-7):
+
+                if err < self._fixer_a * olderr * (1 + 1e-7):
                     labda *= 0.1
                     break
                 labda *= 10
-                if labda > 1e6:
+
+                if self._fixer_b * labda > 1e6:
                     break
                 diff = err - olderr
                 scale = 0.5 * (err + olderr + 1)
-                if diff > -1e-3 * scale and diff < 1e-7 * scale:
+
+                flag = diff > -1e-3 * scale and diff < 1e-7 * scale
+                if flag:
                     count += 1
                 else:
                     count = 0
                 olderr = err
+
                 if count == 3:
                     break
-        self.A, self.B = A, B
+        self.a, self.b = a, b
         return self
 
-    def transform(self, V):
-        return 1 / (1 + np.exp(V * self.A + self.B))
+    def transform(self, logits):
+        """Tranform input to probabilities basing on trained parameters.
 
-    def fit_transform(self, L, V):
-        return self.fit(L, V).transform(V)
+        Args:
+            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+        Returns:
+            Array of probabilities.
+
+        """
+        return 1 / (1 + np.exp(logits * self.a + self.b))
+
+    def fit_transform(self, logits, labels):
+        """Fit and tranform input to probabilities.
+
+        Args:
+            logits (array-like): Classifier output scores.
+            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+        Returns:
+            Array of probabilities.
+
+        """
+        return self.fit(logits, labels).transform(logits)
 
     def __repr__(self):
-        A, B = self.A, self.B
-        return "Platt Scaling: " + f'A: {A}, B: {B}'
+        a, b = self.a, self.b
+        return "Platt Scaling: " + f"a: {a}, b: {b}"
