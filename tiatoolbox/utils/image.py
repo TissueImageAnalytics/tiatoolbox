@@ -22,12 +22,17 @@
 import warnings
 from typing import Tuple, Union
 
-import cv2
 import numpy as np
 from PIL import Image
 
 from tiatoolbox.utils.misc import conv_out_size
-from tiatoolbox.utils.transforms import bounds2locsize, imresize
+from tiatoolbox.utils.transforms import (
+    bounds2locsize,
+    bounds2slices,
+    imresize,
+    locsize2bounds,
+    pad_bounds,
+)
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
@@ -74,6 +79,66 @@ def normalise_padding_size(padding):
     return np.array(padding)
 
 
+def find_padding(read_location, read_size, image_size):
+    """Find the correct padding to add when reading a region of an image.
+
+    Args:
+      read_location (tuple(int)): The location of the region to read.
+      read_size (tuple(int)): The size of the location to read.
+      image_size (tuple(int)): The size of the image to read from.
+
+    Returns:
+        tuple: Tuple of padding to apply in the format expect by np.pad.
+            i.e. ((before_x, after_x), (before_y, after_y)).
+
+    Examples:
+        >>> from tiatoolbox.utils.image import find_padding
+        >>> location, size = (-2, -2), (10, 10)
+        >>> # Find padding needed to make the output (10, 10)
+        >>> # if the image is only (5 , 5) and read at
+        >>> # location (-2, -2).
+        >>> find_padding(location, size, image_size=(5, 5))
+
+    """
+    read_location = np.array(read_location)
+    read_size = np.array(read_size)
+    image_size = np.array(image_size)
+
+    before_padding = np.maximum(-read_location, 0)
+    region_end = read_location + read_size
+    after_padding = np.maximum(region_end - np.max([image_size, read_location], 0), 0)
+    return np.stack([before_padding[::-1], after_padding[::-1]], axis=1)
+
+
+def find_overlap(read_location, read_size, image_size):
+    """Find the part of a region which overlaps the image area.
+
+    Args:
+      read_location (tuple(int)): The location of the region to read.
+      read_size (tuple(int)): The size of the location to read.
+      image_size (tuple(int)): The size of the image to read from.
+
+    Returns:
+        tuple: Bounds of the overlapping region.
+
+    Examples:
+        >>> from tiatoolbox.utils.image import find_overlap
+        >>> loc, size = (-5, -5), (10, 10)
+        >>> find_overlap(loc, size, (5, 5))
+
+    """
+    read_location = np.array(read_location)
+    read_size = np.array(read_size)
+    image_size = np.array(image_size)
+
+    start = np.maximum(read_location, 0)
+    region_end = read_location + read_size
+    stop = np.minimum(region_end, image_size)
+
+    # Concatenate start and stop to make a bounds array (left, top, right, bottom)
+    return np.concatenate([start, stop])
+
+
 def make_bounds_size_positive(bounds):
     """Make bounds have positive size and get horizontal/vertical flip flags.
 
@@ -91,20 +156,25 @@ def make_bounds_size_positive(bounds):
             - :py:obj:`bool` - Horizontal flip
             - :py:obj:`bool` - Vertical flip
 
+    Examples:
+        >>> from tiatoolbox.utils.image import make_bounds_size_positive
+        >>> bounds = (10, 10, 0, 0)
+        >>> positive_bounds, flipud, fliplr = make_bounds_size_positive(bounds)
+
     """
-    hflip, vflip = False, False
+    fliplr, flipud = False, False
     _, (width, height) = bounds2locsize(bounds)
     if width >= 0 and height >= 0:
-        return bounds, hflip, vflip
+        return bounds, fliplr, flipud
     l, t, r, b = bounds
     if width < 0:
         l, r = r, l
-        hflip = True
+        fliplr = True
     if height < 0:
         t, b = b, t
-        vflip = True
+        flipud = True
     bounds = np.array([l, t, r, b])
-    return (bounds, hflip, vflip)
+    return (bounds, fliplr, flipud)
 
 
 def crop_and_pad_edges(
@@ -137,51 +207,58 @@ def crop_and_pad_edges(
         region (:class:`numpy.ndarray`): The image region to be cropped
             and padded.
         pad_mode (str): The pad mode to use, see :func:`numpy.pad`
-            for valid pad modes. Defaults to 'constant'.
+            for valid pad modes. Defaults to 'constant'. If set to
+            "none" or None no padding is applied.
         pad_constant_values (int or tuple(int)): Constant value(s)
             to use when padding. Only used with pad_mode constant.
 
     Returns:
         :class:`numpy.ndarray`: The cropped and padded image.
 
+    Examples:
+        >>> from tiatoolbox.utils.image import crop_and_pad_edges
+        >>> import numpy as np
+        >>> region = np.ones((10, 10, 3))
+        >>> padded_region = crop_and_pad_edges(
+        ...   bounds=(-1, -1, 5, 5),
+        ...   max_dimensions=(10, 10),
+        ...   region=image,
+        ...   pad_mode="constant",
+        ...   pad_constant_values=0,
+        ... )
+
     """
-    left, top, right, bottom = bounds
-    _, (bounds_width, bounds_height) = bounds2locsize(bounds)
-    slide_width, slide_height = max_dimensions
+    loc, size = bounds2locsize(bounds)
 
-    if slide_width < 0 or slide_height < 0:
-        raise ValueError("max_dimensions must be >= 0.")
+    if np.min(max_dimensions) < 0:
+        raise ValueError("Max dimensions must be >= 0.")
 
-    if bounds_width <= 0 or bounds_height <= 0:
+    if np.min(size) <= 0:
         raise ValueError("Bounds must have size (width and height) > 0.")
 
-    # Create value ranges across x and y coordinates
-    x, y = np.arange(left, right), np.arange(top, bottom)
-    # Find padding before (also the crop start index)
-    x_before = np.argmin(np.abs(x))
-    y_before = np.argmin(np.abs(y))
-    # Find the end index of the crop
-    x_end = np.argmin(np.abs(slide_width - 1 - x))
-    y_end = np.argmin(np.abs(slide_height - 1 - y))
-    # Find padding after the cropped sub-region
-    x_after = bounds_width - 1 - x_end
-    y_after = bounds_height - 1 - y_end
-    # Full padding tuple for np.pad
-    padding = (
-        (y_before, y_after),
-        (x_before, x_after),
-    )
+    padding = find_padding(loc, size, max_dimensions)
+    if len(region.shape) > 2:
+        padding = np.concatenate([padding, [[0, 0]]])
 
     # If no padding is required then return the original image unmodified
     if np.all(np.array(padding) == 0):
         return region
+
+    overlap = find_overlap(loc, size, max_dimensions)
+    overlap = np.maximum(overlap - np.tile(loc, 2), 0)
 
     # Add extra padding dimension for colour channels
     if len(region.shape) > 2:
         padding = padding + ((0, 0),)
 
     # Crop the region
-    crop = region[y_before : y_end + 1, x_before : x_end + 1, ...]
+    slices = bounds2slices(overlap)
+    slices += (...,)
+    crop = region[slices]
+
+    # Return if pad_mode is None
+    if pad_mode in ["none", None]:
+        return crop
 
     # Pad the region and return
     if pad_mode == "constant":
@@ -282,8 +359,6 @@ def safe_padded_read(
     # Check if the padded coords outside of the image bounds
     # (over the width/height or under 0)
     padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
-    _, bounds_size = bounds2locsize(padded_bounds)
-    out_size = tuple(conv_out_size(bounds_size, stride=stride))
     img_size = np.array(image.shape[:2][::-1])
     hw_limits = np.tile(img_size, 2)  # height/width limits
     zeros = np.zeros(hw_limits.shape)
@@ -306,13 +381,15 @@ def safe_padded_read(
         bounds = conv_out_size(np.array(bounds), stride=np.tile(stride, 2))
         padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
         img_size = conv_out_size(img_size, stride=stride)
+
+    # Return without padding if pad_mode is none
+    if pad_mode in ["none", None]:
+        return region
+
     # Find how much padding needs to be applied to fill the edge gaps
-    edge_padding = padded_bounds - np.array(
-        [
-            *np.min([[0, 0], padded_bounds[2:]], axis=0),
-            *np.max([img_size, padded_bounds[:2] - img_size], axis=0),
-        ]
-    )
+    before_padding = np.min([[0, 0], padded_bounds[2:]], axis=0)
+    after_padding = np.max([img_size, padded_bounds[:2] - img_size], axis=0)
+    edge_padding = padded_bounds - np.concatenate([before_padding, after_padding])
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
     edge_padding[2:] = np.max([edge_padding[2:], [0, 0]], axis=0)
     edge_padding = np.abs(edge_padding)
@@ -321,18 +398,15 @@ def safe_padded_read(
     if len(region.shape) == 3:
         pad_width += [(0, 0)]
     # Pad the image region at the edges
-    region = np.pad(
+    return np.pad(
         region,
         pad_width,
         mode=pad_mode,
         **pad_kwargs,
     )
-    if region.shape[:2] != out_size[::-1]:
-        return cv2.resize(region, out_size, interpolation=cv2.INTER_LINEAR)
-    return region
 
 
-def sub_pixel_read(
+def sub_pixel_read(  # noqa: CCR001
     image,
     bounds,
     output_size,
@@ -340,10 +414,12 @@ def sub_pixel_read(
     stride=1,
     interpolation="nearest",
     pad_at_baseline=False,
+    interpolation_padding=2,
     read_func=None,
     pad_mode="constant",
     pad_constant_values=0,
     read_kwargs=None,
+    pad_kwargs=None,
 ):
     """Read and resize an image region with sub-pixel bounds.
     Allows for reading of image regions with sub-pixel coordinates, and
@@ -354,32 +430,54 @@ def sub_pixel_read(
             :alt: Illustration for reading a region with fractional
                 coordinates (sub-pixel).
     Args:
-        image (:class:`numpy.ndarray`): Image to read from.
-        bounds (tuple(float)): Bounds of the image to read in
-          (left, top, right, bottom) format.
-        output_size (tuple(int)): The desired output size.
-        padding (int or tuple(int)): Amount of padding to apply to the
-          image region in pixels. Defaults to 0.
-        stride (int or tuple(int)): Stride when reading from img.
-          Defaults to 1. A tuple is interpreted as stride in
-          x and y (axis 1 and 0 respectively).
-        interpolation (str): Method of interpolation. Possible values
-          are: nearest, linear, cubic, lanczos, area. Defaults to nearest.
-        pad_at_baseline (bool): Apply padding in terms of baseline pixels. Defaults
-          to False, meaning padding is added to the output image size in pixels.
-        read_func (collections.abc.Callable): Custom read function. Defaults to
-          :func:`safe_padded_read`. A function which recieves two positional args
-          of the image object and a set of integer bounds in addition to padding
-          key word arguments for reading a pixel-aligned bounding region. This function
-          should return a numpy array with 2 or 3 dimensions. See examples for
-          more information.
-        pad_mode (str): Method for padding when reading areas outside of the input
-          image. Default is constant (0 padding). This is passed to `read_func`
-          which defaults to :func:`safe_padded_read`.
-          See :func:`safe_padded_read` for supported pad modes.
-        **read_kwargs (dict): Arbitrary keyword arguments passed through
-          to `read_func`.
-    Return:
+        image (:class:`numpy.ndarray`):
+            Image to read from.
+        bounds (tuple(float)):
+            Bounds of the image to read in
+            (left, top, right, bottom) format.
+        output_size (tuple(int)):
+            The desired output size.
+        padding (int or tuple(int)):
+            Amount of padding to apply to the image region in pixels.
+            Defaults to 0.
+        stride (int or tuple(int)):
+            Stride when reading from img. Defaults to 1. A tuple is
+            interpreted as stride in x and y (axis 1 and 0 respectively).
+        interpolation (str):
+            Method of interpolation. Possible values are: nearest,
+            linear, cubic, lanczos, area. Defaults to nearest.
+        pad_at_baseline (bool):
+            Apply padding in terms of baseline
+            pixels. Defaults to False, meaning padding is added to the
+            output image size in pixels.
+        interpolation_padding (int):
+            Padding to temporarily apply before rescaling to avoid
+            border effects. Defaults to 2.
+        read_func (collections.abc.Callable):
+            Custom read function. Defaults to
+            :func:`safe_padded_read`. A function which recieves
+            two positional args of the image object and a set of
+            integer bounds in addition to padding key word arguments
+            for reading a pixel-aligned bounding region. This function
+            should return a numpy array with 2 or 3 dimensions. See
+            examples for more.
+        pad_mode (str):
+            Method for padding when reading areas outside of
+            the input image. Default is constant (0 padding). This is
+            passed to `read_func` which defaults to
+            :func:`safe_padded_read`. See :func:`safe_padded_read`
+            for supported pad modes. Setting to "none" or None will
+            result in no padding being applied.
+        pad_constant_values (int, tuple(int)): Constant values to use
+            when padding with constant pad mode. Passed to the
+            :func:`numpy.pad` `constant_values` argument. Default is 0.
+        **read_kwargs (dict):
+            Arbitrary keyword arguments passed through to `read_func`.
+        **pad_kwargs (dict):
+            Arbitrary keyword arguments passed through to the
+            padding function :func:`numpy.pad`.
+
+    Returns:
         :class:`numpy.ndimage`: Output image region.
 
     Raises:
@@ -423,108 +521,141 @@ def sub_pixel_read(
         >>> sub_pixel_read(bounds, read_func=openslide_read)
 
     """
+    # Handle inputs
+    if pad_kwargs is None:
+        pad_kwargs = {}
     if read_kwargs is None:
         read_kwargs = {}
+    if interpolation is None:
+        interpolation = "none"
+
+    if pad_mode == "constant" and "constant_values" not in pad_kwargs:
+        pad_kwargs["constant_values"] = pad_constant_values
+
+    if 0 in bounds2locsize(bounds)[1]:
+        raise ValueError("Bounds must have non-zero size")
+
+    # Normalise padding
+    padding = normalise_padding_size(padding)
+
+    # Check the bounds are valid or have a negative size
+    # The left/start_x and top/start_y values should usually be smaller
+    # than the right/end_x and bottom/end_y values.
+    bounds, fliplr, flipud = make_bounds_size_positive(bounds)
+    if fliplr or flipud:
+        warnings.warn("Bounds have a negative size, output will be flipped.")
 
     if isinstance(image, Image.Image):
         image = np.array(image)
-    bounds = np.array(bounds)
+
+    # Normalise none pad_mode to None
+    if pad_mode.lower() == "none":
+        pad_mode = None
+
+    # Initialise variables
+    image_size = np.flip(image.shape[:2])
+    scaling = np.array([1, 1])
     _, bounds_size = bounds2locsize(bounds)
-    if np.size(stride) == 1:
-        stride = np.tile(stride, 2)
-    bounds_size = bounds_size / stride
-    if 0 in bounds_size:
-        raise ValueError("Bounds must have non-zero size in each dimension")
-    scale_factor = np.abs(output_size / bounds_size)
+    if output_size is not None and interpolation != "none":
+        scaling = np.array(output_size) / bounds_size / stride
+    read_bounds = bounds
+    if pad_mode is None:
+        output_size = np.round(
+            bounds2locsize(find_overlap(*bounds2locsize(bounds), image_size))[1]
+            * scaling
+        ).astype(int)
 
-    # Normalise desired padding to be a length 4 array.
-    padding = normalise_padding_size(padding)
+    overlap_bounds = find_overlap(*bounds2locsize(bounds), image_size=image_size)
+    if pad_mode is None:
+        read_bounds = overlap_bounds
+    pad_width = np.zeros((2, 2), int)
 
-    # Divide padding by scale factor to get padding to add to bounds.
-    if pad_at_baseline:
-        bounds_padding = padding
-        output_padding = padding * np.tile(scale_factor, 2)
-    else:
-        bounds_padding = padding / np.tile(scale_factor, 2)
-        output_padding = padding
+    baseline_padding = padding
+    if not pad_at_baseline:
+        baseline_padding = padding * np.tile(scaling, 2)
 
-    padded_output_size = np.round(output_size + output_padding.reshape(2, 2).sum(0))
+    # Check the padded bounds do not have zero size
+    _, padded_bounds_size = bounds2locsize(pad_bounds(bounds, baseline_padding))
+    if 0 in padded_bounds_size:
+        raise ValueError("Bounds have zero size after padding.")
 
-    # Find the pixel-aligned indexes to read the image at
-    padded_bounds = bounds + (bounds_padding * PADDING_TO_BOUNDS)
+    read_bounds = pad_bounds(read_bounds, interpolation_padding + baseline_padding)
+    # 0 Expand to integers and find residuals
+    start, end = np.reshape(read_bounds, (2, -1))
+    int_read_bounds = np.concatenate(
+        [
+            np.floor(start),
+            np.ceil(end),
+        ]
+    )
+    residuals = np.abs(int_read_bounds - read_bounds)
+    read_bounds = int_read_bounds
+    valid_int_bounds = find_overlap(
+        *bounds2locsize(int_read_bounds), image_size
+    ).astype(int)
 
-    # The left/start_x and top/start_y values should usually be smaller
-    # than the right/end_x and bottom/end_y values.
-    padded_bounds, hflip, vflip = make_bounds_size_positive(padded_bounds)
-    if hflip or vflip:
-        warnings.warn("Bounds have a negative size, output will be flipped.")
-
-    pixel_aligned_bounds = padded_bounds.copy()
-    pixel_aligned_bounds[:2] = np.floor(pixel_aligned_bounds[:2])
-    pixel_aligned_bounds[2:] = np.ceil(pixel_aligned_bounds[2:])
-    pixel_aligned_bounds = pixel_aligned_bounds.astype(int)
-    # Keep the difference between pixel-aligned and original coordinates
-    residuals = padded_bounds - pixel_aligned_bounds
-
-    # If no read function is given, use the default.
+    # 1 Read the region
+    _, valid_int_size = bounds2locsize(valid_int_bounds)
     if read_func is None:
-        read_func = safe_padded_read
+        region = image[bounds2slices(valid_int_bounds, stride=stride)]
+    else:
+        region = read_func(image, valid_int_bounds, stride, **read_kwargs)
+        if region is None or 0 in region.shape:
+            raise ValueError("Read region is empty or None.")
+        region_size = region.shape[:2][::-1]
+        if not np.array_equal(region_size, valid_int_size):
+            raise ValueError("Read function returned a region of incorrect size.")
 
-    _, pixel_aligned_size = bounds2locsize(pixel_aligned_bounds)
-    if any(pixel_aligned_size <= 0):
-        raise ValueError("Bounds have zero size after padding and integer alignment.")
-
-    # Perform the pixel-aligned read.
-    region = read_func(
-        image,
-        pixel_aligned_bounds,
-        pad_mode=pad_mode,
-        stride=stride,
-        pad_constant_values=pad_constant_values,
-        **read_kwargs,
-    )
-
-    # Error checking
-    region_size = np.array(region.shape[:2][::-1])
-    if not np.all(region_size > 0):
-        raise ValueError("Region returned from read_func is empty.")
-
-    if any(region_size != conv_out_size(pixel_aligned_size, stride=stride)):
-        raise ValueError("Read func returned region of incorrect size.")
-
-    # Find the size which the region should be scaled to.
-    scaled_size = region_size * scale_factor
-    scaled_size = tuple(scaled_size.astype(int))
-
-    # If no interpolation is to be used, return the region without resampling
-    if interpolation == "none":
-        return region
-
-    # Resize/scale the region and residuals
-    scaled_region = imresize(
-        region, output_size=scaled_size, interpolation=interpolation
-    )
-    scaled_residuals = residuals * np.tile(scale_factor, 2)
-
-    # Trim extra whole pixels (residuals) which resulted from expanding
-    # to integers before scaling.
-    resized_indexes = scaled_residuals.astype(int)
-    resized_indexes += np.array([0, 0, *scaled_size])
-    l, t, r, b = resized_indexes
-    result = scaled_region[t:b, l:r, ...]
-    result_size = np.array(result.shape[:2][::-1])
-
-    # Re-sample to fit in the requested output size (to fix 1 pixel differences)
-    if not all(result_size == padded_output_size):
-        # raise Exception
-        result = cv2.resize(
-            result, tuple(padded_output_size), interpolation=cv2.INTER_LINEAR
+    # 1.5 Pad the region
+    pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
+    if pad_mode is None:
+        pad_width -= find_padding(*bounds2locsize(overlap_bounds), image_size)
+    # Apply stride to padding
+    pad_width = pad_width / stride
+    # Add 0 padding to channels if required
+    if len(image.shape) > 2:
+        pad_width = np.concatenate([pad_width, [(0, 0)]])
+    # 1.7 Do the padding
+    if pad_mode == "constant":
+        region = np.pad(
+            region,
+            pad_width.astype(int),
+            mode=pad_mode or "constant",
+            **pad_kwargs,
         )
-
-    # Apply flips
-    if hflip:
-        result = np.flipud(result)
-    if vflip:
-        result = np.fliplr(result)
-
-    return result  # noqa: R504
+    else:
+        region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
+    # 2 Re-scaling
+    if output_size is not None and interpolation != "none":
+        region = imresize(region, scale_factor=scaling, interpolation=interpolation)
+    # 3 Trim interpolation padding
+    region_size = np.flip(region.shape[:2])
+    trimming = bounds2slices(
+        np.round(
+            pad_bounds(
+                locsize2bounds((0, 0), region_size),
+                (-(interpolation_padding + residuals) * np.tile(scaling, 2)),
+            )
+        )
+    )
+    region = region[trimming + (...,)]
+    region_size = region.shape[:2][::-1]
+    # 4 Ensure output is the correct size
+    if output_size is not None and interpolation != "none":
+        total_padding_per_axis = padding.reshape(2, 2).sum(axis=0)
+        if pad_at_baseline:
+            output_size = np.round(
+                np.add(output_size, total_padding_per_axis * scaling)
+            ).astype(int)
+        else:
+            output_size = np.add(output_size, total_padding_per_axis)
+        if not np.array_equal(region_size, output_size):
+            region = imresize(
+                region, output_size=tuple(output_size), interpolation=interpolation
+            )
+    # 5 Apply flips to account for negative bounds
+    if fliplr:
+        region = np.flipud(region)
+    if flipud:
+        region = np.fliplr(region)
+    return region  # noqa: R504

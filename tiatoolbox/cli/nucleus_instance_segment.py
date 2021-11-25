@@ -18,29 +18,33 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Command line interface for patch_predictor."""
+"""Command line interface for nucleus instance segmentation."""
 import click
+import yaml
 
 from tiatoolbox import utils
-from tiatoolbox.models.engine.patch_predictor import PatchPredictor
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
+    IOSegmentorConfig,
+    NucleusInstanceSegmentor,
+)
 
 
 @click.group()
 def main():  # pragma: no cover
-    """Define patch_predictor click group."""
+    """Define semantic_segment click group."""
     return 0
 
 
 @main.command()
 @click.option(
     "--pretrained-model",
-    help="Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
-    "resnet18 model trained on the kather dataset. For a detailed list of "
-    "available pretrained models please see "
-    "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
-    "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
-    default="resnet18-kather100k",
+    help="Name of the existing models support by tiatoolbox"
+    "for processing the data. Refer to [URL] for details."
+    "By default, the corresponding pretrained weights will also be"
+    "downloaded. However, you can override with your own set of weights"
+    "via the `pretrained_weights` argument. Argument is case insensitive. "
+    "default = 'hovernet_fast-pannuke'",
+    default="hovernet_fast-pannuke",
 )
 @click.option(
     "--pretrained-weights",
@@ -65,7 +69,7 @@ def main():  # pragma: no cover
     "image tiles and whole-slide images. Patches are only processed if they are "
     "within a masked area. If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
-    "processed for image tiles. Supported file types are jpg, png and npy.",
+    "processed for image tiles. Supported file types are jpg, png.",
     default=None,
 )
 @click.option(
@@ -76,7 +80,7 @@ def main():  # pragma: no cover
 @click.option(
     "--output-path",
     help="Output directory where model predictions will be saved.",
-    default="patch_prediction",
+    default="semantic_segmentation",
 )
 @click.option(
     "--batch-size",
@@ -84,35 +88,12 @@ def main():  # pragma: no cover
     default=1,
 )
 @click.option(
-    "--resolution",
-    type=float,
-    default=0.5,
-    help="resolution to read the image at, default=0",
-)
-@click.option(
-    "--units",
-    default="mpp",
-    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
-    help="resolution units, default=level",
-)
-@click.option(
-    "--return-probabilities",
-    type=bool,
-    help="Whether to return raw model probabilities. default=False",
-    default=False,
-)
-@click.option(
-    "--return-labels",
-    type=bool,
-    help="Whether to return raw model output as labels. default=True",
-    default=True,
-)
-@click.option(
-    "--merge-predictions",
-    type=bool,
-    default=True,
-    help="Whether to merge the predictions to form a 2-dimensional map. "
-    "default=False",
+    "--yaml-config-path",
+    help="Path to ioconfig file. Sample yaml file can be viewed in "
+    "tiatoolbox.data.pretrained_model.yaml. "
+    "if pretrained_model is used the ioconfig is automatically set."
+    "default=None",
+    default="None",
 )
 @click.option(
     "--num-loader-workers",
@@ -120,6 +101,19 @@ def main():  # pragma: no cover
     "also perform preprocessing.",
     type=int,
     default=0,
+)
+@click.option(
+    "--num-postproc-workers",
+    help="Number of workers to post-process the network output.",
+    type=int,
+    default=0,
+)
+@click.option(
+    "--auto-generate-mask",
+    help="If set to True, it automatically generates tile/WSI tissue mask. "
+    "default=False",
+    type=bool,
+    default=False,
 )
 @click.option(
     "--on-gpu",
@@ -133,7 +127,7 @@ def main():  # pragma: no cover
     default=True,
     help="Print output, default=True",
 )
-def patch_predictor(
+def nucleus_instance_segment(
     pretrained_model,
     pretrained_weights,
     img_input,
@@ -142,12 +136,10 @@ def patch_predictor(
     mode,
     output_path,
     batch_size,
-    resolution,
-    units,
-    return_probabilities,
-    return_labels,
-    merge_predictions,
+    yaml_config_path,
     num_loader_workers,
+    num_postproc_workers,
+    auto_generate_mask,
     on_gpu,
     verbose,
 ):
@@ -160,11 +152,21 @@ def patch_predictor(
         mode=mode,
     )
 
-    predictor = PatchPredictor(
+    ioconfig = None
+
+    if pretrained_weights is not None:
+        with open(yaml_config_path) as registry_handle:
+            ioconfig = yaml.safe_load(registry_handle)
+
+        ioconfig = IOSegmentorConfig(**ioconfig)
+
+    predictor = NucleusInstanceSegmentor(
         pretrained_model=pretrained_model,
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,
+        num_postproc_workers=num_postproc_workers,
+        auto_generate_mask=auto_generate_mask,
         verbose=verbose,
     )
 
@@ -172,15 +174,9 @@ def patch_predictor(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
-        return_probabilities=return_probabilities,
-        merge_predictions=merge_predictions,
-        labels=None,
-        return_labels=return_labels,
-        resolution=resolution,
-        units=units,
         on_gpu=on_gpu,
         save_dir=output_path,
-        save_output=True,
+        ioconfig=ioconfig,
     )
 
     utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))

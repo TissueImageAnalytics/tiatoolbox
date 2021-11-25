@@ -57,8 +57,8 @@ def _process_tile_predictions(
 
     Args:
         ioconfig (:class:`IOSegmentorConfig`): Object defines information
-            about input and ouput placement of patches.
-        tile_bounds (list): Boundary of the current tile, defined as
+            about input and output placement of patches.
+        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
             (top_left_x, top_left_y, bottom_x, bottom_y).
         tile_flag (list): A list of flag to indicate if instances within
             an area extended from each side (by `ioconfig.margin`) of

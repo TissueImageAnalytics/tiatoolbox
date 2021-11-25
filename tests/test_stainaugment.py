@@ -7,24 +7,24 @@ import numpy as np
 import pytest
 
 from tiatoolbox.data import stainnorm_target
-from tiatoolbox.tools.stainaugment import StainAugmentation
+from tiatoolbox.tools.stainaugment import StainAugmentor
 from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox.utils.misc import imread
 
 
 def test_stainaugment(source_image, norm_vahadane):
-    """Test functionality of the StainAugmentation class."""
+    """Test functionality of the StainAugmentor class."""
     source_img = imread(pathlib.Path(source_image))
     target_img = stainnorm_target()
     vahadane_img = imread(pathlib.Path(norm_vahadane))
 
     # Test invalid method in the input
     with pytest.raises(ValueError, match=r".*Unsupported stain extractor method.*"):
-        _ = StainAugmentation(method="invalid")
+        _ = StainAugmentor(method="invalid")
 
     # 1. Testing without stain matrix.
     # Test with macenko stain extractor
-    augmentor = StainAugmentation(
+    augmentor = StainAugmentor(
         method="macenko", sigma1=3.0, sigma2=3.0, augment_background=True
     )
     augmentor.fit(source_img)
@@ -42,7 +42,7 @@ def test_stainaugment(source_image, norm_vahadane):
 
     # Now we augment the the source image with sigma1=0, sigma2=0 to force the augmentor
     # to act like a normalizer
-    augmentor = StainAugmentation(
+    augmentor = StainAugmentor(
         method="vahadane",
         stain_matrix=target_stain_matrix,
         sigma1=0.0,
@@ -58,7 +58,7 @@ def test_stainaugment(source_image, norm_vahadane):
     # and sigma1,2 equal to 0. The output should be equal to stain normalized image.
     aug_pipeline = alb.Compose(
         [
-            StainAugmentation(
+            StainAugmentor(
                 method="vahadane",
                 stain_matrix=target_stain_matrix,
                 sigma1=0.0,
