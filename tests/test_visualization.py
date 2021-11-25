@@ -134,7 +134,7 @@ def test_overlay_instance_prediction():
 
 
 def test_plot_graph():
-    """"""
+    """Test plotting graph."""
     canvas = np.zeros([10, 10])
     nodes = np.array([[1, 1], [2, 2], [2, 5]])
     edges = np.array([[0, 1], [1, 2], [2, 0]])

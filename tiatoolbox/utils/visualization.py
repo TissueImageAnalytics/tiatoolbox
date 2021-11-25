@@ -230,7 +230,9 @@ def plot_graph(
     edge_colors: Union[Tuple[int], np.ndarray] = (0, 0, 0),
     edge_size: int = 5,
 ):
-    """Drawing the graph onto a canvas.
+    """Drawing a graph onto a canvas.
+
+    Drawing a graph onto a canvas.
 
     Args:
         canvas (np.ndarray): Canvas to be drawn upon.
@@ -257,6 +259,7 @@ def plot_graph(
 
     # draw the edges
     def to_int_tuple(x):
+        """Helper to convert to tuple of int."""
         return tuple([int(v) for v in x])
 
     for idx, (src, dst) in enumerate(edges):

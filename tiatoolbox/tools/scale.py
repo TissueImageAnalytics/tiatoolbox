@@ -43,6 +43,7 @@ class PlattScaling:
         """
 
         def mylog(v):
+            """Log with epilon."""
             return np.log(v + 1.0e-200)
 
         out = np.array(logits)
