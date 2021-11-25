@@ -28,6 +28,10 @@ def test_platt_scaler():
     scaler = PlattScaling(num_iters=10)
     _ = scaler.fit_transform(logit * 100, label)
 
+    label = np.concatenate([np.full(int(sample_size), -1)])
+    scaler = PlattScaling(num_iters=1)
+    _ = scaler.fit_transform(logit * 0.01, label)
+
     with pytest.raises(ValueError, match=r".*same shape.*"):
         scaler.fit_transform(logit, label[:2])
     print(scaler)
