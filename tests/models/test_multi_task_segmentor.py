@@ -44,7 +44,7 @@ def _rm_dir(path):
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
 def test_functionality_local(remote_sample, tmp_path):
     """Local functionality test for multi task segmentor. Currently only
-    testing HoVer-Net+ with semantic segmentor
+    testing HoVer-Net+ with semantic segmentor.
     """
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("CMU-1-Small-Region.svs"))
