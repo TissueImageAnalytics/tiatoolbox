@@ -31,6 +31,7 @@ requirements = [
     "zarr",
     "requests",
     "defusedxml",
+    "pygeos",
 ]
 
 setup_requirements = [
