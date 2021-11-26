@@ -84,7 +84,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
 5. Create virtual environment for TIAToolbox using
 
 ```sh
-    $ conda env create -f requirements.dev.conda.yml
+    $ conda env create -f requirements.dev.conda.yml # for linux/mac only.
     $ conda activate tiatoolbox-dev
 ```
 or
@@ -111,7 +111,7 @@ The full text of the licence is included in [LICENSE.md](https://raw.githubuserc
 
 ### Auxiliary Files
 
-Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/cross_fac/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ### Dual License
 
