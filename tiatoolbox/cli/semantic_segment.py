@@ -43,7 +43,7 @@ def main():  # pragma: no cover
     "resnet18 model trained on the kather dataset. For a detailed list of "
     "available pretrained models please see "
     "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
-    "#tiatoolbox.models.classification.patch_predictor.get_pretrained_model",
+    "#deep-learning-models.architecture.get_pretrained_model",
     default="fcn-tissue_mask",
 )
 @click.option(

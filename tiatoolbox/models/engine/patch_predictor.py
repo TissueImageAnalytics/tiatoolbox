@@ -61,7 +61,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
         )
 
 
-class CNNPatchPredictor:
+class PatchPredictor:
     """Patch-level predictor.
 
     Args:
@@ -76,7 +76,7 @@ class CNNPatchPredictor:
           via the `pretrained_weights` argument. Argument is case insensitive.
         pretrained_weights (str): Path to the weight of the corresponding
           `pretrained_model`.
-          >>> predictor = CNNPatchPredictor(
+          >>> predictor = PatchPredictor(
           ...    pretrained_model="resnet18-kather100k",
           ...    pretrained_weights="resnet18_local_weight")
         batch_size (int) : Number of images fed into the model each time.
@@ -103,27 +103,27 @@ class CNNPatchPredictor:
     Examples:
         >>> # list of 2 image patches as input
         >>> data = [img1, img2]
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
-        >>> predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
-        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(tile_file, mode='tile')
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
-        >>> predictor = CNNPatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(wsi_file, mode='wsi')
 
     """
@@ -198,7 +198,7 @@ class CNNPatchPredictor:
             ...     'predictions': [1, 0],
             ...     'coordinates': [[0, 0, 2, 2], [2, 2, 4, 4]],
             ... }
-            >>> merged = CNNPatchPredictor.merge_predictions(
+            >>> merged = PatchPredictor.merge_predictions(
             ...         np.zeros([4, 4]),
             ...         output,
             ...         resolution=1.0,
@@ -419,7 +419,7 @@ class CNNPatchPredictor:
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
-            >>> predictor = CNNPatchPredictor(
+            >>> predictor = PatchPredictor(
             ...                 pretrained_model="resnet18-kather100k")
             >>> output = predictor.predict(wsis, mode="wsi")
             >>> output.keys()
