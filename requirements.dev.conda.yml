@@ -1,4 +1,4 @@
-name: tiatoolbox
+name: tiatoolbox-dev
 channels:
   - conda
   - conda-forge

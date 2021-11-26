@@ -30,6 +30,7 @@ requirements = [
     "imagecodecs",
     "zarr",
     "requests",
+    "defusedxml",
 ]
 
 setup_requirements = [
