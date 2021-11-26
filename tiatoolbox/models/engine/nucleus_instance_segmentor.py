@@ -26,7 +26,6 @@ from typing import Callable, List, Union
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
-import pygeos
 import torch
 import tqdm
 from shapely.geometry import box as shapely_box
@@ -136,32 +135,31 @@ def _process_tile_predictions(
     if len(inst_dict) == 0:
         return {}, []
 
-    # ! DEPRECATION:
-    # !     will be deprecated upon finalization of SQL annotation store
+    # !
     m = ioconfig.margin
     w, h = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
-    tile_rtree = pygeos.STRtree(
-        pygeos.box(
-            inst_boxes[:, 0], inst_boxes[:, 1], inst_boxes[:, 2], inst_boxes[:, 3]
-        )
-    )
+
+    geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+    # An auxiliary dictionary to actually query the index within the source list
+    index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
+    tile_rtree = STRtree(geometries)
     # !
 
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        pygeos.box(0, 0, w, 1),  # noqa top egde
-        pygeos.box(0, h - 1, w, h),  # noqa bottom edge
-        pygeos.box(0, 0, 1, h),  # noqa left
-        pygeos.box(w - 1, 0, w, h),  # noqa right
+        shapely_box(0, 0, w, 1),  # noqa top egde
+        shapely_box(0, h - 1, w, h),  # noqa bottom edge
+        shapely_box(0, 0, 1, h),  # noqa left
+        shapely_box(w - 1, 0, w, h),  # noqa right
     ]
     margin_boxes = [
-        pygeos.box(0, 0, w, m),  # noqa top egde
-        pygeos.box(0, h - m, w, h),  # noqa bottom edge
-        pygeos.box(0, 0, m, h),  # noqa left
-        pygeos.box(w - m, 0, w, h),  # noqa right
+        shapely_box(0, 0, w, m),  # noqa top egde
+        shapely_box(0, h - m, w, h),  # noqa bottom edge
+        shapely_box(0, 0, m, h),  # noqa left
+        shapely_box(w - m, 0, w, h),  # noqa right
     ]
     # ! this is wrt to WSI coord space, not tile
     margin_lines = [
@@ -171,7 +169,7 @@ def _process_tile_predictions(
         [[w - m, m], [w - m, h - m]],  # noqa right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
-    margin_lines = [pygeos.box(*v.flatten().tolist()) for v in margin_lines]
+    margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
 
     # the ids within this match with those within `inst_map`, not UUID
     sel_indices = []
@@ -184,8 +182,12 @@ def _process_tile_predictions(
             for idx, box in enumerate(margin_boxes)
             if tile_flag[idx] or tile_mode == 3
         ]
+
         sel_indices = [
-            tile_rtree.query(bounds, predicate="contains") for bounds in sel_boxes
+            index_by_id[id(geo)]
+            for bounds in sel_boxes
+            for geo in tile_rtree.query(bounds)
+            if bounds.contains(geo)
         ]
     elif tile_mode in [1, 2]:
         # for `horizontal/vertical strip` tiles
@@ -198,8 +200,11 @@ def _process_tile_predictions(
             margin_boxes[idx] if flag else boundary_lines[idx]
             for idx, flag in enumerate(tile_flag)
         ]
+
         sel_indices = [
-            tile_rtree.query(bounds, predicate="intersects") for bounds in sel_boxes
+            index_by_id[id(geo)]
+            for bounds in sel_boxes
+            for geo in tile_rtree.query(bounds)
         ]
     else:
         raise ValueError(f"Unknown tile mode {tile_mode}.")
@@ -210,7 +215,6 @@ def _process_tile_predictions(
         if len(sel_indices) > 0:
             # not sure how costly this is in large dict
             inst_uids = list(inst_dict.keys())
-            sel_indices = [idx for sub_sel in sel_indices for idx in sub_sel]
             sel_uids = [inst_uids[idx] for idx in sel_indices]
         return sel_uids
 
@@ -220,26 +224,19 @@ def _process_tile_predictions(
     # this one should contain UUID with the reference database
     remove_insts_in_orig = []
     if tile_mode == 3:
-        # ! DEPRECATION:
-        # !     will be deprecated upon finalization of SQL annotation store
         inst_boxes = [v["box"] for v in ref_inst_dict.values()]
         inst_boxes = np.array(inst_boxes)
-        ref_inst_rtree = pygeos.STRtree(
-            pygeos.box(
-                inst_boxes[:, 0],
-                inst_boxes[:, 1],
-                inst_boxes[:, 2],
-                inst_boxes[:, 3],
-            )
-        )
-        # !
 
-        # remove existing instances in old prediction which intersect
-        # with the margin lines
+        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        # An auxiliary dictionary to actually query the index within the source list
+        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
+        ref_inst_rtree = STRtree(geometries)
         sel_indices = [
-            ref_inst_rtree.query(bounds, predicate="intersects")
+            index_by_id[id(geo)]
             for bounds in margin_lines
+            for geo in ref_inst_rtree.query(bounds)
         ]
+
         remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
 
     # move inst position from tile space back to WSI space
@@ -628,17 +625,10 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             patch_inputs = patch_inputs[sel]
 
         # assume to be in [top_left_x, top_left_y, bot_right_x, bot_right_y]
-        # ! DEPRECATION:
-        # !     will be deprecated upon finalization of SQL annotation store
-        spatial_indexer = pygeos.STRtree(
-            pygeos.box(
-                patch_outputs[:, 0],
-                patch_outputs[:, 1],
-                patch_outputs[:, 2],
-                patch_outputs[:, 3],
-            )
-        )
-        # !
+        geometries = [shapely_box(*bounds) for bounds in patch_outputs]
+        # An auxiliary dictionary to actually query the index within the source list
+        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
+        spatial_indexer = STRtree(geometries)
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
@@ -658,7 +648,11 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
                 # select any patches that have their output
                 # within the current tile
-                sel_indices = spatial_indexer.query(pygeos.box(*tile_bounds))
+                sel_box = shapely_box(*tile_bounds)
+                sel_indices = [
+                    index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
+                ]
+
                 tile_patch_inputs = patch_inputs[sel_indices]
                 tile_patch_outputs = patch_outputs[sel_indices]
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
