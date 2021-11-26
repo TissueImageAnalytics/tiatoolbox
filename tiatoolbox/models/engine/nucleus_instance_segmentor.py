@@ -410,8 +410,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             spatial_indexer = STRtree(geometries)
 
             for idx, sel_box in enumerate(sel_boxes):
-                query_geos = [geo for geo in spatial_indexer.query(sel_box)]
-                sel_indices = [index_by_id[id(geo)] for geo in query_geos]
+                sel_indices = [
+                    index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
+                ]
                 removal_flag[sel_indices, idx] = 0
             return removal_flag
 
