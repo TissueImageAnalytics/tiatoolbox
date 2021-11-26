@@ -29,6 +29,8 @@ import numpy as np
 import pygeos
 import torch
 import tqdm
+from shapely.geometry import box as shapely_box
+from shapely.strtree import STRtree
 
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
@@ -390,24 +392,29 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # * === be removed in postproc callback
         boxes = tile_outputs
 
+        # This saves computation time if the image is smaller than the expected tile
+        if np.all(image_shape <= tile_shape):
+            flag = np.zeros([boxes.shape[0], 4], dtype=np.int32)
+            return [[boxes, flag]]
+
         # * remove all sides for boxes
         # unset for those lie within the selection
         def unset_removal_flag(boxes, removal_flag):
             """Unset removal flags for tiles intersecting image boundaries."""
-            # ! DEPRECATION:
-            # !     will be deprecated upon finalization of SQL annotation store
             sel_boxes = [
-                pygeos.box(0, 0, w, 0),  # top edge
-                pygeos.box(0, h, w, h),  # bottom edge
-                pygeos.box(0, 0, 0, h),  # left
-                pygeos.box(w, 0, w, h),  # right
+                shapely_box(0, 0, w, 0),  # top edge
+                shapely_box(0, h, w, h),  # bottom edge
+                shapely_box(0, 0, 0, h),  # left
+                shapely_box(w, 0, w, h),  # right
             ]
-            spatial_indexer = pygeos.STRtree(
-                pygeos.box(boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3])
-            )
-            # !
+            geometries = [shapely_box(*bounds) for bounds in boxes]
+            # An auxiliary dictionary to actually query the index within the source list
+            index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
+            spatial_indexer = STRtree(geometries)
+
             for idx, sel_box in enumerate(sel_boxes):
-                sel_indices = spatial_indexer.query(sel_box)
+                query_geos = [geo for geo in spatial_indexer.query(sel_box)]
+                sel_indices = [index_by_id[id(geo)] for geo in query_geos]
                 removal_flag[sel_indices, idx] = 0
             return removal_flag
 
