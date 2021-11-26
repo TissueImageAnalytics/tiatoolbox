@@ -39,7 +39,7 @@ from tiatoolbox.models.dataset import (
     predefined_preproc_func,
 )
 from tiatoolbox.models.engine.patch_predictor import (
-    CNNPatchPredictor,
+    PatchPredictor,
     IOPatchPredictorConfig,
 )
 from tiatoolbox.utils.misc import download_data, imread, imwrite
@@ -475,18 +475,18 @@ def test_predictor_crash():
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
-        CNNPatchPredictor()
+        PatchPredictor()
 
     # provide wrong unknown pretrained model
     with pytest.raises(ValueError, match=r"Pretrained .* does not exist"):
-        CNNPatchPredictor(pretrained_model="secret_model-kather100k")
+        PatchPredictor(pretrained_model="secret_model-kather100k")
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
-        CNNPatchPredictor(pretrained_model=123)
+        PatchPredictor(pretrained_model=123)
 
     # test predict crash
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     with pytest.raises(ValueError, match=r".*not a valid mode.*"):
         predictor.predict("aaa", mode="random")
@@ -511,7 +511,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
 
     # test not providing config / full input info for not pretrained models
     model = CNNModel("resnet50")
-    predictor = CNNPatchPredictor(model=model)
+    predictor = PatchPredictor(model=model)
     with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
         predictor.predict([mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump")
     _rm_dir(f"{tmp_path}/dump")
@@ -555,7 +555,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
     _rm_dir(f"{tmp_path}/dump")
 
     # test overwriting pretrained ioconfig
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     predictor.predict(
         [mini_wsi_svs],
         patch_input_shape=[300, 300],
@@ -596,7 +596,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
     _rm_dir(f"{tmp_path}/dump")
 
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k")
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
     predictor.predict(
         [mini_wsi_svs],
         mode="wsi",
@@ -613,7 +613,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
 
     # convert to pathlib Path to prevent reader complaint
     inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
         inputs,
@@ -674,7 +674,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     )
     download_data(pretrained_weights_url, pretrained_weights)
 
-    predictor = CNNPatchPredictor(
+    predictor = PatchPredictor(
         pretrained_model="resnet18-kather100k",
         pretrained_weights=pretrained_weights,
         batch_size=1,
@@ -683,7 +683,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     # --- test different using user model
     model = CNNModel(backbone="resnet18", num_classes=9)
     # test prediction
-    predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
+    predictor = PatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
         inputs,
         return_probabilities=True,
@@ -706,7 +706,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     # wrapper to make this more clean
     kwargs = dict(
@@ -827,14 +827,14 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
         "predictions": [1, 0],
         "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
     }
-    merged = CNNPatchPredictor.merge_predictions(
+    merged = PatchPredictor.merge_predictions(
         np.zeros([4, 4]), output, resolution=1.0, units="baseline"
     )
     _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
     assert np.sum(merged - _merged) == 0
 
     # blind test for merging probabilities
-    merged = CNNPatchPredictor.merge_predictions(
+    merged = PatchPredictor.merge_predictions(
         np.zeros([4, 4]),
         output,
         resolution=1.0,
@@ -848,7 +848,7 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
 
     # integration test
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
     kwargs = dict(
         return_probabilities=True,
@@ -911,7 +911,7 @@ def _test_predictor_output(
     on_gpu=ON_GPU,
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
-    predictor = CNNPatchPredictor(
+    predictor = PatchPredictor(
         pretrained_model=pretrained_model, batch_size=32, verbose=False
     )
     # don't run test on GPU

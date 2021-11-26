@@ -1,5 +1,6 @@
 # Spell checking whitelist for flake8-spellcheck
 bbox
+centroid
 coords
 csv
 cuda
@@ -7,6 +8,7 @@ CUDA
 dataframe
 dataset
 Dataset
+Delaunay
 downsampled
 dtype
 func
@@ -18,6 +20,7 @@ img
 iostate
 JP2
 kather
+kd
 MERCHANTABILITY
 mpp
 mse
@@ -27,6 +30,8 @@ NHW
 nn
 npy
 numpy
+NxM
+NxN
 Omnyx
 openslide
 otsu
@@ -38,6 +43,7 @@ pretrained
 pyright
 resampling
 runtime
+scipy
 skipcq
 tolist
 uint8

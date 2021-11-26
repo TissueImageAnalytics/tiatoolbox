@@ -1,4 +1,4 @@
-name: tiatoolbox
+name: tiatoolbox-dev
 channels:
   - conda
   - conda-forge
@@ -42,6 +42,7 @@ dependencies:
   - torchvision
   - torchvision>=0.10.1
   - tqdm
+  - umap-learn
   - zarr
   - pip:
       - openslide-python==1.1.2

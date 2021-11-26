@@ -175,4 +175,4 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     @abstractmethod
     def __getitem__(self, idx):
-        ...
+        ...  # pragma: no cover
