@@ -85,19 +85,19 @@ Prepare a computer as a convenient platform for further development of the Pytho
 
 ```sh
     $ conda env create -f requirements.dev.conda.yml
-    $ conda activate tiatoolbox_dev
+    $ conda activate tiatoolbox-dev
 ```
 or
 
 ```sh
-    $ conda create -n tiatoolbox_dev python=3.8 # select version of your choice
-    $ conda activate tiatoolbox_dev
+    $ conda create -n tiatoolbox-dev python=3.8 # select version of your choice
+    $ conda activate tiatoolbox-dev
     $ pip install -r requirements_dev.txt
 ```
 6. To use the packages installed in the environment, run the command:
 
 ```sh
-    $ conda activate tiatoolbox_dev
+    $ conda activate tiatoolbox-dev
 ```
 
 
