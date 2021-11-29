@@ -33,7 +33,6 @@ requirements = [
     "requests",
     "defusedxml",
     "umap-learn",
-    "pygeos",
 ]
 
 setup_requirements = [
