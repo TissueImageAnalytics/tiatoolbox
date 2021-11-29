@@ -23,7 +23,6 @@ dependencies:
   - pip
   - pixman<0.38.0
   - python=3.7
-  - pygeos
   - python=3.7
   - pytorch
   - pyyaml>=5.1
