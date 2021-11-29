@@ -402,7 +402,6 @@ class SemanticSegmentor:
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
         model: torch.nn.Module = None,
         pretrained_model: str = None,
         pretrained_weights: str = None,
