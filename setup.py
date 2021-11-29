@@ -31,6 +31,7 @@ requirements = [
     "zarr",
     "requests",
     "defusedxml",
+    "umap-learn",
     "pygeos",
 ]
 
