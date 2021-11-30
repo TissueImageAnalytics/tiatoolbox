@@ -23,6 +23,7 @@ requirements = [
     "glymur",
     "scikit-learn>=0.23.2",
     "scikit-image>=0.17",
+    "shapely",
     "torchvision==0.10.1",
     "torch==1.9.1",
     "tqdm==4.60.0",
@@ -30,6 +31,7 @@ requirements = [
     "imagecodecs",
     "zarr",
     "requests",
+    "defusedxml",
 ]
 
 setup_requirements = [
