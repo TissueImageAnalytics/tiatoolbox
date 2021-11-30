@@ -1,4 +1,4 @@
-name: tiatoolbox
+name: tiatoolbox-dev
 channels:
   - conda
   - conda-forge
@@ -26,7 +26,6 @@ dependencies:
   - pip
   - pixman<0.38.0
   - pre-commit
-  - pygeos
   - pytest-cov
   - pytest-runner==5.2
   - pytest==6.2.5
@@ -42,6 +41,7 @@ dependencies:
   - torchvision
   - torchvision>=0.10.1
   - tqdm
+  - umap-learn
   - zarr
   - pip:
       - openslide-python==1.1.2

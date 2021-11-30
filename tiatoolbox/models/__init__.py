@@ -22,7 +22,7 @@
 from tiatoolbox.models import abc, architecture, dataset
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.models.engine.patch_predictor import (
-    CNNPatchPredictor,
+    PatchPredictor,
     IOPatchPredictorConfig,
     PatchDataset,
     WSIPatchDataset,

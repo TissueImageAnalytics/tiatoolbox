@@ -32,12 +32,12 @@ from tiatoolbox.tools.stainnorm import get_normaliser
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
-class StainAugmentation(ImageOnlyTransform):
+class StainAugmentor(ImageOnlyTransform):
     """Stain augmentation using predefined stain matrix or stain extraction methods.
 
     This stain augmentation class can be used in 'albumentations' augmentation pipelines
     as well as stand alone. There is an option to use predefined `stain_matrix` in the
-    input which enables the `StainAugmentation` to generate augmented images faster or
+    input which enables the `StainAugmentor` to generate augmented images faster or
     do stain normalization to a specific target `stain_matrix`. Having stain matrix
     beforhand, we don't need to do dictionary learning for stain matrix extraction,
     hence,speed up the stain augmentation/normalization process which makes it more
@@ -95,7 +95,7 @@ class StainAugmentation(ImageOnlyTransform):
         >>> stain_matrix = np.array([[0.91633014, -0.20408072, -0.34451435],
         ...                [0.17669817, 0.92528011, 0.33561059]])
         >>> # Instantiate the stain augmentor and fit it on an image
-        >>> stain_augmentor = StainAugmentation(stain_matrix=stain_matrix)
+        >>> stain_augmentor = StainAugmentor(stain_matrix=stain_matrix)
         >>> stain_augmentor.fit(img)
         >>> # Now using the fitted `stain_augmentor` in a loop to generate
         >>> # several augmented instances from the same image.
@@ -125,7 +125,7 @@ class StainAugmentation(ImageOnlyTransform):
         if self.method.lower() not in {"macenko", "vahadane"}:
             raise ValueError(
                 f"Unsupported stain extractor method '{self.method}' for "
-                "StainAugmentation. Choose either 'vahadane' or 'macenko'."
+                "StainAugmentor. Choose either 'vahadane' or 'macenko'."
             )
         self.stain_normaliser = get_normaliser(self.method.lower())
 

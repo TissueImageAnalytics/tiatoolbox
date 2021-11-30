@@ -5,7 +5,6 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python=3.7
   - albumentations
   - Click
   - cython
@@ -17,21 +16,22 @@ dependencies:
   - matplotlib
   - numpy
   - opencv>=4.0
+  - openjpeg>=2.3.0
   - pandas
   - pillow
-  - openjpeg>=2.3.0
   - pip
   - pixman<0.38.0
+  - python=3.7
   - pytorch
   - pyyaml>=5.1
   - requests
   - scikit-image
   - scikit-learn>=0.23.2
+  - shapely
   - tifffile
   - torchvision
   - tqdm
-  - shapely
-  - pygeos
+  - umap-learn
   - zarr
   - pip:
     - openslide-python
