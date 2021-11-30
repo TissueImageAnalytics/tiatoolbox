@@ -20,6 +20,9 @@
 """Tests for Nucleus Instance Segmentor."""
 
 import copy
+
+# ! The garbage collector
+import gc
 import pathlib
 import shutil
 
@@ -298,6 +301,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
 
 def test_functionality_travis(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
+    gc.collect()
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
@@ -319,7 +323,7 @@ def test_functionality_travis(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[512, 512],
+        tile_shape=[1024, 1024],
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
