@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -162,24 +162,38 @@ class HoVerNetPlus(HoVerNet):
                 prediction.
             inst_dict (dict): a dictionary containing a mapping of each instance
                 within `inst_map` instance information. It has the following form
-            >>> inst_info = {
-            >>>         box: number[],
-            >>>         centroids: number[],
-            >>>         contour: number[][],
-            >>>         type: number,
-            >>>         prob: number,
-            >>> }
-            >>> inst_dict = {[inst_uid: number] : inst_info}
+                inst_info = {
+                        box: number[],
+                        centroids: number[],
+                        contour: number[][],
+                        type: number,
+                        prob: number,
+                }
+                inst_dict = {[inst_uid: number] : inst_info}
                 and `inst_uid` is an integer corresponds to the instance
                 having the same pixel value within `inst_map`.
             layer_map (ndarray): pixel-wise layer segmentation prediction.
             layer_dict (dict): a dictionary containing a mapping of each segmented
                 layer within `layer_map`. It has the following form
-            >>> layer_info = {
-            >>>         contour: number[][],
-            >>>         type: number,
-            >>> }
-            >>> layer_dict = {[layer_uid: number] : layer_info}
+                layer_info = {
+                        contour: number[][],
+                        type: number,
+                }
+                layer_dict = {[layer_uid: number] : layer_info}
+
+        Examples:
+            >>> from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
+            >>> import torch
+            >>> import numpy as np
+            >>> batch = torch.from_numpy(image_patch)[None]
+            >>> # image_patch is a 256x256x3 numpy array
+            >>> weights_path = "A/weights.pth"
+            >>> pretrained = torch.load(weights_path)
+            >>> model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
+            >>> model.load_state_dict(pretrained)
+            >>> output = model.infer_batch(model, batch, on_gpu=False)
+            >>> output = [v[0] for v in output]
+            >>> output = model.postproc(output)
 
         """
         np_map, hv_map, tp_map, ls_map = raw_maps

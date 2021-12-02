@@ -288,6 +288,9 @@ class HoVerNet(ModelABC):
         mode (str): To use architecture defined in as in original paper
           (`original`) or the one used in Pannuke paper (`fast`).
 
+    Examples:
+        TODO
+
     References:
         Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
@@ -564,14 +567,14 @@ class HoVerNet(ModelABC):
             inst_info_dict (dict): A dictionary containing a mapping of each instance
                     within `pred_inst` instance information. It has following form
 
-                >>> inst_info = {
-                >>>         box: number[],
-                >>>         centroids: number[],
-                >>>         contour: number[][],
-                >>>         type: number,
-                >>>         prob: number,
-                >>> }
-                >>> inst_info_dict = {[inst_uid: number] : inst_info}
+                    inst_info = {
+                            box: number[],
+                            centroids: number[],
+                            contour: number[][],
+                            type: number,
+                            prob: number,
+                    }
+                    inst_info_dict = {[inst_uid: number] : inst_info}
 
                     and `inst_uid` is an integer corresponds to the instance
                     having the same pixel value within `pred_inst`.
@@ -660,17 +663,31 @@ class HoVerNet(ModelABC):
             inst_dict (dict): a dictionary containing a mapping of each instance
                 within `inst_map` instance information. It has following form
 
-            >>> inst_info = {
-            >>>         box: number[],
-            >>>         centroids: number[],
-            >>>         contour: number[][],
-            >>>         type: number,
-            >>>         prob: number,
-            >>> }
-            >>> inst_dict = {[inst_uid: number] : inst_info}
+                inst_info = {
+                    box: number[],
+                    centroids: number[],
+                    contour: number[][],
+                    type: number,
+                    prob: number,
+                }
+                inst_dict = {[inst_uid: number] : inst_info}
 
                 and `inst_uid` is an integer corresponds to the instance
                 having the same pixel value within `inst_map`.
+
+        Examples:
+            >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
+            >>> import torch
+            >>> import numpy as np
+            >>> batch = torch.from_numpy(image_patch)[None]
+            >>> # image_patch is a 256x256x3 numpy array
+            >>> weights_path = "A/weights.pth"
+            >>> pretrained = torch.load(weights_path)
+            >>> model = HoVerNet(num_types=6, mode="fast")
+            >>> model.load_state_dict(pretrained)
+            >>> output = model.infer_batch(model, batch, on_gpu=False)
+            >>> output = [v[0] for v in output]
+            >>> output = model.postproc(output)
 
         """
         if len(raw_maps) == 3:
