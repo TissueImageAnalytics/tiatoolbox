@@ -83,12 +83,7 @@ def in_conda_env() -> bool:
     """Detect if the current environment is a conda environment.
 
     Returns:
-        tuple: A tuple containing the version number and the method used
-            to check the version.
-            - version: The version number of the pixman package as a
-              tuple of ints.
-            - using: The method used to check the version.
-
+        bool: True if the current environment is a conda environment, False otherwise.
 
     """
     return "CONDA_DEFAULT_ENV" in os.environ and "CONDA_PREFIX" in os.environ
