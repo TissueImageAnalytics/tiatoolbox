@@ -71,10 +71,9 @@ def is_notebook() -> bool:
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
-        elif shell == "TerminalInteractiveShell":
+        if shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
-        else:
-            return False  # Other type (?)
+        return False  # Other type (?)
     except NameError:
         return False  # Probably standard Python interpreter
 
@@ -161,7 +160,7 @@ def pixman_version() -> Tuple[int, int]:
     if shutil.which("dpkg") and version is None:
         # Using dpkg to check for pixman
         using = "dpkg"
-        dkpg_output = subprocess.check_output(["dpkg", "-s", "libpixman-1-0"])
+        dkpg_output = subprocess.check_output(["/usr/bin/dpkg", "-s", "libpixman-1-0"])
         matches = re.search(
             r"^Version: (\d+.\d+)*",
             dkpg_output.decode("utf-8"),
@@ -237,8 +236,9 @@ def pixman_warning() -> None:  # pragma: no cover
                 "with pixman >=0.39 or install pixman >=0.39 from source. "
                 "See the tiatoolbox documentation for more information on "
                 "setting up a conda environment. "
-                "Instructions to compile from source can be found at the GitLab mirror "
-                "here: https://gitlab.freedesktop.org/pixman/pixman/-/blob/master/INSTALL"
+                "Instructions to compile from source can be found at the GitLab "
+                "mirror here: "
+                "https://gitlab.freedesktop.org/pixman/pixman/-/blob/master/INSTALL"
             )
         if using == "brew":
             fix = "You may be able do this with the command: brew upgrade pixman"
