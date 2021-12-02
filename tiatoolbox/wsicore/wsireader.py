@@ -25,6 +25,7 @@ import numbers
 import os
 import pathlib
 import re
+import threading
 import warnings
 from datetime import datetime
 from numbers import Number
@@ -40,10 +41,12 @@ from defusedxml.ElementTree import fromstring as et_from_string
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
+pixman_warning()
 
 
 IntPair = Tuple[int, int]
@@ -1492,7 +1495,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 bounds, resolution, units
             )
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
-            # dont use the `output_size` (`size_at_requested`) here
+            # don't use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
@@ -1503,7 +1506,7 @@ class OmnyxJP2WSIReader(WSIReader):
             # Find parameters for optimal read
             (
                 read_level,
-                _,  # bounds_at_read_lv,
+                _,  # bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -2184,7 +2187,7 @@ class TIFFWSIReader(WSIReader):
                 bounds, resolution, units
             )
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
-            # dont use the `output_size` (`size_at_requested`) here
+            # don't use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
