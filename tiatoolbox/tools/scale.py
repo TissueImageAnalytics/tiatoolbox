@@ -80,9 +80,9 @@ class PlattScaling:
         target = labels == 1
         prior1 = float(np.sum(target))
         prior0 = len(target) - prior1
-        a = 0
-        b = np.log((prior0 + 1) / (prior1 + 1))
-        self.a, self.b = a, b
+        a_ = 0
+        b_ = np.log((prior0 + 1) / (prior1 + 1))
+        self.a, self.b = a_, b_
 
         hi_target = (prior1 + 1) / (prior1 + 2)
         lo_target = 1 / (prior0 + 2)
@@ -115,18 +115,18 @@ class PlattScaling:
             if flag:
                 break
 
-            old_a = a
-            old_b = b
+            old_a_ = a_
+            old_b_ = b_
             count = 0
             while 1:
                 det = (a + labda) * (b + labda) - c * c
                 if self._fixer_a * det == 0:
                     labda *= 10
                     continue
-                a = old_a + ((b + labda) * d - c * e) / det
-                b = old_b + ((a + labda) * e - c * d) / det
+                a_ = old_a_ + ((b + labda) * d - c * e) / det
+                b_ = old_b_ + ((a + labda) * e - c * d) / det
 
-                self.a, self.b = a, b
+                self.a, self.b = a_, b_
                 err = 0
                 for i, _ in enumerate(out):
                     p = self.transform(out[i])
@@ -153,7 +153,7 @@ class PlattScaling:
 
                 if count == 3:
                     break
-        self.a, self.b = a, b
+        self.a, self.b = a_, b_
         return self
 
     def transform(self, logits):
