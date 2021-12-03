@@ -28,7 +28,7 @@ import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import glymur
 import numpy as np
@@ -66,7 +66,11 @@ class WSIReader:
     """
 
     @staticmethod
-    def open(input_img):
+    def open(
+        input_img,
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> "WSIReader":
         """Return an appropriate :class:`.WSIReader` object.
 
         Args:
@@ -78,6 +82,8 @@ class WSIReader:
             or :obj:WSIReader which is an already created tiatoolbox WSI handler.
             In the latter case, the function directly passes the input_imge to the
             output.
+            mpp (tuple): (x, y) tuple of the MPP in the units of the input image.
+            power (float): Objective power of the input image.
 
         Returns:
             WSIReader: an object with base :class:`.WSIReader` as base class.
@@ -92,24 +98,24 @@ class WSIReader:
 
             if suffixes[-1] in (".npy",):
                 input_img = np.load(input_img)
-                wsi = VirtualWSIReader(input_img)
+                wsi = VirtualWSIReader(input_img, mpp=mpp, power=power)
 
             elif suffixes[-2:] in ([".ome", ".tiff"],):
-                wsi = TIFFWSIReader(input_img)
+                wsi = TIFFWSIReader(input_img, mpp=mpp, power=power)
 
             elif suffixes[-1] in (".jpg", ".png", ".tif"):
-                wsi = VirtualWSIReader(input_img)
+                wsi = VirtualWSIReader(input_img, mpp=mpp, power=power)
 
             elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
-                wsi = OpenSlideWSIReader(input_img)
+                wsi = OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
             elif suffixes[-1] == (".jp2"):
-                wsi = OmnyxJP2WSIReader(input_img)
+                wsi = OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
 
             else:
                 raise FileNotSupported("Filetype not supported.")
         elif isinstance(input_img, np.ndarray):
-            wsi = VirtualWSIReader(input_img)
+            wsi = VirtualWSIReader(input_img, mpp=mpp, power=power)
         elif isinstance(
             input_img, (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader)
         ):
@@ -120,12 +126,19 @@ class WSIReader:
 
         return wsi
 
-    def __init__(self, input_img):
+    def __init__(
+        self,
+        input_img,
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> None:
         if isinstance(input_img, np.ndarray):
             self.input_path = None
         else:
             self.input_path = pathlib.Path(input_img)
         self._m_info = None
+        self._manual_mpp = mpp
+        self._manual_power = power
 
     @property
     def info(self) -> WSIMeta:
@@ -141,10 +154,14 @@ class WSIReader:
         if self._m_info is not None:
             return copy.deepcopy(self._m_info)
         self._m_info = self._info()
+        if self._manual_mpp:
+            self._m_info.mpp = np.array(self._manual_mpp)
+        if self._manual_power:
+            self._m_info.objective_power = self._manual_power
         return self._m_info
 
     @info.setter
-    def info(self, meta):
+    def info(self, meta: WSIMeta) -> None:
         """WSI metadata setter.
 
         Args:
@@ -153,7 +170,7 @@ class WSIReader:
         """
         self._m_info = meta
 
-    def _info(self):
+    def _info(self) -> WSIMeta:
         """WSI metadata internal getter used to update info property.
 
         Missing values for MPP and objective power are approximated and
