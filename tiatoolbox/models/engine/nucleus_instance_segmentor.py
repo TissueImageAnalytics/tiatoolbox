@@ -78,7 +78,7 @@ def _process_tile_predictions(
                 less width (hence vertical strip).
             - 2: Horizontal tile strip that stands between two normal tiles
                 (flag 0). It has the the same width as normal tile but
-                less height (hence vertical strip).
+                less height (hence horizontal strip).
             - 3: tile strip stands at the cross section of four normal tiles
                 (flag 0).
         tile_output (list): A list of patch predictions, that lie within this
