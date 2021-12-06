@@ -38,16 +38,13 @@ class HoVerNetPlus(HoVerNet):
 
     HoVer-Net+ takes an RGB input image, and provides the option to simultaneously
     segment and classify the nuclei present, aswell as semantically segment different
-    regions or layers in the images.
+    regions or layers in the images. Note HoVer-Net+ trained models are currently at
+    20X magnification, in contrast to HoVer-Net at 40X magnification.
 
     """
 
     def __init__(
-        self,
-        num_input_channels: int = 3,
-        num_types: int = None,
-        num_layers: int = None,
-        mode: str = "fast",
+        self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
         """Initialise HoVer-Net+.
 
@@ -57,7 +54,7 @@ class HoVerNetPlus(HoVerNet):
             num_layers (int): The number of layers/different regions types present.
 
         """
-        super().__init__(mode=mode)
+        super().__init__(mode="fast")
         self.num_types = num_types
         self.num_layers = num_layers
         ksize = 3
@@ -189,7 +186,7 @@ class HoVerNetPlus(HoVerNet):
             >>> # image_patch is a 256x256x3 numpy array
             >>> weights_path = "A/weights.pth"
             >>> pretrained = torch.load(weights_path)
-            >>> model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
+            >>> model = HoVerNetPlus(num_types=3, num_layers=5)
             >>> model.load_state_dict(pretrained)
             >>> output = model.infer_batch(model, batch, on_gpu=False)
             >>> output = [v[0] for v in output]

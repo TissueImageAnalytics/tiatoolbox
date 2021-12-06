@@ -39,7 +39,7 @@ def test_functionality(remote_sample, tmp_path):
     batch = torch.from_numpy(patch)[None]
 
     # Test functionality with both nuclei and layer segmentation
-    model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
+    model = HoVerNetPlus(num_types=3, num_layers=5)
     # Test decoder as expected
     assert len(model.decoder["np"]) > 0, "Decoder must contain np branch."
     assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
@@ -53,7 +53,3 @@ def test_functionality(remote_sample, tmp_path):
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0 and len(output[3]) > 0, "Must have some nuclei/layers."
-
-    # test crash when providing exotic mode
-    with pytest.raises(ValueError, match=r".*Invalid mode.*"):
-        model = HoVerNetPlus(num_types=None, num_layers=None, mode="super")
