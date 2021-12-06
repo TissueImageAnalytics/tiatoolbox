@@ -25,7 +25,7 @@ dependencies:
   - pytorch
   - pyyaml>=5.1
   - requests
-  - scikit-image
+  - scikit-image==0.18.3
   - scikit-learn>=0.23.2
   - shapely
   - tifffile

@@ -34,7 +34,7 @@ dependencies:
   - pyyaml>=5.1
   - recommonmark
   - requests
-  - scikit-image
+  - scikit-image==0.18.3
   - scikit-learn>=0.23.2
   - shapely
   - tifffile
