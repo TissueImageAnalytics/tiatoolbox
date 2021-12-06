@@ -327,7 +327,7 @@ hovernet_original-kumar:
 hovernetplus-oed:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
     architecture:
-        class: hovernet_plus.HoVerNetPlus
+        class: hovernetplus.HoVerNetPlus
         kwargs:
             num_types: 3
             num_layers: 5
