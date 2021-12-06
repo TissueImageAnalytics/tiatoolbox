@@ -19,7 +19,12 @@ import shutil
 import subprocess
 import sys
 import threading
+from numbers import Number
 from typing import Tuple
+
+import requests
+
+from tiatoolbox import logger
 
 
 def is_interactive() -> bool:
@@ -71,7 +76,7 @@ def is_notebook() -> bool:
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
-        if shell == "TerminalInteractiveShell":
+        if shell == "TerminalInteractiveShell":  # noqa: PIE801
             return False  # Terminal running IPython
         return False  # Other type (?)
     except NameError:
@@ -128,7 +133,59 @@ def colab_has_gpu() -> bool:
     return bool(int(os.environ.get("COLAB_GPU", 0)))
 
 
-def pixman_version() -> Tuple[int, int]:
+def has_network(timeout: Number = 3) -> bool:  # noqa: CCR001
+    """Detect if the current environment has a network connection.
+
+    Sends a ping via a subprocess to tiatoolbox.dcs.warwick.ac.uk and
+    returns True if the response is received.
+    This will fallback to a GET request if ping is not available.
+
+    Args:
+        timeout (Number): Timeout in seconds for the fallback GET request.
+
+    Returns:
+        bool: True if the current environment has a network connection,
+            False otherwise.
+
+    """
+    # Check that ping and nslookup exist and are executable
+    if shutil.which("ping") and shutil.which("nslookup"):
+        # Option to set the number of pings to send
+        option = "-n" if platform.system() == "Windows" else "-c"
+        # Specify a default IP address to use if nslookup fails
+        ip_address = "137.205.117.139"
+        try:
+            # Check the IP address with nslookup
+            ns_lookup = subprocess.check_output(
+                ["nslookup", "tiatoolbox.dcs.warwick.ac.uk"],
+            )
+            ip_match = re.search(
+                r"Address:\s*((?:\d+\.){3,5}\d+)", ns_lookup.decode("utf-8")
+            )
+            # If nslookup found an IP address, use that instead of the default
+            if ip_match:
+                # There can be two sometimes e.g. if on the local network
+                # The last one is the one we want as ping run from python as
+                # a subprocess will not properly resolve the local IP address.
+                ip_address = ip_match.groups()[-1]
+            # Send a ping to the IP address
+            subprocess.check_output(["ping", option, "1", ip_address])
+        except subprocess.CalledProcessError:  # Non-zero exit code
+            return False
+        except FileNotFoundError:  # A command did not exist
+            pass  # Pass to go to fallback GET request
+        else:  # No exceptions raised
+            return True
+    # Fallback to a GET request
+    try:
+        requests.get("https://tiatoolbox.dcs.warwick.ac.uk", timeout=timeout)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        return False
+    else:  # No exceptions raised
+        return True
+
+
+def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
     """The version of pixman that is installed.
 
     Returns:
@@ -214,9 +271,8 @@ def pixman_warning() -> None:  # pragma: no cover
     Suggest a fix if possible.
 
     """
-    from tiatoolbox import logger
 
-    def _show_warning():
+    def _show_warning() -> None:
         try:
             version, using = pixman_version()
         except EnvironmentError:
@@ -247,10 +303,12 @@ def pixman_warning() -> None:  # pragma: no cover
         # Log the warning
         if version[:2] == (0, 38):
             logger.warning(
-                f"It looks like you are using Pixman version 0.38 (via {using}). "
+                "It looks like you are using Pixman version 0.38 (via %s). "
                 "This version is known to cause issues with OpenSlide. "
                 "Please consider upgrading to Pixman version 0.39 or later. "
-                f"{fix}"
+                "%s",
+                using,
+                fix,
             )
 
     thread = threading.Thread(target=_show_warning, args=(), kwargs={})
