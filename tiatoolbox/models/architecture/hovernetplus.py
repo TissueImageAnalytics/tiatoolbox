@@ -195,7 +195,7 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, power=20)
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
 
