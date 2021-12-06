@@ -517,7 +517,7 @@ class HoVerNet(ModelABC):
             obj_size = 3
         else:
             raise AssertionError(
-                "Other objective powers to 20X and 40X are not yet implemented in the HoVer-Net models family."
+                "Only 20X and 40X objective powers are implemented in HoVer-Net models."
             )
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
