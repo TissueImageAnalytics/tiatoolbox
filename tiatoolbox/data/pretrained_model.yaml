@@ -331,7 +331,6 @@ hovernetplus-oed:
         kwargs:
             num_types: 3
             num_layers: 5
-            mode: "fast"
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
