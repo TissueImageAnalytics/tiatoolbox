@@ -24,7 +24,7 @@ import pytest
 import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
+from tiatoolbox.models.architecture.hovernetplus import HoVerNetPlus
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize
 
