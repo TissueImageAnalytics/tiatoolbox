@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict
 
 import numpy as np
-from flask import Flask, send_file
+from flask import Flask, Response, send_file
 from flask.templating import render_template
 
 from tiatoolbox import data
@@ -35,7 +35,7 @@ class ZoomifyViewer(Flask):
         )
         self.route("/")(self.index)
 
-    def tile(self, layer: str, tile_group: int, z: int, x: int, y: int):
+    def tile(self, layer: str, tile_group: int, z: int, x: int, y: int) -> Response:
         """Serve a tile.
 
         Args:
@@ -46,7 +46,7 @@ class ZoomifyViewer(Flask):
             y (int): The y coordinate.
 
         Returns:
-            bytes: The tile JPEG data.
+            Response: The tile image response.
 
         """
         pyramid = self.tia_pyramids[layer]
@@ -59,11 +59,11 @@ class ZoomifyViewer(Flask):
         image_io.seek(0)
         return send_file(image_io, mimetype="image/jpeg")
 
-    def index(self):
+    def index(self) -> Response:
         """Serve the index page.
 
         Returns:
-            str: The index page.
+            Response: The index page.
 
         """
         layers = [
