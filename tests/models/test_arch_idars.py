@@ -22,25 +22,25 @@
 
 import torch
 
-from tiatoolbox.models.architecture.idars import CNNMutation, CNNTumor
+from tiatoolbox.models.architecture.idars import CNNIDaRS
 
 
 def test_functional():
     """Functional test for architectures."""
     # test forward
     samples = torch.rand(4, 3, 224, 224, dtype=torch.float32)
-    model = CNNTumor("resnet18")
+    model = CNNIDaRS("resnet18")
     model(samples)
 
-    model = CNNMutation("resnet18")
+    model = CNNIDaRS("resnet34")
     model(samples)
 
     # test preproc function
     img = torch.rand(224, 224, 3, dtype=torch.float32)
-    img_ = CNNTumor.preproc(img.numpy())
+    img_ = CNNIDaRS.preproc(img.numpy())
     assert tuple(img_.shape) == (224, 224, 3)
-    img_ = CNNMutation.preproc(img.numpy())
+    img_ = CNNIDaRS.preproc(img.numpy())
     assert tuple(img_.shape) == (224, 224, 3)
     # dummy to make runtime crash
-    img_ = CNNMutation.preproc(img.numpy() / 0.0)
+    img_ = CNNIDaRS.preproc(img.numpy() / 0.0)
     assert tuple(img_.shape) == (224, 224, 3)
