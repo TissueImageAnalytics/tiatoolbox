@@ -13,6 +13,7 @@ from tiatoolbox.utils.visualization import (
     overlay_prediction_contours,
     overlay_prediction_mask,
     overlay_probability_map,
+    plot_graph,
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
@@ -170,3 +171,18 @@ def test_overlay_instance_prediction():
     # test crash
     with pytest.raises(ValueError, match=r"`.*inst_colours`.*tuple.*"):
         overlay_prediction_contours(canvas, inst_dict, inst_colours=inst_colours)
+
+
+def test_plot_graph():
+    """Test plotting graph."""
+    canvas = np.zeros([10, 10])
+    nodes = np.array([[1, 1], [2, 2], [2, 5]])
+    edges = np.array([[0, 1], [1, 2], [2, 0]])
+    node_colors = np.array([[0, 0, 0]] * 3)
+    edge_colors = np.array([[1, 1, 1]] * 3)
+    plot_graph(
+        canvas,
+        nodes,
+        edges,
+    )
+    plot_graph(canvas, nodes, edges, node_colors=node_colors, edge_colors=edge_colors)

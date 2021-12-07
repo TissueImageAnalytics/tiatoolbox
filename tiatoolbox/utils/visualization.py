@@ -82,9 +82,8 @@ def overlay_prediction_mask(
     """
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
-            "Mismatch shape `img` {0} vs `prediction` {1}.".format(
-                img.shape[:2], prediction.shape[:2]
-            )
+            f"Mismatch shape "
+            f"`img` {img.shape[:2]} vs `prediction` {prediction.shape[:2]}."
         )
 
     if np.issubdtype(img.dtype, np.floating):
@@ -114,31 +113,27 @@ def overlay_prediction_mask(
                 check_uid_list.remove(label_uid)
             if not isinstance(label_uid, int):
                 raise ValueError(
-                    "Wrong `label_info` format: label_uid {0}".format(
-                        [label_uid, (label_name, label_colour)]
-                    )
+                    "Wrong `label_info` format: label_uid "
+                    f"{[label_uid, (label_name, label_colour)]}"
                 )
             if not isinstance(label_name, str):
                 raise ValueError(
-                    "Wrong `label_info` format: label_name {0}".format(
-                        [label_uid, (label_name, label_colour)]
-                    )
+                    "Wrong `label_info` format: label_name "
+                    f"{[label_uid, (label_name, label_colour)]}"
                 )
             if not isinstance(label_colour, (tuple, list, np.ndarray)):
                 raise ValueError(
-                    "Wrong `label_info` format: label_colour {0}".format(
-                        [label_uid, (label_name, label_colour)]
-                    )
+                    "Wrong `label_info` format: label_colour "
+                    f"{[label_uid, (label_name, label_colour)]}"
                 )
             if len(label_colour) != 3:
                 raise ValueError(
-                    "Wrong `label_info` format: label_colour {0}".format(
-                        [label_uid, (label_name, label_colour)]
-                    )
+                    "Wrong `label_info` format: label_colour "
+                    f"{[label_uid, (label_name, label_colour)]}"
                 )
         #
         if len(check_uid_list) != 0:
-            raise ValueError("Missing label for: {0}".format(check_uid_list))
+            raise ValueError(f"Missing label for: {check_uid_list}.")
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
@@ -340,3 +335,58 @@ def overlay_prediction_contours(
             inst_centroid = tuple([int(v) for v in inst_centroid])
             overlay = cv2.circle(overlay, inst_centroid, 3, (255, 0, 0), -1)
     return overlay
+
+
+def plot_graph(
+    canvas: np.ndarray,
+    nodes: np.ndarray,
+    edges: np.ndarray,
+    node_colors: Union[Tuple[int], np.ndarray] = (255, 0, 0),
+    node_size: int = 5,
+    edge_colors: Union[Tuple[int], np.ndarray] = (0, 0, 0),
+    edge_size: int = 5,
+):
+    """Drawing a graph onto a canvas.
+
+    Drawing a graph onto a canvas.
+
+    Args:
+        canvas (np.ndarray): Canvas to be drawn upon.
+        nodes (np.ndarray): List of nodes, expected to be Nx2 where
+            N is the number of nodes. Each node is expected to be of
+            `(x, y)` and should be within the height and width of the
+            canvas.
+        edges (np.ndarray): List of egdes, expected to be Mx2 where
+            M is the number of edges. Each edge is defined as `(src, dst)`
+            where each is respectively the index of within `nodes`.
+        node_colors (tuple or np.ndarray): A color or list of node colors.
+            Each color is expected to be `(r, g, b)` and is between 0-255.
+        edge_colors (tuple or np.ndarray): A color or list of node colors.
+            Each color is expected to be `(r, g, b)` and is between 0-255.
+        node_size (int): Radius of each node.
+        edge_size (int): Linewidth of the edge.
+
+    """
+
+    if isinstance(node_colors, tuple):
+        node_colors = [node_colors] * len(nodes)
+    if isinstance(edge_colors, tuple):
+        edge_colors = [edge_colors] * len(edges)
+
+    # draw the edges
+    def to_int_tuple(x):
+        """Helper to convert to tuple of int."""
+        return tuple([int(v) for v in x])
+
+    for idx, (src, dst) in enumerate(edges):
+        src = to_int_tuple(nodes[src])
+        dst = to_int_tuple(nodes[dst])
+        color = to_int_tuple(edge_colors[idx])
+        cv2.line(canvas, src, dst, color, thickness=edge_size)
+
+    # draw the nodes
+    for idx, node in enumerate(nodes):
+        node = to_int_tuple(node)
+        color = to_int_tuple(node_colors[idx])
+        cv2.circle(canvas, node, node_size, color, thickness=-1)
+    return canvas
