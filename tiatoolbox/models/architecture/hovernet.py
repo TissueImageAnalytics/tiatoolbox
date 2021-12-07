@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
+import math
 from collections import OrderedDict
 from typing import List
 
@@ -458,7 +459,7 @@ class HoVerNet(ModelABC):
         return decoder
 
     @staticmethod
-    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, power: int = 40):
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 0.25):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
@@ -473,8 +474,8 @@ class HoVerNet(ModelABC):
             hv_map (np.ndarray): An array of shape (heigh, width, 2) which
               contains the horizontal (channel 0) and vertical (channel 1)
               of possible instances exist withint the images.
-            power (int): The objective magnification of the input images. Default
-              is 40X for HoVer-Net.
+            fx (float): The microns per pixel resolution of the input images. Default
+              is 0.5 for HoVer-Net.
 
         Returns:
             An np.ndarray of shape (height, width) where each non-zero values
@@ -509,16 +510,9 @@ class HoVerNet(ModelABC):
             dtype=cv2.CV_32F,
         )
 
-        if power == 40:
-            ksize = 21
-            obj_size = 10
-        elif power == 20:
-            ksize = 11
-            obj_size = 3
-        else:
-            raise AssertionError(
-                "Only 20X and 40X objective powers are implemented in HoVer-Net models."
-            )
+        ksize = int((5 / fx) + 1)
+        obj_size = math.ceil(0.625 / (fx ** 2))
+        # Get resolution specific filters etc.
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
         sobelv = cv2.Sobel(v_dir, cv2.CV_64F, 0, 1, ksize=ksize)
