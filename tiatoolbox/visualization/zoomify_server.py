@@ -56,7 +56,7 @@ class ZoomifyViewer(Flask):
         self.route("/")(self.index)
 
     def tile(
-        self, layer: str, tile_group: int, z: int, x: int, y: int  # nocq: PYL-w0613
+        self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
     ) -> Response:
         """Serve a tile.
 
