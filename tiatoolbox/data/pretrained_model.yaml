@@ -323,3 +323,28 @@ hovernet_original-kumar:
             patch_output_shape: [80, 80]
             stride_shape: [80, 80]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernetplus-oed:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
+    architecture:
+        class: hovernet_plus.HoVerNetPlus
+        kwargs:
+            num_types: 3
+            num_layers: 5
+            mode: "fast"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.50}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}    
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.50}

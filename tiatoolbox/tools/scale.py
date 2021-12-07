@@ -18,6 +18,14 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
+"""Scaler for transforming input.
+
+Included classes and methods are utilized to either pre-process input
+(such as standardization) or post-process predictions (such as re-calibrating
+logits to proper probabilities).
+
+"""
+
 import numpy as np
 
 
