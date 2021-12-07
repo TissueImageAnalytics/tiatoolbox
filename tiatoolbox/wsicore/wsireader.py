@@ -285,7 +285,7 @@ class WSIReader:
 
         # Check for requested resolution > than baseline resolution
         if any(np.array(scale) > 1):
-            logger.warn(
+            logger.warning(
                 "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
@@ -556,7 +556,7 @@ class WSIReader:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
             rescale = np.int(rescale)
-            logger.warn(
+            logger.warning(
                 "Reading WSI at level 0. Desired tile_objective_value %s"
                 "not available.",
                 str(tile_objective_value),
@@ -565,7 +565,7 @@ class WSIReader:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
-            logger.warn(
+            logger.warning(
                 "Reading WSI at level 0. Reading at tile_objective_value %s"
                 "not allowed.",
                 str(tile_objective_value),
@@ -1333,12 +1333,12 @@ class OpenSlideWSIReader(WSIReader):
                 mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
                 mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
                 mpp = [mpp_x, mpp_y]
-                logger.warn(
+                logger.warning(
                     "Metadata: Falling back to TIFF resolution tag"
                     " for microns-per-pixel (MPP)."
                 )
             except KeyError:
-                logger.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+                logger.warning("Metadata: Unable to determine microns-per-pixel (MPP).")
 
         # Fallback to calculating objective power from mpp
         if objective_power is None:
@@ -1346,11 +1346,11 @@ class OpenSlideWSIReader(WSIReader):
                 objective_power = utils.misc.mpp2common_objective_power(
                     float(np.mean(mpp))
                 )
-                logger.warn(
+                logger.warning(
                     "Metadata: Objective power inferred from microns-per-pixel (MPP)."
                 )
             else:
-                logger.warn("Metadata: Unable to determine objective power.")
+                logger.warning("Metadata: Unable to determine objective power.")
 
         return WSIMeta(
             file_path=self.input_path,
@@ -1533,7 +1533,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 cod = segment
 
         if cod is None:
-            logger.warn(
+            logger.warning(
                 "Metadata: JP2 codestream missing COD segment! "
                 "Cannot determine number of decompositions (levels)"
             )
@@ -1991,7 +1991,7 @@ class TIFFWSIReader(WSIReader):
         if mppx is not None and mppy is not None:
             mpp = [mppx, mppy]
         elif mppx is not None or mppy is not None:
-            logger.warn("Only one MPP value found. Using it for both X  and Y.")
+            logger.warning("Only one MPP value found. Using it for both X  and Y.")
             mpp = [mppx or mppy] * 2
 
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
@@ -2201,7 +2201,7 @@ def get_wsireader(input_img):
         >>> wsi = get_wsireader(input_img="./sample.svs")
 
     """
-    logger.warn(
+    logger.warning(
         "get_wsireader is deprecated. Please use WSIReader.open instead",
     )
     return WSIReader.open(input_img)
