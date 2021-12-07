@@ -1,3 +1,4 @@
+"""A simple Flask app to display Zoomify tile producers."""
 import io
 import json
 from pathlib import Path
@@ -35,12 +36,14 @@ class ZoomifyViewer(Flask):
         )
         self.route("/")(self.index)
 
-    def tile(self, layer: str, tile_group: int, z: int, x: int, y: int) -> Response:
+    def tile(
+        self, layer: str, tile_group: int, z: int, x: int, y: int  # noqc: PYL-w0613
+    ) -> Response:
         """Serve a tile.
 
         Args:
             layer (str): The layer name.
-            tile_group (int): The tile group.
+            tile_group (int): The tile group. Currently unused.
             z (int): The zoom level.
             x (int): The x coordinate.
             y (int): The y coordinate.
