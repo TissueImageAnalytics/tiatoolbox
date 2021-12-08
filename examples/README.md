@@ -19,6 +19,10 @@ Prediction of molecular pathways and key mutations directly from Haematoxylin an
 
 ![image](https://user-images.githubusercontent.com/74412979/145237655-a6361f26-3861-467f-b2f7-1f2c44e3b1a2.png)
 
+### 2- Prediction of HER2 status in breast cancer from H&E stained whole slide images
+This example notebook demonstrate how the functionalities available in TIAToolbox can be used to reproduce the ["SlideGraph+ method" ("SlideGraph+: Whole Slide Image Level Graphs to Predict HER2Status in Breast Cancer" by Lu et al. (2021))](https://arxiv.org/abs/2110.06042) to predict HER2 status of of breast cancer samples from H&E stained whole slide images. As a brief overview, this method involves several steps to generating a graph which represent a whole slide image (WSI) and then directly feeding it into a special convolutional graph network, called SlideGraph, to predict whether that WSI is HER2 negative or positive.
+
+![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
 
 
 ## B) Examples of TIAToolbox functionalities
