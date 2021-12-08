@@ -1,1 +1,6 @@
+![TIA Centre Logo Light@3x](https://user-images.githubusercontent.com/74412979/145181206-1dc0a0cf-ef6d-47ff-8d1d-3bd662b5fdeb.png)
 # TIAToolbox example notebooks
+
+In this directory you will find some example use cases of the TIAToolbox functionalities in the form of Jupyter Notebooks. All of these example notebooks are designed and maintained to run on Colab and Kaggle platforms (unless otherwise stated) but you can run them on your system as well. In the first cell of each example notebook there are two Colab ![colab badge](https://colab.research.google.com/assets/colab-badge.svg) and Kaggle ![kaggle badge](https://kaggle.com/static/images/open-in-kaggle.svg) badges that allow you to open that example notebook in the preferred platform, simply by clicking on the badge. Each notebook contains all the information you need to run the example on any computer with a standard browser and no prior installation of any programming language is required. To run the notebook on any platform, except for Colab or Kaggle, set up your Python environment, as explained in the [installation guide](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
+
+Here, the structure of example directory and a brief description of the included notebooks are explained.
