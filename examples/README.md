@@ -33,14 +33,17 @@ In this example we will show how you can use TIAToolbox to extract patches from 
 
 ![image](https://user-images.githubusercontent.com/74412979/145229244-933fba8b-aa9e-4e88-a9d0-713996e4874a.png)
 
-## 5- Patch prediction in whole slide images ([05-patch-prediction.ipynb]((https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/05-patch-prediction.ipynb))
+## 5- Patch prediction in whole slide images ([05-patch-prediction.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/05-patch-prediction.ipynb))
 In this example, we will show how to use TIAToolbox for patch-level prediction using a range of deep learning models. TIAToolbox can be used to make predictions on pre-extracted image patches or on larger image tiles / whole-slide images (WSIs), where image patches are extracted on the fly. There are various state-of-the-art deep learning models implemented in the TIAToolbox pretrained on datasets related different cancer types. These models can be used out of the box to predict type of the patches in a WSI with just 2 lines of Python code. For example, in colorectal cancer, TIAToolbox can classify whole slide image regions into 9 different categories (Background (empty glass region), Lymphocytes, Normal colon mucosa, Debris, Smooth muscle, Cancer-associated stroma, Adipose, Mucus, Colorectal adenocarcinoma epithelium).
 
 ![image](https://user-images.githubusercontent.com/74412979/145231194-03d10b24-d7b6-40f7-84fc-32b093ae57e2.png)
 
-## 6- Semantic segmentation of whole slide images ([06-semantic-segmentation.ipynb]((https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/06-semantic-segmentation.ipynb))
+## 6- Semantic segmentation of whole slide images ([06-semantic-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/06-semantic-segmentation.ipynb))
 Semantic segmentation of tissue regions in histology images plays an important role in developing algorithms for cancer diagnosis and prognosis as it can help measure tissue attributes in an objective and reproducible fashion. In this example notebook, we show how you can use pretrained models to automatically segment different tissue region types in a set of input images or WSIs. We first focus on a pretrained model incorporated in the TIAToolbox to achieve semantic annotation of tissue region in histology images of breast cancer, which can be done as simple as writing two lines of codes. After that, we will explain how you can use your pretrained model in the TIAToolbox model inference pipeline to do prediction on a set of WSIs.
 
 ![image](https://user-images.githubusercontent.com/74412979/145233254-cd5ae68b-42b9-4627-bfb5-8ac395d904cc.png)
 
+## 7- Advanced model techniques ([07-advanced-modeling.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/07-advanced-modeling.ipynb))
+This notebook demonstrates advanced techniques on how to use TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research. Notice, in this notebook, we assume that you are an advanced user of TIAToolbox who is familiar with object-oriented programming concepts in Python and TIAToolbox models framework.
 
+![image](https://user-images.githubusercontent.com/74412979/145234310-c7dec33c-5dcb-4b87-adea-b762780239d0.png)
