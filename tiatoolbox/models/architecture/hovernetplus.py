@@ -38,16 +38,13 @@ class HoVerNetPlus(HoVerNet):
 
     HoVer-Net+ takes an RGB input image, and provides the option to simultaneously
     segment and classify the nuclei present, aswell as semantically segment different
-    regions or layers in the images.
+    regions or layers in the images. Note the HoVer-Net+ architecture assumes an image
+    resolution of 0.5 mpp, in contrast to HoVer-Net at 0.25 mpp.
 
     """
 
     def __init__(
-        self,
-        num_input_channels: int = 3,
-        num_types: int = None,
-        num_layers: int = None,
-        mode: str = "fast",
+        self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
         """Initialise HoVer-Net+.
 
@@ -57,7 +54,7 @@ class HoVerNetPlus(HoVerNet):
             num_layers (int): The number of layers/different regions types present.
 
         """
-        super().__init__(mode=mode)
+        super().__init__(mode="fast")
         self.num_types = num_types
         self.num_layers = num_layers
         ksize = 3
@@ -189,7 +186,7 @@ class HoVerNetPlus(HoVerNet):
             >>> # image_patch is a 256x256x3 numpy array
             >>> weights_path = "A/weights.pth"
             >>> pretrained = torch.load(weights_path)
-            >>> model = HoVerNetPlus(num_types=3, num_layers=5, mode="fast")
+            >>> model = HoVerNetPlus(num_types=3, num_layers=5)
             >>> model.load_state_dict(pretrained)
             >>> output = model.infer_batch(model, batch, on_gpu=False)
             >>> output = [v[0] for v in output]
@@ -198,7 +195,9 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, fx=0.5)
+        # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
+
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
 
