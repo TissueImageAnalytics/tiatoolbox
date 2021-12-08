@@ -32,6 +32,7 @@ requirements = [
     "zarr",
     "requests",
     "defusedxml",
+    "umap-learn",
 ]
 
 setup_requirements = [
