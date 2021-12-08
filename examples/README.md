@@ -22,3 +22,8 @@ Stain normalisation is a common pre-processing step in computational pathology, 
 but you can use custom stain matrix for stain normalisation as well.
 
 ![image](https://user-images.githubusercontent.com/74412979/145226029-0cdcf94b-eb65-46ba-8f35-94bb6c457fab.png)
+
+## 3- Extracting tissue mask (tissue region) from a WSI ([03-tissue-masking.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/03-tissue-masking.ipynb))
+Apart from tissue regions, WSIs usually show large blank (glass) background areas that contain no information. Therefore it is essential to detect the informative (tissue) region in the WSI before any action (like patch extraction and classification). We call this step, "tissue masking" which is the focus of this example notebook. This notebook shows how you can extract tissue region from a WSI with the help of TIAToolbox and  a single line of Python code.
+
+![image](https://user-images.githubusercontent.com/74412979/145227864-6df6b12c-8d15-4ac6-bc46-19677bce1f8e.png)
