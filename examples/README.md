@@ -13,3 +13,12 @@ This notebook shows you how you can use TIAToolbox to read different kinds of WS
 ![image](https://user-images.githubusercontent.com/74412979/145223963-f5cc3efc-5762-43c1-b040-c1f738a98e1b.png) ![image](https://user-images.githubusercontent.com/74412979/145224002-b61eb074-5b55-45c9-a45c-9b527437be2c.png)
 
 ## 2- Stain normalisation of histology images ([02-stain-normalisation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalisation.ipynb))
+Stain normalisation is a common pre-processing step in computational pathology, whose objective is to reduce the colour variation in histology images (caused by using scanners or different staining protocols) to a minimum that has no significant impact on clinical/computational workflow. It has been shown in many studies that stain normalisation can make algorithm more robust aginst the domain shift problem seen in histology images taken under different circumstances. TIAToolbox makes a few different stain-normalisation algorithms  available to the user, and we demonstrate how to use them in this notebook. The implemented stain normalisatin methods in TIAToolbox are:
+- Reinhard stain normalisation
+- Ruifork 
+- Macenko
+- Vahadane
+
+but you can use custom stain matrix for stain normalisation as well.
+
+![image](https://user-images.githubusercontent.com/74412979/145226029-0cdcf94b-eb65-46ba-8f35-94bb6c457fab.png)
