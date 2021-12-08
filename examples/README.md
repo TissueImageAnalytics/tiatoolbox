@@ -27,3 +27,9 @@ but you can use custom stain matrix for stain normalisation as well.
 Apart from tissue regions, WSIs usually show large blank (glass) background areas that contain no information. Therefore it is essential to detect the informative (tissue) region in the WSI before any action (like patch extraction and classification). We call this step, "tissue masking" which is the focus of this example notebook. This notebook shows how you can extract tissue region from a WSI with the help of TIAToolbox and  a single line of Python code.
 
 ![image](https://user-images.githubusercontent.com/74412979/145227864-6df6b12c-8d15-4ac6-bc46-19677bce1f8e.png)
+
+## 4- Extracting patches from a WSI ([04-patch-extraction.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/04-patch-extraction.ipynb))
+In this example we will show how you can use TIAToolbox to extract patches from a large histology image. Tiatoolbox can extract patches based on point annotatations or fixed-size sliding window (patch extraction from a WSI with overlap). Also, patch extraction module of TIAToolbox supports mask-based patch extraction which means you can extract (overlapping) patches from a certain region of WSI (like tissue region).
+
+![image](https://user-images.githubusercontent.com/74412979/145229244-933fba8b-aa9e-4e88-a9d0-713996e4874a.png)
+
