@@ -5,6 +5,7 @@ Click>=7.0
 coverage==5.1
 flake8-bugbear
 flake8==3.7.8
+flask
 glymur
 imagecodecs
 jupyterlab
