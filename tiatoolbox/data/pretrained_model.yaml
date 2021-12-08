@@ -240,7 +240,7 @@ googlenet-kather100k:
 resnet18-idars-tumour:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet18
             num_classes: 2
@@ -253,7 +253,7 @@ resnet18-idars-tumour:
 resnet34-idars-msi:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -266,7 +266,7 @@ resnet34-idars-msi:
 resnet34-idars-braf:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-braf.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -279,7 +279,7 @@ resnet34-idars-braf:
 resnet34-idars-cimp:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cimp.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -292,7 +292,7 @@ resnet34-idars-cimp:
 resnet34-idars-cin:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cin.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -305,7 +305,7 @@ resnet34-idars-cin:
 resnet34-idars-tp53:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-tp53.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
@@ -318,7 +318,7 @@ resnet34-idars-tp53:
 resnet34-idars-hm:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-hm.pth
     architecture:
-        class: idars.CNNIDaRS
+        class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2

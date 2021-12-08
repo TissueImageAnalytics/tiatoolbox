@@ -33,7 +33,7 @@ TRANSFORM = transforms.Compose(
 )
 
 
-class CNNIDaRS(CNNModel):
+class IDaRS(CNNModel):
     """Retrieve the model and add custom preprocessing used in IDaRS paper.
 
     Args:
