@@ -5,7 +5,7 @@ In this directory you will find some example use cases of the TIAToolbox functio
 
 Here, the structure of example directory and a brief description of the included notebooks are explained. The example directory contains a subfolder named `pipelines`  which includes high-level use cases of TIAToolbox (such as patient survival prediction and MSI status prediction from H&E whole slide images) and the main directory includes general example notebooks explaining different functinoalities/modules of incorporated in the TIAToolbox.
 
-## Example notebooks on functinalities
+## Example notebooks on functionalities
 Jupyter notebooks dedicated to explain the essential functionalities of TIAToolbox.
 ### 1- Reading Whole Slide Images ([01-wsi-reading.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/01-wsi-reading.ipynb))
 This notebook shows you how you can use TIAToolbox to read different kinds of WSIs. TIAToolbox supports various WSI formats aquired by different sources a list of which is available [here](https://tia-toolbox.readthedocs.io/en/latest/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.get_wsireader). In this example, you will also learn about a couple of well-known techniques for WSI mask and patch extraction.
@@ -47,3 +47,8 @@ Semantic segmentation of tissue regions in histology images plays an important r
 This notebook demonstrates advanced techniques on how to use TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research. Notice, in this notebook, we assume that you are an advanced user of TIAToolbox who is familiar with object-oriented programming concepts in Python and TIAToolbox models framework.
 
 ![image](https://user-images.githubusercontent.com/74412979/145234310-c7dec33c-5dcb-4b87-adea-b762780239d0.png)
+
+## 7- Nucleus instance segmentatino in whole slide images using HoVer-Net model ([08-nucleus-instance-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/08-nucleus-instance-segmentation.ipynb))
+Each WSI can contain up to million nuclei of various types, which can be further analysed systematically and used for predicting clinical outcomes. In order to use nuclear features for downstream analysis within computational pathology, nucleus segmentation and classification must be carried out as an initial step. In this example, we will demonstrate how you can use the TIAToolbox implementation of [HoVer-Net model](https://www.sciencedirect.com/science/article/pii/S1361841519301045) to solve the problem of nuclei instance segmentation and classification within histology image tiles or WSIs.
+
+![image](https://user-images.githubusercontent.com/74412979/145235642-3f4f99b9-e583-4cbc-81a6-5a9c733746b4.png)
