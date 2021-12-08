@@ -23,13 +23,18 @@ but you can use custom stain matrix for stain normalisation as well.
 
 ![image](https://user-images.githubusercontent.com/74412979/145226029-0cdcf94b-eb65-46ba-8f35-94bb6c457fab.png)
 
-## 3- Extracting tissue mask (tissue region) from a WSI ([03-tissue-masking.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/03-tissue-masking.ipynb))
+## 3- Extracting tissue mask (tissue region) from whole slide images ([03-tissue-masking.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/03-tissue-masking.ipynb))
 Apart from tissue regions, WSIs usually show large blank (glass) background areas that contain no information. Therefore it is essential to detect the informative (tissue) region in the WSI before any action (like patch extraction and classification). We call this step, "tissue masking" which is the focus of this example notebook. This notebook shows how you can extract tissue region from a WSI with the help of TIAToolbox and  a single line of Python code.
 
 ![image](https://user-images.githubusercontent.com/74412979/145227864-6df6b12c-8d15-4ac6-bc46-19677bce1f8e.png)
 
-## 4- Extracting patches from a WSI ([04-patch-extraction.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/04-patch-extraction.ipynb))
+## 4- Extracting patches from whole slide images ([04-patch-extraction.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/04-patch-extraction.ipynb))
 In this example we will show how you can use TIAToolbox to extract patches from a large histology image. Tiatoolbox can extract patches based on point annotatations or fixed-size sliding window (patch extraction from a WSI with overlap). Also, patch extraction module of TIAToolbox supports mask-based patch extraction which means you can extract (overlapping) patches from a certain region of WSI (like tissue region).
 
 ![image](https://user-images.githubusercontent.com/74412979/145229244-933fba8b-aa9e-4e88-a9d0-713996e4874a.png)
+
+## 5- Patch prediction in whole slide images ([05-patch-prediction.ipynb](05-patch-prediction.ipynb))
+In this example, we will show how to use TIAToolbox for patch-level prediction using a range of deep learning models. TIAToolbox can be used to make predictions on pre-extracted image patches or on larger image tiles / whole-slide images (WSIs), where image patches are extracted on the fly. There are various state-of-the-art deep learning models implemented in the TIAToolbox pretrained on datasets related different cancer types. These models can be used out of the box to predict type of the patches in a WSI with just 2 lines of Python code. For example, in colorectal cancer, TIAToolbox can classify whole slide image regions into 9 different categories (Background (empty glass region), Lymphocytes, Normal colon mucosa, Debris, Smooth muscle, Cancer-associated stroma, Adipose, Mucus, Colorectal adenocarcinoma epithelium).
+
+![image](https://user-images.githubusercontent.com/74412979/145231194-03d10b24-d7b6-40f7-84fc-32b093ae57e2.png)
 
