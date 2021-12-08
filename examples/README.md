@@ -5,8 +5,25 @@ In this directory you will find some example use cases of the TIAToolbox functio
 
 Here, the structure of example directory and a brief description of the included notebooks are explained. The example directory contains a subfolder named `pipelines`  which includes high-level use cases of TIAToolbox (such as patient survival prediction and MSI status prediction from H&E whole slide images) and the main directory includes general example notebooks explaining different functinoalities/modules of incorporated in the TIAToolbox.
 
-## Example notebooks on functionalities
-Jupyter notebooks dedicated to explain the essential functionalities of TIAToolbox.
+## A) Examples high-level analysis (pipelines) using TIAToolbox
+List of Jupyter notebooks which demonestrate how you can use TIAToolbox to simplfy high-level analysis in computational pathology.
+
+### 1- Prediction of molecular pathways and key mutations in colorectal cancer from whole slide images
+Prediction of molecular pathways and key mutations directly from Haematoxylin and Eosin stained histology images can help bypass additional genetic (e.g., polymerase chain reaction or PCR) or immunohistochemistry (IHC) testing, which can therefore save both money and time. In this example notebook, we show how you can use TIAToolbox's pretrained models to do reproduce the inference results obtained by IDaRS pipeline introduced in [Bilal et al](https://bit.ly/3IwL6vv). In TIAToolbox, we include models that are capable of predicting the following entities in wholde slide images:
+- Microsatellite instability (MSI)
+- Hypermutation density
+- Chromosomal instability
+- CpG island methylator phenotype (CIMP)-high prediction
+- BRAF mutation 
+- TP53 mutation
+
+![image](https://user-images.githubusercontent.com/74412979/145237655-a6361f26-3861-467f-b2f7-1f2c44e3b1a2.png)
+
+
+
+## B) Examples of TIAToolbox functionalities
+List of Jupyter notebooks which are dedicated to explaining the essential functionalities of TIAToolbox.
+
 ### 1- Reading Whole Slide Images ([01-wsi-reading.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/01-wsi-reading.ipynb))
 This notebook shows you how you can use TIAToolbox to read different kinds of WSIs. TIAToolbox supports various WSI formats aquired by different sources a list of which is available [here](https://tia-toolbox.readthedocs.io/en/latest/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.get_wsireader). In this example, you will also learn about a couple of well-known techniques for WSI mask and patch extraction.
 
