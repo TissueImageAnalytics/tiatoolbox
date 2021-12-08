@@ -17,7 +17,7 @@
 # The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
-"""A simple Flask app to display Zoomify tile producers."""
+"""Simple Flask WSGI apps to display tiles as slippery maps."""
 import io
 import json
 from pathlib import Path
@@ -32,7 +32,9 @@ from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-class ZoomifyViewer(Flask):
+class TileServer(Flask):
+    """A Flask app to display Zoomify tiles as a slippery map."""
+
     def __init__(self, title: str, layers: Dict[str, WSIReader]) -> None:
         super().__init__(
             __name__,
@@ -71,11 +73,14 @@ class ZoomifyViewer(Flask):
             Response: The tile image response.
 
         """
-        pyramid = self.tia_pyramids[layer]
+        try:
+            pyramid = self.tia_pyramids[layer]
+        except KeyError:
+            return Response("Layer not found", status=404)
         try:
             tile_image = pyramid.get_tile(level=z, x=x, y=y)
         except IndexError:
-            return "", 404
+            return Response("Tile not found", status=404)
         image_io = io.BytesIO()
         tile_image.save(image_io, format="JPEG")
         image_io.seek(0)
