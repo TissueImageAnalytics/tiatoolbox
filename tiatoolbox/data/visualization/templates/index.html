@@ -47,6 +47,7 @@
         .ol-scale-bar {
             bottom: 6pt;
             left: 6pt;
+            font-family: 'Calibri', 'sans-serif';
         }
 
         .ol-mouse-position {
@@ -59,6 +60,7 @@
             background-color: rgba(255, 255, 255, 0.5);
             padding: 1pt;
             border-radius: 3pt;
+            font-family: 'Calibri', 'sans-serif';
         }
 
         .ol-layerswitcher,
@@ -142,6 +144,8 @@
             view: view,
         });
         // Controls
+
+        // Scale bar
         scaleLineControl = new ol.control.ScaleLine({
             units: "metric",
             bar: true,
@@ -149,6 +153,8 @@
             minWidth: 256,
         });
         map.addControl(scaleLineControl);
+
+        // Overview map
         var overviewMapControl = new ol.control.OverviewMap({
             className: 'ol-overviewmap ol-custom-overviewmap',
             layers: [
@@ -158,6 +164,8 @@
             ],
         });
         map.addControl(overviewMapControl);
+
+        // Mouse position
         var coordinateFormat = function (coordinate) {
             coordinate = [coordinate[0], -coordinate[1]];
             return ol.coordinate.format(coordinate, '{x}, {y}', 0);
@@ -169,13 +177,19 @@
             undefinedHTML: '&nbsp;',
         });
         map.addControl(mousePositionControl);
+
+        // Rotate reset
         var rotate = new ol.control.Rotate({
             autoHide: false,
             className: 'ol-rotate',
         });
         map.addControl(rotate);
+
+        // Fullscreen
         var fullscreen = new ol.control.FullScreen();
         map.addControl(fullscreen);
+
+        // Layer switcher
         var layerSwitcher = new ol.control.LayerSwitcher({
             // collapsed: false,
             // mouseover: true
