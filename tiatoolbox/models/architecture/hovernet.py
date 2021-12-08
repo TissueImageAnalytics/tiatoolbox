@@ -459,7 +459,7 @@ class HoVerNet(ModelABC):
         return decoder
 
     @staticmethod
-    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 0.25):
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 1):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
@@ -474,8 +474,9 @@ class HoVerNet(ModelABC):
             hv_map (np.ndarray): An array of shape (heigh, width, 2) which
               contains the horizontal (channel 0) and vertical (channel 1)
               of possible instances exist withint the images.
-            fx (float): The microns per pixel resolution of the input images. Default
-              is 0.5 for HoVer-Net.
+            fx (float): The scale factor for processing nuclei. The scale
+              assumes an image of resolution 0.25 microns per pixel. Default
+              is therefore 1 for HoVer-Net.
 
         Returns:
             An np.ndarray of shape (height, width) where each non-zero values
@@ -510,8 +511,8 @@ class HoVerNet(ModelABC):
             dtype=cv2.CV_32F,
         )
 
-        ksize = int((5 / fx) + 1)
-        obj_size = math.ceil(0.625 / (fx ** 2))
+        ksize = int((20 * fx) + 1)
+        obj_size = math.ceil(10 * (fx ** 2))
         # Get resolution specific filters etc.
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
