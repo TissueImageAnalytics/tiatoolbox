@@ -340,6 +340,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # adding more runtime placeholder
         self._wsi_inst_info = None
+        self.wsi_layers = None
 
     @staticmethod
     def _get_tile_info(
@@ -616,9 +617,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
         resolution = ioconfig.highest_input_resolution
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
-        # Initialise layer map
-        self.layer_map = np.zeros(wsi_proc_shape)
-
         # * retrieve patch placement
         # this is in XY
         (patch_inputs, patch_outputs) = self.get_coordinates(wsi_proc_shape, ioconfig)
@@ -706,17 +704,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
             x_start, y_start, x_end, y_end = bounds
             max_h, max_w = self.wsi_layers.shape
-            if x_end > max_w:
-                x_end = max_w
-            if y_end > max_h:
-                y_end = max_h
+            x_end = min(x_end, max_w)
+            y_end = min(y_end, max_h)
             w = x_end - x_start
             h = y_end - y_start
             self.wsi_layers[y_start:y_end, x_start:x_end] = tile[0:h, 0:w]
 
             # !
 
-        for idx, future in enumerate(self._futures):
+        for future in self._futures:
             #  not actually future but the results
             if self._postproc_workers is None:
                 callback(*future)
