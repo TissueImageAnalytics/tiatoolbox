@@ -193,7 +193,7 @@ def test_points_patch_extractor_svs(
         item=2,
         patch_size=(100, 100),
         units="power",
-        resolution=2.5,
+        resolution=2,
     )
 
     assert np.all(data == saved_data)
