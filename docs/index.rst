@@ -17,7 +17,7 @@ Welcome to TIA Toolbox's documentation!
 .. toctree::
    :hidden:
 
-   Usage <usage.rst>
    Jupyter Notebooks <notebooks.rst>
+   Usage <usage.rst>
    Pre-trained Models <pretrained.rst>
    API Reference <_autosummary/tiatoolbox>

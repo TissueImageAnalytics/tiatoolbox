@@ -62,7 +62,6 @@ Stain Augmentation
 
 - :obj:`Augmentation <tiatoolbox.tools.stainaugment>`
 
-
 ^^^^^^^^^^^^^^^^^^
 Patch Extraction
 ^^^^^^^^^^^^^^^^^^
@@ -81,13 +80,11 @@ Utilities
 - :obj:`Exceptions <tiatoolbox.utils.exceptions>`
 - :obj:`Visualization <tiatoolbox.utils.visualization>`
 
-
 ^^^^^^^^^^^^^^^^^^
 Graph Construction
 ^^^^^^^^^^^^^^^^^^
 
 - :obj:`Slide Graph Constructor <tiatoolbox.tools.graph.SlideGraphConstructor>`
-
 
 ^^^^^^^^^^^^^^^^^^^^^^^
 Tile Pyramid Generation
@@ -95,7 +92,6 @@ Tile Pyramid Generation
 
 - :obj:`Tile Pyramid Generator <tiatoolbox.tools.pyramid.TilePyramidGenerator>`
 - :obj:`Zoomify <tiatoolbox.tools.pyramid.ZoomifyGenerator>`
-
 
 ^^^^^^^^^^^^^^^^^^^^
 Dataset
