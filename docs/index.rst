@@ -1,20 +1,9 @@
-.. toctree::
-   :hidden:
-
-   Home page <self>
-   Usage <usage.rst>
-   Jupyter Notebooks <notebooks.rst>
-   Pre-trained Models <pretrained.rst>
-   API reference <_autosummary/tiatoolbox>
-
 Welcome to TIA Toolbox's documentation!
 =======================================
 
 .. image:: tia_logo.png
    :alt: alternate text
    :align: center
-
-Computational Pathology Toolbox developed at the TIA Centre
 
 .. toctree::
    :maxdepth: 2
@@ -25,3 +14,10 @@ Computational Pathology Toolbox developed at the TIA Centre
    Authors <authors.rst>
    History <history.rst>
 
+.. toctree::
+   :hidden:
+
+   Usage <usage.rst>
+   Jupyter Notebooks <notebooks.rst>
+   Pre-trained Models <pretrained.rst>
+   API Reference <_autosummary/tiatoolbox>
