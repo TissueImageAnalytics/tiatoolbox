@@ -24,6 +24,8 @@ import os
 import pathlib
 import shutil
 
+# ! The garbage collector
+import gc
 import numpy as np
 import pytest
 import torch
@@ -36,7 +38,7 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import crop_op
+from tiatoolbox.models.architecture.utils import centre_crop
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
@@ -77,8 +79,7 @@ class _CNNTo1(ModelABC):
 
     def forward(self, img):
         """Define how to use layer."""
-        output = self.conv(img)
-        return output
+        return self.conv(img)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -107,7 +108,7 @@ class _CNNTo1(ModelABC):
         hw = np.array(img_list.shape[2:])
         with torch.inference_mode():  # do not compute gradient
             logit_list = model(img_list)
-            logit_list = crop_op(logit_list, hw // 2)
+            logit_list = centre_crop(logit_list, hw // 2)
             logit_list = logit_list.permute(0, 2, 3, 1)  # to NHWC
             prob_list = F.relu(logit_list)
 
@@ -136,6 +137,7 @@ def test_segmentor_ioconfig():
         patch_output_shape=[1024, 1024],
         stride_shape=[512, 512],
     )
+
     # error when uniform resolution units are not uniform
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
         xconfig = copy.deepcopy(default_config)
@@ -143,7 +145,7 @@ def test_segmentor_ioconfig():
             {"units": "mpp", "resolution": 0.25},
             {"units": "power", "resolution": 0.50},
         ]
-        ioconfig = IOSegmentorConfig(**xconfig)
+        _ = IOSegmentorConfig(**xconfig)
     # error when uniform resolution units are not supported
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
         xconfig = copy.deepcopy(default_config)
@@ -151,7 +153,7 @@ def test_segmentor_ioconfig():
             {"units": "alpha", "resolution": 0.25},
             {"units": "alpha", "resolution": 0.50},
         ]
-        ioconfig = IOSegmentorConfig(**xconfig)
+        _ = IOSegmentorConfig(**xconfig)
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
@@ -209,7 +211,8 @@ def test_segmentor_ioconfig():
 
 def test_functional_wsi_stream_dataset(remote_sample):
     """Functional test for WSIStreamDataset."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    gc.collect()  # Force clean up everything on hold
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[

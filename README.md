@@ -62,13 +62,44 @@ tiatoolbox supports various features through command line. For more information,
 ### Prepare for development
 
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
-1. Open a `bash` terminal window<br/>
-`cd <future-home-of-tiatoolbox-directory>` <br/>
-2. Download a complete copy of the `tiatoolbox`.<br/>`git clone https://github.com/TissueImageAnalytics/tiatoolbox.git`<br/>
-3. `cd tiatoolbox`
-4. `conda env create -f requirements.conda.yml`<br/>
-creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
-5. To use the packages installed in the environment, run the command:<br/>`conda activate tiatoolbox`
+1. Install [pre-requisite software](https://tia-toolbox.readthedocs.io/en/latest/installation.html)
+2. Open a terminal window<br/>
+
+```sh
+    $ cd <future-home-of-tiatoolbox-directory>
+```
+
+3. Download a complete copy of the `tiatoolbox`.
+
+```sh
+    $ git clone https://github.com/TissueImageAnalytics/tiatoolbox.git
+```
+
+4. Change directory to `tiatoolbox`
+
+```sh
+    $ cd tiatoolbox
+```
+
+5. Create virtual environment for TIAToolbox using
+
+```sh
+    $ conda env create -f requirements.dev.conda.yml # for linux/mac only.
+    $ conda activate tiatoolbox-dev
+```
+or
+
+```sh
+    $ conda create -n tiatoolbox-dev python=3.8 # select version of your choice
+    $ conda activate tiatoolbox-dev
+    $ pip install -r requirements_dev.txt
+```
+6. To use the packages installed in the environment, run the command:
+
+```sh
+    $ conda activate tiatoolbox-dev
+```
+
 
 ### License
 
@@ -80,7 +111,7 @@ The full text of the licence is included in [LICENSE.md](https://raw.githubuserc
 
 ### Auxiliary Files
 
-Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/cross_fac/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ### Dual License
 

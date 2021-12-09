@@ -193,3 +193,11 @@ latex_elements = {
     # Additional stuff for the LaTeX preamble.
     "preamble": PREAMBLE,
 }
+
+# -- Options for autodoc -----------------------------------------------
+
+autodoc_typehints = "description"
+autodoc_type_aliases = {
+    "Iterable": "Iterable",
+    "ArrayLike": "ArrayLike",
+}

@@ -237,6 +237,99 @@ googlenet-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 
+resnet18-idars-tumour:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet18
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [512, 512]
+            stride_shape: [512, 512]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+resnet34-idars-msi:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-braf:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-braf.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-cimp:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cimp.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-cin:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cin.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-tp53:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-tp53.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-hm:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-hm.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+
 fcn-tissue_mask:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
     architecture:
@@ -278,3 +371,72 @@ fcn_resnet50_unet-bcss:
             patch_output_shape: [512, 512]
             stride_shape: [256, 256]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_fast-pannuke:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-pannuke.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: 6
+            mode: "fast"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_original-kumar:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-kumar.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: null  # None in python ?, only do instance segmentation
+            mode: "original"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 235
+            tile_shape: [1024, 1024]
+            patch_input_shape: [270, 270]
+            patch_output_shape: [80, 80]
+            stride_shape: [80, 80]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernetplus-oed:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
+    architecture:
+        class: hovernetplus.HoVerNetPlus
+        kwargs:
+            num_types: 3
+            num_layers: 5
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.50}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}    
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.50}

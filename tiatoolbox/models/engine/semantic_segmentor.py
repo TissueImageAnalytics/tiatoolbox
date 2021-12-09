@@ -194,7 +194,7 @@ class IOSegmentorConfig(IOConfigABC):
 
         scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
         num_input_resolutions = len(self.input_resolutions)
-        num_output_resolutions = len(self.input_resolutions)
+        num_output_resolutions = len(self.output_resolutions)
 
         end_idx = num_input_resolutions
         input_resolutions = [
@@ -402,7 +402,7 @@ class SemanticSegmentor:
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
+        num_postproc_workers: int = 0,  # skipcq: PYL-W0613
         model: torch.nn.Module = None,
         pretrained_model: str = None,
         pretrained_weights: str = None,
@@ -608,7 +608,7 @@ class SemanticSegmentor:
             wsi_path, mask_path, mode, self.auto_generate_mask
         )
 
-        # assume ioconfig has already converted to `baseline` for `tile` mode
+        # assume ioconfig has already been converted to `baseline` for `tile` mode
         resolution = ioconfig.highest_input_resolution
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
 
@@ -1012,7 +1012,7 @@ class SemanticSegmentor:
                     "Must provide either `ioconfig` or "
                     "`patch_input_shape` and `patch_output_shape`"
                 )
-            ioconfig = self.ioconfig
+            ioconfig = copy.deepcopy(self.ioconfig)
         elif ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],

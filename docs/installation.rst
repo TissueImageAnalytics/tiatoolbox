@@ -34,7 +34,14 @@ using
 
 .. code-block:: console
 
-    C:\> conda install -c conda-forge openjpeg>=2.3.0
+    C:\> conda install -c conda-forge openjpeg
+
+3. Install
+TIAToolbox.
+
+.. code-block:: console
+
+    C:\> pip install tiatoolbox
 
 Linux (Ubuntu)
 ^^^^^^^^^^^^^^

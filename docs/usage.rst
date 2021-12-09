@@ -100,6 +100,29 @@ Patch Extraction
 .. autoclass:: SlidingWindowPatchExtractor
     :show-inheritance:
 
+^^^^^^^^^^^^^^^^^^
+Graph Construction
+^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.graph
+    :members:
+
+^^^^^^^^^^^^^^^^^^^^^^^
+Tile Pyramid Generation
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: tiatoolbox.tools.pyramid
+    :members:
+
+.. autoclass:: TilePyramidGenerator
+    :show-inheritance:
+
+.. autoclass:: DeepZoomGenerator
+    :show-inheritance:
+
+.. autoclass:: ZoomifyGenerator
+    :show-inheritance:
+
 ^^^^^^^^^^^^^^^^^^^^
 Deep Learning Models
 ^^^^^^^^^^^^^^^^^^^^
@@ -130,6 +153,9 @@ Engine
 .. automodule:: tiatoolbox.models.engine.semantic_segmentor
     :members:
 
+.. automodule:: tiatoolbox.models.engine.nucleus_instance_segmentor
+    :members:
+
 -------
 Dataset
 -------
@@ -151,6 +177,13 @@ Image
 -----
 
 .. automodule:: tiatoolbox.utils.image
+    :members:
+
+-----
+Visualization
+-----
+
+.. automodule:: tiatoolbox.utils.visualization
     :members:
 
 -------------

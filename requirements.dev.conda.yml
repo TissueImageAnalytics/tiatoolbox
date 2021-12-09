@@ -1,4 +1,4 @@
-name: tiatoolbox
+name: tiatoolbox-dev
 channels:
   - conda
   - conda-forge
@@ -18,7 +18,7 @@ dependencies:
   - jupyterlab
   - matplotlib
   - numpy
-  - opencv>=4.0
+  - opencv==4.5.4.60
   - openjpeg>=2.3.0
   - openslide
   - pandas
@@ -34,12 +34,14 @@ dependencies:
   - pyyaml>=5.1
   - recommonmark
   - requests
-  - scikit-image
+  - scikit-image==0.18.3
   - scikit-learn>=0.23.2
+  - shapely
   - tifffile
   - torchvision
   - torchvision>=0.10.1
   - tqdm
+  - umap-learn
   - zarr
   - pip:
       - openslide-python==1.1.2
