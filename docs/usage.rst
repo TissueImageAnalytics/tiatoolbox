@@ -79,30 +79,23 @@ Utilities
 - :obj:`Transforms <tiatoolbox.utils.transforms>`
 - :obj:`Miscellaneous <tiatoolbox.utils.misc>`
 - :obj:`Exceptions <tiatoolbox.utils.exceptions>`
+- :obj:`Visualization <tiatoolbox.utils.visualization>`
 
 
 ^^^^^^^^^^^^^^^^^^
 Graph Construction
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.tools.graph
-    :members:
+- :obj:`Constructing Graphs <tiatoolbox.tools.graph>`
+
 
 ^^^^^^^^^^^^^^^^^^^^^^^
 Tile Pyramid Generation
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.tools.pyramid
-    :members:
+- :obj:`Tile Pyramid Generator <tiatoolbox.tools.pyramid.TilePyramidGenerator>`
+- :obj:`Zoomify <tiatoolbox.tools.pyramid.ZoomifyGenerator>`
 
-.. autoclass:: TilePyramidGenerator
-    :show-inheritance:
-
-.. autoclass:: DeepZoomGenerator
-    :show-inheritance:
-
-.. autoclass:: ZoomifyGenerator
-    :show-inheritance:
 
 ^^^^^^^^^^^^^^^^^^^^
 Dataset
@@ -114,61 +107,23 @@ Dataset
 Deep Learning Models
 ^^^^^^^^^^^^^^^^^^^^
 
-------------
-Data Loader
-------------
-
-.. automodule:: tiatoolbox.models.architecture
-    :members:
-
 --------------
 Engine
 --------------
 
-.. automodule:: tiatoolbox.models.engine
-    :members:
-
-.. automodule:: tiatoolbox.models.engine.patch_predictor
-    :members:
-
-.. automodule:: tiatoolbox.models.engine.semantic_segmentor
-    :members:
-
-.. automodule:: tiatoolbox.models.engine.nucleus_instance_segmentor
-    :members:
-
--------
-Dataset
--------
-
-.. automodule:: tiatoolbox.models.dataset
-    :members:
-
-.. automodule:: tiatoolbox.models.dataset.classification
-    :members:
+- :obj:`Patch Prediction <tiatoolbox.models.engine.patch_predictor.PatchPredictor>`
+- :obj:`Semantic Segmentation <tiatoolbox.models.engine.semantic_segmentor.SemanticSegmentor>`
+- :obj:`Feature Extraction <tiatoolbox.models.engine.semantic_segmentor.FeatureExtractor>`
+- :obj:`Nucleus Instance Segmnetation <tiatoolbox.models.engine.nucleus_instance_segmentor.NucleusInstanceSegmentor>`
 
 ----------------------------
 Neural Network Architectures
 ----------------------------
 
------
-Visualization
------
-
-.. automodule:: tiatoolbox.utils.visualization
-    :members:
-
--------------
-Miscellaneous
--------------
-
-
 - :obj:`Torch Vision CNNs <tiatoolbox.models.architecture.vanilla>`
 - :obj:`Simplified U-Nets <tiatoolbox.models.architecture.unet>`
+- :obj:`HoVerNet <tiatoolbox.models.architecture.hovernet.HoVerNet>`
+- :obj:`HoVerNet+ <tiatoolbox.models.architecture.hovernetplus.HoVerNetPlus>`
 
---------------
-Engine
---------------
-
-- :obj:`Patch Predictor <tiatoolbox.models.engine.patch_predictor>`
-- :obj:`Semantic Segmentor <tiatoolbox.models.engine.semantic_segmentor>`
+Pipelines:
+    - :obj:`IDARS <tiatoolbox.models.architecture.idars>`
