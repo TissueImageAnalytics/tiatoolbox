@@ -5,27 +5,7 @@ In this directory, you will find some example use cases of the TIAToolbox functi
 
 Here, the structure of the example directory and a brief description of the included notebooks are explained. The example directory contains a subfolder named `pipelines`  which includes high-level use cases of TIAToolbox (such as patient survival prediction and MSI status prediction from H&E whole slide images) and the main directory includes general example notebooks explaining different functionalities/modules incorporated in the TIAToolbox.
 
-## A) Examples of high-level analysis (pipelines) using TIAToolbox
-List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
-
-### 1- Prediction of molecular pathways and key mutations in colorectal cancer from whole slide images
-Prediction of molecular pathways and key mutations directly from Haematoxylin and Eosin stained histology images can help bypass additional genetic (e.g., polymerase chain reaction or PCR) or immunohistochemistry (IHC) testing, which can therefore save both money and time. In this example notebook, we show how you can use TIAToolbox's pretrained models to do reproduce the inference results obtained by IDaRS pipeline introduced in [Bilal et al](https://bit.ly/3IwL6vv). In TIAToolbox, we include models that are capable of predicting the following entities in whole slide images:
-- Microsatellite instability (MSI)
-- Hypermutation density
-- Chromosomal instability
-- CpG island methylator phenotype (CIMP)-high prediction
-- BRAF mutation 
-- TP53 mutation
-
-![image](https://user-images.githubusercontent.com/74412979/145237655-a6361f26-3861-467f-b2f7-1f2c44e3b1a2.png)
-
-### 2- Prediction of HER2 status in breast cancer from H&E stained whole slide images
-This example notebook demonstrates how the functionalities available in TIAToolbox can be used to reproduce the ["SlideGraph+ method" ("SlideGraph+: Whole Slide Image-Level Graphs to Predict HER2Status in Breast Cancer" by Lu et al. (2021))](https://arxiv.org/abs/2110.06042) to predict HER2 status of breast cancer samples from H&E stained whole slide images. As a brief overview, this method involves several steps to generating a graph that represents a whole slide image (WSI) and then directly feeding it into a special convolutional graph network, called SlideGraph, to predict whether that WSI is HER2 negative or positive.
-
-![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
-
-
-## B) Examples of TIAToolbox functionalities
+## A) Examples of TIAToolbox functionalities
 List of Jupyter notebooks that are dedicated to explaining the essential functionalities of TIAToolbox.
 
 ### 1- Reading Whole Slide Images ([01-wsi-reading.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/01-wsi-reading.ipynb))
@@ -69,7 +49,26 @@ This notebook demonstrates advanced techniques on how to use TIAToolbox models w
 
 ![image](https://user-images.githubusercontent.com/74412979/145234310-c7dec33c-5dcb-4b87-adea-b762780239d0.png)
 
-## 7- Nucleus instance segmentatino in whole slide images using HoVer-Net model ([08-nucleus-instance-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/08-nucleus-instance-segmentation.ipynb))
+## 8- Nucleus instance segmentatino in whole slide images using HoVer-Net model ([08-nucleus-instance-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/08-nucleus-instance-segmentation.ipynb))
 Each WSI can contain up to million nuclei of various types, which can be further analysed systematically and used for predicting clinical outcomes. To use nuclear features for downstream analysis within computational pathology, nucleus segmentation and classification must be carried out as an initial step. In this example, we will demonstrate how you can use the TIAToolbox implementation of [HoVer-Net model](https://www.sciencedirect.com/science/article/pii/S1361841519301045) to solve the problem of nuclei instance segmentation and classification within histology image tiles or WSIs.
 
 ![image](https://user-images.githubusercontent.com/74412979/145235642-3f4f99b9-e583-4cbc-81a6-5a9c733746b4.png)
+
+## B) Examples of high-level analysis (pipelines) using TIAToolbox
+List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
+
+### 1- Prediction of molecular pathways and key mutations in colorectal cancer from whole slide images
+Prediction of molecular pathways and key mutations directly from Haematoxylin and Eosin stained histology images can help bypass additional genetic (e.g., polymerase chain reaction or PCR) or immunohistochemistry (IHC) testing, which can therefore save both money and time. In this example notebook, we show how you can use TIAToolbox's pretrained models to do reproduce the inference results obtained by IDaRS pipeline introduced in [Bilal et al](https://bit.ly/3IwL6vv). In TIAToolbox, we include models that are capable of predicting the following entities in whole slide images:
+- Microsatellite instability (MSI)
+- Hypermutation density
+- Chromosomal instability
+- CpG island methylator phenotype (CIMP)-high prediction
+- BRAF mutation 
+- TP53 mutation
+
+![image](https://user-images.githubusercontent.com/74412979/145237655-a6361f26-3861-467f-b2f7-1f2c44e3b1a2.png)
+
+### 2- Prediction of HER2 status in breast cancer from H&E stained whole slide images
+This example notebook demonstrates how the functionalities available in TIAToolbox can be used to reproduce the ["SlideGraph+ method" ("SlideGraph+: Whole Slide Image-Level Graphs to Predict HER2Status in Breast Cancer" by Lu et al. (2021))](https://arxiv.org/abs/2110.06042) to predict HER2 status of breast cancer samples from H&E stained whole slide images. As a brief overview, this method involves several steps to generating a graph that represents a whole slide image (WSI) and then directly feeding it into a special convolutional graph network, called SlideGraph, to predict whether that WSI is HER2 negative or positive.
+
+![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
