@@ -9,7 +9,6 @@
 
 .. autoclass:: {{ objname }}
    :members:
-   :inherited-members:
    :special-members: __call__, __add__, __mul__
 
    {% block methods %}
@@ -19,9 +18,11 @@
    .. autosummary::
       :nosignatures:
    {% for item in methods %}
-      {%- if not item.startswith('_') %}
-      ~{{ name }}.{{ item }}
-      {%- endif -%}
+      {%- if item not in inherited_members %}
+         {%- if not item.startswith('_') %}
+            ~{{ name }}.{{ item }}
+         {%- endif -%}
+      {%- endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}
@@ -32,7 +33,11 @@
 
    .. autosummary::
    {% for item in attributes %}
-      ~{{ name }}.{{ item }}
+      {%- if item not in inherited_members %}
+         {%- if not item.startswith('_') %}
+            ~{{ name }}.{{ item }}
+         {%- endif -%}
+      {%- endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}
