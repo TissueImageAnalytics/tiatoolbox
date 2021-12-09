@@ -22,7 +22,7 @@ Stain normalisation is a common pre-processing step in computational pathology, 
 
 but you can use a custom stain matrix for stain normalisation as well.
 
-![image](https://user-images.githubusercontent.com/74412979/145226029-0cdcf94b-eb65-46ba-8f35-94bb6c457fab.png)
+![image](https://user-images.githubusercontent.com/74412979/145396514-4f84bcf3-35f1-4474-81d9-2c30be8ac353.png)
 
 ## 3- Extracting tissue mask (tissue region) from whole slide images ([03-tissue-masking.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/03-tissue-masking.ipynb))
 Apart from tissue regions, WSIs usually show large blank (glass) background areas that contain no information. Therefore it is essential to detect the informative (tissue) region in the WSI before any action (like patch extraction and classification). We call this step, "tissue masking" which is the focus of this example notebook. This notebook shows how you can extract tissue regions from a WSI with the help of TIAToolbox and a single line of Python code.
@@ -47,7 +47,7 @@ Semantic segmentation of tissue regions in histology images plays an important r
 ## 7- Advanced model techniques ([07-advanced-modeling.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/07-advanced-modeling.ipynb))
 This notebook demonstrates advanced techniques on how to use TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research. Notice, in this notebook, we assume that you are an advanced user of TIAToolbox who is familiar with object-oriented programming concepts in Python and the TIAToolbox models framework.
 
-![image](https://user-images.githubusercontent.com/74412979/145234310-c7dec33c-5dcb-4b87-adea-b762780239d0.png)
+![image](https://user-images.githubusercontent.com/74412979/145396619-e33c1544-c45d-47f3-b070-89dc293c6517.png)
 
 ## 8- Nucleus instance segmentatino in whole slide images using HoVer-Net model ([08-nucleus-instance-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/08-nucleus-instance-segmentation.ipynb))
 Each WSI can contain up to million nuclei of various types, which can be further analysed systematically and used for predicting clinical outcomes. To use nuclear features for downstream analysis within computational pathology, nucleus segmentation and classification must be carried out as an initial step. In this example, we will demonstrate how you can use the TIAToolbox implementation of [HoVer-Net model](https://www.sciencedirect.com/science/article/pii/S1361841519301045) to solve the problem of nuclei instance segmentation and classification within histology image tiles or WSIs.
@@ -66,7 +66,7 @@ Prediction of molecular pathways and key mutations directly from Haematoxylin an
 - BRAF mutation 
 - TP53 mutation
 
-![image](https://user-images.githubusercontent.com/74412979/145237655-a6361f26-3861-467f-b2f7-1f2c44e3b1a2.png)
+![image](https://user-images.githubusercontent.com/74412979/145396818-883ef9af-ae78-4f9d-bdb8-a0926ec807a4.png)
 
 ### 2- Prediction of HER2 status in breast cancer from H&E stained whole slide images
 This example notebook demonstrates how the functionalities available in TIAToolbox can be used to reproduce the ["SlideGraph+ method" ("SlideGraph+: Whole Slide Image-Level Graphs to Predict HER2Status in Breast Cancer" by Lu et al. (2021))](https://arxiv.org/abs/2110.06042) to predict HER2 status of breast cancer samples from H&E stained whole slide images. As a brief overview, this method involves several steps to generating a graph that represents a whole slide image (WSI) and then directly feeding it into a special convolutional graph network, called SlideGraph, to predict whether that WSI is HER2 negative or positive.
