@@ -179,6 +179,13 @@ Image
 .. automodule:: tiatoolbox.utils.image
     :members:
 
+-----
+Visualization
+-----
+
+.. automodule:: tiatoolbox.utils.visualization
+    :members:
+
 -------------
 Miscellaneous
 -------------

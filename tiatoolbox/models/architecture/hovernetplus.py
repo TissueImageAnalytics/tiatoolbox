@@ -38,8 +38,8 @@ class HoVerNetPlus(HoVerNet):
 
     HoVer-Net+ takes an RGB input image, and provides the option to simultaneously
     segment and classify the nuclei present, aswell as semantically segment different
-    regions or layers in the images. Note HoVer-Net+ trained models are currently at
-    20X magnification, in contrast to HoVer-Net at 40X magnification.
+    regions or layers in the images. Note the HoVer-Net+ architecture assumes an image
+    resolution of 0.5 mpp, in contrast to HoVer-Net at 0.25 mpp.
 
     """
 
@@ -195,7 +195,9 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, power=20)
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, fx=0.5)
+        # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
+
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
 

@@ -237,6 +237,99 @@ googlenet-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 
+resnet18-idars-tumour:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet18
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [512, 512]
+            stride_shape: [512, 512]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+resnet34-idars-msi:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-braf:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-braf.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-cimp:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cimp.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-cin:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cin.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-tp53:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-tp53.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-hm:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-hm.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+
 fcn-tissue_mask:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
     architecture:
