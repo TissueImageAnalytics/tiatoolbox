@@ -20,7 +20,6 @@
 
 """This module enables multi-task segmentors."""
 
-import math
 import uuid
 from typing import Callable, List, Union
 
