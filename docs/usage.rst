@@ -86,7 +86,7 @@ Utilities
 Graph Construction
 ^^^^^^^^^^^^^^^^^^
 
-- :obj:`Constructing Graphs <tiatoolbox.tools.graph>`
+- :obj:`Slide Graph Constructor <tiatoolbox.tools.graph.SlideGraphConstructor>`
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^
