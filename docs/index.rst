@@ -13,6 +13,7 @@ Welcome to TIA Toolbox's documentation!
 
 .. toctree::
    :hidden:
+
    Usage <usage.rst>
 
 .. toctree::
