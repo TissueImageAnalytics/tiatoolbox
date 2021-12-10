@@ -16,13 +16,12 @@ import os
 import platform
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import threading
 from numbers import Number
 from typing import Tuple
-
-import requests
 
 from tiatoolbox import logger
 
@@ -133,14 +132,16 @@ def colab_has_gpu() -> bool:
     return bool(int(os.environ.get("COLAB_GPU", 0)))
 
 
-def has_network(timeout: Number = 3) -> bool:  # noqa: CCR001
+def has_network(
+    hostname="one.one.one.one", timeout: Number = 3
+) -> bool:  # noqa: CCR001
     """Detect if the current environment has a network connection.
 
-    Sends a ping via a subprocess to tiatoolbox.dcs.warwick.ac.uk and
-    returns True if the response is received.
-    This will fallback to a GET request if ping is not available.
+    Create a socket connection to the hostname and check if the connection
+    is successful.
 
     Args:
+        hostname (str): The hostname to ping. Defaults to "one.one.one.one".
         timeout (Number): Timeout in seconds for the fallback GET request.
 
     Returns:
@@ -148,41 +149,15 @@ def has_network(timeout: Number = 3) -> bool:  # noqa: CCR001
             False otherwise.
 
     """
-    # Check that ping and nslookup exist and are executable
-    if shutil.which("ping") and shutil.which("nslookup"):
-        # Option to set the number of pings to send
-        option = "-n" if platform.system() == "Windows" else "-c"
-        # Specify a default IP address to use if nslookup fails
-        ip_address = "137.205.117.139"
-        try:
-            # Check the IP address with nslookup
-            ns_lookup = subprocess.check_output(
-                ["nslookup", "tiatoolbox.dcs.warwick.ac.uk"],
-            )
-            ip_match = re.search(
-                r"Address:\s*((?:\d+\.){3,5}\d+)", ns_lookup.decode("utf-8")
-            )
-            # If nslookup found an IP address, use that instead of the default
-            if ip_match:
-                # There can be two sometimes e.g. if on the local network
-                # The last one is the one we want as ping run from python as
-                # a subprocess will not properly resolve the local IP address.
-                ip_address = ip_match.groups()[-1]
-            # Send a ping to the IP address
-            subprocess.check_output(["ping", option, "1", ip_address])
-        except subprocess.CalledProcessError:  # Non-zero exit code
-            return False
-        except FileNotFoundError:  # A command did not exist
-            pass  # Pass to go to fallback GET request
-        else:  # No exceptions raised
-            return True
-    # Fallback to a GET request
     try:
-        requests.get("https://tiatoolbox.dcs.warwick.ac.uk", timeout=timeout)
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-        return False
-    else:  # No exceptions raised
+        # Check DNS listing
+        host = socket.gethostbyname(hostname)
+        # Connect to host
+        connection = socket.create_connection((host, 80), timeout=timeout)
+        connection.close()
         return True
+    except (socket.gaierror, socket.timeout):
+        return False
 
 
 def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
@@ -273,6 +248,7 @@ def pixman_warning() -> None:  # pragma: no cover
     """
 
     def _show_warning() -> None:
+        """Show a warning message if pixman is version 0.38."""
         try:
             version, using = pixman_version()
         except EnvironmentError:
