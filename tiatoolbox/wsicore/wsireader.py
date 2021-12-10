@@ -114,7 +114,8 @@ class WSIReader:
         elif isinstance(input_img, np.ndarray):
             wsi = VirtualWSIReader(input_img)
         elif isinstance(
-            input_img, (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader)
+            input_img,
+            (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader, TIFFWSIReader),
         ):
             # input is already a tiatoolbox wsi handler
             wsi = input_img

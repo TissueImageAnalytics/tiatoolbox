@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 
+import math
 from collections import OrderedDict
 from typing import List
 
@@ -288,6 +289,9 @@ class HoVerNet(ModelABC):
         mode (str): To use architecture defined in as in original paper
           (`original`) or the one used in Pannuke paper (`fast`).
 
+    Examples:
+        TODO
+
     References:
         Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
@@ -320,6 +324,7 @@ class HoVerNet(ModelABC):
             ("relu", nn.ReLU(inplace=True)),
         ]
         # pre-pend the padding for `fast` mode
+
         if mode == "fast":
             modules = [("pad", TFSamepaddingLayer(ksize=7, stride=1)), *modules]
 
@@ -331,59 +336,13 @@ class HoVerNet(ModelABC):
 
         self.conv_bot = nn.Conv2d(2048, 1024, 1, stride=1, padding=0, bias=False)
 
-        def create_decoder_branch(out_ch=2, ksize=5):
-            """Helper to create a decoder branch."""
-            modules = [
-                ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
-                ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
-                (
-                    "convf",
-                    nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u3 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
-                ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
-                (
-                    "convf",
-                    nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u2 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
-                (
-                    "conva",
-                    nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
-                ),
-            ]
-            u1 = nn.Sequential(OrderedDict(modules))
-
-            modules = [
-                ("bn", nn.BatchNorm2d(64, eps=1e-5)),
-                ("relu", nn.ReLU(inplace=True)),
-                (
-                    "conv",
-                    nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
-                ),
-            ]
-            u0 = nn.Sequential(OrderedDict(modules))
-
-            decoder = nn.Sequential(
-                OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
-            )
-            return decoder
-
         ksize = 5 if mode == "original" else 3
         if num_types is None:
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("np", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
                 )
             )
@@ -391,9 +350,14 @@ class HoVerNet(ModelABC):
             self.decoder = nn.ModuleDict(
                 OrderedDict(
                     [
-                        ("tp", create_decoder_branch(ksize=ksize, out_ch=num_types)),
-                        ("np", create_decoder_branch(ksize=ksize, out_ch=2)),
-                        ("hv", create_decoder_branch(ksize=ksize, out_ch=2)),
+                        (
+                            "tp",
+                            HoVerNet._create_decoder_branch(
+                                ksize=ksize, out_ch=num_types
+                            ),
+                        ),
+                        ("np", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
+                        ("hv", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
                     ]
                 )
             )
@@ -448,7 +412,54 @@ class HoVerNet(ModelABC):
         return out_dict
 
     @staticmethod
-    def __proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray):
+    def _create_decoder_branch(out_ch=2, ksize=5):
+        """Helper to create a decoder branch."""
+        modules = [
+            ("conva", nn.Conv2d(1024, 256, ksize, stride=1, padding=0, bias=False)),
+            ("dense", DenseBlock(256, [1, ksize], [128, 32], 8, split=4)),
+            (
+                "convf",
+                nn.Conv2d(512, 512, 1, stride=1, padding=0, bias=False),
+            ),
+        ]
+        u3 = nn.Sequential(OrderedDict(modules))
+
+        modules = [
+            ("conva", nn.Conv2d(512, 128, ksize, stride=1, padding=0, bias=False)),
+            ("dense", DenseBlock(128, [1, ksize], [128, 32], 4, split=4)),
+            (
+                "convf",
+                nn.Conv2d(256, 256, 1, stride=1, padding=0, bias=False),
+            ),
+        ]
+        u2 = nn.Sequential(OrderedDict(modules))
+
+        modules = [
+            ("conva/pad", TFSamepaddingLayer(ksize=ksize, stride=1)),
+            (
+                "conva",
+                nn.Conv2d(256, 64, ksize, stride=1, padding=0, bias=False),
+            ),
+        ]
+        u1 = nn.Sequential(OrderedDict(modules))
+
+        modules = [
+            ("bn", nn.BatchNorm2d(64, eps=1e-5)),
+            ("relu", nn.ReLU(inplace=True)),
+            (
+                "conv",
+                nn.Conv2d(64, out_ch, 1, stride=1, padding=0, bias=True),
+            ),
+        ]
+        u0 = nn.Sequential(OrderedDict(modules))
+
+        decoder = nn.Sequential(
+            OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
+        )
+        return decoder
+
+    @staticmethod
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 1):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
@@ -463,6 +474,9 @@ class HoVerNet(ModelABC):
             hv_map (np.ndarray): An array of shape (heigh, width, 2) which
               contains the horizontal (channel 0) and vertical (channel 1)
               of possible instances exist withint the images.
+            fx (float): The scale factor for processing nuclei. The scale
+              assumes an image of resolution 0.25 microns per pixel. Default
+              is therefore 1 for HoVer-Net.
 
         Returns:
             An np.ndarray of shape (height, width) where each non-zero values
@@ -497,8 +511,12 @@ class HoVerNet(ModelABC):
             dtype=cv2.CV_32F,
         )
 
-        sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=21)
-        sobelv = cv2.Sobel(v_dir, cv2.CV_64F, 0, 1, ksize=21)
+        ksize = int((20 * fx) + 1)
+        obj_size = math.ceil(10 * (fx ** 2))
+        # Get resolution specific filters etc.
+
+        sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
+        sobelv = cv2.Sobel(v_dir, cv2.CV_64F, 0, 1, ksize=ksize)
 
         sobelh = 1 - (
             cv2.normalize(
@@ -537,52 +555,39 @@ class HoVerNet(ModelABC):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
         marker = measurements.label(marker)[0]
-        marker = remove_small_objects(marker, min_size=10)
+        marker = remove_small_objects(marker, min_size=obj_size)
 
         proced_pred = watershed(dist, markers=marker, mask=blb)
 
         return proced_pred
 
     @staticmethod
-    # skipcq: PYL-W0221
-    def postproc(raw_maps: List[np.ndarray]):
-        """Post processing script for image tiles.
+    def _get_instance_info(pred_inst, pred_type=None):
+        """To collect instance information and store it within a dictionary.
 
         Args:
-            raw_maps (list(ndarray)): list of prediction output of each head and
-                assumed to be in the order of [np, hv, tp] (match with the output
-                of `infer_batch`).
+            pred_inst (np.ndarray): An image of shape (heigh, width) which
+                contains the probabilities of a pixel being a nuclei.
+            pred_type (np.ndarray): An image of shape (heigh, width, 1) which
+                contains the probabilities of a pixel being a certain type of nuclei.
 
         Returns:
-            inst_map (ndarray): pixel-wise nuclear instance segmentation
-                prediction.
-            inst_dict (dict): a dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has following form
+            inst_info_dict (dict): A dictionary containing a mapping of each instance
+                    within `pred_inst` instance information. It has following form
 
-            >>> inst_info = {
-            >>>         box: number[],
-            >>>         centroids: number[],
-            >>>         contour: number[][],
-            >>>         type: number,
-            >>>         prob: number,
-            >>> }
-            >>> inst_dict = {[inst_uid: number] : inst_info}
+                    inst_info = {
+                            box: number[],
+                            centroids: number[],
+                            contour: number[][],
+                            type: number,
+                            prob: number,
+                    }
+                    inst_info_dict = {[inst_uid: number] : inst_info}
 
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `inst_map`.
+                    and `inst_uid` is an integer corresponds to the instance
+                    having the same pixel value within `pred_inst`.
 
         """
-        if len(raw_maps) == 3:
-            np_map, hv_map, tp_map = raw_maps
-        else:
-            tp_map = None
-            np_map, hv_map = raw_maps
-
-        pred_type = tp_map
-        pred_inst = HoVerNet.__proc_np_hv(np_map, hv_map)
-
-        inst_info_dict = None
-
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
         inst_info_dict = {}
         for inst_id in inst_id_list:
@@ -648,7 +653,62 @@ class HoVerNet(ModelABC):
                 inst_info_dict[inst_id]["type"] = int(inst_type)
                 inst_info_dict[inst_id]["prob"] = float(type_prob)
 
-        return pred_inst, inst_info_dict
+        return inst_info_dict
+
+    @staticmethod
+    # skipcq: PYL-W0221
+    def postproc(raw_maps: List[np.ndarray]):
+        """Post processing script for image tiles.
+
+        Args:
+            raw_maps (list(ndarray)): list of prediction output of each head and
+                assumed to be in the order of [np, hv, tp] (match with the output
+                of `infer_batch`).
+
+        Returns:
+            inst_map (ndarray): pixel-wise nuclear instance segmentation
+                prediction.
+            inst_dict (dict): a dictionary containing a mapping of each instance
+                within `inst_map` instance information. It has following form
+
+                inst_info = {
+                    box: number[],
+                    centroids: number[],
+                    contour: number[][],
+                    type: number,
+                    prob: number,
+                }
+                inst_dict = {[inst_uid: number] : inst_info}
+
+                and `inst_uid` is an integer corresponds to the instance
+                having the same pixel value within `inst_map`.
+
+        Examples:
+            >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
+            >>> import torch
+            >>> import numpy as np
+            >>> batch = torch.from_numpy(image_patch)[None]
+            >>> # image_patch is a 256x256x3 numpy array
+            >>> weights_path = "A/weights.pth"
+            >>> pretrained = torch.load(weights_path)
+            >>> model = HoVerNet(num_types=6, mode="fast")
+            >>> model.load_state_dict(pretrained)
+            >>> output = model.infer_batch(model, batch, on_gpu=False)
+            >>> output = [v[0] for v in output]
+            >>> output = model.postproc(output)
+
+        """
+        if len(raw_maps) == 3:
+            np_map, hv_map, tp_map = raw_maps
+        else:
+            tp_map = None
+            np_map, hv_map = raw_maps
+
+        pred_type = tp_map
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
+        nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
+
+        return pred_inst, nuc_inst_info_dict
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
