@@ -1,4 +1,12 @@
 Welcome to Example Notebooks!
 =======================================
 
-Much emptiness
+Example Gallery
+---------------
+
+.. nbgallery::
+    :maxdepth: 0
+    :hidden:
+    :glob:
+
+    _notebooks/*

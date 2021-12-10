@@ -10,14 +10,21 @@ Welcome to TIA Toolbox's documentation!
 
    Readme <readme.md>
    Installation <installation.rst>
-   Contributing <contributing.rst>
-   Authors <authors.rst>
-   History <history.rst>
+
+.. toctree::
+   :hidden:
+   Usage <usage.rst>
+
+.. toctree::
+   :maxdepth: 2
+
+   Pre-trained Models <pretrained.rst>
+   Jupyter Notebooks <notebooks.rst>
 
 .. toctree::
    :hidden:
 
-   Usage <usage.rst>
-   Jupyter Notebooks <notebooks.rst>
-   Pre-trained Models <pretrained.rst>
+   Contributing <contributing.rst>
+   Authors <authors.rst>
+   History <history.rst>
    API Reference <_autosummary/tiatoolbox>

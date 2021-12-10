@@ -41,6 +41,8 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
     "recommonmark",
+    "nbsphinx",
+    "sphinx_gallery.load_style",
 ]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary

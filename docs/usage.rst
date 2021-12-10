@@ -70,16 +70,6 @@ Patch Extraction
 - :obj:`PointsPatchExtractor <tiatoolbox.tools.patchextraction.PointsPatchExtractor>`
 - :obj:`SlidingWindowPatchExtractor <tiatoolbox.tools.patchextraction.SlidingWindowPatchExtractor>`
 
-^^^^^^^^^
-Utilities
-^^^^^^^^^
-
-- :obj:`Image <tiatoolbox.utils.image>`
-- :obj:`Transforms <tiatoolbox.utils.transforms>`
-- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
-- :obj:`Exceptions <tiatoolbox.utils.exceptions>`
-- :obj:`Visualization <tiatoolbox.utils.visualization>`
-
 ^^^^^^^^^^^^^^^^^^
 Graph Construction
 ^^^^^^^^^^^^^^^^^^
@@ -123,3 +113,13 @@ Neural Network Architectures
 
 Pipelines:
     - :obj:`IDARS <tiatoolbox.models.architecture.idars>`
+
+^^^^^^^^^
+Utilities
+^^^^^^^^^
+
+- :obj:`Image <tiatoolbox.utils.image>`
+- :obj:`Transforms <tiatoolbox.utils.transforms>`
+- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
+- :obj:`Exceptions <tiatoolbox.utils.exceptions>`
+- :obj:`Visualization <tiatoolbox.utils.visualization>`
