@@ -14,6 +14,7 @@ dependencies:
   - imagecodecs
   - jupyterlab
   - matplotlib
+  - nbsphinx
   - numpy
   - opencv==4.5.4.60
   - openjpeg>=2.3.0
@@ -29,6 +30,8 @@ dependencies:
   - requests
   - scikit-image==0.18.3
   - scikit-learn>=0.23.2
+  - sphinx_gallery
+  - sphinx_toolbox
   - shapely
   - tifffile
   - torchvision
