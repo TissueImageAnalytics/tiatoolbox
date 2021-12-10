@@ -19,7 +19,7 @@ dependencies:
   - jupyterlab
   - matplotlib
   - numpy
-  - opencv>=4.0
+  - opencv==4.5.4.60
   - openjpeg>=2.3.0
   - openslide
   - pandas
@@ -35,7 +35,7 @@ dependencies:
   - pyyaml>=5.1
   - recommonmark
   - requests
-  - scikit-image
+  - scikit-image==0.18.3
   - scikit-learn>=0.23.2
   - shapely
   - tifffile
