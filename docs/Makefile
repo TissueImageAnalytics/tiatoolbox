@@ -20,5 +20,4 @@ help:
 	rm -rf _build
 	rm -rf _autosummary
 	mkdir _autosummary
-	cp -r images _autosummary	
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
