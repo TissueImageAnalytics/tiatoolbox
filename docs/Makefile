@@ -21,5 +21,4 @@ help:
 	rm -rf _notebooks
 	rm -rf _autosummary
 	mkdir _autosummary
-	rsync -a --include '*/' --include '*.ipynb' --exclude '*' ../examples/ _notebooks/
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
