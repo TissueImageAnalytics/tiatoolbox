@@ -6,7 +6,7 @@
 
 In this directory, you will find some example use cases of the TIAToolbox functionalities in the form of Jupyter Notebooks. All of these example notebooks are designed and maintained to run on Colab and Kaggle platforms (unless otherwise stated) but you can run them on your system as well. In the first cell of each example notebook, there are two Colab ![colab badge](https://colab.research.google.com/assets/colab-badge.svg) and Kaggle ![kaggle badge](https://kaggle.com/static/images/open-in-kaggle.svg) badges that allow you to open that example notebook in the preferred platform, simply by clicking on the badge. Each notebook contains all the information you need to run the example on any computer with a standard browser and no prior installation of any programming language is required. To run the notebook on any platform, except for Colab or Kaggle, set up your Python environment, as explained in the [installation guide](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
 
-Here, the structure of the example directory and a brief description of the included notebooks are explained. The example directory contains a subfolder named `pipelines`  which includes high-level use cases of TIAToolbox (such as patient survival prediction and MSI status prediction from H&E whole slide images) and the main directory includes general example notebooks explaining different functionalities/modules incorporated in the TIAToolbox.
+Here, the structure of the example directory and a brief description of the included notebooks are explained. The example directory contains two subdirectories called `full-pipelines` and `inference-pipelines` that include examples of using TIAToolbox in training of neural networks or inference of WSIs for high-level CPath applications such as patient survival prediction and MSI status prediction from H&E whole slide images. The root directory includes generic example notebooks explaining different functionalities/modules incorporated in the TIAToolbox.
 
 # A) Examples of TIAToolbox functionalities
 List of Jupyter notebooks that are dedicated to explaining the essential functionalities of TIAToolbox.
@@ -60,7 +60,7 @@ Each WSI can contain up to million nuclei of various types, which can be further
 # B) Examples of high-level analysis (pipelines) using TIAToolbox
 List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
 
-## 1- Prediction of molecular pathways and key mutations in colorectal cancer from whole slide images
+## 1- Prediction of molecular pathways and key mutations in colorectal cancer from whole slide images ([idars.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/inference-pipelines/idars.ipynb))
 Prediction of molecular pathways and key mutations directly from Haematoxylin and Eosin stained histology images can help bypass additional genetic (e.g., polymerase chain reaction or PCR) or immunohistochemistry (IHC) testing, which can therefore save both money and time. In this example notebook, we show how you can use TIAToolbox's pretrained models to do reproduce the inference results obtained by IDaRS pipeline introduced in [Bilal et al](https://bit.ly/3IwL6vv). In TIAToolbox, we include models that are capable of predicting the following entities in whole slide images:
 - Microsatellite instability (MSI)
 - Hypermutation density
@@ -71,7 +71,11 @@ Prediction of molecular pathways and key mutations directly from Haematoxylin an
 
 ![image](https://user-images.githubusercontent.com/74412979/145396818-883ef9af-ae78-4f9d-bdb8-a0926ec807a4.png)
 
+
 ## 2- Prediction of HER2 status in breast cancer from H&E stained whole slide images
 This example notebook demonstrates how the functionalities available in TIAToolbox can be used to reproduce the ["SlideGraph+ method" ("SlideGraph+: Whole Slide Image-Level Graphs to Predict HER2Status in Breast Cancer" by Lu et al. (2021))](https://arxiv.org/abs/2110.06042) to predict HER2 status of breast cancer samples from H&E stained whole slide images. As a brief overview, this method involves several steps to generating a graph that represents a whole slide image (WSI) and then directly feeding it into a special convolutional graph network, called SlideGraph, to predict whether that WSI is HER2 negative or positive.
+
+> * Example notebook on training the SlideGraph model is avaialbe here: [slide-graph.ipynb for training](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/full-pipelines/slide-graph.ipynb)
+> * Example notebook on using SlideGraph model for WSI inference is avaialbe here: [slide-graph.ipynb for inference](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/inference-pipelines/slide-graph.ipynb)
 
 ![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
