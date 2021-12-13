@@ -14,7 +14,7 @@ Many of the notebooks will run on a standard desktop computer using only CPU com
 # A) Examples of TIAToolbox functionalities
 We now give a list of our Jupyter notebooks, giving a brief description of the TIAToolbox functionalities that each of the notebook provides.
  ## 1- Reading Whole Slide Images ([01-wsi-reading.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/01-wsi-reading.ipynb))
-This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIAToolbox provides a uniform interface to various WSI formats. To see what formats are dealt with, click [here](https://tia-toolbox.readthedocs.io/en/latest/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.get_wsireader)  and then search for _format_. In this notebook, you will learn some well-known techniques for WSI masking and patch extraction.
+This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIAToolbox provides a uniform interface to various WSI formats. To see what formats are dealt with, click [here](https://tia-toolbox.readthedocs.io/en/develop/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.OpenSlideWSIReader)  and then search for _format_. In this notebook, you will learn some well-known techniques for WSI masking and patch extraction.
 
 ![image](https://user-images.githubusercontent.com/74412979/145223963-f5cc3efc-5762-43c1-b040-c1f738a98e1b.png) ![image](https://user-images.githubusercontent.com/74412979/145224002-b61eb074-5b55-45c9-a45c-9b527437be2c.png)
 
@@ -63,7 +63,7 @@ Each WSI can contain up to a million nuclei of various types. These can  analyse
 List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
 
 ## 1- Prediction of molecular pathways and key mutations in colorectal cancer from whole slide images ([idars.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/inference-pipelines/idars.ipynb))
-Prediction of molecular pathways and key mutations directly from Haematoxylin and Eosin stained histology images can help bypass additional genetic (e.g., polymerase chain reaction or PCR) or immunohistochemistry (IHC) testing, with a view to saving both money and time. In this notebook, we use TIAToolbox's pretrained models to reproduce the inference results obtained by the IDaRS pipeline due to [Bilal et al](https://bit.ly/3IwL6vv). In TIAToolbox, we include models that are capable of predicting the following in whole slide images:
+Prediction of molecular pathways and key mutations directly from Haematoxylin and Eosin stained histology images can help bypass additional genetic (e.g., polymerase chain reaction or PCR) or immunohistochemistry (IHC) testing, with a view to saving both money and time. In this notebook, we use TIAToolbox's pretrained models to reproduce the inference results obtained by the IDaRS pipeline due to <a href="https://www.thelancet.com/journals/landig/article/PIIS2589-7500(2100180-1/fulltext">Bilal et al</a>. In TIAToolbox, we include models that are capable of predicting the following in whole slide images:
 - Microsatellite instability (MSI)
 - Hypermutation density
 - Chromosomal instability
