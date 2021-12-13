@@ -14,14 +14,14 @@ Many of the notebooks will run on a standard desktop computer using only CPU com
 # A) Examples of TIAToolbox functionalities
 We now give a list of our Jupyter notebooks, giving a brief description of the TIAToolbox functionalities that each of the notebook provides.
  ## 1- Reading Whole Slide Images ([01-wsi-reading.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/01-wsi-reading.ipynb))
-This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIAToolbox provides a uniform interface to various WSI formats. To see what formats are dealt with, click [here](https://tia-toolbox.readthedocs.io/en/develop/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.OpenSlideWSIReader)  and then search for _format_. In this notebook, you will learn some well-known techniques for WSI masking and patch extraction.
+This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIAToolbox provides a uniform interface to various WSI formats. To see what formats are dealt with, click [here](https://tia-toolbox.readthedocs.io/en/latest/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.WSIReader)  and then search for _format_. In this notebook, you will learn some well-known techniques for WSI masking and patch extraction.
 
 ![image](https://user-images.githubusercontent.com/74412979/145223963-f5cc3efc-5762-43c1-b040-c1f738a98e1b.png) ![image](https://user-images.githubusercontent.com/74412979/145224002-b61eb074-5b55-45c9-a45c-9b527437be2c.png)
 
 ## 2- Stain normalisation of histology images ([02-stain-normalisation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalisation.ipynb))
 Stain normalisation is a common pre-processing step in computational pathology, whose objective is to reduce, as much as possible, colour variation that has no clinical significance. This variation may be caused by using different scanners, different staining protocols and practices, staining agents that have been left on the laboratory shelf for different lengths of time, different settings when using the scanner, etc. It has been shown in many studies that stain normalisation can make an algorithm more robust against such differences. TIAToolbox makes a few different stain-normalisation algorithms available to the use. The implemented stain normalisation methods in TIAToolbox are:
 - Reinhard stain normalisation
-- Ruifork 
+- Ruifork
 - Macenko
 - Vahadane.
 
@@ -50,7 +50,7 @@ _Semantic segmentation_ groups together similar parts of an image that belong to
 ![image](https://user-images.githubusercontent.com/74412979/145233254-cd5ae68b-42b9-4627-bfb5-8ac395d904cc.png)
 
 ## 7- Advanced model techniques ([07-advanced-modeling.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/07-advanced-modeling.ipynb))
-This notebook is aimed at advanced users of TIAToolbox, familiar with object-oriented programming concepts in Python and the TIAToolbox models framework. We demonstrate the use of TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research. 
+This notebook is aimed at advanced users of TIAToolbox, familiar with object-oriented programming concepts in Python and the TIAToolbox models framework. We demonstrate the use of TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research.
 
 ![image](https://user-images.githubusercontent.com/74412979/145396619-e33c1544-c45d-47f3-b070-89dc293c6517.png)
 
@@ -68,7 +68,7 @@ Prediction of molecular pathways and key mutations directly from Haematoxylin an
 - Hypermutation density
 - Chromosomal instability
 - CpG island methylator phenotype (CIMP)-high prediction
-- BRAF mutation 
+- BRAF mutation
 - TP53 mutation
 
 ![image](https://user-images.githubusercontent.com/74412979/145396818-883ef9af-ae78-4f9d-bdb8-a0926ec807a4.png)
