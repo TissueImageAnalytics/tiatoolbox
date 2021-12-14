@@ -235,17 +235,31 @@ class PatchExtractor(ABC):
             coordinates_list.dtype, np.integer
         ):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
+        if isinstance(coord_resolution, (int, float)):
+            coord_resolution = [coord_resolution, coord_resolution]
         # Default parameters for tissue mask array generation
         mask_res = 8  # should be in mpp units
         tissue_mask = mask_reader.slide_thumbnail(resolution=mask_res, units="mpp")
 
         # checking the coordinates
-        scaled_coords = coordinates_list * coord_resolution / mask_res
-        scaled_coords[:, 2] = np.clip(scaled_coords[:, 2], 0, tissue_mask.shape[1])
-        scaled_coords[:, 0] = np.clip(scaled_coords[:, 0], 0, tissue_mask.shape[1])
-        scaled_coords[:, 3] = np.clip(scaled_coords[:, 3], 0, tissue_mask.shape[0])
-        scaled_coords[:, 1] = np.clip(scaled_coords[:, 1], 0, tissue_mask.shape[0])
+        scaled_coords = np.zeros_like(coordinates_list)
+        for i in range(4):
+            if i % 2 == 0:
+                scaled_coords[:, i] = (
+                    coordinates_list[:, i] * coord_resolution[0] / mask_res
+                )
+                scaled_coords[:, i] = np.clip(
+                    scaled_coords[:, i], 0, tissue_mask.shape[1]
+                )
+            else:
+                scaled_coords[:, i] = (
+                    coordinates_list[:, i] * coord_resolution[1] / mask_res
+                )
+                scaled_coords[:, i] = np.clip(
+                    scaled_coords[:, i], 0, tissue_mask.shape[0]
+                )
         scaled_coords = np.int32(scaled_coords)
+
         flag_list = []
         for coord in scaled_coords:
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
