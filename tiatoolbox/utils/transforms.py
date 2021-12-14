@@ -307,3 +307,72 @@ def pad_bounds(
         raise ValueError("Invalid number of padding elements.")
     signs = np.repeat([-1, 1], ndims)
     return np.add(bounds, padding * signs)
+
+
+def convert_resolution(input_res, input_unit, baseline_mpp=None, baseline_power=None):
+    """Converts resolution between different units.
+    This function accepts a resolution and its unit in the input and converts
+    it all other units. To achieve 'mpp' and 'power' units in the output, you
+    should as well specify `mpp` and `power` of baseline resolution, respectively.
+
+    Args:
+        input_res (float): the resolution which we want to have in
+          the other units.
+        input_unit (float): the unit of the input resolution (`input_res`).
+    Returns:
+        output_dict (dictionary): a dictionary containing the converted
+          `input_res` in all acceptable units (`'mpp'`, `'power'`, `'level'`,
+          `'baseline'`).
+    """
+    if input_unit not in {"mpp", "power", "level", "baseline"}:
+        raise ValueError(
+            "input_unit argument accepts only one of the following options: "
+            "`'mpp'`, `'power'`, `'level'`, `'baseline'`."
+        )
+    if baseline_mpp is None and input_unit == "mpp":
+        raise ValueError(
+            "`input_unit` has been set to 'mpp' while the `baseline_mpp` "
+            "has not been set. Please provide `baseline_mpp` in the input."
+        )
+    if baseline_power is None and input_unit == "power":
+        raise ValueError(
+            "`input_unit`has been set to 'power' while the `baseline_mpp` "
+            "has not been set. Please provide `baseline_power` in the input."
+        )
+
+    # calculate the output_res based on input_unit and resolution
+    output_mpp = None
+    output_power = None
+    if input_unit == "mpp":
+        unit_baseline_scale = baseline_mpp / input_res
+        output_mpp = input_res
+        if baseline_power is not None:
+            output_power = unit_baseline_scale * baseline_power
+        output_level = np.log2(1 / unit_baseline_scale)
+    elif input_unit == "power":
+        unit_baseline_scale = input_res / baseline_power
+        output_power = input_res
+        if baseline_mpp is not None:
+            output_mpp = baseline_mpp / unit_baseline_scale
+        output_level = np.log2(1 / unit_baseline_scale)
+    elif input_unit == "level":
+        unit_baseline_scale = 1 / (2 ** input_res)
+        output_level = input_res
+        if baseline_mpp is not None:
+            output_mpp = baseline_mpp / unit_baseline_scale
+        if baseline_power is not None:
+            output_power = unit_baseline_scale * baseline_power
+    else:  # input_unit == 'baseline'
+        unit_baseline_scale = input_res
+        if baseline_mpp is not None:
+            output_mpp = baseline_mpp * unit_baseline_scale
+        if baseline_power is not None:
+            output_power = baseline_mpp * unit_baseline_scale
+        output_level = np.log2(1 / unit_baseline_scale)
+
+    return {
+        "mpp": output_mpp,
+        "power": output_power,
+        "level": output_level,
+        "baseline": unit_baseline_scale,
+    }

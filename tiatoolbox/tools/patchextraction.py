@@ -25,6 +25,7 @@ import numpy as np
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.transforms import convert_resolution
 from tiatoolbox.wsicore import wsireader
 
 
@@ -177,14 +178,18 @@ class PatchExtractor(ABC):
         )
 
         if self.mask is not None:
-            selected_coord_idxs = self.filter_coordinates(
+            # get the coord_list resolution to mpp unit
+            converted_units = convert_resolution(
+                input_res=self.resolution,
+                input_unit=self.units,
+                baseline_mpp=self.wsi.info.mpp,
+            )
+            selected_coord_idxs = self.filter_coordinates_fast(
                 self.mask,
                 self.coord_list,
-                resolution=self.resolution,
-                units=self.units,
+                coord_resolution=converted_units["mpp"],
             )
             self.coord_list = self.coord_list[selected_coord_idxs]
-
             if len(self.coord_list) == 0:
                 raise ValueError(
                     "No candidate coordinates left after "
@@ -196,6 +201,57 @@ class PatchExtractor(ABC):
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
         return self
+
+    @staticmethod
+    def filter_coordinates_fast(
+        mask_reader,
+        coordinates_list,
+        coord_resolution,
+    ):
+        """
+        Validate patch extraction coordinates based on the input mask.
+        This function indicates which coordinate is valid for mask-based
+        patch extraction based on checks in low resolution.
+
+        Args:
+            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
+              mask related to the WSI from which we want to extract the patches.
+            coordinates_list (ndarray and np.int32): Coordinates to be checked
+              via the `func`. They must be in the same resolution as requested
+              `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+              where N is the number of coordinate sets and K is either 2 for centroids
+              or 4 for bounding boxes. When using the default `func=None`, K should be
+              4, as we expect the `coordinates_list` to be refer to bounding boxes in
+              `[start_x, start_y, end_x, end_y]` format.
+            coord_resolution (float): the resolution at which coordinates_list are
+             generated. NOTE: resolution is expected to be in `'mpp'` units.
+
+        Returns:
+            ndarray: list of flags to indicate which coordinate is valid.
+        """
+        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
+            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
+        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
+            coordinates_list.dtype, np.integer
+        ):
+            raise ValueError("`coordinates_list` should be ndarray of integer type.")
+        # Default parameters for tissue mask array generation
+        mask_res = 8  # should be in mpp units
+        tissue_mask = mask_reader.slide_thumbnail(resolution=mask_res, units="mpp")
+
+        # checking the coordinates
+        scaled_coords = coordinates_list * coord_resolution / mask_res
+        scaled_coords[:, 2] = np.clip(scaled_coords[:, 2], 0, tissue_mask.shape[1])
+        scaled_coords[:, 0] = np.clip(scaled_coords[:, 0], 0, tissue_mask.shape[1])
+        scaled_coords[:, 3] = np.clip(scaled_coords[:, 3], 0, tissue_mask.shape[0])
+        scaled_coords[:, 1] = np.clip(scaled_coords[:, 1], 0, tissue_mask.shape[0])
+        scaled_coords = np.int32(scaled_coords)
+        flag_list = []
+        for coord in scaled_coords:
+            this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
+            this_flag = True if np.any(this_part > 0) else False
+            flag_list.append(this_flag)
+        return np.array(flag_list)
 
     @staticmethod
     def filter_coordinates(
