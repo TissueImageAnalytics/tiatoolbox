@@ -1707,7 +1707,11 @@ def test_command_line_slide_thumbnail_output_none(sample_svs, tmp_path):
     )
 
     assert slide_thumb_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("../slide_thumb.jpg").is_file()
+    assert (
+        pathlib.Path(sample_svs).parent
+        / ("slide_thumbnail")
+        / (sample_svs.stem + ".jpg")
+    ).is_file()
 
 
 def test_command_line_jp2_slide_thumbnail(sample_jp2, tmp_path):

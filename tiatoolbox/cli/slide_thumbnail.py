@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Command line interface for slide_thumbnail."""
+import os
 import pathlib
 
 import click
@@ -42,24 +43,51 @@ def main():  # pragma: no cover
     " default=img_input_dir/../slide_thumb.jpg",
 )
 @click.option(
+    "--file-types",
+    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
+)
+@click.option(
     "--mode",
     default="save",
     help="'show' to display image region or 'save' to save at the output path"
     ", default=save",
 )
-def slide_thumbnail(img_input, output_path, mode):
+def slide_thumbnail(img_input, output_path, file_types, mode):
     """Read whole slide image thumbnail."""
+    file_types = utils.misc.string_to_tuple(in_str=file_types)
+
+    if isinstance(output_path, str):
+        output_path = pathlib.Path(output_path)
+
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    files_all = [
+        img_input,
+    ]
+
+    if os.path.isdir(img_input):
+        files_all = utils.misc.grab_files_from_dir(
+            input_path=img_input, file_types=file_types
+        )
+
     if output_path is None and mode == "save":
         input_dir = pathlib.Path(img_input).parent
-        output_path = str(input_dir.parent / "slide_thumb.jpg")
-
-    wsi = WSIReader.open(input_img=img_input)
-
-    slide_thumb = wsi.slide_thumbnail()
-
-    if mode == "show":
-        im_region = Image.fromarray(slide_thumb)
-        im_region.show()
+        output_path = input_dir / "slide_thumbnail"
 
     if mode == "save":
-        utils.misc.imwrite(output_path, slide_thumb)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+    for curr_file in files_all:
+        wsi = WSIReader.open(input_img=curr_file)
+
+        slide_thumb = wsi.slide_thumbnail()
+        if mode == "show":
+            im_region = Image.fromarray(slide_thumb)
+            im_region.show()
+
+        if mode == "save":
+            utils.misc.imwrite(
+                output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb
+            )

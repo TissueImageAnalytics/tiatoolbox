@@ -80,8 +80,6 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
         input_dir = pathlib.Path(img_input).parent
         output_path = input_dir / "meta"
 
-    print(files_all)
-
     if mode == "save":
         output_path.mkdir(parents=True, exist_ok=True)
 
