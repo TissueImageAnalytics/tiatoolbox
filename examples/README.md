@@ -80,5 +80,3 @@ This notebook demonstrates how the functionalities available in TIAToolbox can b
 > * Example notebook on using SlideGraph model for WSI inference is avaialbe here: [slide-graph.ipynb for inference](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/inference-pipelines/slide-graph.ipynb)
 
 ![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
-
-![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
