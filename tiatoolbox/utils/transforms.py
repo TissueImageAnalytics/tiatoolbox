@@ -326,18 +326,20 @@ def convert_resolution(input_res, input_unit, baseline_mpp=None, baseline_power=
     """
     if input_unit not in {"mpp", "power", "level", "baseline"}:
         raise ValueError(
-            "input_unit argument accepts only one of the following options: "
+            "Invalid input_unit: argument accepts only one of the following options: "
             "`'mpp'`, `'power'`, `'level'`, `'baseline'`."
         )
     if baseline_mpp is None and input_unit == "mpp":
         raise ValueError(
-            "`input_unit` has been set to 'mpp' while the `baseline_mpp` "
-            "has not been set. Please provide `baseline_mpp` in the input."
+            "Missing baseline_mpp: `input_unit` has been set to 'mpp' while the "
+            "`baseline_mpp` has not been set. Please provide `baseline_mpp` in "
+            "the input."
         )
     if baseline_power is None and input_unit == "power":
         raise ValueError(
-            "`input_unit`has been set to 'power' while the `baseline_mpp` "
-            "has not been set. Please provide `baseline_power` in the input."
+            "Missing baseline_power: `input_unit`has been set to 'power' while "
+            "the `baseline_mpp` has not been set. Please provide `baseline_power` "
+            "in the input."
         )
 
     # calculate the output_res based on input_unit and resolution
@@ -365,9 +367,9 @@ def convert_resolution(input_res, input_unit, baseline_mpp=None, baseline_power=
     else:  # input_unit == 'baseline'
         unit_baseline_scale = input_res
         if baseline_mpp is not None:
-            output_mpp = baseline_mpp * unit_baseline_scale
+            output_mpp = baseline_mpp / unit_baseline_scale
         if baseline_power is not None:
-            output_power = baseline_mpp * unit_baseline_scale
+            output_power = baseline_power * unit_baseline_scale
         output_level = np.log2(1 / unit_baseline_scale)
 
     return {
