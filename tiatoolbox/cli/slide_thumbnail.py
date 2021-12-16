@@ -43,9 +43,9 @@ def main():  # pragma: no cover
 )
 @click.option(
     "--mode",
-    default="show",
+    default="save",
     help="'show' to display image region or 'save' to save at the output path"
-    ", default=show",
+    ", default=save",
 )
 def slide_thumbnail(img_input, output_path, mode):
     """Read whole slide image thumbnail."""
