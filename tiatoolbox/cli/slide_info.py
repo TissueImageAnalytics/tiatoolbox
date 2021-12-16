@@ -59,7 +59,7 @@ def main():  # pragma: no cover
 )
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Display or save WSI metadata."""
-    files_all = utils.misc.prepare_file_dir_cli(
+    files_all, output_path = utils.misc.prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"
     )
 

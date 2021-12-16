@@ -728,6 +728,7 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
 
     Returns:
         files_all (list): list of file paths to process.
+        output_path (pathlib.Path): Updated output path.
 
     """
     file_types = string_to_tuple(in_str=file_types)
@@ -752,7 +753,7 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
     if mode == "save":
         output_path.mkdir(parents=True, exist_ok=True)
 
-    return files_all
+    return files_all, output_path
 
 
 def prepare_model_cli(img_input, output_path, masks, file_types, mode):

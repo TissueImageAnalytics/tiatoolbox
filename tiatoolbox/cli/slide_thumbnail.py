@@ -55,7 +55,7 @@ def main():  # pragma: no cover
 )
 def slide_thumbnail(img_input, output_path, file_types, mode):
     """Read whole slide image thumbnail."""
-    files_all = utils.misc.prepare_file_dir_cli(
+    files_all, output_path = utils.misc.prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "slide-thumbnail"
     )
 
