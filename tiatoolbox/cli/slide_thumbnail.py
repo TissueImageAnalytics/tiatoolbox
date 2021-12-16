@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Command line interface for slide_thumbnail."""
-import os
 import pathlib
 
 import click

@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Command line interface for slide_info."""
-import os
 import pathlib
 import sys
 
