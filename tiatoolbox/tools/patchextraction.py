@@ -122,6 +122,8 @@ class PatchExtractor(ABC):
                 self.mask = self.wsi.tissue_mask(
                     method=input_mask, resolution=1.25, units="power"
                 )
+        elif isinstance(input_mask, wsireader.VirtualWSIReader):
+            self.mask = input_mask
         else:
             self.mask = wsireader.VirtualWSIReader(
                 input_mask, info=self.wsi.info, mode="bool"
@@ -150,43 +152,27 @@ class PatchExtractor(ABC):
         x = self.locations_df["x"][item]
         y = self.locations_df["y"][item]
 
-        data = self.wsi.read_rect(
+        return self.wsi.read_rect(
             location=(int(x), int(y)),
             size=self.patch_size,
             resolution=self.resolution,
             units=self.units,
             pad_mode=self.pad_mode,
             pad_constant_values=self.pad_constant_values,
+            coord_space="resolution",
         )
-
-        return data
 
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
         The slide dimension is calculated using units and resolution.
 
         """
-        (read_level, _, _, _, baseline_read_size,) = self.wsi.find_read_rect_params(
-            location=(0, 0),
-            size=self.patch_size,
-            resolution=self.resolution,
-            units=self.units,
-        )
-
-        slide_dimension = self.wsi.info.level_dimensions[0]
-        level_downsample = self.wsi.info.level_downsamples[read_level]
-
-        img_w = slide_dimension[0]
-        img_h = slide_dimension[1]
-        img_patch_w = baseline_read_size[0]
-        img_patch_h = baseline_read_size[1]
-        stride_w = int(self.stride[0] * level_downsample)
-        stride_h = int(self.stride[1] * level_downsample)
+        slide_dimension = self.wsi.slide_dimensions(self.resolution, self.units)
 
         self.coord_list = self.get_coordinates(
-            image_shape=(img_w, img_h),
-            patch_input_shape=(img_patch_w, img_patch_h),
-            stride_shape=(stride_w, stride_h),
+            image_shape=(slide_dimension[0], slide_dimension[1]),
+            patch_input_shape=(self.patch_size[0], self.patch_size[1]),
+            stride_shape=(self.stride[0], self.stride[1]),
             input_within_bound=self.within_bound,
         )
 
@@ -434,9 +420,10 @@ class PointsPatchExtractor(PatchExtractor):
 
     Args:
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
-          and/or type of patch. Input can be path to a csv or json file.
-          classification, default=9 (centre of patch and all the eight neighbours as
-          centre).
+          and/or type of patch. This can be path to csv, npy or json files. Input can
+          also be a :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+          NOTE: value of location $(x,y)$ is expected to be based on the specified
+          `resolution` and `units` (not the `'baseline'` resolution).
 
     """
 
