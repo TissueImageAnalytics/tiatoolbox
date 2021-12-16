@@ -55,29 +55,9 @@ def main():  # pragma: no cover
 )
 def slide_thumbnail(img_input, output_path, file_types, mode):
     """Read whole slide image thumbnail."""
-    file_types = utils.misc.string_to_tuple(in_str=file_types)
-
-    if isinstance(output_path, str):
-        output_path = pathlib.Path(output_path)
-
-    if not os.path.exists(img_input):
-        raise FileNotFoundError
-
-    files_all = [
-        img_input,
-    ]
-
-    if os.path.isdir(img_input):
-        files_all = utils.misc.grab_files_from_dir(
-            input_path=img_input, file_types=file_types
-        )
-
-    if output_path is None and mode == "save":
-        input_dir = pathlib.Path(img_input).parent
-        output_path = input_dir / "slide_thumbnail"
-
-    if mode == "save":
-        output_path.mkdir(parents=True, exist_ok=True)
+    files_all = utils.misc.prepare_file_dir_cli(
+        img_input, output_path, file_types, mode, "slide-thumbnail"
+    )
 
     for curr_file in files_all:
         wsi = WSIReader.open(input_img=curr_file)
