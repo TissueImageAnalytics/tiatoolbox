@@ -713,8 +713,7 @@ def string_to_tuple(in_str):
 
 
 def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
-    """
-    Prepares cli for running code on multiple files or a directory.
+    """Prepares cli for running code on multiple files or a directory.
 
     Checks for existing directories to run tests.
     Converts file path to list of file paths or
