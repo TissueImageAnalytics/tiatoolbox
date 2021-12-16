@@ -24,7 +24,8 @@ import pathlib
 import click
 from PIL import Image
 
-from tiatoolbox import utils, wsicore
+from tiatoolbox import utils
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @click.group()
@@ -52,7 +53,7 @@ def slide_thumbnail(img_input, output_path, mode):
         input_dir = pathlib.Path(img_input).parent
         output_path = str(input_dir.parent / "slide_thumb.jpg")
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
+    wsi = WSIReader.open(input_img=img_input)
 
     slide_thumb = wsi.slide_thumbnail()
 
