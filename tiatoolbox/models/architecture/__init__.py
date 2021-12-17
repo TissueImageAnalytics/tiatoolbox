@@ -58,35 +58,30 @@ def get_pretrained_model(
 
     Args:
         pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. Currently supports:
-            - alexnet-kather100k: alexnet backbone trained on Kather 100k dataset.
-            - resnet18-kather100k: resnet18 backbone trained on Kather 100k dataset.
-            - resnet34-kather100k: resnet34 backbone trained on Kather 100k dataset.
-            - resnet50-kather100k: resnet50 backbone trained on Kather 100k dataset.
-            - resnet101-kather100k: resnet101 backbone trained on Kather 100k dataset.
-            - resnext5032x4d-kather100k: resnext50_32x4d backbone trained on Kather
-              100k dataset.
-            - resnext101_32x8d-kather100k: resnext101_32x8d backbone trained on
-              Kather 100k dataset.
-            - wide_resnet50_2-kather100k: wide_resnet50_2 backbone trained on
-              Kather 100k dataset.
-            - wide_resnet101_2-kather100k: wide_resnet101_2 backbone trained on
-              Kather 100k dataset.
-            - densenet121-kather100k: densenet121 backbone trained on
-              Kather 100k dataset.
-            - densenet161-kather100k: densenet161 backbone trained on
-              Kather 100k dataset.
-            - densenet169-kather100k: densenet169 backbone trained on
-              Kather 100k dataset.
-            - densenet201-kather100k: densenet201 backbone trained on
-              Kather 100k dataset.
-            - mobilenet_v2-kather100k: mobilenet_v2 backbone trained on
-              Kather 100k dataset.
-            - mobilenet_v3_large-kather100k: mobilenet_v3_large backbone trained on
-              Kather 100k dataset.
-            - mobilenet_v3_small-kather100k: mobilenet_v3_small backbone trained on
-              Kather 100k dataset.
-            - googlenet-kather100k: googlenet backbone trained on Kather 100k dataset.
+          for processing the data. The models currently supported:
+            - alexnet
+            - resnet18
+            - resnet34
+            - resnet50
+            - resnet101
+            - resnext5032x4d
+            - resnext101_32x8d
+            - wide_resnet50_2
+            - wide_resnet101_2
+            - densenet121
+            - densenet161
+            - densenet169
+            - densenet201
+            - mobilenet_v2
+            - mobilenet_v3_large
+            - mobilenet_v3_small
+            - googlenet
+
+          Each model has been trained on the Kather100K and PCam datasets. The format
+          of pretrained_model is <model_name>-<dataset_name>. For example, to use a
+          resnet18 model trained on Kather100K, use `resnet18-kather100k and to use
+          an alexnet model trained on PCam, use `alexnet-pcam`.
+
 
           By default, the corresponding pretrained weights will also be
           downloaded. However, you can override with your own set of weights via
@@ -96,13 +91,15 @@ def get_pretrained_model(
         overwrite (bool): To always overwriting downloaded weights.
 
     Examples:
-        >>> # get mobilenet pretrained on kather by TIA team
+        >>> # get mobilenet pretrained on Kather100K dataset by the TIA team
         >>> model = get_pretrained_model(pretrained_model='mobilenet_v2-kather100k')
-        >>> # get mobilenet defined by TIA team but loaded with user weight
+        >>> # get mobilenet defined by TIA team, but loaded with user defined weights
         >>> model = get_pretrained_model(
         ...     pretrained_model='mobilenet_v2-kather100k'
         ...     pretrained_weights='/A/B/C/my_weights.tar'
         ... )
+        >>> # get resnet34 pretrained on PCam dataset by TIA team
+        >>> model = get_pretrained_model(pretrained_model='resnet34-pcam')
 
     """
     if not isinstance(pretrained_model, str):
@@ -120,7 +117,7 @@ def get_pretrained_model(
     # TODO: a dictionary of dataset specific or transformation ?
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
-        # ! associated pre-proc coming from dataset (Kumar, Kather, etc.)
+        # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
         model.preproc_func = predefined_preproc_func(info["dataset"])
 
     if pretrained_weights is None:
