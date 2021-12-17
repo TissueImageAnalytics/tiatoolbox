@@ -5,12 +5,12 @@
 Example Gallery
 ===============
 
-Each of the following notebooks tries to explain how to use
-a specific functionality implemented within the toolbox.
-
 
 Module Tutorial
 ---------------
+
+Each of the following notebooks tries to explain how to use
+a specific functionality implemented within the toolbox.
 
 .. nbgallery::
     :hidden:
