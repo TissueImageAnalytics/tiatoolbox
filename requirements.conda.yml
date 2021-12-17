@@ -9,6 +9,7 @@ dependencies:
   - Click
   - cython
   - defusedxml
+  - flask
   - glymur
   - h5py
   - imagecodecs
