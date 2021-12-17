@@ -713,7 +713,7 @@ def string_to_tuple(in_str):
 
 
 def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
-    """Prepares cli for running code on multiple files or a directory.
+    """Prepares CLI for running code on multiple files or a directory.
 
     Checks for existing directories to run tests.
     Converts file path to list of file paths or
@@ -724,11 +724,11 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
         output_path (str or pathlib.Path): output directory path.
         file_types (str): file types to process using cli.
         mode (str): wsi or tile mode.
-        sub_dirname (str): name of sub directory to save output.
+        sub_dirname (str): name of subdirectory to save output.
 
     Returns:
         files_all (list): list of file paths to process.
-        output_path (pathlib.Path): Updated output path.
+        output_path (pathlib.Path): updated output path.
 
     """
     file_types = string_to_tuple(in_str=file_types)
