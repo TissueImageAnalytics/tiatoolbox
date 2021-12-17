@@ -3,6 +3,13 @@
 
 
 Example Gallery
+===============
+
+Each of the following notebooks tries to explain how to use
+a specific functionality implemented within the toolbox.
+
+
+Module Tutorial
 ---------------
 
 .. nbgallery::
@@ -10,3 +17,29 @@ Example Gallery
     :glob:
 
     _notebooks/*
+
+
+Full Pipelines
+---------------
+
+Each of the following notebooks tries to reproduce an entire paper. This
+reproduction includes both the training and inference portions.
+
+.. nbgallery::
+    :hidden:
+    :glob:
+
+    _notebooks/full-pipelines/*
+
+
+Inference Pipelines
+---------------
+
+Each of the following notebooks tries to implement only the inference portion
+of a paper.
+
+.. nbgallery::
+    :hidden:
+    :glob:
+
+    _notebooks/inference-pipelines/*
