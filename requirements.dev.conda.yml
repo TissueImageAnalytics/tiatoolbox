@@ -12,6 +12,7 @@ dependencies:
   - defusedxml
   - flake8
   - flake8-bugbear
+  - flask
   - glymur
   - h5py
   - imagecodecs
