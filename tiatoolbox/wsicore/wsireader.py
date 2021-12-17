@@ -25,7 +25,6 @@ import numbers
 import os
 import pathlib
 import re
-import threading
 import warnings
 from datetime import datetime
 from numbers import Number
