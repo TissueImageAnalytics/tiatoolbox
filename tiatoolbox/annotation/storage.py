@@ -40,6 +40,7 @@ Properties
 """
 import contextlib
 import copy
+import json
 import pickle
 import sqlite3
 import sys
@@ -72,11 +73,6 @@ from shapely import speedups, wkb, wkt
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
-
-try:
-    import ujson as json  # pyright: reportMissingModuleSource=false
-except ImportError:
-    import json
 
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
