@@ -1078,7 +1078,7 @@ class SQLiteStore(AnnotationStore):
                 objtype TEXT,            -- Object type
                 cx INTEGER NOT NULL,     -- X of centroid/representative point
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
-                boundary BLOB,           -- Detailed boundary
+                geometry BLOB,           -- Detailed geometry
                 properties TEXT          -- JSON properties
             )
             """
@@ -1197,12 +1197,12 @@ class SQLiteStore(AnnotationStore):
         key = key or str(uuid.uuid4())
         geometry = annotation.geometry
         if geometry.geom_type == "Point":
-            boundary = None
+            serialised_geometry = None
         else:
-            boundary = self.serialise_geometry(geometry)
+            serialised_geometry = self.serialise_geometry(geometry)
         return {
             "key": key,
-            "boundary": boundary,
+            "geometry": serialised_geometry,
             "cx": int(geometry.centroid.x),
             "cy": int(geometry.centroid.y),
             "min_x": geometry.bounds[0],
@@ -1250,7 +1250,7 @@ class SQLiteStore(AnnotationStore):
             """
                 INSERT INTO annotations VALUES(
                     NULL, :key, :geom_type,
-                    :cx, :cy, :boundary, :properties
+                    :cx, :cy, :geometry, :properties
                 )
                 """,
             token,
@@ -1320,7 +1320,7 @@ class SQLiteStore(AnnotationStore):
           AND min_x <= :max_x
           AND max_y >= :min_y
           AND min_y <= :max_y
-          AND geometry_predicate(:geometry_predicate, :query_geometry, boundary, cx, cy)
+          AND geometry_predicate(:geometry_predicate, :query_geometry, geometry, cx, cy)
         """
         )
         query_parameters = {
@@ -1352,7 +1352,7 @@ class SQLiteStore(AnnotationStore):
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
-            select_callable="[key], boundary, properties",
+            select_callable="[key], geometry, properties",
         )
         if isinstance(where, Callable):
             return [
@@ -1370,7 +1370,7 @@ class SQLiteStore(AnnotationStore):
     ) -> List[Annotation]:
         query_geometry = geometry
         cur = self._query(
-            "boundary, properties, cx, cy",
+            "geometry, properties, cx, cy",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
@@ -1404,7 +1404,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT boundary, properties, cx, cy
+            SELECT geometry, properties, cx, cy
               FROM annotations
              WHERE [key] = :key
             """,
@@ -1413,9 +1413,9 @@ class SQLiteStore(AnnotationStore):
         row = cur.fetchone()
         if row is None:
             raise KeyError(key)
-        boundary, properties, cx, cy = row
-        properties = json.loads(properties or "{}")
-        geometry = self._unpack_geometry(boundary, cx, cy)
+        serialised_geometry, serialised_properties, cx, cy = row
+        properties = json.loads(serialised_properties or "{}")
+        geometry = self._unpack_geometry(serialised_geometry, cx, cy)
         return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
@@ -1444,7 +1444,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT [key], cx, cy, boundary, properties
+            SELECT [key], cx, cy, geometry, properties
               FROM annotations
             """
         )
@@ -1452,12 +1452,12 @@ class SQLiteStore(AnnotationStore):
             row = cur.fetchone()
             if row is None:
                 break
-            key, cx, cy, boundary, properties = row
-            if boundary is not None:
-                geometry = self._unpack_geometry(boundary, cx, cy)
+            key, cx, cy, serialised_geometry, serialised_properties = row
+            if serialised_geometry is not None:
+                geometry = self._unpack_geometry(serialised_geometry, cx, cy)
             else:
                 geometry = Point(cx, cy)
-            properties = json.loads(properties)
+            properties = json.loads(serialised_properties)
             yield key, Annotation(geometry, properties)
 
     def patch_many(
@@ -1523,7 +1523,7 @@ class SQLiteStore(AnnotationStore):
             **bounds,
             **xy,
             key=key,
-            boundary=self.serialise_geometry(geometry),
+            geometry=self.serialise_geometry(geometry),
         )
         cur.execute(
             """
@@ -1541,7 +1541,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute(
             """
             UPDATE annotations
-               SET cx = :x, cy = :y, boundary = :boundary
+               SET cx = :x, cy = :y, geometry = :geometry
              WHERE [key] = :key
             """,
             query_parameters,
