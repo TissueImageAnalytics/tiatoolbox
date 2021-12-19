@@ -972,9 +972,9 @@ def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
             break
 
 
-def test_patch_predictor_pcam_output(sample_patch1, sample_patch2):
+def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
     """Test the output of patch prediction models on PCam dataset."""
-    inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
+    inputs = [pathlib.Path(sample_patch3), pathlib.Path(sample_patch4)]
     pretrained_info = {
         "alexnet-pcam": [0.999980092048645, 0.9769067168235779],
         "resnet18-pcam": [0.999992847442627, 0.9466130137443542],
