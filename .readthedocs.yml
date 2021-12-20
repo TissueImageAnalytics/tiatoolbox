@@ -30,3 +30,7 @@ python:
   version: "3.8"
   install:
       - requirements: requirements_dev.txt
+        extra_requirements:
+            - nbsphinx
+            - sphinx_gallery
+            - sphinx_toolbox
