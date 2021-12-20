@@ -10,6 +10,7 @@ glymur
 imagecodecs
 jupyterlab
 matplotlib
+nbsphinx
 numpy
 opencv-python==4.5.4.60
 openslide-python==1.1.2
@@ -27,6 +28,8 @@ scikit-image==0.18.3
 scikit-learn>=0.23.2
 shapely
 sphinx==4.1.2
+sphinx_gallery
+sphinx_toolbox
 tifffile
 torch==1.9.1
 torchvision==0.10.1
