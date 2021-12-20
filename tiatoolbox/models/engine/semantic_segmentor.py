@@ -1116,7 +1116,7 @@ class SemanticSegmentor:
         return outputs
 
 
-class FeatureExtractor(SemanticSegmentor):
+class DeepFeatureExtractor(SemanticSegmentor):
     """Generic CNN Feature Extractor.
 
     A engine for using any CNN model as a feature extractor.
@@ -1152,7 +1152,7 @@ class FeatureExtractor(SemanticSegmentor):
         >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
         >>> # create resnet50 with pytorch pretrained weights
         >>> model = CNNExtractor('resnet50')
-        >>> predictor = FeatureExtractor(model=model)
+        >>> predictor = DeepFeatureExtractor(model=model)
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
         [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
@@ -1300,7 +1300,7 @@ class FeatureExtractor(SemanticSegmentor):
             >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
             >>> # create resnet50 with pytorch pretrained weights
             >>> model = CNNExtractor('resnet50')
-            >>> predictor = FeatureExtractor(model=model)
+            >>> predictor = DeepFeatureExtractor(model=model)
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
