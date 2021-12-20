@@ -44,7 +44,6 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-glymur.set_option("lib.num_threads", os.cpu_count() or 1)
 pixman_warning()
 
 
