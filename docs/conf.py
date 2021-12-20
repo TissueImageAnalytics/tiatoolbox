@@ -18,6 +18,8 @@
 # absolute, like shown here.
 #
 import os
+import pathlib
+import shutil
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
@@ -34,12 +36,26 @@ import tiatoolbox  # noqa: E402
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",  # Create neat summary tables
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinx_toolbox.collapse",
     "recommonmark",
+    "nbsphinx",
+    "sphinx_gallery.load_style",
 ]
+
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+# Remove 'view source code' from top of page (for html, not python)
+html_show_sourcelink = False
+# If no docstring, inherit from base class
+# ! only nice for our ABC but it looks ridiculous when inherit from
+# ! grand-nth ancestors
+autodoc_inherit_docstrings = False
+add_module_names = False  # Remove namespaces from class/method signatures
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -47,7 +63,6 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
 source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",
@@ -174,6 +189,15 @@ intersphinx_mapping = {
     "sklearn": ("https://scikit-learn.org/stable/", None),
 }
 
+# create latex preample so that we can build arbitrary nested depth
+fh = open("latex_preamble.tex", "r+")
+PREAMBLE = fh.read()
+fh.close()
+latex_elements = {
+    # Additional stuff for the LaTeX preamble.
+    "preamble": PREAMBLE,
+}
+
 # -- Options for autodoc -----------------------------------------------
 
 autodoc_typehints = "description"
@@ -181,3 +205,28 @@ autodoc_type_aliases = {
     "Iterable": "Iterable",
     "ArrayLike": "ArrayLike",
 }
+
+
+print("=" * 16)
+print("Copy example notebooks into docs/_notebooks")
+print("=" * 16)
+
+
+def all_but_ipynb(dir_path, contents):
+    """Helper to copy all .ipynb"""
+    result = []
+    for c in contents:
+        flag = os.path.isfile(os.path.join(dir_path, c)) and (not c.endswith(".ipynb"))
+        if flag:
+            result += [c]
+    return result
+
+
+DOC_ROOT = os.path.dirname(os.path.realpath(__file__))
+PROJ_ROOT = pathlib.Path(DOC_ROOT).parent
+shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
+shutil.copytree(
+    os.path.join(PROJ_ROOT, "examples"),
+    os.path.join(PROJ_ROOT, "docs/_notebooks"),
+    ignore=all_but_ipynb,
+)
