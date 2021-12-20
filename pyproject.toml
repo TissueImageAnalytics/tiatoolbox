@@ -24,7 +24,7 @@
 [tool.coverage.run]
   branch = true
   source = ['tiatoolbox']
-  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/detection.py']
+  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py']
 
 [tool.coverage.report]
   exclude_lines = [
@@ -34,4 +34,4 @@
     'if __name__ == .__main__.:',
   ]
   ignore_errors = true
-  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/detection.py']
+  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py']
