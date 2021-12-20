@@ -747,7 +747,7 @@ class WSIReader:
         Note: The field of view varies with resolution when using
         :func:`read_rect`.
 
-        .. figure:: images/read_rect_tissue.png
+        .. figure:: ../images/read_rect_tissue.png
             :width: 512
             :alt: Diagram illustrating read_rect
 
@@ -765,7 +765,7 @@ class WSIReader:
         baseline (maximum resultion of the image), then bicubic
         interpolation is applied to the output image.
 
-        .. figure:: images/read_rect-interpolated-reads.png
+        .. figure:: ../images/read_rect-interpolated-reads.png
             :width: 512
             :alt: Diagram illustrating read_rect interpolting between levels
 
@@ -931,7 +931,7 @@ class WSIReader:
         Note: The field of view remains the same as resolution is varied
         when using :func:`read_bounds`.
 
-        .. figure:: images/read_bounds_tissue.png
+        .. figure:: ../images/read_bounds_tissue.png
             :width: 512
             :alt: Diagram illustrating read_bounds
 
