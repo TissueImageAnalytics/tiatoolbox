@@ -24,7 +24,8 @@ import pathlib
 import click
 from PIL import Image
 
-from tiatoolbox import utils, wsicore
+from tiatoolbox import utils
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @click.group()
@@ -41,24 +42,31 @@ def main():  # pragma: no cover
     " default=img_input_dir/../slide_thumb.jpg",
 )
 @click.option(
-    "--mode",
-    default="show",
-    help="'show' to display image region or 'save' to save at the output path"
-    ", default=show",
+    "--file-types",
+    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
 )
-def slide_thumbnail(img_input, output_path, mode):
+@click.option(
+    "--mode",
+    default="save",
+    help="'show' to display image region or 'save' to save at the output path"
+    ", default=save",
+)
+def slide_thumbnail(img_input, output_path, file_types, mode):
     """Read whole slide image thumbnail."""
-    if output_path is None and mode == "save":
-        input_dir = pathlib.Path(img_input).parent
-        output_path = str(input_dir.parent / "slide_thumb.jpg")
+    files_all, output_path = utils.misc.prepare_file_dir_cli(
+        img_input, output_path, file_types, mode, "slide-thumbnail"
+    )
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
+    for curr_file in files_all:
+        wsi = WSIReader.open(input_img=curr_file)
 
-    slide_thumb = wsi.slide_thumbnail()
+        slide_thumb = wsi.slide_thumbnail()
+        if mode == "show":
+            im_region = Image.fromarray(slide_thumb)
+            im_region.show()
 
-    if mode == "show":
-        im_region = Image.fromarray(slide_thumb)
-        im_region.show()
-
-    if mode == "save":
-        utils.misc.imwrite(output_path, slide_thumb)
+        if mode == "save":
+            utils.misc.imwrite(
+                output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb
+            )
