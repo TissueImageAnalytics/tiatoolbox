@@ -1,5 +1,6 @@
 # Spell checking whitelist for flake8-spellcheck
 1x1
+argmax
 bbox
 binarize
 centroid
@@ -12,15 +13,19 @@ dataframe
 dataset
 Dataset
 Delaunay
+downsample
 downsampled
 dpkg
 dtype
+enum
+enums
 func
 getitem
 GPL
 homebrew
 HW
 HWC
+IFD
 img
 iostate
 JP2
@@ -41,6 +46,7 @@ nslookup
 numpy
 NxM
 NxN
+OME
 Omnyx
 openslide
 otsu
@@ -54,11 +60,14 @@ PTC
 pyright
 qtconsole
 resampling
+rescale
 runtime
 scipy
 Segmentor
 skipcq
 svs
+tiatoolbox
+tifffile
 tolist
 uint8
 v4
@@ -68,3 +77,5 @@ wsi
 wsireader
 XY
 YX
+YX
+zarr
