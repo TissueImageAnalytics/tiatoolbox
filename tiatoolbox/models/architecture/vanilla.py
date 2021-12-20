@@ -162,7 +162,7 @@ class CNNModel(ModelABC):
         return output.cpu().numpy()
 
 
-class CNNExtractor(ModelABC):
+class CNNBackbone(ModelABC):
     """Retrieve the model backbone and strip the classification layer.
 
     This is a wrapper for pretrained models within pytorch.
@@ -193,7 +193,7 @@ class CNNExtractor(ModelABC):
         >>> # Creating resnet50 architecture from default pytorch
         >>> # without the classification layer with its associated
         >>> # weights loaded
-        >>> model = CNNExtractor(backbone="resnet50")
+        >>> model = CNNBackbone(backbone="resnet50")
         >>> model.eval()  # set to evaluation mode
         >>> # dummy sample in NHWC form
         >>> samples = torch.random.rand(4, 3, 512, 512)

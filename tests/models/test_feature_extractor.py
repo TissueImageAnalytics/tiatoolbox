@@ -26,7 +26,7 @@ import shutil
 import numpy as np
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNExtractor
+from tiatoolbox.models.architecture.vanilla import CNNBackbone
 from tiatoolbox.models.engine.semantic_segmentor import (
     DeepFeatureExtractor,
     IOSegmentorConfig,
@@ -87,7 +87,7 @@ def test_functional(remote_sample, tmp_path):
         save_resolution={"units": "mpp", "resolution": 8.0},
     )
 
-    model = CNNExtractor("resnet50")
+    model = CNNBackbone("resnet50")
     extractor = DeepFeatureExtractor(batch_size=4, model=model)
     # should still run because we skip exception
     output_list = extractor.predict(
