@@ -40,10 +40,12 @@ from defusedxml.ElementTree import fromstring as et_from_string
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 glymur.set_option("lib.num_threads", os.cpu_count() or 1)
+pixman_warning()
 
 
 NumPair = Tuple[Number, Number]
