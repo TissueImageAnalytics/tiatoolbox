@@ -28,7 +28,7 @@ from typing import Union
 import torch
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.architecture.vanilla import CNNExtractor, CNNModel
+from tiatoolbox.models.architecture.vanilla import CNNBackbone, CNNModel
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
 

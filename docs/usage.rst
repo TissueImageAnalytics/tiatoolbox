@@ -99,7 +99,7 @@ Engine
 
 - :obj:`Patch Prediction <tiatoolbox.models.engine.patch_predictor.PatchPredictor>`
 - :obj:`Semantic Segmentation <tiatoolbox.models.engine.semantic_segmentor.SemanticSegmentor>`
-- :obj:`Feature Extraction <tiatoolbox.models.engine.semantic_segmentor.FeatureExtractor>`
+- :obj:`Feature Extraction <tiatoolbox.models.engine.semantic_segmentor.DeepFeatureExtractor>`
 - :obj:`Nucleus Instance Segmnetation <tiatoolbox.models.engine.nucleus_instance_segmentor.NucleusInstanceSegmentor>`
 
 ----------------------------
