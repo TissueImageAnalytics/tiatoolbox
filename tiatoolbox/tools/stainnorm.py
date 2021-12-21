@@ -21,7 +21,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Stain normalisation classes."""
+"""Stain normalization classes."""
 import cv2
 import numpy as np
 
@@ -36,8 +36,8 @@ from tiatoolbox.utils.misc import load_stain_matrix
 from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
 
 
-class StainNormaliser:
-    """Stain normalisation base class.
+class StainNormalizer:
+    """Stain normalization base class.
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
@@ -101,7 +101,7 @@ class StainNormaliser:
              image.
 
         Returns:
-            :class:`numpy.ndarray`: RGB stain normalised image.
+            :class:`numpy.ndarray`: RGB stain normalized image.
 
         """
         stain_matrix_source = self.extractor.get_stain_matrix(img)
@@ -119,8 +119,8 @@ class StainNormaliser:
         return trans.reshape(img.shape).astype(np.uint8)
 
 
-class CustomNormaliser(StainNormaliser):
-    """Stain Normalisation using a user-defined stain matrix.
+class CustomNormalizer(StainNormalizer):
+    """Stain Normalization using a user-defined stain matrix.
 
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
@@ -130,8 +130,8 @@ class CustomNormaliser(StainNormaliser):
           either 2x3 or 3x3.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import CustomNormaliser
-        >>> norm = CustomNormaliser(stain_matrix)
+        >>> from tiatoolbox.tools.stainnorm import CustomNormalizer
+        >>> norm = CustomNormalizer(stain_matrix)
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
 
@@ -143,10 +143,10 @@ class CustomNormaliser(StainNormaliser):
         self.extractor = CustomExtractor(stain_matrix)
 
 
-class RuifrokNormaliser(StainNormaliser):
-    """Ruifrok & Johnston stain normaliser.
+class RuifrokNormalizer(StainNormalizer):
+    """Ruifrok & Johnston stain normalizer.
 
-    Normalise a patch to the stain appearance of the target image using the method of:
+    Normalize a patch to the stain appearance of the target image using the method of:
 
     Ruifrok, Arnout C., and Dennis A. Johnston. "Quantification of
     histochemical staining by color deconvolution." Analytical and
@@ -156,8 +156,8 @@ class RuifrokNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import RuifrokNormaliser
-        >>> norm = RuifrokNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import RuifrokNormalizer
+        >>> norm = RuifrokNormalizer()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
 
@@ -168,10 +168,10 @@ class RuifrokNormaliser(StainNormaliser):
         self.extractor = RuifrokExtractor()
 
 
-class MacenkoNormaliser(StainNormaliser):
-    """Macenko stain normaliser.
+class MacenkoNormalizer(StainNormalizer):
+    """Macenko stain normalizer.
 
-    Normalise a patch to the stain appearance of the target image using the method of:
+    Normalize a patch to the stain appearance of the target image using the method of:
 
     Macenko, Marc, et al. "A method for normalizing histology
     slides for quantitative analysis." 2009 IEEE International
@@ -181,8 +181,8 @@ class MacenkoNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import MacenkoNormaliser
-        >>> norm = MacenkoNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import MacenkoNormalizer
+        >>> norm = MacenkoNormalizer()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
 
@@ -193,10 +193,10 @@ class MacenkoNormaliser(StainNormaliser):
         self.extractor = MacenkoExtractor()
 
 
-class VahadaneNormaliser(StainNormaliser):
-    """Vahadane stain normaliser.
+class VahadaneNormalizer(StainNormalizer):
+    """Vahadane stain normalizer.
 
-    Normalise a patch to the stain appearance of the target image using the method of:
+    Normalize a patch to the stain appearance of the target image using the method of:
 
     Vahadane, Abhishek, et al. "Structure-preserving color normalization
     and sparse stain separation for histological images."
@@ -206,8 +206,8 @@ class VahadaneNormaliser(StainNormaliser):
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import VahadaneNormaliser
-        >>> norm = VahadaneNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import VahadaneNormalizer
+        >>> norm = VahadaneNormalizer()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
 
@@ -218,10 +218,10 @@ class VahadaneNormaliser(StainNormaliser):
         self.extractor = VahadaneExtractor()
 
 
-class ReinhardNormaliser:
-    """Reinhard colour normaliser.
+class ReinhardNormalizer:
+    """Reinhard colour normalizer.
 
-    Normalise a patch colour to the target image using the method of:
+    Normalize a patch colour to the target image using the method of:
 
     Reinhard, Erik, et al. "Color transfer between images."
     IEEE Computer graphics and applications 21.5 (2001): 34-41.
@@ -234,8 +234,8 @@ class ReinhardNormaliser:
         target_stds (float) : standard deviation of each LAB channel.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import ReinhardNormaliser
-        >>> norm = ReinhardNormaliser()
+        >>> from tiatoolbox.tools.stainnorm import ReinhardNormalizer
+        >>> norm = ReinhardNormalizer()
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(src_img)
 
@@ -263,7 +263,7 @@ class ReinhardNormaliser:
             img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Input image.
 
         Returns:
-            :class:`numpy.ndarray` of type :class:`numpy.float`: colour normalised RGB
+            :class:`numpy.ndarray` of type :class:`numpy.float`: colour normalized RGB
               image.
 
         """
@@ -342,8 +342,8 @@ class ReinhardNormaliser:
         return means, stds
 
 
-def get_normaliser(method_name, stain_matrix=None):
-    """Return a :class:`.StainNormaliser` with corresponding name.
+def get_normalizer(method_name, stain_matrix=None):
+    """Return a :class:`.StainNormalizer` with corresponding name.
 
     Args:
         method_name (str) : name of stain norm method, must be one of "reinhard",
@@ -353,11 +353,11 @@ def get_normaliser(method_name, stain_matrix=None):
           .npy file. This is only utilised if using "custom" method name.
 
     Returns:
-        StainNormaliser : an object with base :class:'.StainNormaliser' as base class.
+        StainNormalizer : an object with base :class:'.StainNormalizer' as base class.
 
     Examples:
-        >>> from tiatoolbox.tools.stainnorm import get_normaliser
-        >>> norm = get_normaliser('Reinhard')
+        >>> from tiatoolbox.tools.stainnorm import get_normalizer
+        >>> norm = get_normalizer('Reinhard')
         >>> norm.fit(target_img)
         >>> norm_img = norm.transform(source_img)
 
@@ -369,15 +369,15 @@ def get_normaliser(method_name, stain_matrix=None):
         raise ValueError("stain_matrix is only defined when using custom")
 
     if method_name.lower() == "reinhard":
-        norm = ReinhardNormaliser()
+        norm = ReinhardNormalizer()
     elif method_name.lower() == "custom":
-        norm = CustomNormaliser(load_stain_matrix(stain_matrix))
+        norm = CustomNormalizer(load_stain_matrix(stain_matrix))
     elif method_name.lower() == "ruifrok":
-        norm = RuifrokNormaliser()
+        norm = RuifrokNormalizer()
     elif method_name.lower() == "macenko":
-        norm = MacenkoNormaliser()
+        norm = MacenkoNormalizer()
     elif method_name.lower() == "vahadane":
-        norm = VahadaneNormaliser()
+        norm = VahadaneNormalizer()
     else:
         raise MethodNotSupported
 

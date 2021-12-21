@@ -39,16 +39,16 @@ Stain Extraction
 - :obj:`Stain Extraction <tiatoolbox.tools.stainextract>`
 
 ^^^^^^^^^^^^^^^^^^^
-Stain Normalisation
+Stain Normalization
 ^^^^^^^^^^^^^^^^^^^
 
-- :obj:`get_normaliser <tiatoolbox.tools.stainnorm.get_normaliser>`
-- :obj:`StainNormaliser <tiatoolbox.tools.stainnorm.StainNormaliser>`
-- :obj:`CustomNormaliser <tiatoolbox.tools.stainnorm.CustomNormaliser>`
-- :obj:`RuifrokNormaliser <tiatoolbox.tools.stainnorm.RuifrokNormaliser>`
-- :obj:`MacenkoNormaliser <tiatoolbox.tools.stainnorm.MacenkoNormaliser>`
-- :obj:`VahadaneNormaliser <tiatoolbox.tools.stainnorm.VahadaneNormaliser>`
-- :obj:`ReinhardNormaliser <tiatoolbox.tools.stainnorm.ReinhardNormaliser>`
+- :obj:`get_normalizer <tiatoolbox.tools.stainnorm.get_normalizer>`
+- :obj:`StainNormalizer <tiatoolbox.tools.stainnorm.StainNormalizer>`
+- :obj:`CustomNormalizer <tiatoolbox.tools.stainnorm.CustomNormalizer>`
+- :obj:`RuifrokNormalizer <tiatoolbox.tools.stainnorm.RuifrokNormalizer>`
+- :obj:`MacenkoNormalizer <tiatoolbox.tools.stainnorm.MacenkoNormalizer>`
+- :obj:`VahadaneNormalizer <tiatoolbox.tools.stainnorm.VahadaneNormalizer>`
+- :obj:`ReinhardNormalizer <tiatoolbox.tools.stainnorm.ReinhardNormalizer>`
 
 ^^^^^^^^^^^^^^^
 Tissue Masking
