@@ -18,14 +18,14 @@ This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIATo
 
 ![image](https://user-images.githubusercontent.com/74412979/145223963-f5cc3efc-5762-43c1-b040-c1f738a98e1b.png) ![image](https://user-images.githubusercontent.com/74412979/145224002-b61eb074-5b55-45c9-a45c-9b527437be2c.png)
 
-## 2- Stain normalisation of histology images ([02-stain-normalisation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalisation.ipynb))
-Stain normalisation is a common pre-processing step in computational pathology, whose objective is to reduce, as much as possible, colour variation that has no clinical significance. This variation may be caused by using different scanners, different staining protocols and practices, staining agents that have been left on the laboratory shelf for different lengths of time, different settings when using the scanner, etc. It has been shown in many studies that stain normalisation can make an algorithm more robust against such differences. TIAToolbox makes a few different stain-normalisation algorithms available to the use. The implemented stain normalisation methods in TIAToolbox are:
-- Reinhard stain normalisation
+## 2- Stain normalization of histology images ([02-stain-normalization.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalization.ipynb))
+Stain normalization is a common pre-processing step in computational pathology, whose objective is to reduce, as much as possible, colour variation that has no clinical significance. This variation may be caused by using different scanners, different staining protocols and practices, staining agents that have been left on the laboratory shelf for different lengths of time, different settings when using the scanner, etc. It has been shown in many studies that stain normalization can make an algorithm more robust against such differences. TIAToolbox makes a few different stain-normalization algorithms available to the use. The implemented stain normalization methods in TIAToolbox are:
+- Reinhard stain normalization
 - Ruifork
 - Macenko
 - Vahadane.
 
-Alternatively, if you prefer, you can use your own stain matrix for stain normalisation. In the images below, the object of an algorithm is to change to source image to make its colours similar to those in the target image.
+Alternatively, if you prefer, you can use your own stain matrix for stain normalization. In the images below, the object of an algorithm is to change to source image to make its colours similar to those in the target image.
 
 ![image](https://user-images.githubusercontent.com/74412979/145396514-4f84bcf3-35f1-4474-81d9-2c30be8ac353.png)
 
