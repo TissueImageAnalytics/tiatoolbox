@@ -28,7 +28,7 @@ import random
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
 
-from tiatoolbox.tools.stainnorm import get_normaliser
+from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
@@ -65,7 +65,7 @@ class StainAugmentor(ImageOnlyTransform):
             albumentations documentations for more information.
 
     Attributes:
-        stain_normaliser: Fitted stain normalization class.
+        stain_normalizer: Fitted stain normalization class.
         stain_matrix (:class:`numpy.ndarray`): extracted stain matrix from the image
         source_concentrations (:class:`numpy.ndarray`): extracted stain
             concentrations from the input image.
@@ -127,7 +127,7 @@ class StainAugmentor(ImageOnlyTransform):
                 f"Unsupported stain extractor method '{self.method}' for "
                 "StainAugmentor. Choose either 'vahadane' or 'macenko'."
             )
-        self.stain_normaliser = get_normaliser(self.method.lower())
+        self.stain_normalizer = get_normalizer(self.method.lower())
 
         self.alpha = None
         self.beta = None
@@ -152,11 +152,11 @@ class StainAugmentor(ImageOnlyTransform):
 
         """
         if self.stain_matrix is None:
-            self.stain_normaliser.fit(img)
-            self.stain_matrix = self.stain_normaliser.stain_matrix_target
-            self.source_concentrations = self.stain_normaliser.target_concentrations
+            self.stain_normalizer.fit(img)
+            self.stain_matrix = self.stain_normalizer.stain_matrix_target
+            self.source_concentrations = self.stain_normalizer.target_concentrations
         else:
-            self.source_concentrations = self.stain_normaliser.get_concentrations(
+            self.source_concentrations = self.stain_normalizer.get_concentrations(
                 img, self.stain_matrix
             )
         self.n_stains = self.source_concentrations.shape[1]

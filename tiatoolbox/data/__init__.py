@@ -106,5 +106,5 @@ def _local_sample_path(path: pathlib.Path) -> pathlib.Path:
 
 
 def stainnorm_target() -> np.ndarray:
-    """Target image for stain normalisation."""
+    """Target image for stain normalization."""
     return imread(_local_sample_path("target_image.png"))

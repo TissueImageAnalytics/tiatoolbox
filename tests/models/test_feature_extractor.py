@@ -26,9 +26,9 @@ import shutil
 import numpy as np
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNExtractor
+from tiatoolbox.models.architecture.vanilla import CNNBackbone
 from tiatoolbox.models.engine.semantic_segmentor import (
-    FeatureExtractor,
+    DeepFeatureExtractor,
     IOSegmentorConfig,
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
@@ -57,7 +57,7 @@ def test_functional(remote_sample, tmp_path):
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     _rm_dir(save_dir)  # default output dir test
-    extractor = FeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
+    extractor = DeepFeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
     output_list = extractor.predict(
         [mini_wsi_svs],
         mode="wsi",
@@ -87,8 +87,8 @@ def test_functional(remote_sample, tmp_path):
         save_resolution={"units": "mpp", "resolution": 8.0},
     )
 
-    model = CNNExtractor("resnet50")
-    extractor = FeatureExtractor(batch_size=4, model=model)
+    model = CNNBackbone("resnet50")
+    extractor = DeepFeatureExtractor(batch_size=4, model=model)
     # should still run because we skip exception
     output_list = extractor.predict(
         [mini_wsi_svs],

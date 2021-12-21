@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/74412979/145408251-0420e41c-d183-44e9-a131-9a7229776b72.png">
+  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
 </p>
 
 <h1 align="center">TIAToolbox Example Notebooks</h1>
 
-In this directory, you will find some example use cases of the TIAToolbox functionalities in the form of Jupyter Notebooks. All of these notebooks are designed and maintained to run on Colab and Kaggle platforms (unless otherwise stated) but you can run them on your own system as well. In the first cell of each example notebook, there are two badges, ![colab badge](https://colab.research.google.com/assets/colab-badge.svg) and ![kaggle badge](https://kaggle.com/static/images/open-in-kaggle.svg). Simply clicking on one of these badges opens that notebook on the selected platform. Each notebook contains all the information needed to run the example remotely on Colab or Kaggle. All that you need is a local computer at your fingertips, with a standard browser connected to the Internet. The local computer does even need a programming language to be installed&mdash;all the crucial resources are provided at the remote site. To run the notebook on other platforms, such as your own computer, set up your Python environment, as explained in the [installation guide](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
+In this directory, you will find some example use cases of the TIAToolbox functionalities in the form of Jupyter Notebooks. All of these notebooks are designed and maintained to run on Colab and Kaggle platforms (unless otherwise stated) but you can run them on your own system as well. In the first cell of each example notebook, there are links to open the notebook in Google Colab and Kaggle. Simply clicking on one of these links opens that notebook on the selected platform. Each notebook contains all the information needed to run the example remotely on Colab or Kaggle. All that you need is a local computer at your fingertips, with a standard browser connected to the Internet. The local computer does even need a programming language to be installed&mdash;all the crucial resources are provided at the remote site. To run the notebook on other platforms, such as your own computer, set up your Python environment, as explained in the [installation guide](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
 
 We explain here the structure of the examples directory and briefly describe our notebooks. (Except for technical minutiae, the words _folder_ and _directory_ are interchangeable.) The examples directory includes general notebooks explaining different functionalities/modules incorporated in TIAToolbox. Most of these notebooks are written with less advanced users in mind&mdash;some familiarity with Python is assumed&mdash;but the capabilities they demonstrate would also be useful to more advanced users.
 
@@ -18,14 +18,14 @@ This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIATo
 
 ![image](https://user-images.githubusercontent.com/74412979/145223963-f5cc3efc-5762-43c1-b040-c1f738a98e1b.png) ![image](https://user-images.githubusercontent.com/74412979/145224002-b61eb074-5b55-45c9-a45c-9b527437be2c.png)
 
-## 2- Stain normalisation of histology images ([02-stain-normalisation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalisation.ipynb))
-Stain normalisation is a common pre-processing step in computational pathology, whose objective is to reduce, as much as possible, colour variation that has no clinical significance. This variation may be caused by using different scanners, different staining protocols and practices, staining agents that have been left on the laboratory shelf for different lengths of time, different settings when using the scanner, etc. It has been shown in many studies that stain normalisation can make an algorithm more robust against such differences. TIAToolbox makes a few different stain-normalisation algorithms available to the use. The implemented stain normalisation methods in TIAToolbox are:
-- Reinhard stain normalisation
+## 2- Stain normalization of histology images ([02-stain-normalization.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalization.ipynb))
+Stain normalization is a common pre-processing step in computational pathology, whose objective is to reduce, as much as possible, colour variation that has no clinical significance. This variation may be caused by using different scanners, different staining protocols and practices, staining agents that have been left on the laboratory shelf for different lengths of time, different settings when using the scanner, etc. It has been shown in many studies that stain normalization can make an algorithm more robust against such differences. TIAToolbox makes a few different stain-normalization algorithms available to the use. The implemented stain normalization methods in TIAToolbox are:
+- Reinhard stain normalization
 - Ruifork
 - Macenko
 - Vahadane.
 
-Alternatively, if you prefer, you can use your own stain matrix for stain normalisation. In the images below, the object of an algorithm is to change to source image to make its colours similar to those in the target image.
+Alternatively, if you prefer, you can use your own stain matrix for stain normalization. In the images below, the object of an algorithm is to change to source image to make its colours similar to those in the target image.
 
 ![image](https://user-images.githubusercontent.com/74412979/145396514-4f84bcf3-35f1-4474-81d9-2c30be8ac353.png)
 
@@ -78,7 +78,5 @@ This notebook demonstrates how the functionalities available in TIAToolbox can b
 
 > * Example notebook on training the SlideGraph model is avaialbe here: [slide-graph.ipynb for training](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/full-pipelines/slide-graph.ipynb)
 > * Example notebook on using SlideGraph model for WSI inference is avaialbe here: [slide-graph.ipynb for inference](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/inference-pipelines/slide-graph.ipynb)
-
-![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)
 
 ![image](https://user-images.githubusercontent.com/74412979/145244421-ad2f28fe-1361-44b8-a82f-707fd72b0a28.png)

@@ -289,9 +289,6 @@ class HoVerNet(ModelABC):
         mode (str): To use architecture defined in as in original paper
           (`original`) or the one used in Pannuke paper (`fast`).
 
-    Examples:
-        TODO
-
     References:
         Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."

@@ -1,14 +1,14 @@
 """Tests for exceptions used in the toolbox."""
 
+import pathlib
+
+import pytest
+
+from tiatoolbox import utils
+from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.wsicore.save_tiles import save_tiles
 from tiatoolbox.wsicore.slide_info import slide_info
-from tiatoolbox.tools.stainnorm import get_normaliser
-from tiatoolbox import utils
-
-
-import pytest
-import pathlib
 
 
 def test_exception_tests():
@@ -29,8 +29,8 @@ def test_exception_tests():
         )
 
     with pytest.raises(MethodNotSupported):
-        get_normaliser(method_name="invalid_normaliser")
+        get_normalizer(method_name="invalid_normalizer")
 
     with pytest.raises(Exception) as e:
-        get_normaliser(method_name="reinhard", stain_matrix="[1, 2]")
+        get_normalizer(method_name="reinhard", stain_matrix="[1, 2]")
     assert str(e.value) == "stain_matrix is only defined when using custom"
