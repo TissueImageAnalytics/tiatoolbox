@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
+  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
 </p>
 
 <h1 align="center">TIAToolbox Example Notebooks</h1>
