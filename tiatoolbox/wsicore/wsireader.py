@@ -30,13 +30,11 @@ from datetime import datetime
 from numbers import Number
 from typing import Iterable, List, Tuple, Union
 
-import glymur
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
 import zarr
-from defusedxml.ElementTree import fromstring as et_from_string
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
@@ -44,9 +42,8 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-glymur.set_option("lib.num_threads", os.cpu_count() or 1)
-pixman_warning()
 
+pixman_warning()
 
 NumPair = Tuple[Number, Number]
 IntPair = Tuple[int, int]
@@ -1441,6 +1438,9 @@ class OmnyxJP2WSIReader(WSIReader):
 
     def __init__(self, input_img):
         super().__init__(input_img=input_img)
+        import glymur
+
+        glymur.set_option("lib.num_threads", os.cpu_count() or 1)
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(
@@ -1573,6 +1573,8 @@ class OmnyxJP2WSIReader(WSIReader):
             WSIMeta: containing meta information
 
         """
+        import glymur
+
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         description = box[3].xml.find("description")
@@ -2027,6 +2029,8 @@ class TIFFWSIReader(WSIReader):
         # The OME-XML should be in each IFD but is optional. It must be
         # present in the first IFD. We simply get the description from
         # the first IFD.
+        from defusedxml.ElementTree import fromstring as et_from_string
+
         description = self.tiff.pages[0].description
         xml = et_from_string(description)
         namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
