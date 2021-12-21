@@ -43,8 +43,8 @@ applies the padding to the bounds.
 PADDING_TO_BOUNDS.flags.writeable = False
 
 
-def normalise_padding_size(padding):
-    """Normalises padding to be length 4 (left, top, right, bottom).
+def normalize_padding_size(padding):
+    """Normalizes padding to be length 4 (left, top, right, bottom).
 
     Given a scalar value, this is assumed to apply to all sides and
     therefore repeated for each output (left, right, top, bottom). A
@@ -52,7 +52,7 @@ def normalise_padding_size(padding):
     left/right and top/bottom.
 
     Args:
-        padding (int or tuple(int)): Padding to normalise.
+        padding (int or tuple(int)): Padding to normalize.
 
     Raises:
         ValueError: Invalid input size of padding (e.g. length 3).
@@ -347,7 +347,7 @@ def safe_padded_read(
         raise ValueError("Padding cannot be negative.")
 
     # Allow padding to be a 2-tuple in addition to an int or 4-tuple
-    padding = normalise_padding_size(padding)
+    padding = normalize_padding_size(padding)
 
     # Ensure stride is a 2-tuple
     if np.size(stride) not in [1, 2]:
@@ -535,8 +535,8 @@ def sub_pixel_read(  # noqa: CCR001
     if 0 in bounds2locsize(bounds)[1]:
         raise ValueError("Bounds must have non-zero size")
 
-    # Normalise padding
-    padding = normalise_padding_size(padding)
+    # Normalize padding
+    padding = normalize_padding_size(padding)
 
     # Check the bounds are valid or have a negative size
     # The left/start_x and top/start_y values should usually be smaller
@@ -548,7 +548,7 @@ def sub_pixel_read(  # noqa: CCR001
     if isinstance(image, Image.Image):
         image = np.array(image)
 
-    # Normalise none pad_mode to None
+    # Normalize none pad_mode to None
     if pad_mode.lower() == "none":
         pad_mode = None
 

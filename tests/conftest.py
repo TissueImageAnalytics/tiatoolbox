@@ -109,7 +109,7 @@ def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
 @pytest.fixture(scope="session")
 def source_image(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for source image.
-    Download stain normalisation source image for pytest.
+    Download stain normalization source image for pytest.
 
     """
     return remote_sample("stainnorm-source")

@@ -42,7 +42,6 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-
 pixman_warning()
 
 NumPair = Tuple[Number, Number]
@@ -151,7 +150,7 @@ class WSIReader:
         This property is cached and only generated on the first call.
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata
+            WSIMeta: An object containing normalized slide metadata
 
         """
         # In Python>=3.8 this could be replaced with functools.cached_property
@@ -180,7 +179,7 @@ class WSIReader:
         :func:utils.transforms.objective_power2mpp.
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata.
+            WSIMeta: An object containing normalized slide metadata.
 
         """
         raise NotImplementedError
@@ -1880,7 +1879,7 @@ class ArrayView:
         return tuple(self._shape[c] for c in "YXS")
 
     def __getitem__(self, index):
-        # Normalise to a tuple of length = len(self.axes)
+        # Normalize to a tuple of length = len(self.axes)
         if not isinstance(index, tuple):
             index = (index,)
         while len(index) < len(self.axes):

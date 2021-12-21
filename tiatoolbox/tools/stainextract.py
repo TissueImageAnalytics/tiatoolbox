@@ -21,7 +21,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Stain matrix extraction for stain normalisation."""
+"""Stain matrix extraction for stain normalization."""
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
@@ -213,8 +213,8 @@ class MacenkoExtractor:
         # order of H&E - H first row
         he = h_and_e_in_right_order(v1, v2)
 
-        normalised_rows = he / np.linalg.norm(he, axis=1)[:, None]
-        return normalised_rows
+        normalized_rows = he / np.linalg.norm(he, axis=1)[:, None]
+        return normalized_rows
 
 
 class VahadaneExtractor:
@@ -277,6 +277,6 @@ class VahadaneExtractor:
         # H on first row.
         dictionary = dl_output_for_h_and_e(dictionary)
 
-        normalised_rows = dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
+        normalized_rows = dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
 
-        return normalised_rows
+        return normalized_rows

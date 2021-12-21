@@ -20,7 +20,7 @@
 
 """This module defines a dataclass which holds metadata about a WSI.
 
-With this class, metadata is in a normalised consistent format
+With this class, metadata is in a normalized consistent format
 which is quite useful when working with many different WSI formats.
 The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.
