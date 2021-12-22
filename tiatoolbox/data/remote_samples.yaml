@@ -59,6 +59,10 @@ files:
     url: [*modelroot, "samples/kather_patch1.tif"]
   sample-patch-2:
     url: [*modelroot, "samples/kather_patch2.tif"]
+  sample-patch-3:
+    url: [*modelroot, "samples/pcam_patch1.png"]
+  sample-patch-4:
+    url: [*modelroot, "samples/pcam_patch2.png"]
   wsi1_2k_2k_svs:
     url: [*modelroot, "samples/wsi1_2k_2k.svs"]
   wsi1_8k_8k_svs:

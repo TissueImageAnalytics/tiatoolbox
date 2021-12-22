@@ -28,7 +28,7 @@ from tiatoolbox.models.engine.patch_predictor import (
     WSIPatchDataset,
 )
 from tiatoolbox.models.engine.semantic_segmentor import (
-    FeatureExtractor,
+    DeepFeatureExtractor,
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,

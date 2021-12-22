@@ -1140,10 +1140,10 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
         )
 
 
-def test_normalise_padding_input_dims():
-    """Test that normalise padding error with input dimensions > 1."""
+def test_normalize_padding_input_dims():
+    """Test that normalize padding error with input dimensions > 1."""
     with pytest.raises(ValueError, match="1 dimensional"):
-        utils.image.normalise_padding_size(((0, 0), (0, 0)))
+        utils.image.normalize_padding_size(((0, 0), (0, 0)))
 
 
 def test_select_device():
@@ -1232,3 +1232,19 @@ def test_imread_none_args():
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.misc.imread(img)
+
+
+def test_detect_pixman():
+    """Test detection of the pixman version.
+
+    Simply check it passes without exception.
+    """
+    _, _ = utils.env_detection.pixman_version()
+
+
+def test_detect_travis():
+    """Test detection of the travis environment.
+
+    Simply check it passes without exception.
+    """
+    _ = utils.env_detection.running_on_travis()

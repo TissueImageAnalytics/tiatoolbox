@@ -302,7 +302,7 @@ class WSIStreamDataset(torch_data.Dataset):
             )
             reader = VirtualWSIReader(
                 img,
-                metadata,
+                info=metadata,
             )
         return reader
 
@@ -1116,7 +1116,7 @@ class SemanticSegmentor:
         return outputs
 
 
-class FeatureExtractor(SemanticSegmentor):
+class DeepFeatureExtractor(SemanticSegmentor):
     """Generic CNN Feature Extractor.
 
     A engine for using any CNN model as a feature extractor.
@@ -1131,7 +1131,7 @@ class FeatureExtractor(SemanticSegmentor):
           for processing the data. By default, the corresponding pretrained weights
           will also be downloaded. However, you can override with your own set of
           weights via the `pretrained_weights` argument. Argument is case insensitive.
-          Refer to :class:`tiatoolbox.models.architecture.vanilla.CNNExtractor`
+          Refer to :class:`tiatoolbox.models.architecture.vanilla.CNNBackbone`
           for list of supported pretrained models.
         pretrained_weights (str): Path to the weight of the corresponding
           `pretrained_model`.
@@ -1148,11 +1148,11 @@ class FeatureExtractor(SemanticSegmentor):
 
     Examples:
         >>> # Sample output of a network
-        >>> from tiatoolbox.models.architecture.vanilla import CNNExtractor
+        >>> from tiatoolbox.models.architecture.vanilla import CNNBackbone
         >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
         >>> # create resnet50 with pytorch pretrained weights
-        >>> model = CNNExtractor('resnet50')
-        >>> predictor = FeatureExtractor(model=model)
+        >>> model = CNNBackbone('resnet50')
+        >>> predictor = DeepFeatureExtractor(model=model)
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
         [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
@@ -1296,11 +1296,11 @@ class FeatureExtractor(SemanticSegmentor):
 
         Examples:
             >>> # Sample output of a network
-            >>> from tiatoolbox.models.architecture.vanilla import CNNExtractor
+            >>> from tiatoolbox.models.architecture.vanilla import CNNBackbone
             >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
             >>> # create resnet50 with pytorch pretrained weights
-            >>> model = CNNExtractor('resnet50')
-            >>> predictor = FeatureExtractor(model=model)
+            >>> model = CNNBackbone('resnet50')
+            >>> predictor = DeepFeatureExtractor(model=model)
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]

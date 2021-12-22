@@ -28,26 +28,28 @@ import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
-import glymur
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
 import zarr
-from defusedxml.ElementTree import fromstring as et_from_string
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-glymur.set_option("lib.num_threads", os.cpu_count() or 1)
+pixman_warning()
 
-
+NumPair = Tuple[Number, Number]
 IntPair = Tuple[int, int]
+Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
+Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+WSIReaderInput = Union[str, pathlib.Path, np.ndarray, "WSIReader"]
 
 
 class WSIReader:
@@ -71,7 +73,7 @@ class WSIReader:
 
     """
 
-    @staticmethod
+    @staticmethod  # noqa: A003
     def open(
         input_img: Union[str, pathlib.Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
@@ -104,36 +106,49 @@ class WSIReader:
         if isinstance(input_img, (str, pathlib.Path)):
             _, _, suffixes = utils.misc.split_path_name_ext(input_img)
 
+            if suffixes[-1] not in [
+                ".svs",
+                ".npy",
+                ".ndpi",
+                ".mrxs",
+                ".ndpi",
+                ".tif",
+                ".tiff",
+                ".jp2",
+                ".png",
+                ".jpg",
+                ".jpeg",
+            ]:
+                raise FileNotSupported(
+                    f"File {input_img} is not a supported file format."
+                )
+
             if suffixes[-1] in (".npy",):
                 input_img = np.load(input_img)
-                wsi = VirtualWSIReader(input_img, mpp=mpp, power=power)
+                return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
-            elif suffixes[-2:] in ([".ome", ".tiff"],):
-                wsi = TIFFWSIReader(input_img, mpp=mpp, power=power)
+            if suffixes[-2:] in ([".ome", ".tiff"],):
+                return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
-            elif suffixes[-1] in (".jpg", ".png", ".tif"):
-                wsi = VirtualWSIReader(input_img, mpp=mpp, power=power)
+            if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
+                return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
-            elif suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
-                wsi = OpenSlideWSIReader(input_img, mpp=mpp, power=power)
+            if suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
+                return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
-            elif suffixes[-1] == (".jp2"):
-                wsi = OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
+            if suffixes[-1] in (".jp2",):
+                return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
 
-            else:
-                raise FileNotSupported("Filetype not supported.")
-        elif isinstance(input_img, np.ndarray):
-            wsi = VirtualWSIReader(input_img, mpp=mpp, power=power)
-        elif isinstance(
+        if isinstance(input_img, np.ndarray):
+            return VirtualWSIReader(input_img, mpp=mpp, power=power)
+
+        if isinstance(
             input_img,
-            (VirtualWSIReader, OpenSlideWSIReader, OmnyxJP2WSIReader, TIFFWSIReader),
+            WSIReader,
         ):
             # input is already a tiatoolbox wsi handler
-            wsi = input_img
-        else:
-            raise TypeError("Please input correct image path or an ndarray image.")
-
-        return wsi
+            return input_img
+        raise TypeError("Invalid input. Must be a file path or an ndarray image.")
 
     def __init__(
         self,
@@ -156,7 +171,7 @@ class WSIReader:
         This property is cached and only generated on the first call.
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata
+            WSIMeta: An object containing normalized slide metadata
 
         """
         # In Python>=3.8 this could be replaced with functools.cached_property
@@ -189,12 +204,14 @@ class WSIReader:
         :func:utils.transforms.objective_power2mpp.
 
         Returns:
-            WSIMeta: An object containing normalised slide metadata.
+            WSIMeta: An object containing normalized slide metadata.
 
         """
         raise NotImplementedError
 
-    def _relative_level_scales(self, resolution, units):
+    def _relative_level_scales(
+        self, resolution: Resolution, units: str
+    ) -> List[np.ndarray]:
         """Calculate scale of each level in the WSI relative to given resolution.
 
         Find the relative scale of each image pyramid / resolution level
@@ -233,7 +250,7 @@ class WSIReader:
         """
         info = self.info
 
-        def make_into_array(x):
+        def np_pair(x):
             """Ensure input x is a numpy array of length 2."""
             if isinstance(x, numbers.Number):
                 # If one number is given, the same value is used for x and y
@@ -253,18 +270,20 @@ class WSIReader:
             ceil_downsample = info.level_downsamples[ceil]
             return np.interp(x, [floor, ceil], [floor_downsample, ceil_downsample])
 
-        resolution = make_into_array(resolution)
+        resolution = np_pair(resolution)
 
+        if units not in ("mpp", "power", "level", "baseline"):
+            raise ValueError("Invalid units")
         if units == "mpp":
             if info.mpp is None:
                 raise ValueError("MPP is None")
             base_scale = info.mpp
-        elif units == "power":
+        if units == "power":
             if info.objective_power is None:
                 raise ValueError("Objective power is None")
             base_scale = 1 / info.objective_power
             resolution = 1 / resolution
-        elif units == "level":
+        if units == "level":
             if any(resolution >= len(info.level_downsamples)):
                 raise ValueError(
                     f"Target scale level {resolution} "
@@ -272,16 +291,14 @@ class WSIReader:
                 )
             base_scale = 1
             resolution = level_to_downsample(resolution)
-        elif units == "baseline":
+        if units == "baseline":
             base_scale = 1
             resolution = 1 / resolution
-        else:
-            raise ValueError(f"Invalid units `{units}`.")
 
         return [(base_scale * ds) / resolution for ds in info.level_downsamples]
 
     def _find_optimal_level_and_downsample(
-        self, resolution, units, precision=3
+        self, resolution: Resolution, units: str, precision: int = 3
     ) -> Tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
 
@@ -305,7 +322,7 @@ class WSIReader:
             tuple: Optimal read level and scale factor between the
                 optimal level and the target scale (usually <= 1):
                 - :py:obj:`int` - Level
-                - :py:obj:`float` - Scale factor
+                - np.ndarray - Scale factor in X and Y
 
         """
         level_scales = self._relative_level_scales(resolution, units)
@@ -336,11 +353,18 @@ class WSIReader:
             )
         return level, scale
 
-    def find_read_rect_params(self, location, size, resolution, units, precision=3):
+    def find_read_rect_params(
+        self,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution,
+        units: str,
+        precision: int = 3,
+    ) -> Tuple[int, IntPair, IntPair, NumPair, IntPair]:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Reading the image at full baseline resolution and re-sampling to
-        the desired resolution would require a large amount of memeory
+        the desired resolution would require a large amount of memory
         and be very slow. This function checks the other resolutions
         stored in the WSI's pyramid of resolutions to find the lowest
         resolution (smallest level) which is higher resolution (a larger
@@ -395,19 +419,20 @@ class WSIReader:
         ).astype(int)
         level_read_size = np.round(np.array(size) / post_read_scale_factor).astype(int)
         level_location = np.round(np.array(location) / level_downsample).astype(int)
-        output = (
+        return (
             read_level,
             level_location,
             level_read_size,
             post_read_scale_factor,
             baseline_read_size,
         )
-        return output
 
-    def _find_read_params_at_resolution(self, location, size, resolution, units):
+    def _find_read_params_at_resolution(
+        self, location: IntPair, size: IntPair, resolution: Resolution, units: str
+    ) -> Tuple[int, NumPair, IntPair, IntPair, IntPair, IntPair]:
         """Works similarly to `_find_read_rect_params`.
 
-        Return the information neccessary for scaling. While `_find_read_rect_params`
+        Return the information necessary for scaling. While `_find_read_rect_params`
         assumes location to be at baseline. This function assumes location to be at
         requested resolution.
 
@@ -479,13 +504,14 @@ class WSIReader:
             location_at_baseline,
         )
         output = tuple([np.ceil(v).astype(np.int64) for v in output])
-        output = (
+        return (
             read_level,
             read_level_to_resolution_scale_factor,
         ) + output
-        return output
 
-    def _bounds_at_resolution_to_baseline(self, bounds, resolution, units):
+    def _bounds_at_resolution_to_baseline(
+        self, bounds: Bounds, resolution: Resolution, units: str
+    ) -> Bounds:
         """Find corresponding bounds in baseline.
 
         Find corresponding bounds in baseline given the input
@@ -499,9 +525,9 @@ class WSIReader:
         # Find parameters for optimal read
         (
             _,  # read_level,
-            _,  # read_lv_to_requested_scale_factor,
+            _,  # read_level_to_requested_scale_factor,
             _,  # size_at_read_level,
-            _,  # location_at_read_lv,
+            _,  # location_at_read_level,
             size_at_baseline,
             location_at_baseline,
         ) = self._find_read_params_at_resolution(
@@ -509,10 +535,11 @@ class WSIReader:
         )
         tl_at_baseline = location_at_baseline
         br_at_baseline = tl_at_baseline + size_at_baseline
-        bounds_at_baseline = np.concatenate([tl_at_baseline, br_at_baseline])
-        return bounds_at_baseline
+        return np.concatenate([tl_at_baseline, br_at_baseline])  # bounds at baseline
 
-    def slide_dimensions(self, resolution, units, precisions=3):
+    def slide_dimensions(
+        self, resolution: Resolution, units: str, precisions: int = 3
+    ) -> IntPair:
         """Return the size of WSI at requested resolution.
 
         Args:
@@ -536,7 +563,9 @@ class WSIReader:
         )
         return wsi_shape_at_resolution
 
-    def _find_read_bounds_params(self, bounds, resolution, units, precision=3):
+    def _find_read_bounds_params(
+        self, bounds: Bounds, resolution: Resolution, units: str, precision: int = 3
+    ) -> Tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
@@ -563,7 +592,7 @@ class WSIReader:
                 - :py:obj:`tuple` - Expected size of the output image
                     - :py:obj:`int` - Width
                     - :py:obj:`int` - Height
-                - :py:obj:`float` - Scale factor of re-sampling to apply after reading.
+                - np.ndarray - Scale factor of re-sampling to apply after reading.
 
         """
         start_x, start_y, end_x, end_y = bounds
@@ -578,63 +607,65 @@ class WSIReader:
         level_location = np.round(location / level_downsample).astype(int)
         level_bounds = (*level_location, *(level_location + level_size))
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
-        output = (read_level, level_bounds, output_size, post_read_scale_factor)
-        return output
+        return (read_level, level_bounds, output_size, post_read_scale_factor)
 
-    def _find_tile_params(self, tile_objective_value: int):
+    def _find_tile_params(
+        self, tile_objective_value: Number
+    ) -> Tuple[int, IntPair, int, Number]:
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
-        if rescale.is_integer():
-            try:
-                level = np.log2(rescale)
-                if level.is_integer():
-                    level = np.int(level)
-                    slide_dimension = self.info.level_dimensions[level]
-                    rescale = 1
-                else:
-                    raise ValueError
-            # Raise index error if desired pyramid level not embedded
-            # in level_dimensions
-            except IndexError:
-                level = 0
-                slide_dimension = self.info.level_dimensions[level]
-                rescale = np.int(rescale)
-                warnings.warn(
-                    "Reading WSI at level 0. Desired tile_objective_value"
-                    + str(tile_objective_value)
-                    + "not available.",
-                    UserWarning,
-                )
-            except ValueError:
-                level = 0
-                slide_dimension = self.info.level_dimensions[level]
-                rescale = 1
-                warnings.warn(
-                    "Reading WSI at level 0. Reading at tile_objective_value"
-                    + str(tile_objective_value)
-                    + "not allowed.",
-                    UserWarning,
-                )
-                tile_objective_value = self.info.objective_power
-        else:
-            raise ValueError("rescaling factor must be an integer.")
+        if not rescale.is_integer():
+            raise ValueError(
+                "Tile objective value must be an integer multiple of the "
+                "objective power of the slide."
+            )
+        try:
+            level = np.log2(rescale)
+            if not level.is_integer():
+                raise ValueError
+            level = np.int(level)
+            slide_dimension = self.info.level_dimensions[level]
+            rescale = 1
+        # Raise index error if desired pyramid level not embedded
+        # in level_dimensions
+        except IndexError:
+            level = 0
+            slide_dimension = self.info.level_dimensions[level]
+            rescale = np.int(rescale)
+            warnings.warn(
+                "Reading WSI at level 0. Desired tile_objective_value"
+                + str(tile_objective_value)
+                + "not available.",
+                UserWarning,
+            )
+        except ValueError:
+            level = 0
+            slide_dimension = self.info.level_dimensions[level]
+            rescale = 1
+            warnings.warn(
+                "Reading WSI at level 0. Reading at tile_objective_value"
+                + str(tile_objective_value)
+                + "not allowed.",
+                UserWarning,
+            )
+            tile_objective_value = self.info.objective_power
 
         return level, slide_dimension, rescale, tile_objective_value
 
     def _read_rect_at_resolution(
         self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
+        location: NumPair,
+        size: NumPair,
+        resolution: Resolution = 0,
+        units: str = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
         **kwargs,
-    ):
+    ) -> np.ndarray:
         """Internal helper to perform `read_rect` at resolution.
 
-        In actuallity, `read_rect` at resolution is synonymous with
+        In actuality, `read_rect` at resolution is synonymous with
         calling `read_bound` at resolution because `size` has always been
         within the resolution system.
 
@@ -642,7 +673,7 @@ class WSIReader:
         tl = np.array(location)
         br = location + np.array(size)
         bounds = np.concatenate([tl, br])
-        region = self.read_bounds(
+        return self.read_bounds(
             bounds,
             resolution=resolution,
             units=units,
@@ -652,20 +683,19 @@ class WSIReader:
             coord_space="resolution",
             **kwargs,
         )
-        return region
 
     def read_rect(
         self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: str = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
+        coord_space: str = "baseline",
         **kwargs,
-    ):
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  /
@@ -738,7 +768,7 @@ class WSIReader:
         Note: The field of view varies with resolution when using
         :func:`read_rect`.
 
-        .. figure:: images/read_rect_tissue.png
+        .. figure:: ../images/read_rect_tissue.png
             :width: 512
             :alt: Diagram illustrating read_rect
 
@@ -756,7 +786,7 @@ class WSIReader:
         baseline (maximum resultion of the image), then bicubic
         interpolation is applied to the output image.
 
-        .. figure:: images/read_rect-interpolated-reads.png
+        .. figure:: ../images/read_rect-interpolated-reads.png
             :width: 512
             :alt: Diagram illustrating read_rect interpolting between levels
 
@@ -840,15 +870,15 @@ class WSIReader:
 
     def read_bounds(
         self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
+        bounds: Bounds,
+        resolution: Resolution = 0,
+        units: str = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
+        coord_space: str = "baseline",
         **kwargs,
-    ):
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  /
@@ -922,7 +952,7 @@ class WSIReader:
         Note: The field of view remains the same as resolution is varied
         when using :func:`read_bounds`.
 
-        .. figure:: images/read_bounds_tissue.png
+        .. figure:: ../images/read_bounds_tissue.png
             :width: 512
             :alt: Diagram illustrating read_bounds
 
@@ -944,7 +974,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def read_region(self, location, level, size):
+    def read_region(self, location: NumPair, level: int, size: IntPair) -> np.ndarray:
         """Read a region of the whole slide image (OpenSlide format args).
 
         This function is to help with writing code which is backwards
@@ -971,7 +1001,7 @@ class WSIReader:
             location=location, size=size, resolution=level, units="level"
         )
 
-    def slide_thumbnail(self, resolution=1.25, units="power"):
+    def slide_thumbnail(self, resolution: Resolution = 1.25, units: str = "power"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see :func:`read_rect`
@@ -992,12 +1022,15 @@ class WSIReader:
         """
         slide_dimensions = self.info.slide_dimensions
         bounds = (0, 0, *slide_dimensions)
-        thumb = self.read_bounds(bounds, resolution=resolution, units=units)
-        return thumb
+        return self.read_bounds(bounds, resolution=resolution, units=units)
 
     def tissue_mask(
-        self, method="otsu", resolution=1.25, units="power", **masker_kwargs
-    ):
+        self,
+        method: str = "otsu",
+        resolution: Resolution = 1.25,
+        units: str = "power",
+        **masker_kwargs,
+    ) -> "VirtualWSIReader":
         """Create a tissue mask and wrap it in a VirtualWSIReader.
 
         For the morphological method, mpp is used for calculating the
@@ -1018,44 +1051,44 @@ class WSIReader:
 
         """
         thumbnail = self.slide_thumbnail(resolution, units)
+        if method not in ["otsu", "morphological"]:
+            raise ValueError(f"Invalid tissue masking method: {method}")
         if method == "otsu":
             masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
-        elif method == "morphological":
+        if method == "morphological":
             mpp = None
             power = None
             if units == "power":
                 power = resolution
-            elif units == "mpp":
+            if units == "mpp":
                 mpp = resolution
             masker = tissuemask.MorphologicalMasker(
                 mpp=mpp, power=power, **masker_kwargs
             )
-        else:
-            raise ValueError("Invalid tissue masker method.")
-
         mask_img = masker.fit_transform([thumbnail])[0]
-        mask = VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
-        return mask
+        return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
     def save_tiles(
         self,
         output_dir: Union[str, pathlib.Path],
         tile_objective_value: int,
         tile_read_size: Tuple[int, int],
-        tile_format=".jpg",
-        verbose=True,
-    ):
+        tile_format: str = ".jpg",
+        verbose: bool = True,
+    ) -> None:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str or pathlib.Path): Output directory to save the tiles.
-            tile_objective_value (int): Objective value at which tile is generated.
-            tile_read_size (tuple(int)): Tile (width, height).
-            tile_format (str): file format to save image tiles, default=".jpg"
-            verbose (bool): Print output, default=True
-
-        Returns:
-            saves tiles in the output directory output_dir
+            output_dir(str or pathlib.Path):
+                Output directory to save the tiles.
+            tile_objective_value (int):
+                Objective value at which tile is generated.
+            tile_read_size (tuple(int)):
+                Tile (width, height).
+            tile_format (str):
+                File format to save image tiles, defaults to ".jpg".
+            verbose (bool):
+                Print output, default to True.
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import get_wsireader
@@ -1064,7 +1097,6 @@ class WSIReader:
             ...     tile_objective_value=10,
             ...     tile_read_size=(2000, 2000))
 
-        Examples:
             >>> from tiatoolbox.wsicore.wsireader import get_wsireader
             >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_param = wsi.info
@@ -1087,76 +1119,74 @@ class WSIReader:
         output_dir.mkdir(parents=True)
         data = []
 
-        for h in range(int(math.ceil((slide_h - tile_h) / tile_h + 1))):
-            for w in range(int(math.ceil((slide_w - tile_w) / tile_w + 1))):
-                start_h = h * tile_h
-                end_h = (h * tile_h) + tile_h
-                start_w = w * tile_w
-                end_w = (w * tile_w) + tile_w
+        vertical_tiles = int(math.ceil((slide_h - tile_h) / tile_h + 1))
+        horizontal_tiles = int(math.ceil((slide_w - tile_w) / tile_w + 1))
+        for iter_tot, (h, w) in enumerate(np.ndindex(vertical_tiles, horizontal_tiles)):
+            start_h = h * tile_h
+            end_h = (h * tile_h) + tile_h
+            start_w = w * tile_w
+            end_w = (w * tile_w) + tile_w
 
-                end_h = min(end_h, slide_h)
-                end_w = min(end_w, slide_w)
+            end_h = min(end_h, slide_h)
+            end_w = min(end_w, slide_w)
 
-                # convert to baseline reference frame
-                bounds = start_w, start_h, end_w, end_h
-                baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
-                # Read image region
-                im = self.read_bounds(baseline_bounds, level)
+            # convert to baseline reference frame
+            bounds = start_w, start_h, end_w, end_h
+            baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
+            # Read image region
+            im = self.read_bounds(baseline_bounds, level)
 
-                if verbose:
-                    format_str = (
-                        "Tile%d:  start_w:%d, end_w:%d, "
-                        "start_h:%d, end_h:%d, "
-                        "width:%d, height:%d"
-                    )
-
-                    print(
-                        format_str
-                        % (
-                            iter_tot,
-                            start_w,
-                            end_w,
-                            start_h,
-                            end_h,
-                            end_w - start_w,
-                            end_h - start_h,
-                        ),
-                        flush=True,
-                    )
-
-                # Rescale to the correct objective value
-                if rescale != 1:
-                    im = utils.transforms.imresize(img=im, scale_factor=rescale)
-
-                img_save_name = (
-                    "_".join(
-                        [
-                            "Tile",
-                            str(tile_objective_value),
-                            str(int(start_w / rescale)),
-                            str(int(start_h / rescale)),
-                        ]
-                    )
-                    + tile_format
+            if verbose:
+                format_str = (
+                    "Tile%d:  start_w:%d, end_w:%d, "
+                    "start_h:%d, end_h:%d, "
+                    "width:%d, height:%d"
                 )
 
-                utils.misc.imwrite(
-                    image_path=output_dir.joinpath(img_save_name), img=im
-                )
-
-                data.append(
-                    [
+                print(
+                    format_str
+                    % (
                         iter_tot,
-                        img_save_name,
                         start_w,
                         end_w,
                         start_h,
                         end_h,
-                        im.shape[0],
-                        im.shape[1],
+                        end_w - start_w,
+                        end_h - start_h,
+                    ),
+                    flush=True,
+                )
+
+            # Rescale to the correct objective value
+            if rescale != 1:
+                im = utils.transforms.imresize(img=im, scale_factor=rescale)
+
+            img_save_name = (
+                "_".join(
+                    [
+                        "Tile",
+                        str(tile_objective_value),
+                        str(int(start_w / rescale)),
+                        str(int(start_h / rescale)),
                     ]
                 )
-                iter_tot += 1
+                + tile_format
+            )
+
+            utils.misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
+
+            data.append(
+                [
+                    iter_tot,
+                    img_save_name,
+                    start_w,
+                    end_w,
+                    start_h,
+                    end_h,
+                    im.shape[0],
+                    im.shape[1],
+                ]
+            )
 
         # Save information on each slide to relate to the whole slide image
         df = pd.DataFrame(
@@ -1224,7 +1254,7 @@ class OpenSlideWSIReader(WSIReader):
         **kwargs,
     ):
         if coord_space == "resolution":
-            region = self._read_rect_at_resolution(
+            return self._read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -1233,7 +1263,6 @@ class OpenSlideWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return region
 
         # Find parameters for optimal read
         (
@@ -1272,8 +1301,7 @@ class OpenSlideWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        im_region = utils.transforms.background_composite(image=im_region)
-        return im_region
+        return utils.transforms.background_composite(image=im_region)
 
     def read_bounds(
         self,
@@ -1293,7 +1321,7 @@ class OpenSlideWSIReader(WSIReader):
                 bounds, resolution, units
             )
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
-            # dont use the `output_size` (`size_at_requested`) here
+            # don't use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
@@ -1350,8 +1378,7 @@ class OpenSlideWSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
-        im_region = utils.transforms.background_composite(image=im_region)
-        return im_region
+        return utils.transforms.background_composite(image=im_region)
 
     def _info(self):
         """Openslide WSI meta data reader.
@@ -1412,7 +1439,7 @@ class OpenSlideWSIReader(WSIReader):
             else:
                 warnings.warn("Metadata: Unable to determine objective power.")
 
-        param = WSIMeta(
+        return WSIMeta(
             file_path=self.input_path,
             axes="YXS",
             objective_power=objective_power,
@@ -1424,8 +1451,6 @@ class OpenSlideWSIReader(WSIReader):
             mpp=mpp,
             raw=dict(**props),
         )
-
-        return param
 
 
 class OmnyxJP2WSIReader(WSIReader):
@@ -1447,6 +1472,9 @@ class OmnyxJP2WSIReader(WSIReader):
         power: Optional[Number] = None,
     ) -> None:
         super().__init__(input_img=input_img, mpp=mpp, power=power)
+        import glymur
+
+        glymur.set_option("lib.num_threads", os.cpu_count() or 1)
         self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(
@@ -1462,7 +1490,7 @@ class OmnyxJP2WSIReader(WSIReader):
         **kwargs,
     ):
         if coord_space == "resolution":
-            region = self._read_rect_at_resolution(
+            return self._read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -1471,7 +1499,6 @@ class OmnyxJP2WSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return region
 
         # Find parameters for optimal read
         (
@@ -1507,8 +1534,7 @@ class OmnyxJP2WSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        im_region = utils.transforms.background_composite(image=im_region)
-        return im_region
+        return utils.transforms.background_composite(image=im_region)
 
     def read_bounds(
         self,
@@ -1528,7 +1554,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 bounds, resolution, units
             )
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
-            # dont use the `output_size` (`size_at_requested`) here
+            # don't use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
@@ -1539,7 +1565,7 @@ class OmnyxJP2WSIReader(WSIReader):
             # Find parameters for optimal read
             (
                 read_level,
-                _,  # bounds_at_read_lv,
+                _,  # bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -1548,13 +1574,6 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
 
         stride = 2 ** read_level
-
-        # Method without sub-pixel reads
-        # im_region = glymur_wsi[start_y:end_y:stride, start_x:end_x:stride]
-
-        # Equivalent but deprecated read function
-        # area = (start_y, start_x, end_y, end_x)
-        # im_region = glymur_wsi.read(rlevel=read_level, area=area)
 
         im_region = utils.image.safe_padded_read(
             image=glymur_wsi,
@@ -1579,8 +1598,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
-        im_region = utils.transforms.background_composite(image=im_region)
-        return im_region
+        return utils.transforms.background_composite(image=im_region)
 
     def _info(self):
         """JP2 meta data reader.
@@ -1589,6 +1607,8 @@ class OmnyxJP2WSIReader(WSIReader):
             WSIMeta: containing meta information
 
         """
+        import glymur
+
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         description = box[3].xml.find("description")
@@ -1625,7 +1645,7 @@ class OmnyxJP2WSIReader(WSIReader):
         mpp_y = float(m.group(0))
         mpp = [mpp_x, mpp_y]
 
-        param = WSIMeta(
+        return WSIMeta(
             file_path=self.input_path,
             axes="YXS",
             objective_power=objective_power,
@@ -1637,8 +1657,6 @@ class OmnyxJP2WSIReader(WSIReader):
             mpp=mpp,
             raw=self.glymur_wsi.box,
         )
-
-        return param
 
 
 class VirtualWSIReader(WSIReader):
@@ -1755,7 +1773,7 @@ class VirtualWSIReader(WSIReader):
         **kwargs,
     ):
         if coord_space == "resolution":
-            region = self._read_rect_at_resolution(
+            return self._read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -1764,7 +1782,6 @@ class VirtualWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return region
 
         # Find parameters for optimal read
         (_, _, _, _, baseline_read_size,) = self.find_read_rect_params(
@@ -1799,7 +1816,7 @@ class VirtualWSIReader(WSIReader):
         )
 
         if self.mode == "rgb":
-            im_region = utils.transforms.background_composite(image=im_region)
+            return utils.transforms.background_composite(image=im_region)
         return im_region
 
     def read_bounds(
@@ -1822,7 +1839,7 @@ class VirtualWSIReader(WSIReader):
             )
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
             # * Find parameters for optimal read
-            # dont use the `output_size` (`size_at_requested`) here
+            # don't use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
@@ -1870,7 +1887,7 @@ class VirtualWSIReader(WSIReader):
             )
 
         if self.mode == "rgb":
-            im_region = utils.transforms.background_composite(image=im_region)
+            return utils.transforms.background_composite(image=im_region)
         return im_region
 
 
@@ -1901,7 +1918,7 @@ class ArrayView:
         return tuple(self._shape[c] for c in "YXS")
 
     def __getitem__(self, index):
-        # Normalise to a tuple of length = len(self.axes)
+        # Normalize to a tuple of length = len(self.axes)
         if not isinstance(index, tuple):
             index = (index,)
         while len(index) < len(self.axes):
@@ -1910,8 +1927,8 @@ class ArrayView:
         if self.axes == "YXS":
             return self.array[index]
         if self.axes == "SYX":
-            Y, X, S = index
-            index = (S, Y, X)
+            y, x, s = index
+            index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
         raise Exception("Unsupported axes")
 
@@ -2046,19 +2063,19 @@ class TIFFWSIReader(WSIReader):
             mpp = [mpp] * 2
         objective_power = svs_tags.get("AppMag")
 
-        kwargs = dict(
-            objective_power=objective_power,
-            vendor=vendor,
-            mpp=mpp,
-            raw=raw,
-        )
-
-        return kwargs
+        return {
+            "objective_power": objective_power,
+            "vendor": vendor,
+            "mpp": mpp,
+            "raw": raw,
+        }
 
     def _parse_ome_metadata(self) -> dict:
         # The OME-XML should be in each IFD but is optional. It must be
         # present in the first IFD. We simply get the description from
         # the first IFD.
+        from defusedxml.ElementTree import fromstring as et_from_string
+
         description = self.tiff.pages[0].description
         xml = et_from_string(description)
         namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
@@ -2102,14 +2119,12 @@ class TIFFWSIReader(WSIReader):
         except KeyError:
             raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
 
-        kwargs = dict(
-            objective_power=objective_power,
-            vendor=vendor,
-            mpp=mpp,
-            raw=raw,
-        )
-
-        return kwargs
+        return {
+            "objective_power": objective_power,
+            "vendor": vendor,
+            "mpp": mpp,
+            "raw": raw,
+        }
 
     def _info(self):
         """TIFF metadata constructor.
@@ -2126,7 +2141,7 @@ class TIFFWSIReader(WSIReader):
         slide_dimensions = level_dimensions[0]
         level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
         # The tags attribute object will not pickle or deepcopy,
-        # so a copy with only python values or tiffile enums is made.
+        # so a copy with only python values or tifffile enums is made.
         tiff_tags = {
             code: {
                 "code": code,
@@ -2144,7 +2159,7 @@ class TIFFWSIReader(WSIReader):
             filetype_params = self._parse_ome_metadata()
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
-        param = WSIMeta(
+        return WSIMeta(
             file_path=self.input_path,
             slide_dimensions=slide_dimensions,
             axes=self._axes,
@@ -2153,8 +2168,6 @@ class TIFFWSIReader(WSIReader):
             level_downsamples=level_downsamples,
             **filetype_params,
         )
-
-        return param
 
     def read_rect(
         self,
@@ -2169,7 +2182,7 @@ class TIFFWSIReader(WSIReader):
         **kwargs,
     ):
         if coord_space == "resolution":
-            region = self._read_rect_at_resolution(
+            return self._read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -2178,7 +2191,6 @@ class TIFFWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return region
 
         # Find parameters for optimal read
         (
@@ -2211,8 +2223,7 @@ class TIFFWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        im_region = utils.transforms.background_composite(image=im_region)
-        return im_region
+        return utils.transforms.background_composite(image=im_region)
 
     def read_bounds(
         self,
@@ -2231,7 +2242,7 @@ class TIFFWSIReader(WSIReader):
                 bounds, resolution, units
             )
             _, size_at_requested = utils.transforms.bounds2locsize(bounds)
-            # dont use the `output_size` (`size_at_requested`) here
+            # don't use the `output_size` (`size_at_requested`) here
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)

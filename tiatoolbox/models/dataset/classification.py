@@ -69,8 +69,12 @@ def predefined_preproc_func(dataset_name):
     preproc_dict = {
         "kather100k": [
             transforms.ToTensor(),
-        ]
+        ],
+        "pcam": [
+            transforms.ToTensor(),
+        ],
     }
+
     if dataset_name not in preproc_dict:
         raise ValueError(
             f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
@@ -259,7 +263,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             resolution = 1.0
             self.reader = VirtualWSIReader(
                 img,
-                metadata,
+                info=metadata,
             )
 
         # may decouple into misc ?
