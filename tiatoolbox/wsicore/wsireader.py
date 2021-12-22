@@ -35,6 +35,7 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
+from numpy.core.defchararray import array
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
@@ -643,8 +644,11 @@ class WSIReader:
             "baseline": None,
         }
         if input_unit == "mpp":
-            output_dict["baseline"] = baseline_mpp / input_res
-            output_dict["mpp"] = input_res
+            if isinstance(input_res, (list, tuple, np.ndarray)):
+                output_dict["mpp"] = np.array(input_res)
+            else:
+                output_dict["mpp"] = np.array([input_res, input_res])
+            output_dict["baseline"] = baseline_mpp[0] / output_dict["mpp"][0]
             if baseline_power is not None:
                 output_dict["power"] = output_dict["baseline"] * baseline_power
         elif input_unit == "power":
@@ -666,6 +670,13 @@ class WSIReader:
             if baseline_power is not None:
                 output_dict["power"] = baseline_power * output_dict["baseline"]
         out_res = output_dict[output_unit] if output_unit is not None else output_dict
+        if out_res is None:
+            warnings.warn(
+                "Although unit coversion from input_unit has been done, the requested "
+                "output_unit is returned as None. Probably due to missing 'mpp' or "
+                "'objective_power' in slide's meta data.",
+                UserWarning,
+            )
         return out_res
 
     def _find_tile_params(

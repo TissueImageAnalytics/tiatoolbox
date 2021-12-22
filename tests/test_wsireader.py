@@ -5,6 +5,7 @@ import pathlib
 import random
 import re
 import shutil
+from copy import deepcopy
 from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
@@ -485,6 +486,68 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi):
 
         assert read_level == level
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
+
+
+def test_convert_resolution_units(sample_ndpi):
+    """Test the resolution unit conversion code."""
+
+    wsi = wsireader.WSIReader.open(sample_ndpi)
+
+    # test for invalid input and output units
+    with pytest.raises(ValueError, match=r".*Invalid input_unit.*"):
+        wsi._convert_resolution_units(0, input_unit="invalid")
+    with pytest.raises(ValueError, match=r".*Invalid output_unit.*"):
+        wsi._convert_resolution_units(0, input_unit="level", output_unit="level")
+
+    # Test functionality: Assuming a baseline_mpp to be 0.25 at 40x mag
+    gt_mpp = wsi.info.mpp
+    gt_power = wsi.info.objective_power
+    gt_dict = {"mpp": 2 * gt_mpp, "power": gt_power / 2, "baseline": 0.5}
+
+    # convert input_unit == "mpp" to other formats
+    output = wsi._convert_resolution_units(2 * gt_mpp, input_unit="mpp")
+    assert output["power"] == gt_dict["power"]
+
+    # convert input_unit == "power" to other formats
+    output = wsi._convert_resolution_units(
+        gt_power / 2, input_unit="power", output_unit="mpp"
+    )
+    assert all(output == gt_dict["mpp"])
+
+    # convert input_unit == "level" to other formats
+    output = wsi._convert_resolution_units(1, input_unit="level")
+    assert all(output["mpp"] == gt_dict["mpp"])
+
+    # convert input_unit == "baseline" to other formats
+    output = wsi._convert_resolution_units(0.5, input_unit="baseline")
+    assert output["power"] == gt_dict["power"]
+
+    # Test for missing information
+    org_info = wsi.info
+    # test when mpp is missing
+    _info = deepcopy(org_info)
+    _info.mpp = None
+    wsi._m_info = _info
+    with pytest.raises(ValueError, match=r".*Missing 'mpp'.*"):
+        wsi._convert_resolution_units(0, input_unit="mpp")
+    _ = wsi._convert_resolution_units(0, input_unit="power")
+
+    # test when power is missing
+    _info = deepcopy(org_info)
+    _info.objective_power = None
+    wsi._m_info = _info
+    with pytest.raises(ValueError, match=r".*Missing 'objective_power'.*"):
+        wsi._convert_resolution_units(0, input_unit="power")
+    _ = wsi._convert_resolution_units(0, input_unit="mpp")
+
+    # test when power and mpp are missing
+    _info = deepcopy(org_info)
+    _info.objective_power = None
+    _info.mpp = None
+    wsi._m_info = _info
+    _ = wsi._convert_resolution_units(0, input_unit="baseline")
+    with pytest.warns(UserWarning, match=r".*output_unit is returned as None.*"):
+        _ = wsi._convert_resolution_units(0, input_unit="level", output_unit="mpp")
 
 
 def test_find_read_rect_params_power(sample_ndpi):

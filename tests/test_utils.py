@@ -17,7 +17,7 @@ from PIL import Image
 from tiatoolbox import rcParam, utils
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.utils.transforms import convert_resolution_units, locsize2bounds
+from tiatoolbox.utils.transforms import locsize2bounds
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
@@ -1232,55 +1232,3 @@ def test_imread_none_args():
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.misc.imread(img)
-
-
-def test_convert_resolution_units():
-    """Test the resolution unit conversion code."""
-    # test for invalid input unit
-    with pytest.raises(ValueError, match=r".*Invalid input_unit.*"):
-        convert_resolution_units(0, input_unit="invalid")
-
-    # Test for missing information
-    with pytest.raises(ValueError, match=r".*Missing baseline_mpp.*"):
-        convert_resolution_units(0, input_unit="mpp", baseline_mpp=None)
-    with pytest.raises(ValueError, match=r".*Missing baseline_power.*"):
-        convert_resolution_units(0, input_unit="power", baseline_power=None)
-
-    # Test functionality: Assuming a baseline_mpp to be 0.25 at 40x mag
-    gt_dict = {"mpp": 0.5, "power": 20, "level": 1, "baseline": 0.5}
-
-    # convert input_unit == "mpp" to other formats
-    output = convert_resolution_units(
-        0.5, input_unit="mpp", baseline_mpp=0.25, baseline_power=40
-    )
-    assert output == gt_dict
-    output = convert_resolution_units(
-        0.5, input_unit="mpp", baseline_mpp=0.25, baseline_power=None
-    )
-
-    # convert input_unit == "power" to other formats
-    output = convert_resolution_units(
-        20, input_unit="power", baseline_mpp=0.25, baseline_power=40
-    )
-    assert output == gt_dict
-    output = convert_resolution_units(
-        20, input_unit="power", baseline_mpp=None, baseline_power=40
-    )
-
-    # convert input_unit == "level" to other formats
-    output = convert_resolution_units(
-        1, input_unit="level", baseline_mpp=0.25, baseline_power=40
-    )
-    assert output == gt_dict
-    output = convert_resolution_units(
-        1, input_unit="level", baseline_mpp=None, baseline_power=None
-    )
-
-    # convert input_unit == "baseline" to other formats
-    output = convert_resolution_units(
-        0.5, input_unit="baseline", baseline_mpp=0.25, baseline_power=40
-    )
-    assert output == gt_dict
-    output = convert_resolution_units(
-        0.5, input_unit="baseline", baseline_mpp=None, baseline_power=None
-    )

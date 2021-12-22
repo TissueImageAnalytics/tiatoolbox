@@ -25,7 +25,6 @@ import numpy as np
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.transforms import convert_resolution_units
 from tiatoolbox.wsicore import wsireader
 
 
@@ -178,16 +177,25 @@ class PatchExtractor(ABC):
         )
 
         if self.mask is not None:
-            # convert the coord_list resolution to mpp unit
-            converted_units = convert_resolution_units(
+            # convert the coord_list resolution unit to acceptable units
+            converted_units = self.wsi._convert_resolution_units(
                 input_res=self.resolution,
                 input_unit=self.units,
-                baseline_mpp=self.wsi.info.mpp,
             )
+            # find the first unit which is not None
+            converted_units = {
+                k: v for k, v in converted_units.items() if v is not None
+            }
+            converted_units_keys = list(converted_units.keys())
+            if len(converted_units_keys) == 0:
+                raise Exception(
+                    "There is no supported meta data in this"
+                    "WSI to use for mask-based patch extraction."
+                )
             selected_coord_idxs = self.filter_coordinates_fast(
                 self.mask,
                 self.coord_list,
-                coord_resolution=converted_units["mpp"],
+                coord_resolution=converted_units,
             )
             self.coord_list = self.coord_list[selected_coord_idxs]
             if len(self.coord_list) == 0:
