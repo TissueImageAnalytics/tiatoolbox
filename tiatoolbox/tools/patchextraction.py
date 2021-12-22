@@ -178,7 +178,7 @@ class PatchExtractor(ABC):
 
         if self.mask is not None:
             # convert the coord_list resolution unit to acceptable units
-            converted_units = self.wsi._convert_resolution_units(
+            converted_units = self.wsi.convert_resolution_units(
                 input_res=self.resolution,
                 input_unit=self.units,
             )

@@ -585,7 +585,7 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return (read_level, level_bounds, output_size, post_read_scale_factor)
 
-    def _convert_resolution_units(self, input_res, input_unit, output_unit=None):
+    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
         """Converts resolution value between different units.
 
         This function accepts a resolution and its units in the input and converts
