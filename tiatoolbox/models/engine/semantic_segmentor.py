@@ -402,7 +402,7 @@ class SemanticSegmentor:
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
+        num_postproc_workers: int = 0,  # skipcq: PYL-W0613
         model: torch.nn.Module = None,
         pretrained_model: str = None,
         pretrained_weights: str = None,
@@ -1012,7 +1012,7 @@ class SemanticSegmentor:
                     "Must provide either `ioconfig` or "
                     "`patch_input_shape` and `patch_output_shape`"
                 )
-            ioconfig = self.ioconfig
+            ioconfig = copy.deepcopy(self.ioconfig)
         elif ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
