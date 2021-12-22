@@ -25,7 +25,7 @@ import numpy as np
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
-from tiatoolbox.utils.transforms import convert_resolution
+from tiatoolbox.utils.transforms import convert_resolution_units
 from tiatoolbox.wsicore import wsireader
 
 
@@ -179,7 +179,7 @@ class PatchExtractor(ABC):
 
         if self.mask is not None:
             # convert the coord_list resolution to mpp unit
-            converted_units = convert_resolution(
+            converted_units = convert_resolution_units(
                 input_res=self.resolution,
                 input_unit=self.units,
                 baseline_mpp=self.wsi.info.mpp,
@@ -226,8 +226,8 @@ class PatchExtractor(ABC):
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
-        """
 
+        """
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
         if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(

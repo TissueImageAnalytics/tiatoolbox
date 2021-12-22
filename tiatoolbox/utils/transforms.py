@@ -309,20 +309,38 @@ def pad_bounds(
     return np.add(bounds, padding * signs)
 
 
-def convert_resolution(input_res, input_unit, baseline_mpp=None, baseline_power=None):
-    """Converts resolution between different units.
-    This function accepts a resolution and its unit in the input and converts
-    it all other units. To achieve 'mpp' and 'power' units in the output, you
-    should as well specify `mpp` and `power` of baseline resolution, respectively.
+def convert_resolution_units(
+    input_res, input_unit, baseline_mpp=None, baseline_power=None
+):
+    """Converts resolution value between different units.
+
+    This function accepts a resolution and its units in the input and converts
+    it to all other units. To achieve resolution in 'mpp' and 'power' units in the
+    output, you should as well specify the `baseline_mpp` and `baseline_power`
+    resolutions in the input, respectively.
 
     Args:
-        input_res (float): the resolution which we want to have in
+        input_res (float): the resolution which we want to convert to
           the other units.
-        input_unit (float): the unit of the input resolution (`input_res`).
+        input_unit (str): the unit of the input resolution (`input_res`).
+        baseline_mpp (float): the `mpp` resolution of the WSI baseline level. This
+          is needed when you desired to convert the `input_res` to (or from) `mpp`
+          units.
+        baseline_power (float): the `power` resolution of the WSI baseline level. This
+          is needed when you desired to convert the `input_res` to (or from) `power`
+          units.
+
     Returns:
         output_dict (dictionary): a dictionary containing the converted
           `input_res` in all acceptable units (`'mpp'`, `'power'`, `'level'`,
           `'baseline'`).
+
+    Examples:
+        >>> from tiatoolbox.utils.transforms import convert_resolution_units
+        >>> # Convert the resolution=1 in `mpp` units to other units.
+        >>> converted_units = convert_resolution_units(
+        ...  1, `mpp`, baseline_mpp=0.25, baseline_power=40)
+
     """
     if input_unit not in {"mpp", "power", "level", "baseline"}:
         raise ValueError(
@@ -338,7 +356,7 @@ def convert_resolution(input_res, input_unit, baseline_mpp=None, baseline_power=
     if baseline_power is None and input_unit == "power":
         raise ValueError(
             "Missing baseline_power: `input_unit`has been set to 'power' while "
-            "the `baseline_mpp` has not been set. Please provide `baseline_power` "
+            "the `baseline_power` has not been set. Please provide `baseline_power` "
             "in the input."
         )
 
