@@ -1254,21 +1254,33 @@ def test_convert_resolution_units():
         0.5, input_unit="mpp", baseline_mpp=0.25, baseline_power=40
     )
     assert output == gt_dict
+    output = convert_resolution_units(
+        0.5, input_unit="mpp", baseline_mpp=0.25, baseline_power=None
+    )
 
     # convert input_unit == "power" to other formats
     output = convert_resolution_units(
         20, input_unit="power", baseline_mpp=0.25, baseline_power=40
     )
     assert output == gt_dict
+    output = convert_resolution_units(
+        20, input_unit="power", baseline_mpp=None, baseline_power=40
+    )
 
     # convert input_unit == "level" to other formats
     output = convert_resolution_units(
         1, input_unit="level", baseline_mpp=0.25, baseline_power=40
     )
     assert output == gt_dict
+    output = convert_resolution_units(
+        1, input_unit="level", baseline_mpp=None, baseline_power=None
+    )
 
     # convert input_unit == "baseline" to other formats
     output = convert_resolution_units(
         0.5, input_unit="baseline", baseline_mpp=0.25, baseline_power=40
     )
     assert output == gt_dict
+    output = convert_resolution_units(
+        0.5, input_unit="baseline", baseline_mpp=None, baseline_power=None
+    )

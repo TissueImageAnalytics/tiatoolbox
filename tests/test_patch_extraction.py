@@ -462,6 +462,9 @@ def test_filter_coordinates():
         mask_reader, bbox_list, coord_resolution=1.0, mask_resolution=1.0
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
+    flag_list = PatchExtractor.filter_coordinates_fast(
+        mask_reader, bbox_list, coord_resolution=1.0, mask_resolution=(1.0, 1.0)
+    )
 
     # Test for bad mask input
     with pytest.raises(
