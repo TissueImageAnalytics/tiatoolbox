@@ -452,6 +452,7 @@ def test_filter_coordinates():
             mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
         )
 
+    ###############################################
     # Tests for filter_coordinates_fast (new) method
     _info = mask_reader.info
     _info.mpp = 1.0
@@ -459,11 +460,15 @@ def test_filter_coordinates():
 
     # functionality test
     flag_list = PatchExtractor.filter_coordinates_fast(
-        mask_reader, bbox_list, coord_resolution=1.0, mask_resolution=1.0
+        mask_reader,
+        bbox_list,
+        coord_resolution=1.0,
+        coord_units="mpp",
+        mask_resolution=1,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
     flag_list = PatchExtractor.filter_coordinates_fast(
-        mask_reader, bbox_list, coord_resolution=1.0, mask_resolution=(1.0, 1.0)
+        mask_reader, bbox_list, coord_resolution=(1.0, 1.0), coord_units="mpp"
     )
 
     # Test for bad mask input
@@ -471,19 +476,28 @@ def test_filter_coordinates():
         ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
     ):
         PatchExtractor.filter_coordinates_fast(
-            mask, bbox_list, coord_resolution=1.0, mask_resolution=1.0
+            mask,
+            bbox_list,
+            coord_resolution=1.0,
+            coord_units="mpp",
         )
 
     # Test for bad bbox coordinate list in the input
     with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
         PatchExtractor.filter_coordinates_fast(
-            mask_reader, bbox_list.tolist(), coord_resolution=1, mask_resolution=1
+            mask_reader,
+            bbox_list.tolist(),
+            coord_resolution=1,
+            coord_units="mpp",
         )
 
     # Test for incomplete coordinate list
     with pytest.raises(ValueError, match=r".*`coordinates_list` must be of shape.*"):
         PatchExtractor.filter_coordinates_fast(
-            mask_reader, bbox_list[:, :2], coord_resolution=1, mask_resolution=1
+            mask_reader,
+            bbox_list[:, :2],
+            coord_resolution=1,
+            coord_units="mpp",
         )
 
 
@@ -581,3 +595,10 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
             units="level",
             stride=stride,
         )
+
+    # Test mask-based patch extraction from a WSI that has no meta data
+    _info = wsi.info
+    _info.objective_power = None
+    _info.mpp = None
+    _info.baseline = None
+    wsi._m_info = _info

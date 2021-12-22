@@ -187,15 +187,11 @@ class PatchExtractor(ABC):
                 k: v for k, v in converted_units.items() if v is not None
             }
             converted_units_keys = list(converted_units.keys())
-            if len(converted_units_keys) == 0:
-                raise Exception(
-                    "There is no supported meta data in this"
-                    "WSI to use for mask-based patch extraction."
-                )
             selected_coord_idxs = self.filter_coordinates_fast(
                 self.mask,
                 self.coord_list,
-                coord_resolution=converted_units,
+                coord_resolution=converted_units[converted_units_keys[0]],
+                coord_units=converted_units_keys[0],
             )
             self.coord_list = self.coord_list[selected_coord_idxs]
             if len(self.coord_list) == 0:
@@ -212,10 +208,14 @@ class PatchExtractor(ABC):
 
     @staticmethod
     def filter_coordinates_fast(
-        mask_reader, coordinates_list, coord_resolution, mask_resolution=8
+        mask_reader,
+        coordinates_list,
+        coord_resolution,
+        coord_units,
+        mask_resolution=None,
     ):
-        """
-        Validate patch extraction coordinates based on the input mask.
+        """Validate patch extraction coordinates based on the input mask.
+
         This function indicates which coordinate is valid for mask-based
         patch extraction based on checks in low resolution.
 
@@ -229,8 +229,14 @@ class PatchExtractor(ABC):
               or 4 for bounding boxes. When using the default `func=None`, K should be
               4, as we expect the `coordinates_list` to be refer to bounding boxes in
               `[start_x, start_y, end_x, end_y]` format.
-            coord_resolution (float): the resolution at which coordinates_list are
-             generated. NOTE: resolution is expected to be in `'mpp'` units.
+            coord_resolution (float): the resolution value at which coordinates_list are
+              generated.
+            coord_resolution (str): the resolution unit at which coordinates_list are
+              generated.
+            mask_resolution (floar): resolution at which mask array is extracted. It is
+              supposed to be in the same units as `coord_resolution` i.e.,
+              `coord_units`. If not provided, a default value will be selected based on
+              `coord_units`.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
@@ -246,20 +252,23 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
         if isinstance(coord_resolution, (int, float)):
             coord_resolution = [coord_resolution, coord_resolution]
-        if isinstance(mask_resolution, (int, float)):
-            mask_resolution = [mask_resolution, mask_resolution]
+
+        # define default mask_resolution based on the input coord_units
+        if mask_resolution is None:
+            mask_res_dict = {"mpp": 8, "power": 1.25, "baseline": 0.03125}
+            mask_resolution = mask_res_dict[coord_units]
 
         tissue_mask = mask_reader.slide_thumbnail(
-            resolution=mask_resolution, units="mpp"
+            resolution=mask_resolution, units=coord_units
         )
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
         scaled_coords = coordinates_list.copy().astype(np.float32)
-        scaled_coords[:, [0, 2]] *= coord_resolution[0] / mask_resolution[0]
+        scaled_coords[:, [0, 2]] *= coord_resolution[0] / mask_resolution
         scaled_coords[:, [0, 2]] = np.clip(
             scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
         )
-        scaled_coords[:, [1, 3]] *= coord_resolution[1] / mask_resolution[1]
+        scaled_coords[:, [1, 3]] *= coord_resolution[1] / mask_resolution
         scaled_coords[:, [1, 3]] = np.clip(
             scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
         )
