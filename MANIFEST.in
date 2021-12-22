@@ -1,0 +1,15 @@
+include AUTHORS.md
+include CONTRIBUTING.rst
+include HISTORY.md
+include LICENSE
+include README.md
+include tiatoolbox/data/*
+include make.bat
+include Makefile
+include conf.py
+
+recursive-include tests *
+recursive-include docs
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

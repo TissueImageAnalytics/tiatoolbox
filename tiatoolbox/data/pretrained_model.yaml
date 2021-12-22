@@ -1,0 +1,314 @@
+alexnet-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/alexnet-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: alexnet
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+resnet18-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet18
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+resnet34-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet34
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+resnet50-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet50
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+resnet101-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet101
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+resnext50_32x4d-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnext50_32x4d
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+resnext101_32x8d-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnext101_32x8d
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+wide_resnet50_2-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: wide_resnet50_2
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+wide_resnet101_2-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: wide_resnet101_2
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+densenet121-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet121
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+densenet161-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet161
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+densenet169-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet169
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+densenet201-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet201
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+mobilenet_v2-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v2
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+mobilenet_v3_large-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v3_large
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+mobilenet_v3_small-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v3_small
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+googlenet-kather100k:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-kather100k.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: googlenet
+            num_classes: 9
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_size: [224, 224]
+            stride_size: [224, 224]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+    # dataset: KatherPatchDataset
+    dataset: kather100k
+
+fcn-tissue_mask:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
+    architecture:
+        class: unet.UNetModel
+        kwargs:
+            num_input_channels: 3
+            num_output_channels: 2
+            encoder: "resnet50"
+            decoder_block: [3]
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 2.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 2.0}
+            patch_input_shape: [1024, 1024]
+            patch_output_shape: [512, 512]
+            stride_shape: [256, 256]
+            save_resolution: {'units': 'mpp', 'resolution': 8.0}
+
+fcn_resnet50_unet-bcss:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn_resnet50_unet-bcss.pth
+    architecture:
+        class: unet.UNetModel
+        kwargs:
+            num_input_channels: 3
+            num_output_channels: 5
+            encoder: "resnet50"
+            decoder_block: [3, 3]
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [1024, 1024]
+            patch_output_shape: [512, 512]
+            stride_shape: [256, 256]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}

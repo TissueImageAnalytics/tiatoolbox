@@ -1,0 +1,34 @@
+name: tiatoolbox
+channels:
+  - conda
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.7
+  - Click
+  - cython
+  - defusedxml
+  - glymur
+  - h5py
+  - imagecodecs
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - opencv>=4.0
+  - pandas
+  - pillow
+  - openjpeg>=2.3.0
+  - pip
+  - pixman<0.38.0
+  - pytorch
+  - pyyaml>=5.1
+  - requests
+  - scikit-image
+  - scikit-learn>=0.23.2
+  - tifffile
+  - torchvision
+  - tqdm
+  - zarr
+  - pip:
+    - openslide-python
