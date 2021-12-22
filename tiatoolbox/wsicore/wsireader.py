@@ -161,7 +161,17 @@ class WSIReader:
         else:
             self.input_path = pathlib.Path(input_img)
         self._m_info = None
-        self._manual_mpp = mpp
+
+        # Set a manual mpp value
+        if mpp and isinstance(mpp, Number):
+            mpp = (mpp, mpp)
+        if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
+            raise TypeError("Invalid mpp: Must be an iterable of length 2")
+        self._manual_mpp = tuple(mpp) if mpp else None
+
+        # Set a manual power value
+        if power and not isinstance(power, Number):
+            raise TypeError("Invalid power: Power must be a number")
         self._manual_power = power
 
     @property
