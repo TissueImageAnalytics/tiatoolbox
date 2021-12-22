@@ -178,7 +178,7 @@ class PatchExtractor(ABC):
         )
 
         if self.mask is not None:
-            # get the coord_list resolution to mpp unit
+            # convert the coord_list resolution to mpp unit
             converted_units = convert_resolution(
                 input_res=self.resolution,
                 input_unit=self.units,
@@ -227,6 +227,7 @@ class PatchExtractor(ABC):
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
         """
+
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
         if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
@@ -244,23 +245,16 @@ class PatchExtractor(ABC):
             resolution=mask_resolution, units="mpp"
         )
 
-        # checking the coordinates
-        scaled_coords = np.zeros_like(coordinates_list)
-        for i in range(4):
-            if i % 2 == 0:
-                scaled_coords[:, i] = (
-                    coordinates_list[:, i] * coord_resolution[0] / mask_resolution[0]
-                )
-                scaled_coords[:, i] = np.clip(
-                    scaled_coords[:, i], 0, tissue_mask.shape[1]
-                )
-            else:
-                scaled_coords[:, i] = (
-                    coordinates_list[:, i] * coord_resolution[1] / mask_resolution[1]
-                )
-                scaled_coords[:, i] = np.clip(
-                    scaled_coords[:, i], 0, tissue_mask.shape[0]
-                )
+        # Scaling the coordinates_list to the `tissue_mask` array resolution
+        scaled_coords = coordinates_list.copy().astype(np.float32)
+        scaled_coords[:, [0, 2]] *= coord_resolution[0] / mask_resolution[0]
+        scaled_coords[:, [0, 2]] = np.clip(
+            scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
+        )
+        scaled_coords[:, [1, 3]] *= coord_resolution[1] / mask_resolution[1]
+        scaled_coords[:, [1, 3]] = np.clip(
+            scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
+        )
         scaled_coords = np.int32(scaled_coords)
 
         flag_list = []
