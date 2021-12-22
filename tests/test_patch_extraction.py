@@ -595,10 +595,3 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
             units="level",
             stride=stride,
         )
-
-    # Test mask-based patch extraction from a WSI that has no meta data
-    _info = wsi.info
-    _info.objective_power = None
-    _info.mpp = None
-    _info.baseline = None
-    wsi._m_info = _info
