@@ -1,6 +1,44 @@
 History
 =======
 
+1.0.0 (2021-12-22)
+------------------
+### Major Updates and Feature Improvements
+- Adds nucleus instance segmentation base class
+  - Adds  [HoVerNet](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045) architecture
+- Adds multi-task segmentor [HoVerNet+](https://arxiv.org/abs/2108.13904) model
+- Adds <a href="https://www.thelancet.com/journals/landig/article/PIIS2589-7500(2100180-1/fulltext">IDaRS</a> pipeline
+- Adds [SlideGraph](https://arxiv.org/abs/2110.06042) pipeline
+- Adds PCam patch classification models
+- Adds support for stain augmentation feature
+- Adds classes and functions under `tiatoolbox.tools.graph` to enable construction of graphs in a format which can be used with PyG (PyTorch Geometric).
+- Add classes which act as a mutable mapping (dictionary like) structure and enables efficient management of annotations. (#135)
+- Adds example notebook for adding advanced models
+- Adds classes which can generate zoomify tiles from a WSIReader object.
+- Adds WSI viewer using Zoomify/WSIReader API (#212)
+- Adds README to example page for clarity
+
+### Changes to API
+- Replaces `models.controller` API with `models.engine`
+- Replaces `CNNPatchPredictor` with `PatchPredictor`
+
+### Bug Fixes and Other Changes
+- Fixes  Fix `filter_coordinates` read wrong resolutions for patch extraction
+- For `PatchPredictor`
+  - `ioconfig` will supersede everything
+  - if `ioconfig` is not provided
+    - If `model` is pretrained (defined in `pretrained_model.yaml` )
+      - Use the yaml ioconfig
+      - Any other input patch reading arguments will overwrite the yaml ioconfig (at the same keyword).
+    - If `model` is not defined, all input patch reading arguments must be provided else exception will be thrown.
+
+### Development related changes
+- Improve tests performance for Travis runs
+- Adds feature detection mechanism to detect the platform and installed packages etc.
+- On demand imports for some libraries for performance
+- Improves performance of mask based patch extraction
+
+
 0.8.0 (2021-10-27)
 ------------------
 ### Major Updates and Feature Improvements
