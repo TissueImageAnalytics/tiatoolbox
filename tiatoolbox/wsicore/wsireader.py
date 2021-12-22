@@ -35,7 +35,6 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
-from numpy.core.defchararray import array
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
