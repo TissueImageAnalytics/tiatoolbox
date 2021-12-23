@@ -33,7 +33,10 @@ Annotation
     A geometry and associated properties.
 Geometry
     One of: a point, a polygon, or a line string.
-    .. image: images/geometries.png
+
+    .. figure:: ../images/geometries.png
+            :width: 512
+
 Properties
     Key-value pairs associated with a geometry.
 
