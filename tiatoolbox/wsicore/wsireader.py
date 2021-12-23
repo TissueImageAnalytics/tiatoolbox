@@ -28,7 +28,7 @@ import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import openslide
@@ -62,24 +62,38 @@ class WSIReader:
         input_img (pathlib.Path): Input path to WSI file.
 
     Args:
-        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`): input
-         path to WSI.
+        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
+            Input path to WSI.
+        mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
+            The MPP of the WSI. If not provided, the MPP is approximated
+            from the objective power.
+        power (:obj:`float` or :obj:`None`, optional):
+            The objective power of the WSI. If not provided, the power
+            is approximated from the MPP.
 
     """
 
     @staticmethod  # noqa: A003
-    def open(input_img: WSIReaderInput) -> "WSIReader":
+    def open(
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> "WSIReader":
         """Return an appropriate :class:`.WSIReader` object.
 
         Args:
             input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
-            Input to create a WSI object from.
-            Supported types of input are: `str` and `pathlib.Path` which point to
-            the location on the disk where image is stored, :class:`numpy.ndarray`
-            in which the input image in the form of numpy array (HxWxC) is stored,
-            or :obj:WSIReader which is an already created tiatoolbox WSI handler.
-            In the latter case, the function directly passes the input_imge to the
-            output.
+                Input to create a WSI object from.
+                Supported types of input are: `str` and `pathlib.Path` which point to
+                the location on the disk where image is stored, :class:`numpy.ndarray`
+                in which the input image in the form of numpy array (HxWxC) is stored,
+                or :obj:WSIReader which is an already created tiatoolbox WSI handler.
+                In the latter case, the function directly passes the input_imge to the
+                output.
+            mpp (tuple):
+                (x, y) tuple of the MPP in the units of the input image.
+            power (float):
+                Objective power of the input image.
 
         Returns:
             WSIReader: an object with base :class:`.WSIReader` as base class.
@@ -111,22 +125,22 @@ class WSIReader:
 
             if suffixes[-1] in (".npy",):
                 input_img = np.load(input_img)
-                return VirtualWSIReader(input_img)
+                return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
             if suffixes[-2:] in ([".ome", ".tiff"],):
-                return TIFFWSIReader(input_img)
+                return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
             if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
-                return VirtualWSIReader(input_img)
+                return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
             if suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
-                return OpenSlideWSIReader(input_img)
+                return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
             if suffixes[-1] in (".jp2",):
-                return OmnyxJP2WSIReader(input_img)
+                return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
 
         if isinstance(input_img, np.ndarray):
-            return VirtualWSIReader(input_img)
+            return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
         if isinstance(
             input_img,
@@ -136,12 +150,29 @@ class WSIReader:
             return input_img
         raise TypeError("Invalid input. Must be a file path or an ndarray image.")
 
-    def __init__(self, input_img: WSIReaderInput) -> None:
+    def __init__(
+        self,
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> None:
         if isinstance(input_img, np.ndarray):
             self.input_path = None
         else:
             self.input_path = pathlib.Path(input_img)
         self._m_info = None
+
+        # Set a manual mpp value
+        if mpp and isinstance(mpp, Number):
+            mpp = (mpp, mpp)
+        if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
+            raise TypeError("Invalid mpp: Must be an iterable of length 2")
+        self._manual_mpp = tuple(mpp) if mpp else None
+
+        # Set a manual power value
+        if power and not isinstance(power, Number):
+            raise TypeError("Invalid power: Power must be a number")
+        self._manual_power = power
 
     @property
     def info(self) -> WSIMeta:
@@ -157,6 +188,10 @@ class WSIReader:
         if self._m_info is not None:
             return copy.deepcopy(self._m_info)
         self._m_info = self._info()
+        if self._manual_mpp:
+            self._m_info.mpp = np.array(self._manual_mpp)
+        if self._manual_power:
+            self._m_info.objective_power = self._manual_power
         return self._m_info
 
     @info.setter
@@ -1207,8 +1242,13 @@ class OpenSlideWSIReader(WSIReader):
 
     """
 
-    def __init__(self, input_img):
-        super().__init__(input_img=input_img)
+    def __init__(
+        self,
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> None:
+        super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(
@@ -1435,8 +1475,13 @@ class OmnyxJP2WSIReader(WSIReader):
 
     """
 
-    def __init__(self, input_img):
-        super().__init__(input_img=input_img)
+    def __init__(
+        self,
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> None:
+        super().__init__(input_img=input_img, mpp=mpp, power=power)
         import glymur
 
         glymur.set_option("lib.num_threads", os.cpu_count() or 1)
@@ -1657,12 +1702,16 @@ class VirtualWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img,
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
         info: WSIMeta = None,
         mode="rgb",
-    ):
+    ) -> None:
         super().__init__(
             input_img=input_img,
+            mpp=mpp,
+            power=power,
         )
         if mode.lower() not in ["rgb", "bool"]:
             raise ValueError("Invalid mode.")
@@ -1862,7 +1911,7 @@ class ArrayView:
 
     """
 
-    def __init__(self, array: zarr.Array, axes: str):
+    def __init__(self, array: zarr.Array, axes: str) -> None:
         """Initialise the view object.
 
         Args:
@@ -1895,8 +1944,15 @@ class ArrayView:
 
 
 class TIFFWSIReader(WSIReader):
-    def __init__(self, input_img, series="auto", cache_size=2 ** 28):
-        super().__init__(input_img=input_img)
+    def __init__(
+        self,
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+        series="auto",
+        cache_size=2 ** 28,
+    ) -> None:
+        super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
         self._axes = self.tiff.pages[0].axes
         if not any([self.tiff.is_svs, self.tiff.is_ome]):

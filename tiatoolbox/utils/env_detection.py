@@ -196,11 +196,14 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
     if in_conda_env():
         # Using anaconda to check for pixman
         using = "conda"
-        conda_list = subprocess.Popen(("conda", "list"), stdout=subprocess.PIPE)
-        conda_pixman = subprocess.check_output(
-            ("grep", "pixman"), stdin=conda_list.stdout
-        )
-        conda_list.wait()
+        try:
+            conda_list = subprocess.Popen(("conda", "list"), stdout=subprocess.PIPE)
+            conda_pixman = subprocess.check_output(
+                ("grep", "pixman"), stdin=conda_list.stdout
+            )
+            conda_list.wait()
+        except subprocess.SubprocessError:
+            conda_pixman = b""
         matches = re.search(
             r"^pixman\s*(\d+.\d+)*",
             conda_pixman.decode("utf-8"),
@@ -211,7 +214,12 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
     if shutil.which("dpkg") and version is None:
         # Using dpkg to check for pixman
         using = "dpkg"
-        dkpg_output = subprocess.check_output(["/usr/bin/dpkg", "-s", "libpixman-1-0"])
+        try:
+            dkpg_output = subprocess.check_output(
+                ["/usr/bin/dpkg", "-s", "libpixman-1-0"]
+            )
+        except subprocess.SubprocessError:
+            dkpg_output = b""
         matches = re.search(
             r"^Version: (\d+.\d+)*",
             dkpg_output.decode("utf-8"),
@@ -222,13 +230,16 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
     if shutil.which("brew") and version is None:
         # Using homebrew to check for pixman
         using = "brew"
-        brew_list = subprocess.Popen(
-            ("brew", "list", "--versions"), stdout=subprocess.PIPE
-        )
-        brew_pixman = subprocess.check_output(
-            ("grep", "pixman"), stdin=brew_list.stdout
-        )
-        brew_list.wait()
+        try:
+            brew_list = subprocess.Popen(
+                ("brew", "list", "--versions"), stdout=subprocess.PIPE
+            )
+            brew_pixman = subprocess.check_output(
+                ("grep", "pixman"), stdin=brew_list.stdout
+            )
+            brew_list.wait()
+        except subprocess.SubprocessError:
+            brew_pixman = b""
         matches = re.search(
             r"(\d+.\d+)*",
             brew_pixman.decode("utf-8"),
