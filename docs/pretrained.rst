@@ -51,7 +51,7 @@ They share the same input output configuration defined below:
 Patch Camelyon (PCam) Dataset
 -----------------------------
 
-The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`.
+The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`_.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
