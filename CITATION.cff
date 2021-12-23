@@ -17,7 +17,7 @@ authors:
   given-names: "Srijay"
   orcid: "https://orcid.org/0000-0003-3923-2944"
 - family-names: "Hadjigeorghiou"
-  given-names: "Giorgios"
+  given-names: "Giorgos"
   orcid: "https://orcid.org/0000-0003-2734-8915"
 - family-names: "Shephard"
   given-names: "Adam"
@@ -45,5 +45,6 @@ authors:
   orcid: "https://orcid.org/0000-0002-1097-1738"
 title: "TIAToolbox: An End-to-End Toolbox for Advanced Tissue Image Analytics"
 version: 1.0.0
+doi: 10.5281/zenodo.5802443
 date-released: 2021-12-23
 url: "https://github.com/TissueImageAnalytics/tiatoolbox"
