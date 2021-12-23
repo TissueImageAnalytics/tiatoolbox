@@ -152,3 +152,142 @@ They share the same input output configuration defined below:
 
     - fcn_resnet50_unet-bcss
 
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nucleus Instance Segmentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+--------------------
+PanNuke Dataset
+--------------------
+
+We provide the following models trained using the PanNuke, which use the following
+input output configuration defined below:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            input_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            output_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            margin=128
+            tile_shape=[1024, 1024]
+            patch_input_shape=(256, 256),
+            patch_output_shape=(164, 164),
+            stride_shape=(164, 164),
+            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+        )
+
+.. collapse:: Model names
+
+    - hovernet_fast-pannuke
+
+
+--------------------
+MoNuSAC Dataset
+--------------------
+
+We provide the following models trained using the MoNuSAC, which use the following
+input output configuration defined below:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            input_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            output_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            margin=128
+            tile_shape=[1024, 1024]
+            patch_input_shape=(256, 256),
+            patch_output_shape=(164, 164),
+            stride_shape=(164, 164),
+            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+        )
+
+.. collapse:: Model names
+
+    - hovernet_fast-monusac
+
+
+--------------------
+CoNSeP Dataset
+--------------------
+
+We provide the following models trained using the CoNSeP, which use the following
+input output configuration defined below:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            input_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            output_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            margin=128
+            tile_shape=[1024, 1024]
+            patch_input_shape=(270, 270),
+            patch_output_shape=(80, 80),
+            stride_shape=(80, 80),
+            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+        )
+
+.. collapse:: Model names
+
+    - hovernet_original-consep
+
+
+--------------------
+Kumar Dataset
+--------------------
+
+We provide the following models trained using the Kumar, which use the following
+input output configuration defined below:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            input_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            output_resolutions=[
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25},
+                {'units': 'mpp', 'resolution': 0.25}
+            ],
+            margin=128
+            tile_shape=[1024, 1024]
+            patch_input_shape=(270, 270),
+            patch_output_shape=(80, 80),
+            stride_shape=(80, 80),
+            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+        )
+
+.. collapse:: Model names
+
+    - hovernet_original_kumar
