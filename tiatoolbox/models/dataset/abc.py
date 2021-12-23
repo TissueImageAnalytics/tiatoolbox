@@ -14,14 +14,14 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 
-from abc import ABC, abstractmethod
 import os
 import pathlib
+from abc import ABC, abstractmethod
 
 import numpy as np
 import torch
@@ -175,4 +175,4 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     @abstractmethod
     def __getitem__(self, idx):
-        ...
+        ...  # pragma: no cover

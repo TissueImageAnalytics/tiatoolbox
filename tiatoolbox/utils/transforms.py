@@ -14,11 +14,13 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """Define Image transforms."""
+from typing import Tuple, Union
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -92,10 +94,17 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         >>> transforms.imresize(slide_thumbnail, scale_factor=0.5)
 
     """
+    if scale_factor is None and output_size is None:
+        raise TypeError("One of scale_factor and output_size must be not None.")
+    if scale_factor is not None:
+        scale_factor = np.array(scale_factor)
+        if scale_factor.size == 1:
+            scale_factor = np.repeat(scale_factor, 2)
+
     # Handle None arguments
     if output_size is None:
-        width = int(img.shape[1] * scale_factor)
-        height = int(img.shape[0] * scale_factor)
+        width = int(img.shape[1] * scale_factor[0])
+        height = int(img.shape[0] * scale_factor[1])
         output_size = (width, height)
 
     if scale_factor is None:
@@ -111,6 +120,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
             interpolation = "cubic"
         else:
             interpolation = "area"
+
+    if img.dtype == np.float16:
+        img = img.astype(np.float32)
+
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
     # Resize the image
@@ -173,6 +186,23 @@ def bounds2locsize(bounds, origin="upper"):
         origin (str): Upper (Top-left) or lower (bottom-left) origin.
             Defaults to upper.
 
+    Returns:
+        tuple: A 2-tuple containing integer 2-tuples for location and size.
+          - :py:obj:`tuple` - location tuple
+            - :py:obj:`int` - x
+            - :py:obj:`int` - y
+          - :py:obj:`size` - size tuple
+            - :py:obj:`int` - width
+            - :py:obj:`int` - height
+
+    Examples:
+        >>> from tiatoolbox.utils.transforms import bounds2locsize
+        >>> bounds = (0, 0, 10, 10)
+        >>> location, size = bounds2locsize(bounds)
+
+        >>> from tiatoolbox.utils.transforms import bounds2locsize
+        >>> _, size = bounds2locsize((12, 4, 24, 16))
+
     """
     left, top, right, bottom = bounds
     origin = origin.lower()
@@ -206,3 +236,74 @@ def locsize2bounds(location, size):
         location[0] + size[0],
         location[1] + size[1],
     )
+
+
+def bounds2slices(
+    bounds: Tuple[int, int, int, int],
+    stride: Union[int, Tuple[int, int, Tuple[int, int]]] = 1,
+) -> Tuple[slice]:
+    """Convert bounds to slices.
+
+    Create a tuple of slices for each start/stop pair in bounds.
+
+    Arguments:
+        bounds (tuple(int)): Iterable of integer bounds. Must be even in
+            length with the dirst half as starting values and the second half
+            as end values, e.g. (start_x, start_y, stop_x, stop_y).
+        stride (int): Stride to apply when converting to slices.
+
+    Returns:
+        tuple(slice): Tuple of slices in image read order (y, x, channels).
+
+    Example:
+        >>> from tiatoolbox.utils.transforms import bounds2slices
+        >>> import numpy as np
+        >>> bounds = (5, 5, 10, 10)
+        >>> array = np.ones((10, 10, 3))
+        >>> slices = bounds2slices(bounds)
+        >>> region = array[slices, ...]
+
+    """
+    if np.size(stride) == 1:
+        stride = np.tile(stride, 4)
+    elif np.size(stride) == 2:
+        stride = np.tile(stride, 2)
+    else:
+        raise ValueError("Invalid stride shape")
+    start, stop = np.reshape(bounds, (2, -1)).astype(int)
+    slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
+    return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
+
+
+def pad_bounds(
+    bounds: Tuple[int, int, int, int],
+    padding: Union[int, Tuple[int, int], Tuple[int, int, int, int]],
+) -> Tuple[int, int, int, int]:
+    """Add padding to bounds.
+
+    Arguments:
+        bounds (tuple(int)): Iterable of integer bounds. Must be even in
+            length with the dirst half as starting values and the second half
+            as end values, e.g. (start_x, start_y, stop_x, stop_y).
+        padding (int): Padding to add to bounds.
+
+    Examples:
+        >>> pad_bounds((0, 0, 0, 0), 1)
+
+    Returns:
+        tuple(int): Tuple of bounds with padding to the edges.
+
+    """
+    if np.size(bounds) % 2 != 0:
+        raise ValueError("Bounds must have an even number of elements")
+    ndims = np.size(bounds) // 2
+    if np.size(padding) == 1:
+        pass
+    elif np.size(padding) == ndims:
+        padding = np.tile(padding, 2)
+    elif np.size(padding) == np.size(bounds):
+        pass
+    else:
+        raise ValueError("Invalid number of padding elements.")
+    signs = np.repeat([-1, 1], ndims)
+    return np.add(bounds, padding * signs)

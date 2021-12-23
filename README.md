@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tia_logo.png">
+  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
 <p align="center">
@@ -35,8 +35,7 @@ Anyone wanting to contribute to this repository, please first look at our [Wiki]
 ### Links, if needed
 The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Commands in this README are in bash. Windows users can use the command prompt to install conda and python packages.
 
-
-[`conda`](https://github.com/conda/conda) is a management system for software packages and [virtual environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html). To get `conda`, download [Anaconda](https://www.anaconda.com/), which includes hundreds of the most useful Python packages, using 2GB disk space. Alternatively, [miniconda](https://docs.conda.io/en/latest/miniconda.html) uses 400MB, and packages can be added as needed.
+[conda](https://github.com/conda/conda) is a management system for software packages and [virtual environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html). To get `conda`, download [Anaconda](https://www.anaconda.com/), which includes hundreds of the most useful Python packages, using 2GB disk space. Alternatively, [miniconda](https://docs.conda.io/en/latest/miniconda.html) uses 400MB, and packages can be added as needed.
 
 [Github](https://github.com/about) is powered by the version control system [git](https://git-scm.com/), which has many users and uses. In Github, it is used to track versions of code and other documents.
 
@@ -62,13 +61,44 @@ tiatoolbox supports various features through command line. For more information,
 ### Prepare for development
 
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
-1. Open a `bash` terminal window<br/>
-`cd <future-home-of-tiatoolbox-directory>` <br/>
-2. Download a complete copy of the `tiatoolbox`.<br/>`git clone https://github.com/TissueImageAnalytics/tiatoolbox.git`<br/>
-3. `cd tiatoolbox`
-4. `conda env create -f requirements.conda.yml`<br/>
-creates the virtual environment `tiatoolbox`. Details in the text file `requirements.conda.yml`
-5. To use the packages installed in the environment, run the command:<br/>`conda activate tiatoolbox`
+1. Install [pre-requisite software](https://tia-toolbox.readthedocs.io/en/latest/installation.html)
+2. Open a terminal window<br/>
+
+```sh
+    $ cd <future-home-of-tiatoolbox-directory>
+```
+
+3. Download a complete copy of the `tiatoolbox`.
+
+```sh
+    $ git clone https://github.com/TissueImageAnalytics/tiatoolbox.git
+```
+
+4. Change directory to `tiatoolbox`
+
+```sh
+    $ cd tiatoolbox
+```
+
+5. Create virtual environment for TIAToolbox using
+
+```sh
+    $ conda env create -f requirements.dev.conda.yml # for linux/mac only.
+    $ conda activate tiatoolbox-dev
+```
+or
+
+```sh
+    $ conda create -n tiatoolbox-dev python=3.8 # select version of your choice
+    $ conda activate tiatoolbox-dev
+    $ pip install -r requirements_dev.txt
+```
+6. To use the packages installed in the environment, run the command:
+
+```sh
+    $ conda activate tiatoolbox-dev
+```
+
 
 ### License
 
@@ -80,7 +110,7 @@ The full text of the licence is included in [LICENSE.md](https://raw.githubuserc
 
 ### Auxiliary Files
 
-Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/fac/cross_fac/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ### Dual License
 

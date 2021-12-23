@@ -5,31 +5,39 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python=3.7
+  - albumentations
   - Click
   - cython
   - defusedxml
+  - flask
   - glymur
   - h5py
   - imagecodecs
   - jupyterlab
   - matplotlib
+  - nbsphinx
   - numpy
-  - opencv>=4.0
+  - opencv==4.5.4.60
   - openjpeg>=2.3.0
   - openslide
   - pandas
   - pillow
   - pip
   - pixman<0.38.0
+  - python=3.7
+  - python=3.7
   - pytorch
   - pyyaml>=5.1
   - requests
-  - scikit-image
+  - scikit-image==0.18.3
   - scikit-learn>=0.23.2
+  - sphinx_gallery
+  - sphinx_toolbox
+  - shapely
   - tifffile
   - torchvision
   - tqdm
+  - umap-learn
   - zarr
   - pip:
     - openslide-python==1.1.2

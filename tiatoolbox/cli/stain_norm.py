@@ -1,3 +1,23 @@
+# ***** BEGIN GPL LICENSE BLOCK *****
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
+# All rights reserved.
+# ***** END GPL LICENSE BLOCK *****
+
 """Command line interface for stain_norm."""
 import os
 
@@ -21,20 +41,20 @@ def main():  # pragma: no cover
 @click.option("--target-input", help="input path to the target image")
 @click.option(
     "--method",
-    help="Stain normalisation method to use. Choose from 'reinhard', 'custom',"
+    help="Stain normalization method to use. Choose from 'reinhard', 'custom',"
     "'ruifrok', 'macenko, 'vahadane'",
     default="reinhard",
 )
 @click.option(
     "--stain-matrix",
-    help="stain matrix to use in custom normaliser. This can either be a numpy array"
+    help="stain matrix to use in custom normalizer. This can either be a numpy array"
     ", a path to a npy file or a path to a csv file. If using a path to a csv file, "
     "there must not be any column headers.",
     default=None,
 )
 @click.option(
     "--output-path",
-    help="Output directory for stain normalisation",
+    help="Output directory for stain normalization",
     default="stainorm_output",
 )
 @click.option(
@@ -46,7 +66,7 @@ def main():  # pragma: no cover
 def stain_norm(
     source_input, target_input, method, stain_matrix, output_path, file_types
 ):
-    """Stain normalise an input image/directory of input images."""
+    """Stain normalize an input image/directory of input images."""
     file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if not os.path.exists(source_input):
@@ -64,8 +84,8 @@ def stain_norm(
     if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
         raise utils.exceptions.MethodNotSupported
 
-    # init stain normalisation method
-    norm = sn.get_normaliser(method, stain_matrix)
+    # init stain normalization method
+    norm = sn.get_normalizer(method, stain_matrix)
 
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))

@@ -14,11 +14,12 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 """Tests for Patch Predictor."""
 
+import copy
 import os
 import pathlib
 import shutil
@@ -31,20 +32,21 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli, rcParam
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.models.controller.patch_predictor import (
-    CNNPatchPredictor,
-    IOPatchPredictorConfig,
-)
 from tiatoolbox.models.dataset import (
     PatchDataset,
     PatchDatasetABC,
     WSIPatchDataset,
     predefined_preproc_func,
 )
+from tiatoolbox.models.engine.patch_predictor import (
+    PatchPredictor,
+    IOPatchPredictorConfig,
+)
 from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_TRAVIS = True
+ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
 
 
 def _rm_dir(path):
@@ -275,8 +277,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         WSIPatchDataset(
             img_path="aaaa",
             mode="wsi",
-            patch_size=[512, 512],
-            stride_size=[256, 256],
+            patch_input_shape=[512, 512],
+            stride_shape=[256, 256],
             auto_get_mask=False,
         )
 
@@ -286,8 +288,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
             img_path=mini_wsi_svs,
             mask_path="aaaa",
             mode="wsi",
-            patch_size=[512, 512],
-            stride_size=[256, 256],
+            patch_input_shape=[512, 512],
+            stride_shape=[256, 256],
             resolution=1.0,
             units="mpp",
             auto_get_mask=False,
@@ -301,21 +303,21 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     with pytest.raises(ValueError):
         reuse_init()
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=[512, 512, 512])
+        reuse_init_wsi(patch_input_shape=[512, 512, 512])
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=[512, "a"])
+        reuse_init_wsi(patch_input_shape=[512, "a"])
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=512)
+        reuse_init_wsi(patch_input_shape=512)
     # invalid stride
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=[512, 512], stride_size=[512, "a"])
+        reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, "a"])
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=[512, 512], stride_size=[512, 512, 512])
+        reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, 512, 512])
     # negative
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=[512, -512], stride_size=[512, 512])
+        reuse_init_wsi(patch_input_shape=[512, -512], stride_shape=[512, 512])
     with pytest.raises(ValueError):
-        reuse_init_wsi(patch_size=[512, 512], stride_size=[512, -512])
+        reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, -512])
 
     # * for wsi
     # dummy test for analysing the output
@@ -323,8 +325,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     patch_size = [512, 512]
     stride_size = [256, 256]
     ds = reuse_init_wsi(
-        patch_size=patch_size,
-        stride_size=stride_size,
+        patch_input_shape=patch_size,
+        stride_shape=stride_size,
         resolution=1.0,
         units="mpp",
         auto_get_mask=False,
@@ -348,8 +350,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 
     # test creation with auto mask gen and input mask
     ds = reuse_init_wsi(
-        patch_size=patch_size,
-        stride_size=stride_size,
+        patch_input_shape=patch_size,
+        stride_shape=stride_size,
         resolution=1.0,
         units="mpp",
         auto_get_mask=True,
@@ -359,8 +361,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         img_path=mini_wsi_svs,
         mask_path=mini_wsi_msk,
         mode="wsi",
-        patch_size=[512, 512],
-        stride_size=[256, 256],
+        patch_input_shape=[512, 512],
+        stride_shape=[256, 256],
         auto_get_mask=False,
         resolution=1.0,
         units="mpp",
@@ -373,8 +375,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
             img_path=mini_wsi_svs,
             mask_path="negative_mask.png",
             mode="wsi",
-            patch_size=[512, 512],
-            stride_size=[256, 256],
+            patch_input_shape=[512, 512],
+            stride_shape=[256, 256],
             auto_get_mask=False,
             resolution=1.0,
             units="mpp",
@@ -386,8 +388,8 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     tile_ds = WSIPatchDataset(
         img_path=mini_wsi_jpg,
         mode="tile",
-        patch_size=patch_size,
-        stride_size=stride_size,
+        patch_input_shape=patch_size,
+        stride_shape=stride_size,
         auto_get_mask=False,
     )
     step_idx = 3  # manually calibrate
@@ -455,10 +457,9 @@ def test_io_patch_predictor_config():
     """Test for IOConfig."""
     # test for creating
     cfg = IOPatchPredictorConfig(
-        patch_size=[224, 224],
-        stride_size=[224, 224],
+        patch_input_shape=[224, 224],
+        stride_shape=[224, 224],
         input_resolutions=[{"resolution": 0.5, "units": "mpp"}],
-        output_resolutions=[{"resolution": 0.5, "units": "mpp"}],
         # test adding random kwarg and they should be accessible as kwargs
         crop_from_source=True,
     )
@@ -466,7 +467,7 @@ def test_io_patch_predictor_config():
 
 
 # -------------------------------------------------------------------------------------
-# Controller
+# Engine
 # -------------------------------------------------------------------------------------
 
 
@@ -474,18 +475,18 @@ def test_predictor_crash():
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
-        CNNPatchPredictor()
+        PatchPredictor()
 
     # provide wrong unknown pretrained model
     with pytest.raises(ValueError, match=r"Pretrained .* does not exist"):
-        CNNPatchPredictor(pretrained_model="secret_model-kather100k")
+        PatchPredictor(pretrained_model="secret_model-kather100k")
 
     # provide wrong model of unknown type, deprecated later with type hint
     with pytest.raises(ValueError, match=r".*must be a string.*"):
-        CNNPatchPredictor(pretrained_model=123)
+        PatchPredictor(pretrained_model=123)
 
     # test predict crash
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     with pytest.raises(ValueError, match=r".*not a valid mode.*"):
         predictor.predict("aaa", mode="random")
@@ -504,13 +505,115 @@ def test_predictor_crash():
     _rm_dir("output")
 
 
+def test_io_config_delegation(remote_sample, tmp_path):
+    """Tests for delegating args to io config."""
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+
+    # test not providing config / full input info for not pretrained models
+    model = CNNModel("resnet50")
+    predictor = PatchPredictor(model=model)
+    with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
+        predictor.predict([mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump")
+    _rm_dir(f"{tmp_path}/dump")
+
+    kwargs = {
+        "patch_input_shape": [512, 512],
+        "resolution": 1.75,
+        "units": "mpp",
+    }
+    for key, _ in kwargs.items():
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs.pop(key)
+        with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
+            predictor.predict(
+                [mini_wsi_svs],
+                mode="wsi",
+                save_dir=f"{tmp_path}/dump",
+                on_gpu=ON_GPU,
+                **_kwargs,
+            )
+        _rm_dir(f"{tmp_path}/dump")
+
+    # test providing config / full input info for not pretrained models
+    ioconfig = IOPatchPredictorConfig(
+        patch_input_shape=[512, 512],
+        stride_shape=[256, 256],
+        input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
+    )
+    predictor.predict(
+        [mini_wsi_svs],
+        ioconfig=ioconfig,
+        mode="wsi",
+        save_dir=f"{tmp_path}/dump",
+        on_gpu=ON_GPU,
+    )
+    _rm_dir(f"{tmp_path}/dump")
+
+    predictor.predict(
+        [mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump", on_gpu=ON_GPU, **kwargs
+    )
+    _rm_dir(f"{tmp_path}/dump")
+
+    # test overwriting pretrained ioconfig
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor.predict(
+        [mini_wsi_svs],
+        patch_input_shape=[300, 300],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert predictor._ioconfig.patch_input_shape == [300, 300]
+    _rm_dir(f"{tmp_path}/dump")
+
+    predictor.predict(
+        [mini_wsi_svs],
+        stride_shape=[300, 300],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert predictor._ioconfig.stride_shape == [300, 300]
+    _rm_dir(f"{tmp_path}/dump")
+
+    predictor.predict(
+        [mini_wsi_svs],
+        resolution=1.99,
+        mode="wsi",
+        on_gpu=ON_GPU,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    _rm_dir(f"{tmp_path}/dump")
+
+    predictor.predict(
+        [mini_wsi_svs],
+        units="baseline",
+        mode="wsi",
+        on_gpu=ON_GPU,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
+    _rm_dir(f"{tmp_path}/dump")
+
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+    predictor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        merge_predictions=True,
+        save_dir=f"{tmp_path}/dump",
+        on_gpu=ON_GPU,
+    )
+    _rm_dir(f"{tmp_path}/dump")
+
+
 def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     """Helper function to get the model output using API 1."""
     save_dir_path = tmp_path
 
     # convert to pathlib Path to prevent reader complaint
     inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     output = predictor.predict(
         inputs,
@@ -571,7 +674,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     )
     download_data(pretrained_weights_url, pretrained_weights)
 
-    predictor = CNNPatchPredictor(
+    predictor = PatchPredictor(
         pretrained_model="resnet18-kather100k",
         pretrained_weights=pretrained_weights,
         batch_size=1,
@@ -580,7 +683,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     # --- test different using user model
     model = CNNModel(backbone="resnet18", num_classes=9)
     # test prediction
-    predictor = CNNPatchPredictor(model=model, batch_size=1, verbose=False)
+    predictor = PatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
         inputs,
         return_probabilities=True,
@@ -603,15 +706,15 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     # wrapper to make this more clean
     kwargs = dict(
         return_probabilities=True,
         return_labels=True,
         on_gpu=ON_GPU,
-        patch_size=patch_size,
-        stride_size=patch_size,
+        patch_input_shape=patch_size,
+        stride_shape=patch_size,
         resolution=1.0,
         units="baseline",
     )
@@ -645,15 +748,13 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
         return_probabilities=True,
         return_labels=True,
         on_gpu=ON_GPU,
-        patch_size=patch_size,
-        stride_size=patch_size,
+        patch_input_shape=patch_size,
+        stride_shape=patch_size,
         resolution=0.5,
         save_dir=save_dir,
         merge_predictions=True,  # to test the api coverage
         units="mpp",
     )
-
-    import copy
 
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = False
@@ -726,21 +827,35 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
         "predictions": [1, 0],
         "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
     }
-    merged = CNNPatchPredictor.merge_predictions(
+    merged = PatchPredictor.merge_predictions(
         np.zeros([4, 4]), output, resolution=1.0, units="baseline"
     )
     _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
     assert np.sum(merged - _merged) == 0
 
+    # blind test for merging probabilities
+    merged = PatchPredictor.merge_predictions(
+        np.zeros([4, 4]),
+        output,
+        resolution=1.0,
+        units="baseline",
+        return_raw=True,
+    )
+    _merged = np.array(
+        [[0.45, 0.45, 0, 0], [0.45, 0.45, 0, 0], [0, 0, 0.90, 0.90], [0, 0, 0.90, 0.90]]
+    )
+    assert merged.shape == (4, 4, 2)
+    assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
+
     # integration test
-    predictor = CNNPatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
     kwargs = dict(
         return_probabilities=True,
         return_labels=True,
         on_gpu=ON_GPU,
-        patch_size=np.array([224, 224]),
-        stride_size=np.array([224, 224]),
+        patch_input_shape=np.array([224, 224]),
+        stride_shape=np.array([224, 224]),
         resolution=1.0,
         units="baseline",
         merge_predictions=True,
@@ -796,7 +911,7 @@ def _test_predictor_output(
     on_gpu=ON_GPU,
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
-    predictor = CNNPatchPredictor(
+    predictor = PatchPredictor(
         pretrained_model=pretrained_model, batch_size=32, verbose=False
     )
     # don't run test on GPU
@@ -822,8 +937,8 @@ def _test_predictor_output(
         )
 
 
-def test_patch_predictor_output(sample_patch1, sample_patch2):
-    """Test the output of patch prediction models."""
+def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
+    """Test the output of patch prediction models on Kather100K dataset."""
     inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
     pretrained_info = {
         "alexnet-kather100k": [1.0, 0.9999735355377197],
@@ -852,6 +967,44 @@ def test_patch_predictor_output(sample_patch1, sample_patch2):
             predictions_check=[6, 3],
             on_gpu=ON_GPU,
         )
+        # only test 1 on travis to limit runtime
+        if ON_TRAVIS:
+            break
+
+
+def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
+    """Test the output of patch prediction models on PCam dataset."""
+    inputs = [pathlib.Path(sample_patch3), pathlib.Path(sample_patch4)]
+    pretrained_info = {
+        "alexnet-pcam": [0.999980092048645, 0.9769067168235779],
+        "resnet18-pcam": [0.999992847442627, 0.9466130137443542],
+        "resnet34-pcam": [1.0, 0.9976525902748108],
+        "resnet50-pcam": [0.9999270439147949, 0.9999996423721313],
+        "resnet101-pcam": [1.0, 0.9997289776802063],
+        "resnext50_32x4d-pcam": [0.9999996423721313, 0.9984435439109802],
+        "resnext101_32x8d-pcam": [0.9997072815895081, 0.9969086050987244],
+        "wide_resnet50_2-pcam": [0.9999837875366211, 0.9959040284156799],
+        "wide_resnet101_2-pcam": [1.0, 0.9945427179336548],
+        "densenet121-pcam": [0.9999251365661621, 0.9997479319572449],
+        "densenet161-pcam": [0.9999969005584717, 0.9662821292877197],
+        "densenet169-pcam": [0.9999998807907104, 0.9993504881858826],
+        "densenet201-pcam": [0.9999942779541016, 0.9950824975967407],
+        "mobilenet_v2-pcam": [0.9999876022338867, 0.9942564368247986],
+        "mobilenet_v3_large-pcam": [0.9999922513961792, 0.9719613790512085],
+        "mobilenet_v3_small-pcam": [0.9999963045120239, 0.9747149348258972],
+        "googlenet-pcam": [0.9999929666519165, 0.8701475858688354],
+    }
+    for pretrained_model, expected_prob in pretrained_info.items():
+        _test_predictor_output(
+            inputs,
+            pretrained_model,
+            probabilities_check=expected_prob,
+            predictions_check=[1, 0],
+            on_gpu=ON_GPU,
+        )
+        # only test 1 on travis to limit runtime
+        if ON_TRAVIS:
+            break
 
 
 # -------------------------------------------------------------------------------------

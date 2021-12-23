@@ -14,9 +14,10 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
+
 """Defines vanilla CNNs with torch backbones, mainly for patch classification."""
 
 import numpy as np
@@ -161,7 +162,7 @@ class CNNModel(ModelABC):
         return output.cpu().numpy()
 
 
-class CNNExtractor(ModelABC):
+class CNNBackbone(ModelABC):
     """Retrieve the model backbone and strip the classification layer.
 
     This is a wrapper for pretrained models within pytorch.
@@ -192,7 +193,7 @@ class CNNExtractor(ModelABC):
         >>> # Creating resnet50 architecture from default pytorch
         >>> # without the classification layer with its associated
         >>> # weights loaded
-        >>> model = CNNExtractor(backbone="resnet50")
+        >>> model = CNNBackbone(backbone="resnet50")
         >>> model.eval()  # set to evaluation mode
         >>> # dummy sample in NHWC form
         >>> samples = torch.random.rand(4, 3, 512, 512)

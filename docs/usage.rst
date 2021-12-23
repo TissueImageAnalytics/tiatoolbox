@@ -10,25 +10,17 @@ To use TIA Toolbox in a project::
 Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.wsicore.wsireader
-    :members: WSIReader, get_wsireader
-    :private-members:
-
-.. autoclass:: OpenSlideWSIReader
-    :show-inheritance:
-
-.. autoclass:: OmnyxJP2WSIReader
-    :show-inheritance:
-
-.. autoclass:: VirtualWSIReader
-    :show-inheritance:
+- :obj:`wsireader <tiatoolbox.wsicore.wsireader>`
+- :obj:`OpenSlideWSIReader <tiatoolbox.wsicore.wsireader.OpenSlideWSIReader>`
+- :obj:`OmnyxJP2WSIReader <tiatoolbox.wsicore.wsireader.OmnyxJP2WSIReader>`
+- :obj:`VirtualWSIReader <tiatoolbox.wsicore.wsireader.VirtualWSIReader>`
+- :obj:`TIFFWSIReader <tiatoolbox.wsicore.wsireader.TIFFWSIReader>`
 
 ^^^^^^^^^^^^^^^^^^
 Accessing Metadata
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.wsicore.wsimeta
-    :members: WSIMeta
+- :obj:`WSIMeta <tiatoolbox.wsicore.wsimeta.WSIMeta>`
 
 ^^^^^^^^^^
 Functional
@@ -37,146 +29,97 @@ Functional
 The wsicore module also includes some functional syntax for quickly
 obtaining information about a slide or generating tiles.
 
-.. automodule:: tiatoolbox.wsicore.slide_info
-    :members: slide_info
-
-.. automodule:: tiatoolbox.wsicore.save_tiles
-    :members: save_tiles
-
-
-^^^^^^^^^^^^^^^^^^^
-Stain Normalisation
-^^^^^^^^^^^^^^^^^^^
-
-.. automodule:: tiatoolbox.tools.stainnorm
-    :members: StainNormaliser, get_normaliser
-
-.. autoclass:: CustomNormaliser
-    :show-inheritance:
-
-.. autoclass:: RuifrokNormaliser
-    :show-inheritance:
-
-.. autoclass:: MacenkoNormaliser
-    :show-inheritance:
-
-.. autoclass:: VahadaneNormaliser
-    :show-inheritance:
-
-.. autoclass:: ReinhardNormaliser
-    :show-inheritance:
-
-
-^^^^^^^^^^^^^^^
-Tissue Masking
-^^^^^^^^^^^^^^^
-
-.. automodule:: tiatoolbox.tools.tissuemask
-    :members:
-
+- :obj:`slide_info <tiatoolbox.wsicore.slide_info>`
+- :obj:`save_tiles <tiatoolbox.wsicore.save_tiles>`
 
 ^^^^^^^^^^^^^^^^^^
 Stain Extraction
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.tools.stainextract
-    :members:
+- :obj:`Stain Extraction <tiatoolbox.tools.stainextract>`
+
+^^^^^^^^^^^^^^^^^^^
+Stain Normalization
+^^^^^^^^^^^^^^^^^^^
+
+- :obj:`get_normalizer <tiatoolbox.tools.stainnorm.get_normalizer>`
+- :obj:`StainNormalizer <tiatoolbox.tools.stainnorm.StainNormalizer>`
+- :obj:`CustomNormalizer <tiatoolbox.tools.stainnorm.CustomNormalizer>`
+- :obj:`RuifrokNormalizer <tiatoolbox.tools.stainnorm.RuifrokNormalizer>`
+- :obj:`MacenkoNormalizer <tiatoolbox.tools.stainnorm.MacenkoNormalizer>`
+- :obj:`VahadaneNormalizer <tiatoolbox.tools.stainnorm.VahadaneNormalizer>`
+- :obj:`ReinhardNormalizer <tiatoolbox.tools.stainnorm.ReinhardNormalizer>`
+
+^^^^^^^^^^^^^^^
+Tissue Masking
+^^^^^^^^^^^^^^^
+
+- :obj:`Tissue Mask <tiatoolbox.tools.tissuemask>`
+
+^^^^^^^^^^^^^^^^^^
+Stain Augmentation
+^^^^^^^^^^^^^^^^^^
+
+- :obj:`Augmentation <tiatoolbox.tools.stainaugment>`
 
 ^^^^^^^^^^^^^^^^^^
 Patch Extraction
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: tiatoolbox.tools.patchextraction
-    :members: PatchExtractor, get_patch_extractor, convert_input_image_for_patch_extraction
+- :obj:`get_patch_extractor <tiatoolbox.tools.patchextraction.get_patch_extractor>`
+- :obj:`PointsPatchExtractor <tiatoolbox.tools.patchextraction.PointsPatchExtractor>`
+- :obj:`SlidingWindowPatchExtractor <tiatoolbox.tools.patchextraction.SlidingWindowPatchExtractor>`
 
-.. autoclass:: PointsPatchExtractor
-    :show-inheritance:
+^^^^^^^^^^^^^^^^^^
+Graph Construction
+^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: SlidingWindowPatchExtractor
-    :show-inheritance:
+- :obj:`Slide Graph Constructor <tiatoolbox.tools.graph.SlideGraphConstructor>`
+
+^^^^^^^^^^^^^^^^^^^^^^^
+Tile Pyramid Generation
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- :obj:`Tile Pyramid Generator <tiatoolbox.tools.pyramid.TilePyramidGenerator>`
+- :obj:`Zoomify <tiatoolbox.tools.pyramid.ZoomifyGenerator>`
+
+^^^^^^^^^^^^^^^^^^^^
+Dataset
+^^^^^^^^^^^^^^^^^^^^
+
+- :obj:`Kather Dataset <tiatoolbox.models.dataset.info.KatherPatchDataset>`
 
 ^^^^^^^^^^^^^^^^^^^^
 Deep Learning Models
 ^^^^^^^^^^^^^^^^^^^^
 
-.. automodule::tiatoolbox.models
-    :members:
-
-.. automodule:: tiatoolbox.models.abc
-    :members:
-
-------------
-Architecture
-------------
-
-.. automodule:: tiatoolbox.models.architecture
-    :members:
-
 --------------
-Controller
+Engine
 --------------
 
-.. automodule:: tiatoolbox.models.controller
-    :members:
+- :obj:`Patch Prediction <tiatoolbox.models.engine.patch_predictor.PatchPredictor>`
+- :obj:`Semantic Segmentation <tiatoolbox.models.engine.semantic_segmentor.SemanticSegmentor>`
+- :obj:`Feature Extraction <tiatoolbox.models.engine.semantic_segmentor.DeepFeatureExtractor>`
+- :obj:`Nucleus Instance Segmnetation <tiatoolbox.models.engine.nucleus_instance_segmentor.NucleusInstanceSegmentor>`
 
-.. automodule:: tiatoolbox.models.controller.patch_predictor
-    :members:
+----------------------------
+Neural Network Architectures
+----------------------------
 
-.. automodule:: tiatoolbox.models.controller.semantic_segmentor
-    :members:
+- :obj:`Torch Vision CNNs <tiatoolbox.models.architecture.vanilla>`
+- :obj:`Simplified U-Nets <tiatoolbox.models.architecture.unet>`
+- :obj:`HoVerNet <tiatoolbox.models.architecture.hovernet.HoVerNet>`
+- :obj:`HoVerNet+ <tiatoolbox.models.architecture.hovernetplus.HoVerNetPlus>`
 
--------
-Dataset
--------
-
-.. automodule:: tiatoolbox.models.dataset
-    :members:
-
-.. automodule:: tiatoolbox.models.dataset.classification
-    :members:
+Pipelines:
+    - :obj:`IDARS <tiatoolbox.models.architecture.idars>`
 
 ^^^^^^^^^
 Utilities
 ^^^^^^^^^
 
-.. automodule:: tiatoolbox.utils
-
------
-Image
------
-
-.. automodule:: tiatoolbox.utils.image
-    :members:
-
--------------
-Miscellaneous
--------------
-
-.. automodule:: tiatoolbox.utils.misc
-    :members:
-
-    .. autofunction:: mpp2objective_power(mpp)
-    .. autofunction:: objective_power2mpp(objective_power)
-    .. autofunction:: mpp2common_objective_power(mpp, common_powers)
-    .. autofunction:: conv_out_size(in_size, kernel_size=1, padding=0, stride=1)
-
-----------
-Transforms
-----------
-
-.. automodule:: tiatoolbox.utils.transforms
-    :members:
-
-    .. autofunction:: background_composite
-    .. autofunction:: imresize
-    .. autofunction:: convert_RGB2OD
-    .. autofunction:: convert_OD2RGB
-    .. autofunction:: bounds2locsize
-    .. autofunction:: locsize2bounds
-
-----------
-Exceptions
-----------
-
-.. automodule:: tiatoolbox.utils.exceptions
-    :members: FileNotSupported, MethodNotSupported
+- :obj:`Image <tiatoolbox.utils.image>`
+- :obj:`Transforms <tiatoolbox.utils.transforms>`
+- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
+- :obj:`Exceptions <tiatoolbox.utils.exceptions>`
+- :obj:`Visualization <tiatoolbox.utils.visualization>`

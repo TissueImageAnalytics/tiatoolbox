@@ -8,11 +8,9 @@ alexnet-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 resnet18-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth
@@ -24,11 +22,9 @@ resnet18-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 resnet34-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-kather100k.pth
@@ -40,11 +36,9 @@ resnet34-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 resnet50-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-kather100k.pth
@@ -56,11 +50,9 @@ resnet50-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 resnet101-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-kather100k.pth
@@ -72,11 +64,9 @@ resnet101-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 resnext50_32x4d-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-kather100k.pth
@@ -88,11 +78,9 @@ resnext50_32x4d-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 resnext101_32x8d-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-kather100k.pth
@@ -104,11 +92,9 @@ resnext101_32x8d-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 wide_resnet50_2-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-kather100k.pth
@@ -120,11 +106,9 @@ wide_resnet50_2-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 wide_resnet101_2-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-kather100k.pth
@@ -136,11 +120,9 @@ wide_resnet101_2-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 densenet121-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-kather100k.pth
@@ -152,11 +134,9 @@ densenet121-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 densenet161-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-kather100k.pth
@@ -168,11 +148,9 @@ densenet161-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 densenet169-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-kather100k.pth
@@ -184,11 +162,9 @@ densenet169-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 densenet201-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-kather100k.pth
@@ -200,11 +176,9 @@ densenet201-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 mobilenet_v2-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-kather100k.pth
@@ -216,11 +190,9 @@ mobilenet_v2-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 mobilenet_v3_large-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-kather100k.pth
@@ -232,11 +204,9 @@ mobilenet_v3_large-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 mobilenet_v3_small-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-kather100k.pth
@@ -248,11 +218,9 @@ mobilenet_v3_small-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
 googlenet-kather100k:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-kather100k.pth
@@ -264,12 +232,342 @@ googlenet-kather100k:
     ioconfig:
         class: patch_predictor.IOPatchPredictorConfig
         kwargs:
-            patch_size: [224, 224]
-            stride_size: [224, 224]
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-            output_resolutions: [{"resolution": 0.5, "units": "mpp"}]
-    # dataset: KatherPatchDataset
     dataset: kather100k
+
+alexnet-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/alexnet-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: alexnet
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+resnet18-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet18
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+resnet34-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+resnet50-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet50
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+resnet101-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet101
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+resnext50_32x4d-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnext50_32x4d
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+resnext101_32x8d-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnext101_32x8d
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+wide_resnet50_2-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: wide_resnet50_2
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+wide_resnet101_2-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: wide_resnet101_2
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+densenet121-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet121
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+densenet161-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet161
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+densenet169-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet169
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+densenet201-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet201
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+mobilenet_v2-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v2
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+mobilenet_v3_large-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v3_large
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+mobilenet_v3_small-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v3_small
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+googlenet-pcam:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-pcam.pth
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: googlenet
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+resnet18-idars-tumour:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet18
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [512, 512]
+            stride_shape: [512, 512]
+            input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+resnet34-idars-msi:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-braf:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-braf.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-cimp:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cimp.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-cin:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cin.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-tp53:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-tp53.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+resnet34-idars-hm:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-hm.pth
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: patch_predictor.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
 
 fcn-tissue_mask:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
@@ -312,3 +610,118 @@ fcn_resnet50_unet-bcss:
             patch_output_shape: [512, 512]
             stride_shape: [256, 256]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_fast-pannuke:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-pannuke.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: 6
+            mode: "fast"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_fast-monusac:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-monusac.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: 5
+            mode: "fast"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_original-consep:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-consep.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: 5
+            mode: "original"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [270, 270]
+            patch_output_shape: [80, 80]
+            stride_shape: [80, 80]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernet_original-kumar:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-kumar.pth
+    architecture:
+        class: hovernet.HoVerNet
+        kwargs:
+            num_types: null  # None in python ?, only do instance segmentation
+            mode: "original"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.25}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.25}
+                - {"units": "mpp", "resolution": 0.25}
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [270, 270]
+            patch_output_shape: [80, 80]
+            stride_shape: [80, 80]
+            save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+hovernetplus-oed:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
+    architecture:
+        class: hovernetplus.HoVerNetPlus
+        kwargs:
+            num_types: 3
+            num_layers: 5
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions: 
+                - {"units": "mpp", "resolution": 0.50}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}    
+            margin: 128
+            tile_shape: [1024, 1024]
+            patch_input_shape: [256, 256]
+            patch_output_shape: [164, 164]
+            stride_shape: [164, 164]
+            save_resolution: {'units': 'mpp', 'resolution': 0.50}

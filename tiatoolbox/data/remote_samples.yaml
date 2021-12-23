@@ -59,6 +59,12 @@ files:
     url: [*modelroot, "samples/kather_patch1.tif"]
   sample-patch-2:
     url: [*modelroot, "samples/kather_patch2.tif"]
+  sample-patch-3:
+    url: [*modelroot, "samples/pcam_patch1.png"]
+  sample-patch-4:
+    url: [*modelroot, "samples/pcam_patch2.png"]
+  wsi1_2k_2k_svs:
+    url: [*modelroot, "samples/wsi1_2k_2k.svs"]
   wsi1_8k_8k_svs:
     url: [*modelroot, "samples/wsi1_8k_8k.svs"]
   wsi1_8k_8k_jp2:
@@ -77,8 +83,12 @@ files:
     url: [*modelroot, "samples/wsi2_4k_4k.pred.dat"]
   wsi3_20k_20k_svs:
     url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+  wsi4_512_512_svs:
+    url: [*modelroot, "samples/wsi4_512_512.svs"]
+  wsi4_1k_1k_svs:
+    url: [*modelroot, "samples/wsi4_1k_1k.svs"]
   wsi4_4k_4k_svs:
-    url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+    url: [*modelroot, "samples/wsi4_4k_4k.svs"]
   wsi3_20k_20k_pred:
     url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
   wsi4_4k_4k_pred:

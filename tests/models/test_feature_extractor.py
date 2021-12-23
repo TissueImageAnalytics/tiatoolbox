@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 """Tests for feature extractor."""
@@ -26,9 +26,9 @@ import shutil
 import numpy as np
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNExtractor
-from tiatoolbox.models.controller.semantic_segmentor import (
-    FeatureExtractor,
+from tiatoolbox.models.architecture.vanilla import CNNBackbone
+from tiatoolbox.models.engine.semantic_segmentor import (
+    DeepFeatureExtractor,
     IOSegmentorConfig,
 )
 from tiatoolbox.wsicore.wsireader import get_wsireader
@@ -45,7 +45,7 @@ def _rm_dir(path):
 
 
 # -------------------------------------------------------------------------------------
-# Controller
+# Engine
 # -------------------------------------------------------------------------------------
 
 
@@ -53,11 +53,11 @@ def test_functional(remote_sample, tmp_path):
     """Test for feature extraction."""
     save_dir = pathlib.Path(f"{tmp_path}/output/")
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     _rm_dir(save_dir)  # default output dir test
-    extractor = FeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
+    extractor = DeepFeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
     output_list = extractor.predict(
         [mini_wsi_svs],
         mode="wsi",
@@ -70,7 +70,7 @@ def test_functional(remote_sample, tmp_path):
     features = np.load(f"{wsi_0_root_path}.features.0.npy")
     assert len(features.shape) == 4
 
-    # * test same output between full infer and controller
+    # * test same output between full infer and engine
     # pre-emptive clean up
     _rm_dir(save_dir)  # default output dir test
 
@@ -87,8 +87,8 @@ def test_functional(remote_sample, tmp_path):
         save_resolution={"units": "mpp", "resolution": 8.0},
     )
 
-    model = CNNExtractor("resnet50")
-    extractor = FeatureExtractor(batch_size=4, model=model)
+    model = CNNBackbone("resnet50")
+    extractor = DeepFeatureExtractor(batch_size=4, model=model)
     # should still run because we skip exception
     output_list = extractor.predict(
         [mini_wsi_svs],

@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -122,6 +122,8 @@ class PatchExtractor(ABC):
                 self.mask = self.wsi.tissue_mask(
                     method=input_mask, resolution=1.25, units="power"
                 )
+        elif isinstance(input_mask, wsireader.VirtualWSIReader):
+            self.mask = input_mask
         else:
             self.mask = wsireader.VirtualWSIReader(
                 input_mask, info=self.wsi.info, mode="bool"
@@ -150,55 +152,48 @@ class PatchExtractor(ABC):
         x = self.locations_df["x"][item]
         y = self.locations_df["y"][item]
 
-        data = self.wsi.read_rect(
+        return self.wsi.read_rect(
             location=(int(x), int(y)),
             size=self.patch_size,
             resolution=self.resolution,
             units=self.units,
             pad_mode=self.pad_mode,
             pad_constant_values=self.pad_constant_values,
+            coord_space="resolution",
         )
-
-        return data
 
     def _generate_location_df(self):
         """Generate location list based on slide dimension.
         The slide dimension is calculated using units and resolution.
 
         """
-        (read_level, _, _, _, baseline_read_size,) = self.wsi.find_read_rect_params(
-            location=(0, 0),
-            size=self.patch_size,
-            resolution=self.resolution,
-            units=self.units,
-        )
-
-        slide_dimension = self.wsi.info.level_dimensions[0]
-        level_downsample = self.wsi.info.level_downsamples[read_level]
-
-        img_w = slide_dimension[0]
-        img_h = slide_dimension[1]
-        img_patch_w = baseline_read_size[0]
-        img_patch_h = baseline_read_size[1]
-        stride_w = int(self.stride[0] * level_downsample)
-        stride_h = int(self.stride[1] * level_downsample)
+        slide_dimension = self.wsi.slide_dimensions(self.resolution, self.units)
 
         self.coord_list = self.get_coordinates(
-            image_shape=(img_w, img_h),
-            patch_input_shape=(img_patch_w, img_patch_h),
-            stride_shape=(stride_w, stride_h),
+            image_shape=(slide_dimension[0], slide_dimension[1]),
+            patch_input_shape=(self.patch_size[0], self.patch_size[1]),
+            stride_shape=(self.stride[0], self.stride[1]),
             input_within_bound=self.within_bound,
         )
 
         if self.mask is not None:
-            selected_coord_idxs = self.filter_coordinates(
+            # convert the coord_list resolution unit to acceptable units
+            converted_units = self.wsi.convert_resolution_units(
+                input_res=self.resolution,
+                input_unit=self.units,
+            )
+            # find the first unit which is not None
+            converted_units = {
+                k: v for k, v in converted_units.items() if v is not None
+            }
+            converted_units_keys = list(converted_units.keys())
+            selected_coord_idxs = self.filter_coordinates_fast(
                 self.mask,
                 self.coord_list,
-                resolution=self.resolution,
-                units=self.units,
+                coord_resolution=converted_units[converted_units_keys[0]],
+                coord_units=converted_units_keys[0],
             )
             self.coord_list = self.coord_list[selected_coord_idxs]
-
             if len(self.coord_list) == 0:
                 raise ValueError(
                     "No candidate coordinates left after "
@@ -210,6 +205,80 @@ class PatchExtractor(ABC):
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
         return self
+
+    @staticmethod
+    def filter_coordinates_fast(
+        mask_reader,
+        coordinates_list,
+        coord_resolution,
+        coord_units,
+        mask_resolution=None,
+    ):
+        """Validate patch extraction coordinates based on the input mask.
+
+        This function indicates which coordinate is valid for mask-based
+        patch extraction based on checks in low resolution.
+
+        Args:
+            mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
+              mask related to the WSI from which we want to extract the patches.
+            coordinates_list (ndarray and np.int32): Coordinates to be checked
+              via the `func`. They must be in the same resolution as requested
+              `resolution` and `units`. The shape of `coordinates_list` is (N, K)
+              where N is the number of coordinate sets and K is either 2 for centroids
+              or 4 for bounding boxes. When using the default `func=None`, K should be
+              4, as we expect the `coordinates_list` to be refer to bounding boxes in
+              `[start_x, start_y, end_x, end_y]` format.
+            coord_resolution (float): the resolution value at which coordinates_list are
+              generated.
+            coord_resolution (str): the resolution unit at which coordinates_list are
+              generated.
+            mask_resolution (floar): resolution at which mask array is extracted. It is
+              supposed to be in the same units as `coord_resolution` i.e.,
+              `coord_units`. If not provided, a default value will be selected based on
+              `coord_units`.
+
+        Returns:
+            ndarray: list of flags to indicate which coordinate is valid.
+
+        """
+        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
+            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
+        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
+            coordinates_list.dtype, np.integer
+        ):
+            raise ValueError("`coordinates_list` should be ndarray of integer type.")
+        if coordinates_list.shape[-1] != 4:
+            raise ValueError("`coordinates_list` must be of shape [N, 4].")
+        if isinstance(coord_resolution, (int, float)):
+            coord_resolution = [coord_resolution, coord_resolution]
+
+        # define default mask_resolution based on the input coord_units
+        if mask_resolution is None:
+            mask_res_dict = {"mpp": 8, "power": 1.25, "baseline": 0.03125}
+            mask_resolution = mask_res_dict[coord_units]
+
+        tissue_mask = mask_reader.slide_thumbnail(
+            resolution=mask_resolution, units=coord_units
+        )
+
+        # Scaling the coordinates_list to the `tissue_mask` array resolution
+        scaled_coords = coordinates_list.copy().astype(np.float32)
+        scaled_coords[:, [0, 2]] *= coord_resolution[0] / mask_resolution
+        scaled_coords[:, [0, 2]] = np.clip(
+            scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
+        )
+        scaled_coords[:, [1, 3]] *= coord_resolution[1] / mask_resolution
+        scaled_coords[:, [1, 3]] = np.clip(
+            scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
+        )
+        scaled_coords = np.int32(scaled_coords)
+
+        flag_list = []
+        for coord in scaled_coords:
+            this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
+            flag_list.append(np.any(this_part > 0))
+        return np.array(flag_list)
 
     @staticmethod
     def filter_coordinates(
@@ -244,6 +313,7 @@ class PatchExtractor(ABC):
                 resolution=reader.info.mpp if resolution is None else resolution,
                 units="mpp" if units is None else units,
                 interpolation="nearest",
+                coord_space="resolution",
             )
             return np.sum(roi > 0) > 0
 
@@ -433,9 +503,10 @@ class PointsPatchExtractor(PatchExtractor):
 
     Args:
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
-          and/or type of patch. Input can be path to a csv or json file.
-          classification, default=9 (centre of patch and all the eight neighbours as
-          centre).
+          and/or type of patch. This can be path to csv, npy or json files. Input can
+          also be a :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+          NOTE: value of location $(x,y)$ is expected to be based on the specified
+          `resolution` and `units` (not the `'baseline'` resolution).
 
     """
 

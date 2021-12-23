@@ -47,12 +47,35 @@ def test_imresize():
     )
     assert resized_img.shape == (1000, 500, 3)
 
+    # test for dtype conversion
+    resized_img = utils.transforms.imresize(
+        img.astype(np.float16),
+        scale_factor=0.5,
+        interpolation=cv2.INTER_CUBIC,
+    )
+    assert resized_img.shape == (1000, 500, 3)
+    assert resized_img.dtype == np.float32
+
+
+def test_imresize_1x1():
+    """Test imresize with 1x1 image."""
+    img = np.zeros((1, 1, 3))
+    resized_img = utils.transforms.imresize(img, scale_factor=10)
+    assert resized_img.shape == (10, 10, 3)
+
 
 def test_imresize_no_scale_factor():
     """Test for imresize with no scale_factor given."""
     img = np.zeros((2000, 1000, 3))
     resized_img = utils.transforms.imresize(img, output_size=(50, 100))
     assert resized_img.shape == (100, 50, 3)
+
+
+def test_imresize_no_scale_factor_or_output_size():
+    """Test imresize with no scale_factor or output_size."""
+    img = np.zeros((2000, 1000, 3))
+    with pytest.raises(TypeError, match="One of scale_factor and output_size"):
+        utils.transforms.imresize(img)
 
 
 def test_background_composite():
@@ -125,6 +148,14 @@ def test_safe_padded_read_negative_padding():
     bounds = (1, 1, 5, 5)
     with pytest.raises(ValueError, match="negative"):
         utils.image.safe_padded_read(data, bounds, padding=-1)
+
+
+def test_safe_padded_read_pad_mode_none():
+    """Test safe_padded_read with pad_mode=None."""
+    data = np.zeros((16, 16))
+    bounds = (-5, -5, 5, 5)
+    region = utils.image.safe_padded_read(data, bounds, pad_mode=None)
+    assert region.shape == (5, 5)
 
 
 def test_safe_padded_read_padding_formats():
@@ -204,6 +235,7 @@ def test_fuzz_safe_padded_read_edge_padding():
     it. A region is read using safe_padded_read with a constant padding
     of 0 and an offset by some random 'shift' amount between 1 and 16.
     The resulting image is checked for the correct number of 0 values.
+
     """
     random.seed(0)
     for _ in range(1000):
@@ -220,6 +252,20 @@ def test_fuzz_safe_padded_read_edge_padding():
         region = utils.image.safe_padded_read(data, bounds)
 
         assert np.sum(region == 0) == (16 * shift_magnitude)
+
+
+def test_fuzz_safe_padded_read():
+    """Fuzz test for safe_padded_read."""
+    random.seed(0)
+    for _ in range(1000):
+        data = np.random.randint(0, 255, (16, 16))
+
+        loc = np.random.randint(0, 16, 2)
+        size = (16, 16)
+        bounds = locsize2bounds(loc, size)
+        padding = np.random.randint(0, 16)
+        region = utils.image.safe_padded_read(data, bounds, padding=padding)
+        assert all(np.array(region.shape) == 16 + 2 * padding)
 
 
 def test_safe_padded_read_padding_shape():
@@ -280,9 +326,34 @@ def test_aligned_padded_sub_pixel_read(source_image):
     h = 5
     padding = 1
     bounds = (x, y, x + w, y + h)
-    ow = 4 + 2 * padding
-    oh = 4 + 2 * padding
+    ow = 4
+    oh = 4
     output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
+    assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
+
+
+def test_sub_pixel_read_with_pad_kwargs(source_image):
+    """Test sub-pixel numpy image reads with pad kwargs."""
+    image_path = Path(source_image)
+    assert image_path.exists()
+    test_image = utils.misc.imread(image_path)
+
+    x = 1
+    y = 1
+    w = 5
+    h = 5
+    padding = 1
+    bounds = (x, y, x + w, y + h)
+    ow = 4
+    oh = 4
+    output = utils.image.sub_pixel_read(
+        test_image,
+        bounds,
+        (ow, oh),
+        padding=padding,
+        pad_mode="reflect",
+        pad_kwargs={"reflect_type": "even"},
+    )
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
@@ -294,15 +365,17 @@ def test_non_aligned_padded_sub_pixel_read(source_image):
 
     x = 0.5
     y = 0.5
-    w = 4.5
-    h = 4.5
-    padding = 1
-    bounds = (x, y, x + w, y + h)
-    ow = 4
-    oh = 4
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
+    w = 4
+    h = 4
+    for padding in [1, 2, 3]:
+        bounds = (x, y, x + w, y + h)
+        ow = 4
+        oh = 4
+        output = utils.image.sub_pixel_read(
+            test_image, bounds, (ow, oh), padding=padding
+        )
 
-    assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
+        assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
 def test_non_baseline_padded_sub_pixel_read(source_image):
@@ -313,16 +386,27 @@ def test_non_baseline_padded_sub_pixel_read(source_image):
 
     x = 0.5
     y = 0.5
-    w = 4.5
-    h = 4.5
-    padding = 1
-    bounds = (x, y, x + w, y + h)
-    ow = 8
-    oh = 8
-    output = utils.image.sub_pixel_read(
-        test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
-    )
-    assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(output.shape[:2][::-1])
+    w = 4
+    h = 4
+    for padding in [1, 2, 3]:
+        bounds = (x, y, x + w, y + h)
+        ow = 8
+        oh = 8
+        output = utils.image.sub_pixel_read(
+            test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
+        )
+        assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(
+            output.shape[:2][::-1]
+        )
+
+
+def test_sub_pixel_read_pad_mode_none():
+    """Test sub_pixel_read with invalid interpolation."""
+    data = np.ones((16, 16))
+
+    bounds = (-1, -1, 5, 5)
+    region = utils.image.sub_pixel_read(data, bounds, (6, 6), pad_mode="none")
+    assert region.shape[:2] == (5, 5)
 
 
 def test_sub_pixel_read_invalid_interpolation():
@@ -356,7 +440,7 @@ def test_sub_pixel_read_pad_at_baseline():
     bounds = (0, 0, 8, 8)
     for padding in range(3):
         region = utils.image.sub_pixel_read(
-            data, bounds, out_size, padding=padding, pad_at_baseline=True
+            data, bounds, output_size=out_size, padding=padding, pad_at_baseline=True
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
 
@@ -368,6 +452,24 @@ def test_sub_pixel_read_pad_at_baseline():
         read_func=utils.image.safe_padded_read,
     )
     assert region.shape == (16, 16)
+
+
+def test_sub_pixel_read_bad_read_func():
+    """Test sub_pixel_read with read_func returning None."""
+    data = np.zeros((16, 16))
+    out_size = data.shape
+    bounds = (0, 0, 8, 8)
+
+    def bad_read_func(img, bounds, *kwargs):
+        return None
+
+    with pytest.raises(ValueError, match="None"):
+        utils.image.sub_pixel_read(
+            data,
+            bounds,
+            out_size,
+            read_func=bad_read_func,
+        )
 
 
 def test_sub_pixel_read_padding_formats():
@@ -447,8 +549,8 @@ def test_fuzz_padded_sub_pixel_read(source_image):
     for _ in range(10000):
         x = random.randint(-5, 32 - 5)
         y = random.randint(-5, 32 - 5)
-        w = random.random() * random.randint(1, 32)
-        h = random.random() * random.randint(1, 32)
+        w = 4 + random.random() * random.randint(1, 32)
+        h = 4 + random.random() * random.randint(1, 32)
         padding = random.randint(0, 2)
         bounds = (x, y, x + w, y + h)
         ow = random.randint(4, 128)
@@ -459,6 +561,7 @@ def test_fuzz_padded_sub_pixel_read(source_image):
             (ow, oh),
             interpolation="linear",
             padding=padding,
+            pad_kwargs={"constant_values": 0},
         )
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
@@ -512,9 +615,7 @@ def test_sub_pixel_read_empty_bounds():
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(
-        ValueError, match="Bounds have zero size after padding and integer alignment."
-    ):
+    with pytest.raises(ValueError, match="Bounds have zero size after padding."):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -565,6 +666,34 @@ def test_bounds2size_value_error():
     """Test bounds to size ValueError."""
     with pytest.raises(ValueError, match="Invalid origin"):
         utils.transforms.bounds2locsize((0, 0, 1, 1), origin="middle")
+
+
+def test_bounds2slices_invalid_stride():
+    """Test bounds2slices raises ValueError with invalid stride."""
+    bounds = (0, 0, 10, 10)
+    with pytest.raises(ValueError, match="Invalid stride"):
+        utils.transforms.bounds2slices(bounds, stride=(1, 1, 1))
+
+
+def test_pad_bounds_sample_cases():
+    """Test sample inputs for pad_bounds."""
+    output = utils.transforms.pad_bounds([0] * 4, 1)
+    assert np.array_equal(output, (-1, -1, 1, 1))
+
+    output = utils.transforms.pad_bounds((0, 0, 10, 10), (1, 2))
+    assert np.array_equal(output, (-1, -2, 11, 12))
+
+
+def test_pad_bounds_invalid_inputs():
+    """Test invalid inputs for pad_bounds."""
+    with pytest.raises(ValueError, match="even"):
+        utils.transforms.pad_bounds(bounds=(0, 0, 10), padding=1)
+
+    with pytest.raises(ValueError, match="Invalid number of padding"):
+        utils.transforms.pad_bounds(bounds=(0, 0, 10, 10), padding=(1, 1, 1))
+
+    # Normal case for control
+    utils.transforms.pad_bounds(bounds=(0, 0, 10, 10), padding=1)
 
 
 def test_contrast_enhancer():
@@ -831,33 +960,33 @@ def test_make_bounds_size_positive():
     """Test make_bounds_size_positive outputs positive bounds."""
     # Horizontal only
     bounds = (0, 0, -10, 10)
-    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    pos_bounds, fliplr, flipud = utils.image.make_bounds_size_positive(bounds)
     _, size = utils.transforms.bounds2locsize(pos_bounds)
     assert len(size) == 2
     assert size[0] > 0
     assert size[1] > 0
-    assert hflip is True
-    assert vflip is False
+    assert fliplr is True
+    assert flipud is False
 
     # Vertical only
     bounds = (0, 0, 10, -10)
-    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    pos_bounds, fliplr, flipud = utils.image.make_bounds_size_positive(bounds)
     _, size = utils.transforms.bounds2locsize(pos_bounds)
     assert len(size) == 2
     assert size[0] > 0
     assert size[1] > 0
-    assert hflip is False
-    assert vflip is True
+    assert fliplr is False
+    assert flipud is True
 
     # Both
     bounds = (0, 0, -10, -10)
-    pos_bounds, hflip, vflip = utils.image.make_bounds_size_positive(bounds)
+    pos_bounds, fliplr, flipud = utils.image.make_bounds_size_positive(bounds)
     _, size = utils.transforms.bounds2locsize(pos_bounds)
     assert len(size) == 2
     assert size[0] > 0
     assert size[1] > 0
-    assert hflip is True
-    assert vflip is True
+    assert fliplr is True
+    assert flipud is True
 
 
 def test_crop_and_pad_edges():
@@ -906,17 +1035,32 @@ def test_crop_and_pad_edges():
     assert output.shape == region.shape
 
 
+def test_crop_and_pad_edges_common_fail_cases():
+    """Test common failure cases for crop_and_pad_edges."""
+    bounds = (15, -5, 25, 5)
+    slide_dimensions = (10, 10)
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+    output = utils.image.crop_and_pad_edges(
+        bounds=bounds,
+        max_dimensions=slide_dimensions,
+        region=region,
+        pad_mode="constant",
+    )
+    assert output.shape == (10, 10)
+
+
 def test_fuzz_crop_and_pad_edges_output_size():
     """Fuzz test crop and pad util function output size."""
     random.seed(0)
+    region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
 
     for _ in range(1000):
         slide_dimensions = (random.randint(0, 50), random.randint(0, 50))
 
-        loc = (-5, -5)
+        loc = tuple(random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2))
         size = (10, 10)
         bounds = utils.transforms.locsize2bounds(loc, size)
-        region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+
         output = utils.image.crop_and_pad_edges(
             bounds=bounds,
             max_dimensions=slide_dimensions,
@@ -924,7 +1068,35 @@ def test_fuzz_crop_and_pad_edges_output_size():
             pad_mode="constant",
         )
 
-        assert output.shape == region.shape
+        assert output.shape == size
+
+
+def test_fuzz_crop_and_pad_edges_output_size_no_padding():
+    """Fuzz test crop and pad util function output size with no padding."""
+    random.seed(0)
+
+    for _ in range(1000):
+        slide_dimensions = np.array([random.randint(5, 50) for _ in range(2)])
+
+        loc = np.array(
+            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)]
+        )
+        size = np.array([10, 10])
+        expected = np.maximum(
+            size + np.minimum(loc, 0) - np.maximum(loc + size - slide_dimensions, 0),
+            0,
+        )
+        expected = tuple(expected[::-1])
+        bounds = utils.transforms.locsize2bounds(loc, size)
+        region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
+        output = utils.image.crop_and_pad_edges(
+            bounds=bounds,
+            max_dimensions=slide_dimensions,
+            region=region,
+            pad_mode=random.choice(["none", None]),
+        )
+
+        assert output.shape == expected
 
 
 def test_crop_and_pad_edges_negative_max_dims():
@@ -958,7 +1130,7 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
             pad_mode="constant",
         )
 
-    with pytest.raises(ValueError, match="max_dimensions must be >= 0"):
+    with pytest.raises(ValueError, match="dimensions must be >= 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, 0, 0),
@@ -968,10 +1140,10 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
         )
 
 
-def test_normalise_padding_input_dims():
-    """Test that normalise padding error with input dimensions > 1."""
+def test_normalize_padding_input_dims():
+    """Test that normalize padding error with input dimensions > 1."""
     with pytest.raises(ValueError, match="1 dimensional"):
-        utils.image.normalise_padding_size(((0, 0), (0, 0)))
+        utils.image.normalize_padding_size(((0, 0), (0, 0)))
 
 
 def test_select_device():
@@ -1010,7 +1182,7 @@ def test_save_as_json():
         "a1": {"name": "John", "age": 23, "sex": "male"},
         "a2": {"name": "John", "age": 23, "sex": "male"},
     }
-    sample = {
+    sample = {  # noqa: ECE001
         "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
         "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
         "c": {
@@ -1040,7 +1212,7 @@ def test_save_as_json():
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test complex list of data
     misc.save_as_json(list(sample.values()), "sample_json.json")
@@ -1048,9 +1220,31 @@ def test_save_as_json():
     with open("sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test numpy generic
     misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
     misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
     os.remove("sample_json.json")
+
+
+def test_imread_none_args():
+    img = np.zeros((10, 10, 3))
+    with pytest.raises(TypeError):
+        utils.misc.imread(img)
+
+
+def test_detect_pixman():
+    """Test detection of the pixman version.
+
+    Simply check it passes without exception.
+    """
+    _, _ = utils.env_detection.pixman_version()
+
+
+def test_detect_travis():
+    """Test detection of the travis environment.
+
+    Simply check it passes without exception.
+    """
+    _ = utils.env_detection.running_on_travis()

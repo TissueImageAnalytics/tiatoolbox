@@ -14,13 +14,13 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
 """This module defines a dataclass which holds metadata about a WSI.
 
-With this class, metadata is in a normalised consistent format
+With this class, metadata is in a normalized consistent format
 which is quite useful when working with many different WSI formats.
 The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.

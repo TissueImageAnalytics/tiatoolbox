@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -25,6 +25,7 @@ import sys
 import click
 
 from tiatoolbox import __version__
+from tiatoolbox.cli.nucleus_instance_segment import nucleus_instance_segment
 from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
 from tiatoolbox.cli.save_tiles import save_tiles
@@ -48,19 +49,19 @@ def version_msg():
     __version__, "--version", "-V", help="Version", message=version_msg()
 )
 def main():
-    """Computational pathology toolbox by TIA LAB."""
+    """Computational pathology toolbox by TIA Centre."""
     return 0
 
 
-main.add_command(slide_info)
-main.add_command(read_bounds)
-main.add_command(slide_thumbnail)
-main.add_command(save_tiles)
-main.add_command(tissue_mask)
+main.add_command(nucleus_instance_segment)
 main.add_command(patch_predictor)
-main.add_command(stain_norm)
+main.add_command(read_bounds)
+main.add_command(save_tiles)
 main.add_command(semantic_segment)
-
+main.add_command(slide_info)
+main.add_command(slide_thumbnail)
+main.add_command(tissue_mask)
+main.add_command(stain_norm)
 
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover

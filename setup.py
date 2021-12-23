@@ -11,17 +11,19 @@ with open("HISTORY.md") as history_file:
     history = history_file.read()
 
 requirements = [
+    "albumentations>0.5.0",
     "Click>=7.0",
     "numpy",
     "pillow",
     "matplotlib",
-    "opencv-python>=4.0",
+    "opencv-python==4.5.4.60",
     "openslide-python==1.1.2",
     "pyyaml>=5.1",
     "pandas",
     "glymur",
     "scikit-learn>=0.23.2",
-    "scikit-image>=0.17",
+    "scikit-image==0.18.3",
+    "shapely",
     "torchvision==0.10.1",
     "torch==1.9.1",
     "tqdm==4.60.0",
@@ -29,6 +31,8 @@ requirements = [
     "imagecodecs",
     "zarr",
     "requests",
+    "defusedxml",
+    "umap-learn",
 ]
 
 setup_requirements = [
@@ -69,6 +73,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/TissueImageAnalytics/tiatoolbox",
-    version="0.8.0",
+    version="1.0.0",
     zip_safe=False,
 )

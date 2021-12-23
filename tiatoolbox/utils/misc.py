@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# The Original Code is Copyright (C) 2021, TIALab, University of Warwick
+# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
@@ -673,6 +673,32 @@ def model_to(on_gpu, model):
     return model
 
 
+def get_bounding_box(img):
+    """Get bounding box coordinate information.
+
+    Given an image with zero and non-zero values. This function
+    will return the the minimal box that contains all non-zero
+    values.
+
+    Args:
+        img (ndarray): Image to get the bounding box.
+
+    Returns:
+        bound (ndarray): Coordinates of the box in the form of
+            [start_x, start_y, end_x, end_y].
+
+    """
+    rows = np.any(img, axis=1)
+    cols = np.any(img, axis=0)
+    rmin, rmax = np.where(rows)[0][[0, -1]]
+    cmin, cmax = np.where(cols)[0][[0, -1]]
+    # due to python indexing, need to add 1 to max
+    # else accessing will be 1px in the box, not out
+    rmax += 1
+    cmax += 1
+    return np.array([cmin, rmin, cmax, rmax])
+
+
 def string_to_tuple(in_str):
     """Splits input string to tuple at ','.
 
@@ -684,6 +710,50 @@ def string_to_tuple(in_str):
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
+
+
+def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
+    """Prepares CLI for running code on multiple files or a directory.
+
+    Checks for existing directories to run tests.
+    Converts file path to list of file paths or
+    creates list of file paths if input is a directory.
+
+    Args:
+        img_input (str or pathlib.Path): file path to images.
+        output_path (str or pathlib.Path): output directory path.
+        file_types (str): file types to process using cli.
+        mode (str): wsi or tile mode.
+        sub_dirname (str): name of subdirectory to save output.
+
+    Returns:
+        files_all (list): list of file paths to process.
+        output_path (pathlib.Path): updated output path.
+
+    """
+    file_types = string_to_tuple(in_str=file_types)
+
+    if isinstance(output_path, str):
+        output_path = pathlib.Path(output_path)
+
+    if not os.path.exists(img_input):
+        raise FileNotFoundError
+
+    files_all = [
+        img_input,
+    ]
+
+    if os.path.isdir(img_input):
+        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
+
+    if output_path is None and mode == "save":
+        input_dir = pathlib.Path(img_input).parent
+        output_path = input_dir / sub_dirname
+
+    if mode == "save":
+        output_path.mkdir(parents=True, exist_ok=True)
+
+    return files_all, output_path
 
 
 def prepare_model_cli(img_input, output_path, masks, file_types, mode):
@@ -701,7 +771,7 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
         mode (str): wsi or tile mode.
 
     Returns:
-        files_all (list): list of files to process.
+        files_all (list): list of file paths to process.
         masks_all (list): list of masks corresponding to input files.
         output_path (pathlib.Path): output path
 
