@@ -619,6 +619,100 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return (read_level, level_bounds, output_size, post_read_scale_factor)
 
+    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
+        """Converts resolution value between different units.
+
+        This function accepts a resolution and its units in the input and converts
+        it to all other units ('mpp', 'power', 'baseline'). To achieve resolution
+        in 'mpp' and 'power' units in theoutput, WSI meta data should cotain `mpp`
+        and `objective_power` information, respectively.
+
+        Args:
+            input_res (float): the resolution which we want to convert to
+            the other units.
+            input_unit (str): the unit of the input resolution (`input_res`). Acceptable
+            input_units are 'mpp', 'power', 'baseline', and 'level'.
+            output_unit (str): the desired unit to which we want to convert
+            the `input_res`. Acceptable values for `output_unit` are: 'mpp',
+            'power', and 'baseline'. If `output_unit` is not provided, all of
+            the conversions to all of the mentioned units will be returned in a
+            dictionary.
+
+
+        Returns:
+            output_res (float or dictionary): either a float which is the
+            converted `input_res` to the desired `output_unit` or a dictionary
+            containing the converted `input_res` to all acceptable units (`'mpp'`,
+            `'power'`, `'baseline'`). If there is not enough meta data to calculate
+            a unit (like `mpp` or `power`), they will be set to None in the dictionary.
+
+        """
+        baseline_mpp = self.info.mpp
+        baseline_power = self.info.objective_power
+        if input_unit not in {"mpp", "power", "level", "baseline"}:
+            raise ValueError(
+                "Invalid input_unit: argument accepts only one of the following "
+                " options: `'mpp'`, `'power'`, `'level'`, `'baseline'`."
+            )
+        if output_unit not in {"mpp", "power", "baseline", None}:
+            raise ValueError(
+                "Invalid output_unit: argument accepts only one of the following"
+                " options: `'mpp'`, `'power'`, `'baseline'`, or None (to return"
+                " all units)."
+            )
+        if baseline_mpp is None and input_unit == "mpp":
+            raise ValueError(
+                "Missing 'mpp': `input_unit` has been set to 'mpp' while there "
+                "is no information about 'mpp' in WSI meta data."
+            )
+        if baseline_power is None and input_unit == "power":
+            raise ValueError(
+                "Missing 'objective_power': `input_unit` has been set to 'power' while "
+                "there is no information about 'objective_power' in WSI meta data."
+            )
+
+        # calculate the output_res based on input_unit and resolution
+        output_dict = {
+            "mpp": None,
+            "power": None,
+            "baseline": None,
+        }
+        if input_unit == "mpp":
+            if isinstance(input_res, (list, tuple, np.ndarray)):
+                output_dict["mpp"] = np.array(input_res)
+            else:
+                output_dict["mpp"] = np.array([input_res, input_res])
+            output_dict["baseline"] = baseline_mpp[0] / output_dict["mpp"][0]
+            if baseline_power is not None:
+                output_dict["power"] = output_dict["baseline"] * baseline_power
+        elif input_unit == "power":
+            output_dict["baseline"] = input_res / baseline_power
+            output_dict["power"] = input_res
+            if baseline_mpp is not None:
+                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
+        elif input_unit == "level":
+            level_scales = self._relative_level_scales(input_res, input_unit)
+            output_dict["baseline"] = level_scales[0]
+            if baseline_mpp is not None:
+                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
+            if baseline_power is not None:
+                output_dict["power"] = output_dict["baseline"] * baseline_power
+        else:  # input_unit == 'baseline'
+            output_dict["baseline"] = input_res
+            if baseline_mpp is not None:
+                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
+            if baseline_power is not None:
+                output_dict["power"] = baseline_power * output_dict["baseline"]
+        out_res = output_dict[output_unit] if output_unit is not None else output_dict
+        if out_res is None:
+            warnings.warn(
+                "Although unit coversion from input_unit has been done, the requested "
+                "output_unit is returned as None. Probably due to missing 'mpp' or "
+                "'objective_power' in slide's meta data.",
+                UserWarning,
+            )
+        return out_res
+
     def _find_tile_params(
         self, tile_objective_value: Number
     ) -> Tuple[int, IntPair, int, Number]:
