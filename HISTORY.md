@@ -17,6 +17,7 @@ History
 - Adds classes which can generate zoomify tiles from a WSIReader object.
 - Adds WSI viewer using Zoomify/WSIReader API (#212)
 - Adds README to example page for clarity
+- Adds support to override or specify mpp and power
 
 ### Changes to API
 - Replaces `models.controller` API with `models.engine`
@@ -31,6 +32,7 @@ History
       - Use the yaml ioconfig
       - Any other input patch reading arguments will overwrite the yaml ioconfig (at the same keyword).
     - If `model` is not defined, all input patch reading arguments must be provided else exception will be thrown.
+- Improves performance of mask based patch extraction
 
 ### Development related changes
 - Improve tests performance for Travis runs
