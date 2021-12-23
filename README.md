@@ -15,6 +15,8 @@
     <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
     </a>
+  <br>
+  <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 </p>
 
 Computational Pathology Toolbox developed at the TIA Centre
