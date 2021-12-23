@@ -286,7 +286,7 @@ def safe_padded_read(
     Note that padding of the output is not guarenteed to be
     integer/pixel aligned if using a stride != 1.
 
-    .. figure:: images/out_of_bounds_read.png
+    .. figure:: ../images/out_of_bounds_read.png
             :width: 512
             :alt: Illustration for reading a region with negative
                 coordinates using zero padding and reflection padding.
@@ -425,7 +425,7 @@ def sub_pixel_read(  # noqa: CCR001
     Allows for reading of image regions with sub-pixel coordinates, and
     out of bounds reads with various padding and interpolation modes.
 
-    .. figure:: images/sub_pixel_reads.png
+    .. figure:: ../images/sub_pixel_reads.png
             :width: 512
             :alt: Illustration for reading a region with fractional
                 coordinates (sub-pixel).

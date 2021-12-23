@@ -33,7 +33,7 @@ reproduction includes both the training and inference portions.
 
 
 Inference Pipelines
----------------
+--------------------
 
 Each of the following notebooks tries to implement only the inference portion
 of a paper.
