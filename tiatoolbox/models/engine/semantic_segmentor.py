@@ -370,7 +370,7 @@ class SemanticSegmentor:
           `pretrained_model` argument is ignored.
         pretrained_model (str): Name of the existing models support by tiatoolbox
           for processing the data. For a full list of pretrained models, refer to the
-          `docs <https://tia-toolbox.readthedocs.io/en/master/pretrained.html/>`_.
+          `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
           By default, the corresponding pretrained weights will also be
           downloaded. However, you can override with your own set of weights
           via the `pretrained_weights` argument. Argument is case insensitive.
