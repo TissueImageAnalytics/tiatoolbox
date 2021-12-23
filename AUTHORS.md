@@ -12,12 +12,13 @@ Development Lead
 - Mostafa Jahanifar <mostafajahanifar>
 - David Epstein <DavidBAEpstein>
 - Srijay Deshpande <Srijay-lab>
+- George Hadjigeorgiou <ghadjigeorghiou>
+- Adam Shephard <adamshephard>
+- Wenqi Lu <wenqi006>
 - Saad Bashir <rajasaad>
 
 Contributors
 ------------
 
-- George Hadjigeorgiou <ghadjigeorghiou>
 - Rob Jewsbury <R-J96>
-- Jev Gamper <jgamper>
-
+- Mohsin Bilal <>

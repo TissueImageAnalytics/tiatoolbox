@@ -1,7 +1,7 @@
 History
 =======
 
-1.0.0 (2021-12-22)
+1.0.0 (2021-12-23)
 ------------------
 ### Major Updates and Feature Improvements
 - Adds nucleus instance segmentation base class

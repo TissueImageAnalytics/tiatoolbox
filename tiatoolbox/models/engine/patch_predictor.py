@@ -69,18 +69,18 @@ class PatchPredictor:
           weights already loaded. Default is `None`. If provided,
           `pretrained_model` argument is ignored.
         pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. Refer to
-          `tiatoolbox.models.classification.get_pretrained_model` for details.
+          for processing the data. For a full list of pretrained models, refer to the
+          `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
           By default, the corresponding pretrained weights will also be
           downloaded. However, you can override with your own set of weights
-          via the `pretrained_weights` argument. Argument is case insensitive.
+          via the `pretrained_weights` argument. Argument is case-insensitive.
         pretrained_weights (str): Path to the weight of the corresponding
           `pretrained_model`.
+
           >>> predictor = PatchPredictor(
           ...    pretrained_model="resnet18-kather100k",
           ...    pretrained_weights="resnet18_local_weight")
-          For a full list of pretrained models, refer to the
-          `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+
         batch_size (int) : Number of images fed into the model each time.
         num_loader_workers (int) : Number of workers to load the data.
           Take note that they will also perform preprocessing.
