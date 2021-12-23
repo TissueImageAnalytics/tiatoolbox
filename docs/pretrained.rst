@@ -1,7 +1,7 @@
 .. _pretrained-info-page:
 
 =================================
-Pre-trained Neural Network Models
+Pretrained Neural Network Models
 =================================
 
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -73,8 +73,8 @@ They share the same input output configuration defined below:
     - resnet34-pcam
     - resnet50-pcam
     - resnet101-pcam
-    - resnext50_pcam
-    - resnext101_pcam
+    - resnext50-pcam
+    - resnext101-pcam
     - wide_resnet50_2-pcam
     - wide_resnet101_2-pcam
     - densenet121-pcam
@@ -161,8 +161,8 @@ Nucleus Instance Segmentation
 PanNuke Dataset
 --------------------
 
-We provide the following models trained using the PanNuke, which use the following
-input output configuration defined below:
+We provide the following models trained using the `PanNuke dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_, which uses the following
+input output configuration:
 
 .. collapse:: Input Output Configuration Details
 
@@ -195,8 +195,8 @@ input output configuration defined below:
 MoNuSAC Dataset
 --------------------
 
-We provide the following models trained using the MoNuSAC, which use the following
-input output configuration defined below:
+We provide the following models trained using the `MoNuSAC dataset <https://monusac.grand-challenge.org/>`_, which uses the following
+input output configuration:
 
 .. collapse:: Input Output Configuration Details
 
@@ -229,8 +229,8 @@ input output configuration defined below:
 CoNSeP Dataset
 --------------------
 
-We provide the following models trained using the CoNSeP, which use the following
-input output configuration defined below:
+We provide the following models trained using the `CoNSeP dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_, which uses the following
+input output configuration:
 
 .. collapse:: Input Output Configuration Details
 
@@ -263,8 +263,8 @@ input output configuration defined below:
 Kumar Dataset
 --------------------
 
-We provide the following models trained using the Kumar, which use the following
-input output configuration defined below:
+We provide the following models trained using the `Kumar dataset <https://monuseg.grand-challenge.org/>`_, which uses the following
+input output configuration:
 
 .. collapse:: Input Output Configuration Details
 
@@ -291,3 +291,43 @@ input output configuration defined below:
 .. collapse:: Model names
 
     - hovernet_original_kumar
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Multi-Task Segmentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+----------------------------------------
+Oral Epithelial Dysplasia (OED) Dataset
+---------------------------------------
+
+We provide the following model trained using a private OED dataset. The model outputs nuclear instance segmentation
+and classification results, as well as semantic segmentation of epithelial layers. The model uses the following
+input output configuration:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            input_resolutions=[
+                {'units': 'mpp', 'resolution': 0.5}
+            ],
+            output_resolutions=[
+                {'units': 'mpp', 'resolution': 0.5},
+                {'units': 'mpp', 'resolution': 0.5},
+                {'units': 'mpp', 'resolution': 0.5},
+                {'units': 'mpp', 'resolution': 0.5}
+            ],
+            margin=128
+            tile_shape=[1024, 1024]
+            patch_input_shape=(256, 256),
+            patch_output_shape=(164, 164),
+            stride_shape=(164, 164),
+            save_resolution={'units': 'mpp', 'resolution': 0.5}        
+        )
+
+.. collapse:: Model names
+
+    - hovernetplus-oed
