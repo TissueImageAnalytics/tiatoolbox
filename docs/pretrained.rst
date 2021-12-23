@@ -51,7 +51,7 @@ They share the same input output configuration defined below:
 Patch Camelyon (PCam) Dataset
 -----------------------------
 
-The following models are trained using the PCam dataset.
+The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
@@ -95,7 +95,7 @@ Semantic Segmentation
 Tissue Masking
 --------------------
 
-The following models are trained using internal data of TIACentre.
+The following models are trained using internal data of TIA Centre.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
@@ -126,7 +126,7 @@ They share the same input output configuration defined below:
 Breast Cancer
 --------------------
 
-The following models are trained using `BCSS dataset <https://bcsegmentation.grand-challenge.org/>`_.
+The following models are trained using the `BCSS dataset <https://bcsegmentation.grand-challenge.org/>`_.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
