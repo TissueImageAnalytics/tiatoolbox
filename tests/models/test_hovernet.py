@@ -55,7 +55,35 @@ def test_functionality(remote_sample, tmp_path):
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
 
-    # * test original mode (architecture used in HoVerNet paper)
+    # * test fast mode (architecture used for MoNuSAC data)
+    patch = reader.read_bounds(
+        [0, 0, 256, 256], resolution=0.25, units="mpp", coord_space="resolution"
+    )
+    batch = torch.from_numpy(patch)[None]
+    model = HoVerNet(num_types=5, mode="fast")
+    fetch_pretrained_weights("hovernet_fast-monusac", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    model.load_state_dict(pretrained)
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = [v[0] for v in output]
+    output = model.postproc(output)
+    assert len(output[1]) > 0, "Must have some nuclei."
+
+    # * test original mode on CoNSeP dataset (architecture used in HoVerNet paper)
+    patch = reader.read_bounds(
+        [0, 0, 270, 270], resolution=0.25, units="mpp", coord_space="resolution"
+    )
+    batch = torch.from_numpy(patch)[None]
+    model = HoVerNet(num_types=5, mode="original")
+    fetch_pretrained_weights("hovernet_original-consep", f"{tmp_path}/weigths.pth")
+    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    model.load_state_dict(pretrained)
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = [v[0] for v in output]
+    output = model.postproc(output)
+    assert len(output[1]) > 0, "Must have some nuclei."
+
+    # * test original mode on Kumar dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
         [0, 0, 270, 270], resolution=0.25, units="mpp", coord_space="resolution"
     )

@@ -287,14 +287,14 @@ class HoVerNet(ModelABC):
           Once define, a branch dedicated for typing is created.
           By default, no typing (`num_types=None`) is used.
         mode (str): To use architecture defined in as in original paper
-          (`original`) or the one used in Pannuke paper (`fast`).
+          (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
         Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
-        Gamper, Jevgenij, et al. "Pannuke dataset extension, insights and baselines."
+        Gamper, Jevgenij, et al. "PanNuke dataset extension, insights and baselines."
         arXiv preprint arXiv:2003.10778 (2020).
 
     """
