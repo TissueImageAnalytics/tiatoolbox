@@ -1232,3 +1232,19 @@ def test_imread_none_args():
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.misc.imread(img)
+
+
+def test_detect_pixman():
+    """Test detection of the pixman version.
+
+    Simply check it passes without exception.
+    """
+    _, _ = utils.env_detection.pixman_version()
+
+
+def test_detect_travis():
+    """Test detection of the travis environment.
+
+    Simply check it passes without exception.
+    """
+    _ = utils.env_detection.running_on_travis()

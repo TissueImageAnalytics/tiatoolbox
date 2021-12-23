@@ -302,7 +302,7 @@ class WSIStreamDataset(torch_data.Dataset):
             )
             reader = VirtualWSIReader(
                 img,
-                metadata,
+                info=metadata,
             )
         return reader
 

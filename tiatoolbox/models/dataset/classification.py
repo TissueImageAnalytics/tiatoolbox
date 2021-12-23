@@ -263,7 +263,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             resolution = 1.0
             self.reader = VirtualWSIReader(
                 img,
-                metadata,
+                info=metadata,
             )
 
         # may decouple into misc ?
