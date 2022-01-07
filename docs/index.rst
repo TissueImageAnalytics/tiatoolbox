@@ -12,7 +12,7 @@ Welcome to TIA Toolbox's documentation!
    Installation <installation.rst>
 
 .. toctree::
-   :hidden:
+   :maxdepth: 2
 
    Usage <usage.rst>
 
