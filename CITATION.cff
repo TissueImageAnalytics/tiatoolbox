@@ -93,7 +93,7 @@ preferred-citation:
   - family-names: "Raza"
     given-names: "Shan E Ahmed"
     orcid: "https://orcid.org/0000-0002-1097-1738"
-    doi: "10.1101/2021.12.23.474029"
+  doi: "10.1101/2021.12.23.474029"
   journal: "bioRxiv"
   month: 12
   title: "TIAToolbox: An End-to-End Toolbox for Advanced Tissue Image Analytics"
