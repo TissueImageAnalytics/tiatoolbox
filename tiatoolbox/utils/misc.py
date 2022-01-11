@@ -80,7 +80,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """
     input_path = pathlib.Path(input_path)
 
-    if type(file_types) is str:
+    if isinstance(file_types, str):
         if len(file_types.split(",")) > 1:
             file_types = tuple(file_types.replace(" ", "").split(","))
         else:
@@ -158,7 +158,7 @@ def imread(image_path, as_uint8=True):
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
-        image = image.astype(np.uint8)
+        return image.astype(np.uint8)
     return image
 
 
@@ -180,23 +180,24 @@ def load_stain_matrix(stain_matrix_input):
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
-        if suffixes[-1] == ".csv":
-            stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
-        elif suffixes[-1] == ".npy":
-            stain_matrix = np.load(str(stain_matrix_input))
-        else:
+        if suffixes[-1] not in [".csv", ".npy"]:
             raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
-    elif isinstance(stain_matrix_input, np.ndarray):
-        stain_matrix = stain_matrix_input
-    else:
-        raise TypeError(
-            "Stain_matrix must be either a path to npy/csv file or a numpy array"
-        )
 
-    return stain_matrix
+        if suffixes[-1] == ".csv":
+            return pd.read_csv(stain_matrix_input).to_numpy()
+
+        if suffixes[-1] == ".npy":
+            return np.load(str(stain_matrix_input))
+
+    if isinstance(stain_matrix_input, np.ndarray):
+        return stain_matrix_input
+
+    raise TypeError(
+        "Stain_matrix must be either a path to npy/csv file or a numpy array"
+    )
 
 
 def get_luminosity_tissue_mask(img, threshold):
@@ -257,8 +258,7 @@ def mpp2common_objective_power(
     """
     op = mpp2objective_power(mpp)
     distances = [np.abs(op - power) for power in common_powers]
-    closest_match = common_powers[np.argmin(distances)]
-    return closest_match
+    return common_powers[np.argmin(distances)]
 
 
 mpp2common_objective_power = np.vectorize(
