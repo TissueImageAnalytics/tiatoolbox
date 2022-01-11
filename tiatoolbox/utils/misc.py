@@ -627,12 +627,14 @@ def save_as_json(data, save_path):
                 raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
             dct[k] = v
 
+    if not isinstance(shadow_data, (dict, list)):
+        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+
     if isinstance(shadow_data, dict):
         walk_dict(shadow_data)
     elif isinstance(shadow_data, list):
         walk_list(shadow_data)
-    else:
-        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+
     with open(save_path, "w") as handle:
         json.dump(shadow_data, handle)
 
@@ -648,11 +650,9 @@ def select_device(on_gpu):
 
     """
     if on_gpu:
-        device = "cuda"
+        return "cuda"
     else:
-        device = "cpu"
-
-    return device
+        return "cpu"
 
 
 def model_to(on_gpu, model):
@@ -668,11 +668,9 @@ def model_to(on_gpu, model):
     """
     if on_gpu:  # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
-        model = model.to("cuda")
+        return model.to("cuda")
     else:
-        model = model.to("cpu")
-
-    return model
+        return model.to("cpu")
 
 
 def get_bounding_box(img):
