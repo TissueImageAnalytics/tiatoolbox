@@ -651,8 +651,8 @@ def select_device(on_gpu):
     """
     if on_gpu:
         return "cuda"
-    else:
-        return "cpu"
+
+    return "cpu"
 
 
 def model_to(on_gpu, model):
@@ -669,8 +669,8 @@ def model_to(on_gpu, model):
     if on_gpu:  # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
         return model.to("cuda")
-    else:
-        return model.to("cpu")
+
+    return model.to("cpu")
 
 
 def get_bounding_box(img):
