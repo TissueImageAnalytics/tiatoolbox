@@ -358,6 +358,53 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
+def numpy_array_to_table(input_table):
+    """Checks numpy array to be 2 or 3 columns.
+    If it has two columns then class should be assign None.
+
+    Args:
+        input_table (np.ndarray): input table.
+
+    Returns:
+       table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+    Raises:
+        ValueError: If the number of columns is not equal to 2 or 3.
+
+    """
+    if input_table.shape[1] == 2:
+        out_table = pd.DataFrame(input_table, columns=["x", "y"])
+        out_table["class"] = None
+        return out_table
+
+    if input_table.shape[1] == 3:
+        return pd.DataFrame(input_table, columns=["x", "y", "class"])
+
+    raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
+
+
+def assign_unknown_class(input_table):
+    """Creates a column and assigns None if class is unknown.
+
+    Args:
+        input_table (np.ndarray or pd.DataFrame): input table.
+
+    Returns:
+        table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+    Raises:
+        ValueError: If the number of columns is not equal to 2 or 3.
+
+    """
+    if input_table.shape[1] not in [2, 3]:
+        raise ValueError("Input table must have 2 or 3 columns.")
+
+    if input_table.shape[1] == 2:
+        input_table["class"] = None
+
+    return input_table
+
+
 def read_locations(input_table):
     """Read annotations as pandas DataFrame.
 
@@ -381,52 +428,6 @@ def read_locations(input_table):
         >>> labels = read_locations('./annotations.csv')
 
     """
-
-    def numpy_array_to_table(input_table):
-        """Checks numpy array to be 2 or 3 columns.
-        If it has two columns then class should be assign None.
-
-        Args:
-            input_table (np.ndarray): input table.
-
-        Returns:
-           table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
-
-        Raises:
-            ValueError: If the number of columns is not equal to 2 or 3.
-
-        """
-        if input_table.shape[1] == 2:
-            out_table = pd.DataFrame(input_table, columns=["x", "y"])
-            out_table["class"] = None
-            return out_table
-
-        if input_table.shape[1] == 3:
-            return pd.DataFrame(input_table, columns=["x", "y", "class"])
-
-        raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
-
-    def assign_unknown_class(input_table):
-        """Creates a column and assigns None if class is unknown.
-
-        Args:
-            input_table (np.ndarray or pd.DataFrame): input table.
-
-        Returns:
-            table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
-
-        Raises:
-            ValueError: If the number of columns is not equal to 2 or 3.
-
-        """
-        if input_table.shape[1] not in [2, 3]:
-            raise ValueError("Input table must have 2 or 3 columns.")
-
-        if input_table.shape[1] == 2:
-            input_table["class"] = None
-
-        return input_table
-
     if isinstance(input_table, (str, pathlib.Path)):
         _, _, suffixes = split_path_name_ext(input_table)
 
