@@ -403,6 +403,27 @@ def read_locations(input_table):
 
         raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
 
+    def assign_unknown_class(input_table):
+        """Creates a column and assigns None if class is unknown.
+
+        Args:
+            input_table (np.ndarray or pd.DataFrame): input table.
+
+        Returns:
+            table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+        Raises:
+            ValueError: If the number of columns is not equal to 2 or 3.
+
+        """
+        if input_table.shape[1] not in [2, 3]:
+            raise ValueError("Input table must have 2 or 3 columns.")
+
+        if input_table.shape[1] == 2:
+            input_table["class"] = None
+
+        return input_table
+
     if isinstance(input_table, (str, pathlib.Path)):
         _, _, suffixes = split_path_name_ext(input_table)
 
@@ -410,7 +431,7 @@ def read_locations(input_table):
             out_table = np.load(input_table)
             return numpy_array_to_table(out_table)
 
-        elif suffixes[-1] == ".csv":
+        if suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
@@ -420,31 +441,22 @@ def read_locations(input_table):
                     sep=None,
                     engine="python",
                 )
-            if out_table.shape[1] == 2:
-                out_table["class"] = None
 
-        elif suffixes[-1] == ".json":
+            return assign_unknown_class(out_table)
+
+        if suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
-            if out_table.shape[1] == 2:
-                out_table["class"] = None
+            return assign_unknown_class(out_table)
 
-        else:
-            raise FileNotSupported("Filetype not supported.")
+        raise FileNotSupported("File type not supported.")
 
-    elif isinstance(input_table, np.ndarray):
+    if isinstance(input_table, np.ndarray):
         return numpy_array_to_table(input_table)
 
-    elif isinstance(input_table, pd.DataFrame):
-        out_table = input_table
-        if out_table.shape[1] == 2:
-            out_table["class"] = None
-        elif out_table.shape[1] < 2:
-            raise ValueError("Input table must have 2 or 3 columns.")
+    if isinstance(input_table, pd.DataFrame):
+        return assign_unknown_class(input_table)
 
-    else:
-        raise TypeError("Please input correct image path or an ndarray image.")
-
-    return out_table
+    raise TypeError("Please input correct image path or an ndarray image.")
 
 
 @np.vectorize
