@@ -75,7 +75,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
         >>> from tiatoolbox import utils
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,
-        ...     file_types=file_types,)
+        ...     file_types=file_types)
 
     """
     input_path = pathlib.Path(input_path)
@@ -140,6 +140,7 @@ def imread(image_path, as_uint8=True):
 
     Args:
         image_path (str or pathlib.Path): File path (including extension) to read image.
+        as_uint8 (bool): Read an image in uint8 format.
 
     Returns:
         img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
@@ -236,7 +237,7 @@ def mpp2common_objective_power(
 
     Args:
         mpp (float or tuple(float)): Microns per-pixel.
-        common_powers (list of float): A sequence of objective
+        common_powers (tuple or list of float): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
@@ -460,12 +461,13 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
 
     Examples:
         >>> from tiatoolbox import utils
+        >>> import numpy as np
         >>> utils.misc.conv_out_size(100, 3)
-        >>> array(98)
+        >>> np.array(98)
         >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
-        >>> array(98)
+        >>> np.array(98)
         >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
-        >>> array([49, 49])
+        >>> np.array([49, 49])
 
   """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
@@ -490,7 +492,7 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
 
     Args:
         interpolation (Union[str, int]): Interpolation mode string.
-            Possible values are: neares, linear, cubic, lanczos, area.
+            Possible values are: nearest, linear, cubic, lanczos, area.
 
     Raises:
         ValueError: Invalid interpolation mode.
