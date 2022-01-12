@@ -80,7 +80,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """
     input_path = pathlib.Path(input_path)
 
-    if type(file_types) is str:
+    if isinstance(file_types, str):
         if len(file_types.split(",")) > 1:
             file_types = tuple(file_types.replace(" ", "").split(","))
         else:
@@ -182,21 +182,24 @@ def load_stain_matrix(stain_matrix_input):
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
-        if suffixes[-1] == ".csv":
-            return pd.read_csv(stain_matrix_input).to_numpy()
-        elif suffixes[-1] == ".npy":
-            return np.load(str(stain_matrix_input))
-        else:
+        if suffixes[-1] not in [".csv", ".npy"]:
             raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
-    elif isinstance(stain_matrix_input, np.ndarray):
+
+        if suffixes[-1] == ".csv":
+            return pd.read_csv(stain_matrix_input).to_numpy()
+
+        if suffixes[-1] == ".npy":
+            return np.load(str(stain_matrix_input))
+
+    if isinstance(stain_matrix_input, np.ndarray):
         return stain_matrix_input
-    else:
-        raise TypeError(
-            "Stain_matrix must be either a path to npy/csv file or a numpy array"
-        )
+
+    raise TypeError(
+        "Stain_matrix must be either a path to npy/csv file or a numpy array"
+    )
 
 
 def get_luminosity_tissue_mask(img, threshold):
