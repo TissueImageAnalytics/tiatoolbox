@@ -16,7 +16,7 @@ We now give a list of our Jupyter notebooks, giving a brief description of the T
  ## 1- Reading Whole Slide Images ([01-wsi-reading.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/01-wsi-reading.ipynb))
 This notebook shows how to use TIAToolbox to read different kinds of WSIs. TIAToolbox provides a uniform interface to various WSI formats. To see what formats are dealt with, click [here](https://tia-toolbox.readthedocs.io/en/latest/usage.html?highlight=wsiread#tiatoolbox.wsicore.wsireader.WSIReader)  and then search for _format_. In this notebook, you will learn some well-known techniques for WSI masking and patch extraction.
 
-![image](https://user-images.githubusercontent.com/74412979/145223963-f5cc3efc-5762-43c1-b040-c1f738a98e1b.png) ![image](https://user-images.githubusercontent.com/74412979/145224002-b61eb074-5b55-45c9-a45c-9b527437be2c.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/wsi-reading-1.png) ![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/wsi-reading-2.png)
 
 ## 2- Stain normalization of histology images ([02-stain-normalization.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/02-stain-normalization.ipynb))
 Stain normalization is a common pre-processing step in computational pathology, whose objective is to reduce, as much as possible, colour variation that has no clinical significance. This variation may be caused by using different scanners, different staining protocols and practices, staining agents that have been left on the laboratory shelf for different lengths of time, different settings when using the scanner, etc. It has been shown in many studies that stain normalization can make an algorithm more robust against such differences. TIAToolbox makes a few different stain-normalization algorithms available to the use. The implemented stain normalization methods in TIAToolbox are:
@@ -27,27 +27,27 @@ Stain normalization is a common pre-processing step in computational pathology, 
 
 Alternatively, if you prefer, you can use your own stain matrix for stain normalization. In the images below, the object of an algorithm is to change to source image to make its colours similar to those in the target image.
 
-![image](https://user-images.githubusercontent.com/74412979/145396514-4f84bcf3-35f1-4474-81d9-2c30be8ac353.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/stain-norm-example.png)
 
 ## 3- Extracting tissue mask (tissue region) from whole slide images ([03-tissue-masking.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/03-tissue-masking.ipynb))
 WSIs often show large blank (glass) background areas that contain no information. Therefore it is essential to detect the informative (tissue) region in the WSI before taking any action (like patch extraction and classification). We call this step, "tissue masking" which is the focus of this example notebook. This notebook shows how to extract tissue regions from a WSI with the help of TIAToolbox and a single line of Python code.
 
-![image](https://user-images.githubusercontent.com/74412979/145227864-6df6b12c-8d15-4ac6-bc46-19677bce1f8e.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/tissue-mask.png)
 
 ## 4- Extracting patches from whole slide images ([04-patch-extraction.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/04-patch-extraction.ipynb))
 This notebook uses TIAToolbox to extract patches from a large histology image. Tiatoolbox can extract patches based on point annotations or using a fixed-size sliding window. The patch extraction module of TIAToolbox supports mask-based patch extraction which means you can extract (overlapping, if you prefer) patches from a certain region of WSI (for example a region consisting of a particular type of tissue).
 
-![image](https://user-images.githubusercontent.com/74412979/145229244-933fba8b-aa9e-4e88-a9d0-713996e4874a.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/patch-extraction-example.png)
 
 ## 5- Patch prediction in whole slide images ([05-patch-prediction.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/05-patch-prediction.ipynb))
 In this notebook, we use TIAToolbox for patch-level prediction, using a range of deep learning models. TIAToolbox can be used to make predictions on pre-extracted image patches or on larger image tiles / whole-slide images (WSIs), where image patches are extracted on the fly. There are various state-of-the-art deep learning models implemented in TIAToolbox, pretrained on datasets related to different cancer types. With just two lines of Python code, any of these models can be used out of the box to predict the type of patches in a WSI. For example, in colorectal cancer, TIAToolbox can classify whole slide image regions into nine different categories (Empty glass, Lymphocytes, Normal colon mucosa, Debris, Smooth muscle, Cancer-associated stroma, Adipose, Mucus, Colorectal adenocarcinoma epithelium).
 
-![image](https://user-images.githubusercontent.com/74412979/145231194-03d10b24-d7b6-40f7-84fc-32b093ae57e2.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/patch-prediction-example.png)
 
 ## 6- Semantic segmentation of whole slide images ([06-semantic-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/06-semantic-segmentation.ipynb))
 _Semantic segmentation_ groups together similar parts of an image that belong to the same class, as in the image immediately above and in the image below. Semantic segmentation of tissue regions plays an important role in developing algorithms for cancer diagnosis and prognosis, as it can help measure tissue attributes in an objective and reproducible fashion. In this notebook, we use pretrained models to automatically segment different tissue region types in a set of input images or WSIs. We first use a pretrained model to semantically annotate images of breast cancer, needing only two lines of codes to do so. After that, we explain how to use a pretrained TIAToolbox model inference pipeline to do prediction on a set of WSIs.
 
-![image](https://user-images.githubusercontent.com/74412979/145233254-cd5ae68b-42b9-4627-bfb5-8ac395d904cc.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/sematic-segment-example.png)
 
 ## 7- Advanced model techniques ([07-advanced-modeling.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/07-advanced-modeling.ipynb))
 This notebook is aimed at advanced users of TIAToolbox, familiar with object-oriented programming concepts in Python and the TIAToolbox models framework. We demonstrate the use of TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research.
