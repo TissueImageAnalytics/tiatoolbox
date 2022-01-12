@@ -629,12 +629,14 @@ def save_as_json(data, save_path):
                 raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
             dct[k] = v
 
+    if not isinstance(shadow_data, (dict, list)):
+        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+
     if isinstance(shadow_data, dict):
         walk_dict(shadow_data)
     elif isinstance(shadow_data, list):
         walk_list(shadow_data)
-    else:
-        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+
     with open(save_path, "w") as handle:
         json.dump(shadow_data, handle)
 
