@@ -52,7 +52,7 @@ _Semantic segmentation_ groups together similar parts of an image that belong to
 ## 7- Advanced model techniques ([07-advanced-modeling.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/07-advanced-modeling.ipynb))
 This notebook is aimed at advanced users of TIAToolbox, familiar with object-oriented programming concepts in Python and the TIAToolbox models framework. We demonstrate the use of TIAToolbox models with your current workflow and how you can integrate your solutions into the TIAToolbox model framework. By doing so, you will be able to utilize extensively tested TIAToolbox tools in your experiments and speed up your computational pathology research.
 
-![image](https://user-images.githubusercontent.com/74412979/145396619-e33c1544-c45d-47f3-b070-89dc293c6517.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/advanced-techniques-example.png)
 
 ## 8- Nucleus instance segmentation in whole slide images using the HoVer-Net model ([08-nucleus-instance-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/08-nucleus-instance-segmentation.ipynb))
 Each WSI can contain up to a million nuclei of various types. These can  analysed systematically and used for predicting clinical outcomes. Nucleus segmentation and classification must be carried out before using nuclear features in downstream analysis. In this example, we will demonstrate the use of the TIAToolbox implementation of the [HoVer-Net model](https://www.sciencedirect.com/science/article/pii/S1361841519301045) to solve the problem of nucleus instance segmentation and classification.
