@@ -825,7 +825,7 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test if input array does not have 2 or 3 columns
-    with pytest.raises(ValueError, match="Input array must have 2 or 3 columns"):
+    with pytest.raises(ValueError, match="numpy table should be of format"):
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
