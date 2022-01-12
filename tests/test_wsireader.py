@@ -1292,7 +1292,6 @@ def test_VirtualWSIReader_read_bounds_virtual_levels_mpp(source_image):
 
 def test_tissue_mask_otsu(sample_svs):
     """Test wsi.tissue_mask with Otsu's method."""
-
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
 
     tissue_thumb = wsi.slide_thumbnail()
