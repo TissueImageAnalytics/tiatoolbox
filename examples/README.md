@@ -57,12 +57,12 @@ This notebook is aimed at advanced users of TIAToolbox, familiar with object-ori
 ## 8- Nucleus instance segmentation in whole slide images using the HoVer-Net model ([08-nucleus-instance-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/08-nucleus-instance-segmentation.ipynb))
 Each WSI can contain up to a million nuclei of various types. These can  analysed systematically and used for predicting clinical outcomes. Nucleus segmentation and classification must be carried out before using nuclear features in downstream analysis. In this example, we will demonstrate the use of the TIAToolbox implementation of the [HoVer-Net model](https://www.sciencedirect.com/science/article/pii/S1361841519301045) to solve the problem of nucleus instance segmentation and classification.
 
-![image](https://user-images.githubusercontent.com/74412979/145235642-3f4f99b9-e583-4cbc-81a6-5a9c733746b4.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/hovernet-example.png)
 
 ## 9- Multi-task segmentation in whole slide images using the HoVer-Net+ model ([09-multi-task-segmentation.ipynb](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/09-multi-task-segmentation.ipynb))
 Each WSI consists of a multitutude of different tissue types, each containing many nuclei of varying types. In computational pathology, it is often important to generate tissue specific morphological features for downstream analyses. It can therefore be beneficial to perform multiple tasks such as semantic segmentation of tissue regions and nuclear instance segmentation/classification simultaneously in order to exploit useful information learnt from each task to further advance both tasks. If inflammatory cells are more common in connective tissue, and epithelial cells are more common in the epithelium, then it is logical that performing these tasks simultaneously may be benefical to each task. In this example, we will demonstrate the use of the TIAToolbox implementation of the [HoVer-Net+ model](https://arxiv.org/pdf/2108.13904.pdf) to solve the problem of nucleus instance segmentation/classification and the semantic segmentation of intra-epithelial layers.
 
-![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/hovernetplus-example.png)
+![image](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/docs/images/hovernetplus-example.png)
 
 # B) Examples of high-level analysis (pipelines) using TIAToolbox
 List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
