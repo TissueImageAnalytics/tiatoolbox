@@ -373,6 +373,9 @@ def read_locations(input_table):
     Returns:
         pd.DataFrame: DataFrame with x, y location and class type.
 
+    Raises:
+        FileNotSupported: If the path to input table is not of supported type.
+
     Examples:
         >>> from tiatoolbox.utils.misc import read_locations
         >>> labels = read_locations('./annotations.csv')
