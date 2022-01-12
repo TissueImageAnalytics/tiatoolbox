@@ -378,20 +378,37 @@ def read_locations(input_table):
         >>> labels = read_locations('./annotations.csv')
 
     """
+
+    def numpy_array_to_table(input_table):
+        """Checks numpy array to be 2 or 3 columns.
+        If it has two columns then class should be assign None.
+
+        Args:
+            input_table (np.ndarray): input table.
+
+        Returns:
+           table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+        Raises:
+            ValueError: If the number of columns is not equal to 2 or 3.
+
+        """
+        if input_table.shape[1] == 2:
+            out_table = pd.DataFrame(input_table, columns=["x", "y"])
+            out_table["class"] = None
+            return out_table
+
+        if input_table.shape[1] == 3:
+            return pd.DataFrame(input_table, columns=["x", "y", "class"])
+
+        raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
+
     if isinstance(input_table, (str, pathlib.Path)):
         _, _, suffixes = split_path_name_ext(input_table)
 
         if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
-            if out_table.shape[1] == 2:
-                out_table = pd.DataFrame(out_table, columns=["x", "y"])
-                out_table["class"] = None
-            elif out_table.shape[1] == 3:
-                out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
-            else:
-                raise ValueError(
-                    "numpy table should be of format `x, y` or " "`x, y, class`"
-                )
+            return numpy_array_to_table(out_table)
 
         elif suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
@@ -415,13 +432,7 @@ def read_locations(input_table):
             raise FileNotSupported("Filetype not supported.")
 
     elif isinstance(input_table, np.ndarray):
-        if input_table.shape[1] == 3:
-            out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
-        elif input_table.shape[1] == 2:
-            out_table = pd.DataFrame(input_table, columns=["x", "y"])
-            out_table["class"] = None
-        else:
-            raise ValueError("Input array must have 2 or 3 columns.")
+        return numpy_array_to_table(input_table)
 
     elif isinstance(input_table, pd.DataFrame):
         out_table = input_table
