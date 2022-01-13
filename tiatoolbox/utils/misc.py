@@ -497,7 +497,7 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
 
     Returns:
         int: OpenCV (cv2) interpolation enum.
-        
+
     """
     if isinstance(interpolation, str):
         interpolation = interpolation.lower()
