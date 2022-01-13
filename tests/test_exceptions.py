@@ -13,7 +13,6 @@ from tiatoolbox.wsicore.slide_info import slide_info
 
 def test_exception_tests():
     """Test for Exceptions."""
-
     with pytest.raises(FileNotSupported):
         utils.misc.save_yaml(
             slide_info(input_path="/mnt/test/sample.txt", verbose=True).as_dict(),

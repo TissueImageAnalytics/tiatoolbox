@@ -367,7 +367,6 @@ def plot_graph(
         edge_size (int): Linewidth of the edge.
 
     """
-
     if isinstance(node_colors, tuple):
         node_colors = [node_colors] * len(nodes)
     if isinstance(edge_colors, tuple):

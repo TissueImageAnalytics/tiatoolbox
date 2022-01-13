@@ -467,7 +467,7 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
         >>> array([49, 49])
 
-  """
+    """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
 
 
@@ -497,6 +497,7 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
 
     Returns:
         int: OpenCV (cv2) interpolation enum.
+
     """
     if isinstance(interpolation, str):
         interpolation = interpolation.lower()

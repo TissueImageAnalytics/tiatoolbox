@@ -123,7 +123,6 @@ class HoVerNetPlus(HoVerNet):
                 layer_dict = {[layer_uid: number] : layer_info}
 
         """
-
         layer_list = np.unique(pred_layer)
         layer_list = np.delete(layer_list, np.where(layer_list == 0))
         layer_info_dict = {}
