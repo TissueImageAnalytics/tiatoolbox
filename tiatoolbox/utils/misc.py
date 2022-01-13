@@ -607,6 +607,58 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
+def walk_list_dict(in_list_dict):
+    """Recursive walk and jsonify in place.
+
+    Args:
+        in_list_dict (list or dict):  input list or a dictionary.
+
+    Returns:
+        list or dict
+
+    """
+    if isinstance(in_list_dict, dict):
+        walk_dict(in_list_dict)
+    elif isinstance(in_list_dict, list):
+        walk_list(in_list_dict)
+    elif isinstance(in_list_dict, np.ndarray):
+        in_list_dict = in_list_dict.tolist()
+        walk_list(in_list_dict)
+    elif isinstance(in_list_dict, np.generic):
+        in_list_dict = in_list_dict.item()
+    elif in_list_dict is not None and not isinstance(
+        in_list_dict, (int, float, str, bool)
+    ):
+        raise ValueError(
+            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
+        )
+    return in_list_dict
+
+
+def walk_list(lst):
+    """Recursive walk and jsonify a list in place.
+
+    Args:
+        lst (list):  input list.
+
+    """
+    for i, v in enumerate(lst):
+        lst[i] = walk_list_dict(v)
+
+
+def walk_dict(dct):
+    """Recursive walk and jsonify a dictionary in place.
+
+    Args:
+        dct (dict):  input dictionary.
+
+    """
+    for k, v in dct.items():
+        if not isinstance(k, (int, float, str, bool)):
+            raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+        dct[k] = walk_list_dict(v)
+
+
 def save_as_json(data, save_path):
     """Save data to a json file.
 
@@ -619,43 +671,7 @@ def save_as_json(data, save_path):
         save_path (str): Output to save the json of `input`.
 
     """
-    shadow_data = copy.deepcopy(data)
-
-    # make a copy of source input
-    def walk_list(lst):
-        """Recursive walk and jsonify in place."""
-        for i, v in enumerate(lst):
-            if isinstance(v, dict):
-                walk_dict(v)
-            elif isinstance(v, list):
-                walk_list(v)
-            elif isinstance(v, np.ndarray):
-                v = v.tolist()
-                walk_list(v)
-            elif isinstance(v, np.generic):
-                v = v.item()
-            elif v is not None and not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            lst[i] = v
-
-    def walk_dict(dct):
-        """Recursive walk and jsonify in place."""
-        for k, v in dct.items():
-            if isinstance(v, dict):
-                walk_dict(v)
-            elif isinstance(v, list):
-                walk_list(v)
-            elif isinstance(v, np.ndarray):
-                v = v.tolist()
-                walk_list(v)
-            elif isinstance(v, np.generic):
-                v = v.item()
-            elif v is not None and not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            if not isinstance(k, (int, float, str, bool)):
-                raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
-            dct[k] = v
-
+    shadow_data = copy.deepcopy(data)  # make a copy of source input
     if not isinstance(shadow_data, (dict, list)):
         raise ValueError(f"`data` type {type(data)} is not [dict, list].")
 
