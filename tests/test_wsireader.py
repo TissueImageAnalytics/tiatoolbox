@@ -1486,8 +1486,6 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
         )
         # using only reader 1 because it is reference reader
         shape1 = reader1.slide_dimensions(**read_cfg)
-        # shape2 = reader2.slide_dimensions(**read_cfg)
-        # print(read_cfg, shape1, shape2)
         assert roi1.shape[0] == requested_size[0], (
             read_cfg,
             requested_size,
