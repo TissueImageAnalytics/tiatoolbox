@@ -677,7 +677,7 @@ def save_as_json(data, save_path):
 
     if isinstance(shadow_data, dict):
         walk_dict(shadow_data)
-    elif isinstance(shadow_data, list):
+    else:
         walk_list(shadow_data)
 
     with open(save_path, "w") as handle:
