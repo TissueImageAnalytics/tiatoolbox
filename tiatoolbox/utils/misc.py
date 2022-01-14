@@ -358,7 +358,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
-def numpy_array_to_table(input_table):
+def __numpy_array_to_table(input_table):
     """Checks numpy array to be 2 or 3 columns.
     If it has two columns then class should be assign None.
 
@@ -383,7 +383,7 @@ def numpy_array_to_table(input_table):
     raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
 
 
-def assign_unknown_class(input_table):
+def __assign_unknown_class(input_table):
     """Creates a column and assigns None if class is unknown.
 
     Args:
@@ -433,7 +433,7 @@ def read_locations(input_table):
 
         if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
-            return numpy_array_to_table(out_table)
+            return __numpy_array_to_table(out_table)
 
         if suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
@@ -446,19 +446,19 @@ def read_locations(input_table):
                     engine="python",
                 )
 
-            return assign_unknown_class(out_table)
+            return __assign_unknown_class(out_table)
 
         if suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
-            return assign_unknown_class(out_table)
+            return __assign_unknown_class(out_table)
 
         raise FileNotSupported("File type not supported.")
 
     if isinstance(input_table, np.ndarray):
-        return numpy_array_to_table(input_table)
+        return __numpy_array_to_table(input_table)
 
     if isinstance(input_table, pd.DataFrame):
-        return assign_unknown_class(input_table)
+        return __assign_unknown_class(input_table)
 
     raise TypeError("Please input correct image path or an ndarray image.")
 
@@ -607,7 +607,7 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def walk_list_dict(in_list_dict):
+def __walk_list_dict(in_list_dict):
     """Recursive walk and jsonify in place.
 
     Args:
@@ -618,12 +618,12 @@ def walk_list_dict(in_list_dict):
 
     """
     if isinstance(in_list_dict, dict):
-        walk_dict(in_list_dict)
+        __walk_dict(in_list_dict)
     elif isinstance(in_list_dict, list):
-        walk_list(in_list_dict)
+        __walk_list(in_list_dict)
     elif isinstance(in_list_dict, np.ndarray):
         in_list_dict = in_list_dict.tolist()
-        walk_list(in_list_dict)
+        __walk_list(in_list_dict)
     elif isinstance(in_list_dict, np.generic):
         in_list_dict = in_list_dict.item()
     elif in_list_dict is not None and not isinstance(
@@ -635,7 +635,7 @@ def walk_list_dict(in_list_dict):
     return in_list_dict
 
 
-def walk_list(lst):
+def __walk_list(lst):
     """Recursive walk and jsonify a list in place.
 
     Args:
@@ -643,10 +643,10 @@ def walk_list(lst):
 
     """
     for i, v in enumerate(lst):
-        lst[i] = walk_list_dict(v)
+        lst[i] = __walk_list_dict(v)
 
 
-def walk_dict(dct):
+def __walk_dict(dct):
     """Recursive walk and jsonify a dictionary in place.
 
     Args:
@@ -656,7 +656,7 @@ def walk_dict(dct):
     for k, v in dct.items():
         if not isinstance(k, (int, float, str, bool)):
             raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
-        dct[k] = walk_list_dict(v)
+        dct[k] = __walk_list_dict(v)
 
 
 def save_as_json(data, save_path):
@@ -676,9 +676,9 @@ def save_as_json(data, save_path):
         raise ValueError(f"`data` type {type(data)} is not [dict, list].")
 
     if isinstance(shadow_data, dict):
-        walk_dict(shadow_data)
+        __walk_dict(shadow_data)
     else:
-        walk_list(shadow_data)
+        __walk_list(shadow_data)
 
     with open(save_path, "w") as handle:
         json.dump(shadow_data, handle)
