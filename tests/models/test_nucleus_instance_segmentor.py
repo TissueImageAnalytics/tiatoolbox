@@ -29,7 +29,6 @@ import shutil
 import joblib
 import numpy as np
 import pytest
-import torch
 import yaml
 from click.testing import CliRunner
 

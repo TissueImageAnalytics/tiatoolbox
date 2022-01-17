@@ -30,7 +30,6 @@ import pytest
 import torch
 from click.testing import CliRunner
 
-import tiatoolbox
 from tiatoolbox import cli, rcParam
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import (
