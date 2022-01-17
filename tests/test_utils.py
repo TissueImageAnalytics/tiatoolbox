@@ -1248,3 +1248,11 @@ def test_detect_travis():
     Simply check it passes without exception.
     """
     _ = utils.env_detection.running_on_travis()
+
+
+def test_detect_gpu():
+    """Test detection of GPU in the current runtime environment.
+
+    Simply check it passes without exception.
+    """
+    _ = utils.env_detection.has_gpu()
