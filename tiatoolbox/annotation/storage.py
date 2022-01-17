@@ -77,6 +77,7 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
+from tiatoolbox import logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
@@ -1002,6 +1003,14 @@ class SQLiteStore(AnnotationStore):
             ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
         ):
             raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+
+        # Check that math functions are enabled
+        if "ENABLE_MATH_FUNCTIONS" not in compile_options:
+            logger.warning(
+                "SQLite math functions are not enabled."
+                " This may cause problems with some queries."
+                " For example, floor division (//) will not work."
+            )
 
         # Set up database connection and cursor
         path = Path(connection)
