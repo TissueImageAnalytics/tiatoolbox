@@ -677,7 +677,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    toolbox_env.running_on_travis() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_behavior_tissue_mask_local(remote_sample, tmp_path):
@@ -718,7 +718,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    toolbox_env.running_on_travis() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_behavior_bcss_local(remote_sample, tmp_path):
