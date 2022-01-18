@@ -11,7 +11,6 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
-import torch.cuda
 from PIL import Image
 
 from tiatoolbox import rcParam, utils
