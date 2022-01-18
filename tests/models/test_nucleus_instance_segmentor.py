@@ -47,7 +47,7 @@ from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
-ON_GPU = ON_GPU = toolbox_env.has_gpu()
+ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
 
