@@ -1238,6 +1238,7 @@ def test_detect_pixman():
     """Test detection of the pixman version.
 
     Simply check it passes without exception.
+
     """
     _, _ = utils.env_detection.pixman_version()
 
@@ -1246,6 +1247,7 @@ def test_detect_travis():
     """Test detection of the travis environment.
 
     Simply check it passes without exception.
+
     """
     _ = utils.env_detection.running_on_travis()
 
@@ -1254,5 +1256,6 @@ def test_detect_gpu():
     """Test detection of GPU in the current runtime environment.
 
     Simply check it passes without exception.
+
     """
     _ = utils.env_detection.has_gpu()
