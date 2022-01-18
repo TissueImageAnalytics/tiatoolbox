@@ -1162,7 +1162,7 @@ def test_model_to():
 
     # test on GPU
     # no GPU on Travis so this will crash
-    if not torch.cuda.is_available():
+    if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
             _ = misc.model_to(on_gpu=True, model=model)
