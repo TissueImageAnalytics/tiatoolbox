@@ -1160,14 +1160,14 @@ def test_model_to():
     import torch.nn as nn
     import torchvision.models as torch_models
 
-    # test on GPU
+    # Test on GPU
     # no GPU on Travis so this will crash
     if not torch.cuda.is_available():
         model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
             _ = misc.model_to(on_gpu=True, model=model)
 
-    # test on CPU
+    # Test on CPU
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
