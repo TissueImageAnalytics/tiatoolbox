@@ -16,7 +16,7 @@ requirements = [
     "numpy",
     "pillow",
     "matplotlib",
-    "opencv-python==4.5.4.60",
+    "opencv-python>=4.5.4",
     "openslide-python==1.1.2",
     "pyyaml>=5.1",
     "pandas",
