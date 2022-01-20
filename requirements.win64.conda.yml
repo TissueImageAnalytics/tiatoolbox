@@ -17,7 +17,7 @@ dependencies:
   - matplotlib
   - nbsphinx
   - numpy
-  - opencv==4.5.4.60
+  - opencv>=4.5.4
   - openjpeg>=2.3.0
   - pandas
   - pillow

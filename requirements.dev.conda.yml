@@ -19,7 +19,7 @@ dependencies:
   - jupyterlab
   - matplotlib
   - numpy
-  - opencv==4.5.4.60
+  - opencv>=4.5.4
   - openjpeg>=2.3.0
   - openslide
   - pandas
