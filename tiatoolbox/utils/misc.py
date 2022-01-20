@@ -410,12 +410,12 @@ def read_locations(input_table):
 
     Args:
         input_table (str or pathlib.Path or :class:`numpy.ndarray` or
-         :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
-         :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
-         First column in the table represents x position, second
-         column represents y position. The third column represents the class. If the
-         table has headers, the header should be x, y & class. Json should have `x`, `y`
-         and `class` fields.
+            :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+            :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+            First column in the table represents x position, second
+            column represents y position. The third column represents the class.
+            If the table has headers, the header should be x, y & class.
+            Json should have `x`, `y` and `class` fields.
 
     Returns:
         pd.DataFrame: DataFrame with x, y location and class type.
@@ -528,6 +528,7 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
 
     Returns:
         int: OpenCV (cv2) interpolation enum.
+
     """
     if isinstance(interpolation, str):
         interpolation = interpolation.lower()
