@@ -26,7 +26,7 @@ import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
-from tiatoolbox.utils.transforms import convert_RGB2OD
+from tiatoolbox.utils.transforms import convert_rgb2od
 
 
 def vectors_in_correct_direction(e_vectors):
@@ -184,7 +184,7 @@ class MacenkoExtractor:
         tissue_mask = get_luminosity_tissue_mask(
             img, threshold=luminosity_threshold
         ).reshape((-1,))
-        img_od = convert_RGB2OD(img).reshape((-1, 3))
+        img_od = convert_rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]
 
         # eigenvectors of cov in OD space (orthogonal as cov symmetric)
@@ -256,7 +256,7 @@ class VahadaneExtractor:
         tissue_mask = get_luminosity_tissue_mask(
             img, threshold=luminosity_threshold
         ).reshape((-1,))
-        img_od = convert_RGB2OD(img).reshape((-1, 3))
+        img_od = convert_rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]
 
         # do the dictionary learning
