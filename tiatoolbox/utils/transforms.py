@@ -267,7 +267,7 @@ def bounds2slices(
         raise ValueError("Invalid stride shape")
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
-    elif np.size(stride) == 2:
+    elif np.size(stride) == 2:  # pragma: no cover
         stride = np.tile(stride, 2)
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
@@ -303,7 +303,7 @@ def pad_bounds(
 
     if np.size(padding) == 1 or np.size(padding) == np.size(bounds):
         pass
-    elif np.size(padding) == ndims:
+    elif np.size(padding) == ndims:  # pragma: no cover
         padding = np.tile(padding, 2)
 
     signs = np.repeat([-1, 1], ndims)
