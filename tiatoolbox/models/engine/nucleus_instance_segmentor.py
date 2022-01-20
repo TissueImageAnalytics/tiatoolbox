@@ -656,7 +656,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 ]
 
                 # there is nothing in the tile
-                if len(sel_indices) == 0:
+                # Ignore coverage as the condition is difficult
+                # to reproduce on travis.
+                if len(sel_indices) == 0:  # pragma: no cover
                     continue
 
                 tile_patch_inputs = patch_inputs[sel_indices]
