@@ -696,7 +696,7 @@ hovernet_original-kumar:
                 - {"units": "mpp", "resolution": 0.25}
                 - {"units": "mpp", "resolution": 0.25}
             margin: 128
-            tile_shape: [1024, 1024]
+            tile_shape: [2048, 2048]
             patch_input_shape: [270, 270]
             patch_output_shape: [80, 80]
             stride_shape: [80, 80]
@@ -720,7 +720,7 @@ hovernetplus-oed:
                 - {"units": "mpp", "resolution": 0.50}
                 - {"units": "mpp", "resolution": 0.50}    
             margin: 128
-            tile_shape: [1024, 1024]
+            tile_shape: [2048, 2048]
             patch_input_shape: [256, 256]
             patch_output_shape: [164, 164]
             stride_shape: [164, 164]
