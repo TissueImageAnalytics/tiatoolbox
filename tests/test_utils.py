@@ -11,7 +11,6 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
-import torch.cuda
 from PIL import Image
 
 from tiatoolbox import rcParam, utils
@@ -1160,14 +1159,14 @@ def test_model_to():
     import torch.nn as nn
     import torchvision.models as torch_models
 
-    # test on GPU
+    # Test on GPU
     # no GPU on Travis so this will crash
-    if not torch.cuda.is_available():
+    if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
             _ = misc.model_to(on_gpu=True, model=model)
 
-    # test on CPU
+    # Test on CPU
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
@@ -1238,6 +1237,7 @@ def test_detect_pixman():
     """Test detection of the pixman version.
 
     Simply check it passes without exception.
+
     """
     _, _ = utils.env_detection.pixman_version()
 
@@ -1257,3 +1257,12 @@ def test_detect_travis():
         assert len(versions) > 0
     except EnvironmentError:
         pass
+
+
+def test_detect_gpu():
+    """Test detection of GPU in the current runtime environment.
+
+    Simply check it passes without exception.
+
+    """
+    _ = utils.env_detection.has_gpu()

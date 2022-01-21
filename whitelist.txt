@@ -13,6 +13,7 @@ dataframe
 dataset
 Dataset
 Delaunay
+DNS
 downsample
 downsampled
 dpkg

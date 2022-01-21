@@ -20,12 +20,13 @@
 """Tests for Semantic Segmentor."""
 
 import copy
+
+# ! The garbage collector
+import gc
 import os
 import pathlib
 import shutil
 
-# ! The garbage collector
-import gc
 import numpy as np
 import pytest
 import torch
@@ -44,11 +45,15 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     WSIStreamDataset,
 )
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_TRAVIS = True
-ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
+ON_GPU = toolbox_env.has_gpu()
+# The value is based on 2 TitanXP each with 12GB
+BATCH_SIZE = 1 if not ON_GPU else 16
+NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
+
 # ----------------------------------------------------
 
 
@@ -275,7 +280,7 @@ def test_crash_segmentor(remote_sample):
     mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     model = _CNNTo1()
-    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
@@ -351,7 +356,7 @@ def test_functional_segmentor_merging(tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     model = _CNNTo1()
-    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
 
     _rm_dir(save_dir)
     os.mkdir(save_dir)
@@ -479,7 +484,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # preemptive clean up
     _rm_dir("output")  # default output dir test
     model = _CNNTo1()
-    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
@@ -587,7 +592,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
 
     # check normal run with auto get mask
     semantic_segmentor = SemanticSegmentor(
-        batch_size=1, model=model, auto_generate_mask=True
+        batch_size=BATCH_SIZE, model=model, auto_generate_mask=True
     )
     output_list = semantic_segmentor.predict(
         [mini_wsi_svs],
@@ -642,7 +647,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=1, pretrained_model="fcn-tissue_mask"
+        batch_size=BATCH_SIZE, pretrained_model="fcn-tissue_mask"
     )
 
     _rm_dir(save_dir)
@@ -671,7 +676,10 @@ def test_functional_pretrained(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis() or not ON_GPU,
+    reason="Local test on machine with GPU.",
+)
 def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
@@ -679,13 +687,13 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=4, pretrained_model="fcn-tissue_mask"
+        batch_size=BATCH_SIZE, pretrained_model="fcn-tissue_mask"
     )
     _rm_dir(save_dir)
     semantic_segmentor.predict(
         [wsi_with_artifacts],
         mode="wsi",
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -701,7 +709,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -709,7 +717,10 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     _rm_dir(save_dir)
 
 
-@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis() or not ON_GPU,
+    reason="Local test on machine with GPU.",
+)
 def test_behavior_bcss_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
@@ -717,7 +728,9 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
     _rm_dir(save_dir)
     wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     semantic_segmentor = SemanticSegmentor(
-        num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
+        num_loader_workers=4,
+        batch_size=BATCH_SIZE,
+        pretrained_model="fcn_resnet50_unet-bcss",
     )
     semantic_segmentor.predict(
         [wsi_breast],
