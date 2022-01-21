@@ -44,7 +44,7 @@ An additional benefit is that the same input string can be
 used across different backends. For example, the previous
 simple example predicate string can be evaluated as both a valid
 python expression and can be converted to an equivalent valid SQL
-expression simply by running `eval with a different set of globals
+expression simply by running `eval` with a different set of globals
 from this module.
 
 It is important to note that untrusted user input should not be
