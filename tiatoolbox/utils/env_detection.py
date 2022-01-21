@@ -42,7 +42,23 @@ import threading
 from numbers import Number
 from typing import Tuple
 
+import torch
+
 from tiatoolbox import logger
+
+
+def has_gpu() -> bool:
+    """Detect if the runtime has GPU.
+
+    This function calls torch function underneath. To mask an environment
+    to have no GPU, you can set "CUDA_VISIBLE_DEVICES" environment variable
+    to empty before running the python script.
+
+    Returns:
+        bool: True if the current runtime environment has GPU, False otherwise.
+
+    """
+    return torch.cuda.is_available()
 
 
 def is_interactive() -> bool:

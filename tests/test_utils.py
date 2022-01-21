@@ -11,7 +11,6 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
-import torch.cuda
 from PIL import Image
 
 from tiatoolbox import rcParam, utils
@@ -1162,7 +1161,7 @@ def test_model_to():
 
     # Test on GPU
     # no GPU on Travis so this will crash
-    if not torch.cuda.is_available():
+    if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
             _ = misc.model_to(on_gpu=True, model=model)
@@ -1250,3 +1249,12 @@ def test_detect_travis():
 
     """
     _ = utils.env_detection.running_on_travis()
+
+
+def test_detect_gpu():
+    """Test detection of GPU in the current runtime environment.
+
+    Simply check it passes without exception.
+
+    """
+    _ = utils.env_detection.has_gpu()

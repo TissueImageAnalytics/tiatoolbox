@@ -27,6 +27,7 @@ import pytest
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset import DatasetInfoABC, KatherPatchDataset, PatchDataset
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, unzip_data
 
 
@@ -77,7 +78,9 @@ def test_dataset_abc():
         Proto()  # skipcq
 
 
-@pytest.mark.skip(reason="Local test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis(), reason="Local test on local machine."
+)
 def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
 
