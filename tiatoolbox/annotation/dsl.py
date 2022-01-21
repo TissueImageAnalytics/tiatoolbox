@@ -53,7 +53,7 @@ input string.
 
 Supported operators and functions:
     - Property access: `props["key"]`
-    - Math operations (`+`, `-`, `*`, `/`, `**`, `%`): `props["key"] + 1`
+    - Math operations (`+`, `-`, `*`, `/`, `//`, `**`, `%`): `props["key"] + 1`
     - Boolean operations (`and`, `or`, `not`): `props["key"] and props["key"] == 1`
     - Key checking: `"key" in props`
     - List indexing: `props["key"][0]`
