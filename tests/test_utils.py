@@ -1245,6 +1245,15 @@ def test_detect_pixman():
 def test_detect_travis():
     """Test detection of the travis environment.
 
-    Simply check it passes without exception.
+    Simply check it passes without exception or that it raises
+    an EnvironmentError if the version is not detected.
+
+    Any other exception should fail this test.
     """
-    _ = utils.env_detection.running_on_travis()
+    try:
+        versions, using = utils.env_detection.running_on_travis()
+        assert isinstance(using, str)
+        assert isinstance(versions, list)
+        assert len(versions) > 0
+    except EnvironmentError:
+        pass
