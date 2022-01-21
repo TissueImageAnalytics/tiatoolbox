@@ -77,6 +77,7 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
+import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
@@ -1010,6 +1011,9 @@ class SQLiteStore(AnnotationStore):
                 "SQLite math functions are not enabled."
                 " This may cause problems with some queries."
                 " For example, floor division (//) will not work."
+                " For a full list see https://tia-toolbox.readthedocs.io/"
+                "en/v%s/_autosummary/tiatoolbox.annotation.dsl.html",
+                tiatoolbox.__version__,
             )
 
         # Set up database connection and cursor

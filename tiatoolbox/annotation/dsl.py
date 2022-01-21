@@ -68,6 +68,10 @@ Unsupported operations:
     - Imports: `import re`
     - List length: `len(props["key"])` (support planned)
 
+Some mathematical functions will not function if the compile option
+`ENABLE_MATH_FUNCTIONS` is not set. These are:
+    - `//` (floor division)
+
 """
 import json
 import operator
