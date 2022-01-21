@@ -345,7 +345,7 @@ def pixman_warning() -> None:  # pragma: no cover
         if using == "port":
             fix = "You may be able do this with the command: port upgrade pixman"
         # Log a warning if there is a pixman version in the range [0.38, 0.39)
-        if any(v >= (0, 38) and v < (0, 39) for v in versions):
+        if any((0, 38) <= v < (0, 39) for v in versions):
             logger.warning(
                 "It looks like you are using Pixman version 0.38 (via %s). "
                 "This version is known to cause issues with OpenSlide. "
