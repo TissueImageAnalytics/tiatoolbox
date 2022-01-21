@@ -38,8 +38,8 @@ dependencies:
   - scikit-image==0.18.3
   - scikit-learn>=0.23.2
   - shapely
-  - sphinx_gallery
-  - sphinx_toolbox
+  - sphinx-gallery
+  - sphinx-toolbox
   - tifffile
   - torchvision
   - torchvision>=0.10.1
