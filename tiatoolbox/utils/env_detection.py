@@ -225,7 +225,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         except subprocess.SubprocessError:
             dkpg_output = b""
         matches = re.search(
-            r"^Version: (\d+.\d+)*",
+            r"^Version: ((?:\d+[._]+)+\d*)",
             dkpg_output.decode("utf-8"),
             flags=re.MULTILINE,
         )
@@ -245,7 +245,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         except subprocess.SubprocessError:
             brew_pixman = b""
         matches = re.findall(
-            r"((?:\d+\.|\b\d?)+)",
+            r"((?:\d+[._]+)+\d*)",
             brew_pixman.decode("utf-8"),
             flags=re.MULTILINE,
         )
@@ -262,7 +262,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         )
         port_list.wait()
         matches = re.findall(
-            r"((?:\d+\.|\b\d?)+)",
+            r"((?:\d+[._]+)+\d*)",
             port_pixman.decode("utf-8"),
             flags=re.MULTILINE,
         )
@@ -286,7 +286,7 @@ def version_to_tuple(match: str) -> Tuple[int, ...]:
 
     """
     # Check that the string only contains integers and periods
-    if not re.match(r"^\d+(\.\d+)*$", match):
+    if not re.match(r"^\d+([._]\d+)*$", match):
         raise ValueError(f"{match} is not a valid version string.")
     return tuple(int(part) for part in match.split("."))
 
