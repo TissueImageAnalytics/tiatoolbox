@@ -44,7 +44,7 @@ An additional benefit is that the same input string can be
 used across different backends. For example, the previous
 simple example predicate string can be evaluated as both a valid
 python expression and can be converted to an equivalent valid SQL
-expression simply by running `eval with a different set of globals
+expression simply by running `eval` with a different set of globals
 from this module.
 
 It is important to note that untrusted user input should not be
@@ -53,7 +53,7 @@ input string.
 
 Supported operators and functions:
     - Property access: `props["key"]`
-    - Math operations (`+`, `-`, `*`, `/`, `**`, `%`): `props["key"] + 1`
+    - Math operations (`+`, `-`, `*`, `/`, `//`, `**`, `%`): `props["key"] + 1`
     - Boolean operations (`and`, `or`, `not`): `props["key"] and props["key"] == 1`
     - Key checking: `"key" in props`
     - List indexing: `props["key"][0]`
@@ -67,6 +67,10 @@ Unsupported operations:
     - The `is` operator: `props["key"] is None`
     - Imports: `import re`
     - List length: `len(props["key"])` (support planned)
+
+Some mathematical functions will not function if the compile option
+`ENABLE_MATH_FUNCTIONS` is not set. These are:
+    - `//` (floor division)
 
 """
 import json
