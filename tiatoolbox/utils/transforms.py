@@ -131,7 +131,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
-def convert_rgb2od(img):
+def rgb2od(img):
     """Convert from RGB to optical density (OD_RGB) space.
     RGB = 255 * exp(-1*OD_RGB).
 
@@ -144,7 +144,7 @@ def convert_rgb2od(img):
     Examples:
         >>> from tiatoolbox.utils import transforms, misc
         >>> rgb_img = misc.imread('path/to/image')
-        >>> od_img = transforms.convert_rgb2od(rgb_img)
+        >>> od_img = transforms.rgb2od(rgb_img)
 
     """
     mask = img == 0
@@ -152,7 +152,7 @@ def convert_rgb2od(img):
     return np.maximum(-1 * np.log(img / 255), 1e-6)
 
 
-def convert_od2rgb(od):
+def od2rgb(od):
     """Convert from optical density (OD_RGB) to RGB.
     RGB = 255 * exp(-1*OD_RGB)
 
@@ -165,8 +165,8 @@ def convert_od2rgb(od):
     Examples:
         >>> from tiatoolbox.utils import transforms, misc
         >>> rgb_img = misc.imread('path/to/image')
-        >>> od_img = transforms.convert_rgb2od(rgb_img)
-        >>> rgb_img = transforms.convert_od2rgb(od_img)
+        >>> od_img = transforms.rgb2od(rgb_img)
+        >>> rgb_img = transforms.od2rgb(od_img)
 
     """
     od = np.maximum(od, 1e-6)
