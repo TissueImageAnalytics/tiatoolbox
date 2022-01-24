@@ -1236,17 +1236,24 @@ def test_imread_none_args():
 def test_detect_pixman():
     """Test detection of the pixman version.
 
-    Simply check it passes without exception.
+    Simply check it passes without exception or that it raises
+    an EnvironmentError if the version is not detected.
 
+    Any other exception should fail this test.
     """
-    _, _ = utils.env_detection.pixman_version()
+    try:
+        versions, using = utils.env_detection.pixman_versions()
+        assert isinstance(using, str)
+        assert isinstance(versions, list)
+        assert len(versions) > 0
+    except EnvironmentError:
+        pass
 
 
 def test_detect_travis():
     """Test detection of the travis environment.
 
     Simply check it passes without exception.
-
     """
     _ = utils.env_detection.running_on_travis()
 
