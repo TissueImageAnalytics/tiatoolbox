@@ -33,7 +33,7 @@ from tiatoolbox.tools.stainextract import (
 )
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import load_stain_matrix
-from tiatoolbox.utils.transforms import convert_OD2RGB, convert_RGB2OD
+from tiatoolbox.utils.transforms import od2rgb, rgb2od
 
 
 class StainNormalizer:
@@ -71,7 +71,7 @@ class StainNormalizer:
             numpy.ndarray: stain concentrations of input image.
 
         """
-        OD = convert_RGB2OD(img).reshape((-1, 3))
+        OD = rgb2od(img).reshape((-1, 3))
         x, _, _, _ = np.linalg.lstsq(stain_matrix.T, OD.T, rcond=-1)
         return x.T
 
@@ -91,7 +91,7 @@ class StainNormalizer:
             self.target_concentrations, 99, axis=0
         ).reshape((1, 2))
         # useful to visualize.
-        self.stain_matrix_target_RGB = convert_OD2RGB(self.stain_matrix_target)
+        self.stain_matrix_target_RGB = od2rgb(self.stain_matrix_target)
 
     def transform(self, img):
         """Transform an image.

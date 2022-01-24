@@ -62,11 +62,9 @@ def background_composite(image, fill=255, alpha=False):
     )
     composite.alpha_composite(image)
     if not alpha:
-        composite = np.asarray(composite.convert("RGB"))
-    else:
-        composite = np.asarray(composite)
+        return np.asarray(composite.convert("RGB"))
 
-    return composite
+    return np.asarray(composite)
 
 
 def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
@@ -77,10 +75,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         scale_factor (tuple(float)): scaling factor to resize the input image
         output_size (tuple(int)): output image size, (width, height)
         interpolation (str or int): interpolation method used to interpolate the image
-         using `opencv interpolation flags
-         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
-         default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
-         otherwise uses cv2.INTER_CUBIC
+            using `opencv interpolation flags
+            <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
+            default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
+            otherwise uses cv2.INTER_CUBIC
 
     Returns:
         :class:`numpy.ndarray`: resized image
@@ -133,7 +131,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
-def convert_RGB2OD(img):
+def rgb2od(img):
     """Convert from RGB to optical density (OD_RGB) space.
     RGB = 255 * exp(-1*OD_RGB).
 
@@ -144,9 +142,9 @@ def convert_RGB2OD(img):
         :class:`numpy.ndarray`: Optical denisty RGB image.
 
     Examples:
-        >>> from tiatoolbox.utils import transforms
-        >>> # rgb_img: RGB image
-        >>> od_img = transforms.convert_RGB2OD(rgb_img)
+        >>> from tiatoolbox.utils import transforms, misc
+        >>> rgb_img = misc.imread('path/to/image')
+        >>> od_img = transforms.rgb2od(rgb_img)
 
     """
     mask = img == 0
@@ -154,24 +152,25 @@ def convert_RGB2OD(img):
     return np.maximum(-1 * np.log(img / 255), 1e-6)
 
 
-def convert_OD2RGB(OD):
+def od2rgb(od):
     """Convert from optical density (OD_RGB) to RGB.
     RGB = 255 * exp(-1*OD_RGB)
 
     Args:
-        OD (:class:`numpy.ndarray`): Optical denisty RGB image
+        od (:class:`numpy.ndarray`): Optical denisty RGB image
 
     Returns:
         numpy.ndarray: Image RGB
 
     Examples:
-        >>> from tiatoolbox.utils import transforms
-        >>> # od_img: optical density image
-        >>> rgb_img = transforms.convert_OD2RGB(od_img)
+        >>> from tiatoolbox.utils import transforms, misc
+        >>> rgb_img = misc.imread('path/to/image')
+        >>> od_img = transforms.rgb2od(rgb_img)
+        >>> rgb_img = transforms.od2rgb(od_img)
 
     """
-    OD = np.maximum(OD, 1e-6)
-    return (255 * np.exp(-1 * OD)).astype(np.uint8)
+    od = np.maximum(od, 1e-6)
+    return (255 * np.exp(-1 * od)).astype(np.uint8)
 
 
 def bounds2locsize(bounds, origin="upper"):
@@ -264,12 +263,13 @@ def bounds2slices(
         >>> region = array[slices, ...]
 
     """
+    if np.size(stride) not in [1, 2]:
+        raise ValueError("Invalid stride shape")
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
-    elif np.size(stride) == 2:
+    elif np.size(stride) == 2:  # pragma: no cover
         stride = np.tile(stride, 2)
-    else:
-        raise ValueError("Invalid stride shape")
+
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
     return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
@@ -297,13 +297,14 @@ def pad_bounds(
     if np.size(bounds) % 2 != 0:
         raise ValueError("Bounds must have an even number of elements")
     ndims = np.size(bounds) // 2
-    if np.size(padding) == 1:
-        pass
-    elif np.size(padding) == ndims:
-        padding = np.tile(padding, 2)
-    elif np.size(padding) == np.size(bounds):
-        pass
-    else:
+
+    if np.size(padding) not in [1, 2, np.size(bounds)]:
         raise ValueError("Invalid number of padding elements.")
+
+    if np.size(padding) == 1 or np.size(padding) == np.size(bounds):
+        pass
+    elif np.size(padding) == ndims:  # pragma: no cover
+        padding = np.tile(padding, 2)
+
     signs = np.repeat([-1, 1], ndims)
     return np.add(bounds, padding * signs)
