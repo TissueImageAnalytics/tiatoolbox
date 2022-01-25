@@ -11,7 +11,7 @@ imagecodecs>2021.10.0
 jupyterlab
 matplotlib
 numpy
-opencv-python>=4.5.4
+opencv-python<=4.5.4
 openslide-python==1.1.2
 pandas
 pillow
