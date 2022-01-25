@@ -76,7 +76,7 @@ def dl_output_for_h_and_e(dictionary):
 
     """
     if dictionary[0, 0] < dictionary[1, 0]:
-        dictionary = dictionary[[1, 0], :]
+        return dictionary[[1, 0], :]
 
     return dictionary
 
@@ -185,7 +185,7 @@ class MacenkoExtractor:
         img_od = rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]
 
-        # eigenvectors of cov in OD space (orthogonal as cov symmetric)
+        # eigenvectors of covariance in OD space (orthogonal as covariance symmetric)
         _, e_vects = np.linalg.eigh(np.cov(img_od, rowvar=False))
 
         # the two principle eigenvectors
