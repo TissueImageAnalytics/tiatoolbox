@@ -197,7 +197,7 @@ class MacenkoExtractor:
         # project on this basis.
         proj = np.dot(img_od, e_vects)
 
-        # angular coordinates with repect to the prinicple, orthogonal eigenvectors
+        # angular coordinates with respect to the principle, orthogonal eigenvectors
         phi = np.arctan2(proj[:, 1], proj[:, 0])
 
         # min and max angles
