@@ -59,11 +59,9 @@ def h_and_e_in_right_order(v1, v2):
 
     """
     if v1[0] > v2[0]:
-        he = np.array([v1, v2])
-    else:
-        he = np.array([v2, v1])
+        return np.array([v1, v2])
 
-    return he
+    return np.array([v2, v1])
 
 
 def dl_output_for_h_and_e(dictionary):
