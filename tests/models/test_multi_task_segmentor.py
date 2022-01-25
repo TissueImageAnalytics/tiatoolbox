@@ -25,13 +25,14 @@ import shutil
 
 import numpy as np
 import pytest
-import torch
 
 from tiatoolbox.models import SemanticSegmentor
+from tiatoolbox.utils import env_detection as toolbox_env
 
-BATCH_SIZE = 1
-ON_TRAVIS = True
-ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
+ON_GPU = ON_GPU = toolbox_env.has_gpu()
+# The value is based on 2 TitanXP each with 12GB
+BATCH_SIZE = 1 if not ON_GPU else 16
+NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
 
 # ----------------------------------------------------
 
@@ -41,20 +42,23 @@ def _rm_dir(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
-@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    reason="Local test on machine with GPU.",
+)
 def test_functionality_local(remote_sample, tmp_path):
     """Local functionality test for multi task segmentor. Currently only
     testing HoVer-Net+ with semantic segmentor.
     """
     root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("CMU-1-Small-Region.svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
 
     save_dir = f"{root_save_dir}/semantic/"
     _rm_dir(save_dir)
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=NUM_POSTPROC_WORKERS,
     )
     output = semantic_segmentor.predict(
         [mini_wsi_svs],

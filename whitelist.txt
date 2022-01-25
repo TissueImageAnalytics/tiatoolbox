@@ -1,5 +1,6 @@
 # Spell checking whitelist for flake8-spellcheck
 1x1
+1px
 argmax
 bbox
 binarize
@@ -13,6 +14,7 @@ dataframe
 dataset
 Dataset
 Delaunay
+DNS
 downsample
 downsampled
 dpkg
