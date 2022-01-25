@@ -71,7 +71,7 @@ def dl_output_for_h_and_e(dictionary):
 
     Args:
         dictionary (:class:`numpy.ndarray`):
-         :class:`sklearn.decomposition.DictionaryLearning` output
+            :class:`sklearn.decomposition.DictionaryLearning` output
 
     Returns:
         ndarray with correct values for H and E
