@@ -6,13 +6,14 @@ channels:
   - defaults
 dependencies:
   - albumentations
-  - Click
+  - black>=21
+  - Click>=7.0
   - cython
   - defusedxml
   - flask
-  - glymur
+  - glymur>=0.9.7
   - h5py
-  - imagecodecs
+  - imagecodecs>2021.10.0
   - jupyterlab
   - matplotlib
   - nbsphinx
@@ -23,21 +24,20 @@ dependencies:
   - pandas
   - pillow
   - pip
-  - pixman<0.38.0
+  - pixman>=0.39.0
   - python=3.7
-  - python=3.7
-  - pytorch
+  - pytorch>=1.9.0
   - pyyaml>=5.1
   - requests
-  - scikit-image==0.18.3
+  - scikit-image>=0.18.3
   - scikit-learn>=0.23.2
   - sphinx_gallery
-  - sphinx_toolbox
   - shapely
-  - tifffile
-  - torchvision
+  - tifffile>2021.10.0
+  - torchvision>=0.10.1
   - tqdm
   - umap-learn
   - zarr
   - pip:
     - openslide-python==1.1.2
+    - sphinx-toolbox
