@@ -211,8 +211,7 @@ class MacenkoExtractor:
         # order of H&E - H first row
         he = h_and_e_in_right_order(v1, v2)
 
-        normalized_rows = he / np.linalg.norm(he, axis=1)[:, None]
-        return normalized_rows
+        return he / np.linalg.norm(he, axis=1)[:, None]
 
 
 class VahadaneExtractor:
@@ -275,6 +274,4 @@ class VahadaneExtractor:
         # H on first row.
         dictionary = dl_output_for_h_and_e(dictionary)
 
-        normalized_rows = dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
-
-        return normalized_rows
+        return dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
