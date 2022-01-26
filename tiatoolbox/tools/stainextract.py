@@ -88,7 +88,7 @@ class CustomExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainextract import CustomExtractor()
+        >>> from tiatoolbox.tools.stainextract import CustomExtractor
         >>> from tiatoolbox.utils.misc import imread
         >>> extractor = CustomExtractor(stain_matrix)
         >>> img = imread('path/to/image')
@@ -124,7 +124,7 @@ class RuifrokExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainextract import RuifrokExtractor()
+        >>> from tiatoolbox.tools.stainextract import RuifrokExtractor
         >>> from tiatoolbox.utils.misc import imread
         >>> extractor = RuifrokExtractor()
         >>> img = imread('path/to/image')
@@ -156,7 +156,7 @@ class MacenkoExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Examples:
-        >>> from tiatoolbox.tools.stainextract import MacenkoExtractor()
+        >>> from tiatoolbox.tools.stainextract import MacenkoExtractor
         >>> from tiatoolbox.utils.misc import imread
         >>> extractor = MacenkoExtractor()
         >>> img = imread('path/to/image')
@@ -226,8 +226,12 @@ class VahadaneExtractor:
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
+    Args:
+        luminosity_threshold (float): threshold used for tissue area selection
+        regularizer (float): regularizer used in dictionary learning
+
     Examples:
-        >>> from tiatoolbox.tools.stainextract import VahadaneExtractor()
+        >>> from tiatoolbox.tools.stainextract import VahadaneExtractor
         >>> from tiatoolbox.utils.misc import imread
         >>> extractor = VahadaneExtractor()
         >>> img = imread('path/to/image')
@@ -235,20 +239,23 @@ class VahadaneExtractor:
 
     """
 
-    @staticmethod
-    def get_stain_matrix(img, luminosity_threshold=0.8, regularizer=0.1):
+    def __init__(self, luminosity_threshold=0.8, regularizer=0.1):
+        self.__luminosity_threshold = luminosity_threshold
+        self.__regularizer = regularizer
+
+    def get_stain_matrix(self, img):
         """Stain matrix estimation.
 
         Args:
             img (:class:`numpy.ndarray`): input image used for stain matrix estimation
-            luminosity_threshold (float): threshold used for tissue area selection
-            regularizer (float): regularizer used in dictionary learning
 
         Returns:
             :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
+        luminosity_threshold = self.__luminosity_threshold
+        regularizer = self.__regularizer
         # convert to OD and ignore background
         tissue_mask = get_luminosity_tissue_mask(
             img, threshold=luminosity_threshold
