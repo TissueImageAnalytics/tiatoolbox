@@ -135,7 +135,7 @@ class RuifrokExtractor:
     def __init__(self):
         self.__stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
 
-    def get_stain_matrix(self):
+    def get_stain_matrix(self, _):
         """Get the pre-defined stain matrix.
 
         Returns:
