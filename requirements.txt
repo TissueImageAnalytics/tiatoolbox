@@ -7,13 +7,13 @@ imagecodecs>2021.10.0
 jupyterlab
 matplotlib
 numpy
-opencv-python<=4.5.4
+opencv-python>=4.5.4
 openslide-python==1.1.2
 pandas
 pillow
 pyyaml>=5.1
 requests
-scikit-image>=0.18.3
+scikit-image==0.18.3
 scikit-learn>=0.23.2
 shapely
 sphinx>=4.1.2
