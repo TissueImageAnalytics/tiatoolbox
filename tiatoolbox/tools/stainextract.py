@@ -186,16 +186,16 @@ class MacenkoExtractor:
         img_od = img_od[tissue_mask]
 
         # eigenvectors of covariance in OD space (orthogonal as covariance symmetric)
-        _, e_vects = np.linalg.eigh(np.cov(img_od, rowvar=False))
+        _, eigen_vectors = np.linalg.eigh(np.cov(img_od, rowvar=False))
 
         # the two principle eigenvectors
-        e_vects = e_vects[:, [2, 1]]
+        eigen_vectors = eigen_vectors[:, [2, 1]]
 
         # make sure vectors are pointing the right way
-        e_vects = vectors_in_correct_direction(e_vectors=e_vects)
+        eigen_vectors = vectors_in_correct_direction(e_vectors=eigen_vectors)
 
         # project on this basis.
-        proj = np.dot(img_od, e_vects)
+        proj = np.dot(img_od, eigen_vectors)
 
         # angular coordinates with respect to the principle, orthogonal eigenvectors
         phi = np.arctan2(proj[:, 1], proj[:, 0])
@@ -205,8 +205,8 @@ class MacenkoExtractor:
         max_phi = np.percentile(phi, angular_percentile)
 
         # the two principle colors
-        v1 = np.dot(e_vects, np.array([np.cos(min_phi), np.sin(min_phi)]))
-        v2 = np.dot(e_vects, np.array([np.cos(max_phi), np.sin(max_phi)]))
+        v1 = np.dot(eigen_vectors, np.array([np.cos(min_phi), np.sin(min_phi)]))
+        v2 = np.dot(eigen_vectors, np.array([np.cos(max_phi), np.sin(max_phi)]))
 
         # order of H&E - H first row
         he = h_and_e_in_right_order(v1, v2)
@@ -236,13 +236,13 @@ class VahadaneExtractor:
     """
 
     @staticmethod
-    def get_stain_matrix(img, luminosity_threshold=0.8, regulariser=0.1):
+    def get_stain_matrix(img, luminosity_threshold=0.8, regularizer=0.1):
         """Stain matrix estimation.
 
         Args:
             img (:class:`numpy.ndarray`): input image used for stain matrix estimation
             luminosity_threshold (float): threshold used for tissue area selection
-            regulariser (float): regulariser used in dictionary learning
+            regularizer (float): regularizer used in dictionary learning
 
         Returns:
             :class:`numpy.ndarray`: estimated stain matrix.
@@ -259,8 +259,8 @@ class VahadaneExtractor:
         # do the dictionary learning
         dl = DictionaryLearning(
             n_components=2,
-            alpha=regulariser,
-            transform_alpha=regulariser,
+            alpha=regularizer,
+            transform_alpha=regularizer,
             fit_algorithm="lars",
             transform_algorithm="lasso_lars",
             positive_dict=True,
