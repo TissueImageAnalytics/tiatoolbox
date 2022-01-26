@@ -155,6 +155,11 @@ class MacenkoExtractor:
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
+    Args:
+        luminosity_threshold (float): threshold used for tissue area selection
+        angular_percentile (int): percentile of angular coordinates to be selected
+            with respect to the principle, orthogonal eigenvectors.
+
     Examples:
         >>> from tiatoolbox.tools.stainextract import MacenkoExtractor
         >>> from tiatoolbox.utils.misc import imread
@@ -164,20 +169,24 @@ class MacenkoExtractor:
 
     """
 
-    @staticmethod
-    def get_stain_matrix(img, luminosity_threshold=0.8, angular_percentile=99):
+    def __init__(self, luminosity_threshold=0.8, angular_percentile=99):
+        self.__luminosity_threshold = luminosity_threshold
+        self.__angular_percentile = angular_percentile
+
+    def get_stain_matrix(self, img):
         """Stain matrix estimation.
 
         Args:
-            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
-            luminosity_threshold (float): threshold used for tissue area selection
-            angular_percentile (int):
+            img (:class:`numpy.ndarray`): input image used for stain matrix estimation.
 
         Returns:
             :class:`numpy.ndarray`: estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
+        luminosity_threshold = self.__luminosity_threshold
+        angular_percentile = self.__angular_percentile
+
         # convert to OD and ignore background
         tissue_mask = get_luminosity_tissue_mask(
             img, threshold=luminosity_threshold
