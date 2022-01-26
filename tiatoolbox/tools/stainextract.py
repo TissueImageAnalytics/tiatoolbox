@@ -132,15 +132,17 @@ class RuifrokExtractor:
 
     """
 
-    @staticmethod
-    def get_stain_matrix(_):
+    def __init__(self):
+        self.__stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+
+    def get_stain_matrix(self):
         """Get the pre-defined stain matrix.
 
         Returns:
             ndarray: pre-defined  stain matrix.
 
         """
-        return np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+        return self.__stain_matrix
 
 
 class MacenkoExtractor:
