@@ -22,7 +22,7 @@ requirements = [
     "pandas",
     "glymur",
     "scikit-learn>=0.23.2",
-    "scikit-image>=0.18.3",
+    "scikit-image==0.18.3",
     "shapely",
     "torchvision>=0.10.1",
     "torch>=1.9.1",
