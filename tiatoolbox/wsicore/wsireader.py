@@ -1966,7 +1966,8 @@ class TIFFWSIReader(WSIReader):
         if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
             raise Exception("TIFF does not contain any valid series.")
         if self.series_n == "auto":
-            all_series = self.tiff.series or []
+            # Find the series with the largest page 0
+            all_series: Union[tifffile.TiffPageSeries, list] = self.tiff.series or []
 
             def page_area(page: tifffile.TiffPage) -> float:
                 """Calculate the area of a page."""
