@@ -24,6 +24,7 @@ dependencies:
   - pillow
   - pip
   - pixman<0.38.0
+  - pydicom # Used by wsidicom
   - python=3.7
   - python=3.7
   - pytorch
@@ -31,9 +32,9 @@ dependencies:
   - requests
   - scikit-image==0.18.3
   - scikit-learn>=0.23.2
+  - shapely
   - sphinx_gallery
   - sphinx_toolbox
-  - shapely
   - tifffile
   - torchvision
   - tqdm
@@ -41,3 +42,4 @@ dependencies:
   - zarr
   - pip:
     - openslide-python==1.1.2
+    - wsidicom

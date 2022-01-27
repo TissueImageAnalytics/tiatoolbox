@@ -27,6 +27,7 @@ dependencies:
   - pip
   - pixman<0.38.0
   - pre-commit
+  - pydicom # Used by wsidicom
   - pytest-cov
   - pytest-runner==5.2
   - pytest==6.2.5
@@ -48,3 +49,4 @@ dependencies:
   - zarr
   - pip:
       - openslide-python==1.1.2
+      - wsidicom
