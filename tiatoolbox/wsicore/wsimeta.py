@@ -270,7 +270,7 @@ class WSIMeta:
         if units == "mpp":
             if self.mpp is None:
                 raise ValueError("MPP is None. Cannot determine scale in terms of MPP.")
-            base_scale, resolution = self.mpp, resolution
+            base_scale = self.mpp
 
         if units == "power":
             if self.objective_power is None:

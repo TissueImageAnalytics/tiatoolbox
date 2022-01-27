@@ -2368,7 +2368,7 @@ class DICOMWSIReader(WSIReader):
             level_location,
             level_read_size,
             post_read_scale,
-            baseline_read_size,
+            _,
         ) = self.find_read_rect_params(
             location=location,
             size=size,
