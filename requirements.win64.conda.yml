@@ -37,6 +37,7 @@ dependencies:
   - sphinx-gallery
   - tifffile>2021.10.0
   - torchvision
+  - tox
   - tqdm
   - umap-learn
   - zarr
