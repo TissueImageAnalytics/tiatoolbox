@@ -75,12 +75,12 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
         >>> from tiatoolbox import utils
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,
-        ...     file_types=file_types,)
+        ...     file_types=file_types)
 
     """
     input_path = pathlib.Path(input_path)
 
-    if type(file_types) is str:
+    if isinstance(file_types, str):
         if len(file_types.split(",")) > 1:
             file_types = tuple(file_types.replace(" ", "").split(","))
         else:
@@ -140,6 +140,7 @@ def imread(image_path, as_uint8=True):
 
     Args:
         image_path (str or pathlib.Path): File path (including extension) to read image.
+        as_uint8 (bool): Read an image in uint8 format.
 
     Returns:
         img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
@@ -151,13 +152,15 @@ def imread(image_path, as_uint8=True):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
+
     if pathlib.Path(image_path).suffix == ".npy":
         image = np.load(image_path)
     else:
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
-        image = image.astype(np.uint8)
+        return image.astype(np.uint8)
+
     return image
 
 
@@ -179,23 +182,24 @@ def load_stain_matrix(stain_matrix_input):
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
-        if suffixes[-1] == ".csv":
-            stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
-        elif suffixes[-1] == ".npy":
-            stain_matrix = np.load(str(stain_matrix_input))
-        else:
+        if suffixes[-1] not in [".csv", ".npy"]:
             raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
-    elif isinstance(stain_matrix_input, np.ndarray):
-        stain_matrix = stain_matrix_input
-    else:
-        raise TypeError(
-            "Stain_matrix must be either a path to npy/csv file or a numpy array"
-        )
 
-    return stain_matrix
+        if suffixes[-1] == ".csv":
+            return pd.read_csv(stain_matrix_input).to_numpy()
+
+        if suffixes[-1] == ".npy":
+            return np.load(str(stain_matrix_input))
+
+    if isinstance(stain_matrix_input, np.ndarray):
+        return stain_matrix_input
+
+    raise TypeError(
+        "Stain_matrix must be either a path to npy/csv file or a numpy array"
+    )
 
 
 def get_luminosity_tissue_mask(img, threshold):
@@ -236,7 +240,7 @@ def mpp2common_objective_power(
 
     Args:
         mpp (float or tuple(float)): Microns per-pixel.
-        common_powers (list of float): A sequence of objective
+        common_powers (tuple or list of float): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
@@ -256,8 +260,7 @@ def mpp2common_objective_power(
     """
     op = mpp2objective_power(mpp)
     distances = [np.abs(op - power) for power in common_powers]
-    closest_match = common_powers[np.argmin(distances)]
-    return closest_match
+    return common_powers[np.argmin(distances)]
 
 
 mpp2common_objective_power = np.vectorize(
@@ -355,20 +358,70 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
+def __numpy_array_to_table(input_table):
+    """Checks numpy array to be 2 or 3 columns.
+    If it has two columns then class should be assign None.
+
+    Args:
+        input_table (np.ndarray): input table.
+
+    Returns:
+       table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+    Raises:
+        ValueError: If the number of columns is not equal to 2 or 3.
+
+    """
+    if input_table.shape[1] == 2:
+        out_table = pd.DataFrame(input_table, columns=["x", "y"])
+        out_table["class"] = None
+        return out_table
+
+    if input_table.shape[1] == 3:
+        return pd.DataFrame(input_table, columns=["x", "y", "class"])
+
+    raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
+
+
+def __assign_unknown_class(input_table):
+    """Creates a column and assigns None if class is unknown.
+
+    Args:
+        input_table (np.ndarray or pd.DataFrame): input table.
+
+    Returns:
+        table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+    Raises:
+        ValueError: If the number of columns is not equal to 2 or 3.
+
+    """
+    if input_table.shape[1] not in [2, 3]:
+        raise ValueError("Input table must have 2 or 3 columns.")
+
+    if input_table.shape[1] == 2:
+        input_table["class"] = None
+
+    return input_table
+
+
 def read_locations(input_table):
     """Read annotations as pandas DataFrame.
 
     Args:
         input_table (str or pathlib.Path or :class:`numpy.ndarray` or
-         :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
-         :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
-         First column in the table represents x position, second
-         column represents y position. The third column represents the class. If the
-         table has headers, the header should be x, y & class. Json should have `x`, `y`
-         and `class` fields.
+            :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+            :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+            First column in the table represents x position, second
+            column represents y position. The third column represents the class.
+            If the table has headers, the header should be x, y & class.
+            Json should have `x`, `y` and `class` fields.
 
     Returns:
         pd.DataFrame: DataFrame with x, y location and class type.
+
+    Raises:
+        FileNotSupported: If the path to input table is not of supported type.
 
     Examples:
         >>> from tiatoolbox.utils.misc import read_locations
@@ -380,17 +433,9 @@ def read_locations(input_table):
 
         if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
-            if out_table.shape[1] == 2:
-                out_table = pd.DataFrame(out_table, columns=["x", "y"])
-                out_table["class"] = None
-            elif out_table.shape[1] == 3:
-                out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
-            else:
-                raise ValueError(
-                    "numpy table should be of format `x, y` or " "`x, y, class`"
-                )
+            return __numpy_array_to_table(out_table)
 
-        elif suffixes[-1] == ".csv":
+        if suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
@@ -400,37 +445,22 @@ def read_locations(input_table):
                     sep=None,
                     engine="python",
                 )
-            if out_table.shape[1] == 2:
-                out_table["class"] = None
 
-        elif suffixes[-1] == ".json":
+            return __assign_unknown_class(out_table)
+
+        if suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
-            if out_table.shape[1] == 2:
-                out_table["class"] = None
+            return __assign_unknown_class(out_table)
 
-        else:
-            raise FileNotSupported("Filetype not supported.")
+        raise FileNotSupported("File type not supported.")
 
-    elif isinstance(input_table, np.ndarray):
-        if input_table.shape[1] == 3:
-            out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
-        elif input_table.shape[1] == 2:
-            out_table = pd.DataFrame(input_table, columns=["x", "y"])
-            out_table["class"] = None
-        else:
-            raise ValueError("Input array must have 2 or 3 columns.")
+    if isinstance(input_table, np.ndarray):
+        return __numpy_array_to_table(input_table)
 
-    elif isinstance(input_table, pd.DataFrame):
-        out_table = input_table
-        if out_table.shape[1] == 2:
-            out_table["class"] = None
-        elif out_table.shape[1] < 2:
-            raise ValueError("Input table must have 2 or 3 columns.")
+    if isinstance(input_table, pd.DataFrame):
+        return __assign_unknown_class(input_table)
 
-    else:
-        raise TypeError("Please input correct image path or an ndarray image.")
-
-    return out_table
+    raise TypeError("Please input correct image path or an ndarray image.")
 
 
 @np.vectorize
@@ -460,12 +490,13 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
 
     Examples:
         >>> from tiatoolbox import utils
+        >>> import numpy as np
         >>> utils.misc.conv_out_size(100, 3)
-        >>> array(98)
+        >>> np.array(98)
         >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
-        >>> array(98)
+        >>> np.array(98)
         >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
-        >>> array([49, 49])
+        >>> np.array([49, 49])
 
     """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
@@ -490,7 +521,7 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
 
     Args:
         interpolation (Union[str, int]): Interpolation mode string.
-            Possible values are: neares, linear, cubic, lanczos, area.
+            Possible values are: nearest, linear, cubic, lanczos, area.
 
     Raises:
         ValueError: Invalid interpolation mode.
@@ -577,6 +608,58 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
+def __walk_list_dict(in_list_dict):
+    """Recursive walk and jsonify in place.
+
+    Args:
+        in_list_dict (list or dict):  input list or a dictionary.
+
+    Returns:
+        list or dict
+
+    """
+    if isinstance(in_list_dict, dict):
+        __walk_dict(in_list_dict)
+    elif isinstance(in_list_dict, list):
+        __walk_list(in_list_dict)
+    elif isinstance(in_list_dict, np.ndarray):
+        in_list_dict = in_list_dict.tolist()
+        __walk_list(in_list_dict)
+    elif isinstance(in_list_dict, np.generic):
+        in_list_dict = in_list_dict.item()
+    elif in_list_dict is not None and not isinstance(
+        in_list_dict, (int, float, str, bool)
+    ):
+        raise ValueError(
+            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
+        )
+    return in_list_dict
+
+
+def __walk_list(lst):
+    """Recursive walk and jsonify a list in place.
+
+    Args:
+        lst (list):  input list.
+
+    """
+    for i, v in enumerate(lst):
+        lst[i] = __walk_list_dict(v)
+
+
+def __walk_dict(dct):
+    """Recursive walk and jsonify a dictionary in place.
+
+    Args:
+        dct (dict):  input dictionary.
+
+    """
+    for k, v in dct.items():
+        if not isinstance(k, (int, float, str, bool)):
+            raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+        dct[k] = __walk_list_dict(v)
+
+
 def save_as_json(data, save_path):
     """Save data to a json file.
 
@@ -589,49 +672,15 @@ def save_as_json(data, save_path):
         save_path (str): Output to save the json of `input`.
 
     """
-    shadow_data = copy.deepcopy(data)
-
-    # make a copy of source input
-    def walk_list(lst):
-        """Recursive walk and jsonify in place."""
-        for i, v in enumerate(lst):
-            if isinstance(v, dict):
-                walk_dict(v)
-            elif isinstance(v, list):
-                walk_list(v)
-            elif isinstance(v, np.ndarray):
-                v = v.tolist()
-                walk_list(v)
-            elif isinstance(v, np.generic):
-                v = v.item()
-            elif v is not None and not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            lst[i] = v
-
-    def walk_dict(dct):
-        """Recursive walk and jsonify in place."""
-        for k, v in dct.items():
-            if isinstance(v, dict):
-                walk_dict(v)
-            elif isinstance(v, list):
-                walk_list(v)
-            elif isinstance(v, np.ndarray):
-                v = v.tolist()
-                walk_list(v)
-            elif isinstance(v, np.generic):
-                v = v.item()
-            elif v is not None and not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            if not isinstance(k, (int, float, str, bool)):
-                raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
-            dct[k] = v
+    shadow_data = copy.deepcopy(data)  # make a copy of source input
+    if not isinstance(shadow_data, (dict, list)):
+        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
 
     if isinstance(shadow_data, dict):
-        walk_dict(shadow_data)
-    elif isinstance(shadow_data, list):
-        walk_list(shadow_data)
+        __walk_dict(shadow_data)
     else:
-        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+        __walk_list(shadow_data)
+
     with open(save_path, "w") as handle:
         json.dump(shadow_data, handle)
 
@@ -647,11 +696,9 @@ def select_device(on_gpu):
 
     """
     if on_gpu:
-        device = "cuda"
-    else:
-        device = "cpu"
+        return "cuda"
 
-    return device
+    return "cpu"
 
 
 def model_to(on_gpu, model):
@@ -667,11 +714,9 @@ def model_to(on_gpu, model):
     """
     if on_gpu:  # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
-        model = model.to("cuda")
-    else:
-        model = model.to("cpu")
+        return model.to("cuda")
 
-    return model
+    return model.to("cpu")
 
 
 def get_bounding_box(img):
