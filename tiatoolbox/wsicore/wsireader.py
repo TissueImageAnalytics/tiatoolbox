@@ -1962,18 +1962,17 @@ class TIFFWSIReader(WSIReader):
             raise ValueError("Unsupported TIFF WSI format.")
 
         self.series_n = series
-        # Find the largest series if series="auto"
         if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
             raise Exception("TIFF does not contain any valid series.")
+        # Find the largest series if series="auto"
         if self.series_n == "auto":
-            # Find the series with the largest page 0
-            all_series: Union[tifffile.TiffPageSeries, list] = self.tiff.series or []
+            all_series = self.tiff.series or []
 
             def page_area(page: tifffile.TiffPage) -> float:
                 """Calculate the area of a page."""
                 return np.prod(self._canonical_shape(page.shape)[:2])
 
-            series_areas = [page_area(s.pages[0]) for s in all_series]
+            series_areas = [page_area(s.pages[0]) for s in all_series]  # skipcq
             self.series_n = np.argmax(series_areas)
         self._tiff_series = self.tiff.series[self.series_n]
         self._zarr_store = tifffile.imread(
