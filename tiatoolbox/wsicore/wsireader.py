@@ -1968,7 +1968,8 @@ class TIFFWSIReader(WSIReader):
         if self.series_n == "auto":
             all_series = self.tiff.series or []
 
-            def page_area(page):
+            def page_area(page: tifffile.TiffPage) -> float:
+                """Calculate the area of a page."""
                 return np.prod(self._canonical_shape(page.shape)[:2])
 
             series_areas = [page_area(s.pages[0]) for s in all_series]
