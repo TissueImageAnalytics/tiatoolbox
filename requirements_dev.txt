@@ -1,5 +1,5 @@
 albumentations
-black>=21
+black>=21.4b0
 bump2version==0.5.11
 Click>=7.0
 coverage==5.1
