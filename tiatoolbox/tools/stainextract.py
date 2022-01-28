@@ -142,7 +142,7 @@ class RuifrokExtractor:
             ndarray: pre-defined  stain matrix.
 
         """
-        return self.__stain_matrix
+        return self.__stain_matrix.copy()
 
 
 class MacenkoExtractor:
