@@ -1,6 +1,24 @@
 History
 =======
 
+1.0.1 (2022-01-31)
+------------------
+### Major Updates and Feature Improvements
+- Updates dependencies for conda recipe #262
+
+### Changes to API
+- None
+
+### Bug Fixes and Other Changes
+- Adds User Warning For Missing SQLite Functions
+- Fixes Pixman version check errors
+- Fixes empty query in instance segmentor
+
+### Development related changes
+- Fixes flake8 linting issues and typos
+- Conditional pytest.skipif to skip GPU tests on travis while running them locally or elsewhere
+
+
 1.0.0 (2021-12-23)
 ------------------
 ### Major Updates and Feature Improvements

@@ -39,14 +39,14 @@ from tiatoolbox.models.dataset import (
     predefined_preproc_func,
 )
 from tiatoolbox.models.engine.patch_predictor import (
-    PatchPredictor,
     IOPatchPredictorConfig,
+    PatchPredictor,
 )
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_TRAVIS = True
-ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
+ON_GPU = toolbox_env.has_gpu()
 
 
 def _rm_dir(path):
@@ -868,7 +868,7 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
         **kwargs,
     )
 
-    # mockup to change the preproc func and
+    # mock up to change the preproc func and
     # force to use the default in merge function
     # still should have the same results
     kwargs["merge_predictions"] = False
@@ -968,7 +968,7 @@ def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
             on_gpu=ON_GPU,
         )
         # only test 1 on travis to limit runtime
-        if ON_TRAVIS:
+        if toolbox_env.running_on_travis():
             break
 
 
@@ -1003,7 +1003,7 @@ def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
             on_gpu=ON_GPU,
         )
         # only test 1 on travis to limit runtime
-        if ON_TRAVIS:
+        if toolbox_env.running_on_travis():
             break
 
 

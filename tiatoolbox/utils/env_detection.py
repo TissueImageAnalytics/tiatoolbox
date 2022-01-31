@@ -40,9 +40,25 @@ import subprocess
 import sys
 import threading
 from numbers import Number
-from typing import Tuple
+from typing import List, Tuple
+
+import torch
 
 from tiatoolbox import logger
+
+
+def has_gpu() -> bool:
+    """Detect if the runtime has GPU.
+
+    This function calls torch function underneath. To mask an environment
+    to have no GPU, you can set "CUDA_VISIBLE_DEVICES" environment variable
+    to empty before running the python script.
+
+    Returns:
+        bool: True if the current runtime environment has GPU, False otherwise.
+
+    """
+    return torch.cuda.is_available()
 
 
 def is_interactive() -> bool:
@@ -179,18 +195,22 @@ def has_network(
         return False
 
 
-def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
-    """The version of pixman that is installed.
+def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
+    """The version(s) of pixman that are installed.
+
+    Some package managers (brew) may report multiple versions of pixman
+    installed as part of a dependency tree.
 
     Returns:
-        tuple: The version of pixman that is installed as a tuple of ints.
+        list of tuple of int: The versions of pixman that are installed
+            as tuples of ints.
 
     Raises:
         Exception: If pixman is not installed or the version
         could not be determined.
 
     """
-    version = None
+    versions = []
     using = None
 
     if in_conda_env():
@@ -210,8 +230,8 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
             flags=re.MULTILINE,
         )
         if matches:
-            version = tuple(int(part) for part in matches.group(1).split("."))
-    if shutil.which("dpkg") and version is None:
+            versions = [version_to_tuple(matches.group(1))]
+    if shutil.which("dpkg") and not versions:
         # Using dpkg to check for pixman
         using = "dpkg"
         try:
@@ -221,13 +241,13 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
         except subprocess.SubprocessError:
             dkpg_output = b""
         matches = re.search(
-            r"^Version: (\d+.\d+)*",
+            r"^Version: ((?:\d+[._]+)+\d*)",
             dkpg_output.decode("utf-8"),
             flags=re.MULTILINE,
         )
         if matches:
-            version = tuple(int(part) for part in matches.group(1).split("."))
-    if shutil.which("brew") and version is None:
+            versions = [version_to_tuple(matches.group(1))]
+    if shutil.which("brew") and not versions:
         # Using homebrew to check for pixman
         using = "brew"
         try:
@@ -240,14 +260,14 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
             brew_list.wait()
         except subprocess.SubprocessError:
             brew_pixman = b""
-        matches = re.search(
-            r"(\d+.\d+)*",
+        matches = re.findall(
+            r"((?:\d+[._]+)+\d*)",
             brew_pixman.decode("utf-8"),
             flags=re.MULTILINE,
         )
         if matches:
-            version = tuple(int(part) for part in matches.group(1).split("."))
-    if platform.system() == "Darwin" and shutil.which("port") and version is None:
+            versions = [version_to_tuple(match) for match in matches]
+    if platform.system() == "Darwin" and shutil.which("port") and not versions:
         # Using macports to check for pixman
         # Also checks the platform is Darwin as macports is only available on
         # MacOS.
@@ -257,16 +277,34 @@ def pixman_version() -> Tuple[int, int]:  # noqa: CCR001
             ("grep", "pixman"), stdin=port_list.stdout
         )
         port_list.wait()
-        matches = re.search(
-            r"(\d+.\d+)*",
+        matches = re.findall(
+            r"((?:\d+[._]+)+\d*)",
             port_pixman.decode("utf-8"),
             flags=re.MULTILINE,
         )
         if matches:
-            version = tuple(int(part) for part in matches.group(1).split("."))
-    if version:
-        return version, using
-    raise EnvironmentError("Unable to detect pixman version.")
+            versions = [version_to_tuple(matches.group(1))]
+    if versions:
+        return versions, using
+    raise EnvironmentError("Unable to detect pixman version(s).")
+
+
+def version_to_tuple(match: str) -> Tuple[int, ...]:
+    """Convert a version string to a tuple of ints.
+
+    Only supports versions containing integers and periods.
+
+    Args:
+        match (str): The version string to convert.
+
+    Returns:
+        tuple: The version string as a tuple of ints.
+
+    """
+    # Check that the string only contains integers and periods
+    if not re.match(r"^\d+([._]\d+)*$", match):
+        raise ValueError(f"{match} is not a valid version string.")
+    return tuple(int(part) for part in match.split("."))
 
 
 def pixman_warning() -> None:  # pragma: no cover
@@ -280,7 +318,7 @@ def pixman_warning() -> None:  # pragma: no cover
     def _show_warning() -> None:
         """Show a warning message if pixman is version 0.38."""
         try:
-            version, using = pixman_version()
+            versions, using = pixman_versions()
         except EnvironmentError:
             # Unable to determine the pixman version
             return
@@ -294,10 +332,10 @@ def pixman_warning() -> None:  # pragma: no cover
             )
         if using == "dpkg":
             fix = (
-                "To fix this you may need to set up an anaconda environment "
-                "with pixman >=0.39 or install pixman >=0.39 from source. "
-                "See the tiatoolbox documentation for more information on "
-                "setting up a conda environment. "
+                "To fix this you may need to do one of the following:\n"
+                "  1. Install libpixman-1-dev from your package manager (e.g. apt).\n"
+                "  2. Set up an anaconda environment with pixman >=0.39\n"
+                "  3. Install pixman >=0.39 from source. "
                 "Instructions to compile from source can be found at the GitLab "
                 "mirror here: "
                 "https://gitlab.freedesktop.org/pixman/pixman/-/blob/master/INSTALL"
@@ -306,8 +344,8 @@ def pixman_warning() -> None:  # pragma: no cover
             fix = "You may be able do this with the command: brew upgrade pixman"
         if using == "port":
             fix = "You may be able do this with the command: port upgrade pixman"
-        # Log the warning
-        if version[:2] == (0, 38):
+        # Log a warning if there is a pixman version in the range [0.38, 0.39)
+        if any((0, 38) <= v < (0, 39) for v in versions):
             logger.warning(
                 "It looks like you are using Pixman version 0.38 (via %s). "
                 "This version is known to cause issues with OpenSlide. "

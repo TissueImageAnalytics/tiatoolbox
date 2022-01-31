@@ -11,7 +11,6 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
-import torch.cuda
 from PIL import Image
 
 from tiatoolbox import rcParam, utils
@@ -825,7 +824,7 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test if input array does not have 2 or 3 columns
-    with pytest.raises(ValueError, match="Input array must have 2 or 3 columns"):
+    with pytest.raises(ValueError, match="numpy table should be of format"):
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
@@ -1160,14 +1159,14 @@ def test_model_to():
     import torch.nn as nn
     import torchvision.models as torch_models
 
-    # test on GPU
+    # Test on GPU
     # no GPU on Travis so this will crash
-    if not torch.cuda.is_available():
+    if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
             _ = misc.model_to(on_gpu=True, model=model)
 
-    # test on CPU
+    # Test on CPU
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
@@ -1237,9 +1236,18 @@ def test_imread_none_args():
 def test_detect_pixman():
     """Test detection of the pixman version.
 
-    Simply check it passes without exception.
+    Simply check it passes without exception or that it raises
+    an EnvironmentError if the version is not detected.
+
+    Any other exception should fail this test.
     """
-    _, _ = utils.env_detection.pixman_version()
+    try:
+        versions, using = utils.env_detection.pixman_versions()
+        assert isinstance(using, str)
+        assert isinstance(versions, list)
+        assert len(versions) > 0
+    except EnvironmentError:
+        pass
 
 
 def test_detect_travis():
@@ -1248,3 +1256,12 @@ def test_detect_travis():
     Simply check it passes without exception.
     """
     _ = utils.env_detection.running_on_travis()
+
+
+def test_detect_gpu():
+    """Test detection of GPU in the current runtime environment.
+
+    Simply check it passes without exception.
+
+    """
+    _ = utils.env_detection.has_gpu()

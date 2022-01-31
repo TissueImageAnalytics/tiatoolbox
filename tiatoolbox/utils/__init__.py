@@ -20,4 +20,4 @@
 
 """Utils package for toolbox utilities."""
 
-from tiatoolbox.utils import exceptions, image, misc, transforms
+from tiatoolbox.utils import env_detection, exceptions, image, misc, transforms

@@ -315,7 +315,6 @@ class UNetModel(ModelABC):
               input images.
 
         """
-
         # scale to 0-1
         imgs = imgs / 255.0
 

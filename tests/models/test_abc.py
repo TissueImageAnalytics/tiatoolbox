@@ -25,9 +25,13 @@ import pytest
 from tiatoolbox import rcParam
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.utils import env_detection as toolbox_env
 
 
-@pytest.mark.skip(reason="Local test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    reason="Local test on machine with GPU.",
+)
 def test_get_pretrained_model():
     """Test for downloading and creating pretrained models."""
     pretrained_info = rcParam["pretrained_model_info"]
