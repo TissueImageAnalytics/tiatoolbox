@@ -226,14 +226,20 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
-        encoder_levels: List[int] = [64, 128, 256, 512, 1024],
-        decoder_block: Tuple[int] = [3, 3],
+        encoder_levels: List[int] = None,
+        decoder_block: Tuple[int] = None,
         skip_type: str = "add",
     ):
         super().__init__()
 
         if encoder.lower() not in {"resnet50", "unet"}:
             raise ValueError(f"Unknown encoder `{encoder}`")
+
+        if encoder_levels is None:
+            encoder_levels = [64, 128, 256, 512, 1024]
+
+        if decoder_block is None:
+            decoder_block = [3, 3]
 
         if encoder == "resnet50":
             padding = "same"
@@ -330,7 +336,6 @@ class UNetModel(ModelABC):
               input images.
 
         """
-
         # scale to 0-1
         imgs = imgs / 255.0
 
