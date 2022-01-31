@@ -119,7 +119,6 @@ class WSIReader:
             ".npy",
             ".ndpi",
             ".mrxs",
-            ".ndpi",
             ".tif",
             ".tiff",
             ".jp2",
@@ -139,13 +138,10 @@ class WSIReader:
         if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
-        if suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
-            return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
-
         if suffixes[-1] in (".jp2",):
             return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
 
-        raise TypeError("Invalid input. Must be a file path or an ndarray image.")
+        return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
     def __init__(
         self,
