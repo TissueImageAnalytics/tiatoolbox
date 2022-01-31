@@ -68,8 +68,7 @@ class ResNetEncoder(ResNet):
     @staticmethod
     def resnet50(num_input_channels: int):
         """Shortcut method to create ResNet50."""
-        model = ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
-        return model
+        return ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
 
     @staticmethod
     def resnet(
@@ -195,11 +194,18 @@ class UNetModel(ModelABC):
           - "resnet50": The well-known ResNet50- this is not the pre-activation model.
           - "unet": The vanilla UNet encoder where each down-sampling level
             contains 2 blocks of Convolution-BatchNorm-ReLu.
+        encoder_levels (list): A list of integers to configure "unet" encoder levels.
+          Each number defines the number of output channels at each down-sampling
+          level (2 convolutions). Number of intergers define the number down-sampling
+          levels in the unet encoder. This is only applicable when `encoder="unet"`.
         decoder_block (list): A list of convolution layers. Each item is an
           integer and denotes the layer kernel size.
         classifier (list): A list of convolution layers before the final 1x1
           convolution. Each item is an integer denotes the layer kernel size. The
           default is `None` and contains only the 1x1 convolution.
+        skip_type (str): Choosing between "add" or "concat" method to be used for
+          combining feature maps from encoder and decoder parts at skip connections.
+          Default is "add".
 
     Returns:
         model (torch.nn.Module): a pytorch model.
@@ -220,20 +226,27 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
-        decoder_block: Tuple[int] = (3, 3),
+        encoder_levels: List[int] = [64, 128, 256, 512, 1024],
+        decoder_block: Tuple[int] = [3, 3],
+        skip_type: str = "add",
     ):
         super().__init__()
 
+        if encoder.lower() not in {"resnet50", "unet"}:
+            raise ValueError(f"Unknown encoder `{encoder}`")
+
         if encoder == "resnet50":
-            padding = 1
+            padding = "same"
             preact = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
         elif encoder == "unet":
-            padding = 0
+            padding = "same"
             preact = False
-            self.backbone = UnetEncoder(num_input_channels, [64, 128, 256, 512, 2048])
-        else:
-            raise ValueError(f"Unknown encoder `{encoder}`")
+            self.backbone = UnetEncoder(num_input_channels, encoder_levels)
+
+        if skip_type.lower() not in {"add", "concat"}:
+            raise ValueError(f"Unknown type of skip connection: `{skip_type}`")
+        self.skip_type = skip_type.lower()
 
         img_list = torch.rand([1, num_input_channels, 256, 256])
         out_list = self.backbone(img_list)
@@ -281,7 +294,7 @@ class UNetModel(ModelABC):
                                 padding=padding,
                                 bias=False,
                             ),
-                            nn.BatchNorm2d(input_ch),
+                            nn.BatchNorm2d(output_ch),
                             nn.ReLU(),
                         ]
                     )
@@ -293,6 +306,8 @@ class UNetModel(ModelABC):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
                 next_up_ch = down_ch_list[ch_idx + 2]
+            if self.skip_type == "concat":
+                ch *= 2
             layers = create_block(decoder_block, ch, next_up_ch)
             self.uplist.append(nn.Sequential(*layers))
 
@@ -315,6 +330,7 @@ class UNetModel(ModelABC):
               input images.
 
         """
+
         # scale to 0-1
         imgs = imgs / 255.0
 
@@ -329,10 +345,12 @@ class UNetModel(ModelABC):
             # coming from the encoder, then run it through the decoder
             # block
             y = en_list[-idx]
-            x = self.upsample2x(x) + y
+            if self.skip_type == "add":
+                x = self.upsample2x(x) + y
+            else:
+                x = torch.cat([self.upsample2x(x), y], dim=1)
             x = self.uplist[idx - 1](x)
-        output = self.clf(x)
-        return output
+        return self.clf(x)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
