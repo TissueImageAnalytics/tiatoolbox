@@ -101,6 +101,24 @@ class WSIReader:
             >>> wsi = get_wsireader(input_img="./sample.svs")
 
         """
+
+        def is_dicom(path: pathlib.Path) -> bool:
+            """Check if the input is a DICOM file.
+
+            Args:
+                path (pathlib.Path): Path to the file to check.
+
+            Returns:
+                bool: True if the file is a DICOM file.
+
+            """
+            path = pathlib.Path(path)
+            is_dcm = path.suffix.lower() == ".dcm"
+            is_dcm_dir = path.is_dir() and any(
+                p.suffix.lower() == ".dcm" for p in path.iterdir()
+            )
+            return is_dcm or is_dcm_dir
+
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
@@ -111,6 +129,9 @@ class WSIReader:
 
         if isinstance(input_img, WSIReader):
             return input_img
+
+        if is_dicom(input_img):
+            return DICOMWSIReader(input_img, mpp=mpp, power=power)
 
         _, _, suffixes = utils.misc.split_path_name_ext(input_img)
 

@@ -34,6 +34,7 @@ from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
+    WSIReader,
 )
 
 # -------------------------------------------------------------------------------------
@@ -1825,6 +1826,13 @@ class TestReader:
         ),
         ("DICOMReader", {"reader_class": DICOMWSIReader, "sample_key": "dicom-1"}),
     ]
+
+    @staticmethod
+    def test_base_open(sample_key, reader_class):
+        """Checks that WSIReader.open detects the type correctly."""
+        sample = _fetch_remote_sample(sample_key)
+        wsi = WSIReader.open(sample)
+        assert isinstance(wsi, reader_class)
 
     @staticmethod
     def test_wsimeta_attrs(sample_key, reader_class):
