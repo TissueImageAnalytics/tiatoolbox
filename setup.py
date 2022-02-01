@@ -33,6 +33,7 @@ requirements = [
     "requests",
     "defusedxml",
     "umap-learn",
+    "wsidicom",
 ]
 
 setup_requirements = [
