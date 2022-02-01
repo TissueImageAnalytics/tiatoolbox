@@ -22,6 +22,7 @@
       <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads"/>
     </a>
   <br>
+  <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://zenodo.org/badge/DOI/10.1101.2021.12.23.474029.svg" alt="DOI"></a>
   <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 </p>
 
