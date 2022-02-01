@@ -6,8 +6,8 @@
   <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
     <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
   </a>
-  <a href="https://travis-ci.org/TissueImageAnalytics/tiatoolbox">
-    <img src="https://travis-ci.org/TissueImageAnalytics/tiatoolbox.svg?branch=master" alt="Travis CI Status" />
+  <a href="https://travis-ci.com/github/TissueImageAnalytics/tiatoolbox">
+    <img src="https://app.travis-ci.com/TissueImageAnalytics/tiatoolbox.svg?branch=master" alt="Travis CI Status" />
   </a>
     <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
@@ -17,7 +17,7 @@
     </a>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
-  </a>    
+  </a>
     <a href="https://pepy.tech/project/tiatoolbox">
       <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads"/>
     </a>
