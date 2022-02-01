@@ -1236,7 +1236,7 @@ class WSIReader:
 
             # convert to baseline reference frame
             bounds = start_w, start_h, end_w, end_h
-            baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
+            baseline_bounds = tuple([bound * (2**level) for bound in bounds])
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
@@ -1618,7 +1618,7 @@ class OmnyxJP2WSIReader(WSIReader):
             units=units,
         )
 
-        stride = 2 ** read_level
+        stride = 2**read_level
         glymur_wsi = self.glymur_wsi
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
@@ -1677,7 +1677,7 @@ class OmnyxJP2WSIReader(WSIReader):
             )
         glymur_wsi = self.glymur_wsi
 
-        stride = 2 ** read_level
+        stride = 2**read_level
 
         im_region = utils.image.safe_padded_read(
             image=glymur_wsi,
@@ -1736,10 +1736,10 @@ class OmnyxJP2WSIReader(WSIReader):
         else:
             level_count = cod.num_res
 
-        level_downsamples = [2 ** n for n in range(level_count)]
+        level_downsamples = [2**n for n in range(level_count)]
 
         level_dimensions = [
-            (int(slide_dimensions[0] / 2 ** n), int(slide_dimensions[1] / 2 ** n))
+            (int(slide_dimensions[0] / 2**n), int(slide_dimensions[1] / 2**n))
             for n in range(level_count)
         ]
 
@@ -2044,7 +2044,7 @@ class TIFFWSIReader(WSIReader):
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         series="auto",
-        cache_size=2 ** 28,
+        cache_size=2**28,
     ) -> None:
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
