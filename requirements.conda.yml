@@ -24,7 +24,7 @@ dependencies:
   - pandas
   - pillow
   - pip
-  - pixman!=0.38.0
+  - pixman>=0.39.0
   - python=3.7
   - pytorch>=1.9.0
   - pyyaml>=5.1
