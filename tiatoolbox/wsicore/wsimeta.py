@@ -234,13 +234,13 @@ class WSIMeta:
                 units.
 
         Examples:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "mpp"))
             [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
 
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "baseline"))
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
