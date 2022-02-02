@@ -25,7 +25,7 @@ dependencies:
   - pandas
   - pillow
   - pip
-  - pixman!=0.38.0
+  - pixman>=0.39.0
   - pre-commit
   - pytest-cov
   - pytest-runner>=5.2
