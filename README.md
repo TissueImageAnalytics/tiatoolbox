@@ -34,7 +34,7 @@
     </a>
 
   <br>
-  <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/biorxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
+  <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
   <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 </p>
 
