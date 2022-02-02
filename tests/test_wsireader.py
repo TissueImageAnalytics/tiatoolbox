@@ -1839,6 +1839,7 @@ class TestReader:
         """Check for expected attrs in .info / WSIMeta.
 
         Checks for existence of expected attrs but not their contents.
+
         """
         sample = _fetch_remote_sample(sample_key)
         wsi = reader_class(sample)
@@ -1919,6 +1920,7 @@ class TestReader:
         - 50 random seeded reads are performed.
         - All test bounds are within the the slide dimensions.
         - Bounds sizes are randomised between 1 and 512 in width and height.
+
         """
         random.seed(123)
         sample = _fetch_remote_sample(sample_key)
