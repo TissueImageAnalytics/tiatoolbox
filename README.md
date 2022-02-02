@@ -18,6 +18,9 @@
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
+  <a href="https://anaconda.org/conda-forge/tiatoolbox">
+    <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox" alt="Conda Status" />
+  </a>
     <a href="https://pepy.tech/project/tiatoolbox">
       <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads"/>
     </a>
