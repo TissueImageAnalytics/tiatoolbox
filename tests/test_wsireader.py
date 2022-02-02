@@ -967,7 +967,7 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
     tmp_path = pathlib.Path(tmp_path)
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
     wsi.save_tiles(
-        output_dir=str(tmp_path.joinpath("test_wsireader_jp2_save_tiles")),
+        output_dir=str(tmp_path / "test_wsireader_jp2_save_tiles"),
         tile_objective_value=5,
         tile_read_size=(5000, 5000),
         verbose=True,
