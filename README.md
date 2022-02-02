@@ -27,7 +27,7 @@
     </a>
     <br>
     <a href="https://anaconda.org/conda-forge/tiatoolbox">
-      <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/installer/conda.svg" />
+      <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox" />
     </a>
     <a href="https://anaconda.org/conda-forge/tiatoolbox">
         <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/downloads.svg" />
