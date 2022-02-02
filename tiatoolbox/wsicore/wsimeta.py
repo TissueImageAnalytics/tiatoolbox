@@ -235,7 +235,7 @@ class WSIMeta:
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> wsi = WSIReader.open("./CMU-1.ndpi")
             >>> print(wsi._relative_level_scales(0.5, "mpp"))
             [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
 
