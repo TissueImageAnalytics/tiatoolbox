@@ -23,7 +23,7 @@ dependencies:
   - pandas
   - pillow
   - pip
-  - pixman>=0.39.0
+  - pixman!=0.38.0
   - pytest-cov
   - pytest-runner>=5.2
   - pytest>=6.2.5
@@ -42,5 +42,5 @@ dependencies:
   - umap-learn
   - zarr
   - pip:
-    - openslide-python
+    - openslide-python>=1.1.2
     - sphinx-toolbox
