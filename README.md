@@ -15,10 +15,11 @@
     <a href="https://github.com/psf/black">
       <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
     </a>
-    <a href="https://anaconda.org/conda-forge/tiatoolbox">
-      <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/license.svg" />
+    <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/doc-update-after-conda-build#license">
+      <img src="https://img.shields.io/badge/license-GPL--3.0-lightgrey" />
     </a>
   <br>
+    <br>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
@@ -34,6 +35,7 @@
     </a>
 
   <br>
+    <br>
   <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
   <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 </p>
