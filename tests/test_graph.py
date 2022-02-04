@@ -92,7 +92,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
         n = len(affinity_matrix)
         two, m = edge_index.shape
         assert two == 2
-        assert 0 <= m <= n**2
+        assert 0 <= m <= n ** 2
 
 
 def test_affinity_to_edge_index_invalid_fuzz_input_shape():
@@ -210,7 +210,7 @@ class TestConstructor:
         two, m = edge_index.shape
         n = len(x)
         assert two == 2
-        assert 0 <= m <= n**2
+        assert 0 <= m <= n ** 2
 
     @staticmethod
     def test_visualise(graph_constructor):
@@ -275,9 +275,9 @@ class TestConstructor:
     @staticmethod
     def test_visualise_invalid_input(graph_constructor):
         """Test visualising a graph with invalid input."""
-        with pytest.raises(ValueError, match="must contain x"):
+        with pytest.raises(ValueError, match="must contain key `x`"):
             graph_constructor.visualise({})
-        with pytest.raises(ValueError, match="must contain edge_index"):
+        with pytest.raises(ValueError, match="must contain key `edge_index`"):
             graph_constructor.visualise({"x": []})
-        with pytest.raises(ValueError, match="must contain coords"):
+        with pytest.raises(ValueError, match="must contain key `coords`"):
             graph_constructor.visualise({"x": [], "edge_index": []})

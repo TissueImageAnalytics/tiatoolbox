@@ -1819,9 +1819,9 @@ def test_manual_mpp_float(sample_svs):
 
 def test_manual_mpp_invalid(sample_svs):
     """Test setting a manual mpp for a WSI."""
-    with pytest.raises(TypeError, match="Invalid mpp"):
+    with pytest.raises(TypeError, match="mpp"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, mpp=(0.5,))
-    with pytest.raises(TypeError, match="Invalid mpp"):
+    with pytest.raises(TypeError, match="mpp"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, mpp="foo")
 
 
@@ -1833,7 +1833,7 @@ def test_manual_power_tuple(sample_svs):
 
 def test_manual_power_invalid(sample_svs):
     """Test setting a manual power for a WSI."""
-    with pytest.raises(TypeError, match="Invalid power"):
+    with pytest.raises(TypeError, match="power"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, power=(42,))
 
 
