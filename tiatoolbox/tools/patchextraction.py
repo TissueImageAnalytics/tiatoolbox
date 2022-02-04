@@ -568,5 +568,5 @@ def get_patch_extractor(method_name, **kwargs):
 
     if method_name.lower() == "point":
         return PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "slidingwindow":
-        return SlidingWindowPatchExtractor(**kwargs)
+
+    return SlidingWindowPatchExtractor(**kwargs)
