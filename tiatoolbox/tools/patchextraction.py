@@ -142,7 +142,7 @@ class PatchExtractor(ABC):
         return self[n]
 
     def __getitem__(self, item):
-        if type(item) is not int:
+        if isinstance(item, int):
             raise TypeError("Index should be an integer.")
 
         if item >= self.locations_df.shape[0]:
@@ -228,8 +228,8 @@ class PatchExtractor(ABC):
                 or 4 for bounding boxes. When using the default `func=None`, K should be
                 4, as we expect the `coordinates_list` to be refer to bounding boxes in
                 `[start_x, start_y, end_x, end_y]` format.
-            coordinate_resolution (float): the resolution value at which coordinates_list are
-                generated.
+            coordinate_resolution (float): the resolution value at which
+                coordinates_list are generated.
             coordinate_units (str): the resolution unit at which coordinates_list are
                 generated.
             mask_resolution (float): resolution at which mask array is extracted. It is
