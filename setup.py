@@ -17,7 +17,7 @@ requirements = [
     "pillow",
     "matplotlib",
     "opencv-python>=4.5.4",
-    "openslide-python==1.1.2",
+    "openslide-python>=1.1.2",
     "pyyaml>=5.1",
     "pandas",
     "glymur",

@@ -12,7 +12,7 @@ jupyterlab
 matplotlib
 numpy
 opencv-python>=4.5.4
-openslide-python==1.1.2
+openslide-python>=1.1.2
 pandas
 pillow
 pip>=20.0.2
