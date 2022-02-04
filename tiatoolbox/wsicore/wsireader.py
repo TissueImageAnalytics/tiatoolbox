@@ -166,12 +166,12 @@ class WSIReader:
         if mpp and isinstance(mpp, Number):
             mpp = (mpp, mpp)
         if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
-            raise TypeError("MPP must be an iterable of length 2")
+            raise TypeError("`mpp` must be a number or iterable of length 2.")
         self._manual_mpp = tuple(mpp) if mpp else None
 
         # Set a manual power value
         if power and not isinstance(power, Number):
-            raise TypeError("Power must be a number.")
+            raise TypeError("`power` must be a number.")
         self._manual_power = power
 
     @property
