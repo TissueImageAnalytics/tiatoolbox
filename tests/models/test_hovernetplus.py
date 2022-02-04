@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Unit test package for HoVerNet+."""
+"""Unit test package for HoVer-Net+."""
 
 import torch
 

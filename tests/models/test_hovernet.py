@@ -83,7 +83,7 @@ def test_functionality(remote_sample, tmp_path):
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
 
-    # * test original mode on Kumar dataset (architecture used in HoVerNet paper)
+    # * test original mode on Kumar dataset (architecture used in HoVer-Net paper)
     patch = reader.read_bounds(
         [0, 0, 270, 270], resolution=0.25, units="mpp", coord_space="resolution"
     )
@@ -103,7 +103,7 @@ def test_functionality(remote_sample, tmp_path):
 
 
 def test_unit_blocks():
-    """Tests for blocks within HoVerNet."""
+    """Tests for blocks within HoVer-Net."""
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
     sample = torch.rand((1, 3, 14, 14), dtype=torch.float32)
