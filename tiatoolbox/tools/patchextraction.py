@@ -561,11 +561,12 @@ def get_patch_extractor(method_name, **kwargs):
         ...  'point', img_patch_h=200, img_patch_w=200)
 
     """
-    if method_name.lower() == "point":
-        patch_extractor = PointsPatchExtractor(**kwargs)
-    elif method_name.lower() == "slidingwindow":
-        patch_extractor = SlidingWindowPatchExtractor(**kwargs)
-    else:
-        raise MethodNotSupported
+    if method_name.lower() not in ["point", "slidingwindow"]:
+        raise MethodNotSupported(
+            f"{method_name.lower()} method is not currently supported."
+        )
 
-    return patch_extractor
+    if method_name.lower() == "point":
+        return PointsPatchExtractor(**kwargs)
+    elif method_name.lower() == "slidingwindow":
+        return SlidingWindowPatchExtractor(**kwargs)
