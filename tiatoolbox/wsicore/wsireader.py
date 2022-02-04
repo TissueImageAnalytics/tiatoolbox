@@ -148,7 +148,7 @@ class WSIReader:
         ):
             # input is already a tiatoolbox wsi handler
             return input_img
-        raise TypeError("Invalid input. Must be a file path or an ndarray image.")
+        raise TypeError("Input must be a file path or an ndarray image.")
 
     def __init__(
         self,
@@ -166,12 +166,12 @@ class WSIReader:
         if mpp and isinstance(mpp, Number):
             mpp = (mpp, mpp)
         if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
-            raise TypeError("Invalid mpp: Must be an iterable of length 2")
+            raise TypeError("MPP must be an iterable of length 2")
         self._manual_mpp = tuple(mpp) if mpp else None
 
         # Set a manual power value
         if power and not isinstance(power, Number):
-            raise TypeError("Invalid power: Power must be a number")
+            raise TypeError("Power must be a number.")
         self._manual_power = power
 
     @property
@@ -283,14 +283,14 @@ class WSIReader:
         resolution = np_pair(resolution)
 
         if units not in ("mpp", "power", "level", "baseline"):
-            raise ValueError("Invalid units")
+            raise ValueError("Invalid `units`.")
         if units == "mpp":
             if info.mpp is None:
-                raise ValueError("MPP is None")
+                raise ValueError("Microns-per pixel (mpp) is None.")
             base_scale = info.mpp
         if units == "power":
             if info.objective_power is None:
-                raise ValueError("Objective power is None")
+                raise ValueError("Objective power is None.")
             base_scale = 1 / info.objective_power
             resolution = 1 / resolution
         if units == "level":
@@ -1156,7 +1156,7 @@ class WSIReader:
         """
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
-            raise ValueError(f"Invalid tissue masking method: {method}")
+            raise ValueError(f"Invalid tissue masking method: {method}.")
         if method == "otsu":
             masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         if method == "morphological":
@@ -1236,7 +1236,7 @@ class WSIReader:
 
             # convert to baseline reference frame
             bounds = start_w, start_h, end_w, end_h
-            baseline_bounds = tuple([bound * (2**level) for bound in bounds])
+            baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
@@ -1618,7 +1618,7 @@ class OmnyxJP2WSIReader(WSIReader):
             units=units,
         )
 
-        stride = 2**read_level
+        stride = 2 ** read_level
         glymur_wsi = self.glymur_wsi
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
@@ -1677,7 +1677,7 @@ class OmnyxJP2WSIReader(WSIReader):
             )
         glymur_wsi = self.glymur_wsi
 
-        stride = 2**read_level
+        stride = 2 ** read_level
 
         im_region = utils.image.safe_padded_read(
             image=glymur_wsi,
@@ -1736,10 +1736,10 @@ class OmnyxJP2WSIReader(WSIReader):
         else:
             level_count = cod.num_res
 
-        level_downsamples = [2**n for n in range(level_count)]
+        level_downsamples = [2 ** n for n in range(level_count)]
 
         level_dimensions = [
-            (int(slide_dimensions[0] / 2**n), int(slide_dimensions[1] / 2**n))
+            (int(slide_dimensions[0] / 2 ** n), int(slide_dimensions[1] / 2 ** n))
             for n in range(level_count)
         ]
 
@@ -2034,7 +2034,7 @@ class ArrayView:
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
-        raise Exception("Unsupported axes")
+        raise Exception(f"Unsupported axes `{self.axes}`.")
 
 
 class TIFFWSIReader(WSIReader):
@@ -2044,7 +2044,7 @@ class TIFFWSIReader(WSIReader):
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         series="auto",
-        cache_size=2**28,
+        cache_size=2 ** 28,
     ) -> None:
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
@@ -2096,7 +2096,7 @@ class TIFFWSIReader(WSIReader):
             return shape
         if self._axes == "SYX":
             return np.roll(shape, -1)
-        raise Exception("Unsupported axes")
+        raise Exception(f"Unsupported axes `{self._axes}`.")
 
     def _parse_svs_metadata(self) -> dict:
         """Extract SVS specific metadata.

@@ -96,7 +96,7 @@ class DenseBlock(nn.Module):
     ):
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info")
+            raise ValueError("Unbalance Unit Info.")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -185,7 +185,7 @@ class ResidualBlock(nn.Module):
     ):
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info")
+            raise ValueError("Unbalance Unit Info.")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -509,7 +509,7 @@ class HoVerNet(ModelABC):
         )
 
         ksize = int((20 * fx) + 1)
-        obj_size = math.ceil(10 * (fx**2))
+        obj_size = math.ceil(10 * (fx ** 2))
         # Get resolution specific filters etc.
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)

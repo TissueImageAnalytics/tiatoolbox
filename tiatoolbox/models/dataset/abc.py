@@ -122,7 +122,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
         else:
             if not isinstance(self.inputs, (list, np.ndarray)):
-                raise ValueError("`inputs` should be a list of patch coordinates")
+                raise ValueError("`inputs` should be a list of patch coordinates.")
 
     @staticmethod
     def load_img(path):

@@ -46,7 +46,7 @@ def centre_crop(
 
     """
     if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`")
+        raise ValueError(f"Unknown input format `{data_format}`.")
 
     crop_t = crop_shape[0] // 2
     crop_b = crop_shape[0] - crop_t
@@ -80,7 +80,7 @@ def centre_crop_to_shape(
 
     """
     if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`")
+        raise ValueError(f"Unknown input format `{data_format}`.")
 
     if data_format == "NCHW":
         _, _, h1, w1 = x.shape
