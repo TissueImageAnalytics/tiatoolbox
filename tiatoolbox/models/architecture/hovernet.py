@@ -102,7 +102,7 @@ class DenseBlock(nn.Module):
         self.in_ch = in_ch
 
         # weights value may not match with tensorflow version
-        # due to different default intialization scheme between
+        # due to different default initialization scheme between
         # torch and tensorflow
         def get_unit_block(unit_in_ch):
             """Helper function to make it less long."""
