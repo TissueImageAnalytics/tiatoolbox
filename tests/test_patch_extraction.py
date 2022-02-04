@@ -462,13 +462,13 @@ def test_filter_coordinates():
     flag_list = PatchExtractor.filter_coordinates_fast(
         mask_reader,
         bbox_list,
-        coord_resolution=1.0,
-        coord_units="mpp",
+        coordinate_resolution=1.0,
+        coordinate_units="mpp",
         mask_resolution=1,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
     flag_list = PatchExtractor.filter_coordinates_fast(
-        mask_reader, bbox_list, coord_resolution=(1.0, 1.0), coord_units="mpp"
+        mask_reader, bbox_list, coordinate_resolution=(1.0, 1.0), coordinate_units="mpp"
     )
 
     # Test for bad mask input
@@ -478,8 +478,8 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask,
             bbox_list,
-            coord_resolution=1.0,
-            coord_units="mpp",
+            coordinate_resolution=1.0,
+            coordinate_units="mpp",
         )
 
     # Test for bad bbox coordinate list in the input
@@ -487,8 +487,8 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask_reader,
             bbox_list.tolist(),
-            coord_resolution=1,
-            coord_units="mpp",
+            coordinate_resolution=1,
+            coordinate_units="mpp",
         )
 
     # Test for incomplete coordinate list
@@ -496,8 +496,8 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask_reader,
             bbox_list[:, :2],
-            coord_resolution=1,
-            coord_units="mpp",
+            coordinate_resolution=1,
+            coordinate_units="mpp",
         )
 
 

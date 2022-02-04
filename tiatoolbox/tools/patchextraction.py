@@ -110,7 +110,7 @@ class PatchExtractor(ABC):
         self.n = 0
         self.wsi = wsireader.WSIReader.open(input_img=input_img)
         self.locations_df = None
-        self.coord_list = None
+        self.coordinate_list = None
         self.stride = None
         if input_mask is None:
             self.mask = None
@@ -168,7 +168,7 @@ class PatchExtractor(ABC):
         """
         slide_dimension = self.wsi.slide_dimensions(self.resolution, self.units)
 
-        self.coord_list = self.get_coordinates(
+        self.coordinate_list = self.get_coordinates(
             image_shape=(slide_dimension[0], slide_dimension[1]),
             patch_input_shape=(self.patch_size[0], self.patch_size[1]),
             stride_shape=(self.stride[0], self.stride[1]),
@@ -176,7 +176,7 @@ class PatchExtractor(ABC):
         )
 
         if self.mask is not None:
-            # convert the coord_list resolution unit to acceptable units
+            # convert the coordinate_list resolution unit to acceptable units
             converted_units = self.wsi.convert_resolution_units(
                 input_res=self.resolution,
                 input_unit=self.units,
@@ -188,18 +188,18 @@ class PatchExtractor(ABC):
             converted_units_keys = list(converted_units.keys())
             selected_coord_idxs = self.filter_coordinates_fast(
                 self.mask,
-                self.coord_list,
-                coord_resolution=converted_units[converted_units_keys[0]],
-                coord_units=converted_units_keys[0],
+                self.coordinate_list,
+                coordinate_resolution=converted_units[converted_units_keys[0]],
+                coordinate_units=converted_units_keys[0],
             )
-            self.coord_list = self.coord_list[selected_coord_idxs]
-            if len(self.coord_list) == 0:
+            self.coordinate_list = self.coordinate_list[selected_coord_idxs]
+            if len(self.coordinate_list) == 0:
                 raise ValueError(
                     "No candidate coordinates left after "
                     "filtering by input_mask positions."
                 )
 
-        data = self.coord_list[:, :2]  # only use the x_start and y_start
+        data = self.coordinate_list[:, :2]  # only use the x_start and y_start
 
         self.locations_df = misc.read_locations(input_table=np.array(data))
 
@@ -209,8 +209,8 @@ class PatchExtractor(ABC):
     def filter_coordinates_fast(
         mask_reader,
         coordinates_list,
-        coord_resolution,
-        coord_units,
+        coordinate_resolution,
+        coordinate_units,
         mask_resolution=None,
     ):
         """Validate patch extraction coordinates based on the input mask.
@@ -228,9 +228,9 @@ class PatchExtractor(ABC):
                 or 4 for bounding boxes. When using the default `func=None`, K should be
                 4, as we expect the `coordinates_list` to be refer to bounding boxes in
                 `[start_x, start_y, end_x, end_y]` format.
-            coord_resolution (float): the resolution value at which coordinates_list are
+            coordinate_resolution (float): the resolution value at which coordinates_list are
                 generated.
-            coord_units (str): the resolution unit at which coordinates_list are
+            coordinate_units (str): the resolution unit at which coordinates_list are
                 generated.
             mask_resolution (float): resolution at which mask array is extracted. It is
                 supposed to be in the same units as `coord_resolution` i.e.,
@@ -249,25 +249,25 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if coordinates_list.shape[-1] != 4:
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
-        if isinstance(coord_resolution, (int, float)):
-            coord_resolution = [coord_resolution, coord_resolution]
+        if isinstance(coordinate_resolution, (int, float)):
+            coordinate_resolution = [coordinate_resolution, coordinate_resolution]
 
-        # define default mask_resolution based on the input coord_units
+        # define default mask_resolution based on the input `coordinate_units`
         if mask_resolution is None:
             mask_res_dict = {"mpp": 8, "power": 1.25, "baseline": 0.03125}
-            mask_resolution = mask_res_dict[coord_units]
+            mask_resolution = mask_res_dict[coordinate_units]
 
         tissue_mask = mask_reader.slide_thumbnail(
-            resolution=mask_resolution, units=coord_units
+            resolution=mask_resolution, units=coordinate_units
         )
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
         scaled_coords = coordinates_list.copy().astype(np.float32)
-        scaled_coords[:, [0, 2]] *= coord_resolution[0] / mask_resolution
+        scaled_coords[:, [0, 2]] *= coordinate_resolution[0] / mask_resolution
         scaled_coords[:, [0, 2]] = np.clip(
             scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
         )
-        scaled_coords[:, [1, 3]] *= coord_resolution[1] / mask_resolution
+        scaled_coords[:, [1, 3]] *= coordinate_resolution[1] / mask_resolution
         scaled_coords[:, [1, 3]] = np.clip(
             scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
         )
