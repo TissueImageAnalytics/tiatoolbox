@@ -328,8 +328,8 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if func is None and coordinates_list.shape[-1] != 4:
             raise ValueError(
-                "Default `func` does not support "
-                "`coordinates_list` of shape {}.".format(coordinates_list.shape)
+                f"Default `func` does not support "
+                f"`coordinates_list` of shape {coordinates_list.shape}."
             )
         func = default_sel_func if func is None else func
         flag_list = [func(mask_reader, coord) for coord in coordinates_list]
