@@ -29,8 +29,7 @@ from tiatoolbox.wsicore import wsireader
 
 
 class PatchExtractor(ABC):
-    """
-    Class for extracting and merging patches in standard and whole-slide images.
+    """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
@@ -235,8 +234,8 @@ class PatchExtractor(ABC):
                 generated.
             mask_resolution (float): resolution at which mask array is extracted. It is
                 supposed to be in the same units as `coord_resolution` i.e.,
-                `coord_units`. If not provided, a default value will be selected based on
-                `coord_units`.
+                `coord_units`. If not provided, a default value will be selected based
+                on `coord_units`.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
