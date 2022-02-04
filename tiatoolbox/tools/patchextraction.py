@@ -73,11 +73,11 @@ class PatchExtractor(ABC):
         resolution(tuple(int)): resolution at which to read the image.
         units (str): the units of resolution.
         n(int): current state of the iterator.
-        locations_df(pd.DataFrame): A table containing location and/or type of patces
+        locations_df(pd.DataFrame): A table containing location and/or type of patches
             in `(x_start, y_start, class)` format.
-        coord_list(:class:`numpy.ndarray`): An array containing coordinates of patches
-            in `(x_start, y_start, x_end, y_end)` format to be used for `slidingwindow`
-            patch extraction.
+        coordinate_list(:class:`numpy.ndarray`): An array containing coordinates of
+            patches in `(x_start, y_start, x_end, y_end)` format to be used for
+            `slidingwindow` patch extraction.
         pad_mode (str): Method for padding at edges of the WSI.
             See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
@@ -142,7 +142,7 @@ class PatchExtractor(ABC):
         return self[n]
 
     def __getitem__(self, item):
-        if isinstance(item, int):
+        if not isinstance(item, int):
             raise TypeError("Index should be an integer.")
 
         if item >= self.locations_df.shape[0]:
@@ -226,8 +226,8 @@ class PatchExtractor(ABC):
                 `resolution` and `units`. The shape of `coordinates_list` is (N, K)
                 where N is the number of coordinate sets and K is either 2 for centroids
                 or 4 for bounding boxes. When using the default `func=None`, K should be
-                4, as we expect the `coordinates_list` to be refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
+                4, as we expect the `coordinates_list` to be referred to bounding boxes
+                in `[start_x, start_y, end_x, end_y]` format.
             coordinate_resolution (float): the resolution value at which
                 coordinates_list are generated.
             coordinate_units (str): the resolution unit at which coordinates_list are
@@ -294,8 +294,8 @@ class PatchExtractor(ABC):
                 `resolution` and `units`. The shape of `coordinates_list` is (N, K)
                 where N is the number of coordinate sets and K is either 2 for centroids
                 or 4 for bounding boxes. When using the default `func=None`, K should be
-                4, as we expect the `coordinates_list` to be refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
+                4, as we expect the `coordinates_list` to be referred to bounding boxes
+                in `[start_x, start_y, end_x, end_y]` format.
             func: The coordinate validator function. A function that takes `reader` and
                 `coordinate` as arguments and return True or False as indication of
                 coordinate validity.
@@ -348,7 +348,7 @@ class PatchExtractor(ABC):
 
         Args:
             image_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                This argument specifies the shape of mother image (the image we want to)
+                This argument specifies the shape of mother image (the image we want to
                 extract patches from) at requested `resolution` and `units` and it is
                 expected to be in (width, height) format.
             patch_input_shape (a tuple (int, int) or
@@ -363,7 +363,7 @@ class PatchExtractor(ABC):
                 (width, height) format. If this is not provided, `patch_output_shape`
                 will be the same as `patch_input_shape`.
             stride_shape (a tuple (int, int) or :class:`numpy.ndarray` of shape (2,)):
-                The stride that is used to calcualte the patch location during the patch
+                The stride that is used to calculate the patch location during the patch
                 extraction. If `patch_output_shape` is provided, next stride location
                 will base on the output rather than the input.
             input_within_bound (bool): Whether to include the patches where their
