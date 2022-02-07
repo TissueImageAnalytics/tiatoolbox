@@ -21,7 +21,9 @@
 
 """Package to define datasets available to download via TIAToolbox."""
 import pathlib
+import shutil
 import tempfile
+import zipfile
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -65,12 +67,14 @@ def _fetch_remote_sample(
         tmp_path = pathlib.Path(tempfile.gettempdir())
     if not tmp_path.is_dir():
         raise ValueError("tmp_path must be a directory.")
-    url = "/".join(SAMPLE_FILES[key]["url"])
+    sample = SAMPLE_FILES[key]
+    url = "/".join(sample["url"])
     url_filename = pathlib.Path(urlparse(url).path).name
     # Get the filename from SAMPLE_FILES, else use the URL filename
     filename = SAMPLE_FILES[key].get("filename", url_filename)
     file_path = tmp_path / filename
-    if not pathlib.Path(file_path).is_file():
+    # Download the file if it doesn't exist
+    if not file_path.is_file():
         print(f"Downloading sample file {filename}")
         # Start the connection with a 5s timeout to avoid hanging forever
         response = requests.get(url, stream=True, timeout=5)
@@ -80,8 +84,17 @@ def _fetch_remote_sample(
         with open(file_path, "wb") as handle:
             for block in response.iter_content(1024):
                 handle.write(block)
+        # Extract the (zip) archive contents if required
+        if sample.get("extract"):
+            print(f"Extracting sample file {filename}")
+            extract_path = tmp_path / filename.replace(".zip", "")
+            with zipfile.ZipFile(file_path, "r") as zip_handle:
+                zip_handle.extractall(path=extract_path)
+            file_path = extract_path
         return file_path
-    print(f"Skipping {filename}. File exists at {file_path}")
+    print(f"Skipping download of sample file {filename}")
+    if sample.get("extract"):
+        file_path = tmp_path / filename.replace(".zip", "")
     return file_path
 
 
