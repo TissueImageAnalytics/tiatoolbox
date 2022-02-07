@@ -11,6 +11,7 @@ opencv-python>=4.5.4
 openslide-python>=1.1.2
 pandas
 pillow
+pydicom # Used by wsidicom
 pyyaml>=5.1
 requests
 scikit-image==0.18.3
@@ -22,4 +23,5 @@ torch>=1.9.0
 torchvision>=0.10.1
 tqdm>=4.60.0
 umap-learn
+wsidicom
 zarr
