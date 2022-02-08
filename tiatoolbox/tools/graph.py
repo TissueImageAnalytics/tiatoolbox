@@ -319,8 +319,8 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
-        ckdtree = cKDTree(points)
-        neighbour_distances_ckd, neighbour_indexes_ckd = ckdtree.query(
+        kd_tree = cKDTree(points)
+        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
             x=points, k=len(points)
         )
 
