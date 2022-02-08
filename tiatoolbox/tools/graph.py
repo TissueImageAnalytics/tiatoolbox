@@ -411,7 +411,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         """Visualise a graph.
 
         The visualisation is a scatter plot of the graph nodes
-        and the connections bneewn them. By default, nodes are coloured
+        and the connections between them. By default, nodes are coloured
         according to the features of the graph via a UMAP embedding to
         the sRGB color space. This can be customised by passing a color
         argument which can be a single color, a list of colors, or a
