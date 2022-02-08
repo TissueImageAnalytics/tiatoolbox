@@ -83,7 +83,7 @@ Stable release
 --------------
 
 Please note that TIAToolbox is tested for python version 3.7, 3.8 and 3.9.
-To install TIA Toolbox, run this command in your terminal after you have installed the pre-requisite software:
+To install TIA Toolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console
 
