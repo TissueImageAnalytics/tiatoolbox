@@ -464,6 +464,8 @@ class SlideGraphConstructor:  # noqa: PIE798
             >>> plt.show()
 
         """
+        from matplotlib import collections as mc
+
         # Check that the graph is valid
         if "x" not in graph:
             raise ValueError("Graph must contain x")
@@ -476,23 +478,22 @@ class SlideGraphConstructor:  # noqa: PIE798
         if color is None:
             color = cls._umap_reducer
 
+        nodes = graph["coords"]
+        edges = graph["edge_index"]
+
         # Plot the edges
-        triangles = edge_index_to_triangles(graph["edge_index"])
-        # Ensure triangles are counter-clockwise
-        for i, tri in enumerate(triangles):
-            if triangle_signed_area(graph["coords"][tri]) < 0:
-                triangles[i] = triangles[i][::-1]
-        ax.triplot(
-            graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
+        line_segments = nodes[edges.T]
+        edge_collection = mc.LineCollection(
+            line_segments, colors=edge_color, linewidths=1
         )
+        ax.add_collection(edge_collection)
 
         # Plot the nodes
-        ax.scatter(
-            graph["coords"][:, 0],
-            graph["coords"][:, 1],
+        plt.scatter(
+            *nodes.T,
             c=color(graph) if isinstance(color, Callable) else color,
             s=node_size(graph) if isinstance(node_size, Callable) else node_size,
-            zorder=1,
+            zorder=2,
         )
 
         return ax
