@@ -95,7 +95,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     return adjacency
 
 
-def traingle_signed_area(triangle: ArrayLike) -> int:
+def triangle_signed_area(triangle: ArrayLike) -> int:
     """Determine the signed area of a triangle.
 
     Args:
@@ -121,7 +121,7 @@ def traingle_signed_area(triangle: ArrayLike) -> int:
 
 
 def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
-    """Convert an edged index to traingle simplices.
+    """Convert an edged index to triangle simplices.
 
     Args:
         edge_index (ArrayLike):
@@ -241,7 +241,7 @@ class SlideGraphConstructor:  # noqa: PIE798
     ) -> Dict[str, ArrayLike]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
-        The graph is constructed via hybrid heirachical clustering followed
+        The graph is constructed via hybrid hierarchical clustering followed
         by Delaunay triangulation of these cluster centroids.
         This is part of the SlideGraph pipeline but may be used to construct
         a graph in general from point coordinates and features.
@@ -254,7 +254,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         Points which are spatially further apart than
         `neighbour_search_radius` are given a similarity of 1 (most
         dissimilar). This significantly speeds up computation. This distance
-        metric is then used to form clusters via hierachical/agglomerative
+        metric is then used to form clusters via hierarchical/agglomerative
         clustering.
 
         Next, a Delaunay triangulation is applied to the clusters to connect
@@ -283,7 +283,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             feature_range_thresh (Number):
                 Minimal range for which a feature is considered significant.
                 Features which have a range less than this are ignored.
-                Defaults to 1e-4. If falsey (None, False, 0, etc.), then
+                Defaults to 1e-4. If falsy (None, False, 0, etc.), then
                 no features are removed.
 
         Returns:
@@ -480,7 +480,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         triangles = edge_index_to_triangles(graph["edge_index"])
         # Ensure triangles are counter-clockwise
         for i, tri in enumerate(triangles):
-            if traingle_signed_area(graph["coords"][tri]) < 0:
+            if triangle_signed_area(graph["coords"][tri]) < 0:
                 triangles[i] = triangles[i][::-1]
         ax.triplot(
             graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color

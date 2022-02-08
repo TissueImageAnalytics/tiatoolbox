@@ -10,7 +10,7 @@ from tiatoolbox.tools.graph import (
     affinity_to_edge_index,
     delaunay_adjacency,
     edge_index_to_triangles,
-    traingle_signed_area,
+    triangle_signed_area,
 )
 
 
@@ -92,7 +92,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
         n = len(affinity_matrix)
         two, m = edge_index.shape
         assert two == 2
-        assert 0 <= m <= n ** 2
+        assert 0 <= m <= n**2
 
 
 def test_affinity_to_edge_index_invalid_fuzz_input_shape():
@@ -118,34 +118,34 @@ def test_edge_index_to_triangles_invalid_input():
         edge_index_to_triangles(edge_index)
 
 
-def test_traingle_signed_area():
+def test_triangle_signed_area():
     """Test that the signed area of a triangle is correct."""
     # Triangle with positive area
     points = np.array([[0, 0], [1, 0], [0, 1]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == 0.5
 
     # Triangle with negative area
     points = np.array([[0, 0], [1, 0], [0, -1]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == -0.5
 
     # Triangle with co-linear points
     points = np.array([[0, 0], [1, 1], [2, 2]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == 0
 
     # Triangle with larger area
     points = np.array([[0, 0], [2, 0], [0, 2]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == 2
 
 
-def test_traingle_signed_area_invalid_input():
+def test_triangle_signed_area_invalid_input():
     """Test that the signed area of a triangle with invalid input fails."""
     points = np.random.rand(3, 3)
     with pytest.raises(ValueError, match="3x2"):
-        traingle_signed_area(points)
+        triangle_signed_area(points)
 
 
 def pytest_generate_tests(metafunc):
@@ -210,7 +210,7 @@ class TestConstructor:
         two, m = edge_index.shape
         n = len(x)
         assert two == 2
-        assert 0 <= m <= n ** 2
+        assert 0 <= m <= n**2
 
     @staticmethod
     def test_visualise(graph_constructor):
