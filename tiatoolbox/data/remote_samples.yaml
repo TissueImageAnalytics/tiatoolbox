@@ -12,7 +12,10 @@ files:
   ndpi-1:
     url: [*wsis, "CMU-1.ndpi"]
   ndpi-2:
-      url: [ *wsis, "bioformatspull2759.ndpi" ]
+      url: [*wsis, "bioformatspull2759.ndpi" ]
+  dicom-1:
+    url: [*wsis, "CMU-1.dicom.zip"]
+    extract: True
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
   ome-brightfield-pyramid-1-small:
