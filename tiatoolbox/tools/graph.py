@@ -217,7 +217,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         Args:
             graph (dict):
                 A graph with keys "x", "edge_index", and optionally
-                "coordinates".
+                "coords".
         Returns:
             ArrayLike: A UMAP embedding of `graph["x"]` with shape (N, 3)
                 and values ranging from 0 to 1.
@@ -396,7 +396,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         return {
             "x": feature_centroids,
             "edge_index": edge_index,
-            "coordinates": point_centroids,
+            "coords": point_centroids,
         }
 
     @classmethod
@@ -469,7 +469,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             raise ValueError("Graph must contain key `x`.")
         if "edge_index" not in graph:
             raise ValueError("Graph must contain key `edge_index`.")
-        if "coordinates" not in graph:
+        if "coords" not in graph:
             raise ValueError("Graph must contain key `coords`.")
         if ax is None:
             _, ax = plt.subplots()
@@ -480,19 +480,16 @@ class SlideGraphConstructor:  # noqa: PIE798
         triangles = edge_index_to_triangles(graph["edge_index"])
         # Ensure triangles are counter-clockwise
         for i, tri in enumerate(triangles):
-            if traingle_signed_area(graph["coordinates"][tri]) < 0:
+            if traingle_signed_area(graph["coords"][tri]) < 0:
                 triangles[i] = triangles[i][::-1]
         ax.triplot(
-            graph["coordinates"][:, 0],
-            graph["coordinates"][:, 1],
-            triangles,
-            color=edge_color,
+            graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
         )
 
         # Plot the nodes
         ax.scatter(
-            graph["coordinates"][:, 0],
-            graph["coordinates"][:, 1],
+            graph["coords"][:, 0],
+            graph["coords"][:, 1],
             c=color(graph) if isinstance(color, Callable) else color,
             s=node_size(graph) if isinstance(node_size, Callable) else node_size,
             zorder=1,
