@@ -121,7 +121,7 @@ def triangle_signed_area(triangle: ArrayLike) -> int:
 
 
 def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
-    """Convert an edged index to triangle simplices.
+    """Convert an edged index to triangle simplices (triplets of coordinate indices).
 
     Args:
         edge_index (ArrayLike):
@@ -151,13 +151,13 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     # Remove any nodes with less than two neighbours
     nodes = [node for node in nodes if len(neighbours[node]) >= 2]
     # Find the triangles
-    triangles = []
+    triangles = set()
     for node in nodes:
         for neighbour in neighbours[node]:
             overlap = neighbours[node].intersection(neighbours[neighbour])
             while overlap:
-                triangles.append([node, neighbour, overlap.pop()])
-    return np.array(triangles, dtype=np.int32, order="C")
+                triangles.add(frozenset({node, neighbour, overlap.pop()}))
+    return np.array([list(tri) for tri in triangles], dtype=np.int32, order="C")
 
 
 def affinity_to_edge_index(

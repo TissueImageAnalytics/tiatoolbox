@@ -148,6 +148,40 @@ def test_triangle_signed_area_invalid_input():
         triangle_signed_area(points)
 
 
+def test_edge_index_to_trainangles_single():
+    """Test edge_index_to_triangles with a simple 2XM input matrix.
+
+    Basic test case for a single triangle.
+
+    0 -- 1
+    |   /
+    | /
+    2
+    """
+    edge_index = np.array([[0, 1], [0, 2], [1, 2]]).T
+    triangles = edge_index_to_triangles(edge_index)
+    assert triangles.shape == (1, 3)
+    assert np.array_equal(triangles, np.array([[0, 1, 2]]))
+
+
+def test_edge_index_to_trainangles_many():
+    """Test edge_index_to_triangles with a simple 2XM input matrix.
+
+    Moderate test case for a few trainangles.
+
+    4 -- 3
+    |  / |
+    |/   |
+    0 -- 1
+    |   /
+    | /
+    2
+    """
+    edge_index = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [0, 4], [4, 3]]).T
+    triangles = edge_index_to_triangles(edge_index)
+    assert triangles.shape == (3, 3)
+
+
 def pytest_generate_tests(metafunc):
     """Generate (parameterize) test scenarios.
 
