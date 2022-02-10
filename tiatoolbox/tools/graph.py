@@ -217,7 +217,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         Args:
             graph (dict):
                 A graph with keys "x", "edge_index", and optionally
-                "coords".
+                "coordinates".
         Returns:
             ArrayLike: A UMAP embedding of `graph["x"]` with shape (N, 3)
                 and values ranging from 0 to 1.
@@ -396,7 +396,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         return {
             "x": feature_centroids,
             "edge_index": edge_index,
-            "coords": point_centroids,
+            "coordinates": point_centroids,
         }
 
     @classmethod
@@ -471,14 +471,14 @@ class SlideGraphConstructor:  # noqa: PIE798
             raise ValueError("Graph must contain x")
         if "edge_index" not in graph:
             raise ValueError("Graph must contain edge_index")
-        if "coords" not in graph:
+        if "coordinates" not in graph:
             raise ValueError("Graph must contain coords")
         if ax is None:
             _, ax = plt.subplots()
         if color is None:
             color = cls._umap_reducer
 
-        nodes = graph["coords"]
+        nodes = graph["coordinates"]
         edges = graph["edge_index"]
 
         # Plot the edges
