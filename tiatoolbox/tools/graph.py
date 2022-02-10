@@ -428,7 +428,7 @@ class SlideGraphConstructor:  # noqa: PIE798
                     - :class:`numpy.ndarray` - edge_index:
                         Edge index matrix defining connectivity.
                         Required
-                    - :class:`numpy.ndarray` - coords:
+                    - :class:`numpy.ndarray` - coordinates:
                         Coordinates of each node within the WSI (mean of point
                         in a cluster).
                         Required
@@ -472,7 +472,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         if "edge_index" not in graph:
             raise ValueError("Graph must contain edge_index")
         if "coordinates" not in graph:
-            raise ValueError("Graph must contain coords")
+            raise ValueError("Graph must contain coordinates")
         if ax is None:
             _, ax = plt.subplots()
         if color is None:
