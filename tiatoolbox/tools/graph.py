@@ -102,7 +102,7 @@ def triangle_signed_area(triangle: ArrayLike) -> int:
         triangle (ArrayLike): A 3x2 list of coordinates.
 
     Returns:
-        int: The signed area of the triange. It will be negative if
+        int: The signed area of the triangle. It will be negative if
              the triangle has a clockwise winding, negative if the
              triangle has a counter-clockwise winding, and zero if the
              triangles points are collinear.
