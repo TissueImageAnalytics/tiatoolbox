@@ -279,7 +279,7 @@ class ResidualBlock(nn.Module):
 
 
 class HoVerNet(ModelABC):
-    """HoVer-Net Architecture.
+    """HoVerNet Architecture.
 
     Args:
         num_input_channels (int): Number of channels in input.
@@ -290,7 +290,7 @@ class HoVerNet(ModelABC):
           (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
-        Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
+        Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
@@ -308,7 +308,7 @@ class HoVerNet(ModelABC):
 
         if mode not in ["original", "fast"]:
             raise ValueError(
-                f"Invalid mode {mode} for HoVer-Net. "
+                f"Invalid mode {mode} for HoVerNet. "
                 "Only support `original` or `fast`."
             )
 
@@ -473,7 +473,7 @@ class HoVerNet(ModelABC):
               of possible instances exist withint the images.
             fx (float): The scale factor for processing nuclei. The scale
               assumes an image of resolution 0.25 microns per pixel. Default
-              is therefore 1 for HoVer-Net.
+              is therefore 1 for HoVerNet.
 
         Returns:
             An np.ndarray of shape (height, width) where each non-zero values

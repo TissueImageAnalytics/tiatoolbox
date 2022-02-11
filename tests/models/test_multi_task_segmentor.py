@@ -18,7 +18,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Unit test package for HoVer-Net+."""
+"""Unit test package for HoVerNet+."""
 
 import pathlib
 import shutil
@@ -48,7 +48,7 @@ def _rm_dir(path):
 )
 def test_functionality_local(remote_sample, tmp_path):
     """Local functionality test for multi task segmentor. Currently only
-    testing HoVer-Net+ with semantic segmentor.
+    testing HoVerNet+ with semantic segmentor.
     """
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
