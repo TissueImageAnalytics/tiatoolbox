@@ -313,5 +313,5 @@ class TestConstructor:
             graph_constructor.visualise({})
         with pytest.raises(ValueError, match="must contain edge_index"):
             graph_constructor.visualise({"x": []})
-        with pytest.raises(ValueError, match="must contain coords"):
+        with pytest.raises(ValueError, match="must contain coordinates"):
             graph_constructor.visualise({"x": [], "edge_index": []})
