@@ -668,11 +668,13 @@ class SemanticSegmentor:
 
             sample_outputs = list(zip(sample_infos, sample_outputs))
             cum_output.extend(sample_outputs)
-            # TODO: detach or hook this into a parallel process
-            self._process_predictions(
-                cum_output, wsi_reader, ioconfig, save_path, cache_dir
-            )
             pbar.update()
+        
+        # TODO: hook this into a parallel process
+        self._process_predictions(
+            cum_output, wsi_reader, ioconfig, save_path, cache_dir
+        )
+        
         pbar.close()
 
         # clean up the cache directories
