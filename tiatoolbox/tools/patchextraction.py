@@ -38,17 +38,17 @@ class PatchExtractor(ABC):
         input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             input mask that is used for position filtering when extracting patches
             i.e., patches will only be extracted based on the highlighted regions in
-            the input_mask. input_mask can be either path to the mask, a numpy
+            the `input_mask`. `input_mask` can be either path to the mask, a numpy
             array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
             options. In case of 'otsu' or 'morphological', a tissue mask is generated
             for the input_image using tiatoolbox :class:`TissueMasker` functionality.
         resolution (int or float or tuple of float): resolution at
             which to read the image, default = 0. Either a single
-            number or a sequence of two numbers for x and y are
+            number or a sequence of two numbers for `x` and `y` are
             valid. This value is in terms of the corresponding
-            units. For example: resolution=0.5 and units="mpp" will
+            units. For example: `resolution`=0.5 and `units`="mpp" will
             read the slide at 0.5 microns per-pixel, and
-            resolution=3, units="level" will read at level at
+            `resolution`=3, `units`="level" will read at level at
             pyramid level / resolution layer 3.
         units (str): the units of resolution, default = "level".
             Supported units are: microns per pixel (mpp), objective
@@ -56,7 +56,7 @@ class PatchExtractor(ABC):
             Only pyramid / resolution levels (level) embedded in
             the whole slide image are supported.
         pad_mode (str): Method for padding at edges of the WSI. Default
-            to 'constant'. See :func:`numpy.pad` for more information.
+            to `constant`. See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
             constant padding. Defaults to 0. See :func:`numpy.pad` for
             more.
@@ -83,7 +83,7 @@ class PatchExtractor(ABC):
         pad_constant_values (int or tuple(int)): Values to use with
             constant padding. Defaults to 0. See :func:`numpy.pad` for
             more.
-        stride (tuple(int)): stride in (x, y) direction for patch extraction. Not used
+        stride (tuple(int)): stride in `(x, y)` direction for patch extraction. Not used
             for :obj:`PointsPatchExtractor`
 
     """
@@ -196,7 +196,7 @@ class PatchExtractor(ABC):
             if len(self.coordinate_list) == 0:
                 raise ValueError(
                     "No candidate coordinates left after "
-                    "filtering by input_mask positions."
+                    "filtering by `input_mask` positions."
                 )
 
         data = self.coordinate_list[:, :2]  # only use the x_start and y_start
@@ -229,13 +229,13 @@ class PatchExtractor(ABC):
                 4, as we expect the `coordinates_list` to be referred to bounding boxes
                 in `[start_x, start_y, end_x, end_y]` format.
             coordinate_resolution (float): the resolution value at which
-                coordinates_list are generated.
+                `coordinates_list` are generated.
             coordinate_units (str): the resolution unit at which coordinates_list are
                 generated.
             mask_resolution (float): resolution at which mask array is extracted. It is
                 supposed to be in the same units as `coord_resolution` i.e.,
-                `coord_units`. If not provided, a default value will be selected based
-                on `coord_units`.
+                `coordinate_units`. If not provided, a default value will be selected
+                based on `coordinate_units`.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
@@ -466,7 +466,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             input mask that is used for position filtering when extracting patches
             i.e., patches will only be extracted based on the highlighted regions in
-            the input_mask. input_mask can be either path to the mask, a numpy
+            the `input_mask`. `input_mask` can be either path to the mask, a numpy
             array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
             options. In case of 'otsu' or 'morphological', a tissue mask is generated
             for the input_image using tiatoolbox :class:`TissueMasker` functionality.
@@ -495,7 +495,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             exceed the mother image dimensions would be neglected.
             Default is False.
         stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
-            default = patch_size
+            default = `patch_size`
 
     Attributes:
         stride(tuple(int)): stride in (x, y) direction for patch extraction.
@@ -549,7 +549,7 @@ class PointsPatchExtractor(PatchExtractor):
         input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             input mask that is used for position filtering when extracting patches
             i.e., patches will only be extracted based on the highlighted regions in
-            the input_mask. input_mask can be either path to the mask, a numpy
+            the `input_mask`. `input_mask` can be either path to the mask, a numpy
             array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
             options. In case of 'otsu' or 'morphological', a tissue mask is generated
             for the input_image using tiatoolbox :class:`TissueMasker` functionality.
@@ -618,7 +618,7 @@ def get_patch_extractor(method_name, **kwargs):
 
     Args:
         method_name (str): name of patch extraction method, must be one of "point" or
-            "slidingwindow".
+            "slidingwindow". The method name is case-insensitive.
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
