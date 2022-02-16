@@ -134,7 +134,7 @@ Once you have a copy of the source, you can install it with:
 Using Docker
 ==================
 
-If you want to run TIA toolbox in an isolated environment, you can use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . Furthermore, we host different Dockerfiles in our `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_ github repository. 
+If you would like to run TIA toolbox in an isolated environment, you can use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_ github repository. Please report any issues related to docker image in the `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>` repository. 
 
 After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desktop), you can use our TIA toolbox image in 3 different ways.
 
