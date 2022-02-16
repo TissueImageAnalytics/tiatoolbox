@@ -144,7 +144,7 @@ After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desk
 
     $ docker pull ghcr.io/tissueimageanalytics/tiatoolbox:latest
 
-Use the image as a base image in a Dockerfile
+2. Use the image as a base image in a Dockerfile
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
