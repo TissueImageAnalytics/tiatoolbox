@@ -138,7 +138,7 @@ If you would like to run TIA toolbox in an isolated environment, you can use our
 
 After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desktop), you can use our TIA toolbox image in 3 different ways.
 
-Pull the image from the Github Container Registry
+1. Pull the image from the Github Container Registry
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
