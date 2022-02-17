@@ -95,14 +95,14 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     return adjacency
 
 
-def traingle_signed_area(triangle: ArrayLike) -> int:
+def triangle_signed_area(triangle: ArrayLike) -> int:
     """Determine the signed area of a triangle.
 
     Args:
         triangle (ArrayLike): A 3x2 list of coordinates.
 
     Returns:
-        int: The signed area of the triange. It will be negative if
+        int: The signed area of the triangle. It will be negative if
              the triangle has a clockwise winding, negative if the
              triangle has a counter-clockwise winding, and zero if the
              triangles points are collinear.
@@ -121,7 +121,7 @@ def traingle_signed_area(triangle: ArrayLike) -> int:
 
 
 def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
-    """Convert an edged index to traingle simplices.
+    """Convert an edged index to triangle simplices (triplets of coordinate indices).
 
     Args:
         edge_index (ArrayLike):
@@ -151,13 +151,13 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     # Remove any nodes with less than two neighbours
     nodes = [node for node in nodes if len(neighbours[node]) >= 2]
     # Find the triangles
-    triangles = []
+    triangles = set()
     for node in nodes:
         for neighbour in neighbours[node]:
             overlap = neighbours[node].intersection(neighbours[neighbour])
             while overlap:
-                triangles.append([node, neighbour, overlap.pop()])
-    return np.array(triangles, dtype=np.int32, order="C")
+                triangles.add(frozenset({node, neighbour, overlap.pop()}))
+    return np.array([list(tri) for tri in triangles], dtype=np.int32, order="C")
 
 
 def affinity_to_edge_index(
@@ -217,7 +217,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         Args:
             graph (dict):
                 A graph with keys "x", "edge_index", and optionally
-                "coords".
+                "coordinates".
         Returns:
             ArrayLike: A UMAP embedding of `graph["x"]` with shape (N, 3)
                 and values ranging from 0 to 1.
@@ -241,7 +241,7 @@ class SlideGraphConstructor:  # noqa: PIE798
     ) -> Dict[str, ArrayLike]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
-        The graph is constructed via hybrid heirachical clustering followed
+        The graph is constructed via hybrid hierarchical clustering followed
         by Delaunay triangulation of these cluster centroids.
         This is part of the SlideGraph pipeline but may be used to construct
         a graph in general from point coordinates and features.
@@ -254,7 +254,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         Points which are spatially further apart than
         `neighbour_search_radius` are given a similarity of 1 (most
         dissimilar). This significantly speeds up computation. This distance
-        metric is then used to form clusters via hierachical/agglomerative
+        metric is then used to form clusters via hierarchical/agglomerative
         clustering.
 
         Next, a Delaunay triangulation is applied to the clusters to connect
@@ -283,7 +283,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             feature_range_thresh (Number):
                 Minimal range for which a feature is considered significant.
                 Features which have a range less than this are ignored.
-                Defaults to 1e-4. If falsey (None, False, 0, etc.), then
+                Defaults to 1e-4. If falsy (None, False, 0, etc.), then
                 no features are removed.
 
         Returns:
@@ -319,8 +319,8 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
-        ckdtree = cKDTree(points)
-        neighbour_distances_ckd, neighbour_indexes_ckd = ckdtree.query(
+        kd_tree = cKDTree(points)
+        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
             x=points, k=len(points)
         )
 
@@ -396,7 +396,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         return {
             "x": feature_centroids,
             "edge_index": edge_index,
-            "coords": point_centroids,
+            "coordinates": point_centroids,
         }
 
     @classmethod
@@ -411,7 +411,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         """Visualise a graph.
 
         The visualisation is a scatter plot of the graph nodes
-        and the connections bneewn them. By default, nodes are coloured
+        and the connections between them. By default, nodes are coloured
         according to the features of the graph via a UMAP embedding to
         the sRGB color space. This can be customised by passing a color
         argument which can be a single color, a list of colors, or a
@@ -428,7 +428,7 @@ class SlideGraphConstructor:  # noqa: PIE798
                     - :class:`numpy.ndarray` - edge_index:
                         Edge index matrix defining connectivity.
                         Required
-                    - :class:`numpy.ndarray` - coords:
+                    - :class:`numpy.ndarray` - coordinates:
                         Coordinates of each node within the WSI (mean of point
                         in a cluster).
                         Required
@@ -464,35 +464,36 @@ class SlideGraphConstructor:  # noqa: PIE798
             >>> plt.show()
 
         """
+        from matplotlib import collections as mc
+
         # Check that the graph is valid
         if "x" not in graph:
             raise ValueError("Graph must contain x")
         if "edge_index" not in graph:
             raise ValueError("Graph must contain edge_index")
-        if "coords" not in graph:
-            raise ValueError("Graph must contain coords")
+        if "coordinates" not in graph:
+            raise ValueError("Graph must contain coordinates")
         if ax is None:
             _, ax = plt.subplots()
         if color is None:
             color = cls._umap_reducer
 
+        nodes = graph["coordinates"]
+        edges = graph["edge_index"]
+
         # Plot the edges
-        triangles = edge_index_to_triangles(graph["edge_index"])
-        # Ensure triangles are counter-clockwise
-        for i, tri in enumerate(triangles):
-            if traingle_signed_area(graph["coords"][tri]) < 0:
-                triangles[i] = triangles[i][::-1]
-        ax.triplot(
-            graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
+        line_segments = nodes[edges.T]
+        edge_collection = mc.LineCollection(
+            line_segments, colors=edge_color, linewidths=1
         )
+        ax.add_collection(edge_collection)
 
         # Plot the nodes
-        ax.scatter(
-            graph["coords"][:, 0],
-            graph["coords"][:, 1],
+        plt.scatter(
+            *nodes.T,
             c=color(graph) if isinstance(color, Callable) else color,
             s=node_size(graph) if isinstance(node_size, Callable) else node_size,
-            zorder=1,
+            zorder=2,
         )
 
         return ax
