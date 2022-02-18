@@ -21,7 +21,7 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Stain augmentation"""
+"""Stain augmentation."""
 import copy
 import random
 
