@@ -284,8 +284,9 @@ class PatchExtractor(ABC):
     def filter_coordinates(
         mask_reader, coordinates_list, func=None, resolution=None, units=None
     ):
-        """Indicates which coordinate is valid for mask-based patch extraction.
-        Locations are being validated by a custom or build-in `func`.
+        """Indicates which coordinates are valid for mask-based patch extraction.
+
+        Locations are validated by a custom or default filter `func`.
 
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
@@ -298,7 +299,7 @@ class PatchExtractor(ABC):
                 4, as we expect the `coordinates_list` to be referred to bounding boxes
                 in `[start_x, start_y, end_x, end_y]` format.
             func: The coordinate validator function. A function that takes `reader` and
-                `coordinate` as arguments and return True or False as indication of
+                `coordinate` as arguments and returns True or False to indicate
                 coordinate validity.
             resolution (float): the resolution value at which coordinates_list are
                 generated.

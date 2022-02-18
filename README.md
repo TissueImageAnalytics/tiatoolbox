@@ -15,17 +15,28 @@
     <a href="https://github.com/psf/black">
       <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
     </a>
+    <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
+      <img src="https://img.shields.io/badge/license-GPL--3.0-lightgrey" />
+    </a>
+  <br>
+    <br>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
-  </a>
-  <a href="https://anaconda.org/conda-forge/tiatoolbox">
-    <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox" alt="Conda Status" />
   </a>
     <a href="https://pepy.tech/project/tiatoolbox">
       <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads"/>
     </a>
+    <br>
+    <a href="https://anaconda.org/conda-forge/tiatoolbox">
+      <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox" />
+    </a>
+    <a href="https://anaconda.org/conda-forge/tiatoolbox">
+        <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/downloads.svg" />
+    </a>
+
   <br>
-  <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://zenodo.org/badge/DOI/10.1101.2021.12.23.474029.svg" alt="DOI"></a>
+    <br>
+  <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
   <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 </p>
 

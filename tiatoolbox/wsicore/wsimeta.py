@@ -27,10 +27,13 @@ format of this dictionary may vary between WSI formats.
 
 """
 import warnings
+from numbers import Number
 from pathlib import Path
-from typing import Mapping, Optional, Sequence, Tuple
+from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
+Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 
 
 class WSIMeta:
@@ -39,7 +42,7 @@ class WSIMeta:
     Args:
             slide_dimensions (int, int): Tuple containing the width and
                 height of the WSI. These are for the baseline (full resolution)
-                image if the WSI is a pyramid or multi-resoltion.
+                image if the WSI is a pyramid or multi-resolution.
             level_dimensions (list): A list of dimensions for each level of the
                 pyramid or for each resolution in the WSI.
             objective_power (float, optional): The power of the objective lens
@@ -60,7 +63,7 @@ class WSIMeta:
     Attributes:
         slide_dimensions (tuple(int)): Tuple containing the width and
             height of the WSI. These are for the baseline (full resolution)
-            image if the WSI is a pyramid or multi-resoltion. Required.
+            image if the WSI is a pyramid or multi-resolution. Required.
         axes (str): Axes ordering of the image. This is most relevant for
             OME-TIFF images where the axes ordering can vary. For most
             images this with be "YXS" i.e. the image is store in the axis
@@ -173,7 +176,116 @@ class WSIMeta:
         if all(x is None for x in [self.objective_power, self.mpp]):
             warnings.warn("Unknown scale (no objective_power or mpp)")
 
-        return passed
+        return passed  # noqa
+
+    def level_downsample(
+        self,
+        level: Union[int, float],
+    ) -> float:
+        """Get the downsample factor for a level.
+
+        For non-integer values of `level`, the downsample factor is
+        linearly interpolated between from the downsample factors of
+        the level below and the level above.
+
+        Args:
+            level (int or float): Level to get downsample factor for.
+
+        Returns:
+            float: Downsample factor for the given level.
+
+        """
+        level_downsamples = self.level_downsamples
+        if isinstance(level, int) or int(level) == level:
+            # Return the downsample for the level
+            return level_downsamples[int(level)]
+        # Linearly interpolate between levels
+        floor = int(np.floor(level))
+        ceil = int(np.ceil(level))
+        floor_downsample = level_downsamples[floor]
+        ceil_downsample = level_downsamples[ceil]
+        return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
+
+    def relative_level_scales(
+        self, resolution: Resolution, units: str
+    ) -> List[np.ndarray]:
+        """Calculate scale of each level in the WSI relative to given resolution.
+
+        Find the relative scale of each image pyramid / resolution level
+        of the WSI relative to the given resolution and units.
+
+        Values > 1 indicate that the level has a larger scale than the
+        target and < 1 indicates that it is smaller.
+
+        Args:
+            resolution (float or tuple(float)): Scale to calculate
+                relative to units.
+            units (str): Units of the scale. Allowed values are: mpp,
+                power, level, baseline. Baseline refers to the largest
+                resolution in the WSI (level 0).
+
+        Raises:
+            ValueError: Missing MPP metadata
+            ValueError: Missing objective power metadata
+            ValueError: Invalid units
+
+        Returns:
+            list: Scale for each level relative to the given scale and
+                units.
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> print(wsi.info.relative_level_scales(0.5, "mpp"))
+            [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
+
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> print(wsi.info.relative_level_scales(0.5, "baseline"))
+            [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
+
+        """
+        if units not in ("mpp", "power", "level", "baseline"):
+            raise ValueError("Invalid units")
+
+        level_downsamples = self.level_downsamples
+
+        def np_pair(x: Union[Number, np.array]) -> np.ndarray:
+            """Ensure input x is a numpy array of length 2."""
+            # If one number is given, the same value is used for x and y
+            if isinstance(x, Number):
+                return np.array([x] * 2)
+            return np.array(x)
+
+        if units == "level":
+            if resolution >= len(level_downsamples):
+                raise ValueError(
+                    f"Target scale level {resolution} "
+                    f"> number of levels {len(level_downsamples)} in WSI"
+                )
+            base_scale, resolution = 1, self.level_downsample(resolution)
+
+        resolution = np_pair(resolution)
+
+        if units == "mpp":
+            if self.mpp is None:
+                raise ValueError("MPP is None. Cannot determine scale in terms of MPP.")
+            base_scale = self.mpp
+
+        if units == "power":
+            if self.objective_power is None:
+                raise ValueError(
+                    "Objective power is None. "
+                    "Cannot determine scale in terms of objective power."
+                )
+            base_scale, resolution = 1 / self.objective_power, 1 / resolution
+
+        if units == "baseline":
+            base_scale, resolution = 1, 1 / resolution
+
+        return [
+            (base_scale * downsample) / resolution for downsample in level_downsamples
+        ]
 
     def as_dict(self):
         """Convert WSIMeta to dictionary of Python types.
@@ -186,7 +298,7 @@ class WSIMeta:
             mpp = (self.mpp, self.mpp)
         else:
             mpp = tuple(self.mpp)
-        param = {
+        return {
             "objective_power": self.objective_power,
             "slide_dimensions": self.slide_dimensions,
             "level_count": self.level_count,
@@ -196,4 +308,3 @@ class WSIMeta:
             "mpp": mpp,
             "file_path": self.file_path,
         }
-        return param

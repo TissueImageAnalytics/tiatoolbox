@@ -264,7 +264,7 @@ def bounds2slices(
 
     """
     if np.size(stride) not in [1, 2]:
-        raise ValueError("Invalid stride shape")
+        raise ValueError("Invalid stride shape.")
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
     elif np.size(stride) == 2:  # pragma: no cover
@@ -295,7 +295,7 @@ def pad_bounds(
 
     """
     if np.size(bounds) % 2 != 0:
-        raise ValueError("Bounds must have an even number of elements")
+        raise ValueError("Bounds must have an even number of elements.")
     ndims = np.size(bounds) // 2
 
     if np.size(padding) not in [1, 2, np.size(bounds)]:

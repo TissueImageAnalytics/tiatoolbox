@@ -12,11 +12,12 @@ jupyterlab
 matplotlib
 numpy
 opencv-python>=4.5.4
-openslide-python==1.1.2
+openslide-python>=1.1.2
 pandas
 pillow
 pip>=20.0.2
 pre-commit
+pydicom # Used by wsidicom
 pytest-cov==2.9.0
 pytest-runner>=5.2
 pytest>=6.2.5
@@ -38,4 +39,5 @@ twine==1.14.0
 umap-learn
 watchdog==0.9.0
 wheel==0.33.6
+wsidicom
 zarr

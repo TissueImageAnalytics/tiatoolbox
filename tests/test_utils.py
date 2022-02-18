@@ -824,7 +824,7 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test if input array does not have 2 or 3 columns
-    with pytest.raises(ValueError, match="numpy table should be of format"):
+    with pytest.raises(ValueError, match="Numpy table should be of format"):
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
@@ -832,7 +832,7 @@ def test_read_point_annotations(
     with open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
-    with pytest.raises(ValueError, match="numpy table should be of format"):
+    with pytest.raises(ValueError, match="Numpy table should be of format"):
         _ = utils.misc.read_locations(labels)
 
     # Test if input pd DataFrame does not have 2 or 3 columns
@@ -1202,7 +1202,7 @@ def test_save_as_json():
         misc.save_as_json(not_jsonable, "sample_json.json")
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
-    with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
+    with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
     # test complex nested dict
     print(sample)
