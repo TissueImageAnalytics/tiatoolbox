@@ -12,12 +12,13 @@ Please follow the instructions below to install prerequisite software according 
 Using Anaconda (Recommended)
 ============================
 
-After `installing Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or miniconda), you can create a virtual environment for TIA toolbox using the following command:
+After `installing Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or miniconda), you can install TIA toolbox using the following command:
 
 .. code-block:: console
 
-    $ conda env create --file requirements.conda.yml
+    $ conda install -c conda-forge tiatoolbox
 
+Please note that conda-forge installation support is limited on Windows as openslide binaries are not supported on official conda channels. An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://docs.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_.
 
 Alternative Method
 ==================
@@ -82,7 +83,7 @@ Stable release
 --------------
 
 Please note that TIAToolbox is tested for python version 3.7, 3.8 and 3.9.
-To install TIA Toolbox, run this command in your terminal after you have installed the pre-requisite software:
+To install TIA Toolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console
 

@@ -21,14 +21,13 @@
 """This module defines classes which can read image data from WSI formats."""
 import copy
 import math
-import numbers
 import os
 import pathlib
 import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
 import openslide
@@ -49,7 +48,6 @@ IntPair = Tuple[int, int]
 Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-WSIReaderInput = Union[str, pathlib.Path, np.ndarray, "WSIReader"]
 
 
 class WSIReader:
@@ -100,55 +98,71 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./sample.svs")
+            >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
-        if isinstance(input_img, (str, pathlib.Path)):
-            _, _, suffixes = utils.misc.split_path_name_ext(input_img)
 
-            if suffixes[-1] not in [
-                ".svs",
-                ".npy",
-                ".ndpi",
-                ".mrxs",
-                ".ndpi",
-                ".tif",
-                ".tiff",
-                ".jp2",
-                ".png",
-                ".jpg",
-                ".jpeg",
-            ]:
-                raise FileNotSupported(
-                    f"File {input_img} is not a supported file format."
-                )
+        def is_dicom(path: pathlib.Path) -> bool:
+            """Check if the input is a DICOM file.
 
-            if suffixes[-1] in (".npy",):
-                input_img = np.load(input_img)
-                return VirtualWSIReader(input_img, mpp=mpp, power=power)
+            Args:
+                path (pathlib.Path): Path to the file to check.
 
-            if suffixes[-2:] in ([".ome", ".tiff"],):
-                return TIFFWSIReader(input_img, mpp=mpp, power=power)
+            Returns:
+                bool: True if the file is a DICOM file.
 
-            if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
-                return VirtualWSIReader(input_img, mpp=mpp, power=power)
+            """
+            path = pathlib.Path(path)
+            is_dcm = path.suffix.lower() == ".dcm"
+            is_dcm_dir = path.is_dir() and any(
+                p.suffix.lower() == ".dcm" for p in path.iterdir()
+            )
+            return is_dcm or is_dcm_dir
 
-            if suffixes[-1] in (".svs", ".ndpi", ".mrxs"):
-                return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
-
-            if suffixes[-1] in (".jp2",):
-                return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
+        if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
+            raise TypeError(
+                "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
+            )
 
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
-        if isinstance(
-            input_img,
-            WSIReader,
-        ):
-            # input is already a tiatoolbox wsi handler
+        if isinstance(input_img, WSIReader):
             return input_img
-        raise TypeError("Invalid input. Must be a file path or an ndarray image.")
+
+        if is_dicom(input_img):
+            return DICOMWSIReader(input_img, mpp=mpp, power=power)
+
+        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
+
+        if suffixes[-1] not in [
+            ".svs",
+            ".npy",
+            ".ndpi",
+            ".mrxs",
+            ".tif",
+            ".tiff",
+            ".jp2",
+            ".png",
+            ".jpg",
+            ".jpeg",
+        ]:
+            raise FileNotSupported(f"File {input_img} is not a supported file format.")
+
+        if suffixes[-1] in (".npy",):
+            input_img = np.load(input_img)
+            return VirtualWSIReader(input_img, mpp=mpp, power=power)
+
+        if suffixes[-2:] in ([".ome", ".tiff"],):
+            return TIFFWSIReader(input_img, mpp=mpp, power=power)
+
+        if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
+            return VirtualWSIReader(input_img, mpp=mpp, power=power)
+
+        if suffixes[-1] in (".jp2",):
+            return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
+
+        return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
     def __init__(
         self,
@@ -219,94 +233,6 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def _relative_level_scales(
-        self, resolution: Resolution, units: str
-    ) -> List[np.ndarray]:
-        """Calculate scale of each level in the WSI relative to given resolution.
-
-        Find the relative scale of each image pyramid / resolution level
-        of the WSI relative to the given resolution and units.
-
-        Values > 1 indicate that the level has a larger scale than the
-        target and < 1 indicates that it is smaller.
-
-        Args:
-            resolution (float or tuple(float)): Scale to calculate
-                relative to units.
-            units (str): Units of the scale. Allowed values are: mpp,
-                power, level, baseline. Baseline refers to the largest
-                resolution in the WSI (level 0).
-
-        Raises:
-            ValueError: Missing MPP metadata
-            ValueError: Missing objective power metadata
-            ValueError: Invalid units
-
-        Returns:
-            list: Scale for each level relative to the given scale and
-                units.
-
-        Examples:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
-            >>> print(wsi._relative_level_scales(0.5, "mpp"))
-            [array([0.91282519, 0.91012514]), array([1.82565039, 1.82025028]) ...
-
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
-            >>> print(wsi._relative_level_scales(0.5, "baseline"))
-            [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
-
-        """
-        info = self.info
-
-        def np_pair(x):
-            """Ensure input x is a numpy array of length 2."""
-            if isinstance(x, numbers.Number):
-                # If one number is given, the same value is used for x and y
-                return np.array([x] * 2)
-            return np.array(x)
-
-        @np.vectorize
-        def level_to_downsample(x):
-            """Get the downsample for a level, interpolating non-integer levels."""
-            if isinstance(x, int) or int(x) == x:
-                # Return the downsample for the level
-                return info.level_downsamples[int(x)]
-            # Linearly interpolate between levels
-            floor = int(np.floor(x))
-            ceil = int(np.ceil(x))
-            floor_downsample = info.level_downsamples[floor]
-            ceil_downsample = info.level_downsamples[ceil]
-            return np.interp(x, [floor, ceil], [floor_downsample, ceil_downsample])
-
-        resolution = np_pair(resolution)
-
-        if units not in ("mpp", "power", "level", "baseline"):
-            raise ValueError("Invalid units")
-        if units == "mpp":
-            if info.mpp is None:
-                raise ValueError("MPP is None")
-            base_scale = info.mpp
-        if units == "power":
-            if info.objective_power is None:
-                raise ValueError("Objective power is None")
-            base_scale = 1 / info.objective_power
-            resolution = 1 / resolution
-        if units == "level":
-            if any(resolution >= len(info.level_downsamples)):
-                raise ValueError(
-                    f"Target scale level {resolution} "
-                    f"> number of levels {len(info.level_downsamples)} in WSI"
-                )
-            base_scale = 1
-            resolution = level_to_downsample(resolution)
-        if units == "baseline":
-            base_scale = 1
-            resolution = 1 / resolution
-
-        return [(base_scale * ds) / resolution for ds in info.level_downsamples]
-
     def _find_optimal_level_and_downsample(
         self, resolution: Resolution, units: str, precision: int = 3
     ) -> Tuple[int, np.ndarray]:
@@ -335,7 +261,7 @@ class WSIReader:
                 - np.ndarray - Scale factor in X and Y
 
         """
-        level_scales = self._relative_level_scales(resolution, units)
+        level_scales = self.info.relative_level_scales(resolution, units)
         level_resolution_sufficient = [
             all(np.round(x, decimals=precision) <= 1) for x in level_scales
         ]
@@ -691,7 +617,7 @@ class WSIReader:
             if baseline_mpp is not None:
                 output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
         elif input_unit == "level":
-            level_scales = self._relative_level_scales(input_res, input_unit)
+            level_scales = self.info.relative_level_scales(input_res, input_unit)
             output_dict["baseline"] = level_scales[0]
             if baseline_mpp is not None:
                 output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
@@ -833,7 +759,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
             interpolation (str): Method to use when resampling the output
                 image. Possible values are "linear", "cubic", "lanczos",
-                "area", and "optimse". Defaults to 'optimise' which
+                "area", and "optimise". Defaults to 'optimise' which
                 will use cubic interpolation for upscaling and area
                 interpolation for downscaling to avoid moiré patterns.
             pad_mode (str): Method to use when padding at the edges of the
@@ -1018,7 +944,7 @@ class WSIReader:
                 pixels per baseline pixel (baseline).
             interpolation (str): Method to use when resampling the output
                 image. Possible values are "linear", "cubic", "lanczos",
-                "area", and "optimse". Defaults to 'optimise' which
+                "area", and "optimise". Defaults to 'optimise' which
                 will use cubic interpolation for upscaling and area
                 interpolation for downscaling to avoid moiré patterns.
             pad_mode (str): Method to use when padding at the edges of the
@@ -1236,7 +1162,7 @@ class WSIReader:
 
             # convert to baseline reference frame
             bounds = start_w, start_h, end_w, end_h
-            baseline_bounds = tuple([bound * (2 ** level) for bound in bounds])
+            baseline_bounds = tuple([bound * (2**level) for bound in bounds])
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
@@ -1516,7 +1442,7 @@ class OpenSlideWSIReader(WSIReader):
             tiff_res_units = props.get("tiff.ResolutionUnit")
             try:
                 microns_per_unit = {
-                    "centimeter": 1e4,  # 10k
+                    "centimeter": 1e4,  # 10,000
                     "inch": 25400,
                 }
                 x_res = float(props["tiff.XResolution"])
@@ -1618,7 +1544,7 @@ class OmnyxJP2WSIReader(WSIReader):
             units=units,
         )
 
-        stride = 2 ** read_level
+        stride = 2**read_level
         glymur_wsi = self.glymur_wsi
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
@@ -1677,7 +1603,7 @@ class OmnyxJP2WSIReader(WSIReader):
             )
         glymur_wsi = self.glymur_wsi
 
-        stride = 2 ** read_level
+        stride = 2**read_level
 
         im_region = utils.image.safe_padded_read(
             image=glymur_wsi,
@@ -1736,10 +1662,10 @@ class OmnyxJP2WSIReader(WSIReader):
         else:
             level_count = cod.num_res
 
-        level_downsamples = [2 ** n for n in range(level_count)]
+        level_downsamples = [2**n for n in range(level_count)]
 
         level_dimensions = [
-            (int(slide_dimensions[0] / 2 ** n), int(slide_dimensions[1] / 2 ** n))
+            (int(slide_dimensions[0] / 2**n), int(slide_dimensions[1] / 2**n))
             for n in range(level_count)
         ]
 
@@ -1778,7 +1704,7 @@ class VirtualWSIReader(WSIReader):
     resolution masks as if they were stretched to overlay a higher
     resolution WSI.
 
-    Extra key-word arugments given to :func:`~WSIReader.read_region`
+    Extra key-word arguments given to :func:`~WSIReader.read_region`
     and :func:`~WSIReader.read_bounds` will be passed to
     :func:`~tiatoolbox.utils.image.sub_pixel_read`.
 
@@ -2044,7 +1970,7 @@ class TIFFWSIReader(WSIReader):
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         series="auto",
-        cache_size=2 ** 28,
+        cache_size=2**28,
     ) -> None:
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
@@ -2053,15 +1979,17 @@ class TIFFWSIReader(WSIReader):
             raise ValueError("Unsupported TIFF WSI format.")
 
         self.series_n = series
-        # Find the largest series if series="auto"
         if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
             raise Exception("TIFF does not contain any valid series.")
+        # Find the largest series if series="auto"
         if self.series_n == "auto":
             all_series = self.tiff.series or []
-            series_areas = [
-                np.prod(self._shape_channels_last(np.array(s.pages[0].shape))[:2])
-                for s in all_series  # skipcq: PYL-E1133
-            ]
+
+            def page_area(page: tifffile.TiffPage) -> float:
+                """Calculate the area of a page."""
+                return np.prod(self._canonical_shape(page.shape)[:2])
+
+            series_areas = [page_area(s.pages[0]) for s in all_series]  # skipcq
             self.series_n = np.argmax(series_areas)
         self._tiff_series = self.tiff.series[self.series_n]
         self._zarr_store = tifffile.imread(
@@ -2077,12 +2005,8 @@ class TIFFWSIReader(WSIReader):
             int(key): ArrayView(array, axes=self.info.axes)
             for key, array in self._zarr_group.items()
         }
-        # Using the zarr array view method gives a ValueError
-        # self.zarr_views = zarr.hierarchy.group()
-        # for key, array in self.zarr_group.items():
-        #     self.zarr_views[key] = array.view(self._shape_channels_last(array.shape))
 
-    def _shape_channels_last(self, shape):
+    def _canonical_shape(self, shape):
         """Make a level shape tuple in YXS order.
 
         Args:
@@ -2149,9 +2073,9 @@ class TIFFWSIReader(WSIReader):
             def time(string: str) -> datetime:
                 return datetime.strptime(string, r"%H:%M:%S")
 
-            casting_prescedence = [us_date, time, int, float]
+            casting_precedence = [us_date, time, int, float]
             value = value_string
-            for cast in casting_prescedence:
+            for cast in casting_precedence:
                 try:
                     value = cast(value_string)
                     return key, value
@@ -2239,13 +2163,14 @@ class TIFFWSIReader(WSIReader):
         """
         level_count = len(self._zarr_group)
         level_dimensions = [
-            np.array(self._shape_channels_last(p.shape)[:2][::-1])
+            np.array(self._canonical_shape(p.shape)[:2][::-1])
             for p in self._zarr_group.values()
         ]
         slide_dimensions = level_dimensions[0]
         level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
         # The tags attribute object will not pickle or deepcopy,
         # so a copy with only python values or tifffile enums is made.
+        tifffile_tags = self.tiff.pages[0].tags.items()
         tiff_tags = {
             code: {
                 "code": code,
@@ -2254,7 +2179,7 @@ class TIFFWSIReader(WSIReader):
                 "count": tag.count,
                 "type": tag.dtype,
             }
-            for code, tag in self.tiff.pages[0].tags.items()
+            for code, tag in tifffile_tags
         }
 
         if self.tiff.is_svs:
@@ -2387,6 +2312,208 @@ class TIFFWSIReader(WSIReader):
             )
 
         return im_region
+
+
+class DICOMWSIReader(WSIReader):
+    wsidicom = None
+
+    def __init__(
+        self,
+        input_img: Union[str, pathlib.Path, np.ndarray],
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+    ) -> None:
+        from wsidicom import WsiDicom
+
+        super().__init__(input_img, mpp, power)
+        self.wsi = WsiDicom.open(input_img)
+
+    def _info(self) -> WSIMeta:
+
+        level_dimensions = [
+            (level.size.width, level.size.height) for level in self.wsi.levels
+        ]
+        level_downsamples = [
+            np.mean(
+                [
+                    level_dimensions[0][0] / level.size.width,
+                    level_dimensions[0][1] / level.size.height,
+                ]
+            )
+            for level in self.wsi.levels
+        ]
+        dataset = self.wsi.datasets[0]
+        # Get pixel spacing in mm from DICOM file and convert to um/px (mpp)
+        mm_per_pixel = dataset.pixel_spacing
+        mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
+
+        return WSIMeta(
+            slide_dimensions=level_dimensions[0],
+            level_dimensions=level_dimensions,
+            level_downsamples=level_downsamples,
+            axes="YXS",
+            mpp=mpp,
+            level_count=len(level_dimensions),
+            vendor=dataset.Manufacturer,
+        )
+
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        if coord_space == "resolution":
+            return self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+
+        # Find parameters for optimal read
+        (
+            read_level,
+            level_location,
+            level_read_size,
+            post_read_scale,
+            _,
+        ) = self.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
+
+        wsi = self.wsi
+
+        # Read at optimal level and corrected read size
+        level_size = self.info.level_dimensions[read_level]
+        constrained_read_bounds = utils.image.find_overlap(
+            read_location=level_location,
+            read_size=level_read_size,
+            image_size=level_size,
+        )
+        _, constrained_read_size = utils.transforms.bounds2locsize(
+            constrained_read_bounds
+        )
+        im_region = wsi.read_region(location, read_level, constrained_read_size)
+        im_region = np.array(im_region)
+
+        # Apply padding outside of the slide area
+        level_read_bounds = utils.transforms.locsize2bounds(
+            level_location, level_read_size
+        )
+        im_region = utils.image.crop_and_pad_edges(
+            bounds=level_read_bounds,
+            max_dimensions=level_size,
+            region=im_region,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        # Resize to correct scale if required
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=tuple(np.array(size).astype(int)),
+            interpolation=interpolation,
+        )
+
+        return utils.transforms.background_composite(image=im_region)
+
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        # convert from requested to `baseline`
+        bounds_at_baseline = bounds
+        if coord_space == "resolution":
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units
+            )
+            _, size_at_requested = utils.transforms.bounds2locsize(bounds)
+            # don't use the `output_size` (`size_at_requested`) here
+            # because the rounding error at `bounds_at_baseline` leads to
+            # different `size_at_requested` (keeping same read resolution
+            # but base image is of different scale)
+            (
+                read_level,
+                bounds_at_read_level,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+        else:  # duplicated portion with VirtualReader, factoring out ?
+            # Find parameters for optimal read
+            (
+                read_level,
+                bounds_at_read_level,
+                size_at_requested,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+
+        wsi = self.wsi
+
+        # Read at optimal level and corrected read size
+        location_at_baseline = bounds_at_baseline[:2]
+        level_location, size_at_read_level = utils.transforms.bounds2locsize(
+            bounds_at_read_level
+        )
+        level_size = self.info.level_dimensions[read_level]
+        read_bounds = utils.image.find_overlap(
+            level_location, size_at_read_level, level_size
+        )
+        _, read_size = utils.transforms.bounds2locsize(read_bounds)
+        im_region = wsi.read_region(
+            location=location_at_baseline, level=read_level, size=read_size
+        )
+        im_region = np.array(im_region)
+
+        # Apply padding outside of the slide area
+        im_region = utils.image.crop_and_pad_edges(
+            bounds=bounds_at_read_level,
+            max_dimensions=self.info.level_dimensions[read_level],
+            region=im_region,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        # Resize to correct scale if required
+        if coord_space == "resolution":
+            im_region = utils.transforms.imresize(
+                img=im_region,
+                output_size=size_at_requested,
+                interpolation=interpolation,
+            )
+        else:
+            im_region = utils.transforms.imresize(
+                img=im_region,
+                scale_factor=post_read_scale,
+                output_size=size_at_requested,
+                interpolation=interpolation,
+            )
+
+        return utils.transforms.background_composite(image=im_region)
 
 
 def get_wsireader(input_img):

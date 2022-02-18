@@ -42,5 +42,5 @@ dependencies:
   - umap-learn
   - zarr
   - pip:
-    - openslide-python
+    - openslide-python>=1.1.2
     - sphinx-toolbox
