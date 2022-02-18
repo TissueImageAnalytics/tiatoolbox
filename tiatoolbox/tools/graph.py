@@ -468,11 +468,11 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         # Check that the graph is valid
         if "x" not in graph:
-            raise ValueError("Graph must contain x")
+            raise ValueError("Graph must contain key `x`.")
         if "edge_index" not in graph:
-            raise ValueError("Graph must contain edge_index")
+            raise ValueError("Graph must contain key `edge_index`.")
         if "coordinates" not in graph:
-            raise ValueError("Graph must contain coordinates")
+            raise ValueError("Graph must contain key `coordinates`")
         if ax is None:
             _, ax = plt.subplots()
         if color is None:

@@ -225,7 +225,7 @@ def get_luminosity_tissue_mask(img, threshold):
 
     # check it's not empty
     if tissue_mask.sum() == 0:
-        raise ValueError("Empty tissue mask computed")
+        raise ValueError("Empty tissue mask computed.")
 
     return tissue_mask
 
@@ -380,7 +380,7 @@ def __numpy_array_to_table(input_table):
     if input_table.shape[1] == 3:
         return pd.DataFrame(input_table, columns=["x", "y", "class"])
 
-    raise ValueError("numpy table should be of format `x, y` or " "`x, y, class`")
+    raise ValueError("Numpy table should be of format `x, y` or `x, y, class`.")
 
 
 def __assign_unknown_class(input_table):
@@ -674,7 +674,7 @@ def save_as_json(data, save_path):
     """
     shadow_data = copy.deepcopy(data)  # make a copy of source input
     if not isinstance(shadow_data, (dict, list)):
-        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
+        raise ValueError(f"Type of `data` ({type(data)}) must be in (dict, list).")
 
     if isinstance(shadow_data, dict):
         __walk_dict(shadow_data)
@@ -832,7 +832,7 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
         raise FileNotFoundError
 
     if mode not in ["wsi", "tile"]:
-        raise ValueError("Please select wsi or tile mode.")
+        raise ValueError('`mode` must be in ("wsi", "tile").')
 
     files_all = [
         img_input,

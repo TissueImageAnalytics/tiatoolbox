@@ -29,8 +29,7 @@ from tiatoolbox.wsicore import wsireader
 
 
 class PatchExtractor(ABC):
-    """
-    Class for extracting and merging patches in standard and whole-slide images.
+    """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
         input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
@@ -233,7 +232,7 @@ class PatchExtractor(ABC):
               generated.
             coord_resolution (str): the resolution unit at which coordinates_list are
               generated.
-            mask_resolution (floar): resolution at which mask array is extracted. It is
+            mask_resolution (float): resolution at which mask array is extracted. It is
               supposed to be in the same units as `coord_resolution` i.e.,
               `coord_units`. If not provided, a default value will be selected based on
               `coord_units`.
@@ -284,9 +283,9 @@ class PatchExtractor(ABC):
     def filter_coordinates(
         mask_reader, coordinates_list, func=None, resolution=None, units=None
     ):
-        """
-        Indicates which coordinate is valid for mask-based patch extraction.
-        Locations are being validated by a custom or build-in `func`.
+        """Indicates which coordinates are valid for mask-based patch extraction.
+
+        Locations are validated by a custom or default filter `func`.
 
         Args:
             mask_reader (:class:`.VirtualReader`): a virtual pyramidal reader of the
@@ -299,11 +298,12 @@ class PatchExtractor(ABC):
               4, as we expect the `coordinates_list` to be refer to bounding boxes in
               `[start_x, start_y, end_x, end_y]` format.
             func: The coordinate validator function. A function that takes `reader` and
-              `coordinate` as arguments and return True or False as indication of
+              `coordinate` as arguments and returns True or False to indicate
               coordinate validity.
 
         Returns:
             ndarray: list of flags to indicate which coordinate is valid.
+
         """
 
         def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
