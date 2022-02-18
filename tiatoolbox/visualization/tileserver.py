@@ -35,6 +35,14 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 class TileServer(Flask):
     """A Flask app to display Zoomify tiles as a slippery map.
 
+    Args:
+        title:
+            The title of the tile server, displayed in the browser as
+            the page title.
+        layers:
+            A dictionary mapping layer names to :obj:`WSIReader` objects
+            to display.
+
     Examples:
         >>> from tiatoolbox.wsiscore.wsireader import WSIReader
         >>> from tiatoolbox.visualization.tileserver import TileServer
@@ -73,7 +81,7 @@ class TileServer(Flask):
     def zoomify(
         self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
     ) -> Response:
-        """Serve a zoomify tile for a particular layer.
+        """Serve a Zoomify tile for a particular layer.
 
         Note that this should not be called directly, but will be called
         automatically by the Flask framework when a client requests a
