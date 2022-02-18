@@ -41,19 +41,22 @@ class HoVerNetPlus(HoVerNet):
     regions or layers in the images. Note the HoVer-Net+ architecture assumes an image
     resolution of 0.5 mpp, in contrast to HoVer-Net at 0.25 mpp.
 
+    Args:
+        num_input_channels (int): The number of input channels, default = 3 for RGB.
+        num_types (int): The number of types of nuclei present in the images.
+        num_layers (int): The number of layers/different regions types present.
+
+    References:
+        Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer Segmentation
+        in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF International
+        Conference on Computer Vision. 2021.
+
+
     """
 
     def __init__(
         self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
-        """Initialise HoVer-Net+.
-
-        Args:
-            num_input_channels (int): The number of input channels, default = 3 for RGB.
-            num_types (int): The number of types of nuclei present in the images.
-            num_layers (int): The number of layers/different regions types present.
-
-        """
         super().__init__(mode="fast")
         self.num_types = num_types
         self.num_layers = num_layers
