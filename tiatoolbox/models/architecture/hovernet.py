@@ -716,7 +716,7 @@ class HoVerNet(ModelABC):
 
                     where the instance ID is an integer corresponding to
                     the instance at the same pixel location within
-                    the instance map.
+                    the returned instance map.
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
