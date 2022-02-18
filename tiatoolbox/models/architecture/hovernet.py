@@ -585,19 +585,27 @@ class HoVerNet(ModelABC):
                 within `pred_inst` instance information. It has
                 following form::
 
-                    inst_info = {
-                            box: number[],
-                            centroids: number[],
-                            contour: number[][],
-                            type: number,
-                            prob: number,
-                    }
-                    inst_info_dict = {
-                        [inst_uid: number]: inst_info
+                    {
+                        0: {  # Instance ID
+                            "box": [
+                                x_min,
+                                y_min,
+                                x_max,
+                                y_max,
+                            ],
+                            "centroid": [x, y],
+                            "contour": [
+                                [x, y],
+                                ...
+                            ],
+                            "type": 1,
+                            "prob": 0.95,
+                        },
+                        ...
                     }
 
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `pred_inst`.
+                where the instance ID is an integer corresponding to the
+                instance at the same pixel value within `pred_inst`.
 
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
