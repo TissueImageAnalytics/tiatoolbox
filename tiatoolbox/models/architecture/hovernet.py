@@ -594,7 +594,7 @@ class HoVerNet(ModelABC):
                             prob: number,
                     }
                     inst_info_dict = {
-                    [inst_uid: number]: inst_info
+                        [inst_uid: number]: inst_info
                     }
 
                 and `inst_uid` is an integer corresponds to the instance
@@ -696,7 +696,9 @@ class HoVerNet(ModelABC):
                             type: number,
                             prob: number,
                         }
-                        inst_dict = {[inst_uid: number] : inst_info}
+                        inst_dict = {
+                            [inst_uid: number] : inst_info
+                        }
 
                     where `inst_uid` is an integer corresponding to the
                     instance at the same pixel location within
