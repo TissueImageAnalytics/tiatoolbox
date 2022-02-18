@@ -19,6 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This file defines patch extraction methods for deep learning models."""
+import warnings
 from abc import ABC
 
 import numpy as np
@@ -194,7 +195,7 @@ class PatchExtractor(ABC):
             )
             self.coordinate_list = self.coordinate_list[selected_coord_idxs]
             if len(self.coordinate_list) == 0:
-                raise ValueError(
+                warnings.warn(
                     "No candidate coordinates left after "
                     "filtering by `input_mask` positions."
                 )

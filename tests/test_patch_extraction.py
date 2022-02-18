@@ -585,8 +585,8 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Test passing an empty mask
     wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
-    with pytest.raises(ValueError, match=".*No candidate coordinates left.*"):
-        patches = patchextraction.get_patch_extractor(
+    with pytest.warns(UserWarning, match=".*No candidate coordinates left.*"):
+        _ = patchextraction.get_patch_extractor(
             input_img=input_img,
             input_mask=wsi_mask,
             method_name="slidingwindow",
