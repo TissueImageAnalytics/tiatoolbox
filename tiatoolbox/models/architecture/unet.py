@@ -350,7 +350,7 @@ class UNetModel(ModelABC):
 
         """
         # transform the input using network-specific transform function
-        imgs = self.__transform(imgs)
+        imgs = self._transform(imgs)
 
         # assume output is after each down-sample resolution
         en_list = self.backbone(imgs)
