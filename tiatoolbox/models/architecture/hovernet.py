@@ -585,18 +585,17 @@ class HoVerNet(ModelABC):
                 within `pred_inst` instance information. It has
                 following form:
 
-                ```
-                inst_info = {
-                        box: number[],
-                        centroids: number[],
-                        contour: number[][],
-                        type: number,
-                        prob: number,
-                }
-                inst_info_dict = {
-                 [inst_uid: number]: inst_info
-                }
-                ```
+                .. code-block:: text
+                    inst_info = {
+                            box: number[],
+                            centroids: number[],
+                            contour: number[][],
+                            type: number,
+                            prob: number,
+                    }
+                    inst_info_dict = {
+                    [inst_uid: number]: inst_info
+                    }
 
                 and `inst_uid` is an integer corresponds to the instance
                 having the same pixel value within `pred_inst`.
@@ -689,16 +688,15 @@ class HoVerNet(ModelABC):
                     within `inst_map` instance information. It has
                     following form:
 
-                    ```
-                    inst_info = {
-                        box: number[],
-                        centroids: number[],
-                        contour: number[][],
-                        type: number,
-                        prob: number,
-                    }
-                    inst_dict = {[inst_uid: number] : inst_info}
-                    ```
+                    .. code-block:: text
+                        inst_info = {
+                            box: number[],
+                            centroids: number[],
+                            contour: number[][],
+                            type: number,
+                            prob: number,
+                        }
+                        inst_dict = {[inst_uid: number] : inst_info}
 
                     where `inst_uid` is an integer corresponding to the
                     instance at the same pixel location within
