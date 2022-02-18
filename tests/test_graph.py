@@ -10,7 +10,7 @@ from tiatoolbox.tools.graph import (
     affinity_to_edge_index,
     delaunay_adjacency,
     edge_index_to_triangles,
-    traingle_signed_area,
+    triangle_signed_area,
 )
 
 
@@ -118,34 +118,68 @@ def test_edge_index_to_triangles_invalid_input():
         edge_index_to_triangles(edge_index)
 
 
-def test_traingle_signed_area():
+def test_triangle_signed_area():
     """Test that the signed area of a triangle is correct."""
     # Triangle with positive area
     points = np.array([[0, 0], [1, 0], [0, 1]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == 0.5
 
     # Triangle with negative area
     points = np.array([[0, 0], [1, 0], [0, -1]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == -0.5
 
     # Triangle with co-linear points
     points = np.array([[0, 0], [1, 1], [2, 2]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == 0
 
     # Triangle with larger area
     points = np.array([[0, 0], [2, 0], [0, 2]])
-    area = traingle_signed_area(points)
+    area = triangle_signed_area(points)
     assert area == 2
 
 
-def test_traingle_signed_area_invalid_input():
+def test_triangle_signed_area_invalid_input():
     """Test that the signed area of a triangle with invalid input fails."""
     points = np.random.rand(3, 3)
     with pytest.raises(ValueError, match="3x2"):
-        traingle_signed_area(points)
+        triangle_signed_area(points)
+
+
+def test_edge_index_to_trainangles_single():
+    """Test edge_index_to_triangles with a simple 2XM input matrix.
+
+    Basic test case for a single triangle.
+
+    0 -- 1
+    |   /
+    | /
+    2
+    """
+    edge_index = np.array([[0, 1], [0, 2], [1, 2]]).T
+    triangles = edge_index_to_triangles(edge_index)
+    assert triangles.shape == (1, 3)
+    assert np.array_equal(triangles, np.array([[0, 1, 2]]))
+
+
+def test_edge_index_to_trainangles_many():
+    """Test edge_index_to_triangles with a simple 2XM input matrix.
+
+    Moderate test case for a few trainangles.
+
+    4 -- 3
+    |  / |
+    |/   |
+    0 -- 1
+    |   /
+    | /
+    2
+    """
+    edge_index = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [0, 4], [4, 3]]).T
+    triangles = edge_index_to_triangles(edge_index)
+    assert triangles.shape == (3, 3)
 
 
 def pytest_generate_tests(metafunc):
@@ -279,5 +313,5 @@ class TestConstructor:
             graph_constructor.visualise({})
         with pytest.raises(ValueError, match="must contain key `edge_index`"):
             graph_constructor.visualise({"x": []})
-        with pytest.raises(ValueError, match="must contain key `coords`"):
+        with pytest.raises(ValueError, match="must contain key `coordinates`"):
             graph_constructor.visualise({"x": [], "edge_index": []})
