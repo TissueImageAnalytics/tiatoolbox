@@ -225,7 +225,7 @@ def test_patch_dataset_crash(tmp_path):
     ]
     with pytest.raises(
         ValueError,
-        match=r"Can not load data of .*",
+        match="Cannot load image data from",
     ):
         _ = PatchDataset(imgs)
     _rm_dir(rcParam["TIATOOLBOX_HOME"])
@@ -255,7 +255,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 
     # test for ABC validate
     with pytest.raises(
-        ValueError, match=r".*inputs should be a list of patch coordinates.*"
+        ValueError, match=r".*`inputs` should be a list of patch coordinates.*"
     ):
         # intentionally created to check error
         # skipcq
@@ -370,7 +370,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     negative_mask = imread(mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
     imwrite("negative_mask.png", negative_mask)
-    with pytest.raises(ValueError, match=r".*No coordinate remain after tiling.*"):
+    with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
         ds = WSIPatchDataset(
             img_path=mini_wsi_svs,
             mask_path="negative_mask.png",

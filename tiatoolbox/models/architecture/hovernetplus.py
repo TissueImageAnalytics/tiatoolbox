@@ -34,12 +34,12 @@ from tiatoolbox.utils import misc
 
 
 class HoVerNetPlus(HoVerNet):
-    """Initialise HoVer-Net+.
+    """Initialise HoVerNet+.
 
-    HoVer-Net+ takes an RGB input image, and provides the option to
+    HoVerNet+ takes an RGB input image, and provides the option to
     simultaneously segment and classify the nuclei present, as well as
     semantically segment different regions or layers in the images. Note
-    the HoVer-Net+ architecture assumes an image resolution of 0.5 mpp,
+    the HoVerNet+ architecture assumes an image resolution of 0.5 mpp,
     in contrast to HoVer-Net at 0.25 mpp.
 
     """
@@ -47,7 +47,7 @@ class HoVerNetPlus(HoVerNet):
     def __init__(
         self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
-        """Initialise HoVer-Net+.
+        """Initialise HoVerNet+.
 
         Args:
             num_input_channels (int):

@@ -395,7 +395,9 @@ def get_normalizer(method_name, stain_matrix=None):
         method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]
         and stain_matrix is not None
     ):
-        raise ValueError("stain_matrix is only defined when using custom")
+        raise ValueError(
+            '`stain_matrix` is only defined when using `method_name`="custom".'
+        )
 
     if method_name.lower() == "reinhard":
         norm = ReinhardNormalizer()

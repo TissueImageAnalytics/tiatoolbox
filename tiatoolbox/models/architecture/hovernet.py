@@ -96,13 +96,13 @@ class DenseBlock(nn.Module):
     ):
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info")
+            raise ValueError("Unbalance Unit Info.")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
 
         # weights value may not match with tensorflow version
-        # due to different default intialization scheme between
+        # due to different default initialization scheme between
         # torch and tensorflow
         def get_unit_block(unit_in_ch):
             """Helper function to make it less long."""
@@ -185,7 +185,7 @@ class ResidualBlock(nn.Module):
     ):
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info")
+            raise ValueError("Unbalance Unit Info.")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -279,7 +279,7 @@ class ResidualBlock(nn.Module):
 
 
 class HoVerNet(ModelABC):
-    """HoVer-Net Architecture.
+    """HoVerNet Architecture.
 
     Args:
         num_input_channels (int):
@@ -293,7 +293,7 @@ class HoVerNet(ModelABC):
             (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
-        Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
+        Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
@@ -472,12 +472,12 @@ class HoVerNet(ModelABC):
 
         Args:
             np_map (np.ndarray):
-                An image of shape (heigh, width, 1) which contains the
-                probabilities of a pixel being a nuclei.
+                An image of shape (height, width, 1) which contains the
+                probabilities of a pixel being a nucleus.
             hv_map (np.ndarray):
-                An array of shape (heigh, width, 2) which contains the
-                horizontal (channel 0) and vertical (channel 1) of
-                possible instances exist withint the images.
+                An array of shape (height, width, 2) which contains the
+                horizontal (channel 0) and vertical (channel 1) maps of
+                possible instances within the image.
             fx (float):
                 The scale factor for processing nuclei. The scale
                 assumes an image of resolution 0.25 microns per pixel.

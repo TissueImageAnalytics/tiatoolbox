@@ -329,7 +329,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             self.inputs = self.inputs[selected]
 
         if len(self.inputs) == 0:
-            raise ValueError("No coordinate remain after tiling!")
+            raise ValueError("No patch coordinates remain after filtering.")
 
         self.patch_input_shape = patch_input_shape
         self.resolution = resolution

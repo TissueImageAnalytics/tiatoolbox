@@ -161,7 +161,7 @@ class PatchPredictor:
         self.mode = None
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either of `model` or `pretrained_model`")
+            raise ValueError("Must provide either `model` or `pretrained_model`.")
 
         if model is not None:
             self.model = model

@@ -29,8 +29,7 @@ from tiatoolbox.wsicore import wsireader
 
 
 class PatchExtractor(ABC):
-    """
-    Class for extracting and merging patches in standard and whole-slide images.
+    """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
         input_img(str, pathlib.Path, :class:`numpy.ndarray`):
@@ -242,7 +241,7 @@ class PatchExtractor(ABC):
                 WSI from which we want to extract the patches.
             coordinates_list (ndarray and np.int32):
                 Coordinates to be checked via the `func`. They must be
-                in the same resolution as requested `resolution` and
+                at the same resolution as requested `resolution` and
                 `units`. The shape of `coordinates_list` is (N, K) where
                 N is the number of coordinate sets and K is either 2 for
                 centroids or 4 for bounding boxes. When using the
@@ -250,11 +249,11 @@ class PatchExtractor(ABC):
                 `coordinates_list` to be refer to bounding boxes in
                 `[start_x, start_y, end_x, end_y]` format.
             coord_resolution (float):
-                Resolution value at which coordinates_list are
+                Resolution value at which `coordinates_list` is
                 generated.
             coord_resolution (str):
-                Resolution unit at which coordinates_list are generated.
-            mask_resolution (floar):
+                Resolution unit at which `coordinates_list` is generated.
+            mask_resolution (float):
                 Resolution at which mask array is extracted. It is
                 supposed to be in the same units as `coord_resolution`
                 i.e., `coord_units`. If not provided, a default value
@@ -309,7 +308,7 @@ class PatchExtractor(ABC):
     ):
         """Indicates which coordinate is valid for mask-based patch extraction.
 
-        Locations are validated by a custom or build-in `func`.
+        Locations are validated by a custom or default filter `func`.
 
         Args:
             mask_reader (:class:`.VirtualReader`):

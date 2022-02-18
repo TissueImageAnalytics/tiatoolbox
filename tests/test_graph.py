@@ -309,9 +309,9 @@ class TestConstructor:
     @staticmethod
     def test_visualise_invalid_input(graph_constructor):
         """Test visualising a graph with invalid input."""
-        with pytest.raises(ValueError, match="must contain x"):
+        with pytest.raises(ValueError, match="must contain key `x`"):
             graph_constructor.visualise({})
-        with pytest.raises(ValueError, match="must contain edge_index"):
+        with pytest.raises(ValueError, match="must contain key `edge_index`"):
             graph_constructor.visualise({"x": []})
-        with pytest.raises(ValueError, match="must contain coordinates"):
+        with pytest.raises(ValueError, match="must contain key `coordinates`"):
             graph_constructor.visualise({"x": [], "edge_index": []})

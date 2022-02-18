@@ -105,7 +105,7 @@ class CustomExtractor:
     def __init__(self, stain_matrix):
         self.stain_matrix = stain_matrix
         if self.stain_matrix.shape not in [(2, 3), (3, 3)]:
-            raise ValueError("Stain matrix must be either (2,3) or (3,3)")
+            raise ValueError("Stain matrix must have shape (2, 3) or (3, 3).")
 
     def get_stain_matrix(self, _):
         """Get the user defined stain matrix.

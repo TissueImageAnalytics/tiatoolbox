@@ -149,7 +149,7 @@ class IOSegmentorConfig(IOConfigABC):
             "baseline",
             "mpp",
         ]:
-            raise ValueError("Invalid resolution units.")
+            raise ValueError(f"Invalid resolution units `{units[0]}`.")
 
     @staticmethod
     def scale_to_highest(resolutions: List[dict], units: str):
