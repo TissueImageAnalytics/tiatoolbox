@@ -134,7 +134,7 @@ def running_on_travis() -> bool:
         bool: True if the current environment is on travis, False otherwise.
 
     """
-    return os.environ.get("TRAVIS") == "true" and os.environ.get("CI") == "true"
+    return "TRAVIS" in os.environ and "CI" in os.environ
 
 
 def running_on_kaggle() -> bool:
