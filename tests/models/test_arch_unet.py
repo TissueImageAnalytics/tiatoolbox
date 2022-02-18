@@ -47,13 +47,18 @@ def test_functional_unet(remote_sample, tmp_path):
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
         model = UNetModel(3, 2, encoder="resnet101", decoder_block=[3])
 
+    with pytest.raises(ValueError, match=r".*Unknown type of skip connection*"):
+        model = UNetModel(3, 2, encoder="unet", skip_type="attention")
+
     # test creation
     model = UNetModel(5, 5, encoder="resnet50")
     model = UNetModel(3, 2, encoder="resnet50")
     model = UNetModel(3, 2, encoder="unet")
+    model = UNetModel(3, 2, encoder="unet", encoder_levels=[32, 64, 128])
+    model = UNetModel(3, 1, encoder="unet", skip_type="concat")
 
     # test inference
-    read_kwargs = dict(resolution=2.0, units="mpp", coord_space="resolution")
+    read_kwargs = {"resolution": 2.0, "units": "mpp", "coord_space": "resolution"}
     batch = np.array(
         [
             # noqa
