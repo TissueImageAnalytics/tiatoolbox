@@ -59,11 +59,12 @@ class TissueMasker(ABC):
         """Create and return a tissue mask.
 
         Args:
-            images (:class:`numpy.ndarray`): RGB image, usually a WSI
-                thumbnail.
+            images (:class:`numpy.ndarray`):
+                RGB image, usually a WSI thumbnail.
 
         Returns:
-            :class:`numpy.ndarray`: Map of semantic classes spatially over the WSI
+            :class:`numpy.ndarray`:
+                Map of semantic classes spatially over the WSI
                 e.g. regions of tissue vs background.
 
         """
@@ -78,8 +79,10 @@ class TissueMasker(ABC):
         of :func:`fit` followed by :func:`transform` can be overridden.
 
         Args:
-            images (:class:`numpy.ndarray`): Image to create mask from.
-            kwargs (dict): Other key word arguments passed to fit.
+            images (:class:`numpy.ndarray`):
+                Image to create mask from.
+            **kwargs (dict):
+                Other key word arguments passed to fit.
         """
         self.fit(images, **kwargs)
         return self.transform(images)
@@ -88,7 +91,7 @@ class TissueMasker(ABC):
 class OtsuTissueMasker(TissueMasker):
     """Tissue masker which uses Otsu's method to determine background.
 
-    Otsu's method
+    Otsu's method.
 
     Examples:
         >>> from tiatoolbox.tools.tissuemask import OtsuTissueMasker
@@ -110,10 +113,11 @@ class OtsuTissueMasker(TissueMasker):
         """Find a binary threshold using Otsu's method.
 
         Args:
-            images (:class:`numpy.ndarray`): List of images with a
-              length 4 shape (N, height, width, channels).
-            masks (:class:`numpy.ndarray`): Unused here, for API
-              consistency.
+            images (:class:`numpy.ndarray`):
+                List of images with a length 4 shape (N, height, width,
+                channels).
+            masks (:class:`numpy.ndarray`):
+                Unused here, for API consistency.
 
         """
         images_shape = np.shape(images)
@@ -142,12 +146,14 @@ class OtsuTissueMasker(TissueMasker):
 
 
         Args:
-            images (:class:`numpy.ndarray`): List of images with a
-              length 4 shape (N, height, width, channels).
+            images (:class:`numpy.ndarray`):
+                List of images with a length 4 shape (N, height, width,
+                channels).
 
         Returns:
-            :class:`numpy.ndarray`: List of images with a length 4
-              shape (N, height, width, channels).
+            :class:`numpy.ndarray`:
+                List of images with a length 4 shape (N, height, width,
+                channels).
 
         """
         super().transform(images)
@@ -169,13 +175,13 @@ class MorphologicalMasker(OtsuTissueMasker):
     This method applies Otsu's threshold before a simple small region
     removal, followed by a morphological dilation. The kernel for the
     dilation is an ellipse of radius 64/mpp unless a value is given for
-    kernel_size. MPP is estimated from objective power
-    via func:`tiatoolbox.utils.misc.objective_power2mpp` if a power
-    argument is given instead of mpp to the initialiser.
+    kernel_size. MPP is estimated from objective power via
+    func:`tiatoolbox.utils.misc.objective_power2mpp` if a power argument
+    is given instead of mpp to the initialiser.
 
     For small region removal, the minimum area size defaults to the area
-    of the kernel. If no mpp, objective power, or kernel_size areguments
-    are given then the kernel defualts to a size of 1x1.
+    of the kernel. If no mpp, objective power, or kernel_size arguments
+    are given then the kernel defaults to a size of 1x1.
 
     The scale of the morphological operations can also be manually
     specified with the `kernel_size` argument, for example if the
@@ -189,7 +195,8 @@ class MorphologicalMasker(OtsuTissueMasker):
         >>> masker = MorphologicalMasker(mpp=32)
         >>> masks = masker.fit_transform([thumbnail])
 
-    An example reading a thumbnail from a file where the objective power is known:
+    An example reading a thumbnail from a file where the objective power
+    is known:
 
         >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
         >>> from tiatoolbox.utils.misc import imread
@@ -205,16 +212,18 @@ class MorphologicalMasker(OtsuTissueMasker):
         """Initialise a morphological masker.
 
         Args:
-            mpp (float or tuple(float)): The microns per-pixel of the
-              image to be masked. Used to calculate kernel_size a 64/mpp, optional.
-            power (float or tuple(float)): The objective power of the image to be
-              masked. Used to calculate kernel_size as
-              64/objective_power2mpp(power), optional.
+            mpp (float or tuple(float)):
+                The microns per-pixel of the image to be masked. Used to
+                calculate kernel_size a 64/mpp, optional.
+            power (float or tuple(float)):
+                The objective power of the image to be masked. Used to
+                calculate kernel_size as 64/objective_power2mpp(power),
+                optional.
             kernel_size (int or tuple(int)):
-              Size of elliptical kernel in x and y, optional.
+                Size of elliptical kernel in x and y, optional.
             min_region_size (int):
-              Minimum region size in pixels to consider as foreground.
-              Defaults to area of the kernel.
+                Minimum region size in pixels to consider as foreground.
+                Defaults to area of the kernel.
 
         """
         super().__init__()
@@ -261,12 +270,14 @@ class MorphologicalMasker(OtsuTissueMasker):
 
 
         Args:
-            images (:class:`numpy.ndarray`): List of images with a
-              length 4 shape (N, height, width, channels).
+            images (:class:`numpy.ndarray`):
+                List of images with a length 4 shape (N, height, width,
+                channels).
 
         Returns:
-            :class:`numpy.ndarray`: List of images with a length 4
-              shape (N, height, width, channels).
+            :class:`numpy.ndarray`:
+                List of images with a length 4 shape (N, height, width,
+                channels).
 
         """
         super().transform(images)

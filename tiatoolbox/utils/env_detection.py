@@ -23,7 +23,8 @@ This module contains methods for detecting aspects of the current
 environment. Some things which this module can detect are:
  - Whether the current environment is interactive.
  - Whether the current environment is a conda environment.
- - Whether the current environment is running on travis, kaggle, or colab.
+ - Whether the current environment is running on Travis, Kaggle, or
+   Colab.
 
 Note that these detections may not be correct 100% of the time but are
 as accurate as can be reasonably be expected depending on what is being
@@ -50,12 +51,14 @@ from tiatoolbox import logger
 def has_gpu() -> bool:
     """Detect if the runtime has GPU.
 
-    This function calls torch function underneath. To mask an environment
-    to have no GPU, you can set "CUDA_VISIBLE_DEVICES" environment variable
-    to empty before running the python script.
+    This function calls torch function underneath. To mask an
+    environment to have no GPU, you can set "CUDA_VISIBLE_DEVICES"
+    environment variable to empty before running the python script.
 
     Returns:
-        bool: True if the current runtime environment has GPU, False otherwise.
+        bool:
+            True if the current runtime environment has GPU, False
+            otherwise.
 
     """
     return torch.cuda.is_available()
@@ -86,7 +89,9 @@ def is_interactive() -> bool:
         - PyCharm Run (emulate terminal)
 
     Returns:
-        bool: True if the current environment is interactive, False otherwise.
+        bool:
+            True if the current environment is interactive, False
+            otherwise.
 
     """
     return hasattr(sys, "ps1")
@@ -103,7 +108,9 @@ def is_notebook() -> bool:
        (https://stackoverflow.com/users/2132753/gustavo-bezerra)
 
     Returns:
-        bool: True if the current environment is a Jupyter notebook, False
+        bool:
+            True if the current environment is a Jupyter notebook, False
+            otherwise.
 
     """
     try:
@@ -121,7 +128,9 @@ def in_conda_env() -> bool:
     """Detect if the current environment is a conda environment.
 
     Returns:
-        bool: True if the current environment is a conda environment, False otherwise.
+        bool:
+            True if the current environment is a conda environment,
+            False otherwise.
 
     """
     return "CONDA_DEFAULT_ENV" in os.environ and "CONDA_PREFIX" in os.environ
@@ -138,30 +147,36 @@ def running_on_travis() -> bool:
 
 
 def running_on_kaggle() -> bool:
-    """Detect if the current environment is running on kaggle.
+    """Detect if the current environment is running on Kaggle.
 
     Returns:
-        bool: True if the current environment is on kaggle, False otherwise.
+        bool:
+            True if the current environment is on Kaggle, False
+            otherwise.
 
     """
     return os.environ.get("KAGGLE_KERNEL_RUN_TYPE") == "Interactive"
 
 
 def running_on_colab() -> bool:
-    """Detect if the current environment is running on Google colab.
+    """Detect if the current environment is running on Google Colab.
 
     Returns:
-        bool: True if the current environment is on colab, False otherwise.
+        bool:
+            True if the current environment is on Colab, False
+            otherwise.
 
     """
     return "COLAB_GPU" in os.environ
 
 
 def colab_has_gpu() -> bool:
-    """Detect if the current environment is running on Google colab with a GPU.
+    """Detect if the current environment is running on Google Colab with a GPU.
 
     Returns:
-        bool: True if the current environment is on colab with a GPU, False otherwise.
+        bool:
+            True if the current environment is on colab with a GPU,
+            False otherwise.
 
     """
     return bool(int(os.environ.get("COLAB_GPU", 0)))
@@ -176,11 +191,14 @@ def has_network(
     is successful.
 
     Args:
-        hostname (str): The hostname to ping. Defaults to "one.one.one.one".
-        timeout (Number): Timeout in seconds for the fallback GET request.
+        hostname (str):
+            The hostname to ping. Defaults to "one.one.one.one".
+        timeout (Number):
+            Timeout in seconds for the fallback GET request.
 
     Returns:
-        bool: True if the current environment has a network connection,
+        bool:
+            True if the current environment has a network connection,
             False otherwise.
 
     """
@@ -202,12 +220,13 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
     installed as part of a dependency tree.
 
     Returns:
-        list of tuple of int: The versions of pixman that are installed
-            as tuples of ints.
+        list of tuple of int:
+            The versions of pixman that are installed as tuples of ints.
 
     Raises:
-        Exception: If pixman is not installed or the version
-        could not be determined.
+        Exception:
+            If pixman is not installed or the version could not be
+            determined.
 
     """
     versions = []
@@ -268,9 +287,8 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         if matches:
             versions = [version_to_tuple(match) for match in matches]
     if platform.system() == "Darwin" and shutil.which("port") and not versions:
-        # Using macports to check for pixman
-        # Also checks the platform is Darwin as macports is only available on
-        # MacOS.
+        # Using macports to check for pixman. Also checks the platform
+        # is Darwin, as macports is only available on MacOS.
         using = "port"
         port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
         port_pixman = subprocess.check_output(

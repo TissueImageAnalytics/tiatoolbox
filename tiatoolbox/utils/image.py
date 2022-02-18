@@ -52,15 +52,19 @@ def normalize_padding_size(padding):
     left/right and top/bottom.
 
     Args:
-        padding (int or tuple(int)): Padding to normalize.
+        padding (int or tuple(int)):
+            Padding to normalize.
 
     Raises:
-        ValueError: Invalid input size of padding (e.g. length 3).
-        ValueError: Invalid input shape of padding (e.g. 3 dimensional).
+        ValueError:
+            Invalid input size of padding (e.g. length 3).
+        ValueError:
+            Invalid input shape of padding (e.g. 3 dimensional).
 
     Returns:
-        :class:`numpy.ndarray`: Numpy array of length 4 with elements containing
-            padding for left, top, right, bottom.
+        :class:`numpy.ndarray`:
+            Numpy array of length 4 with elements containing padding for
+            left, top, right, bottom.
 
     """
     padding_shape = np.shape(padding)
@@ -83,13 +87,17 @@ def find_padding(read_location, read_size, image_size):
     """Find the correct padding to add when reading a region of an image.
 
     Args:
-      read_location (tuple(int)): The location of the region to read.
-      read_size (tuple(int)): The size of the location to read.
-      image_size (tuple(int)): The size of the image to read from.
+      read_location (tuple(int)):
+        The location of the region to read.
+      read_size (tuple(int)):
+        The size of the location to read.
+      image_size (tuple(int)):
+        The size of the image to read from.
 
     Returns:
-        tuple: Tuple of padding to apply in the format expect by np.pad.
-            i.e. ((before_x, after_x), (before_y, after_y)).
+        tuple:
+            Tuple of padding to apply in the format expect by `np.pad`.
+            i.e. `((before_x, after_x), (before_y, after_y))`.
 
     Examples:
         >>> from tiatoolbox.utils.image import find_padding
@@ -114,12 +122,16 @@ def find_overlap(read_location, read_size, image_size):
     """Find the part of a region which overlaps the image area.
 
     Args:
-      read_location (tuple(int)): The location of the region to read.
-      read_size (tuple(int)): The size of the location to read.
-      image_size (tuple(int)): The size of the image to read from.
+      read_location (tuple(int)):
+        The location of the region to read.
+      read_size (tuple(int)):
+        The size of the location to read.
+      image_size (tuple(int)):
+        The size of the image to read from.
 
     Returns:
-        tuple: Bounds of the overlapping region.
+        tuple:
+            Bounds of the overlapping region.
 
     Examples:
         >>> from tiatoolbox.utils.image import find_overlap
@@ -144,14 +156,16 @@ def make_bounds_size_positive(bounds):
 
     Bounds with a negative size in either direction with have the
     coordinates swapped (e.g. left and right or top and bottom swapped)
-    and a respective horizontal or vertical flip flag set in the
-    output to reflect the swaps which occurred.
+    and a respective horizontal or vertical flip flag set in the output
+    to reflect the swaps which occurred.
 
     Args:
-        bounds (:class:`numpy.ndarray`): Length 4 array of bounds.
+        bounds (:class:`numpy.ndarray`):
+            Length 4 array of bounds.
 
     Returns:
-        tuple: Three tuple containing positive bounds and flips:
+        tuple:
+            Three tuple containing positive bounds and flips:
             - :class:`numpy.ndarray` - Positive bounds
             - :py:obj:`bool` - Horizontal flip
             - :py:obj:`bool` - Vertical flip
@@ -200,20 +214,24 @@ def crop_and_pad_edges(
     formats.
 
     Args:
-        bounds (tuple(int)): Bounds of the image region.
-        max_dimensions (tuple(int)): The maximum valid x and y
-            values of the bounds, i.e. the width and height of the
-            slide.
-        region (:class:`numpy.ndarray`): The image region to be cropped
-            and padded.
-        pad_mode (str): The pad mode to use, see :func:`numpy.pad`
-            for valid pad modes. Defaults to 'constant'. If set to
-            "none" or None no padding is applied.
-        pad_constant_values (int or tuple(int)): Constant value(s)
-            to use when padding. Only used with pad_mode constant.
+        bounds (tuple(int)):
+            Bounds of the image region.
+        max_dimensions (tuple(int)):
+            The maximum valid x and y values of the bounds, i.e. the
+            width and height of the slide.
+        region (:class:`numpy.ndarray`):
+            The image region to be cropped and padded.
+        pad_mode (str):
+            The pad mode to use, see :func:`numpy.pad` for valid pad
+            modes. Defaults to 'constant'. If set to "none" or None no
+            padding is applied.
+        pad_constant_values (int or tuple(int)):
+            Constant value(s) to use when padding. Only used with
+            pad_mode constant.
 
     Returns:
-        :class:`numpy.ndarray`: The cropped and padded image.
+        :class:`numpy.ndarray`:
+            The cropped and padded image.
 
     Examples:
         >>> from tiatoolbox.utils.image import crop_and_pad_edges
@@ -280,10 +298,10 @@ def safe_padded_read(
     Safely 'read' regions, even outside of the image bounds. Accepts
     integer bounds only.
 
-    Regions outside of the source image are padded using
-    any of the pad modes available in :func:`numpy.pad`.
+    Regions outside of the source image are padded using any of the pad
+    modes available in :func:`numpy.pad`.
 
-    Note that padding of the output is not guarenteed to be
+    Note that padding of the output is not guaranteed to be
     integer/pixel aligned if using a stride != 1.
 
     .. figure:: ../images/out_of_bounds_read.png
@@ -295,32 +313,34 @@ def safe_padded_read(
         image (:class:`numpy.ndarray` or :class:`glymur.Jp2k`):
             Input image to read from.
         bounds (tuple(int)):
-            Bounds of the region in (left, top,
-            right, bottom) format.
+            Bounds of the region in (left, top, right, bottom) format.
         stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
-            interpreted as stride in x and y (axis 1 and 0 respectively).
-            Also applies to padding.
+            interpreted as stride in x and y (axis 1 and 0
+            respectively). Also applies to padding.
         padding (int or tuple(int)):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
-            Method for padding when reading areas outside of
-            the input image. Default is constant (0 padding). Possible
-            values are: constant, reflect, wrap, symmetric. See
-            :func:`numpy.pad` for more.
+            Method for padding when reading areas outside of the input
+            image. Default is constant (0 padding). Possible values are:
+            constant, reflect, wrap, symmetric. See :func:`numpy.pad`
+            for more.
         pad_constant_values (int, tuple(int)): Constant values to use
             when padding with constant pad mode. Passed to the
             :func:`numpy.pad` `constant_values` argument. Default is 0.
         pad_kwargs (dict):
-            Arbitrary keyword arguments passed through to the
-            padding function :func:`numpy.pad`.
+            Arbitrary keyword arguments passed through to the padding
+            function :func:`numpy.pad`.
 
     Returns:
-        numpy.ndarray: Padded image region.
+        numpy.ndarray:
+            Padded image region.
 
     Raises:
-        ValueError: Bounds must be integers.
-        ValueError: Padding can't be negative.
+        ValueError:
+            Bounds must be integers.
+        ValueError:
+            Padding can't be negative.
 
     Examples:
         >>> bounds = (-5, -5, 5, 5)
@@ -422,6 +442,7 @@ def sub_pixel_read(  # noqa: CCR001
     pad_kwargs=None,
 ):
     """Read and resize an image region with sub-pixel bounds.
+
     Allows for reading of image regions with sub-pixel coordinates, and
     out of bounds reads with various padding and interpolation modes.
 
@@ -429,12 +450,13 @@ def sub_pixel_read(  # noqa: CCR001
             :width: 512
             :alt: Illustration for reading a region with fractional
                 coordinates (sub-pixel).
+
     Args:
         image (:class:`numpy.ndarray`):
             Image to read from.
         bounds (tuple(float)):
-            Bounds of the image to read in
-            (left, top, right, bottom) format.
+            Bounds of the image to read in (left, top, right, bottom)
+            format.
         output_size (tuple(int)):
             The desired output size.
         padding (int or tuple(int)):
@@ -442,47 +464,49 @@ def sub_pixel_read(  # noqa: CCR001
             Defaults to 0.
         stride (int or tuple(int)):
             Stride when reading from img. Defaults to 1. A tuple is
-            interpreted as stride in x and y (axis 1 and 0 respectively).
+            interpreted as stride in x and y (axis 1 and 0
+            respectively).
         interpolation (str):
             Method of interpolation. Possible values are: nearest,
             linear, cubic, lanczos, area. Defaults to nearest.
         pad_at_baseline (bool):
-            Apply padding in terms of baseline
-            pixels. Defaults to False, meaning padding is added to the
-            output image size in pixels.
+            Apply padding in terms of baseline pixels. Defaults to
+            False, meaning padding is added to the output image size in
+            pixels.
         interpolation_padding (int):
             Padding to temporarily apply before rescaling to avoid
             border effects. Defaults to 2.
         read_func (collections.abc.Callable):
-            Custom read function. Defaults to
-            :func:`safe_padded_read`. A function which recieves
-            two positional args of the image object and a set of
-            integer bounds in addition to padding key word arguments
-            for reading a pixel-aligned bounding region. This function
-            should return a numpy array with 2 or 3 dimensions. See
-            examples for more.
+            Custom read function. Defaults to :func:`safe_padded_read`.
+            A function which recieves two positional args of the image
+            object and a set of integer bounds in addition to padding
+            key word arguments for reading a pixel-aligned bounding
+            region. This function should return a numpy array with 2 or
+            3 dimensions. See examples for more.
         pad_mode (str):
-            Method for padding when reading areas outside of
-            the input image. Default is constant (0 padding). This is
-            passed to `read_func` which defaults to
-            :func:`safe_padded_read`. See :func:`safe_padded_read`
-            for supported pad modes. Setting to "none" or None will
-            result in no padding being applied.
+            Method for padding when reading areas outside of the input
+            image. Default is constant (0 padding). This is passed to
+            `read_func` which defaults to :func:`safe_padded_read`. See
+            :func:`safe_padded_read` for supported pad modes. Setting to
+            "none" or None will result in no padding being applied.
         pad_constant_values (int, tuple(int)): Constant values to use
             when padding with constant pad mode. Passed to the
             :func:`numpy.pad` `constant_values` argument. Default is 0.
         **read_kwargs (dict):
             Arbitrary keyword arguments passed through to `read_func`.
         **pad_kwargs (dict):
-            Arbitrary keyword arguments passed through to the
-            padding function :func:`numpy.pad`.
+            Arbitrary keyword arguments passed through to the padding
+            function :func:`numpy.pad`.
 
     Returns:
-        :class:`numpy.ndimage`: Output image region.
+        :class:`numpy.ndimage`:
+            Output image region.
 
     Raises:
-        ValueError: Invalid arguments.
-        AssertionError: Internal errors, possibly due to invalid values.
+        ValueError:
+            Invalid arguments.
+        AssertionError:
+            Internal errors, possibly due to invalid values.
 
     Examples:
         >>> # Simple read

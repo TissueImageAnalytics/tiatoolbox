@@ -80,14 +80,20 @@ class TileServer(Flask):
         tile at the registered URL.
 
         Args:
-            layer (str): The layer name.
-            tile_group (int): The tile group. Currently unused.
-            z (int): The zoom level.
-            x (int): The x coordinate.
-            y (int): The y coordinate.
+            layer (str):
+                The layer name.
+            tile_group (int):
+                The tile group. Currently unused.
+            z (int):
+                The zoom level.
+            x (int):
+                The x coordinate.
+            y (int):
+                The y coordinate.
 
         Returns:
-            Response: The tile image response.
+            Response:
+                The tile image response.
 
         """
         try:

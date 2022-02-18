@@ -28,11 +28,14 @@ def slide_info(input_path, verbose=True):
     """Return WSI meta data.
 
     Args:
-        input_path (str or pathlib.Path): Path to whole slide image
-        verbose (bool): Print output, default=True
+        input_path (str or pathlib.Path):
+            Path to whole slide image.
+        verbose (bool):
+            Print output, default=True.
 
     Returns:
-        WSIMeta: containing meta information
+        WSIMeta:
+            Metadata information.
 
     Examples:
         >>> from tiatoolbox.wsicore.slide_info import slide_info

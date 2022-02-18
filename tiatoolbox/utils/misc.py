@@ -41,10 +41,12 @@ def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (str or pathlib.Path): Path to a file
+        full_path (str or pathlib.Path):
+            Path to a file.
 
     Returns:
-        tuple: Three parts of the input file path:
+        tuple:
+            Three parts of the input file path:
             - :py:obj:`pathlib.Path` - Parent directory path
             - :py:obj:`str` - File name
             - :py:obj:`list(str)` - File extensions
@@ -63,13 +65,16 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str or pathlib.Path): Path to the directory where files
+        input_path (str or pathlib.Path):
+            Path to the directory where files
             need to be searched.
-        file_types (str or tuple(str)): File types (extensions) to be searched.
+        file_types (str or tuple(str)):
+            File types (extensions) to be searched.
 
     Returns:
-        list: File paths as a python list. It has been sorted to ensure
-            same ordering across platforms.
+        list:
+            File paths as a python list. It has been sorted to ensure
+            the same ordering across platforms.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -98,8 +103,10 @@ def save_yaml(input_dict, output_path="output.yaml"):
     """Save dictionary as yaml.
 
     Args:
-        input_dict (dict): A variable of type 'dict'
-        output_path (str or pathlib.Path): Path to save the output file
+        input_dict (dict):
+            A variable of type 'dict'.
+        output_path (str or pathlib.Path):
+            Path to save the output file.
 
     Returns:
 
@@ -117,9 +124,10 @@ def imwrite(image_path, img):
     """Write numpy array to an image.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension)
-            to save image
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
+        image_path (str or pathlib.Path):
+            File path (including extension) to save image to.
+        img (:class:`numpy.ndarray`):
+            Image array of dtype uint8, MxNx3.
 
     Returns:
 
@@ -139,11 +147,14 @@ def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): File path (including extension) to read image.
-        as_uint8 (bool): Read an image in uint8 format.
+        image_path (str or pathlib.Path):
+            File path (including extension) to read image.
+        as_uint8 (bool):
+            Read an image in uint8 format.
 
     Returns:
-        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
+        :class:`numpy.ndarray`:
+            Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -168,12 +179,14 @@ def load_stain_matrix(stain_matrix_input):
     """Load a stain matrix as a numpy array.
 
     Args:
-        stain_matrix_input (ndarray or str, pathlib.Path): either a 2x3 / 3x3
-            numpy array or a path to a saved .npy / .csv file. If using a .csv file,
-            there should be no column headers provided
+        stain_matrix_input (ndarray or str, pathlib.Path):
+            Either a 2x3 or 3x3 numpy array or a path to a saved .npy /
+            .csv file. If using a .csv file, there should be no column
+            headers provided
 
     Returns:
-        stain_matrix (:class:`numpy.ndarray`): the loaded stain matrix.
+        stain_matrix (:class:`numpy.ndarray`):
+            The loaded stain matrix.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -206,11 +219,14 @@ def get_luminosity_tissue_mask(img, threshold):
     """Get tissue mask based on the luminosity of the input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
-        threshold (float): luminosity threshold used to determine tissue area.
+        img (:class:`numpy.ndarray`):
+            Input image used to obtain tissue mask.
+        threshold (float):
+            Luminosity threshold used to determine tissue area.
 
     Returns:
-        tissue_mask (:class:`numpy.ndarray`): binary tissue mask.
+        tissue_mask (:class:`numpy.ndarray`):
+            Binary tissue mask.
 
     Examples:
         >>> from tiatoolbox import utils

@@ -35,49 +35,66 @@ from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 class StainAugmentor(ImageOnlyTransform):
     """Stain augmentation using predefined stain matrix or stain extraction methods.
 
-    This stain augmentation class can be used in 'albumentations' augmentation pipelines
-    as well as stand alone. There is an option to use predefined `stain_matrix` in the
-    input which enables the `StainAugmentor` to generate augmented images faster or
-    do stain normalization to a specific target `stain_matrix`. Having stain matrix
-    beforhand, we don't need to do dictionary learning for stain matrix extraction,
-    hence,speed up the stain augmentation/normalization process which makes it more
-    appropriate for one-the-fly stain augmentation/normalization.
+    This stain augmentation class can be used in 'albumentations'
+    augmentation pipelines as well as stand alone. There is an option to
+    use predefined `stain_matrix` in the input which enables the
+    `StainAugmentor` to generate augmented images faster or do stain
+    normalization to a specific target `stain_matrix`. Having stain
+    matrix beforehand, we don't need to do dictionary learning for stain
+    matrix extraction, hence,speed up the stain
+    augmentation/normalization process which makes it more appropriate
+    for one-the-fly stain augmentation/normalization.
 
     Args:
-        method (str): The method to use for stain matrix and stain concentration
+        method (str):
+            The method to use for stain matrix and stain concentration
             extraction. Can be either "vahadane" (default) or "macenko".
-        stain_matrix (:class:`numpy.ndarray`): Pre-extracted stain matrix of a target
-            image. This can be used for both on-the-fly stain normalization and faster
-            stain augmentation. User can use tools in `tiatoolbox.tools.stainextract`
-            to extract this information. If None (default), the stain matrix will be
-            automatically extracted using the method specified by user.
-        sigma1 (float): Controls the extent of the stain concentrations scale parameter
-            (`alpha` belonging to [1-sigma1, 1+sigma1] range). Default is 0.5.
-        sigma2 (float): Controls the extent of the stain concentrations shift parameter
-            (`beta` belonging to [-sigma2, sigma2] range). Default is 0.25.
-        augment_background (bool): Specifies whether to apply stain augmentation on the
-            background or not. Default is False, which indicates that only tissue region
-            will be stain augmented.
-        always_apply (False): For use with 'albumentations' pipeline. Please refer to
+        stain_matrix (:class:`numpy.ndarray`):
+            Pre-extracted stain matrix of a target image. This can be
+            used for both on-the-fly stain normalization and faster
+            stain augmentation. User can use tools in
+            `tiatoolbox.tools.stainextract` to extract this information.
+            If None (default), the stain matrix will be automatically
+            extracted using the method specified by user.
+        sigma1 (float):
+            Controls the extent of the stain concentrations scale
+            parameter (`alpha` belonging to [1-sigma1, 1+sigma1] range).
+            Default is 0.5.
+        sigma2 (float):
+            Controls the extent of the stain concentrations shift
+            parameter (`beta` belonging to [-sigma2, sigma2] range).
+            Default is 0.25.
+        augment_background (bool):
+            Specifies whether to apply stain augmentation on the
+            background or not. Default is False, which indicates that
+            only tissue region will be stain augmented.
+        always_apply (False):
+            For use with 'albumentations' pipeline. Please refer to
             albumentations documentations for more information.
-        p (0.5): For use with 'albumentations' pipeline which specifies the probability
-            of using the augmentation in a 'albumentations' pipeline. . Please refer to
-            albumentations documentations for more information.
+        p (0.5):
+            For use with 'albumentations' pipeline which specifies the
+            probability of using the augmentation in a 'albumentations'
+            pipeline. . Please refer to albumentations documentations
+            for more information.
 
     Attributes:
-        stain_normalizer: Fitted stain normalization class.
-        stain_matrix (:class:`numpy.ndarray`): extracted stain matrix from the image
-        source_concentrations (:class:`numpy.ndarray`): extracted stain
-            concentrations from the input image.
-        n_stains (int): number of stain channels in the stain concentrations.
+        stain_normalizer:
+            Fitted stain normalization class.
+        stain_matrix (:class:`numpy.ndarray`):
+            extracted stain matrix from the image
+        source_concentrations (:class:`numpy.ndarray`):
+            Extracted stain concentrations from the input image.
+        n_stains (int):
+            Number of stain channels in the stain concentrations.
             Expected to be 2 for H&E stained images.
-        tissue_mask (:class:`numpy.ndarray`): tissue region mask in the image.
+        tissue_mask (:class:`numpy.ndarray`):
+            Tissue region mask in the image.
 
     Examples:
         >>> '''Using the stain augmentor in the 'albumentations' pipeline'''
         >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
         >>> import albumentations as A
-        >>> # Defining an examplar stain matrix as refrence
+        >>> # Defining an examplar stain matrix as reference
         >>> stain_matrix = np.array([[0.91633014, -0.20408072, -0.34451435],
         ...                [0.17669817, 0.92528011, 0.33561059]])
         >>> # Define albumentations pipeline
@@ -91,7 +108,7 @@ class StainAugmentor(ImageOnlyTransform):
 
         >>> '''Using the stain augmentor stand alone'''
         >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
-        >>> # Defining an examplar stain matrix as refrence
+        >>> # Defining an examplar stain matrix as reference
         >>> stain_matrix = np.array([[0.91633014, -0.20408072, -0.34451435],
         ...                [0.17669817, 0.92528011, 0.33561059]])
         >>> # Instantiate the stain augmentor and fit it on an image
@@ -139,16 +156,20 @@ class StainAugmentor(ImageOnlyTransform):
     def fit(self, img, threshold=0.85):
         """Fit function to extract information needed for stain augmentation.
 
-        The `fit` function uses either 'Macenko' or 'Vahadane' stain extraction methods
-        to extract stain matrix and stain concentrations of the input image to be used
-        in the `augment` function.
+        The `fit` function uses either 'Macenko' or 'Vahadane' stain
+        extraction methods to extract stain matrix and stain
+        concentrations of the input image to be used in the `augment`
+        function.
 
         Args:
-            img (:class:`numpy.ndarray`): RGB image in the form of uint8 numpy array.
-            threshold (float): The threshold value used to find tissue mask from the
-                luminosity component of the image. The found `tissue_mask` will be used
-                to filter out background area in stain augmentation process upon user
-                setting `augment_background=False`.
+            img (:class:`numpy.ndarray`):
+                RGB image in the form of uint8 numpy array.
+            threshold (float):
+                The threshold value used to find tissue mask from the
+                luminosity component of the image. The found
+                `tissue_mask` will be used to filter out background area
+                in stain augmentation process upon user setting
+                `augment_background=False`.
 
         """
         if self.stain_matrix is None:
@@ -166,13 +187,15 @@ class StainAugmentor(ImageOnlyTransform):
     def augment(self):
         """Return an augmented instance based on source stain concentrations.
 
-        Stain concentrations of the source image are altered (scaled and shifted)
-        based on the random alpha and beta paramters, and then an augmented image is
-        reconstructed from the altered concentrations.
-        All parameters needed for this part are calculated when calling fit() function.
+        Stain concentrations of the source image are altered (scaled and
+        shifted) based on the random alpha and beta paramters, and then
+        an augmented image is reconstructed from the altered
+        concentrations. All parameters needed for this part are
+        calculated when calling `fit()` function.
 
         Returns:
-            img_augmented (:class:`numpy.ndarray`): stain augmented image.
+            :class:`numpy.ndarray`:
+                Stain augmented image.
 
         """
         augmented_concentrations = copy.deepcopy(self.source_concentrations)
@@ -195,11 +218,12 @@ class StainAugmentor(ImageOnlyTransform):
         """Call the `fit` and `augment` functions to generate an stain augmented image.
 
         Args:
-            img (:class:`numpy.ndarray`): Input RGB image in the form of unit8 numpy
-                array.
+            img (:class:`numpy.ndarray`):
+                Input RGB image in the form of unit8 numpy array.
         Returns:
-            :class:`numpy.ndarray`: Stain augmented image with the same
-                size and format as the input img.
+            :class:`numpy.ndarray`:
+                Stain augmented image with the same size and format as
+                the input img.
 
         """
         self.fit(img, threshold=0.85)
