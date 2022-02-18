@@ -580,7 +580,7 @@ class HoVerNet(ModelABC):
                 probabilities of a pixel being a certain type of nuclei.
 
         Returns:
-            inst_info_dict (dict):
+            dict:
                 A dictionary containing a mapping of each instance
                 within `pred_inst` instance information. It has
                 following form:
