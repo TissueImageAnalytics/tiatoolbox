@@ -585,14 +585,18 @@ class HoVerNet(ModelABC):
                 within `pred_inst` instance information. It has
                 following form:
 
-                >>> inst_info = {
-                ...         box: number[],
-                ...         centroids: number[],
-                ...         contour: number[][],
-                ...         type: number,
-                ...         prob: number,
-                ... }
-                >>> inst_info_dict = {[inst_uid: number] : inst_info}
+                ```
+                inst_info = {
+                        box: number[],
+                        centroids: number[],
+                        contour: number[][],
+                        type: number,
+                        prob: number,
+                }
+                inst_info_dict = {
+                 [inst_uid: number]: inst_info
+                }
+                ```
 
                 and `inst_uid` is an integer corresponds to the instance
                 having the same pixel value within `pred_inst`.
