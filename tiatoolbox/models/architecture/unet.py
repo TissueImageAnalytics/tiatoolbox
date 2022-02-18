@@ -318,7 +318,7 @@ class UNetModel(ModelABC):
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
-    def __transform(self, imgs: torch.Tensor):
+    def _transform(self, imgs: torch.Tensor):
         """Transforming network input to desired format.
 
         This method is model and dataset specific, meaning that it can be replaced by
