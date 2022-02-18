@@ -690,25 +690,33 @@ class HoVerNet(ModelABC):
             tuple:
                 - :class:`numpy.ndarray` - Instance map:
                     Pixel-wise nuclear instance segmentation prediction.
-                - :class:`numpy.ndarray` - Instance dictionary:
+                - :py:obj:`dict` - Instance dictionary:
                     A dictionary containing a mapping of each instance
                     within `inst_map` instance information. It has
                     following form::
 
-                        inst_info = {
-                            box: number[],
-                            centroids: number[],
-                            contour: number[][],
-                            type: number,
-                            prob: number,
-                        }
-                        inst_dict = {
-                            [inst_uid: number] : inst_info
+                        {
+                            0: {  # Instance ID
+                                "box": [
+                                    x_min,
+                                    y_min,
+                                    x_max,
+                                    y_max,
+                                ],
+                                "centroid": [x, y],
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": 1,
+                                "prob": 0.95,
+                            },
+                            ...
                         }
 
-                    where `inst_uid` is an integer corresponding to the
-                    instance at the same pixel location within
-                    `inst_map`.
+                    where the instance ID is an integer corresponding to
+                    the instance at the same pixel location within
+                    the instance map.
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
