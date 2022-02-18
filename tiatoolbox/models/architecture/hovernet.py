@@ -583,9 +583,8 @@ class HoVerNet(ModelABC):
             dict:
                 A dictionary containing a mapping of each instance
                 within `pred_inst` instance information. It has
-                following form:
+                following form::
 
-                .. code-block:: text
                     inst_info = {
                             box: number[],
                             centroids: number[],
@@ -686,9 +685,8 @@ class HoVerNet(ModelABC):
                 - :class:`numpy.ndarray` - Instance dictionary:
                     A dictionary containing a mapping of each instance
                     within `inst_map` instance information. It has
-                    following form:
+                    following form::
 
-                    .. code-block:: text
                         inst_info = {
                             box: number[],
                             centroids: number[],
