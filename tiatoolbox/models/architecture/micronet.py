@@ -41,8 +41,6 @@ def weights_init(m):
     if "linear" in classname.lower() and m.bias is not None:
         nn.init.constant_(m.bias, 0)
 
-    return
-
 
 def resize_op(in_tensor, size):
     """Resize input tensor.
@@ -74,11 +72,24 @@ class MicroNet(nn.Module):
 
     def __init__(self, num_input_channels=3, num_class=2):
         super().__init__()
-        assert num_class >= 2
+        if num_class < 2:
+            ValueError("Number of classes should be >=2.")
         self.__num_class = num_class
         self.in_ch = num_input_channels
 
-        def group1_branch(in_ch, resized_in_ch, out_ch):
+        def group1_branch(in_ch: int, resized_in_ch: int, out_ch: int):
+            """MicroNet group1 branch.
+
+            Args:
+                in_ch (int): Number of input channels.
+                resized_in_ch (int): Number of input channels from
+                    resized input.
+                out_ch (int): Number of output channels.
+
+            Returns:
+                torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+
+            """
             module_dict = OrderedDict()
             module_dict["conv1"] = nn.Sequential(
                 nn.Conv2d(
@@ -227,7 +238,7 @@ class MicroNet(nn.Module):
                 nn.Dropout2d(p=0.5),
                 nn.Conv2d(
                     in_ch,
-                    num_class,
+                    self.__num_class,
                     kernel_size=(3, 3),
                     stride=(1, 1),
                     padding=0,
@@ -263,7 +274,7 @@ class MicroNet(nn.Module):
 
         self.apply(weights_init)
 
-    def forward(self, inputs):
+    def forward(self, inputs: torch.Tensor):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
