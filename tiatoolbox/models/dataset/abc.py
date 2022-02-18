@@ -33,14 +33,17 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
 
     Attributes:
-        return_labels (bool, False): `__getitem__` will return both the img and
-          its label. If `labels` is `None`, `None` is returned
-        preproc_func: Preprocessing function used to transform the input data. If
-          supplied, then torch.Compose will be used on the input preprocs.
-          preprocs is a list of torchvision transforms for preprocessing the
-          image. The transforms will be applied in the order that they are given in
-          the list. For more information, use the following link:
-          https://pytorch.org/vision/stable/transforms.html.
+        return_labels (bool, False):
+            `__getitem__` will return both the img and its label. If
+            `labels` is `None`, `None` is returned
+        preproc_func:
+            Preprocessing function used to transform the input data. If
+            supplied, then torch.Compose will be used on the input
+            preprocs. preprocs is a list of torchvision transforms for
+            preprocessing the image. The transforms will be applied in
+            the order that they are given in the list. For more
+            information, use the following link:
+            https://pytorch.org/vision/stable/transforms.html.
 
     """
 
@@ -58,7 +61,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
         These checks include:
             - Input is of a singular data type, such as a list of paths.
-            - If it is list of images, all images are of the same height and width
+            - If it is list of images, all images are of the same height and width.
 
         """
         if mode == "patch":
@@ -158,8 +161,9 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     def preproc_func(self, func):
         """Set the pre-processing function for this instance.
 
-        If `func=None`, the method will default to `self.preproc`. Otherwise,
-          `func` is expected to be callable and behave as follows:
+        If `func=None`, the method will default to `self.preproc`.
+        Otherwise, `func` is expected to be callable and behave as
+        follows:
         >>> transformed_img = func(img)
 
         """

@@ -165,11 +165,13 @@ class UnetEncoder(nn.Module):
         This method defines how layers are used in forward operation.
 
         Args:
-            x (torch.Tensor): Input images- the tensor is of the shape NCHW.
+            x (torch.Tensor): Input images- the tensor is of the shape
+            NCHW.
 
         Returns:
-            features (list): List of features for each down-sample
-              block. Each feature tensor is of the shape NCHW.
+            list:
+                A list of features for each down-sample block. Each
+                feature tensor is of the shape NCHW.
 
         """
         features = []
@@ -183,26 +185,35 @@ class UnetEncoder(nn.Module):
 class UNetModel(ModelABC):
     """Generate families of UNet model.
 
-    This supports different encoders. However, the decoder is relatively simple-
-    each upsampling block contains a number of vanilla convolution layers, that
-    are not customizable. Additionally, the aggregation between down-sampling and
-    up-sampling is addition, not concatenation.
+    This supports different encoders. However, the decoder is relatively
+    simple- each upsampling block contains a number of vanilla
+    convolution layers, that are not customizable. Additionally, the
+    aggregation between down-sampling and up-sampling is addition, not
+    concatenation.
 
     Args:
-        num_input_channels (int): Number of channels in input images.
-        num_output_channels (int): Number of channels in output images.
-        encoder (str): Name of the encoder, currently supports:
-          - "resnet50": The well-known ResNet50- this is not the pre-activation model.
-          - "unet": The vanilla UNet encoder where each down-sampling level
-            contains 2 blocks of Convolution-BatchNorm-ReLu.
-        decoder_block (list): A list of convolution layers. Each item is an
-          integer and denotes the layer kernel size.
-        classifier (list): A list of convolution layers before the final 1x1
-          convolution. Each item is an integer denotes the layer kernel size. The
-          default is `None` and contains only the 1x1 convolution.
+        num_input_channels (int):
+            Number of channels in input images.
+        num_output_channels (int):
+            Number of channels in output images.
+        encoder (str):
+            Name of the encoder, currently supports:
+            - "resnet50": The well-known ResNet50- this is not the
+              pre-activation model.
+            - "unet": The vanilla UNet encoder where each down-sampling
+              level contains 2 blocks of Convolution-BatchNorm-ReLu.
+        decoder_block (list):
+            A list of convolution layers. Each item is an integer and
+            denotes the layer kernel size.
+        classifier (list):
+            A list of convolution layers before the final 1x1
+            convolution. Each item is an integer denotes the layer
+            kernel size. The default is `None` and contains only the 1x1
+            convolution.
 
     Returns:
-        model (torch.nn.Module): a pytorch model.
+        torch.nn.Module:
+            A pytorch model.
 
     Examples:
         >>> # instantiate a UNet with resnet50 endcoder and
@@ -249,10 +260,13 @@ class UNetModel(ModelABC):
             This is in pre-activation style.
 
             Args:
-                kernels (list): A list of convolution layers. Each item is an
-                  integer and denotes the layer kernel size.
-                input_ch (int): Number of channels in the input images.
-                output_ch (int): Number of channels in the output images.
+                kernels (list):
+                    A list of convolution layers. Each item is an
+                    integer and denotes the layer kernel size.
+                input_ch (int):
+                    Number of channels in the input images.
+                output_ch (int):
+                    Number of channels in the output images.
 
             """
             layers = []
@@ -307,12 +321,14 @@ class UNetModel(ModelABC):
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+            imgs (torch.Tensor):#
+                Input images, the tensor is of the shape NCHW.
 
         Returns:
-            output (torch.Tensor): The inference output. The tensor is of the shape
-              NCHW. However, `height` and `width` may not be the same as the
-              input images.
+            torch.Tensor:
+                The inference output. The tensor is of the shape NCHW.
+                However, `height` and `width` may not be the same as the
+                input images.
 
         """
         # scale to 0-1
@@ -338,17 +354,21 @@ class UNetModel(ModelABC):
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch.
 
-        This contains logic for forward operation as well as
-        i/o aggregation.
+        This contains logic for forward operation as well as i/o
+        aggregation.
 
         Args:
-            model (nn.Module): PyTorch defined model.
-            batch_data (ndarray): A batch of data generated by
-              torch.utils.data.DataLoader.
-            on_gpu (bool): Whether to run inference on a GPU.
+            model (nn.Module):
+                PyTorch defined model.
+            batch_data (ndarray):
+                A batch of data generated by
+                `torch.utils.data.DataLoader`.
+            on_gpu (bool):
+                Whether to run inference on a GPU.
 
         Returns:
-            List of network output head, each output is a `ndarray`.
+            list:
+                List of network output head, each output is an `ndarray`.
 
         """
         model.eval()

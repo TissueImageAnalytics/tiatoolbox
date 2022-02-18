@@ -53,11 +53,13 @@ def _fetch_remote_sample(
     `tiatoolbox/data/remote_samples.yaml`.
 
     Args:
-        key (str): The name of the resource to fetch.
-        tmp_path (pathlib.Path): The directory to use for local caching.
-            Defaults to the OS tmp path, see `tempfile.gettempdir` for more
-            information. During testing, `tmp_path` should be set to a
-            temporary test location using `tmp_path_factory.mketmp()`.
+        key (str):
+            The name of the resource to fetch.
+        tmp_path (pathlib.Path):
+            The directory to use for local caching. Defaults to the OS
+            tmp path, see `tempfile.gettempdir` for more information.
+            During testing, `tmp_path` should be set to a temporary test
+            location using `tmp_path_factory.mketmp()`.
 
     Returns:
         pathlib.Path: The local path to the cached sample file after downloading.

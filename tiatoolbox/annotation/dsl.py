@@ -20,41 +20,41 @@
 
 """Domain specific langauge (DSL) for use in AnnotationStore queries and indexes.
 
-This modules facilitates conversion from a
-restricted subset of python to another domain specific language,
-for example SQL. This is done using `eval` and a set of provided
-globals and locals. Mainly used for construction of predicate statemtents
-for AnnotationStore queries but also used in statements for the creation
-of indexes to accelerate queries.
+This modules facilitates conversion from a restricted subset of python
+to another domain specific language, for example SQL. This is done using
+`eval` and a set of provided globals and locals. Mainly used for
+construction of predicate statemtents for AnnotationStore queries but
+also used in statements for the creation of indexes to accelerate
+queries.
 
-This conversion should be assumed to be on a best-effort basis.
-Not every expression valid in python can be evaluated to form a valid
-matching SQL expression.
-However, for many common cases this will be possible.
-For example, the simple python expression `props["class"] == 42` can be
-converted to a valid SQL (SQLite flavour) predicate which will access
-the properties JSON column and check that the value under the key of
-"class" equals 42.
+This conversion should be assumed to be on a best-effort basis. Not
+every expression valid in python can be evaluated to form a valid
+matching SQL expression. However, for many common cases this will be
+possible. For example, the simple python expression `props["class"] ==
+42` can be converted to a valid SQL (SQLite flavour) predicate which
+will access the properties JSON column and check that the value under
+the key of "class" equals 42.
 
-This predicate statement can be used as part of an SQL query and
-should be faster than post-query filtering in python or filtering
-during the query via a registered custom function callback.
+This predicate statement can be used as part of an SQL query and should
+be faster than post-query filtering in python or filtering during the
+query via a registered custom function callback.
 
-An additional benefit is that the same input string can be
-used across different backends. For example, the previous
-simple example predicate string can be evaluated as both a valid
-python expression and can be converted to an equivalent valid SQL
-expression simply by running `eval` with a different set of globals
-from this module.
+An additional benefit is that the same input string can be used across
+different backends. For example, the previous simple example predicate
+string can be evaluated as both a valid python expression and can be
+converted to an equivalent valid SQL expression simply by running `eval`
+with a different set of globals from this module.
 
 It is important to note that untrusted user input should not be
-accepted, as arbitrary code can be run during the parsing of an
-input string.
+accepted, as arbitrary code can be run during the parsing of an input
+string.
 
 Supported operators and functions:
     - Property access: `props["key"]`
-    - Math operations (`+`, `-`, `*`, `/`, `//`, `**`, `%`): `props["key"] + 1`
-    - Boolean operations (`and`, `or`, `not`): `props["key"] and props["key"] == 1`
+    - Math operations (`+`, `-`, `*`, `/`, `//`, `**`, `%`):
+      `props["key"] + 1`
+    - Boolean operations (`and`, `or`, `not`): `props["key"] and
+      props["key"] == 1`
     - Key checking: `"key" in props`
     - List indexing: `props["key"][0]`
     - List sum: `sum(props["key"])`
