@@ -411,7 +411,7 @@ class SemanticSegmentor:
         >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
-        ... [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+        [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
         >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
         >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
 
@@ -1042,7 +1042,7 @@ class SemanticSegmentor:
             >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
-            ... [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
             >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
             >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
 
@@ -1230,7 +1230,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         >>> predictor = DeepFeatureExtractor(model=model)
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
-        ... [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
+        [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
         >>> # If a network have 2 output heads, for 'A/wsi.svs',
         >>> # there will be 3 output and they are respectively stored at
         >>> # 'output/0.position.npy'   # will always be output

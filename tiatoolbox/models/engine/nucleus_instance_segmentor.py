@@ -329,7 +329,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         >>> predictor = SemanticSegmentor(model='hovernet_fast-pannuke')
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
-        ... [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
+        [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
         >>> # Each output of 'A/wsi.svs'
         >>> # will be respectively stored in 'output/0.dat', 'output/0.dat'
 
