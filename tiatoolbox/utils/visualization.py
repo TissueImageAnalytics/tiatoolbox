@@ -233,9 +233,9 @@ def overlay_probability_map(
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
     if min_val < 0.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1]")
+        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
     if min_val > 1.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1]")
+        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
     prediction_sel = prediction >= min_val
 
     overlay = img.copy()

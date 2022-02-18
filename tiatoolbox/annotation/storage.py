@@ -918,7 +918,7 @@ class AnnotationStore(ABC, MutableMapping):
             sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
             cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
             return
-        raise TypeError("Invalid type for where")
+        raise TypeError(f"Invalid type for `where` ({type(where)}).")
 
     def clear(self) -> None:
         """Remove all annotations from the store.

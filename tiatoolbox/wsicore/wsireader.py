@@ -180,12 +180,12 @@ class WSIReader:
         if mpp and isinstance(mpp, Number):
             mpp = (mpp, mpp)
         if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
-            raise TypeError("Invalid mpp: Must be an iterable of length 2")
+            raise TypeError("`mpp` must be a number or iterable of length 2.")
         self._manual_mpp = tuple(mpp) if mpp else None
 
         # Set a manual power value
         if power and not isinstance(power, Number):
-            raise TypeError("Invalid power: Power must be a number")
+            raise TypeError("`power` must be a number.")
         self._manual_power = power
 
     @property
@@ -1082,7 +1082,7 @@ class WSIReader:
         """
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
-            raise ValueError(f"Invalid tissue masking method: {method}")
+            raise ValueError(f"Invalid tissue masking method: {method}.")
         if method == "otsu":
             masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         if method == "morphological":
@@ -1960,7 +1960,7 @@ class ArrayView:
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
-        raise Exception("Unsupported axes")
+        raise Exception(f"Unsupported axes `{self.axes}`.")
 
 
 class TIFFWSIReader(WSIReader):
@@ -2020,7 +2020,7 @@ class TIFFWSIReader(WSIReader):
             return shape
         if self._axes == "SYX":
             return np.roll(shape, -1)
-        raise Exception("Unsupported axes")
+        raise Exception(f"Unsupported axes `{self._axes}`.")
 
     def _parse_svs_metadata(self) -> dict:
         """Extract SVS specific metadata.
