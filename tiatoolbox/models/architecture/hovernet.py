@@ -671,30 +671,32 @@ class HoVerNet(ModelABC):
         """Post processing script for image tiles.
 
         Args:
-            raw_maps (list(ndarray)):
+            raw_maps (list(:class:`numpy.ndarray`)):
                 A list of prediction output of each head and assumed to
                 be in the order of [np, hv, tp] (match with the output
                 of `infer_batch`).
 
         Returns:
-            inst_map (ndarray):
-                Pixel-wise nuclear instance segmentation prediction.
-            inst_dict (dict):
-                A dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has following
-                form:
+            tuple:
+                - :class:`numpy.ndarray` - Instance map:
+                    Pixel-wise nuclear instance segmentation prediction.
+                - :class:`numpy.ndarray` - Instance dictionary:
+                    A dictionary containing a mapping of each instance
+                    within `inst_map` instance information. It has
+                    following form:
 
-                >>> inst_info = {
-                ...     box: number[],
-                ...     centroids: number[],
-                ...     contour: number[][],
-                ...     type: number,
-                ...     prob: number,
-                ... }
-                >>> inst_dict = {[inst_uid: number] : inst_info}
+                    >>> inst_info = {
+                    ...     box: number[],
+                    ...     centroids: number[],
+                    ...     contour: number[][],
+                    ...     type: number,
+                    ...     prob: number,
+                    ... }
+                    >>> inst_dict = {[inst_uid: number] : inst_info}
 
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `inst_map`.
+                    where `inst_uid` is an integer corresponding to the
+                    instance at the same pixel location within
+                    `inst_map`.
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
@@ -740,10 +742,12 @@ class HoVerNet(ModelABC):
                 Whether to run inference on a GPU.
 
         Returns:
-            List of output from each head, each head is expected to
-            contain N predictions for N input patches. There are two
-            cases, one with 2 heads (Nuclei Pixels `np` and Hover `hv`)
-            or with 2 heads (`np`, `hv`, and Nuclei Types `tp`).
+            tuple:
+                Tuple of output from each head, each head is expected to
+                contain N predictions for N input patches. There are two
+                cases, one with 2 heads (Nuclei Pixels `np` and Hover
+                `hv`) or with 2 heads (`np`, `hv`, and Nuclei Types
+                `tp`).
 
         """
         patch_imgs = batch_data
