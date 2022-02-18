@@ -144,7 +144,7 @@ def rgb2od(img):
     """Convert from RGB to optical density (OD_RGB) space.
 
     ::math::
-        RGB = 255 * \exp(-1*OD_RGB)
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
         img (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
@@ -169,7 +169,7 @@ def od2rgb(od):
     """Convert from optical density (OD_RGB) to RGB.
 
     ::math::
-        RGB = 255 * \exp(-1*OD_RGB)
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
         od (:class:`numpy.ndarray`):
