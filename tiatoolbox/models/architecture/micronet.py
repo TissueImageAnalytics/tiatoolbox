@@ -27,6 +27,7 @@ import torch.nn.functional as functional
 
 
 def weights_init(m):
+    """Weights initialization."""
     classname = m.__class__.__name__
     # ! Fixed the type checking
     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
