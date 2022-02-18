@@ -126,8 +126,9 @@ class ModelABC(ABC, nn.Module):
     def postproc_func(self, func):
         """Set the pre-processing function for this instance of model.
 
-        If `func=None`, the method will default to `self.postproc`. Otherwise,
-        `func` is expected to be callable and behave as follows:
+        If `func=None`, the method will default to `self.postproc`.
+        Otherwise, `func` is expected to be callable and behave as
+        follows:
 
         Examples:
             >>> # expected usage
