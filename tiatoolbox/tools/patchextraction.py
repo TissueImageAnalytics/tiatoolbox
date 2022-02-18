@@ -546,13 +546,6 @@ class PointsPatchExtractor(PatchExtractor):
             also be a :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             NOTE: value of location $(x,y)$ is expected to be based on the specified
             `resolution` and `units` (not the `'baseline'` resolution).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
-            input mask that is used for position filtering when extracting patches
-            i.e., patches will only be extracted based on the highlighted regions in
-            the `input_mask`. `input_mask` can be either path to the mask, a numpy
-            array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
-            options. In case of 'otsu' or 'morphological', a tissue mask is generated
-            for the input_image using tiatoolbox :class:`TissueMasker` functionality.
         patch_size(int or tuple(int)): patch size tuple (width, height).
         resolution (int or float or tuple of float): resolution at
             which to read the image, default = 0. Either a single
@@ -585,7 +578,6 @@ class PointsPatchExtractor(PatchExtractor):
         self,
         input_img,
         locations_list,
-        input_mask=None,
         patch_size=(224, 224),
         resolution=0,
         units="level",
@@ -595,7 +587,6 @@ class PointsPatchExtractor(PatchExtractor):
     ):
         super().__init__(
             input_img=input_img,
-            input_mask=input_mask,
             patch_size=patch_size,
             resolution=resolution,
             units=units,
