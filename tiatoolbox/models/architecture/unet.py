@@ -24,7 +24,7 @@ from typing import List, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as nn_func
 from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
@@ -242,11 +242,9 @@ class UNetModel(ModelABC):
             decoder_block = [3, 3]
 
         if encoder == "resnet50":
-            padding = "same"
             preact = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
         elif encoder == "unet":
-            padding = "same"
             preact = False
             self.backbone = UnetEncoder(num_input_channels, encoder_levels)
 
@@ -285,7 +283,7 @@ class UNetModel(ModelABC):
                                 input_ch,
                                 output_ch,
                                 (ksize, ksize),
-                                padding=padding,
+                                padding=int((ksize - 1) // 2),  # same padding
                                 bias=False,
                             ),
                         ]
@@ -297,7 +295,7 @@ class UNetModel(ModelABC):
                                 input_ch,
                                 output_ch,
                                 (ksize, ksize),
-                                padding=padding,
+                                padding=int((ksize - 1) // 2),  # same padding
                                 bias=False,
                             ),
                             nn.BatchNorm2d(output_ch),
@@ -320,6 +318,21 @@ class UNetModel(ModelABC):
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
+    def __transform(self, imgs: torch.Tensor):
+        """Transforming network input to desired format.
+
+        This method is model and dataset specific, meaning that it can be replaced by
+        user's desired tranform function before training/inference.
+
+        Args:
+            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+
+        Returns:
+            output (torch.Tensor): The transformed input.
+
+        """
+        return imgs / 255.0
+
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
     def forward(self, imgs: torch.Tensor, *args, **kwargs):
@@ -336,8 +349,8 @@ class UNetModel(ModelABC):
               input images.
 
         """
-        # scale to 0-1
-        imgs = imgs / 255.0
+        # transform the input using network-specific transform function
+        imgs = self.__transform(imgs)
 
         # assume output is after each down-sample resolution
         en_list = self.backbone(imgs)
@@ -350,10 +363,11 @@ class UNetModel(ModelABC):
             # coming from the encoder, then run it through the decoder
             # block
             y = en_list[-idx]
+            x_ = self.upsample2x(x)
             if self.skip_type == "add":
-                x = self.upsample2x(x) + y
+                x = x_ + y
             else:
-                x = torch.cat([self.upsample2x(x), y], dim=1)
+                x = torch.cat([x_, y], dim=1)
             x = self.uplist[idx - 1](x)
         return self.clf(x)
 
@@ -387,8 +401,8 @@ class UNetModel(ModelABC):
         crop_shape = [h // 2, w // 2]
         with torch.inference_mode():
             logits = model(imgs)
-            probs = F.softmax(logits, 1)
-            probs = F.interpolate(
+            probs = nn_func.softmax(logits, 1)
+            probs = nn_func.interpolate(
                 probs, scale_factor=2, mode="bilinear", align_corners=False
             )
             probs = centre_crop(probs, crop_shape)
