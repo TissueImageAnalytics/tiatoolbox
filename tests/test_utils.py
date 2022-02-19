@@ -1255,7 +1255,11 @@ def test_detect_travis():
 
     Simply check it passes without exception.
     """
-    assert utils.env_detection.running_on_travis()
+    on_travis = utils.env_detection.running_on_travis()
+    if "ON_TRAVIS" in os.environ:
+        assert on_travis
+    else:
+        assert not on_travis
 
 
 def test_detect_gpu():
