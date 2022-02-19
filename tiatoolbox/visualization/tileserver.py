@@ -35,7 +35,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 class TileServer(Flask):
     """A Flask app to display Zoomify tiles as a slippery map.
 
-    Attributes:
+    Args:
         title:
             The title of the tile server, displayed in the browser as
             the page title.
