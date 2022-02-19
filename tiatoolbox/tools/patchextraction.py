@@ -504,42 +504,51 @@ class SlidingWindowPatchExtractor(PatchExtractor):
     """Extract patches using sliding fixed sized window for images and labels.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
-            patch extraction.
-        patch_size(int or tuple(int)): patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
-            input mask that is used for position filtering when extracting patches
-            i.e., patches will only be extracted based on the highlighted regions in
-            the `input_mask`. `input_mask` can be either path to the mask, a numpy
-            array, :class:`VirtualWSIReader`, or one of 'otsu' and 'morphological'
-            options. In case of 'otsu' or 'morphological', a tissue mask is generated
-            for the input_image using tiatoolbox :class:`TissueMasker` functionality.
-        resolution (int or float or tuple of float): resolution at
-            which to read the image, default = 0. Either a single
-            number or a sequence of two numbers for x and y are
-            valid. This value is in terms of the corresponding
-            units. For example: resolution=0.5 and units="mpp" will
-            read the slide at 0.5 microns per-pixel, and
-            resolution=3, units="level" will read at level at
-            pyramid level / resolution layer 3.
-        units (str): the units of resolution, default = "level".
-            Supported units are: microns per pixel (mpp), objective
-            power (power), pyramid / resolution level (level),
-            Only pyramid / resolution levels (level) embedded in
-            the whole slide image are supported.
-        pad_mode (str): Method for padding at edges of the WSI. Default
-            to 'constant'. See :func:`numpy.pad` for more information.
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+            Input image for patch extraction.
+        patch_size(int or tuple(int)):
+            Patch size tuple (width, height).
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or
+        :obj:`WSIReader`):
+            Input mask that is used for position filtering when
+            extracting patches i.e., patches will only be extracted
+            based on the highlighted regions in the `input_mask`.
+            `input_mask` can be either path to the mask, a numpy array,
+            :class:`VirtualWSIReader`, or one of 'otsu' and
+            'morphological' options. In case of 'otsu' or
+            'morphological', a tissue mask is generated for the
+            input_image using tiatoolbox :class:`TissueMasker`
+            functionality.
+        resolution (int or float or tuple of float):
+            Resolution at which to read the image, default = 0. Either a
+            single number or a sequence of two numbers for x and y are
+            valid. This value is in terms of the corresponding units.
+            For example: resolution=0.5 and units="mpp" will read the
+            slide at 0.5 microns per-pixel, and resolution=3,
+            units="level" will read at level at pyramid level /
+            resolution layer 3.
+        units (str):
+            The units of resolution, default = "level". Supported units
+            are: microns per pixel (mpp), objective power (power),
+            pyramid / resolution level (level), Only pyramid /
+            resolution levels (level) embedded in the whole slide image
+            are supported.
+        pad_mode (str):
+            Method for padding at edges of the WSI. Default to
+            'constant'. See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
             constant padding. Defaults to 0. See :func:`numpy.pad` for
             more.
-        within_bound (bool): whether to extract patches beyond the
-            input_image size limits. If False, extracted patches at margins
-            will be padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their bounds
-            exceed the mother image dimensions would be neglected.
-            Default is False.
-        stride(int or tuple(int)): stride in (x, y) direction for patch extraction,
-            default = `patch_size`
+        within_bound (bool):
+            Whether to extract patches beyond the input_image size
+            limits. If False, extracted patches at margins will be
+            padded appropriately based on `pad_constant_values` and
+            `pad_mode`. If False, patches at the margin that their
+            bounds exceed the mother image dimensions would be
+            neglected. Default is False.
+        stride(int or tuple(int)):
+            Stride in (x, y) direction for patch extraction, default =
+            `patch_size`.
 
     Attributes:
         stride(tuple(int)):
@@ -584,38 +593,44 @@ class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`): input image for
-            patch extraction.
-        locations_list(ndarray, pd.DataFrame, str, pathlib.Path): contains location
-            and/or type of patch. This can be path to csv, npy or json files. Input can
-            also be a :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
-            NOTE: value of location $(x,y)$ is expected to be based on the specified
-            `resolution` and `units` (not the `'baseline'` resolution).
-        patch_size(int or tuple(int)): patch size tuple (width, height).
-        resolution (int or float or tuple of float): resolution at
-            which to read the image, default = 0. Either a single
-            number or a sequence of two numbers for x and y are
-            valid. This value is in terms of the corresponding
-            units. For example: resolution=0.5 and units="mpp" will
-            read the slide at 0.5 microns per-pixel, and
-            resolution=3, units="level" will read at level at
-            pyramid level / resolution layer 3.
-        units (str): the units of resolution, default = "level".
-            Supported units are: microns per pixel (mpp), objective
-            power (power), pyramid / resolution level (level),
-            Only pyramid / resolution levels (level) embedded in
-            the whole slide image are supported.
-        pad_mode (str): Method for padding at edges of the WSI. Default
-            to 'constant'. See :func:`numpy.pad` for more information.
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+            Input image for patch extraction.
+        locations_list(ndarray, pd.DataFrame, str, pathlib.Path):
+            Contains location and/or type of patch. This can be path to
+            csv, npy or json files. Input can also be a
+            :class:`numpy.ndarray` or :class:`pandas.DataFrame`. NOTE:
+            value of location $(x,y)$ is expected to be based on the
+            specified `resolution` and `units` (not the `'baseline'`
+            resolution).
+        patch_size(int or tuple(int)):
+            Patch size tuple (width, height).
+        resolution (int or float or tuple of float):
+            Resolution at which to read the image, default = 0. Either a
+            single number or a sequence of two numbers for x and y are
+            valid. This value is in terms of the corresponding units.
+            For example: resolution=0.5 and units="mpp" will read the
+            slide at 0.5 microns per-pixel, and resolution=3,
+            units="level" will read at level at pyramid level /
+            resolution layer 3.
+        units (str):
+            The units of resolution, default = "level". Supported units
+            are: microns per pixel (mpp), objective power (power),
+            pyramid / resolution level (level), Only pyramid /
+            resolution levels (level) embedded in the whole slide image
+            are supported.
+        pad_mode (str):
+            Method for padding at edges of the WSI. Default to
+            'constant'. See :func:`numpy.pad` for more information.
         pad_constant_values (int or tuple(int)): Values to use with
             constant padding. Defaults to 0. See :func:`numpy.pad` for
             more.
-        within_bound (bool): whether to extract patches beyond the
-            input_image size limits. If False, extracted patches at margins
-            will be padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their bounds
-            exceed the mother image dimensions would be neglected.
-            Default is False.
+        within_bound (bool):
+            Whether to extract patches beyond the input_image size
+            limits. If False, extracted patches at margins will be
+            padded appropriately based on `pad_constant_values` and
+            `pad_mode`. If False, patches at the margin that their
+            bounds exceed the mother image dimensions would be
+            neglected. Default is False.
 
     """
 
