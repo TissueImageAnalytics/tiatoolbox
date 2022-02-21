@@ -1256,7 +1256,7 @@ def test_detect_travis():
     Simply check it passes without exception.
     """
     on_travis = utils.env_detection.running_on_travis()
-    if "ON_TRAVIS" in os.environ:
+    if os.getusername()=="travis":
         assert on_travis
     else:
         assert not on_travis
