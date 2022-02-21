@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import pwd
 import random
 import shutil
 from pathlib import Path
@@ -1256,7 +1257,7 @@ def test_detect_travis():
     Simply check it passes without exception.
     """
     on_travis = utils.env_detection.running_on_travis()
-    if os.getusername()=="travis":
+    if pwd.getpwuid(os.getuid())[0] == "travis":
         assert on_travis
     else:
         assert not on_travis
