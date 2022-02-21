@@ -2,7 +2,6 @@
 
 import hashlib
 import os
-import pwd
 import random
 import shutil
 from pathlib import Path
@@ -1251,11 +1250,16 @@ def test_detect_pixman():
         pass
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="Test only designed for travis online Linux platform."
+)
 def test_detect_travis():
     """Test detection of the travis environment.
 
     Simply check it passes without exception.
     """
+    import pwd
+
     on_travis = utils.env_detection.running_on_travis()
     if pwd.getpwuid(os.getuid())[0] == "travis":
         assert on_travis
