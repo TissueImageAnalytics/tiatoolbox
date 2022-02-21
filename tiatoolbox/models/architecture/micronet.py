@@ -337,13 +337,13 @@ class MicroNet(ModelABC):
 
         self.apply(weights_init)
 
-    def forward(self, inputs: torch.Tensor):
+    def forward(self, imgs: torch.Tensor):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            inputs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            imgs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
 
         Returns:
             list: A list of main and auxiliary outputs.
@@ -421,23 +421,23 @@ class MicroNet(ModelABC):
 
         b1 = group1_branch(
             self.layer["b1"],
-            inputs,
-            functional.interpolate(inputs, size=(128, 128), mode="bicubic"),
+            imgs,
+            functional.interpolate(imgs, size=(128, 128), mode="bicubic"),
         )
         b2 = group1_branch(
             self.layer["b2"],
             b1,
-            functional.interpolate(inputs, size=(64, 64), mode="bicubic"),
+            functional.interpolate(imgs, size=(64, 64), mode="bicubic"),
         )
         b3 = group1_branch(
             self.layer["b3"],
             b2,
-            functional.interpolate(inputs, size=(32, 32), mode="bicubic"),
+            functional.interpolate(imgs, size=(32, 32), mode="bicubic"),
         )
         b4 = group1_branch(
             self.layer["b4"],
             b3,
-            functional.interpolate(inputs, size=(16, 16), mode="bicubic"),
+            functional.interpolate(imgs, size=(16, 16), mode="bicubic"),
         )
         b5 = group2_branch(self.layer["b5"], b4)
         b6 = group3_branch(self.layer["b6"], b5, b4)
@@ -458,7 +458,17 @@ class MicroNet(ModelABC):
         return [out, aux1, aux2, aux3]
 
     @staticmethod
-    def postproc(image):
+    def postproc(image: np.ndarray):
+        """Post-processing script for MicroNet.
+
+        Args:
+            image (ndarray): input image of type numpy array.
+
+        Returns:
+            inst_map (ndarray): pixel-wise nuclear instance segmentation
+                prediction.
+
+        """
         pred_bin = np.argmax(image, axis=2)
         pred_inst = ndimage.measurements.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
@@ -471,44 +481,31 @@ class MicroNet(ModelABC):
         return canvas
 
     @staticmethod
-    def preproc(image):
-        """
-        This function creates a custom per image standardization
-        transform which is used for data augmentation.
-        params:
-            - image (torch Tensor): Image Tensor that needs to be standardized.
+    def preproc(image: np.ndarray):
+        """Preprocessing function for MicroNet.
 
-        returns:
-            - image (torch Tensor): Image Tensor post standardization.
+        Performs per image standardization.
+
+        Args:
+            image (ndarray): input image of type numpy array.
+
+        Returns:
+            :class:`numpy.ndarray`: Pre-processed numpy array.
+
         """
         image = np.transpose(image, axes=(2, 0, 1))
         image = image / 255.0
         image = torch.from_numpy(image)
 
-        # get original data type
-        orig_dtype = image.dtype
-
-        # compute image mean
         image_mean = torch.mean(image, dim=(-1, -2, -3))
-
-        # compute image standard deviation
         stddev = torch.std(image, dim=(-1, -2, -3))
-
-        # compute number of pixels
         num_pixels = torch.tensor(torch.numel(image), dtype=torch.float32)
-
-        # compute minimum standard deviation
         min_stddev = torch.rsqrt(num_pixels)
-
-        # compute adjusted standard deviation
         adjusted_stddev = torch.max(stddev, min_stddev)
 
-        # normalize image
         image -= image_mean
         image = torch.div(image, adjusted_stddev)
 
-        # make sure that image output dtype  == input dtype
-        assert image.dtype == orig_dtype
         return np.transpose(image.numpy(), axes=(1, 2, 0))
 
     @staticmethod
