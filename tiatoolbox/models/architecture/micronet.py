@@ -337,7 +337,7 @@ class MicroNet(ModelABC):
 
         self.apply(weights_init)
 
-    def forward(self, imgs: torch.Tensor):
+    def forward(self, imgs: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
