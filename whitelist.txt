@@ -88,3 +88,6 @@ zarr
 Peter
 Byfield
 Peter554
+HoVerNet
+Kumar
+Ver
