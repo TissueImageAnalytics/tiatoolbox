@@ -17,7 +17,13 @@
 # The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
+"""Defines MicroNet architecture.
 
+Raza, SEA et al., “Micro-Net: A unified model for segmentation of
+various objects in microscopy images,” Medical Image Analysis,
+Dec. 2018, vol. 52, p. 160–173.
+
+"""
 
 from collections import OrderedDict
 
@@ -27,7 +33,13 @@ import torch.nn.functional as functional
 
 
 def weights_init(m):
-    """Weights initialization."""
+    """Initializes weights and biases for a torch Module e.g., Conv2d.
+
+    Args:
+        m (torch.nn.Module): :class:`torch.nn.Module` with
+            weights and biases to initialize.
+
+    """
     classname = m.__class__.__name__
     # ! Fixed the type checking
     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -143,6 +155,16 @@ class MicroNet(nn.Module):
             return nn.ModuleDict(module_dict)
 
         def group2_branch(in_ch, out_ch):
+            """MicroNet group2 branch.
+
+            Args:
+                in_ch (int): Number of input channels.
+                out_ch (int): Number of output channels.
+
+            Returns:
+                torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+
+            """
             module_dict = OrderedDict()
             module_dict["conv1"] = nn.Sequential(
                 nn.Conv2d(
@@ -169,6 +191,17 @@ class MicroNet(nn.Module):
             return nn.ModuleDict(module_dict)
 
         def group3_branch(in_ch, skip, out_ch):
+            """MicroNet group3 branch.
+
+            Args:
+                in_ch (int): Number of input channels.
+                skip (int): Number of channels for the skip connection.
+                out_ch (int): Number of output channels.
+
+            Returns:
+                torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+
+            """
             module_dict = OrderedDict()
             module_dict["up1"] = nn.ConvTranspose2d(
                 in_ch, out_ch, kernel_size=(2, 2), stride=(2, 2)
@@ -217,6 +250,20 @@ class MicroNet(nn.Module):
             return nn.ModuleDict(module_dict)
 
         def group4_branch(in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2)):
+            """MicroNet group4 branch.
+
+            Args:
+                in_ch (int): Number of input channels.
+                out_ch (int): Number of output channels.
+                up_kernel (tuple of int): Kernel size for
+                    :class:`torch.nn.ConvTranspose2d`.
+                up_strides (tuple of int): Stride size for
+                    :class:`torch.nn.ConvTranspose2d`.
+
+            Returns:
+                torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+
+            """
             module_dict = OrderedDict()
             module_dict["up1"] = nn.ConvTranspose2d(
                 in_ch, out_ch, kernel_size=up_kernel, stride=up_strides
@@ -235,6 +282,15 @@ class MicroNet(nn.Module):
             return nn.ModuleDict(module_dict)
 
         def out_branch(in_ch):
+            """MicroNet group2 branch.
+
+            Args:
+                in_ch (int): Number of input channels.
+
+            Returns:
+                torch.nn.Sequential: An output of type :class:`torch.nn.Sequential`
+
+            """
             return nn.Sequential(
                 nn.Dropout2d(p=0.5),
                 nn.Conv2d(
@@ -284,12 +340,23 @@ class MicroNet(nn.Module):
             inputs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
 
         Returns:
-            output (dict): A dictionary containing the inference output.
-                The expected format os {decoder_name: prediction}.
+            list: A list of main and auxiliary outputs.
+                The expected format is [main_output, aux1, aux2, aux3].
 
         """
 
         def group1_branch(layer, in_tensor, resized_feat):
+            """Defines group 1 connections.
+
+            Args:
+                layer (torch.nn.Module): Network layer.
+                in_tensor (torch.Tensor): Input tensor.
+                resized_feat (torch.Tensor): Resized input.
+
+            Returns:
+                torch.Tensor: Output of group 1 layer.
+
+            """
             a = layer["conv1"](in_tensor)
             a = layer["conv2"](a)
             a = layer["pool"](a)
@@ -298,10 +365,31 @@ class MicroNet(nn.Module):
             return torch.cat(tensors=(a, b), dim=1)
 
         def group2_branch(layer, in_tensor):
+            """Defines group 1 connections.
+
+            Args:
+                layer (torch.nn.Module): Network layer.
+                in_tensor (torch.Tensor): Input tensor.
+
+            Returns:
+                torch.Tensor: Output of group 1 layer.
+
+            """
             a = layer["conv1"](in_tensor)
             return layer["conv2"](a)
 
         def group3_branch(layer, main_feat, skip):
+            """Defines group 1 connections.
+
+            Args:
+                layer (torch.nn.Module): Network layer.
+                main_feat (torch.Tensor): Input tensor.
+                skip (torch.Tensor): Skip connection.
+
+            Returns:
+                torch.Tensor: Output of group 1 layer.
+
+            """
             a = layer["up1"](main_feat)
             a = layer["conv1"](a)
             a = layer["conv2"](a)
@@ -312,6 +400,16 @@ class MicroNet(nn.Module):
             return layer["conv3"](b)
 
         def group4_branch(layer, in_tensor):
+            """Defines group 1 connections.
+
+            Args:
+                layer (torch.nn.Module): Network layer.
+                in_tensor (torch.Tensor): Input tensor.
+
+            Returns:
+                torch.Tensor: Output of group 1 layer.
+
+            """
             a = layer["up1"](in_tensor)
             return layer["conv1"](a)
 
