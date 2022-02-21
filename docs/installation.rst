@@ -134,7 +134,7 @@ Once you have a copy of the source, you can install it with:
 Using Docker
 ==================
 
-If you would like to run TIA toolbox in an isolated environment, you can use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_ github repository. Please report any issues related to docker image in the `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>` repository. 
+To run TIA toolbox in an isolated environment, use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our github repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_. Please report any issues related to the docker image in the repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`. 
 
 After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desktop), you can use our TIA toolbox image in 3 different ways.
 
@@ -146,7 +146,7 @@ Use the pre-built docker image
 
     $ docker pull ghcr.io/tissueimageanalytics/tiatoolbox:latest
 
-2. Use the image as a base image in a Dockerfile
+2. Use the pre-built Docker image as a base image in a Dockerfile
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
