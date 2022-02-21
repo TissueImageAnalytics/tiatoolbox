@@ -97,7 +97,7 @@ class MicroNet(ModelABC):
         self.in_ch = num_input_channels
 
         def group1_branch(in_ch: int, resized_in_ch: int, out_ch: int):
-            """MicroNet group1 branch.
+            """Group1 branch for MicroNet.
 
             Args:
                 in_ch (int): Number of input channels.
@@ -161,7 +161,7 @@ class MicroNet(ModelABC):
             return nn.ModuleDict(module_dict)
 
         def group2_branch(in_ch, out_ch):
-            """MicroNet group2 branch.
+            """Group2 branch for MicroNet.
 
             Args:
                 in_ch (int): Number of input channels.
@@ -197,7 +197,7 @@ class MicroNet(ModelABC):
             return nn.ModuleDict(module_dict)
 
         def group3_branch(in_ch, skip, out_ch):
-            """MicroNet group3 branch.
+            """Group3 branch for MicroNet.
 
             Args:
                 in_ch (int): Number of input channels.
@@ -256,7 +256,7 @@ class MicroNet(ModelABC):
             return nn.ModuleDict(module_dict)
 
         def group4_branch(in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2)):
-            """MicroNet group4 branch.
+            """Group4 branch for MicroNet.
 
             Args:
                 in_ch (int): Number of input channels.
@@ -288,7 +288,7 @@ class MicroNet(ModelABC):
             return nn.ModuleDict(module_dict)
 
         def out_branch(in_ch):
-            """MicroNet group2 branch.
+            """Group5 branch for MicroNet.
 
             Args:
                 in_ch (int): Number of input channels.
