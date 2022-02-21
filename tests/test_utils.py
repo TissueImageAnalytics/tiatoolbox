@@ -1250,12 +1250,21 @@ def test_detect_pixman():
         pass
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="Test only designed for travis online Linux platform."
+)
 def test_detect_travis():
     """Test detection of the travis environment.
 
     Simply check it passes without exception.
     """
-    _ = utils.env_detection.running_on_travis()
+    import pwd
+
+    on_travis = utils.env_detection.running_on_travis()
+    if pwd.getpwuid(os.getuid())[0] == "travis":
+        assert on_travis
+    else:
+        assert not on_travis
 
 
 def test_detect_gpu():
