@@ -20,10 +20,6 @@ install:
     - source "$HOME/miniconda/etc/profile.d/conda.sh"
     - pip install -U tox-travis
 
-env:
-  global:
-    - ON_TRAVIS=true
-
 # Command to run tests, e.g. python setup.py test
 script:
     - set -e # Exit on first failure (errexit)
