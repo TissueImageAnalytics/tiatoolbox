@@ -189,7 +189,8 @@ class AnnotationStore(ABC, MutableMapping):
                 The second geometry.
 
         Returns:
-            bool: True if the predicate holds.
+            bool:
+                True if the predicate holds.
 
         """
         return getattr(a, name)(b)
@@ -217,7 +218,8 @@ class AnnotationStore(ABC, MutableMapping):
             fp(Path or str or IO): The file path or file handle.
 
         Returns:
-            AnnotationStoreABC: An instance of an annotation store.
+            AnnotationStoreABC:
+                An instance of an annotation store.
 
         """
 
@@ -225,9 +227,9 @@ class AnnotationStore(ABC, MutableMapping):
     def serialise_geometry(geometry: Geometry) -> Union[str, bytes]:
         """Serialise a geometry to a string or bytes.
 
-        This defaults to well-known text (WKT) but may be overridden to any
-        other format which a Shapely geometry could be serialised to e.g.
-        well-known binary (WKB) or geoJSON etc.
+        This defaults to well-known text (WKT) but may be overridden to
+        any other format which a Shapely geometry could be serialised to
+        e.g. well-known binary (WKB) or geoJSON etc.
 
         Args:
             geometry(Geometry):
@@ -244,9 +246,9 @@ class AnnotationStore(ABC, MutableMapping):
     def deserialise_geometry(data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes.
 
-        This default implementation will deserialise bytes as well-known binary
-        (WKB) and strings as well-known text (WKT). This can be overridden to
-        deserialise other formats such as geoJSON etc.
+        This default implementation will deserialise bytes as well-known
+        binary (WKB) and strings as well-known text (WKT). This can be
+        overridden to deserialise other formats such as geoJSON etc.
 
         Args:
             data(bytes or str):
@@ -279,7 +281,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Serialise and return a copy of store as a string or bytes.
 
         Returns:
-            str or bytes: The serialised store.
+            str or bytes:
+                The serialised store.
 
         """
 
@@ -299,7 +302,8 @@ class AnnotationStore(ABC, MutableMapping):
                 instead.
 
         Returns:
-            str: The unique key of the newly inserted annotation.
+            str:
+                The unique key of the newly inserted annotation.
 
         """
         keys = key if key is None else [key]
@@ -438,7 +442,8 @@ class AnnotationStore(ABC, MutableMapping):
                 The value to return if the key is not found.
 
         Returns:
-            The annotation or default if the key is not found.
+            Annotation:
+                The annotation or default if the key is not found.
 
         """
         if not isinstance(default, Annotation):
@@ -457,11 +462,12 @@ class AnnotationStore(ABC, MutableMapping):
         """
         self.remove(key)
 
-    def keys(self) -> Iterable[int]:
+    def keys(self) -> Iterable[str]:
         """Return an iterable (usually generator) of all keys in the store.
 
         Returns:
-            iter: An iterable of keys.
+            Iterable[str]:
+                An iterable of keys.
 
         """
         for key, _ in self.items():
@@ -471,19 +477,21 @@ class AnnotationStore(ABC, MutableMapping):
         """Return an iterable of all annotation in the store.
 
         Returns:
-            iter: An iterable of annotations.
+            Iterable[Annotation]:
+                An iterable of annotations.
 
         """
         for _, annotation in self.items():
             yield annotation
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterable[str]:
         """Return an iterable of keys in the store.
 
         An alias of `keys`.
 
         Returns:
-            iter: An iterable of keys.
+            Iterable[str]:
+                An iterable of keys.
 
         """
         yield from self.keys()
@@ -506,7 +514,8 @@ class AnnotationStore(ABC, MutableMapping):
                 properties on which to evaluate the predicate.
 
         Returns:
-            bool: Returns true if the predicate holds.
+            bool:
+                Returns True if the predicate holds.
 
         """
         if predicate is None:
@@ -562,9 +571,8 @@ class AnnotationStore(ABC, MutableMapping):
                 the `shapely documentation on binary predicates`__.
 
             Returns:
-                list: A list of 2-tuples containing:
-                - geometry: The annotation Shapely geometry object.
-                - properties: The properties JSON as a dictionary.
+                list:
+                    A list of Annotation objects.
 
             .. _BP:
                 | https://shapely.readthedocs.io/en/stable/
@@ -637,9 +645,8 @@ class AnnotationStore(ABC, MutableMapping):
                 the `shapely documentation on binary predicates`__.
 
             Returns:
-                list: A list of 2-tuples containing:
-                - geometry: The annotation Shapely geometry object.
-                - properties: The properties JSON as a dictionary.
+                list:
+                    A list of Annotation objects.
 
             .. _BP:
                 | https://shapely.readthedocs.io/en/stable/
@@ -671,7 +678,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Return annotations as a list of geoJSON features.
 
         Returns:
-            list: List of features as dictionaries.
+            list:
+                List of features as dictionaries.
 
         """
         for a in self.values():
@@ -681,7 +689,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Return annotations as a dictionary in geoJSON format.
 
         Returns:
-            dict: Dictionary of annotations in geoJSON format.
+            dict:
+                Dictionary of annotations in geoJSON format.
 
         """
         return {
@@ -706,7 +715,8 @@ class AnnotationStore(ABC, MutableMapping):
                 The function to call when fp is None.
 
         Returns:
-            Any: The result of dump. Depends on the provided functions.
+            Any:
+                The result of dump. Depends on the provided functions.
 
         """
         if fp is not None:
@@ -757,11 +767,14 @@ class AnnotationStore(ABC, MutableMapping):
         - https://tools.ietf.org/html/rfc7946
 
         Args:
-             fp (IO): A file-like object supporting `.read`. Defaults to
-                None which returns geoJSON as a string.
+             fp (IO):
+                A file-like object supporting `.read`. Defaults to None
+                which returns geoJSON as a string.
 
         Returns:
-            None or str: None if writing to file or the geoJSON string.
+            Optional[str]:
+                None if writing to file or the geoJSON string if `fp` is
+                None.
 
         """
         return self._dump_cases(
@@ -801,7 +814,9 @@ class AnnotationStore(ABC, MutableMapping):
                 None which returns geoJSON as a string.
 
         Returns:
-            None or str: None if writing to file or the geoJSON string.
+            Optional[str]:
+                None if writing to file or the geoJSON string if`fp` is
+                None.
 
         """
         string_lines_generator = (
@@ -840,7 +855,8 @@ class AnnotationStore(ABC, MutableMapping):
             fp (IO): A file-like object supporting `.read`.
 
         Returns:
-            AnnotationStore: The loaded annotations.
+            AnnotationStore:
+                The loaded annotations.
 
         """
         store = cls()
@@ -1098,7 +1114,8 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry to be serialised.
 
         Returns:
-            bytes or str: The serialised geometry.
+            bytes or str:
+                The serialised geometry.
 
         """
         data = geometry.wkb
@@ -1125,7 +1142,8 @@ class SQLiteStore(AnnotationStore):
                 The Y coordinate of the centroid/representative point.
 
         Returns:
-            Geometry: The Shapely geometry.
+            Geometry:
+                The Shapely geometry.
 
         """
         if data is None:
@@ -1140,7 +1158,8 @@ class SQLiteStore(AnnotationStore):
                 The serialised representation of a Shapely geometry.
 
         Returns:
-            Geometry: The deserialised Shapely geometry.
+            Geometry:
+                The deserialised Shapely geometry.
 
         """
         if self.metadata["compression"] == "zlib":
@@ -1293,7 +1312,8 @@ class SQLiteStore(AnnotationStore):
                 during the query.
 
         Returns:
-            sqlite3.Cursor: A database cursor for the current query.
+            sqlite3.Cursor:
+                A database cursor for the current query.
 
         """
         query_geometry = geometry

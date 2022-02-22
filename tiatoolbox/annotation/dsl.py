@@ -307,7 +307,8 @@ def json_list_sum(json_list: str) -> Number:
         json_list: JSON string containing a list of numbers.
 
     Returns:
-        Number: The sum of the numbers in the list.
+        Number:
+            The sum of the numbers in the list.
 
     """
     return sum(json.loads(json_list))
@@ -321,7 +322,8 @@ def json_contains(json_str: str, x: object) -> bool:
         x: Value to search for.
 
     Returns:
-        True if x is in json_str.
+        bool:
+            True if x is in json_str.
 
     """
     return x in json.loads(json_str)
@@ -331,7 +333,9 @@ def sql_is_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     """Check if x is None.
 
     Returns:
-        SQLTriplet: SQLTriplet representing None check.
+        SQLTriplet:
+            SQLTriplet representing None check.
+
     """
     return SQLTriplet(x, "is_none")
 
@@ -340,7 +344,9 @@ def sql_is_not_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     """Check if x is not None.
 
     Returns:
-        SQLTriplet: SQLTriplet representing not None check.
+        SQLTriplet:
+            SQLTriplet representing not None check.
+
     """
     return SQLTriplet(x, "is_not_none")
 
@@ -349,10 +355,13 @@ def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
     """Return a representation of the sum of a list.
 
     Args:
-        x: The list to sum.
+        x:
+            The list to sum.
 
     Returns:
-        SQLTriplet: SQLTriplet for a function call to sum the list.
+        SQLTriplet:
+            SQLTriplet for a function call to sum the list.
+
     """
     return SQLTriplet(x, "list_sum")
 
@@ -367,7 +376,9 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTripl
             Key to check for.
 
     Returns:
-        SQLTriplet: SQLTriplet representing key check.
+        SQLTriplet:
+            SQLTriplet representing key check.
+
     """
     if not isinstance(dictionary, (SQLJSONDictionary,)):
         raise TypeError("Unsupported type for has_key.")
