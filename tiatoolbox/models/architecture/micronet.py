@@ -76,16 +76,28 @@ def resize_op(in_tensor, size):
 
 
 class MicroNet(ModelABC):
-    """Initialise MicroNet.
+    """Initialise MicroNet [1].
+    The following models have been included in tiatoolbox.
+    1. `micronet_hovernet-consep`: This is trained on
+    `ConSep dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_
+    The model is retrained in torch as the original model with results on ConSep [2]
+    was trained in TensorFlow. The retrained model should produce following results
+    on the ConSep dataset.
+    [   DICE      AJI       DQ      SQ       PQ      AJI+ ]
+    [ 0.80709  0.43748  0.59282  0.74697  0.44406  0.50295]
 
     Args:
         num_input_channels (int): Number of channels in input. default=3.
         num_class (int): Number of output channels. default=2.
 
     References:
-        Raza, SEA et al., “Micro-Net: A unified model for segmentation of
+        [1] Raza, SEA et al., “Micro-Net: A unified model for segmentation of
         various objects in microscopy images,” Medical Image Analysis,
         Dec. 2018, vol. 52, p. 160–173.
+
+        [2] Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
+        classification of nuclei in multi-tissue histology images."
+        Medical Image Analysis 58 (2019): 101563.
 
     """
 
@@ -337,13 +349,13 @@ class MicroNet(ModelABC):
 
         self.apply(weights_init)
 
-    def forward(self, input_images: torch.Tensor, *args, **kwargs):
+    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            input_images (torch.Tensor): Input images, the tensor is
+            input_tensor (torch.Tensor): Input images, the tensor is
                 in the shape of NCHW.
 
         Returns:
@@ -422,23 +434,23 @@ class MicroNet(ModelABC):
 
         b1 = group1_branch(
             self.layer["b1"],
-            input_images,
-            functional.interpolate(input_images, size=(128, 128), mode="bicubic"),
+            input_tensor,
+            functional.interpolate(input_tensor, size=(128, 128), mode="bicubic"),
         )
         b2 = group1_branch(
             self.layer["b2"],
             b1,
-            functional.interpolate(input_images, size=(64, 64), mode="bicubic"),
+            functional.interpolate(input_tensor, size=(64, 64), mode="bicubic"),
         )
         b3 = group1_branch(
             self.layer["b3"],
             b2,
-            functional.interpolate(input_images, size=(32, 32), mode="bicubic"),
+            functional.interpolate(input_tensor, size=(32, 32), mode="bicubic"),
         )
         b4 = group1_branch(
             self.layer["b4"],
             b3,
-            functional.interpolate(input_images, size=(16, 16), mode="bicubic"),
+            functional.interpolate(input_tensor, size=(16, 16), mode="bicubic"),
         )
         b5 = group2_branch(self.layer["b5"], b4)
         b6 = group3_branch(self.layer["b6"], b5, b4)
