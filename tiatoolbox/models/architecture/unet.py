@@ -299,15 +299,15 @@ class UNetModel(ModelABC):
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
-    # pylint: disable=W0221
+    # skipcq: PYL-W0221
     # because abc is generic, this is actual definition
-    def forward(self, imgs: torch.Tensor, *args, **kwargs):
+    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+            input_tensor (torch.Tensor): Input images, the tensor is of the shape NCHW.
 
         Returns:
             output (torch.Tensor): The inference output. The tensor is of the shape
@@ -316,10 +316,10 @@ class UNetModel(ModelABC):
 
         """
         # scale to 0-1
-        imgs = imgs / 255.0
+        input_tensor = input_tensor / 255.0
 
         # assume output is after each down-sample resolution
-        en_list = self.backbone(imgs)
+        en_list = self.backbone(input_tensor)
         x = self.conv1x1(en_list[-1])
 
         en_list = en_list[:-1]
