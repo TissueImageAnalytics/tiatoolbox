@@ -36,16 +36,16 @@ def centre_crop(
     """A function to center crop image with given crop shape.
 
     Args:
-        img (ndarray, torch.tensor):
+        img (:class:`numpy.ndarray`, torch.tensor):
             Input image, should be of 3 channels.
-        crop_shape (ndarray, torch.tensor):
+        crop_shape (:class:`numpy.ndarray`, torch.tensor):
             The substracted amount in the form of `[substracted height,
             substracted width]`.
         data_format (str):
             Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (ndarray, torch.tensor):
+        (:class:`numpy.ndarray`, torch.tensor):
             Cropped image.
 
     """

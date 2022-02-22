@@ -64,7 +64,7 @@ def predefined_preproc_func(dataset_name):
         dataset_name (str):
             Dataset name used to determine what preprocessing was used.
     Returns:
-        preproc_func (_TorchPreprocCaller):
+        _TorchPreprocCaller:
             Preprocessing function for transforming the input data.
 
     """

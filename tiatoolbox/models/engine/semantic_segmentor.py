@@ -489,11 +489,11 @@ class SemanticSegmentor:
         Returns:
             tuple:
                 Tuple containing:
-                - patch_inputs (list):
+                - :py:obj:`list` - patch_inputs:
                     A list of corrdinates in `[start_x, start_y, end_x,
                     end_y]` format indicating the read location of the
                     patch in the mother image.
-                - patch_outputs (list):
+                - :py:obj:`list` - patch_outputs:
                     A list of corrdinates in `[start_x, start_y, end_x,
                     end_y]` format indicating the write location of the
                     patch in the mother image.

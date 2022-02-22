@@ -123,13 +123,15 @@ class HoVerNetPlus(HoVerNet):
         Returns:
             dict:
                 Dictionary of layer contours. It has the
-                following form:
+                following form::
 
-                >>> layer_info = {
-                ...     contour: number[][],
-                ...     type: number,
-                ... }
-                >>> layer_dict = {[layer_uid: number] : layer_info}
+                    layer_info = {
+                        contour: number[][],
+                        type: number,
+                    }
+                    layer_dict = {
+                        [layer_uid: number]: layer_info
+                    }
 
         """
         layer_list = np.unique(pred_layer)

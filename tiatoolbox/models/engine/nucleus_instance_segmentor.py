@@ -102,16 +102,16 @@ def _process_tile_predictions(
 
     Returns:
         tuple:
-            - :py:obj:`dict` - new_inst_dict:
+            - :py:obj:`dict` - New instances dictionary:
                 A dictionary contain new instances to be accumulated.
                 The expected format is `{instance_id: {type: int,
                 contour: List[List[int]], centroid:List[float],
                 box:List[int]}`.
-            - :py:obj:`list` - remove_insts_in_orig:
-                List of instance id within `ref_inst_dict` to be removed
-                to prevent overlapping predictions. These instances are
-                those get cutoff at the boundary due to the tiling
-                process.
+            - :py:obj:`list` - Instances IDs to remove:
+                List of instance IDs within `ref_inst_dict` to be
+                removed to prevent overlapping predictions. These
+                instances are those get cut off at the boundary due to
+                the tiling process.
 
     """
     locations, predictions = list(zip(*tile_output))
@@ -393,18 +393,18 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         Returns:
             list:
-                - tiles and flags (list)
-                    - grid_tiles (ndarray)
-                    - removal_flags (ndarray)
-                - tiles and flags (list)
-                    - vertical_strip_tiles (ndarray)
-                    - removal_flags (ndarray)
-                - tiles and flags (list)
-                    - horizontal_strip_tiles (ndarray)
-                    - removal_flags (ndarray)
-                - tiles and flags (list)
-                    - cross_section_tiles (ndarray)
-                    - removal_flags (ndarray)
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Grid tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Vertical strip tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Horizontal strip tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Cross section tiles
+                    - :class:`numpy.ndarray` - Removal flags
 
         """
         margin = np.array(ioconfig.margin)
