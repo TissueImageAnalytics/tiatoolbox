@@ -113,7 +113,7 @@ They share the same input output configuration defined below:
             patch_input_shape=(1024, 1024),
             patch_output_shape=(512, 512),
             stride_shape=(256, 256),
-            save_resolution={'units': 'mpp', 'resolution': 8.0}        
+            save_resolution={'units': 'mpp', 'resolution': 8.0}
         )
 
 
@@ -144,7 +144,7 @@ They share the same input output configuration defined below:
             patch_input_shape=(1024, 1024),
             patch_output_shape=(512, 512),
             stride_shape=(256, 256),
-            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+            save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
 
@@ -183,7 +183,7 @@ input output configuration:
             patch_input_shape=(256, 256),
             patch_output_shape=(164, 164),
             stride_shape=(164, 164),
-            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+            save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
 .. collapse:: Model names
@@ -217,7 +217,7 @@ input output configuration:
             patch_input_shape=(256, 256),
             patch_output_shape=(164, 164),
             stride_shape=(164, 164),
-            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+            save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
 .. collapse:: Model names
@@ -251,12 +251,13 @@ input output configuration:
             patch_input_shape=(270, 270),
             patch_output_shape=(80, 80),
             stride_shape=(80, 80),
-            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+            save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
 .. collapse:: Model names
 
     - hovernet_original-consep
+    - micronet_hovernet-consep
 
 
 --------------------
@@ -285,7 +286,7 @@ input output configuration:
             patch_input_shape=(270, 270),
             patch_output_shape=(80, 80),
             stride_shape=(80, 80),
-            save_resolution={'units': 'mpp', 'resolution': 0.25}        
+            save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
 .. collapse:: Model names
@@ -325,7 +326,7 @@ input output configuration:
             patch_input_shape=(256, 256),
             patch_output_shape=(164, 164),
             stride_shape=(164, 164),
-            save_resolution={'units': 'mpp', 'resolution': 0.5}        
+            save_resolution={'units': 'mpp', 'resolution': 0.5}
         )
 
 .. collapse:: Model names
