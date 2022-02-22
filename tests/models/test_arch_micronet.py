@@ -21,6 +21,7 @@
 """Unit test package for HoVerNet."""
 
 import numpy as np
+import pytest
 import torch
 
 from tiatoolbox import utils
@@ -49,3 +50,9 @@ def test_functionality(remote_sample, tmp_path):
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0][0])
     assert np.max(np.unique(output)) == 33
+
+
+def test_value_error():
+    """Test to generate value error is num_classes < 2."""
+    with pytest.raises(ValueError, match="Number of classes should be >=2"):
+        _ = MicroNet(num_class=1)

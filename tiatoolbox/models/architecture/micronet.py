@@ -38,7 +38,7 @@ from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.utils import misc
 
 
-def weights_init(m):
+def weights_init(m):  # pragma: no cover
     """Initializes weights and biases for a torch Module e.g., Conv2d.
 
     Args:
@@ -59,20 +59,6 @@ def weights_init(m):
 
     if "linear" in classname.lower() and m.bias is not None:
         nn.init.constant_(m.bias, 0)
-
-
-def resize_op(in_tensor, size):
-    """Resize input tensor.
-
-    Args:
-        in_tensor (torch.Tensor): input tensor of images.
-        size (tuple of int): output spatial size
-
-    Returns:
-        torch.Tensor: Down/up sampled tensor containing images.
-
-    """
-    return functional.interpolate(in_tensor, size=size, mode="bicubic")
 
 
 class MicroNet(ModelABC):
@@ -124,7 +110,7 @@ class MicroNet(ModelABC):
     def __init__(self, num_input_channels=3, num_class=2):
         super().__init__()
         if num_class < 2:
-            ValueError("Number of classes should be >=2.")
+            raise ValueError("Number of classes should be >=2.")
         self.__num_class = num_class
         self.in_ch = num_input_channels
 
