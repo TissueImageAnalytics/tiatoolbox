@@ -35,7 +35,7 @@ torch>=1.9.0
 torchvision>=0.10.1
 tox
 tqdm
-twine==1.14.0
+twine==3.8.0
 umap-learn
 watchdog==0.9.0
 wheel==0.33.6
