@@ -37,7 +37,6 @@ tox
 tqdm
 twine==3.8.0
 umap-learn
-watchdog==0.9.0
 wheel==0.33.6
 wsidicom
 zarr
