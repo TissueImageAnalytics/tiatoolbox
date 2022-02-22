@@ -18,7 +18,7 @@ pillow
 pip>=20.0.2
 pre-commit
 pydicom # Used by wsidicom
-pytest-cov==2.9.0
+pytest-cov==3.0.0
 pytest-runner>=5.2
 pytest>=6.2.5
 pyyaml>=5.1
