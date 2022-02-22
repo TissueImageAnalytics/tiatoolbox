@@ -176,7 +176,7 @@ def od2rgb(od):
             Optical density (OD) RGB image.
 
     Returns:
-        numpy.ndarray:
+        :class:`numpy.ndarray`:
             RGB Image.
 
     Examples:

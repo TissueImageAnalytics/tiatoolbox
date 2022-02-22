@@ -264,8 +264,8 @@ class WSIReader:
             tuple:
                 Optimal read level and scale factor between the optimal
                 level and the target scale (usually <= 1):
-                - :py:obj:`int` - Level
-                - np.ndarray - Scale factor in X and Y
+                - :py:obj:`int` - Optimal read level.
+                - :class:`numpy.ndarray` - Scale factor in X and Y.
 
         """
         level_scales = self.info.relative_level_scales(resolution, units)
@@ -502,7 +502,7 @@ class WSIReader:
 
         Returns:
             :py:obj:`tuple`:
-                shape of WSI in (width, height).
+                Size of the WSI in (width, height).
 
         Examples:
             >>> from tiatoolbox.wsicore import wsireader
@@ -1462,7 +1462,8 @@ class OpenSlideWSIReader(WSIReader):
         """Openslide WSI meta data reader.
 
         Returns:
-            WSIMeta: containing meta information.
+            WSIMeta:
+                Metadata information.
 
         """
         props = self.openslide_wsi.properties
@@ -2071,7 +2072,8 @@ class TIFFWSIReader(WSIReader):
                 Input shape tuple.
 
         Returns:
-            Shape in YXS order.
+            tuple:
+                Shape in YXS order.
 
         """
         if self._axes == "YXS":
@@ -2084,7 +2086,8 @@ class TIFFWSIReader(WSIReader):
         """Extract SVS specific metadata.
 
         Returns:
-            dict: Dictionary of kwargs for WSIMeta.
+            dict:
+                Dictionary of kwargs for WSIMeta.
 
         """
         raw = {}
@@ -2218,7 +2221,8 @@ class TIFFWSIReader(WSIReader):
         """TIFF metadata constructor.
 
         Returns:
-            WSIMeta: Containing metadata.
+            WSIMeta:
+                Containing metadata.
 
         """
         level_count = len(self._zarr_group)

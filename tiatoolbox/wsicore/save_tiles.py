@@ -47,8 +47,6 @@ def save_tiles(
         verbose (bool):
             Print output, default=True
 
-    Returns:
-
     Examples:
         >>> from tiatoolbox.wsicore.save_tiles import save_tiles
         >>> from tiatoolbox.utils import misc

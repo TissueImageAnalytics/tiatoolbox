@@ -140,7 +140,9 @@ def running_on_travis() -> bool:
     """Detect if the current environment is running on travis.
 
     Returns:
-        bool: True if the current environment is on travis, False otherwise.
+        bool:
+            True if the current environment is on travis, False
+            otherwise.
 
     """
     return os.environ.get("TRAVIS") == "true" and os.environ.get("CI") == "true"
@@ -316,7 +318,8 @@ def version_to_tuple(match: str) -> Tuple[int, ...]:
         match (str): The version string to convert.
 
     Returns:
-        tuple: The version string as a tuple of ints.
+        tuple:
+            The version string as a tuple of ints.
 
     """
     # Check that the string only contains integers and periods

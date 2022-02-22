@@ -333,7 +333,7 @@ def safe_padded_read(
             function :func:`numpy.pad`.
 
     Returns:
-        numpy.ndarray:
+        :class:`numpy.ndarray`:
             Padded image region.
 
     Raises:

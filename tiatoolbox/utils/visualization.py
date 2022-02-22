@@ -40,7 +40,8 @@ def random_colors(num_colors, bright=True):
         bright(bool): To use bright color or not.
 
     Returns:
-        List of (r, g, b) colors.
+        list:
+            List of (r, g, b) colors.
 
     """
     brightness = 1.0 if bright else 0.7
@@ -77,7 +78,7 @@ def overlay_prediction_mask(
 
     Returns:
         If return_ax is True, return the matplotlib ax object. Else,
-          return the overlay array.
+        return the overlay array.
 
     """
     if img.shape[:2] != prediction.shape[:2]:

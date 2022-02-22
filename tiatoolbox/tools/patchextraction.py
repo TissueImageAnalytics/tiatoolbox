@@ -673,7 +673,8 @@ def get_patch_extractor(method_name, **kwargs):
         **kwargs: Keyword arguments passed to :obj:`PatchExtractor`.
 
     Returns:
-        PatchExtractor: an object with base :obj:`PatchExtractor` as base class.
+        PatchExtractor:
+            An object with base :obj:`PatchExtractor` as base class.
 
     Examples:
         >>> from tiatoolbox.tools.patchextraction import get_patch_extractor

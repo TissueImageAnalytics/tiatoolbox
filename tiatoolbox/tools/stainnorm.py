@@ -352,10 +352,11 @@ class ReinhardNormalizer:
                 Input image.
 
         Returns:
-            means (float):
-                Mean values for each RGB channel.
-            stds (float):
-                Standard deviation for each RGB channel.
+            tuple:
+                - :py:obj:`float` - Means:
+                    Mean values for each RGB channel.
+                - :py:obj:`float` - Standard deviations:
+                    Standard deviation for each RGB channel.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8

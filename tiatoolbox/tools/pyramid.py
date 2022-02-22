@@ -255,7 +255,8 @@ class TilePyramidGenerator:
                 The tile index in the y direction.
 
         Returns:
-            Path: A pathlib path object with two parts.
+            Path:
+                A pathlib path object with two parts.
 
         """
         raise NotImplementedError
@@ -420,7 +421,8 @@ class ZoomifyGenerator(TilePyramidGenerator):
                 The tile index in the y direction.
 
         Returns:
-            int: The tile group for the specified tile.
+            int:
+                The tile group for the specified tile.
 
         """
         grid_size = np.array(self.tile_grid_size(level))
@@ -445,7 +447,8 @@ class ZoomifyGenerator(TilePyramidGenerator):
                 The tile index in the y direction.
 
         Returns:
-            Path: A pathlib path object with two parts.
+            Path:
+                A pathlib path object with two parts.
 
         """
         g = self.tile_group(level, x, y)
