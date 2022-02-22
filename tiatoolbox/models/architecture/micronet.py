@@ -83,8 +83,19 @@ class MicroNet(ModelABC):
     The model is retrained in torch as the original model with results on ConSep [2]
     was trained in TensorFlow. The retrained model should produce following results
     on the ConSep dataset.
-    [   DICE      AJI       DQ      SQ       PQ      AJI+ ]
-    [ 0.80709  0.43748  0.59282  0.74697  0.44406  0.50295]
+
+    1. `micronet_hovernet-consep`
+    DICE = 0.80709
+
+    AJI  = 0.43748
+
+    DQ   = 0.59282
+
+    SQ   = 0.74697
+
+    PQ   = 0.44406
+
+    AJI+ = 0.50295
 
     Args:
         num_input_channels (int): Number of channels in input. default=3.
