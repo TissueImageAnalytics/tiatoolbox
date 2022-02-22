@@ -83,7 +83,8 @@ def centre_crop_to_shape(
             Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (ndarray, torch.tensor) Cropped image.
+        (ndarray, torch.tensor):
+            Cropped image.
 
     """
     if data_format not in ["NCHW", "NHWC"]:

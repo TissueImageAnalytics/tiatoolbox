@@ -50,8 +50,9 @@ class ResNetEncoder(ResNet):
               For this method, C=3 (i.e 3 channels images are used as input).
 
         Returns:
-            features (list): List of features for each down-sample
-              block. Each feature tensor is of the shape NCHW.
+            list:
+                List of features for each down-sample
+                block. Each feature tensor is of the shape NCHW.
 
         """
         # See note [TorchScript super()]
@@ -79,12 +80,15 @@ class ResNetEncoder(ResNet):
         """Shortcut method to create customised ResNet.
 
         Args:
-            num_input_channels (int): Number of channels in the input images.
-            downsampling_levels (list): A list of integers where each number defines
-              the number of BottleNeck blocks at each down-sampling level.
+            num_input_channels (int):
+                Number of channels in the input images.
+            downsampling_levels (list):
+                A list of integers where each number defines the number
+                of BottleNeck blocks at each down-sampling level.
 
         Returns:
-            model (torch.nn.Module): a pytorch model.
+            model (torch.nn.Module):
+                A pytorch model.
 
         Examples:
             >>> # instantiate a resnet50
@@ -102,19 +106,22 @@ class ResNetEncoder(ResNet):
 
 
 class UnetEncoder(nn.Module):
-    """Construct a basic unet encoder.
+    """Construct a basic UNet encoder.
 
-    This class builds a basic unet encoder with batch normalization.
+    This class builds a basic UNet encoder with batch normalization.
     The number of channels in each down-sampling block and
     the number of down-sampling levels are customisable.
 
     Args:
-        num_input_channels (int): Number of channels in the input images.
-        layer_output_channels (list): A list of integers where each number
-          defines the number of output channels at each down-sampling level.
+        num_input_channels (int):
+            Number of channels in the input images.
+        layer_output_channels (list):
+            A list of integers where each number defines the number of
+            output channels at each down-sampling level.
 
     Returns:
-        model (torch.nn.Module): a pytorch model.
+        model (torch.nn.Module):
+            A pytorch model.
 
     """
 

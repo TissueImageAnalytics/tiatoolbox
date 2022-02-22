@@ -375,7 +375,7 @@ class HoVerNet(ModelABC):
                 Input images, the tensor is in the shape of NCHW.
 
         Returns:
-            output (dict):
+            dict:
                 A dictionary containing the inference output.
                 The expected format os {decoder_name: prediction}.
 
@@ -484,9 +484,10 @@ class HoVerNet(ModelABC):
                 Default is therefore 1 for HoVer-Net.
 
         Returns:
-            An np.ndarray of shape (height, width) where each non-zero
-            values within the array correspond to one detected nuclei
-            instances.
+            np.ndarray:
+                An np.ndarray of shape (height, width) where each
+                non-zero values within the array correspond to one
+                detected nuclei instances.
 
         """
         blb_raw = np_map[..., 0]

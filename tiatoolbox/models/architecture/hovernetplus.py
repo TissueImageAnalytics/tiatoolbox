@@ -100,7 +100,7 @@ class HoVerNetPlus(HoVerNet):
                 The input predicted segmentation map.
 
         Returns:
-            ls_map:
+            np.ndarray:
                 The processed segmentation map.
 
         """
@@ -116,13 +116,13 @@ class HoVerNetPlus(HoVerNet):
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
-            image (ndarray):
+            image (np.ndarray):
                 Semantic segmentation map of different layers/regions
                 following processing.
 
         Returns:
-            layer_info_dict (dict):
-                Dictionary to store layer contours in. It has the
+            dict:
+                Dictionary of layer contours. It has the
                 following form:
 
                 >>> layer_info = {
@@ -169,16 +169,18 @@ class HoVerNetPlus(HoVerNet):
             inst_dict (dict):
                 A dictionary containing a mapping of each instance
                 within `inst_map` instance information. It has the
-                following form:
+                following form::
 
-                >>> inst_info = {
-                ...     box: number[],
-                ...     centroids: number[],
-                ...     contour: number[][],
-                ...     type: number,
-                ...     prob: number,
-                ... }
-                >>> inst_dict = {[inst_uid: number] : inst_info}
+                    inst_info = {
+                        box: number[],
+                        centroids: number[],
+                        contour: number[][],
+                        type: number,
+                        prob: number,
+                    }
+                    inst_dict = {
+                        [inst_uid: number]: inst_info
+                    }
 
                 and `inst_uid` is an integer corresponds to the instance
                 having the same pixel value within `inst_map`.
@@ -186,13 +188,15 @@ class HoVerNetPlus(HoVerNet):
                 Pixel-wise layer segmentation prediction.
             layer_dict (dict):
                 A dictionary containing a mapping of each segmented
-                layer within `layer_map`. It has the following form:
+                layer within `layer_map`. It has the following form::
 
-                >>> layer_info = {
-                ...      contour: number[][],
-                ...      type: number,
-                ... }
-                >>> layer_dict = {[layer_uid: number] : layer_info}
+                    layer_info = {
+                         contour: number[][],
+                         type: number,
+                    }
+                    layer_dict = {
+                        [layer_uid: number]: layer_info
+                    }
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus

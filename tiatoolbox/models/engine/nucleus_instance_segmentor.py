@@ -102,12 +102,12 @@ def _process_tile_predictions(
 
     Returns:
         tuple:
-            - new_inst_dict (dict):
+            - :py:obj:`dict` - new_inst_dict:
                 A dictionary contain new instances to be accumulated.
                 The expected format is `{instance_id: {type: int,
                 contour: List[List[int]], centroid:List[float],
                 box:List[int]}`.
-            - remove_insts_in_orig (list):
+            - :py:obj:`list` - remove_insts_in_orig:
                 List of instance id within `ref_inst_dict` to be removed
                 to prevent overlapping predictions. These instances are
                 those get cutoff at the boundary due to the tiling

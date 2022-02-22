@@ -62,7 +62,8 @@ def _fetch_remote_sample(
             location using `tmp_path_factory.mketmp()`.
 
     Returns:
-        pathlib.Path: The local path to the cached sample file after downloading.
+        pathlib.Path:
+            The local path to the cached sample file after downloading.
 
     """
     if tmp_path is None:
@@ -104,10 +105,12 @@ def _local_sample_path(path: pathlib.Path) -> pathlib.Path:
     """Get the path to a data file bundled with the package.
 
     Args:
-        path (pathlib.Path): Relative path to the package data file.
+        path (pathlib.Path):
+            Relative path to the package data file.
 
     Returns:
-        pathlib.Path: Path within the package to the data file.
+        pathlib.Path:
+            Path within the package to the data file.
 
 
     Example:
