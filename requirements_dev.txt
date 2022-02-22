@@ -4,7 +4,7 @@ bump2version==0.5.11
 Click>=7.0
 coverage==5.1
 flake8-bugbear
-flake8==3.7.8
+flake8==4.0.1
 flask
 glymur>=0.9.7
 imagecodecs>2021.10.0
