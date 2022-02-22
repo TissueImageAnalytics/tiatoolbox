@@ -337,13 +337,14 @@ class MicroNet(ModelABC):
 
         self.apply(weights_init)
 
-    def forward(self, imgs: torch.Tensor, *args, **kwargs):
+    def forward(self, input_images: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            input_images (torch.Tensor): Input images, the tensor is
+                in the shape of NCHW.
 
         Returns:
             list: A list of main and auxiliary outputs.
@@ -421,23 +422,23 @@ class MicroNet(ModelABC):
 
         b1 = group1_branch(
             self.layer["b1"],
-            imgs,
-            functional.interpolate(imgs, size=(128, 128), mode="bicubic"),
+            input_images,
+            functional.interpolate(input_images, size=(128, 128), mode="bicubic"),
         )
         b2 = group1_branch(
             self.layer["b2"],
             b1,
-            functional.interpolate(imgs, size=(64, 64), mode="bicubic"),
+            functional.interpolate(input_images, size=(64, 64), mode="bicubic"),
         )
         b3 = group1_branch(
             self.layer["b3"],
             b2,
-            functional.interpolate(imgs, size=(32, 32), mode="bicubic"),
+            functional.interpolate(input_images, size=(32, 32), mode="bicubic"),
         )
         b4 = group1_branch(
             self.layer["b4"],
             b3,
-            functional.interpolate(imgs, size=(16, 16), mode="bicubic"),
+            functional.interpolate(input_images, size=(16, 16), mode="bicubic"),
         )
         b5 = group2_branch(self.layer["b5"], b4)
         b6 = group3_branch(self.layer["b6"], b5, b4)

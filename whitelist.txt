@@ -91,3 +91,4 @@ Peter554
 HoVerNet
 Kumar
 Ver
+pylint

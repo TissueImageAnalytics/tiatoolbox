@@ -21,6 +21,7 @@
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
 from abc import ABC, abstractmethod
 
+import torch
 import torch.nn as nn
 
 
@@ -61,7 +62,7 @@ class ModelABC(ABC, nn.Module):
     @abstractmethod
     # noqa
     # This is generic abc, else pylint will complain
-    def forward(self, *args, **kwargs):
+    def forward(self, input_images: torch.Tensor, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
         ...  # pragma: no cover
 
