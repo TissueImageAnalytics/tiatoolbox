@@ -853,7 +853,7 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
             Output directory path.
         masks (str or pathlib.Path):
             File path to masks.
-        file_types (str): 
+        file_types (str):
             File types to process using cli.
         mode (str):
             One of "wsi" or "tile" mode.
