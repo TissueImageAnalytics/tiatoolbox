@@ -2,7 +2,7 @@ albumentations
 black>=21.4b0
 bump2version==0.5.11
 Click>=7.0
-coverage==6.3.2
+coverage[toml]==6.3.2
 flake8-bugbear
 flake8==3.7.8
 flask
