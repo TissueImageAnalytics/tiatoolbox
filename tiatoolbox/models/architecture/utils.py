@@ -127,7 +127,8 @@ class UpSample2x(nn.Module):
         """Logic for using layers defined in init.
 
         Args:
-            input_tensor (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            input_tensor (torch.Tensor): Input images, the tensor
+                is in the shape of NCHW.
 
         Returns:
             ret (torch.Tensor): Input images upsampled by a factor of 2

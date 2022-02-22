@@ -62,7 +62,7 @@ class ModelABC(ABC, nn.Module):
     @abstractmethod
     # noqa
     # This is generic abc, else pylint will complain
-    def forward(self, input_images: torch.Tensor, *args, **kwargs):
+    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
         ...  # pragma: no cover
 
