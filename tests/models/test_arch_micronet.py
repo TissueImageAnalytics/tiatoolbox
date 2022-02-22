@@ -23,6 +23,7 @@
 import numpy as np
 import torch
 
+from tiatoolbox import utils
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.micronet import MicroNet
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -42,7 +43,8 @@ def test_functionality(remote_sample, tmp_path):
     batch = torch.from_numpy(patch)[None]
     model = MicroNet()
     fetch_pretrained_weights("micronet_hovernet-consep", f"{tmp_path}/weights.pth")
-    pretrained = torch.load(f"{tmp_path}/weights.pth")
+    map_location = utils.misc.select_device(utils.env_detection.has_gpu())
+    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0][0])
