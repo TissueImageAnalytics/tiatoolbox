@@ -123,11 +123,11 @@ class UpSample2x(nn.Module):
         )
         self.unpool_mat.unsqueeze(0)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         Args:
-            x (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            input_tensor (torch.Tensor): Input images, the tensor is in the shape of NCHW.
 
         Returns:
             ret (torch.Tensor): Input images upsampled by a factor of 2
@@ -135,13 +135,13 @@ class UpSample2x(nn.Module):
                 as NCHW.
 
         """
-        input_shape = list(x.shape)
+        input_shape = list(input_tensor.shape)
         # un-squeeze is the same as expand_dims
         # permute is the same as transpose
         # view is the same as reshape
-        x = x.unsqueeze(-1)  # bchwx1
+        input_tensor = input_tensor.unsqueeze(-1)  # bchwx1
         mat = self.unpool_mat.unsqueeze(0)  # 1xshxsw
-        ret = torch.tensordot(x, mat, dims=1)  # bxcxhxwxshxsw
+        ret = torch.tensordot(input_tensor, mat, dims=1)  # bxcxhxwxshxsw
         ret = ret.permute(0, 1, 2, 4, 3, 5)
         ret = ret.reshape((-1, input_shape[1], input_shape[2] * 2, input_shape[3] * 2))
         return ret

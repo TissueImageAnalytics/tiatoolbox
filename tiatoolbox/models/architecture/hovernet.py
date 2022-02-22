@@ -361,23 +361,23 @@ class HoVerNet(ModelABC):
 
         self.upsample2x = UpSample2x()
 
-    # skipcq: PYL-W0221
-    def forward(self, imgs: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            input_tensor (torch.Tensor): Input images, the tensor
+                is in the shape of NCHW.
 
         Returns:
             output (dict): A dictionary containing the inference output.
                 The expected format os {decoder_name: prediction}.
 
         """
-        imgs = imgs / 255.0  # to 0-1 range to match XY
+        input_tensor = input_tensor / 255.0  # to 0-1 range to match XY
 
-        d0 = self.conv0(imgs)
+        d0 = self.conv0(input_tensor)
         d0 = self.d0(d0)
         d1 = self.d1(d0)
         d2 = self.d2(d1)
