@@ -85,10 +85,26 @@ class MicroNet(ModelABC):
 
     The tiatoolbox model should produce following results on the ConSep dataset.
 
-    1. `micronet_hovernet-consep`
+    .. list-table:: MicroNet Performance
+       :widths: 15 15 15 15 15 15 15 15
+       :header-rows: 1
 
-        DICE = 0.80709, AJI = 0.43748, DQ = 0.59282, SQ = 0.74697, PQ = 0.44406,
-        AJI+ = 0.50295
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+         - AJI+
+       * - micronet_hovernet-consep
+         - ConSep
+         - 0.81
+         - 0.44
+         - 0.59
+         - 0.75
+         - 0.44
+         - 0.50
 
     Args:
         num_input_channels (int): Number of channels in input. default=3.
