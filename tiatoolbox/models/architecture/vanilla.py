@@ -110,8 +110,9 @@ class CNNModel(ModelABC):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
+    # skipcq: PYL-W0221
     # because abc is generic, this is actual definition
-    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
+    def forward(self, input_tensor: torch.Tensor):
         """Pass input data through the model.
 
         Args:

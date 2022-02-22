@@ -361,7 +361,8 @@ class HoVerNet(ModelABC):
 
         self.upsample2x = UpSample2x()
 
-    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
+    # skipcq: PYL-W0221
+    def forward(self, input_tensor: torch.Tensor):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.

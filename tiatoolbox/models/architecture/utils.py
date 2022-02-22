@@ -123,7 +123,7 @@ class UpSample2x(nn.Module):
         )
         self.unpool_mat.unsqueeze(0)
 
-    def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
+    def forward(self, input_tensor: torch.Tensor):
         """Logic for using layers defined in init.
 
         Args:

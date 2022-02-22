@@ -299,6 +299,7 @@ class UNetModel(ModelABC):
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
+    # skipcq: PYL-W0221
     # because abc is generic, this is actual definition
     def forward(self, input_tensor: torch.Tensor, *args, **kwargs):
         """Logic for using layers defined in init.
