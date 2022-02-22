@@ -81,20 +81,13 @@ class MicroNet(ModelABC):
     1. `micronet_hovernet-consep`: This is trained on
     `ConSep dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_
     The model is retrained in torch as the original model with results on ConSep [2]
-    was trained in TensorFlow. The retrained model should produce following results
-    on the ConSep dataset.
+    was trained in TensorFlow.
+
+    The tiatoolbox model should produce following results on the ConSep dataset.
 
     1. `micronet_hovernet-consep`
-    DICE = 0.80709
 
-    AJI  = 0.43748
-
-    DQ   = 0.59282
-
-    SQ   = 0.74697
-
-    PQ   = 0.44406
-
+    DICE = 0.80709, AJI = 0.43748, DQ = 0.59282, SQ = 0.74697, PQ = 0.44406,
     AJI+ = 0.50295
 
     Args:
