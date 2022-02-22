@@ -40,7 +40,20 @@ class HoVerNetPlus(HoVerNet):
     simultaneously segment and classify the nuclei present, as well as
     semantically segment different regions or layers in the images. Note
     the HoVerNet+ architecture assumes an image resolution of 0.5 mpp,
-    in contrast to HoVer-Net at 0.25 mpp.
+    in contrast to HoVerNet at 0.25 mpp.
+
+    Args:
+        num_input_channels (int):
+            The number of input channels, default = 3 for RGB.
+        num_types (int):
+            The number of types of nuclei present in the images.
+        num_layers (int):
+            The number of layers/different regions types present.
+
+    References:
+        Shephard, Adam J., et al. "Simultaneous Nuclear Instance and
+        Layer Segmentation in Oral Epithelial Dysplasia." Proceedings of
+        the IEEE/CVF International Conference on Computer Vision. 2021.
 
     """
 
