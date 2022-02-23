@@ -110,16 +110,16 @@ class CNNModel(ModelABC):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
         self.classifer = nn.Linear(prev_num_ch, num_classes)
 
-    # pylint: disable=W0221
+    # skipcq: PYL-W0221
     # because abc is generic, this is actual definition
-    def forward(self, imgs):
+    def forward(self, input_tensor: torch.Tensor):
         """Pass input data through the model.
 
         Args:
-            imgs (torch.Tensor): Model input.
+            input_tensor (torch.Tensor): Model input.
 
         """
-        feat = self.feat_extract(imgs)
+        feat = self.feat_extract(input_tensor)
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
         logit = self.classifer(gap_feat)
