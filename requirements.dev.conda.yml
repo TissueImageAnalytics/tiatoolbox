@@ -7,10 +7,12 @@ channels:
 dependencies:
   - albumentations
   - black>=21
+  - bump2version==1.0.1
   - Click>=7.0
+  - coverage==6.3.2
   - cython
   - defusedxml
-  - flake8
+  - flake8==4.0.1
   - flake8-bugbear
   - flask
   - glymur>=0.9.7
@@ -28,7 +30,7 @@ dependencies:
   - pixman!=0.38.0
   - pre-commit
   - pydicom # Used by wsidicom
-  - pytest-cov
+  - pytest-cov==3.0.0
   - pytest-runner>=5.2
   - pytest>=6.2.5
   - python=3.7
@@ -41,10 +43,13 @@ dependencies:
   - shapely
   - sphinx-gallery
   - tifffile>2021.10.0
+  - toml==0.10.2
   - torchvision>=0.10.1
   - tox
   - tqdm
+  - twine==3.8.0
   - umap-learn
+  - wheel==0.37.1
   - zarr
   - pip:
       - openslide-python>=1.1.2

@@ -2,7 +2,7 @@ albumentations
 black>=21.4b0
 bump2version==1.0.1
 Click>=7.0
-coverage[toml]==6.3.2
+coverage==6.3.2
 flake8-bugbear
 flake8==4.0.1
 flask
@@ -31,6 +31,7 @@ sphinx>=4.1.2
 sphinx-gallery
 sphinx-toolbox
 tifffile>2021.10.0
+toml==0.10.2
 torch>=1.9.0
 torchvision>=0.10.1
 tox
