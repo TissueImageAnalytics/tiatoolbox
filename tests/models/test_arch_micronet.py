@@ -52,7 +52,7 @@ def test_functionality(remote_sample, tmp_path):
     pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
-    output = model.postproc(output[0])
+    output, _ = model.postproc(output[0])
     assert np.max(np.unique(output)) == 33
 
 
@@ -91,10 +91,8 @@ def test_micronet_output(remote_sample, tmp_path):
 
     output = np.load(output[0][1] + ".raw.0.npy")
     output_on_server = np.load(str(micronet_output))
-    assert (
-        np.count_nonzero(
-            np.round(output_on_server, 3) == np.round(output[500:1000, 1000:1500, :], 3)
-        )
-        / np.size(output_on_server)
-        > 0.999
-    )
+    output_on_server = np.round(output_on_server, decimals=3)
+    new_output = np.round(output[500:1000, 1000:1500, :], decimals=3)
+    true_values = output_on_server == new_output
+    percent_true = np.count_nonzero(true_values) / np.size(output_on_server)
+    assert percent_true > 0.999
