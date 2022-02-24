@@ -741,7 +741,7 @@ micronet_hovernet-consep:
             output_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
             margin: 128
-            tile_shape: [1024, 1024]
+            tile_shape: [2048, 2048]
             patch_input_shape: [252, 252]
             patch_output_shape: [252, 252]
             stride_shape: [150, 150]

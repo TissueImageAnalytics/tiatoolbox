@@ -35,30 +35,8 @@ from scipy import ndimage
 from skimage import morphology
 
 from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.utils import misc
-
-
-def weights_init(m):  # pragma: no cover
-    """Initializes weights and biases for a torch Module e.g., Conv2d.
-
-    Args:
-        m (torch.nn.Module): :class:`torch.nn.Module` with
-            weights and biases to initialize.
-
-    """
-    classname = m.__class__.__name__
-    # ! Fixed the type checking
-    if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-        nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain("tanh"))
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.1)
-
-    if "norm" in classname.lower():
-        nn.init.constant_(m.weight, 1)
-        nn.init.constant_(m.bias, 0)
-
-    if "linear" in classname.lower() and m.bias is not None:
-        nn.init.constant_(m.bias, 0)
 
 
 def group1_forward_branch(layer, in_tensor, resized_feat):
@@ -433,8 +411,6 @@ class MicroNet(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
-        self.apply(weights_init)
-
     def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
@@ -495,11 +471,11 @@ class MicroNet(ModelABC):
             image (ndarray): input image of type numpy array.
 
         Returns:
-            inst_map (ndarray): pixel-wise nuclear instance segmentation
+            ndarray: pixel-wise nuclear instance segmentation
                 prediction.
 
         """
-        pred_bin = np.argmax(image, axis=2)
+        pred_bin = np.argmax(image[0], axis=2)
         pred_inst = ndimage.measurements.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
@@ -507,8 +483,8 @@ class MicroNet(ModelABC):
             inst_map = np.array(pred_inst == inst_id, dtype=np.uint8)
             inst_map = ndimage.binary_fill_holes(inst_map)
             canvas[inst_map > 0] = inst_id
-
-        return canvas
+        nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
+        return canvas, nuc_inst_info_dict
 
     @staticmethod
     def preproc(image: np.ndarray):

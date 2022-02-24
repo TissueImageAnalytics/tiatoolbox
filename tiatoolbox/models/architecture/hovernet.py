@@ -559,7 +559,7 @@ class HoVerNet(ModelABC):
         return proced_pred
 
     @staticmethod
-    def _get_instance_info(pred_inst, pred_type=None):
+    def get_instance_info(pred_inst, pred_type=None):
         """To collect instance information and store it within a dictionary.
 
         Args:
@@ -703,7 +703,7 @@ class HoVerNet(ModelABC):
 
         pred_type = tp_map
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
-        nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
+        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
         return pred_inst, nuc_inst_info_dict
 
