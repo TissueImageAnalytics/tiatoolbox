@@ -1,10 +1,10 @@
 albumentations
 black>=21.4b0
-bump2version==0.5.11
+bump2version==1.0.1
 Click>=7.0
-coverage==5.1
+coverage==6.3.2
 flake8-bugbear
-flake8==3.7.8
+flake8==4.0.1
 flask
 glymur>=0.9.7
 imagecodecs>2021.10.0
@@ -18,7 +18,7 @@ pillow
 pip>=20.0.2
 pre-commit
 pydicom # Used by wsidicom
-pytest-cov==2.9.0
+pytest-cov==3.0.0
 pytest-runner>=5.2
 pytest>=6.2.5
 pyyaml>=5.1
@@ -31,13 +31,13 @@ sphinx>=4.1.2
 sphinx-gallery
 sphinx-toolbox
 tifffile>2021.10.0
+toml==0.10.2
 torch>=1.9.0
 torchvision>=0.10.1
 tox
 tqdm
-twine==1.14.0
+twine==3.8.0
 umap-learn
-watchdog==0.9.0
-wheel==0.33.6
+wheel==0.37.1
 wsidicom
 zarr
