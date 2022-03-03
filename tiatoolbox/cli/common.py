@@ -24,3 +24,7 @@ import click
 img_input_option = click.option(
     "--img-input", help="input path to WSI file or directory path"
 )
+output_path_option = click.option(
+    "--output-path",
+    help="Path to output directory to save the output, default=img_input/../output",
+)

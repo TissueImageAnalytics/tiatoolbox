@@ -25,7 +25,7 @@ import sys
 import click
 
 from tiatoolbox import utils, wsicore
-from tiatoolbox.cli.common import img_input_option
+from tiatoolbox.cli.common import img_input_option, output_path_option
 
 
 @click.group()
@@ -36,10 +36,7 @@ def main():  # pragma: no cover
 
 @main.command()
 @img_input_option
-@click.option(
-    "--output-path",
-    help="Path to output directory to save the output, default=img_input/../meta",
-)
+@output_path_option
 @click.option(
     "--file-types",
     help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
