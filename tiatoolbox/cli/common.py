@@ -21,10 +21,27 @@
 """Defines common code required for cli."""
 import click
 
-img_input_option = click.option(
+cli_img_input = click.option(
     "--img-input", help="input path to WSI file or directory path"
 )
-output_path_option = click.option(
+cli_output_path = click.option(
     "--output-path",
     help="Path to output directory to save the output, default=img_input/../output",
+)
+cli_file_type = click.option(
+    "--file-types",
+    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
+    default="*.ndpi, *.svs, *.mrxs, *.jp2",
+)
+cli_mode = click.option(
+    "--mode",
+    default="show",
+    help="'show' to display the image or required information or 'save' to save "
+    "the output, default=save",
+)
+cli_verbose = click.option(
+    "--verbose",
+    type=bool,
+    default=True,
+    help="Print output, default=True",
 )

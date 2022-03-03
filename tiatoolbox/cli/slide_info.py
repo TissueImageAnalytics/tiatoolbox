@@ -25,7 +25,13 @@ import sys
 import click
 
 from tiatoolbox import utils, wsicore
-from tiatoolbox.cli.common import img_input_option, output_path_option
+from tiatoolbox.cli.common import (
+    cli_file_type,
+    cli_img_input,
+    cli_mode,
+    cli_output_path,
+    cli_verbose,
+)
 
 
 @click.group()
@@ -35,37 +41,21 @@ def main():  # pragma: no cover
 
 
 @main.command()
-@img_input_option
-@output_path_option
-@click.option(
-    "--file-types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs, *.jp2",
-)
-@click.option(
-    "--mode",
-    default="show",
-    help="'show' to display meta information only or 'save' to save "
-    "the meta information, default=show",
-)
-@click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
-)
+@cli_img_input
+@cli_output_path
+@cli_file_type
+@cli_mode
+@cli_verbose
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Display or save WSI metadata."""
     files_all, output_path = utils.misc.prepare_file_dir_cli(
-        img_input, output_path, file_types, mode, "meta-data"
+        img_input, output_path, file_types, mode, "output"
     )
 
     for curr_file in files_all:
         slide_param = wsicore.slide_info.slide_info(
             input_path=curr_file, verbose=verbose
         )
-        if mode == "show":
-            print(slide_param.as_dict())
 
         if mode == "save":
             out_path = pathlib.Path(

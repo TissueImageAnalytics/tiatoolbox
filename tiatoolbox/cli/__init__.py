@@ -65,7 +65,7 @@ tiatoolbox_cli = TIAToolboxCLI()
 )
 def main():
     """Computational pathology toolbox by TIA Centre."""
-    click.echo(f"Computational pathology toolbox by TIA Centre.")
+    return 0
 
 
 main.add_command(nucleus_instance_segment)
