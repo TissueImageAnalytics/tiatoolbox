@@ -31,6 +31,7 @@ from tiatoolbox.cli.common import (
     cli_mode,
     cli_output_path,
     cli_verbose,
+    prepare_file_dir_cli,
 )
 
 
@@ -48,7 +49,7 @@ def main():  # pragma: no cover
 @cli_verbose
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Display or save WSI metadata."""
-    files_all, output_path = utils.misc.prepare_file_dir_cli(
+    files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "output"
     )
 

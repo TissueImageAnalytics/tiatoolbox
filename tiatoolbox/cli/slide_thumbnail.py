@@ -25,6 +25,7 @@ import click
 from PIL import Image
 
 from tiatoolbox import utils
+from tiatoolbox.cli.common import prepare_file_dir_cli
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -54,7 +55,7 @@ def main():  # pragma: no cover
 )
 def slide_thumbnail(img_input, output_path, file_types, mode):
     """Read whole slide image thumbnail."""
-    files_all, output_path = utils.misc.prepare_file_dir_cli(
+    files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "slide-thumbnail"
     )
 

@@ -22,6 +22,7 @@
 import click
 
 from tiatoolbox import utils
+from tiatoolbox.cli.common import prepare_model_cli
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
 
@@ -152,7 +153,7 @@ def patch_predictor(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
-    files_all, masks_all, output_path = utils.misc.prepare_model_cli(
+    files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,
         masks=masks,

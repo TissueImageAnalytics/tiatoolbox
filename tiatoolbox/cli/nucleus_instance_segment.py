@@ -23,6 +23,7 @@ import click
 import yaml
 
 from tiatoolbox import utils
+from tiatoolbox.cli.common import prepare_model_cli
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     IOSegmentorConfig,
     NucleusInstanceSegmentor,
@@ -144,7 +145,7 @@ def nucleus_instance_segment(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
-    files_all, masks_all, output_path = utils.misc.prepare_model_cli(
+    files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,
         masks=masks,
