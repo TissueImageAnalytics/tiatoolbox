@@ -47,31 +47,16 @@ def version_msg():
 
 
 class TIAToolboxCLI(click.Group):
-    def __init__(self, **extra):
-        super(TIAToolboxCLI, self).__init__()
-        # params = list(extra.pop("params", None) or ())
-        # print(params)
-        # params.append(version_option)
-        # click.Group.__init__(self, params=params, **extra)
+    def __init__(self, *args, **kwargs):
+        super(TIAToolboxCLI, self).__init__(*args, **kwargs)
+        self.help = "Computational pathology toolbox by TIA Centre."
+        self.add_help_option = {"help_option_names": ["-h", "--help"]}
 
 
-cli = TIAToolboxCLI(
-    help="Computational pathology toolbox by TIA Centre.",
-    context_settings={"help_option_names": ["-h", "--help"]},
-)
-
-# self.add_command(nucleus_instance_segment)
-# main.add_command(patch_predictor)
-# main.add_command(read_bounds)
-# main.add_command(save_tiles)
-# main.add_command(semantic_segment)
-# main.add_command(slide_info)
-# main.add_command(slide_thumbnail)
-# main.add_command(tissue_mask)
-# main.add_command(stain_norm)
+tiatoolbox_cli = TIAToolboxCLI()
 
 
-@cli.group(context_settings={"help_option_names": ["-h", "--help"]})
+@tiatoolbox_cli.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(
     __version__,
     "--version",
@@ -82,6 +67,17 @@ cli = TIAToolboxCLI(
 def main() -> None:
     """Computational pathology toolbox by TIA Centre."""
     return None
+
+
+# self.add_command(nucleus_instance_segment)
+# main.add_command(patch_predictor)
+# main.add_command(read_bounds)
+# main.add_command(save_tiles)
+# main.add_command(semantic_segment)
+# main.add_command(slide_info)
+# main.add_command(slide_thumbnail)
+# main.add_command(tissue_mask)
+# main.add_command(stain_norm)
 
 
 if __name__ == "__main__":

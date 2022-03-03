@@ -25,6 +25,7 @@ import sys
 import click
 
 from tiatoolbox import utils, wsicore
+from tiatoolbox.cli.common import img_input_option
 
 
 @click.group()
@@ -34,7 +35,7 @@ def main():  # pragma: no cover
 
 
 @main.command()
-@click.option("--img-input", help="input path to WSI file or directory path")
+@img_input_option
 @click.option(
     "--output-path",
     help="Path to output directory to save the output, default=img_input/../meta",
