@@ -694,7 +694,7 @@ class HoVerNet(ModelABC):
                 - :py:obj:`dict` - Instance dictionary:
                     A dictionary containing a mapping of each instance
                     within `inst_map` instance information. It has
-                    following form::
+                    the following form::
 
                         {
                             0: {  # Instance ID
