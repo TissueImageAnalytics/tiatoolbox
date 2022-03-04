@@ -100,7 +100,7 @@ class WSIReader:
                 An object with base :class:`.WSIReader` as base class.
 
         Examples:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
