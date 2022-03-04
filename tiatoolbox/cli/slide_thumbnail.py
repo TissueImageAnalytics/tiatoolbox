@@ -36,9 +36,6 @@ from tiatoolbox.cli.common import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 slide_thumbnail_cli = TIAToolboxCLI()
-slide_thumbnail_cli.help = (
-    "Reads whole slide image thumbnail and shows or saves based on mode argument."
-)
 
 
 @slide_thumbnail_cli.command()
@@ -47,9 +44,22 @@ slide_thumbnail_cli.help = (
 @cli_file_type
 @cli_mode
 def slide_thumbnail(img_input, output_path, file_types, mode):
-    """Read whole slide image thumbnail."""
+    """Reads whole slide image thumbnail and shows or saves based on mode argument.
+
+    The default inputs are:
+
+    img-input='', output-path=img-input-path/../meta-data,  mode="save",
+    file-types="*.ndpi, *.svs, *.mrxs, *.jp2".
+
+    """
     if img_input is None:
         no_input_message("No image input provided.\n")
+
+    if file_types is None:
+        file_types = "*.ndpi, *.svs, *.mrxs, *.jp2"
+
+    if mode is None:
+        mode = "save"
 
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "output"
