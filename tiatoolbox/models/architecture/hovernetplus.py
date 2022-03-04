@@ -118,7 +118,7 @@ class HoVerNetPlus(HoVerNet):
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
-            image (:class:`numpy.ndarray`):
+            pred_layer (:class:`numpy.ndarray`):
                 Semantic segmentation map of different layers/regions
                 following processing.
 
