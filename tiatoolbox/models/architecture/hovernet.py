@@ -574,7 +574,7 @@ class HoVerNet(ModelABC):
 
         Args:
             pred_inst (:class:`numpy.ndarray`):
-                An image of shape (heigh, width) which contains the
+                An image of shape (height, width) which contains the
                 probabilities of a pixel being a nuclei.
             pred_type (:class:`numpy.ndarray`):
                 An image of shape (height, width, 1) which contains the

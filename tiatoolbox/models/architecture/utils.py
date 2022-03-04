@@ -71,7 +71,7 @@ def centre_crop_to_shape(
     """A function to center crop image to shape.
 
     Centre crop `x` so that `x` has shape of `y` and `y` height and
-    width must be smaller than `x` heigh width.
+    width must be smaller than `x` height width.
 
     Args:
         x (:class:`numpy.ndarray`, torch.tensor):
