@@ -34,7 +34,6 @@ from tiatoolbox.cli.common import (
     cli_output_path,
     cli_resolution,
     cli_units,
-    no_input_message,
     prepare_file_dir_cli,
     tiatoolbox_cli,
 )
@@ -84,8 +83,6 @@ def tissue_mask(
     img_input, output_path, method, resolution, units, kernel_size, mode, file_types
 ):
     """Generate tissue mask for a WSI."""
-    no_input_message(input_file=img_input)
-
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"
     )

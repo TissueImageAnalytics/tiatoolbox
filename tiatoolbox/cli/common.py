@@ -226,6 +226,7 @@ def prepare_file_dir_cli(
         pathlib.Path: updated output path.
 
     """
+    no_input_message(input_file=img_input)
     file_types = string_to_tuple(in_str=file_types)
 
     if isinstance(output_path, str):
