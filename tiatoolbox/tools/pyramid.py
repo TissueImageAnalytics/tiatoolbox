@@ -62,7 +62,7 @@ class TilePyramidGenerator:
             \times\text{overlap}`.
         downsample (int):
             The downsample factor between levels. Default is 2.
-        tile_overlap (int):
+        overlap (int):
             The number of extra pixel to add to each edge of the tile.
             Default is 0.
 
