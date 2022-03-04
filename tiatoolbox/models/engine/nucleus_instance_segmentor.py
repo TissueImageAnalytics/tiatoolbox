@@ -379,7 +379,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         on a large image tiles (each may have size of 4000x4000 compared
         to patch output of 256x256) first before stitching every tiles
         by the end to complete the WSI output. For nuclei instance
-        segmentation, the stiching process will require removal of
+        segmentation, the stitching process will require removal of
         predictions within some bounding areas. This function generates
         both the tile placement as well as the flag to indicate how the
         removal should be done to achieve the above goal.
