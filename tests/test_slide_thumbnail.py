@@ -68,9 +68,7 @@ def test_command_line_slide_thumbnail_output_none(sample_svs, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert (
-        pathlib.Path(sample_svs).parent
-        / ("slide-thumbnail")
-        / (sample_svs.stem + ".jpg")
+        pathlib.Path(sample_svs).parent / ("output") / (sample_svs.stem + ".jpg")
     ).is_file()
 
 

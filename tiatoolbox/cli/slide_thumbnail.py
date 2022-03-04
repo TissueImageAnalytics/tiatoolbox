@@ -21,42 +21,38 @@
 """Command line interface for slide_thumbnail."""
 import pathlib
 
-import click
 from PIL import Image
 
 from tiatoolbox import utils
-from tiatoolbox.cli.common import prepare_file_dir_cli
+from tiatoolbox.cli.common import (
+    TIAToolboxCLI,
+    cli_file_type,
+    cli_img_input,
+    cli_mode,
+    cli_output_path,
+    no_input_message,
+    prepare_file_dir_cli,
+)
 from tiatoolbox.wsicore.wsireader import WSIReader
 
-
-@click.group()
-def main():  # pragma: no cover
-    """Define slide_thumbnail click group."""
-    return 0
-
-
-@main.command()
-@click.option("--img-input", help="Path to WSI file")
-@click.option(
-    "--output-path",
-    help="Path to output file to save the image region in save mode,"
-    " default=img_input_dir/../slide_thumb.jpg",
+slide_thumbnail_cli = TIAToolboxCLI()
+slide_thumbnail_cli.help = (
+    "Reads whole slide image thumbnail and shows or saves based on mode argument."
 )
-@click.option(
-    "--file-types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs, *.jp2",
-)
-@click.option(
-    "--mode",
-    default="save",
-    help="'show' to display image region or 'save' to save at the output path"
-    ", default=save",
-)
+
+
+@slide_thumbnail_cli.command()
+@cli_img_input
+@cli_output_path
+@cli_file_type
+@cli_mode
 def slide_thumbnail(img_input, output_path, file_types, mode):
     """Read whole slide image thumbnail."""
+    if img_input is None:
+        no_input_message("No image input provided.\n")
+
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, mode, "slide-thumbnail"
+        img_input, output_path, file_types, mode, "output"
     )
 
     for curr_file in files_all:
