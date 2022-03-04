@@ -805,7 +805,7 @@ class SemanticSegmentor:
                 each pixel get overlapped when assembling.
             free_prediction (bool):
                 If this is `True`, `predictions` will be modified in
-                place and each patch will be replace with `None` once
+                place and each patch will be replaced with `None` once
                 processed. This is to save memory when assembling.
 
         Returns:
