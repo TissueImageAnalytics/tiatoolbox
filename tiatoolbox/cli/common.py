@@ -27,7 +27,7 @@ import click
 from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
 
-def add_default_to_usage_help(usage_help, default):
+def add_default_to_usage_help(usage_help: str, default: str) -> str:
     """Adds default value to usage help string.
 
     Args:
@@ -102,7 +102,7 @@ class TIAToolboxCLI(click.Group):
         self.add_help_option = {"help_option_names": ["-h", "--help"]}
 
 
-def no_input_message(message):
+def no_input_message(message: str) -> None:
     """This function is called if no input is provided.
 
     Args:
@@ -113,7 +113,13 @@ def no_input_message(message):
     ctx.fail(message=message)
 
 
-def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
+def prepare_file_dir_cli(
+    img_input: str or pathlib.Path,
+    output_path: str or pathlib.Path,
+    file_types: str,
+    mode: str,
+    sub_dirname: str,
+) -> [list, pathlib.Path]:
     """Prepares CLI for running code on multiple files or a directory.
 
     Checks for existing directories to run tests.
@@ -128,8 +134,8 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
         sub_dirname (str): name of subdirectory to save output.
 
     Returns:
-        files_all (list): list of file paths to process.
-        output_path (pathlib.Path): updated output path.
+        list: list of file paths to process.
+        pathlib.Path: updated output path.
 
     """
     file_types = string_to_tuple(in_str=file_types)
@@ -154,10 +160,16 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
     if mode == "save":
         output_path.mkdir(parents=True, exist_ok=True)
 
-    return files_all, output_path
+    return [files_all, output_path]
 
 
-def prepare_model_cli(img_input, output_path, masks, file_types, mode):
+def prepare_model_cli(
+    img_input: str or pathlib.Path,
+    output_path: str or pathlib.Path,
+    masks: str or pathlib.Path,
+    file_types: str,
+    mode: str,
+) -> [list, list, pathlib.Path]:
     """Prepares cli for running models.
 
     Checks for existing directories to run tests.
@@ -172,9 +184,9 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
         mode (str): wsi or tile mode.
 
     Returns:
-        files_all (list): list of file paths to process.
-        masks_all (list): list of masks corresponding to input files.
-        output_path (pathlib.Path): output path
+        list: list of file paths to process.
+        list: list of masks corresponding to input files.
+        pathlib.Path: output path
 
     """
     output_path = pathlib.Path(output_path)
@@ -206,7 +218,7 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
     if os.path.isdir(str(masks)):
         masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
 
-    return files_all, masks_all, output_path
+    return [files_all, masks_all, output_path]
 
 
 tiatoolbox_cli = TIAToolboxCLI()
