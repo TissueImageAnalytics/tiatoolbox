@@ -381,8 +381,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         by the end to complete the WSI output. For nuclei instance
         segmentation, the stitching process will require removal of
         predictions within some bounding areas. This function generates
-        both the tile placement as well as the flag to indicate how the
-        removal should be done to achieve the above goal.
+        both the tile placement and the flag to indicate how the removal
+        should be done to achieve the above goal.
 
         Args:
             image_shape (:class:`numpy.ndarray`, list(int)):
