@@ -163,7 +163,7 @@ class IOSegmentorConfig(IOConfigABC):
                 A list of resolutions where one is defined as
                 `{'resolution': value, 'unit': value}`
             units (str):
-                Units that the the resolutions are at.
+                Units that the resolutions are at.
 
         Returns:
             :class:`numpy.ndarray`:
