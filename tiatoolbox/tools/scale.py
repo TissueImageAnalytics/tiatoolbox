@@ -67,7 +67,7 @@ class PlattScaling:
         Args:
             logits (array-like):
                 Classifier output scores.
-            labels (array like):
+            labels (array-like):
                 Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
 
         Returns:
@@ -76,7 +76,7 @@ class PlattScaling:
         """
 
         def mylog(v):
-            """Log with epilon."""
+            """Log with epsilon."""
             return np.log(v + 1.0e-200)
 
         out = np.array(logits)
