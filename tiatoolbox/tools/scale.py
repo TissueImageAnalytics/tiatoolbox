@@ -170,7 +170,7 @@ class PlattScaling:
         return self
 
     def transform(self, logits):
-        """Tranform input to probabilities basing on trained parameters.
+        """Transform input to probabilities basing on trained parameters.
 
         Args:
             labels (array like):
