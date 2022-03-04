@@ -124,7 +124,7 @@ class OtsuTissueMasker(TissueMasker):
         if len(images_shape) != 4:
             raise ValueError(
                 "Expected 4 dimensional input shape (N, height, width, 3)"
-                f" but recieved shape of {images_shape}."
+                f" but received shape of {images_shape}."
             )
 
         # Convert RGB images to greyscale
