@@ -41,7 +41,10 @@ def add_default_to_usage_help(usage_help: str, default: str or int) -> str:
             New usage_help value.
 
     """
-    return f"{usage_help} default={default}"
+    if default is not None:
+        return f"{usage_help} default={default}"
+    else:
+        return usage_help
 
 
 def cli_img_input(
@@ -53,11 +56,12 @@ def cli_img_input(
 
 def cli_output_path(
     usage_help: str = "Path to output directory to save the output.",
+    default: str = None,
 ) -> callable:
     """Enables --output-path option for cli."""
     return click.option(
         "--output-path",
-        help=usage_help,
+        help=add_default_to_usage_help(usage_help, default),
         type=str,
     )
 
@@ -123,6 +127,31 @@ def cli_resolution(
         type=float,
         default=default,
         help=add_default_to_usage_help(usage_help, default),
+    )
+
+
+def cli_tile_objective(
+    usage_help: str = "Objective value for the saved tiles.", default: int = 20
+) -> callable:
+    """Enables --tile-objective-value option for cli."""
+    return click.option(
+        "--tile-objective-value",
+        type=int,
+        default=default,
+        help=add_default_to_usage_help(usage_help, default),
+    )
+
+
+def cli_tile_read_size(
+    usage_help: str = "Width and Height of saved tiles. default=5000 5000",
+) -> callable:
+    """Enables --tile-objective-value option for cli."""
+    return click.option(
+        "--tile-read-size",
+        type=int,
+        nargs=2,
+        default=[5000, 5000],
+        help=usage_help,
     )
 
 

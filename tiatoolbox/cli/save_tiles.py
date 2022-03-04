@@ -21,48 +21,28 @@
 """Command line interface for save_tiles."""
 import os
 
-import click
-
 from tiatoolbox import utils, wsicore
+from tiatoolbox.cli.common import (
+    cli_file_type,
+    cli_img_input,
+    cli_output_path,
+    cli_tile_objective,
+    cli_tile_read_size,
+    cli_verbose,
+    no_input_message,
+    tiatoolbox_cli,
+)
 
 
-@click.group()
-def main():  # pragma: no cover
-    """Define save_tiles click group."""
-    return 0
-
-
-@main.command()
-@click.option("--img-input", help="input path to WSI file or directory path")
-@click.option(
-    "--output-path",
-    default="tiles",
-    help="Path to output directory to save the output, default=tiles",
+@tiatoolbox_cli.command()
+@cli_img_input()
+@cli_output_path(
+    usage_help="Path to output directory to save the output.", default="tiles"
 )
-@click.option(
-    "--file-types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs, *.jp2",
-)
-@click.option(
-    "--tile-objective-value",
-    type=int,
-    default=20,
-    help="objective value at which tile is generated- default=20",
-)
-@click.option(
-    "--tile-read-size",
-    type=int,
-    nargs=2,
-    default=[5000, 5000],
-    help="tile width, height default=5000 5000",
-)
-@click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
-)
+@cli_file_type()
+@cli_tile_objective()
+@cli_tile_read_size()
+@cli_verbose()
 def save_tiles(
     img_input,
     output_path,
@@ -72,6 +52,7 @@ def save_tiles(
     verbose=True,
 ):
     """Display or save WSI metadata."""
+    no_input_message(input_file=img_input)
     file_types = utils.misc.string_to_tuple(in_str=file_types)
 
     if not os.path.exists(img_input):
