@@ -859,7 +859,7 @@ class WSIReader:
         When reading between the levels stored in the WSI, the
         coordinates of the requested region are projected to the next
         highest resolution. This resolution is then decoded and
-        downsampled to produced the desired output. This is a major
+        downsampled to produce the desired output. This is a major
         source of variability in the time take to perform a read
         operation. Reads which require reading a large region before
         downsampling will be significantly slower than reading at a
