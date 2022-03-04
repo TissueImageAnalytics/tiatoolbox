@@ -157,7 +157,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
             coordinate is of the form `[start_x, start_y, end_x,
             end_y]`.
         patch_input_shape:
-            A tuple(int, int) or ndarray of shape (2,). Expected size to
+            A tuple (int, int) or ndarray of shape (2,). Expected size to
             read from `reader` at requested `resolution` and `units`.
             Expected to be `(height, width)`.
         resolution:
@@ -218,10 +218,10 @@ class WSIPatchDataset(abc.PatchDatasetABC):
                 Preprocessing function used to transform the input data.
 
         Examples:
-            >>> # an user defined preproc func and expected behavior
+            >>> # A user defined preproc func and expected behavior
             >>> preproc_func = lambda img: img/2  # reduce intensity by half
             >>> transformed_img = preproc_func(img)
-            >>> # create a dataset to get patches from WSI with above
+            >>> # Create a dataset to get patches from WSI with above
             >>> # preprocessing function
             >>> ds = WSIPatchDataset(
             ...     img_path='/A/B/C/wsi.svs',

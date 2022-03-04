@@ -77,8 +77,8 @@ class KatherPatchDataset(DatasetInfoABC):
             A list of `int` where each is the label of the sample at the
             same index.
         label_names (dict):
-            A dict indicates the possible associate name of each label
-            value.
+            A dict mapping each unique label value to the associated
+            class name as a string.
 
     """
 
