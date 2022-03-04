@@ -584,7 +584,7 @@ class HoVerNet(ModelABC):
             dict:
                 A dictionary containing a mapping of each instance
                 within `pred_inst` instance information. It has
-                following form::
+                the following form::
 
                     {
                         0: {  # Instance ID
