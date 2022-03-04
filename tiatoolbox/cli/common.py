@@ -82,13 +82,16 @@ def cli_file_type(
 def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",
+    input_type: click.Choice = None,
 ) -> callable:
     """Enables --mode option for cli."""
+    if input_type is None:
+        input_type = click.Choice(["show", "save"], case_sensitive=False)
     return click.option(
         "--mode",
         help=add_default_to_usage_help(usage_help, default),
         default=default,
-        type=str,
+        type=input_type,
     )
 
 
