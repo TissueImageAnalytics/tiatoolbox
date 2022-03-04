@@ -48,15 +48,6 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
     if img_input is None:
         no_input_message("No image input provided.\n")
 
-    if file_types is None:
-        file_types = "*.ndpi, *.svs, *.mrxs, *.jp2"
-
-    if mode is None:
-        mode = "show"
-
-    if verbose is None:
-        verbose = True
-
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"
     )
