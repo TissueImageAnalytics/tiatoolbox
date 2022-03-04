@@ -63,6 +63,7 @@ def cli_output_path(
         "--output-path",
         help=add_default_to_usage_help(usage_help, default),
         type=str,
+        default=default,
     )
 
 
