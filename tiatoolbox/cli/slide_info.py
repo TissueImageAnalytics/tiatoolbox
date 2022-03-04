@@ -54,7 +54,7 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
 
     for curr_file in files_all:
         slide_param = wsicore.slide_info.slide_info(
-            input_path=curr_file, verbose=verbose
+            input_path=curr_file, verbose=verbose or mode == "show"
         )
 
         if mode == "save":
