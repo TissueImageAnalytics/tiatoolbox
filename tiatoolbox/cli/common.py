@@ -27,13 +27,13 @@ import click
 from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
 
-def add_default_to_usage_help(usage_help: str, default: str) -> str:
+def add_default_to_usage_help(usage_help: str, default: str or int) -> str:
     """Adds default value to usage help string.
 
     Args:
         usage_help (str):
             usage help for click option.
-        default (str):
+        default (str or int):
             default value as string for click option.
 
     Returns:
@@ -47,12 +47,14 @@ def add_default_to_usage_help(usage_help: str, default: str) -> str:
 def cli_img_input(
     usage_help: str = "Input path to WSI file or directory path.",
 ) -> callable:
+    """Enables --img-input option for cli."""
     return click.option("--img-input", help=usage_help, type=str)
 
 
 def cli_output_path(
     usage_help: str = "Path to output directory to save the output.",
 ) -> callable:
+    """Enables --output-path option for cli."""
     return click.option(
         "--output-path",
         help=usage_help,
@@ -64,6 +66,7 @@ def cli_file_type(
     usage_help: str = "File types to capture from directory.",
     default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
 ) -> callable:
+    """Enables --file-types option for cli."""
     return click.option(
         "--file-types",
         help=add_default_to_usage_help(usage_help, default),
@@ -76,6 +79,7 @@ def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",
 ) -> callable:
+    """Enables --mode option for cli."""
     return click.option(
         "--mode",
         help=add_default_to_usage_help(usage_help, default),
@@ -84,9 +88,48 @@ def cli_mode(
     )
 
 
+def cli_region(
+    usage_help: str = "Image region in the whole slide image to read from. "
+    "default=0 0 2000 2000",
+) -> callable:
+    """Enables --region option for cli."""
+    return click.option(
+        "--region",
+        type=int,
+        nargs=4,
+        help=usage_help,
+    )
+
+
+def cli_units(
+    usage_help: str = "Image resolution units to read the image.",
+    default: str = "level",
+) -> callable:
+    """Enables --units option for cli."""
+    return click.option(
+        "--units",
+        default=default,
+        type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
+        help=add_default_to_usage_help(usage_help, default),
+    )
+
+
+def cli_resolution(
+    usage_help: str = "Image resolution to read the image.", default: int = 0
+) -> callable:
+    """Enables --resolution option for cli."""
+    return click.option(
+        "--resolution",
+        type=float,
+        default=default,
+        help=add_default_to_usage_help(usage_help, default),
+    )
+
+
 def cli_verbose(
     usage_help: str = "Prints the console output.", default: bool = True
 ) -> callable:
+    """Enables --verbose option for cli."""
     return click.option(
         "--verbose",
         type=bool,

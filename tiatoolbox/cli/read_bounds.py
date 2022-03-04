@@ -21,46 +21,37 @@
 """Command line interface for read_bounds."""
 import pathlib
 
-import click
 from PIL import Image
 
-from tiatoolbox import utils, wsicore
+from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_img_input,
     cli_mode,
     cli_output_path,
+    cli_region,
+    cli_resolution,
+    cli_units,
     no_input_message,
     tiatoolbox_cli,
 )
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @tiatoolbox_cli.command()
 @cli_img_input(usage_help="Path to WSI file.")
 @cli_output_path(
-    usage_help="Path to output file in save mode,"
-    " default=img_input_dir/../im_region.jpg"
+    usage_help="Path to output file in save mode. "
+    "default=img_input_dir/../im_region.jpg"
 )
-@click.option(
-    "--region",
-    type=int,
-    nargs=4,
-    help="image region in the whole slide image to read, default=0 0 2000 2000",
+@cli_region(
+    usage_help="Image region in the whole slide image to read from. "
+    "default=0 0 2000 2000"
 )
-@click.option(
-    "--resolution",
-    type=float,
-    default=0,
-    help="resolution to read the image at, default=0",
-)
-@click.option(
-    "--units",
-    default="level",
-    type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
-    help="resolution units, default=level",
-)
+@cli_resolution()
+@cli_units()
 @cli_mode(default="show")
 def read_bounds(img_input, region, resolution, units, output_path, mode):
-    """Read a region in an whole slide image as specified."""
+    """Read a region in a whole slide image as specified."""
     no_input_message(input_file=img_input)
 
     if not region:
@@ -70,14 +61,14 @@ def read_bounds(img_input, region, resolution, units, output_path, mode):
         input_dir = pathlib.Path(img_input).parent
         output_path = str(input_dir.parent / "im_region.jpg")
 
-    wsi = wsicore.wsireader.get_wsireader(input_img=img_input)
+    wsi = WSIReader.open(input_img=img_input)
 
     im_region = wsi.read_bounds(
         region,
         resolution=resolution,
         units=units,
     )
-    if mode == "show":
+    if mode == "show":  # pragma: no cover
         im_region = Image.fromarray(im_region)
         im_region.show()
 
