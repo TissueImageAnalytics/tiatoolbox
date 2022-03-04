@@ -542,8 +542,8 @@ class SemanticSegmentor:
                 the number of coordinate sets and K is either 2 for
                 centroids or 4 for bounding boxes. When using the
                 default `func=None`, K should be 4, as we expect the
-                `coordinates` to be refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
+                `coordinates` to be bounding boxes in `[start_x,
+                start_y, end_x, end_y]` format.
 
         Returns:
             :class:`numpy.ndarray`:
