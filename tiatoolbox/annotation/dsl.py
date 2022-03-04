@@ -20,7 +20,7 @@
 
 """Domain specific langauge (DSL) for use in AnnotationStore queries and indexes.
 
-This modules facilitates conversion from a restricted subset of python
+This module facilitates conversion from a restricted subset of python
 to another domain specific language, for example SQL. This is done using
 `eval` and a set of provided globals and locals. Mainly used for
 construction of predicate statemtents for AnnotationStore queries but
