@@ -867,9 +867,9 @@ class WSIReader:
 
         Examples:
 
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # The resolution can be different in x and y, e.g.
