@@ -27,13 +27,13 @@ import click
 from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
 
-def add_default_to_usage_help(usage_help: str, default: str or int) -> str:
+def add_default_to_usage_help(usage_help: str, default: str or int or float) -> str:
     """Adds default value to usage help string.
 
     Args:
         usage_help (str):
             usage help for click option.
-        default (str or int):
+        default (str or int or float):
             default value as string for click option.
 
     Returns:
@@ -119,7 +119,7 @@ def cli_units(
 
 
 def cli_resolution(
-    usage_help: str = "Image resolution to read the image.", default: int = 0
+    usage_help: str = "Image resolution to read the image.", default: float = 0
 ) -> callable:
     """Enables --resolution option for cli."""
     return click.option(
@@ -152,6 +152,18 @@ def cli_tile_read_size(
         nargs=2,
         default=[5000, 5000],
         help=usage_help,
+    )
+
+
+def cli_method(
+    usage_help: str = "Select method of choice.", default: str = "Otsu"
+) -> callable:
+    """Enables --tile-objective-value option for cli."""
+    return click.option(
+        "--method",
+        type=click.Choice(["Otsu", "Morphological"], case_sensitive=True),
+        default=default,
+        help=add_default_to_usage_help(usage_help, default),
     )
 
 
