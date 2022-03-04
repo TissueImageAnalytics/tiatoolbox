@@ -181,7 +181,7 @@ class CNNBackbone(ModelABC):
 
     Args:
         backbone (str):
-            Model name. Currently the tool supports following
+            Model name. Currently, the tool supports following
              model names and their default associated weights from pytorch.
                 - "alexnet"
                 - "resnet18"
