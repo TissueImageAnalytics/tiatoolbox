@@ -21,7 +21,6 @@
 
 """Package to define datasets available to download via TIAToolbox."""
 import pathlib
-import shutil
 import tempfile
 import zipfile
 from typing import Optional
