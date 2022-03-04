@@ -36,10 +36,10 @@ class TileServer(Flask):
     """A Flask app to display Zoomify tiles as a slippery map.
 
     Args:
-        title:
+        title (str):
             The title of the tile server, displayed in the browser as
             the page title.
-        layers:
+        layers (Dict[str, WSIReader]):
             A dictionary mapping layer names to :obj:`WSIReader` objects
             to display.
 
