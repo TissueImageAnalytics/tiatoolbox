@@ -92,7 +92,7 @@ class StainAugmentor(ImageOnlyTransform):
 
     Examples:
         >>> '''Using the stain augmentor in the 'albumentations' pipeline'''
-        >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
+        >>> from tiatoolbox.tools.stainaugment import StainAugmentor
         >>> import albumentations as A
         >>> # Defining an exemplar stain matrix as reference
         >>> stain_matrix = np.array([[0.91633014, -0.20408072, -0.34451435],
@@ -101,13 +101,13 @@ class StainAugmentor(ImageOnlyTransform):
         >>> aug_pipline = A.Compose([
         ...                         A.RandomRotate90(),
         ...                         A.Flip(),
-        ...                         StainAugmentaiton(stain_matrix=stain_matrix)
+        ...                         StainAugmentor(stain_matrix=stain_matrix)
         ...                         ])
         >>> # apply the albumentations pipeline on an image (RGB numpy unit8 type)
         >>> img_aug = aug(image=img)['image']
 
         >>> '''Using the stain augmentor stand alone'''
-        >>> from tiatoolbox.tools.stainaugment import StainAugmentaiton
+        >>> from tiatoolbox.tools.stainaugment import StainAugmentor
         >>> # Defining an exemplar stain matrix as reference
         >>> stain_matrix = np.array([[0.91633014, -0.20408072, -0.34451435],
         ...                [0.17669817, 0.92528011, 0.33561059]])
