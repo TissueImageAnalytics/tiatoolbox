@@ -379,19 +379,17 @@ class PatchExtractor(ABC):
         """Calculate patch tiling coordinates.
 
         Args:
-            image_shape (a tuple (int, int) or :class:`numpy.ndarray` of
-            shape (2,)):
+            image_shape (tuple (int, int) or :class:`numpy.ndarray`):
                 This argument specifies the shape of mother image (the
                 image we want to extract patches from) at requested
                 `resolution` and `units` and it is expected to be in
                 (width, height) format.
-            patch_input_shape (a tuple (int, int) or
-            :class:`numpy.ndarray` of shape (2,)):
+            patch_input_shape (tuple (int, int) or :class:`numpy.ndarray`):
                 Specifies the input shape of requested patches to be
                 extracted from mother image at desired `resolution` and
                 `units`. This argument is also expected to be in (width,
                 height) format.
-            patch_output_shape (a tuple (int, int) or
+            patch_output_shape (tuple (int, int) or
             :class:`numpy.ndarray` of shape (2,)):
                 Specifies the output shape of requested patches to be
                 extracted from mother image at desired `resolution` and
@@ -399,7 +397,7 @@ class PatchExtractor(ABC):
                 height) format. If this is not provided,
                 `patch_output_shape` will be the same as
                 `patch_input_shape`.
-            stride_shape (a tuple (int, int) or :class:`numpy.ndarray`
+            stride_shape (tuple (int, int) or :class:`numpy.ndarray`
             of shape (2,)):
                 The stride that is used to calculate the patch location
                 during the patch extraction. If `patch_output_shape` is
