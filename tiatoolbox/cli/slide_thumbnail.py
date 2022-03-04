@@ -25,24 +25,25 @@ from PIL import Image
 
 from tiatoolbox import utils
 from tiatoolbox.cli.common import (
-    TIAToolboxCLI,
     cli_file_type,
     cli_img_input,
     cli_mode,
     cli_output_path,
     no_input_message,
     prepare_file_dir_cli,
+    tiatoolbox_cli,
 )
 from tiatoolbox.wsicore.wsireader import WSIReader
 
-slide_thumbnail_cli = TIAToolboxCLI()
 
-
-@slide_thumbnail_cli.command()
-@cli_img_input
-@cli_output_path
-@cli_file_type
-@cli_mode
+@tiatoolbox_cli.command()
+@cli_img_input()
+@cli_output_path(
+    usage_help="Path to output directory to save the output. "
+    "default=img_input/../slide-thumbnail"
+)
+@cli_file_type(default="*.ndpi, *.svs, *.mrxs, *.jp2")
+@cli_mode(default="save")
 def slide_thumbnail(img_input, output_path, file_types, mode):
     """Reads whole slide image thumbnail and shows or saves based on mode argument.
 
@@ -62,7 +63,7 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
         mode = "save"
 
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, mode, "output"
+        img_input, output_path, file_types, mode, "slide-thumbnail"
     )
 
     for curr_file in files_all:

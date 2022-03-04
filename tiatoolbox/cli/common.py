@@ -207,3 +207,6 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
         masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
 
     return files_all, masks_all, output_path
+
+
+tiatoolbox_cli = TIAToolboxCLI()

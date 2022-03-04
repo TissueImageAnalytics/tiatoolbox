@@ -23,7 +23,6 @@ import pathlib
 
 from tiatoolbox import utils, wsicore
 from tiatoolbox.cli.common import (
-    TIAToolboxCLI,
     cli_file_type,
     cli_img_input,
     cli_mode,
@@ -31,12 +30,11 @@ from tiatoolbox.cli.common import (
     cli_verbose,
     no_input_message,
     prepare_file_dir_cli,
+    tiatoolbox_cli,
 )
 
-slide_info_cli = TIAToolboxCLI()
 
-
-@slide_info_cli.command()
+@tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
     usage_help="Path to output directory to save the output. "

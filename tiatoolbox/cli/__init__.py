@@ -25,7 +25,7 @@ import sys
 import click
 
 from tiatoolbox import __version__
-from tiatoolbox.cli.common import TIAToolboxCLI
+from tiatoolbox.cli.common import tiatoolbox_cli
 from tiatoolbox.cli.nucleus_instance_segment import nucleus_instance_segment
 from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
@@ -44,9 +44,6 @@ def version_msg():
         f"tiatoolbox {__version__} (Python {python_version}) on {platform.platform()}."
     )
     return message
-
-
-tiatoolbox_cli = TIAToolboxCLI()
 
 
 @tiatoolbox_cli.group(context_settings={"help_option_names": ["-h", "--help"]})
