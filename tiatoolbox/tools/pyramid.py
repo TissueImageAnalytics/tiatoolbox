@@ -27,6 +27,7 @@ These are generally intended for serialisation or streaming via a web
 UI. The `get_tile` method returns a Pillow Image object which can be
 easily serialised via the use of an io.BytesIO object or saved directly
 to disk.
+
 """
 
 import tarfile
