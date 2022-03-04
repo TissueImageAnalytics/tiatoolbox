@@ -59,12 +59,15 @@ class TIAToolboxCLI(click.Group):
         self.add_help_option = {"help_option_names": ["-h", "--help"]}
 
 
-def no_input_message():
-    """This function is called if no input is provided."""
-    print("Please see help section below for further information.\n")
+def no_input_message(message):
+    """This function is called if no input is provided.
+
+    Args:
+        message (str): Failure message to display.
+
+    """
     ctx = click.get_current_context()
-    click.echo(ctx.get_help())
-    return 0
+    ctx.fail(message=message)
 
 
 def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):

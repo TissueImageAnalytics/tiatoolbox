@@ -46,8 +46,7 @@ slide_info_cli.help = "Displays or saves WSI metadata."
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Display or save WSI metadata."""
     if img_input is None:
-        print("No image input provided.\n")
-        return no_input_message()
+        no_input_message("No image input provided.\n")
 
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "output"
@@ -67,5 +66,3 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
                 out_path,
             )
             print("Meta files saved at " + str(output_path))
-
-    return 0
