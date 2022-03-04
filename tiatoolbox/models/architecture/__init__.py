@@ -47,7 +47,7 @@ def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = 
             Path to save the weight of the
           corresponding `model_name`.
         overwrite (bool):
-            To always overwriting downloaded weights.
+            Overwrite existing downloaded weights.
     """
     info = PRETRAINED_INFO[model_name]
     download_data(info["url"], save_path, overwrite)
