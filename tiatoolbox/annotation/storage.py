@@ -362,7 +362,7 @@ class AnnotationStore(ABC, MutableMapping):
             geometry(Geometry):
                 The new geometry. If None, the geometry is not updated.
             properties(dict):
-                A dictionary of properties to patch and their new new values.
+                A dictionary of properties to patch and their new values.
                 If None, the existing properties are not altered.
 
         """
