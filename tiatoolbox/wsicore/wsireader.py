@@ -1091,8 +1091,8 @@ class WSIReader:
                 Thumbnail image.
 
         Examples:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> slide_thumbnail = wsi.slide_thumbnail()
 
         """
