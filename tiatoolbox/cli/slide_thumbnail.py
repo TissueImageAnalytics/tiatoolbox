@@ -64,7 +64,7 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
         wsi = WSIReader.open(input_img=curr_file)
 
         slide_thumb = wsi.slide_thumbnail()
-        if mode == "show":
+        if mode == "show":  # pragma: no cover
             im_region = Image.fromarray(slide_thumb)
             im_region.show()
 
