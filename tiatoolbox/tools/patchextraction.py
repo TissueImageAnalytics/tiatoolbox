@@ -420,7 +420,7 @@ class PatchExtractor(ABC):
 
         Return:
             coord_list:
-                A list of corrdinates in `[start_x, start_y, end_x,
+                A list of coordinates in `[start_x, start_y, end_x,
                 end_y]` format to be used for patch extraction.
 
         """
