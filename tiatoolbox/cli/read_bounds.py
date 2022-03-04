@@ -25,20 +25,20 @@ import click
 from PIL import Image
 
 from tiatoolbox import utils, wsicore
+from tiatoolbox.cli.common import (
+    cli_img_input,
+    cli_mode,
+    cli_output_path,
+    no_input_message,
+    tiatoolbox_cli,
+)
 
 
-@click.group()
-def main():  # pragma: no cover
-    """Define read_bounds click group."""
-    return 0
-
-
-@main.command()
-@click.option("--img-input", help="Path to WSI file")
-@click.option(
-    "--output-path",
-    help="Path to output file to save the image region in save mode,"
-    " default=img_input_dir/../im_region.jpg",
+@tiatoolbox_cli.command()
+@cli_img_input(usage_help="Path to WSI file.")
+@cli_output_path(
+    usage_help="Path to output file in save mode,"
+    " default=img_input_dir/../im_region.jpg"
 )
 @click.option(
     "--region",
@@ -58,14 +58,11 @@ def main():  # pragma: no cover
     type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
     help="resolution units, default=level",
 )
-@click.option(
-    "--mode",
-    default="show",
-    help="'show' to display image region or 'save' to save at the output path"
-    ", default=show",
-)
+@cli_mode(default="show")
 def read_bounds(img_input, region, resolution, units, output_path, mode):
     """Read a region in an whole slide image as specified."""
+    no_input_message(input_file=img_input)
+
     if not region:
         region = [0, 0, 2000, 2000]
 

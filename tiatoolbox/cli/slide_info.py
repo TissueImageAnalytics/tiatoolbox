@@ -45,8 +45,7 @@ from tiatoolbox.cli.common import (
 @cli_verbose(default=True)
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Displays or saves WSI metadata depending on the mode argument."""
-    if img_input is None:
-        no_input_message("No image input provided.\n")
+    no_input_message(input_file=img_input)
 
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"

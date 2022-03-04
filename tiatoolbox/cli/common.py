@@ -102,15 +102,19 @@ class TIAToolboxCLI(click.Group):
         self.add_help_option = {"help_option_names": ["-h", "--help"]}
 
 
-def no_input_message(message: str) -> None:
+def no_input_message(
+    input_file: str or pathlib.Path = None, message: str = "No image input provided.\n"
+) -> None:
     """This function is called if no input is provided.
 
     Args:
+        input_file (str or pathlib.Path): Path to input file.
         message (str): Error message to display.
 
     """
-    ctx = click.get_current_context()
-    ctx.fail(message=message)
+    if input_file is None:
+        ctx = click.get_current_context()
+        ctx.fail(message=message)
 
 
 def prepare_file_dir_cli(

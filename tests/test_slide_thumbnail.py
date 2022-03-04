@@ -111,21 +111,3 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(sample_jp2, tmp_pat
     assert slide_thumb_result.output == ""
     assert slide_thumb_result.exit_code == 1
     assert isinstance(slide_thumb_result.exception, FileNotFoundError)
-
-
-def test_command_line_slide_thumbnail_no_input():
-    """Test CLI slide info for single file."""
-    runner = CliRunner()
-    slide_info_result = runner.invoke(
-        cli.main,
-        [
-            "slide-thumbnail",
-            "--file-types",
-            "*.ndpi, *.svs",
-            "--mode",
-            "save",
-        ],
-    )
-
-    assert "No image input provided." in slide_info_result.output
-    assert slide_info_result.exit_code != 0
