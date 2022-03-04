@@ -661,7 +661,7 @@ class WSIReader:
         out_res = output_dict[output_unit] if output_unit is not None else output_dict
         if out_res is None:
             warnings.warn(
-                "Although unit coversion from input_unit has been done, the requested "
+                "Although unit conversion from input_unit has been done, the requested "
                 "output_unit is returned as None. Probably due to missing 'mpp' or "
                 "'objective_power' in slide's meta data.",
                 UserWarning,
