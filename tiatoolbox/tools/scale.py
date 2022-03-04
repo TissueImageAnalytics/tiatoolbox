@@ -184,7 +184,7 @@ class PlattScaling:
         return 1 / (1 + np.exp(logits * self.a + self.b))
 
     def fit_transform(self, logits, labels):
-        """Fit and tranform input to probabilities.
+        """Fit and transform input to probabilities.
 
         Args:
             logits (array-like):
