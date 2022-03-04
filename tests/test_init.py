@@ -1,9 +1,9 @@
 """Tests for toolbox global workspace."""
 
-import os
-import shutil
 import importlib
 import logging
+import os
+import shutil
 
 import tiatoolbox
 

@@ -20,10 +20,10 @@
 
 
 """Package to define datasets available to download via TIAToolbox."""
-from importlib.resources import path
 import pathlib
 import tempfile
 import zipfile
+from importlib.resources import path
 from typing import Optional, Union
 from urllib.parse import urlparse
 
