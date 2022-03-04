@@ -506,8 +506,7 @@ class WSIReader:
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
-            >>> wsi = WSIReader.open()
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> slide_shape = wsi.slide_dimensions(0.55, 'mpp')
 
         """
@@ -815,9 +814,8 @@ class WSIReader:
 
         Example:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
-            >>> WSIReader.open()
             >>> # Load a WSI image
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # Read a region at level 0 (baseline / full resolution)
@@ -1006,9 +1004,9 @@ class WSIReader:
                 Array of size MxNx3 M=end_h-start_h, N=end_w-start_w
 
         Examples:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> from matplotlib import pyplot as plt
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
             >>> img = wsi.read_bounds(bounds)
@@ -1171,14 +1169,14 @@ class WSIReader:
                 Print output, default to True.
 
         Examples:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> wsi.save_tiles(output_dir='./dev_test',
             ...     tile_objective_value=10,
             ...     tile_read_size=(2000, 2000))
 
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
             >>> slide_param = wsi.info
 
         """
@@ -2600,8 +2598,8 @@ def get_wsireader(input_img):
             An object with base :class:`.WSIReader` as base class.
 
     Examples:
-        >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-        >>> wsi = get_wsireader(input_img="./sample.svs")
+        >>> from tiatoolbox.wsicore.wsireader import WSIReader
+        >>> wsi = WSIReader.open(input_img="./sample.svs")
 
     """
     warnings.warn(
