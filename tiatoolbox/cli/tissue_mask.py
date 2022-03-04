@@ -65,7 +65,7 @@ def get_masker(method, kernel_size, units, resolution):
 )
 @cli_mode(default="show")
 @cli_file_type(default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff")
-# specific to this function
+# inputs specific to this function
 @click.option(
     "--kernel-size",
     type=int,

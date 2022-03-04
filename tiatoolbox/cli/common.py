@@ -153,7 +153,7 @@ def cli_tile_objective(
 def cli_tile_read_size(
     usage_help: str = "Width and Height of saved tiles. default=5000 5000",
 ) -> callable:
-    """Enables --tile-objective-value option for cli."""
+    """Enables --tile-read-size option for cli."""
     return click.option(
         "--tile-read-size",
         type=int,
@@ -164,12 +164,16 @@ def cli_tile_read_size(
 
 
 def cli_method(
-    usage_help: str = "Select method of choice.", default: str = "Otsu"
+    usage_help: str = "Select method of for tissue masking.",
+    default: str = "Otsu",
+    input_type: click.Choice = None,
 ) -> callable:
-    """Enables --tile-objective-value option for cli."""
+    """Enables --method option for cli."""
+    if input_type is None:
+        input_type = click.Choice(["Otsu", "Morphological"], case_sensitive=True)
     return click.option(
         "--method",
-        type=click.Choice(["Otsu", "Morphological"], case_sensitive=True),
+        type=input_type,
         default=default,
         help=add_default_to_usage_help(usage_help, default),
     )
