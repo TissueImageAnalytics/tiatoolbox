@@ -115,7 +115,7 @@ class CNNModel(ModelABC):
 
         # Best way to retrieve channel dynamically is passing a small forward pass
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 96, 96])).shape[1]
-        self.classifer = nn.Linear(prev_num_ch, num_classes)
+        self.classifier = nn.Linear(prev_num_ch, num_classes)
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
@@ -130,7 +130,7 @@ class CNNModel(ModelABC):
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
-        logit = self.classifer(gap_feat)
+        logit = self.classifier(gap_feat)
         prob = torch.softmax(logit, -1)
         return prob
 
