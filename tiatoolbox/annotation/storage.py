@@ -545,7 +545,7 @@ class AnnotationStore(ABC, MutableMapping):
                 annotations for which this predicate is true will be returned.
                 Defaults to None (assume always true). May be a string,
                 callable, or pickled function as bytes. Callables are called to
-                filter each result returned the from annotation store backend
+                filter each result returned from the annotation store backend
                 in python before being returned to the user. A pickle object
                 is, where possible, hooked into the backend as a user defined
                 function to filter results during the backend query. Strings
