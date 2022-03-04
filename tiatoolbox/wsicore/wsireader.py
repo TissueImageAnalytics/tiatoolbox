@@ -814,7 +814,8 @@ class WSIReader:
                 Array of size MxNx3 M=size[0], N=size[1]
 
         Example:
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> WSIReader.open()
             >>> # Load a WSI image
             >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> location = (0, 0)
