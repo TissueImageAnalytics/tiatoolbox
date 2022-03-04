@@ -63,7 +63,7 @@ def no_input_message(message):
     """This function is called if no input is provided.
 
     Args:
-        message (str): Failure message to display.
+        message (str): Error message to display.
 
     """
     ctx = click.get_current_context()
