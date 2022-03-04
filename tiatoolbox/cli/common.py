@@ -108,12 +108,17 @@ def cli_region(
 def cli_units(
     usage_help: str = "Image resolution units to read the image.",
     default: str = "level",
+    input_type: click.Choice = None,
 ) -> callable:
     """Enables --units option for cli."""
+    if input_type is None:
+        input_type = click.Choice(
+            ["mpp", "power", "level", "baseline"], case_sensitive=False
+        )
     return click.option(
         "--units",
         default=default,
-        type=click.Choice(["mpp", "power", "level", "baseline"], case_sensitive=False),
+        type=input_type,
         help=add_default_to_usage_help(usage_help, default),
     )
 

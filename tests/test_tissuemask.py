@@ -401,7 +401,7 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
             "--resolution",
             32,
             "--units",
-            "Test",
+            "level",
         ],
     )
 

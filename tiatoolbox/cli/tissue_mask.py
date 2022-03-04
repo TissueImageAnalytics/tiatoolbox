@@ -43,10 +43,6 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 def get_masker(method, kernel_size, units, resolution):
     """Get Tissue Masker."""
-
-    if method not in ["Otsu", "Morphological"]:
-        raise utils.exceptions.MethodNotSupported
-
     if method == "Otsu":
         return tissuemask.OtsuTissueMasker()
 
@@ -56,12 +52,7 @@ def get_masker(method, kernel_size, units, resolution):
     if units == "mpp":
         return tissuemask.MorphologicalMasker(mpp=resolution)
 
-    if units == "power":
-        return tissuemask.MorphologicalMasker(power=resolution)
-
-    raise utils.exceptions.MethodNotSupported(
-        "Specified units not supported for tissue masking."
-    )
+    return tissuemask.MorphologicalMasker(power=resolution)
 
 
 @tiatoolbox_cli.command()
@@ -69,7 +60,9 @@ def get_masker(method, kernel_size, units, resolution):
 @cli_output_path(default="tissue_mask")
 @cli_method(default="Otsu")
 @cli_resolution(default=1.25)
-@cli_units(default="power")
+@cli_units(
+    default="power", input_type=click.Choice(["mpp", "power"], case_sensitive=False)
+)
 @cli_mode(default="show")
 @cli_file_type(default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff")
 # specific to this function
