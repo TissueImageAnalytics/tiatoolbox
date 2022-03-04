@@ -505,7 +505,8 @@ class WSIReader:
                 Size of the WSI in (width, height).
 
         Examples:
-            >>> from tiatoolbox.wsicore import wsireader
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open()
             >>> wsi = get_wsireader(input_img="./CMU-1.ndpi")
             >>> slide_shape = wsi.slide_dimensions(0.55, 'mpp')
 
