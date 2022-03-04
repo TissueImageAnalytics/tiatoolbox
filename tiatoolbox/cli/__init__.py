@@ -25,6 +25,7 @@ import sys
 import click
 
 from tiatoolbox import __version__
+from tiatoolbox.cli.common import TIAToolboxCLI
 from tiatoolbox.cli.nucleus_instance_segment import nucleus_instance_segment
 from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
@@ -43,13 +44,6 @@ def version_msg():
         f"tiatoolbox {__version__} (Python {python_version}) on {platform.platform()}."
     )
     return message
-
-
-class TIAToolboxCLI(click.Group):
-    def __init__(self, *args, **kwargs):
-        super(TIAToolboxCLI, self).__init__(*args, **kwargs)
-        self.help = "Computational pathology toolbox by TIA Centre."
-        self.add_help_option = {"help_option_names": ["-h", "--help"]}
 
 
 tiatoolbox_cli = TIAToolboxCLI()

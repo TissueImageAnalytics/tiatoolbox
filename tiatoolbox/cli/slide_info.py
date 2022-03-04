@@ -20,28 +20,24 @@
 
 """Command line interface for slide_info."""
 import pathlib
-import sys
-
-import click
 
 from tiatoolbox import utils, wsicore
 from tiatoolbox.cli.common import (
+    TIAToolboxCLI,
     cli_file_type,
     cli_img_input,
     cli_mode,
     cli_output_path,
     cli_verbose,
+    no_input_message,
     prepare_file_dir_cli,
 )
 
-
-@click.group()
-def main():  # pragma: no cover
-    """Define slide_info click group."""
-    return 0
+slide_info_cli = TIAToolboxCLI()
+slide_info_cli.help = "Displays or saves WSI metadata."
 
 
-@main.command()
+@slide_info_cli.command()
 @cli_img_input
 @cli_output_path
 @cli_file_type
@@ -49,6 +45,10 @@ def main():  # pragma: no cover
 @cli_verbose
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Display or save WSI metadata."""
+    if img_input is None:
+        print("No image input provided.\n")
+        return no_input_message()
+
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "output"
     )
@@ -68,6 +68,4 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
             )
             print("Meta files saved at " + str(output_path))
 
-
-if __name__ == "__main__":
-    sys.exit(main())  # pragma: no cover
+    return 0

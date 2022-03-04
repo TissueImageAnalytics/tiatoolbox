@@ -52,6 +52,21 @@ cli_verbose = click.option(
 )
 
 
+class TIAToolboxCLI(click.Group):
+    def __init__(self, *args, **kwargs):
+        super(TIAToolboxCLI, self).__init__(*args, **kwargs)
+        self.help = "Computational pathology toolbox by TIA Centre."
+        self.add_help_option = {"help_option_names": ["-h", "--help"]}
+
+
+def no_input_message():
+    """This function is called if no input is provided."""
+    print("Please see help section below for further information.\n")
+    ctx = click.get_current_context()
+    click.echo(ctx.get_help())
+    return 0
+
+
 def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
     """Prepares CLI for running code on multiple files or a directory.
 
