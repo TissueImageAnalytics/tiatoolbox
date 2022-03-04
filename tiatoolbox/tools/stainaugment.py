@@ -188,7 +188,7 @@ class StainAugmentor(ImageOnlyTransform):
         """Return an augmented instance based on source stain concentrations.
 
         Stain concentrations of the source image are altered (scaled and
-        shifted) based on the random alpha and beta paramters, and then
+        shifted) based on the random alpha and beta parameters, and then
         an augmented image is reconstructed from the altered
         concentrations. All parameters needed for this part are
         calculated when calling `fit()` function.
