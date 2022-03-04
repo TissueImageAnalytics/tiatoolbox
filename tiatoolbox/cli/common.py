@@ -26,27 +26,73 @@ import click
 
 from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
-cli_img_input = click.option(
-    "--img-input", help="Input path to WSI file or directory path."
-)
-cli_output_path = click.option(
-    "--output-path",
-    help="Path to output directory to save the output.",
-)
-cli_file_type = click.option(
-    "--file-types",
-    help="File types to capture from directory.",
-)
-cli_mode = click.option(
-    "--mode",
-    help="Selected mode. 'show' to display the image or required information "
-    "or 'save' to save the output.",
-)
-cli_verbose = click.option(
-    "--verbose",
-    type=bool,
-    help="Prints the console output.",
-)
+
+def add_default_to_usage_help(usage_help, default):
+    """Adds default value to usage help string.
+
+    Args:
+        usage_help (str):
+            usage help for click option.
+        default (str):
+            default value as string for click option.
+
+    Returns:
+        str:
+            New usage_help value.
+
+    """
+    return f"{usage_help} default={default}"
+
+
+def cli_img_input(
+    usage_help: str = "Input path to WSI file or directory path.",
+) -> callable:
+    return click.option("--img-input", help=usage_help, type=str)
+
+
+def cli_output_path(
+    usage_help: str = "Path to output directory to save the output.",
+) -> callable:
+    return click.option(
+        "--output-path",
+        help=usage_help,
+        type=str,
+    )
+
+
+def cli_file_type(
+    usage_help: str = "File types to capture from directory.",
+    default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
+) -> callable:
+    return click.option(
+        "--file-types",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+        type=str,
+    )
+
+
+def cli_mode(
+    usage_help: str = "Selected mode to show or save the required information.",
+    default: str = "save",
+) -> callable:
+    return click.option(
+        "--mode",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+        type=str,
+    )
+
+
+def cli_verbose(
+    usage_help: str = "Prints the console output.", default: bool = True
+) -> callable:
+    return click.option(
+        "--verbose",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, str(default)),
+        default=default,
+    )
 
 
 class TIAToolboxCLI(click.Group):

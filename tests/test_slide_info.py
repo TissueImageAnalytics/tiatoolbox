@@ -134,3 +134,21 @@ def test_command_line_slide_info_output_none_mode_save(sample_svs):
     assert pathlib.Path(
         sample_svs.parent, "meta-data", "CMU-1-Small-Region.yaml"
     ).exists()
+
+
+def test_command_line_slide_info_no_input():
+    """Test CLI slide info for single file."""
+    runner = CliRunner()
+    slide_info_result = runner.invoke(
+        cli.main,
+        [
+            "slide-info",
+            "--file-types",
+            "*.ndpi, *.svs",
+            "--mode",
+            "save",
+        ],
+    )
+
+    assert "No image input provided." in slide_info_result.output
+    assert slide_info_result.exit_code != 0

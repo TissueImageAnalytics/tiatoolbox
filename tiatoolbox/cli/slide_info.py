@@ -37,11 +37,14 @@ slide_info_cli = TIAToolboxCLI()
 
 
 @slide_info_cli.command()
-@cli_img_input
-@cli_output_path
-@cli_file_type
-@cli_mode
-@cli_verbose
+@cli_img_input()
+@cli_output_path(
+    usage_help="Path to output directory to save the output. "
+    "default=img_input/../meta-data"
+)
+@cli_file_type(default="*.ndpi, *.svs, *.mrxs, *.jp2")
+@cli_mode(default="show")
+@cli_verbose(default=True)
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Displays or saves WSI metadata depending on the mode argument.
 
