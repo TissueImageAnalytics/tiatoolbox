@@ -328,7 +328,7 @@ class UNetModel(ModelABC):
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor):#
+            imgs (torch.Tensor):
                 Input images, the tensor is of the shape NCHW.
 
         Returns:
