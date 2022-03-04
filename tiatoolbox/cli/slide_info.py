@@ -46,14 +46,7 @@ slide_info_cli = TIAToolboxCLI()
 @cli_mode(default="show")
 @cli_verbose(default=True)
 def slide_info(img_input, output_path, file_types, mode, verbose):
-    """Displays or saves WSI metadata depending on the mode argument.
-
-    The default inputs are:
-
-    img-input='', output-path=img-input-path/../meta-data,  mode="show", verbose=True,
-    file-types="*.ndpi, *.svs, *.mrxs, *.jp2".
-
-    """
+    """Displays or saves WSI metadata depending on the mode argument."""
     if img_input is None:
         no_input_message("No image input provided.\n")
 
