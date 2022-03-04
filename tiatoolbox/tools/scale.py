@@ -173,7 +173,7 @@ class PlattScaling:
         """Transform input to probabilities basing on trained parameters.
 
         Args:
-            labels (array like):
+            logits (array like):
                 Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
 
         Returns:
