@@ -623,9 +623,6 @@ class SemanticSegmentor:
             ioconfig (:class:`IOSegmentorConfig`):
                 Object which defines I/O placement during inference and
                 when assembling back to full tile/wsi.
-            loader (torch.Dataloader):
-                Loader object which return batch of data to be input to
-                model.
             save_path (str):
                 Location to save output prediction as well as possible
                 intermediate results.
