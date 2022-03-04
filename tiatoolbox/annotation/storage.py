@@ -185,12 +185,12 @@ class AnnotationStore(ABC, MutableMapping):
                 Name of the predicate to apply.
             a(Geometry):
                 The first geometry.
-            b(Geomettry):
+            b(Geometry):
                 The second geometry.
 
         Returns:
             bool:
-                True if the predicate holds.
+                True if the geometry predicate holds.
 
         """
         return getattr(a, name)(b)
@@ -358,7 +358,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Args:
             key(str):
-                The key of the annoation to update.
+                The key of the annotation to update.
             geometry(Geometry):
                 The new geometry. If None, the geometry is not updated.
             properties(dict):
@@ -537,38 +537,43 @@ class AnnotationStore(ABC, MutableMapping):
         """Query the store for annotations.
 
         Args:
-            geometry (QueryGeometry):
-                Geometry to use when querying. This can be a bounds or a
-                Shapely geometry (e.g. Polygon).
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon).
             where (str or bytes or Callable):
-                A statement which should evaluate to a boolean value. Only
-                annotations for which this predicate is true will be returned.
-                Defaults to None (assume always true). May be a string,
-                callable, or pickled function as bytes. Callables are called to
-                filter each result returned the from annotation store backend
-                in python before being returned to the user. A pickle object
-                is, where possible, hooked into the backend as a user defined
-                function to filter results during the backend query. Strings
-                are expected to be in a domain specific language and are
-                converted to SQL on a best-effort basis. For supported
-                operators of the DSL see :mod:`tiatoolbox.annotation.dsl`. E.g.
-                a simple python expression `props["class"] == 42` will be
-                converted to a valid SQLite predicate when using `SQLiteStore`
-                and inserted into the SQL query. This should be faster than
-                filtering in python after or during the query. Additionally,
-                the same string can be used across different backends (e.g. the
-                previous example predicate string is valid for both
-                `DictionaryStore `and a `SQliteStore`). On the other hand it
-                has many more limitations. It is important to note that
-                untrusted user input should never be accepted to this argument
-                as arbitrary code can be run via pickle or the parsing of the
-                string statement.
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are expected to be in a domain specific language
+                and are converted to SQL on a best-effort basis. For
+                supported operators of the DSL see
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query.
+                Additionally, the same string can be used across
+                different backends (e.g. the previous example predicate
+                string is valid for both `DictionaryStore `and a
+                `SQliteStore`). On the other hand it has many more
+                limitations. It is important to note that untrusted user
+                input should never be accepted to this argument as
+                arbitrary code can be run via pickle or the parsing of
+                the string statement.
             geometry_predicate (str):
-                A string which define which binary geometry predicate to use
-                when comparing the query geometry and a geometry in the store.
-                Only annotations for which this binary predicate is true will
-                be returned. Defaults to intersects. For more information see
-                the `shapely documentation on binary predicates`__.
+                A string which define which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                intersects. For more information see the `shapely
+                documentation on binary predicates`__.
 
             Returns:
                 list:
@@ -612,41 +617,47 @@ class AnnotationStore(ABC, MutableMapping):
         instead of annotations.
 
         Args:
-            geometry:
-                Geometry to use when querying. This can be a bounds or a
-                Shapely geometry (e.g. Polygon).
-            A statement which should evaluate to a boolean value.
-                Only annotations for which this predicate is true will be
-                returned. Defaults to None (assume always true). May be a
-                string, callable, or pickled function as bytes. Callables are
-                called to filter each result returned the from annotation store
-                backend in python before being returned to the user. A pickle
-                object is, where possible, hooked into the backend as a user
-                defined function to filter results during the backend query.
-                Strings are expected to be in a domain specific language and
-                are converted to SQL on a best-effort basis. For supported
-                operators of the DSL see :mod:`tiatoolbox.annotation.dsl`. E.g.
-                a simple python expression `props["class"] == 42` will be
-                converted to a valid SQLite predicate when using `SQLiteStore`
-                and inserted into the SQL query. This should be faster than
-                filtering in python after or during the query. Additionally,
-                the same string can be used across different backends (e.g. the
-                previous example predicate string is valid for both
-                `DictionaryStore `and a `SQliteStore`). On the other hand it
-                has many more limitations. It is important to note that
-                untrusted user input should never be accepted to this argument
-                as arbitrary code can be run via pickle or the parsing of the
-                string statement.
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon).
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are expected to be in a domain specific language
+                and are converted to SQL on a best-effort basis. For
+                supported operators of the DSL see
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query.
+                Additionally, the same string can be used across
+                different backends (e.g. the previous example predicate
+                string is valid for both `DictionaryStore `and a
+                `SQliteStore`). On the other hand it has many more
+                limitations. It is important to note that untrusted user
+                input should never be accepted to this argument as
+                arbitrary code can be run via pickle or the parsing of
+                the string statement.
             geometry_predicate:
-                A string which define which binary geometry predicate to use
-                when comparing the query geometry and a geometry in the store.
-                Only annotations for which this binary predicate is true will
-                be returned. Defaults to intersects. For more information see
-                the `shapely documentation on binary predicates`__.
+                A string which define which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                intersects. For more information see the `shapely
+                documentation on binary predicates`__.
 
             Returns:
                 list:
-                    A list of Annotation objects.
+                    A list of keys for each Annotation.
 
             .. _BP:
                 | https://shapely.readthedocs.io/en/stable/

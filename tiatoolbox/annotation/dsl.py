@@ -355,7 +355,7 @@ def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
     """Return a representation of the sum of a list.
 
     Args:
-        x:
+        x (SQLJSONDictionary):
             The list to sum.
 
     Returns:
