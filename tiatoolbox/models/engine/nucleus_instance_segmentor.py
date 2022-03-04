@@ -80,11 +80,11 @@ def _process_tile_predictions(
                  predicted instances are immediately added to
                  accumulated output.
             - 1: Vertical tile strip that stands between two normal
-                 tiles (flag 0). It has the the same height as normal
-                 tile but less width (hence vertical strip).
+                 tiles (flag 0). It has the same height as normal tile
+                 but less width (hence vertical strip).
             - 2: Horizontal tile strip that stands between two normal
-                 tiles (flag 0). It has the the same width as normal
-                 tile but less height (hence vertical strip).
+                 tiles (flag 0). It has the same width as normal tile
+                 but less height (hence vertical strip).
             - 3: Tile strip stands at the cross section of four normal
                  tiles (flag 0).
         tile_output (list):
