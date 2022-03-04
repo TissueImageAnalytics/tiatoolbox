@@ -44,7 +44,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     See https://en.wikipedia.org/wiki/Adjacency_matrix.
 
     Args:
-        coordinates (ArrayLike):
+        points (ArrayLike):
             An nxm list of coordinates.
         dthresh (int):
             Distance threshold for triangulation.
