@@ -190,8 +190,9 @@ class IOSegmentorConfig(IOConfigABC):
         """Return a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
-        resolutions have been converted to baseline format with highest
-        possible resolution found in both input and output as reference.
+        resolutions have been converted to baseline format with the
+        highest possible resolution found in both input and output as
+        reference.
 
         """
         resolutions = self.input_resolutions + self.output_resolutions
