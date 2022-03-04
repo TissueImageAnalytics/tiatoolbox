@@ -34,7 +34,6 @@ from tiatoolbox.cli.common import (
 )
 
 slide_info_cli = TIAToolboxCLI()
-slide_info_cli.help = "Displays or saves WSI metadata."
 
 
 @slide_info_cli.command()
@@ -44,12 +43,28 @@ slide_info_cli.help = "Displays or saves WSI metadata."
 @cli_mode
 @cli_verbose
 def slide_info(img_input, output_path, file_types, mode, verbose):
-    """Display or save WSI metadata."""
+    """Displays or saves WSI metadata depending on the mode argument.
+
+    The default inputs are:
+
+    img-input='', output-path=img-input-path/../meta-data,  mode="show", verbose=True,
+    file-types="*.ndpi, *.svs, *.mrxs, *.jp2".
+
+    """
     if img_input is None:
         no_input_message("No image input provided.\n")
 
+    if file_types is None:
+        file_types = "*.ndpi, *.svs, *.mrxs, *.jp2"
+
+    if mode is None:
+        mode = "show"
+
+    if verbose is None:
+        verbose = True
+
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, mode, "output"
+        img_input, output_path, file_types, mode, "meta-data"
     )
 
     for curr_file in files_all:

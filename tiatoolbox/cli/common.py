@@ -27,28 +27,25 @@ import click
 from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
 cli_img_input = click.option(
-    "--img-input", help="input path to WSI file or directory path"
+    "--img-input", help="Input path to WSI file or directory path."
 )
 cli_output_path = click.option(
     "--output-path",
-    help="Path to output directory to save the output, default=img_input/../output",
+    help="Path to output directory to save the output.",
 )
 cli_file_type = click.option(
     "--file-types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs, *.jp2",
+    help="File types to capture from directory.",
 )
 cli_mode = click.option(
     "--mode",
-    default="show",
-    help="'show' to display the image or required information or 'save' to save "
-    "the output, default=save",
+    help="Selected mode. 'show' to display the image or required information "
+    "or 'save' to save the output.",
 )
 cli_verbose = click.option(
     "--verbose",
     type=bool,
-    default=True,
-    help="Print output, default=True",
+    help="Prints the console output.",
 )
 
 
