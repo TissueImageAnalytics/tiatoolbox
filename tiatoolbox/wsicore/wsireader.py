@@ -574,7 +574,7 @@ class WSIReader:
         This function accepts a resolution and its units in the input
         and converts it to all other units ('mpp', 'power', 'baseline').
         To achieve resolution in 'mpp' and 'power' units in the output,
-        WSI meta data should cotain `mpp` and `objective_power`
+        WSI meta data should contain `mpp` and `objective_power`
         information, respectively.
 
         Args:
