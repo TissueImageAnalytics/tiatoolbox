@@ -97,7 +97,7 @@ def tissue_mask(
         wsi_thumb = wsi.slide_thumbnail(resolution=1.25, units="power")
         mask = masker.fit_transform(wsi_thumb[np.newaxis, :])
 
-        if mode == "show":
+        if mode == "show":  # pragma: no cover
             im_region = Image.fromarray(mask[0])
             im_region.show()
 
