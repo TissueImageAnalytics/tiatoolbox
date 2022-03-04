@@ -35,11 +35,11 @@ from tiatoolbox.tools import stainnorm as sn
 
 
 @tiatoolbox_cli.command()
-@cli_output_path(default="stainorm_output")
-@cli_file_type(default="*.png, *.jpg, *.tif, *.tiff")
 @cli_img_input(
     usage_help="Input path to the source image or a directory of source images."
 )
+@cli_output_path(default="stainorm_output")
+@cli_file_type(default="*.png, *.jpg, *.tif, *.tiff")
 @cli_method(
     usage_help="Stain normalization method to use.",
     default="reinhard",
