@@ -35,7 +35,7 @@ class IOConfigABC(ABC):
             Define the resolution of each input, incase the predictor
             receives variable input. Must be in the same order as
             network input.
-        units (dict):
+        output_resolutions (dict):
             Define the resolution of each output, incase the predictor
             return variable output.Must be in the same order as network
             output.
