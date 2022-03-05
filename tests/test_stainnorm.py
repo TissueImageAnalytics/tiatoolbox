@@ -10,7 +10,6 @@ from tiatoolbox import cli
 from tiatoolbox.data import _local_sample_path, stainnorm_target
 from tiatoolbox.tools import stainextract
 from tiatoolbox.tools.stainnorm import get_normalizer
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import imread
 
 

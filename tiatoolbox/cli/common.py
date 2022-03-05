@@ -43,12 +43,12 @@ def add_default_to_usage_help(usage_help: str, default: str or int or float) -> 
     """
     if default is not None:
         return f"{usage_help} default={default}"
-    else:
-        return usage_help
+
+    return usage_help
 
 
 def cli_img_input(
-    usage_help: str = "Input path to WSI file or directory path.",
+    usage_help: str = "Path to WSI or directory containing WSIs.",
 ) -> callable:
     """Enables --img-input option for cli."""
     return click.option("--img-input", help=usage_help, type=str)

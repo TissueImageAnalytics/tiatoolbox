@@ -9,7 +9,6 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.tools import tissuemask
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
 
 # -------------------------------------------------------------------------------------
