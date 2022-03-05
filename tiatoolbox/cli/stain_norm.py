@@ -29,6 +29,7 @@ from tiatoolbox.cli.common import (
     cli_img_input,
     cli_method,
     cli_output_path,
+    prepare_file_dir_cli,
     tiatoolbox_cli,
 )
 from tiatoolbox.tools import stainnorm as sn
@@ -58,28 +59,15 @@ from tiatoolbox.tools import stainnorm as sn
 )
 def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_types):
     """Stain normalize an input image/directory of input images."""
-    file_types = utils.misc.string_to_tuple(in_str=file_types)
-
-    if not os.path.exists(img_input):
-        raise FileNotFoundError
-
-    files_all = [
-        img_input,
-    ]
-
-    if os.path.isdir(img_input):
-        files_all = utils.misc.grab_files_from_dir(
-            input_path=img_input, file_types=file_types
-        )
+    files_all, output_path = prepare_file_dir_cli(
+        img_input, output_path, file_types, "save", "stainnorm_output"
+    )
 
     # init stain normalization method
     norm = sn.get_normalizer(method, stain_matrix)
 
     # get stain information of target image
     norm.fit(utils.misc.imread(target_input))
-
-    if not os.path.isdir(output_path):
-        os.makedirs(output_path)
 
     for curr_file in files_all:
         basename = os.path.basename(curr_file)
