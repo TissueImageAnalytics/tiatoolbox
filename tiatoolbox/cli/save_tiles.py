@@ -19,9 +19,7 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Command line interface for save_tiles."""
-import os
-
-from tiatoolbox import utils, wsicore
+from tiatoolbox import wsicore
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -29,7 +27,7 @@ from tiatoolbox.cli.common import (
     cli_tile_objective,
     cli_tile_read_size,
     cli_verbose,
-    no_input_message,
+    prepare_file_dir_cli,
     tiatoolbox_cli,
 )
 
@@ -52,22 +50,9 @@ def save_tiles(
     verbose=True,
 ):
     """Display or save WSI metadata."""
-    no_input_message(input_file=img_input)
-    file_types = utils.misc.string_to_tuple(in_str=file_types)
-
-    if not os.path.exists(img_input):
-        raise FileNotFoundError
-
-    files_all = [
-        img_input,
-    ]
-
-    if os.path.isdir(img_input):
-        files_all = utils.misc.grab_files_from_dir(
-            input_path=img_input, file_types=file_types
-        )
-
-    print(files_all)
+    files_all, output_path = prepare_file_dir_cli(
+        img_input, output_path, file_types, "save", "tiles"
+    )
 
     for curr_file in files_all:
         wsicore.save_tiles.save_tiles(
