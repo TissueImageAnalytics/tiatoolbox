@@ -127,6 +127,8 @@ def test_command_line_slide_info_output_none_mode_save(sample_svs):
             "*.ndpi, *.svs",
             "--mode",
             "save",
+            "--verbose",
+            "False",
         ],
     )
 

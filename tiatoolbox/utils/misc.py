@@ -191,8 +191,8 @@ def load_stain_matrix(stain_matrix_input):
         if suffixes[-1] == ".csv":
             return pd.read_csv(stain_matrix_input).to_numpy()
 
-        if suffixes[-1] == ".npy":
-            return np.load(str(stain_matrix_input))
+        # only other option left for suffix[-1] is .npy
+        return np.load(str(stain_matrix_input))
 
     if isinstance(stain_matrix_input, np.ndarray):
         return stain_matrix_input

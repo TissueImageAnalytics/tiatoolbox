@@ -61,10 +61,11 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
 
         slide_thumb = wsi.slide_thumbnail()
         if mode == "show":  # pragma: no cover
+            # skipped on travis
             im_region = Image.fromarray(slide_thumb)
             im_region.show()
 
-        if mode == "save":
-            utils.misc.imwrite(
-                output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb
-            )
+        # the only other option left for mode is "save".
+        utils.misc.imwrite(
+            output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb
+        )

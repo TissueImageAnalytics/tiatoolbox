@@ -69,8 +69,10 @@ def read_bounds(img_input, region, resolution, units, output_path, mode):
         units=units,
     )
     if mode == "show":  # pragma: no cover
+        # skipped on travis
         im_region = Image.fromarray(im_region)
         im_region.show()
+        return
 
-    if mode == "save":
-        utils.misc.imwrite(output_path, im_region)
+    # the only other option left for mode is "save".
+    utils.misc.imwrite(output_path, im_region)

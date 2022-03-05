@@ -38,7 +38,7 @@ from tiatoolbox.tools import stainnorm as sn
 @cli_img_input(
     usage_help="Input path to the source image or a directory of source images."
 )
-@cli_output_path(default="stainorm_output")
+@cli_output_path(default="stainnorm_output")
 @cli_file_type(default="*.png, *.jpg, *.tif, *.tiff")
 @cli_method(
     usage_help="Stain normalization method to use.",
@@ -71,9 +71,6 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
         files_all = utils.misc.grab_files_from_dir(
             input_path=img_input, file_types=file_types
         )
-
-    if method not in ["reinhard", "custom", "ruifrok", "macenko", "vahadane"]:
-        raise utils.exceptions.MethodNotSupported
 
     # init stain normalization method
     norm = sn.get_normalizer(method, stain_matrix)
