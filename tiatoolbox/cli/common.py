@@ -27,7 +27,9 @@ import click
 from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
 
-def add_default_to_usage_help(usage_help: str, default: str or int or float) -> str:
+def add_default_to_usage_help(
+    usage_help: str, default: str or int or float or bool
+) -> str:
     """Adds default value to usage help string.
 
     Args:
@@ -180,6 +182,129 @@ def cli_method(
     )
 
 
+def cli_pretrained_model(
+    usage_help: str = "Predefined model used to process the data. the format is "
+    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
+    "resnet18 model trained on the Kather dataset. Please see "
+    "https://tia-toolbox.readthedocs.io/en/latest/usage.html#deep-learning-models "
+    "for a detailed list of available pretrained models.",
+    default: str = "resnet18-kather100k",
+) -> callable:
+    """Enables --pretrained-model option for cli."""
+    return click.option(
+        "--pretrained-model",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_pretrained_weights(
+    usage_help: str = "Path to the model weight file. If not supplied, the default "
+    "pretrained weight will be used.",
+    default: str = None,
+) -> callable:
+    """Enables --pretrained-weights option for cli."""
+    return click.option(
+        "--pretrained-weights",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_return_probabilities(
+    usage_help: str = "Whether to return raw model probabilities.",
+    default: bool = False,
+) -> callable:
+    """Enables --return-probabilities option for cli."""
+    return click.option(
+        "--return-probabilities",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_merge_predictions(
+    usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
+    default: bool = True,
+) -> callable:
+    """Enables --merge-predictions option for cli."""
+    return click.option(
+        "--merge-predictions",
+        type=bool,
+        default=default,
+        help=add_default_to_usage_help(usage_help, default),
+    )
+
+
+def cli_return_labels(
+    usage_help: str = "Whether to return raw model output as labels.",
+    default: bool = True,
+) -> callable:
+    """Enables --return-labels option for cli."""
+    return click.option(
+        "--return-labels",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_batch_size(
+    usage_help: str = "Number of image patches to feed into the model each time.",
+    default: int = 1,
+) -> callable:
+    """Enables --batch-size option for cli."""
+    return click.option(
+        "--batch-size",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_masks(
+    usage_help: str = "Path to the input directory containing masks to process "
+    "corresponding to image tiles and whole-slide images. "
+    "Patches are only processed if they are within a masked area. "
+    "If masks are not provided, then a tissue mask will be "
+    "automatically generated for whole-slide images or the entire image is "
+    "processed for image tiles. Supported file types are jpg, png and npy.",
+    default: str = None,
+) -> callable:
+    """Enables --masks option for cli."""
+    return click.option(
+        "--masks",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_on_gpu(
+    usage_help: str = "Run the model on GPU.", default: bool = False
+) -> callable:
+    """Enables --on-gpu option for cli."""
+    return click.option(
+        "--on-gpu",
+        type=bool,
+        default=default,
+        help=add_default_to_usage_help(usage_help, default),
+    )
+
+
+def cli_num_loader_workers(
+    usage_help: str = "Number of workers to load the data. Please note that they will "
+    "also perform preprocessing.",
+    default: int = 0,
+) -> callable:
+    """Enables --num-loader-workers option for cli."""
+    return click.option(
+        "--num-loader-workers",
+        help=add_default_to_usage_help(usage_help, default),
+        type=int,
+        default=default,
+    )
+
+
 def cli_verbose(
     usage_help: str = "Prints the console output.", default: bool = True
 ) -> callable:
@@ -291,6 +416,7 @@ def prepare_model_cli(
         pathlib.Path: output path
 
     """
+    no_input_message(input_file=img_input)
     output_path = pathlib.Path(output_path)
     file_types = string_to_tuple(in_str=file_types)
 
