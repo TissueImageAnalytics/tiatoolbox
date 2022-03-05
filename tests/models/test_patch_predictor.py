@@ -1045,7 +1045,7 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
             "--file-types",
             '"*.ndpi, *.svs"',
             "--mode",
-            '"patch"',
+            "patch",
             "--output-path",
             str(tmp_path.joinpath("output")),
         ],
