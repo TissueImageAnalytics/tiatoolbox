@@ -95,7 +95,6 @@ def patch_predictor(
         output_path=output_path,
         masks=masks,
         file_types=file_types,
-        mode=mode,
     )
 
     predictor = PatchPredictor(
