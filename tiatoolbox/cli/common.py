@@ -493,16 +493,14 @@ def prepare_model_cli(
 tiatoolbox_cli = TIAToolboxCLI()
 
 
-def prepare_ioconfig_seg(pretrained_weights, yaml_config_path):
+def prepare_ioconfig_seg(segment_config_class, pretrained_weights, yaml_config_path):
     """Prepare ioconfig for segmentation."""
     import yaml
-
-    from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 
     if pretrained_weights is not None:
         with open(yaml_config_path) as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
 
-        return IOSegmentorConfig(**ioconfig)
+        return segment_config_class(**ioconfig)
 
     return None

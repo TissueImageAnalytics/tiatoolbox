@@ -84,6 +84,7 @@ def nucleus_instance_segment(
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     from tiatoolbox.models.engine.nucleus_instance_segmentor import (
+        IOSegmentorConfig,
         NucleusInstanceSegmentor,
     )
     from tiatoolbox.utils.misc import save_as_json
@@ -95,7 +96,9 @@ def nucleus_instance_segment(
         file_types=file_types,
     )
 
-    ioconfig = prepare_ioconfig_seg(pretrained_weights, yaml_config_path)
+    ioconfig = prepare_ioconfig_seg(
+        IOSegmentorConfig, pretrained_weights, yaml_config_path
+    )
 
     predictor = NucleusInstanceSegmentor(
         pretrained_model=pretrained_model,
