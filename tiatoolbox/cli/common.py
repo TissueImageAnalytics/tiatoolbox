@@ -24,8 +24,6 @@ import pathlib
 
 import click
 
-from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
-
 
 def add_default_to_usage_help(
     usage_help: str, default: str or int or float or bool
@@ -408,6 +406,8 @@ def prepare_file_dir_cli(
         pathlib.Path: updated output path.
 
     """
+    from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
+
     no_input_message(input_file=img_input)
     file_types = string_to_tuple(in_str=file_types)
 
@@ -458,6 +458,8 @@ def prepare_model_cli(
         pathlib.Path: output path
 
     """
+    from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
+
     no_input_message(input_file=img_input)
     output_path = pathlib.Path(output_path)
     file_types = string_to_tuple(in_str=file_types)
