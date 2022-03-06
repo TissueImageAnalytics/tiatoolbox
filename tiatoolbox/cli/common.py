@@ -183,11 +183,15 @@ def cli_method(
 
 
 def cli_pretrained_model(
-    usage_help: str = "Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
-    "resnet18 model trained on the Kather dataset. Please see "
+    usage_help: str = "Name of the predefined model used to process the data. "
+    "The format is <model_name>_<dataset_trained_on>. For example, "
+    "`resnet18-kather100K` is a resnet18 model trained on the Kather dataset. "
+    "Please see "
     "https://tia-toolbox.readthedocs.io/en/latest/usage.html#deep-learning-models "
-    "for a detailed list of available pretrained models.",
+    "for a detailed list of available pretrained models."
+    "By default, the corresponding pretrained weights will also be"
+    "downloaded. However, you can override with your own set of weights"
+    "via the `pretrained_weights` argument. Argument is case insensitive.",
     default: str = "resnet18-kather100k",
 ) -> callable:
     """Enables --pretrained-model option for cli."""
