@@ -279,6 +279,20 @@ def cli_masks(
     )
 
 
+def cli_yaml_config_path(
+    usage_help: str = "Path to ioconfig file. Sample yaml file can be viewed in "
+    "tiatoolbox.data.pretrained_model.yaml. "
+    "if pretrained_model is used the ioconfig is automatically set.",
+    default: str = None,
+) -> callable:
+    """Enables --yaml-config-path option for cli."""
+    return click.option(
+        "--yaml-config-path",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
 def cli_on_gpu(
     usage_help: str = "Run the model on GPU.", default: bool = False
 ) -> callable:

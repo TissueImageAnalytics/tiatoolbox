@@ -23,98 +23,50 @@ import click
 import yaml
 
 from tiatoolbox import utils
-from tiatoolbox.cli.common import prepare_model_cli
+from tiatoolbox.cli.common import (
+    cli_batch_size,
+    cli_file_type,
+    cli_img_input,
+    cli_masks,
+    cli_mode,
+    cli_num_loader_workers,
+    cli_on_gpu,
+    cli_output_path,
+    cli_pretrained_model,
+    cli_pretrained_weights,
+    cli_verbose,
+    cli_yaml_config_path,
+    prepare_model_cli,
+    tiatoolbox_cli,
+)
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
 )
 
 
-@click.group()
-def main():  # pragma: no cover
-    """Define semantic_segment click group."""
-    return 0
-
-
-@main.command()
-@click.option(
-    "--pretrained-model",
-    help="Predefined model used to process the data. the format is "
-    "<model_name>_<dataset_trained_on>. For example, `resnet18-kather100K` is a "
-    "resnet18 model trained on the kather dataset. For a detailed list of "
-    "available pretrained models please see "
-    "https://tia-toolbox.readthedocs.io/en/latest/usage.html"
-    "#deep-learning-models.architecture.get_pretrained_model",
-    default="fcn-tissue_mask",
-)
-@click.option(
-    "--pretrained-weights",
-    help="Path to the model weight file. If not supplied, the default "
-    "pretrained weight will be used.",
-    default=None,
-)
-@click.option(
-    "--img-input",
-    help="Path to the input directory containing images to process or an "
-    "individual file.",
-)
-@click.option(
-    "--file-types",
-    help="File types to capture from directory. "
-    "default='*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff'",
-    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
-)
-@click.option(
-    "--masks",
-    help="Path to the input directory containing masks to process corresponding to "
-    "image tiles and whole-slide images. Patches are only processed if they are "
-    "within a masked area. If masks are not provided, then a tissue mask will be "
-    "automatically generated for whole-slide images or the entire image is "
-    "processed for image tiles. Supported file types are jpg, png.",
-    default=None,
-)
-@click.option(
-    "--mode",
-    help="Type of input to process. Choose from either patch, tile or wsi. Default=wsi",
-    default="wsi",
-)
-@click.option(
-    "--output-path",
-    help="Output directory where model predictions will be saved.",
+@tiatoolbox_cli.command()
+@cli_img_input()
+@cli_output_path(
+    usage_help="Output directory where model predictions will be saved.",
     default="semantic_segmentation",
 )
-@click.option(
-    "--batch-size",
-    help="Number of images to feed into the model each time.",
-    default=1,
+@cli_file_type(
+    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs"
 )
-@click.option(
-    "--yaml-config-path",
-    help="Path to ioconfig file. Sample yaml file can be viewed in "
-    "tiatoolbox.data.pretrained_model.yaml. "
-    "if pretrained_model is used the ioconfig is automatically set."
-    "default=None",
-    default="None",
+@cli_mode(
+    usage_help="Type of input file to process.",
+    default="wsi",
+    input_type=click.Choice(["patch", "wsi", "tile"], case_sensitive=False),
 )
-@click.option(
-    "--num-loader-workers",
-    help="Number of workers to load the data. Please note that they will "
-    "also perform preprocessing.",
-    type=int,
-    default=0,
-)
-@click.option(
-    "--on-gpu",
-    type=bool,
-    default=False,
-    help="Run the model on GPU, default=False",
-)
-@click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
-)
+@cli_pretrained_model(default="fcn-tissue_mask")
+@cli_pretrained_weights(default=None)
+@cli_on_gpu()
+@cli_batch_size()
+@cli_masks(default=None)
+@cli_yaml_config_path()
+@cli_num_loader_workers()
+@cli_verbose()
 def semantic_segment(
     pretrained_model,
     pretrained_weights,
