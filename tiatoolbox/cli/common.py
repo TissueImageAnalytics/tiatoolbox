@@ -283,6 +283,19 @@ def cli_masks(
     )
 
 
+def cli_auto_generate_mask(
+    usage_help: str = "Automatically generate tile/WSI tissue mask.",
+    default: bool = False,
+) -> callable:
+    """Enables --auto-generate-mask option for cli."""
+    return click.option(
+        "--auto-generate-mask",
+        help=add_default_to_usage_help(usage_help, default),
+        type=bool,
+        default=default,
+    )
+
+
 def cli_yaml_config_path(
     usage_help: str = "Path to ioconfig file. Sample yaml file can be viewed in "
     "tiatoolbox.data.pretrained_model.yaml. "
@@ -317,6 +330,19 @@ def cli_num_loader_workers(
     """Enables --num-loader-workers option for cli."""
     return click.option(
         "--num-loader-workers",
+        help=add_default_to_usage_help(usage_help, default),
+        type=int,
+        default=default,
+    )
+
+
+def cli_num_postproc_workers(
+    usage_help: str = "Number of workers to post-process the network output.",
+    default: int = 0,
+) -> callable:
+    """Enables --num-postproc-workers option for cli."""
+    return click.option(
+        "--num-postproc-workers",
         help=add_default_to_usage_help(usage_help, default),
         type=int,
         default=default,
@@ -463,3 +489,18 @@ def prepare_model_cli(
 
 
 tiatoolbox_cli = TIAToolboxCLI()
+
+
+def prepare_ioconfig_seg(pretrained_weights, yaml_config_path):
+    """Prepare ioconfig for segmentation."""
+    import yaml
+
+    from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
+
+    if pretrained_weights is not None:
+        with open(yaml_config_path) as registry_handle:
+            ioconfig = yaml.safe_load(registry_handle)
+
+        return IOSegmentorConfig(**ioconfig)
+
+    return None

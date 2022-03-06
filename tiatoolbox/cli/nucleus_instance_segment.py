@@ -20,29 +20,28 @@
 
 """Command line interface for nucleus instance segmentation."""
 import click
-import yaml
 
 from tiatoolbox import utils
 from tiatoolbox.cli.common import (
+    cli_auto_generate_mask,
     cli_batch_size,
     cli_file_type,
     cli_img_input,
     cli_masks,
     cli_mode,
     cli_num_loader_workers,
+    cli_num_postproc_workers,
     cli_on_gpu,
     cli_output_path,
     cli_pretrained_model,
     cli_pretrained_weights,
     cli_verbose,
     cli_yaml_config_path,
+    prepare_ioconfig_seg,
     prepare_model_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (
-    IOSegmentorConfig,
-    NucleusInstanceSegmentor,
-)
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 
 
 @tiatoolbox_cli.command()
@@ -67,19 +66,8 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
 @cli_yaml_config_path(default=None)
 @cli_num_loader_workers()
 @cli_verbose()
-@click.option(
-    "--num-postproc-workers",
-    help="Number of workers to post-process the network output.",
-    type=int,
-    default=0,
-)
-@click.option(
-    "--auto-generate-mask",
-    help="If set to True, it automatically generates tile/WSI tissue mask. "
-    "default=False",
-    type=bool,
-    default=False,
-)
+@cli_num_postproc_workers(default=0)
+@cli_auto_generate_mask(default=False)
 def nucleus_instance_segment(
     pretrained_model,
     pretrained_weights,
@@ -104,13 +92,7 @@ def nucleus_instance_segment(
         file_types=file_types,
     )
 
-    ioconfig = None
-
-    if pretrained_weights is not None:
-        with open(yaml_config_path) as registry_handle:
-            ioconfig = yaml.safe_load(registry_handle)
-
-        ioconfig = IOSegmentorConfig(**ioconfig)
+    ioconfig = prepare_ioconfig_seg(pretrained_weights, yaml_config_path)
 
     predictor = NucleusInstanceSegmentor(
         pretrained_model=pretrained_model,

@@ -20,7 +20,6 @@
 
 """Command line interface for semantic segmentation."""
 import click
-import yaml
 
 from tiatoolbox import utils
 from tiatoolbox.cli.common import (
@@ -36,13 +35,11 @@ from tiatoolbox.cli.common import (
     cli_pretrained_weights,
     cli_verbose,
     cli_yaml_config_path,
+    prepare_ioconfig_seg,
     prepare_model_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    SemanticSegmentor,
-)
+from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 
 
 @tiatoolbox_cli.command()
@@ -89,13 +86,7 @@ def semantic_segment(
         file_types=file_types,
     )
 
-    ioconfig = None
-
-    if pretrained_weights is not None:
-        with open(yaml_config_path) as registry_handle:
-            ioconfig = yaml.safe_load(registry_handle)
-
-        ioconfig = IOSegmentorConfig(**ioconfig)
+    ioconfig = prepare_ioconfig_seg(pretrained_weights, yaml_config_path)
 
     predictor = SemanticSegmentor(
         pretrained_model=pretrained_model,
