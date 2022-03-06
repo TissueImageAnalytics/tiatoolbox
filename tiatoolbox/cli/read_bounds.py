@@ -21,9 +21,6 @@
 """Command line interface for read_bounds."""
 import pathlib
 
-from PIL import Image
-
-from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_img_input,
     cli_mode,
@@ -34,7 +31,6 @@ from tiatoolbox.cli.common import (
     no_input_message,
     tiatoolbox_cli,
 )
-from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @tiatoolbox_cli.command()
@@ -52,6 +48,11 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 @cli_mode(default="show")
 def read_bounds(img_input, region, resolution, units, output_path, mode):
     """Read a region in a whole slide image as specified."""
+    from PIL import Image
+
+    from tiatoolbox.utils.misc import imwrite
+    from tiatoolbox.wsicore.wsireader import WSIReader
+
     no_input_message(input_file=img_input)
 
     if not region:
@@ -75,4 +76,4 @@ def read_bounds(img_input, region, resolution, units, output_path, mode):
         return
 
     # the only other option left for mode is "save".
-    utils.misc.imwrite(output_path, im_region)
+    imwrite(output_path, im_region)

@@ -21,7 +21,6 @@
 """Command line interface for slide_info."""
 import pathlib
 
-from tiatoolbox import utils, wsicore
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -44,6 +43,8 @@ from tiatoolbox.cli.common import (
 @cli_verbose(default=True)
 def slide_info(img_input, output_path, file_types, mode, verbose):
     """Displays or saves WSI metadata depending on the mode argument."""
+    from tiatoolbox import utils, wsicore
+
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"
     )

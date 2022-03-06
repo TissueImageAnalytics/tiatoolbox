@@ -21,9 +21,6 @@
 """Command line interface for slide_thumbnail."""
 import pathlib
 
-from PIL import Image
-
-from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -32,7 +29,6 @@ from tiatoolbox.cli.common import (
     prepare_file_dir_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @tiatoolbox_cli.command()
@@ -52,6 +48,11 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
     file-types="*.ndpi, *.svs, *.mrxs, *.jp2".
 
     """
+    from PIL import Image
+
+    from tiatoolbox.utils.misc import imwrite
+    from tiatoolbox.wsicore.wsireader import WSIReader
+
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "slide-thumbnail"
     )
@@ -66,6 +67,4 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
             im_region.show()
 
         # the only other option left for mode is "save".
-        utils.misc.imwrite(
-            output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb
-        )
+        imwrite(output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb)

@@ -21,7 +21,6 @@
 """Command line interface for semantic segmentation."""
 import click
 
-from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_batch_size,
     cli_file_type,
@@ -39,7 +38,6 @@ from tiatoolbox.cli.common import (
     prepare_model_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 
 
 @tiatoolbox_cli.command()
@@ -79,6 +77,9 @@ def semantic_segment(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
+    from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+    from tiatoolbox.utils.misc import save_as_json
+
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,
@@ -105,4 +106,4 @@ def semantic_segment(
         ioconfig=ioconfig,
     )
 
-    utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))
+    save_as_json(output, str(output_path.joinpath("results.json")))

@@ -21,7 +21,6 @@
 """Command line interface for patch_predictor."""
 import click
 
-from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_batch_size,
     cli_file_type,
@@ -42,7 +41,6 @@ from tiatoolbox.cli.common import (
     prepare_model_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
 
 @tiatoolbox_cli.command()
@@ -90,6 +88,9 @@ def patch_predictor(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
+    from tiatoolbox.models.engine.patch_predictor import PatchPredictor
+    from tiatoolbox.utils.misc import save_as_json
+
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,
@@ -120,4 +121,4 @@ def patch_predictor(
         save_output=True,
     )
 
-    utils.misc.save_as_json(output, str(output_path.joinpath("results.json")))
+    save_as_json(output, str(output_path.joinpath("results.json")))

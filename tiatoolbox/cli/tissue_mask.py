@@ -22,10 +22,7 @@
 import pathlib
 
 import click
-import numpy as np
-from PIL import Image
 
-from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -37,12 +34,12 @@ from tiatoolbox.cli.common import (
     prepare_file_dir_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.tools import tissuemask
-from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def get_masker(method, kernel_size, units, resolution):
     """Get Tissue Masker."""
+    from tiatoolbox.tools import tissuemask
+
     if method == "Otsu":
         return tissuemask.OtsuTissueMasker()
 
@@ -76,6 +73,12 @@ def tissue_mask(
     img_input, output_path, method, resolution, units, kernel_size, mode, file_types
 ):
     """Generate tissue mask for a WSI."""
+    import numpy as np
+    from PIL import Image
+
+    from tiatoolbox.utils.misc import imwrite
+    from tiatoolbox.wsicore.wsireader import WSIReader
+
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"
     )
@@ -92,7 +95,7 @@ def tissue_mask(
             im_region.show()
 
         if mode == "save":
-            utils.misc.imwrite(
+            imwrite(
                 output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
                 mask[0].astype(np.uint8) * 255,
             )

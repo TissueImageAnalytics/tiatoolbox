@@ -19,7 +19,6 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """Command line interface for save_tiles."""
-from tiatoolbox import wsicore
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -50,6 +49,8 @@ def save_tiles(
     verbose=True,
 ):
     """Display or save WSI metadata."""
+    from tiatoolbox import wsicore
+
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, "save", "tiles"
     )

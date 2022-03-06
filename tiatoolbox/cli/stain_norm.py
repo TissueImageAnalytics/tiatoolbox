@@ -23,7 +23,6 @@ import os
 
 import click
 
-from tiatoolbox import utils
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -32,7 +31,6 @@ from tiatoolbox.cli.common import (
     prepare_file_dir_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.tools import stainnorm as sn
 
 
 @tiatoolbox_cli.command()
@@ -59,6 +57,9 @@ from tiatoolbox.tools import stainnorm as sn
 )
 def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_types):
     """Stain normalize an input image/directory of input images."""
+    from tiatoolbox.tools import stainnorm as sn
+    from tiatoolbox.utils.misc import imread, imwrite
+
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, "save", "stainnorm_output"
     )
@@ -67,10 +68,10 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     norm = sn.get_normalizer(method, stain_matrix)
 
     # get stain information of target image
-    norm.fit(utils.misc.imread(target_input))
+    norm.fit(imread(target_input))
 
     for curr_file in files_all:
         basename = os.path.basename(curr_file)
         # transform source image
-        transform = norm.transform(utils.misc.imread(curr_file))
-        utils.misc.imwrite(os.path.join(output_path, basename), transform)
+        transform = norm.transform(imread(curr_file))
+        imwrite(os.path.join(output_path, basename), transform)
