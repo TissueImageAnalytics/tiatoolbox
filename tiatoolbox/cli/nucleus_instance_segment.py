@@ -150,7 +150,6 @@ def nucleus_instance_segment(
         output_path=output_path,
         masks=masks,
         file_types=file_types,
-        mode=mode,
     )
 
     ioconfig = None

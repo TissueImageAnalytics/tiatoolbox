@@ -395,7 +395,6 @@ def prepare_model_cli(
     output_path: str or pathlib.Path,
     masks: str or pathlib.Path,
     file_types: str,
-    mode: str,
 ) -> [list, list, pathlib.Path]:
     """Prepares cli for running models.
 
@@ -408,7 +407,6 @@ def prepare_model_cli(
         output_path (str or pathlib.Path): output directory path.
         masks (str or pathlib.Path): file path to masks.
         file_types (str): file types to process using cli.
-        mode (str): wsi or tile mode.
 
     Returns:
         list: list of file paths to process.
@@ -425,9 +423,6 @@ def prepare_model_cli(
 
     if not os.path.exists(img_input):
         raise FileNotFoundError
-
-    if mode not in ["wsi", "tile"]:
-        raise ValueError('`mode` must be in ("wsi", "tile").')
 
     files_all = [
         img_input,
