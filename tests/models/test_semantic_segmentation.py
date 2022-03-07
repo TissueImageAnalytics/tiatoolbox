@@ -702,7 +702,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
-    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+    assert np.mean(_cache_pred[..., 0] == _test_pred) > 0.99
 
     _rm_dir(save_dir)
     # mainly to test prediction on tile

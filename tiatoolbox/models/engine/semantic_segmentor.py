@@ -366,26 +366,31 @@ class SemanticSegmentor:
 
     Args:
         model (nn.Module): Use externally defined PyTorch model for prediction with.
-          weights already loaded. Default is `None`. If provided,
-          `pretrained_model` argument is ignored.
+            weights already loaded. Default is `None`. If provided,
+            `pretrained_model` argument is ignored.
         pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. For a full list of pretrained models, refer to the
-          `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
-          By default, the corresponding pretrained weights will also be
-          downloaded. However, you can override with your own set of weights
-          via the `pretrained_weights` argument. Argument is case insensitive.
+            for processing the data. For a full list of pretrained models, refer to the
+            `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
+            By default, the corresponding pretrained weights will also be
+            downloaded. However, you can override with your own set of weights
+            via the `pretrained_weights` argument. Argument is case insensitive.
         pretrained_weights (str): Path to the weight of the corresponding
-          `pretrained_model`.
+            `pretrained_model`.
         batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int) : Number of workers to load the data.
+        nu  m_loader_workers (int) : Number of workers to load the data.
           Take note that they will also perform preprocessing.
         num_postproc_workers (int) : This value is there to maintain input
-          compatibility with `tiatoolbox.models.classification` and is
-          not used.
+            compatibility with `tiatoolbox.models.classification` and is
+            not used.
         verbose (bool): Whether to output logging information.
         dataset_class (obj): Dataset class to be used instead of default.
         auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
-          if is not provided.
+              if is not provided.
+
+    Attributes:
+        process_prediction_per_batch (bool): A flag to denote whether post
+            processing for inference output is applied after each batch or
+            after finishing an entire tile or WSI.
 
     Examples:
         >>> # Sample output of a network
@@ -424,6 +429,10 @@ class SemanticSegmentor:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
             self.ioconfig = ioconfig
             self.model = model
+
+        # local variables for flagging mode within class,
+        # subclass should overwritten to alter some specific behavior
+        self.process_prediction_per_batch = True
 
         # for runtime, such as after wrapping with nn.DataParallel
         self._cache_dir = None
@@ -667,15 +676,18 @@ class SemanticSegmentor:
             sample_infos = np.split(sample_infos, batch_size, axis=0)
 
             sample_outputs = list(zip(sample_infos, sample_outputs))
-            cum_output.extend(sample_outputs)
+            if self.process_prediction_per_batch:
+                self._process_predictions(
+                    sample_outputs, wsi_reader, ioconfig, save_path, cache_dir
+                )
+            else:
+                cum_output.extend(sample_outputs)
             pbar.update()
-        
-        # TODO: hook this into a parallel process
+        pbar.close()
+
         self._process_predictions(
             cum_output, wsi_reader, ioconfig, save_path, cache_dir
         )
-        
-        pbar.close()
 
         # clean up the cache directories
         shutil.rmtree(cache_dir)
@@ -691,6 +703,8 @@ class SemanticSegmentor:
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also saving afterwards.
+        Note that items within `cum_batch_predictions` will be consumed during
+        the operation.
 
         Args:
             cum_batch_predictions (list): List of batch predictions. Each item
@@ -703,6 +717,9 @@ class SemanticSegmentor:
             cache_dir (str): Root path to cache current WSI data.
 
         """
+        if len(cum_batch_predictions) == 0:
+            return
+
         # assume predictions is N, each item has L output element
         locations, predictions = list(zip(*cum_batch_predictions))
         # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output patch
@@ -1194,6 +1211,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             auto_generate_mask=auto_generate_mask,
             dataset_class=dataset_class,
         )
+        self.process_prediction_per_batch = False
 
     def _process_predictions(
         self,
