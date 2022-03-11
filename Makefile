@@ -47,6 +47,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
+clean-docs: ## remove documentation artifacts
+	rm -fr docs/_build/
+	rm -fr docs/html/
+	rm -f docs/tiatoolbox.rst
+	rm -f docs/modules.rst
+	rm -rf docs/_autosummary/
+
 lint: ## check style with flake8
 	flake8 tiatoolbox tests
 
@@ -60,10 +67,7 @@ coverage: ## check code coverage quickly with the default Python
 	pytest  --cov=tiatoolbox --cov-report=term --cov-report=html --cov-report=xml
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/tiatoolbox.rst
-	rm -f docs/modules.rst
-	rm -f docs/_autosummary
+docs: clean-docs ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ tiatoolbox
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
