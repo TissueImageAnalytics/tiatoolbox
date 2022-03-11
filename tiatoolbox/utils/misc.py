@@ -858,10 +858,11 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
             One of "wsi" or "tile" mode.
 
     Returns:
-        list:
-            - List of file paths to process.
-            - List of masks corresponding to input files.
-            - Output path.
+        tuple:
+            - :py:obj:`list` - List of file paths to process.
+            - :py:obj:`list` - List of file paths masks corresponding to
+              input files.
+            - :py:obj:`pathlib.Path` - Output path.
 
     """
     output_path = pathlib.Path(output_path)
