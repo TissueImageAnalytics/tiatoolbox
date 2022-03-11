@@ -54,6 +54,7 @@ clean-docs: ## remove documentation artifacts
 	rm -fr docs/html/
 	rm -f docs/tiatoolbox.rst
 	rm -f docs/modules.rst
+	rm -f docs/tiatoolbox.*.rst
 
 
 lint: ## check style with flake8
