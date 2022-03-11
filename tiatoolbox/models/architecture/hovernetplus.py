@@ -63,7 +63,7 @@ class HoVerNetPlus(HoVerNet):
          - 0.80
          - 0.69
     
-    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation of Intra-epithelial layers
+    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation of Intra-epithelial layer
        :widths: 15 15 15 15 15 15
        :header-rows: 1
 
