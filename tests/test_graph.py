@@ -92,7 +92,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
         n = len(affinity_matrix)
         two, m = edge_index.shape
         assert two == 2
-        assert 0 <= m <= n**2
+        assert 0 <= m <= n ** 2
 
 
 def test_affinity_to_edge_index_invalid_fuzz_input_shape():
@@ -244,7 +244,7 @@ class TestConstructor:
         two, m = edge_index.shape
         n = len(x)
         assert two == 2
-        assert 0 <= m <= n**2
+        assert 0 <= m <= n ** 2
 
     @staticmethod
     def test_visualise(graph_constructor):
