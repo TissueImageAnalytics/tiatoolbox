@@ -926,7 +926,7 @@ def _test_predictor_output(
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
         assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-6
+            np.abs(probabilities_max - probabilities_check[idx]) <= 5e-6
             and predictions[idx] == predictions_check[idx]
         ), (
             pretrained_model,
