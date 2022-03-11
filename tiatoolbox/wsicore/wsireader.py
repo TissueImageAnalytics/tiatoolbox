@@ -136,7 +136,7 @@ class WSIReader:
                 tif = tifffile.TiffFile(path)
             except tifffile.TiffFileError:
                 return False
-            return tif.is_tiled
+            return tif.pages[0].is_tiled
 
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
@@ -1466,14 +1466,10 @@ class OpenSlideWSIReader(WSIReader):
         except KeyError:
             tiff_res_units = props.get("tiff.ResolutionUnit")
             try:
-                microns_per_unit = {
-                    "centimeter": 1e4,  # 10,000
-                    "inch": 25400,
-                }
                 x_res = float(props["tiff.XResolution"])
                 y_res = float(props["tiff.YResolution"])
-                mpp_x = 1 / x_res * microns_per_unit[tiff_res_units]
-                mpp_y = 1 / y_res * microns_per_unit[tiff_res_units]
+                mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
+                mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
                 mpp = [mpp_x, mpp_y]
                 warnings.warn(
                     "Metadata: Falling back to TIFF resolution tag"
@@ -2000,7 +1996,10 @@ class TIFFWSIReader(WSIReader):
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
         self._axes = self.tiff.pages[0].axes
-        if not any([self.tiff.is_svs, self.tiff.is_ome]):
+        is_single_page_tiled = (
+            self.tiff.pages[0].is_tiled and not self.tiff.is_multipage
+        )
+        if not any([self.tiff.is_svs, self.tiff.is_ome, is_single_page_tiled]):
             raise ValueError("Unsupported TIFF WSI format.")
 
         self.series_n = series
@@ -2179,6 +2178,38 @@ class TIFFWSIReader(WSIReader):
             "raw": raw,
         }
 
+    def _parse_generic_tiled_metadata(self) -> dict:
+        """Extract generic tiled metadata.
+
+        Returns:
+            dict: Dictionary of kwargs for WSIMeta.
+
+        """
+        raw = {}
+        mpp = None
+        objective_power = None
+        vendor = "Generic"
+
+        description = self.tiff.pages[0].description
+        raw["Description"] = description
+
+        # Check for MPP in the tiff resolution tags
+        res_units = self.tiff.pages[0].tags.get("ResolutionUnit")
+        res_x = self.tiff.pages[0].tags.get("XResolution")
+        res_y = self.tiff.pages[0].tags.get("YResolution")
+        if all(x is not None for x in [res_units, res_x, res_y]):
+            mpp = [
+                utils.misc.ppu2mpp(res_x.value[0], res_units.value),
+                utils.misc.ppu2mpp(res_y.value[0], res_units.value),
+            ]
+
+        return {
+            "objective_power": objective_power,
+            "vendor": vendor,
+            "mpp": mpp,
+            "raw": raw,
+        }
+
     def _info(self):
         """TIFF metadata constructor.
 
@@ -2211,6 +2242,8 @@ class TIFFWSIReader(WSIReader):
             filetype_params = self._parse_svs_metadata()
         if self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
+        if self.tiff.pages[0].is_tiled:
+            filetype_params = self._parse_generic_tiled_metadata()
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(

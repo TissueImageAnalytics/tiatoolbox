@@ -852,3 +852,30 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
         masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
 
     return files_all, masks_all, output_path
+
+
+def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
+    """Convert pixels per unit (ppu) to microns per pixel (mpp)
+
+    Args:
+        ppu (int):
+            Pixels per unit.
+        units (Uniont[str, int]):
+            Units of pixels per unit. Valid options are "cm",
+            "centimeter", "inch", 2 (inches), 3(cm).
+
+    Returns:
+        mpp (float):
+            Microns per pixel.
+
+    """
+    microns_per_unit = {
+        "centimeter": 1e4,  # 10,000
+        "cm": 1e4,  # 10,000
+        "inch": 25400,
+        2: 25400,  # inches in TIFF tags
+        3: 1e4,  # cm in TIFF tags
+    }
+    if units not in microns_per_unit:
+        raise ValueError(f"Invalid units: {units}")
+    return 1 / ppu * microns_per_unit[units]

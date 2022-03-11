@@ -18,6 +18,10 @@ files:
     extract: True
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
+  tiled-tiff-1-small-jpeg:
+    url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
+  tiled-tiff-1-small-jp2k:
+    url: [*wsis, "CMU-1-Small-Region.jp2k.tiff"]
   ome-brightfield-pyramid-1-small:
     url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
   jp2-omnyx-1:

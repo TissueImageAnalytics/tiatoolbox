@@ -1815,6 +1815,24 @@ def test_manual_power_invalid(sample_svs):
         _ = wsireader.OpenSlideWSIReader(sample_svs, power=(42,))
 
 
+def test_tiled_tiff_openslide(remote_sample):
+    """Test reading a tiled TIFF file with OpenSlide."""
+    sample_path = remote_sample("tiled-tiff-1-small-jpeg")
+    wsi = wsireader.WSIReader.open(sample_path)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+
+def test_tiled_tiff_tifffile(remote_sample):
+    """Test fallback to tifffile for files which openslide cannot read.
+
+    E.G. tiled tiffs with JPEG XL compression.
+
+    """
+    sample_path = remote_sample("tiled-tiff-1-small-jp2k")
+    wsi = wsireader.WSIReader.open(sample_path)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
+
+
 class TestReader:
     scenarios = [
         (
