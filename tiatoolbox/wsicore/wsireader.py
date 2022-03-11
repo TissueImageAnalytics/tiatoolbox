@@ -119,6 +119,25 @@ class WSIReader:
             )
             return is_dcm or is_dcm_dir
 
+        def is_tiled_tiff(path: pathlib.Path) -> bool:
+            """Check if the input is a tiled TIFF file.
+
+            Args:
+                path (pathlib.Path):
+                    Path to the file to check.
+
+            Returns:
+                bool:
+                    True if the file is a tiled TIFF file.
+
+            """
+            path = pathlib.Path(path)
+            try:
+                tif = tifffile.TiffFile(path)
+            except tifffile.TiffFileError:
+                return False
+            return tif.is_tiled
+
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
@@ -155,6 +174,12 @@ class WSIReader:
 
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_img, mpp=mpp, power=power)
+
+        if suffixes[-1] in (".tif", ".tiff") and is_tiled_tiff(input_img):
+            try:
+                return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
+            except openslide.OpenSlideError:
+                return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
         if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
