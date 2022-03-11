@@ -31,9 +31,10 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     DeepFeatureExtractor,
     IOSegmentorConfig,
 )
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = not toolbox_env.running_on_travis() and toolbox_env.has_gpu()
 
 # ----------------------------------------------------
 
