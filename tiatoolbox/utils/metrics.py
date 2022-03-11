@@ -41,8 +41,8 @@ def pair_coordinates(set_a, set_b, radius):
             An array of shape Mx2 contains the of XY coordinate of M
             different points.
         radius:
-            Valid area around a point in setA to consider a given
-            coordinate in setB a candidate for matching.
+            Valid area around a point in set A to consider a given
+            coordinate in set B a candidate for matching.
 
     Returns:
         tuple:
