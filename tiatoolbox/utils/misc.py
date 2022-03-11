@@ -809,8 +809,8 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
 
     Returns:
         list:
-            List of file paths to process. output_path (pathlib.Path):
-            updated output path.
+            - :py:obj:`List[pathlib.Path]` - List of file paths to process.
+            - :py:obj:`pathlib.Path` - Updated output path.
 
     """
     file_types = string_to_tuple(in_str=file_types)
