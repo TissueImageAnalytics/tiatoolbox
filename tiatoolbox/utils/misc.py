@@ -808,7 +808,7 @@ def prepare_file_dir_cli(img_input, output_path, file_types, mode, sub_dirname):
             Name of subdirectory to save output.
 
     Returns:
-        list:
+        tuple:
             - :py:obj:`List[pathlib.Path]` - List of file paths to process.
             - :py:obj:`pathlib.Path` - Updated output path.
 
