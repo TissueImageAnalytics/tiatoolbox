@@ -63,7 +63,8 @@ class HoVerNetPlus(HoVerNet):
          - 0.80
          - 0.69
 
-    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation of Intra-epithelial layers
+    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation of 
+    Intra-epithelial layers
        :widths: 15 15 15 15 15 15
        :header-rows: 1
 
@@ -86,9 +87,9 @@ class HoVerNetPlus(HoVerNet):
         num_layers (int): The number of layers/different regions types present.
 
     References:
-        [1] Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer Segmentation
-        in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF International
-        Conference on Computer Vision. 2021.
+        [1] Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer
+        Segmentation in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF
+        International Conference on Computer Vision. 2021.
 
 
     """
