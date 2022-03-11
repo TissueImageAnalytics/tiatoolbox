@@ -377,7 +377,7 @@ class SemanticSegmentor:
         pretrained_weights (str): Path to the weight of the corresponding
             `pretrained_model`.
         batch_size (int) : Number of images fed into the model each time.
-        nu  m_loader_workers (int) : Number of workers to load the data.
+        num_loader_workers (int) : Number of workers to load the data.
           Take note that they will also perform preprocessing.
         num_postproc_workers (int) : This value is there to maintain input
             compatibility with `tiatoolbox.models.classification` and is
