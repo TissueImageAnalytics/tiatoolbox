@@ -861,7 +861,7 @@ class SemanticSegmentor:
             return arr[tl[0] : br[0], tl[1] : br[1]]
 
         patch_infos = list(zip(locations, predictions))
-        for patch_idx, patch_info in enumerate(patch_infos):
+        for _, patch_info in enumerate(patch_infos):
             # position is assumed to be in XY coordinate
             (bound_in_wsi, prediction) = patch_info
             # convert to XY to YX, and in tl, br
