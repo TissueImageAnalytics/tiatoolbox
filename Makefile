@@ -49,10 +49,12 @@ clean-test: ## remove test and coverage artifacts
 
 clean-docs: ## remove documentation artifacts
 	rm -fr docs/_build/
+	rm -rf docs/_autosummary/
+	rm -rf docs/_notebooks/
 	rm -fr docs/html/
 	rm -f docs/tiatoolbox.rst
 	rm -f docs/modules.rst
-	rm -rf docs/_autosummary/
+
 
 lint: ## check style with flake8
 	flake8 tiatoolbox tests
