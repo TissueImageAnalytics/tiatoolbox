@@ -1316,7 +1316,7 @@ class SQLiteStore(AnnotationStore):
             select_callable(str):
                 The rows to select when a callable is given to `where`.
             geometry_predicate(str):
-                The binary predicate to use when compareing `geometry`
+                The binary predicate to use when comparing `geometry`
                 with each candidate shape.
             where (str or bytes or Callable):
                 The predicate to evaluate against candidate properties
