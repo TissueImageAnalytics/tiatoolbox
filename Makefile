@@ -51,7 +51,7 @@ clean-docs: ## remove documentation artifacts
 	rm -fr docs/_build/
 	rm -rf docs/_autosummary/
 	rm -rf docs/_notebooks/
-	rm -fr docs/html/
+	rm -rf docs/html/
 	rm -f docs/tiatoolbox.rst
 	rm -f docs/modules.rst
 	rm -f docs/tiatoolbox.*.rst
