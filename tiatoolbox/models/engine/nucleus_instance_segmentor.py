@@ -127,9 +127,6 @@ def _process_tile_predictions(
             head_predictions,
             head_locations,
         )
-        # free up memory
-        del head_locations
-        del head_predictions
         head_raws.append(head_raw)
     _, inst_dict = postproc(head_raws)
 
