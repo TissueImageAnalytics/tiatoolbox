@@ -748,7 +748,6 @@ class SemanticSegmentor:
                 merged_locations,
                 save_path=sub_save_path,
                 cache_count_path=sub_count_path,
-                free_prediction=True,
             )
 
     @staticmethod
@@ -758,7 +757,6 @@ class SemanticSegmentor:
         locations: Union[List, np.ndarray],
         save_path: Union[str, pathlib.Path] = None,
         cache_count_path: Union[str, pathlib.Path] = None,
-        free_prediction: bool = True,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
@@ -779,9 +777,6 @@ class SemanticSegmentor:
             save_path (str): Location to save the assembled image.
             cache_count_path (str): Location to store the canvas for counting
               how many times each pixel get overlapped when assembling.
-            free_prediction (bool): If this is `True`, `predictions` will
-              be modified in place and each patch will be replace with `None`
-              once processed. This is to save memory when assembling.
 
         Returns:
             :class:`numpy.ndarray`: An image contains merged data.
@@ -797,7 +792,6 @@ class SemanticSegmentor:
         ...         [0, 0, 2, 2],
         ...         [2, 2, 4, 4]],
         ...     save_path=None,
-        ...     free_prediction=False,
         ... )
         array([[1, 1, 0, 0],
             [1, 1, 0, 0],
@@ -917,10 +911,6 @@ class SemanticSegmentor:
                 new_avg_pred = (old_raw_pred + patch_pred) / new_count
                 index(cum_canvas, tl_in_wsi, br_in_wsi)[:] = new_avg_pred
                 index(count_canvas, tl_in_wsi, br_in_wsi)[:] = new_count
-
-            # remove prediction without altering list ordering or length
-            if free_prediction:
-                patch_infos[patch_idx] = None
         if not is_on_drive:
             cum_canvas /= count_canvas + 1.0e-6
         return cum_canvas

@@ -375,7 +375,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     # a second rerun to test overlapping count,
@@ -386,7 +385,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     # else will leave hanging file pointer
@@ -402,7 +400,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     del canvas  # skipcq
 
@@ -414,7 +411,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.1.py",
         cache_count_path=f"{save_dir}/count.1.py",
-        free_prediction=False,
     )
     with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
         semantic_segmentor.merge_prediction(
@@ -423,7 +419,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.1.py",
             cache_count_path=f"{save_dir}/count.py",
-            free_prediction=False,
         )
 
     with pytest.raises(ValueError, match=r".*`cache_count_path` does not match.*"):
@@ -433,7 +428,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
         )
     # * test non HW predictions
     with pytest.raises(ValueError, match=r".*Prediction is no HW or HWC.*"):
@@ -443,7 +437,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
         )
 
     _rm_dir(save_dir)
@@ -460,7 +453,6 @@ def test_functional_segmentor_merging(tmp_path):
         ],
         [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
         save_path=None,
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     del canvas  # skipcq

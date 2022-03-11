@@ -126,8 +126,10 @@ def _process_tile_predictions(
             head_tile_shape[::-1],
             head_predictions,
             head_locations,
-            free_prediction=True,
         )
+        # free up memory
+        del head_locations
+        del head_predictions
         head_raws.append(head_raw)
     _, inst_dict = postproc(head_raws)
 
