@@ -71,7 +71,7 @@ def overlay_prediction_mask(
             2D prediction map. Multi-class prediction should have values
             ranging from 0 to N-1, where N is the number of classes.
         label_info (dict):
-            A dictionary contains the mapping for each integer value
+            A dictionary containing the mapping for each integer value
             within `prediction` to its string and color. [int] : (str,
             (int, int, int)). By default, integer will be taken as label
             and color will be random.
@@ -389,8 +389,8 @@ def plot_graph(
             within the height and width of the canvas.
         edges (np.ndarray):
             List of edges, expected to be Mx2 where M is the number of
-            edges. Each edge is defined as `(src, dst)` where each is
-            respectively the index of within `nodes`.
+            edges. Each edge is defined as a pair of indexes `(from,
+            to)`, where each corresponds to a node of within `nodes`.
         node_colors (tuple or np.ndarray):
             A color or list of node colors. Each color is expected to be
             `(r, g, b)` and is between 0 and 255.

@@ -750,7 +750,7 @@ def get_bounding_box(img):
     """Get bounding box coordinate information.
 
     Given an image with zero and non-zero values. This function will
-    return the the minimal box that contains all non-zero values.
+    return the minimal box that contains all non-zero values.
 
     Args:
         img (ndarray):
@@ -859,10 +859,9 @@ def prepare_model_cli(img_input, output_path, masks, file_types, mode):
 
     Returns:
         list:
-            List of file paths to process.
-        list:
-            List of masks corresponding to input files. output_path
-            (pathlib.Path): output path
+            - List of file paths to process.
+            - List of masks corresponding to input files.
+            - Output path.
 
     """
     output_path = pathlib.Path(output_path)

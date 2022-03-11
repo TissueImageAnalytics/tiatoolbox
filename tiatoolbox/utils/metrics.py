@@ -53,7 +53,7 @@ def pair_coordinates(set_a, set_b, radius):
             - :class:`numpy.ndarray` - Unpaired A:
                 Indices of unpaired points in set A.
             - :class:`numpy.ndarray` - Unpaired B:
-                Indices of unpaired points in set A.
+                Indices of unpaired points in set B.
 
     """
     # * Euclidean distance as the cost matrix
