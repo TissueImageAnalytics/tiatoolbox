@@ -57,7 +57,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
-    description="Computational pathology toolbox developed by TIA Lab.",
+    description="Computational pathology toolbox developed by TIA Centre.",
     entry_points={
         "console_scripts": [
             "tiatoolbox=tiatoolbox.cli:main",

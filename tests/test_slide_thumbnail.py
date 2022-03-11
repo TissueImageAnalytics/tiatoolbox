@@ -3,9 +3,11 @@
 import pathlib
 
 import numpy as np
+import pytest
 from click.testing import CliRunner
 
 from tiatoolbox import cli
+from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.wsicore import wsireader
 
 
@@ -68,9 +70,7 @@ def test_command_line_slide_thumbnail_output_none(sample_svs, tmp_path):
 
     assert slide_thumb_result.exit_code == 0
     assert (
-        pathlib.Path(sample_svs).parent
-        / ("slide-thumbnail")
-        / (sample_svs.stem + ".jpg")
+        pathlib.Path(sample_svs).parent / "slide-thumbnail" / (sample_svs.stem + ".jpg")
     ).is_file()
 
 
@@ -81,6 +81,7 @@ def test_command_line_jp2_slide_thumbnail(sample_jp2, tmp_path):
     command_line_slide_thumbnail(runner, sample=sample_jp2, tmp_path=tmp_path)
 
 
+@pytest.mark.skipif(running_on_travis(), reason="No display on travis.")
 def test_command_line_jp2_slide_thumbnail_mode_show(sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI mode='show'."""
     runner = CliRunner()

@@ -20,54 +20,39 @@
 
 """Command line interface for slide_info."""
 import pathlib
-import sys
 
-import click
-
-from tiatoolbox import utils, wsicore
-
-
-@click.group()
-def main():  # pragma: no cover
-    """Define slide_info click group."""
-    return 0
-
-
-@main.command()
-@click.option("--img-input", help="input path to WSI file or directory path")
-@click.option(
-    "--output-path",
-    help="Path to output directory to save the output, default=img_input/../meta",
+from tiatoolbox.cli.common import (
+    cli_file_type,
+    cli_img_input,
+    cli_mode,
+    cli_output_path,
+    cli_verbose,
+    prepare_file_dir_cli,
+    tiatoolbox_cli,
 )
-@click.option(
-    "--file-types",
-    help="file types to capture from directory, default='*.ndpi', '*.svs', '*.mrxs'",
-    default="*.ndpi, *.svs, *.mrxs, *.jp2",
+
+
+@tiatoolbox_cli.command()
+@cli_img_input()
+@cli_output_path(
+    usage_help="Path to output directory to save the output. "
+    "default=img_input/../meta-data"
 )
-@click.option(
-    "--mode",
-    default="show",
-    help="'show' to display meta information only or 'save' to save "
-    "the meta information, default=show",
-)
-@click.option(
-    "--verbose",
-    type=bool,
-    default=True,
-    help="Print output, default=True",
-)
+@cli_file_type(default="*.ndpi, *.svs, *.mrxs, *.jp2")
+@cli_mode(default="show")
+@cli_verbose(default=True)
 def slide_info(img_input, output_path, file_types, mode, verbose):
-    """Display or save WSI metadata."""
-    files_all, output_path = utils.misc.prepare_file_dir_cli(
+    """Displays or saves WSI metadata depending on the mode argument."""
+    from tiatoolbox import utils, wsicore
+
+    files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, mode, "meta-data"
     )
 
     for curr_file in files_all:
         slide_param = wsicore.slide_info.slide_info(
-            input_path=curr_file, verbose=verbose
+            input_path=curr_file, verbose=verbose or mode == "show"
         )
-        if mode == "show":
-            print(slide_param.as_dict())
 
         if mode == "save":
             out_path = pathlib.Path(
@@ -78,7 +63,3 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
                 out_path,
             )
             print("Meta files saved at " + str(output_path))
-
-
-if __name__ == "__main__":
-    sys.exit(main())  # pragma: no cover

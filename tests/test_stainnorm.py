@@ -10,7 +10,6 @@ from tiatoolbox import cli
 from tiatoolbox.data import _local_sample_path, stainnorm_target
 from tiatoolbox.tools import stainextract
 from tiatoolbox.tools.stainnorm import get_normalizer
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import imread
 
 
@@ -162,7 +161,7 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
@@ -177,7 +176,7 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
@@ -192,7 +191,7 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
@@ -207,7 +206,7 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
@@ -228,7 +227,7 @@ def test_cli_stainnorm_dir(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img),
             "--target-input",
             target_img,
@@ -249,7 +248,7 @@ def test_cli_stainnorm_file_not_found_error(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img)[:-1],
             "--target-input",
             target_img,
@@ -272,7 +271,7 @@ def test_cli_stainnorm_method_not_supported(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img),
             "--target-input",
             target_img,
@@ -281,6 +280,6 @@ def test_cli_stainnorm_method_not_supported(source_image):
         ],
     )
 
-    assert stainnorm_result.output == ""
-    assert stainnorm_result.exit_code == 1
-    assert isinstance(stainnorm_result.exception, MethodNotSupported)
+    assert "Invalid value for '--method'" in stainnorm_result.output
+    assert stainnorm_result.exit_code != 0
+    assert isinstance(stainnorm_result.exception, SystemExit)

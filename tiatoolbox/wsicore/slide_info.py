@@ -21,7 +21,7 @@
 """Get Slide Meta Data information."""
 import pathlib
 
-from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def slide_info(input_path, verbose=True):
@@ -51,7 +51,7 @@ def slide_info(input_path, verbose=True):
     if verbose:
         print(input_path.name, flush=True)
 
-    wsi = wsireader.get_wsireader(input_img=input_path)
+    wsi = WSIReader.open(input_img=input_path)
     info = wsi.info
     if verbose:
         print(info.as_dict())
