@@ -41,7 +41,7 @@ class HoVerNetPlus(HoVerNet):
     regions or layers in the images. Note the HoVerNet+ architecture assumes an image
     resolution of 0.5 mpp, in contrast to HoVerNet at 0.25 mpp.
 
-    The tiatoolbox model should produce following results on the private OED dataset
+    The tiatoolbox model should produce following results on the specified datasets
     that is was trained on.
 
     .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
