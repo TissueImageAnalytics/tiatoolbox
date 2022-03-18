@@ -24,7 +24,6 @@ from torchvision import transforms
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
 
-
 TRANSFORM = transforms.Compose(
     [
         transforms.ToTensor(),
