@@ -1704,10 +1704,10 @@ def test_openslide_read_bounds_edge_reflect_padding(sample_svs):
     assert 0 not in region.min(axis=-1)
 
 
-def test_tiffwsireader_invalid_tiff(sample_ndpi):
+def test_tiffwsireader_invalid_tiff(remote_sample):
     """Test for TIFF which is not supported by TIFFWSIReader."""
     with pytest.raises(ValueError, match="Unsupported TIFF"):
-        _ = wsireader.TIFFWSIReader(sample_ndpi)
+        _ = wsireader.TIFFWSIReader(remote_sample("two-tiled-pages"))
 
 
 def test_tiffwsireader_invalid_svs_metadata(sample_svs, monkeypatch):

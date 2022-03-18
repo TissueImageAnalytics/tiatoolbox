@@ -1996,8 +1996,15 @@ class TIFFWSIReader(WSIReader):
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
         self._axes = self.tiff.pages[0].axes
-        is_single_page_tiled = (
-            self.tiff.pages[0].is_tiled and not self.tiff.is_multipage
+        # Flag which is True if the image is a simple single page tile TIFF
+        is_single_page_tiled = all(
+            [
+                self.tiff.pages[0].is_tiled,
+                # Not currently supporting multi-page images
+                not self.tiff.is_multipage,
+                # Currently only supporting single page generic tiled TIFF
+                len(self.tiff.pages) == 1,
+            ]
         )
         if not any([self.tiff.is_svs, self.tiff.is_ome, is_single_page_tiled]):
             raise ValueError("Unsupported TIFF WSI format.")
@@ -2194,10 +2201,14 @@ class TIFFWSIReader(WSIReader):
         raw["Description"] = description
 
         # Check for MPP in the tiff resolution tags
+        # res_units: 1 = undefined, 2 = inch, 3 = centimeter
         res_units = self.tiff.pages[0].tags.get("ResolutionUnit")
         res_x = self.tiff.pages[0].tags.get("XResolution")
         res_y = self.tiff.pages[0].tags.get("YResolution")
-        if all(x is not None for x in [res_units, res_x, res_y]):
+        if (
+            all(x is not None for x in [res_units, res_x, res_y])
+            and res_units.value != 1
+        ):
             mpp = [
                 utils.misc.ppu2mpp(res_x.value[0], res_units.value),
                 utils.misc.ppu2mpp(res_y.value[0], res_units.value),
