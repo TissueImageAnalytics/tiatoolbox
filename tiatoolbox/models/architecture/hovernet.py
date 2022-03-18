@@ -285,7 +285,7 @@ class HoVerNet(ModelABC):
         num_input_channels (int):
             Number of channels in input.
         num_types (int):
-            Number of nuclei types within the predictions. Once define,
+            Number of nuclei types within the predictions. Once defined,
             a branch dedicated for typing is created. By default, no
             typing (`num_types=None`) is used.
         mode (str):
@@ -683,7 +683,7 @@ class HoVerNet(ModelABC):
 
         Args:
             raw_maps (list(:class:`numpy.ndarray`)):
-                A list of prediction output of each head and assumed to
+                A list of prediction outputs of each head and assumed to
                 be in the order of [np, hv, tp] (match with the output
                 of `infer_batch`).
 
@@ -764,11 +764,10 @@ class HoVerNet(ModelABC):
 
         Returns:
             tuple:
-                Tuple of output from each head, each head is expected to
-                contain N predictions for N input patches. There are two
-                cases, one with 2 heads (Nuclei Pixels `np` and Hover
-                `hv`) or with 2 heads (`np`, `hv`, and Nuclei Types
-                `tp`).
+                Output from each head. Each head is expected to contain
+                N predictions for N input patches. There are two cases,
+                one with 2 heads (Nuclei Pixels `np` and Hover `hv`) or
+                with 2 heads (`np`, `hv`, and Nuclei Types `tp`).
 
         """
         patch_imgs = batch_data
