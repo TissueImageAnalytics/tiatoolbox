@@ -334,7 +334,7 @@ def out_arch_branch(in_ch, num_class=2):
 class MicroNet(ModelABC):
     """Initialise MicroNet [1].
     The following models have been included in tiatoolbox.
-    1. `micronet_hovernet-consep`: This is trained on
+    1. `micronet-consep`: This is trained on
     `ConSep dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_
     The model is retrained in torch as the original model with results on ConSep [2]
     was trained in TensorFlow.
@@ -367,12 +367,12 @@ class MicroNet(ModelABC):
         num_class (int): Number of output channels. default=2.
 
     References:
-        [1] Raza, SEA et al., “Micro-Net: A unified model for segmentation of
-        various objects in microscopy images,” Medical Image Analysis,
-        Dec. 2018, vol. 52, p. 160–173.
+        [1] Raza, Shan E Ahmed, et al. "Micro-Net: A unified model for
+        segmentation of various objects in microscopy images."
+        Medical image analysis 52 (2019): 160-173.
 
-        [2] Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
-        classification of nuclei in multi-tissue histology images."
+        [2] Graham, Simon, et al. "Hover-net: Simultaneous segmentation
+        and classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
     """
