@@ -156,7 +156,7 @@ class IOSegmentorConfig(IOConfigABC):
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to scaling factor with repsect to
-        highest resolution found in the input resolutions list.
+        the highest resolution found in the input resolutions list.
 
         Args:
             resolutions (list):
