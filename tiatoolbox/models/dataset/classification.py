@@ -97,7 +97,7 @@ class PatchDataset(abc.PatchDatasetABC):
             list of valid path with its extension be (".jpg", ".jpeg",
             ".tif", ".tiff", ".png") pointing to an image.
         labels:
-            List of label for sample at the same index in `inputs`.
+            List of labels for sample at the same index in `inputs`.
             Default is `None`.
         preproc_func:
             Preprocessing function used to transform the input data.
@@ -150,8 +150,8 @@ class WSIPatchDataset(abc.PatchDatasetABC):
 
     Attributes:
         reader (:class:`.WSIReader`):
-            An WSI Reader or Virtual Reader
-            for reading pyramidal image or large tile in pyramidal way.
+            A WSI Reader or Virtual Reader for reading pyramidal image
+            or large tile in pyramidal way.
         inputs:
             List of coordinates to read from the `reader`, each
             coordinate is of the form `[start_x, start_y, end_x,
