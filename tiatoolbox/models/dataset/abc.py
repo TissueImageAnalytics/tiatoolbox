@@ -160,7 +160,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """Set the pre-processing function for this instance.
 
         If `func=None`, the method will default to `self.preproc`.
-        Otherwise, `func` is expected to be callable and behave as
+        Otherwise, `func` is expected to be callable and behaves as
         follows:
 
         >>> transformed_img = func(img)

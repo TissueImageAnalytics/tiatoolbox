@@ -212,11 +212,6 @@ class UNetModel(ModelABC):
         decoder_block (list):
             A list of convolution layers. Each item is an integer and
             denotes the layer kernel size.
-        classifier (list):
-            A list of convolution layers before the final 1x1
-            convolution. Each item is an integer denotes the layer
-            kernel size. The default is `None` and contains only the 1x1
-            convolution.
 
     Returns:
         torch.nn.Module:

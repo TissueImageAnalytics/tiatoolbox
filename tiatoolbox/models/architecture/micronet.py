@@ -453,7 +453,7 @@ class MicroNet(ModelABC):
 
         Args:
             input_tensor (torch.Tensor):
-                Input images, the tensor is in the shape of NCHW.
+                Input images, the tensor is in the shape of NHCW.
 
         Returns:
             list:

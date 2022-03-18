@@ -74,8 +74,8 @@ class KatherPatchDataset(DatasetInfoABC):
         inputs (list):
             A list of paths where each path points to a sample image.
         labels (list):
-            A list of `int` where each is the label of the sample at the
-            same index.
+            A list of `int` where each value corresponds to the label of
+            the sample at the same index.
         label_names (dict):
             A dict mapping each unique label value to the associated
             class name as a string.
