@@ -404,7 +404,7 @@ class PatchPredictor:
             imgs (list, ndarray):
                 List of inputs to process. when using `patch` mode, the
                 input must be either a list of images, a list of image
-                file paths or a numpy array of an image list. when using
+                file paths or a numpy array of an image list. When using
                 `tile` or `wsi` mode, the input must be a list of file
                 paths.
             masks (list):
@@ -460,10 +460,12 @@ class PatchPredictor:
                 image tiles or whole-slide images are provided as input,
                 or save_output is True, then results are saved to
                 `save_dir` and a dictionary indicating save location for
-                each input is return. The dict has following format:
+                each input is returned. The dict has following format:
                     - img_path: path of the input image.
-                        - raw: path to save location for raw prediction, saved in .json.
-                        - merged: path to .npy contain merged predictions if
+                        - raw: path to save location for raw prediction,
+                          saved in .json.
+                        - merged: path to .npy contain merged
+                          predictions if
                         `merge_predictions` is `True`.
 
         Examples:
@@ -474,9 +476,9 @@ class PatchPredictor:
             >>> output.keys()
             ... ['wsi1.svs', 'wsi2.svs']
             >>> output['wsi1.svs']
-            ... {'raw': '0.raw.json', 'merged': '0.merged.npy}
+            ... {'raw': '0.raw.json', 'merged': '0.merged.npy'}
             >>> output['wsi2.svs']
-            ... {'raw': '1.raw.json', 'merged': '1.merged.npy}
+            ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
 
         """
         if mode not in ["patch", "wsi", "tile"]:

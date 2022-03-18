@@ -84,7 +84,7 @@ def _process_tile_predictions(
                  but less width (hence vertical strip).
             - 2: Horizontal tile strip that stands between two normal
                  tiles (flag 0). It has the same width as normal tile
-                 but less height (hence vertical strip).
+                 but less height (hence horizontal strip).
             - 3: Tile strip stands at the cross section of four normal
                  tiles (flag 0).
         tile_output (list):
@@ -566,7 +566,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 The index of the WSI to be processed. This is used to
                 retrieve the file path.
             patch_inputs (list):
-                A list of corrdinates in `[start_x, start_y, end_x,
+                A list of coordinates in `[start_x, start_y, end_x,
                 end_y]` format indicating the read location of the patch
                 in the WSI image. The coordinates are in the highest
                 resolution defined in `self.ioconfig`.
@@ -642,9 +642,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             ioconfig (IOSegmentorConfig):
                 Object which defines I/O placement during inference and
                 when assembling back to full tile/wsi.
-            loader (torch.Dataloader):
-                The loader object which return batch of data to be input
-                to model.
             save_path (str):
                 Location to save output prediction as well as possible
                 intermediate results.

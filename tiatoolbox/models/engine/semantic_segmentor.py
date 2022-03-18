@@ -167,7 +167,7 @@ class IOSegmentorConfig(IOConfigABC):
 
         Returns:
             :class:`numpy.ndarray`:
-                A 1D array of scaling factor having the same length as
+                A 1D array of scaling factors having the same length as
                 `resolutions`
 
         """
@@ -1002,10 +1002,10 @@ class SemanticSegmentor:
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
             on_gpu (bool):
-                Whether to run model on the GPU.
+                Whether to run the model on the GPU.
             patch_input_shape (tuple):
-                Size of patches input to the model. The value
-              are at requested read resolution and must be positive.
+                Size of patches input to the model. The values
+                are at requested read resolution and must be positive.
             patch_output_shape (tuple):
                 Size of patches output by the model. The values are at
                 the requested read resolution and must be positive.
@@ -1358,9 +1358,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
             on_gpu (bool):
-                Whether to run model on the GPU.
+                Whether to run the model on the GPU.
             patch_input_shape (tuple):
-                Size of patches input to the model. The value are at
+                Size of patches input to the model. The values are at
                 requested read resolution and must be positive.
             patch_output_shape (tuple):
                 Size of patches output by the model. The values are at
