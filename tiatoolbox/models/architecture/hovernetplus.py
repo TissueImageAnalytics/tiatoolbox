@@ -166,7 +166,7 @@ class HoVerNetPlus(HoVerNet):
 
         Args:
             raw_maps (list(ndarray)):
-                A list of prediction output of each head and assumed to
+                A list of prediction outputs of each head and assumed to
                 be in the order of [np, hv, tp, ls] (match with the
                 output of `infer_batch`).
 
