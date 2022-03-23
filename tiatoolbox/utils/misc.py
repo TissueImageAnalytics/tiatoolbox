@@ -776,7 +776,9 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
     microns_per_unit = {
         "centimeter": 1e4,  # 10,000
         "cm": 1e4,  # 10,000
+        "mm": 1e3,  # 1,000
         "inch": 25400,
+        "in": 25400,
         2: 25400,  # inches in TIFF tags
         3: 1e4,  # cm in TIFF tags
     }

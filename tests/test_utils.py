@@ -122,6 +122,24 @@ def test_mpp2common_objective_power(sample_svs):
         )
 
 
+def test_ppu2mpp_invalid_units():
+    """Test ppu2mpp with invalid units."""
+    with pytest.raises(ValueError, match="Invalid units"):
+        utils.misc.ppu2mpp(1, units="invalid")
+
+
+def test_ppu2mpp():
+    """Test converting pixels-per-unit to mpp with ppu2mpp."""
+    assert utils.misc.ppu2mpp(1, units="in") == 25_400
+    assert utils.misc.ppu2mpp(1, units="inch") == 25_400
+    assert utils.misc.ppu2mpp(1, units="mm") == 1_000
+    assert utils.misc.ppu2mpp(1, units="cm") == 10_000
+    assert utils.misc.ppu2mpp(1, units=2) == 25_400  # inch
+    assert utils.misc.ppu2mpp(1, units=3) == 10_000  # cm
+    assert pytest.approx(utils.misc.ppu2mpp(72, units="in"), 352.8)
+    assert pytest.approx(utils.misc.ppu2mpp(50_000, units="in"), 0.508)
+
+
 def test_assert_dtype_int():
     """Test AssertionError for dtype test."""
     utils.misc.assert_dtype_int(input_var=np.array([1, 2]))
