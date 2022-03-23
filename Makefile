@@ -26,7 +26,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
+clean: clean-build clean-pyc clean-test clean-docs ## remove all build, test, coverage and Python artifacts
 
 clean-build: ## remove build artifacts
 	rm -fr build/
@@ -47,6 +47,15 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
+clean-docs: ## remove documentation artifacts
+	rm -fr docs/_build/
+	rm -rf docs/_autosummary/
+	rm -rf docs/_notebooks/
+	rm -rf docs/html/
+	rm -f docs/tiatoolbox.rst
+	rm -f docs/modules.rst
+	rm -f docs/tiatoolbox.*.rst
+
 lint: ## check style with flake8
 	flake8 tiatoolbox tests
 
@@ -60,10 +69,7 @@ coverage: ## check code coverage quickly with the default Python
 	pytest  --cov=tiatoolbox --cov-report=term --cov-report=html --cov-report=xml
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/tiatoolbox.rst
-	rm -f docs/modules.rst
-	rm -f docs/_autosummary
+docs: clean-docs ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ tiatoolbox
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
