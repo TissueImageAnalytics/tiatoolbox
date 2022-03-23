@@ -1642,6 +1642,10 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     assert pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
 
 
+@pytest.mark.skipif(
+    utils.env_detection.running_on_travis(),
+    reason="No need to display image on travis.",
+)
 def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
     """Test JP2 read_bounds with mode as 'show'."""
     runner = CliRunner()

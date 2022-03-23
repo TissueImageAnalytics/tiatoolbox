@@ -34,13 +34,52 @@ from tiatoolbox.utils import misc
 
 
 class HoVerNetPlus(HoVerNet):
-    """Initialise HoVerNet+.
+    """Initialise HoVerNet+ [1].
 
     HoVerNet+ takes an RGB input image, and provides the option to
     simultaneously segment and classify the nuclei present, as well as
     semantically segment different regions or layers in the images. Note
     the HoVerNet+ architecture assumes an image resolution of 0.5 mpp,
     in contrast to HoVerNet at 0.25 mpp.
+
+    The tiatoolbox model should produce following results on the specified datasets
+    that is was trained on.
+
+    .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernetplus-oed
+         - OED
+         - 0.84
+         - 0.69
+         - 0.86
+         - 0.80
+         - 0.69
+
+    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation
+       :widths: 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - F1
+         - Precision
+         - Recall
+         - Accuracy
+       * - hovernetplus-oed
+         - OED
+         - 0.82
+         - 0.82
+         - 0.82
+         - 0.84
 
     Args:
         num_input_channels (int):
@@ -51,9 +90,10 @@ class HoVerNetPlus(HoVerNet):
             The number of layers/different regions types present.
 
     References:
-        Shephard, Adam J., et al. "Simultaneous Nuclear Instance and
+        [1] Shephard, Adam J., et al. "Simultaneous Nuclear Instance and
         Layer Segmentation in Oral Epithelial Dysplasia." Proceedings of
         the IEEE/CVF International Conference on Computer Vision. 2021.
+
 
     """
 
