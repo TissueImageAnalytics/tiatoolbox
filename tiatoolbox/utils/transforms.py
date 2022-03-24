@@ -308,3 +308,9 @@ def pad_bounds(
 
     signs = np.repeat([-1, 1], ndims)
     return np.add(bounds, padding * signs)
+
+def add_alpha_ch(rgb):
+    #adds alpha channel which is 0 (transparent) for all white areas of input img
+    alph=255-np.all(rgb==255,axis=2).astype('uint8')*255
+    rgb=np.dstack((rgb,alph))
+    return rgb

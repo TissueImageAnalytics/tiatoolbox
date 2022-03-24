@@ -35,6 +35,8 @@ from tiatoolbox.cli.slide_info import slide_info
 from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
 from tiatoolbox.cli.stain_norm import stain_norm
 from tiatoolbox.cli.tissue_mask import tissue_mask
+from tiatoolbox.cli.show_overlay import show_overlay
+from tiatoolbox.cli.overlay_from_json import overlay_from_json
 
 
 def version_msg():
@@ -68,6 +70,8 @@ main.add_command(slide_info)
 main.add_command(slide_thumbnail)
 main.add_command(tissue_mask)
 main.add_command(stain_norm)
+main.add_command(show_overlay)
+main.add_command(overlay_from_json)
 
 
 if __name__ == "__main__":

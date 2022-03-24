@@ -21,6 +21,7 @@ pydicom # Used by wsidicom
 pytest-cov==3.0.0
 pytest-runner>=5.2
 pytest>=6.2.5
+pyvips
 pyyaml>=5.1
 recommonmark
 requests

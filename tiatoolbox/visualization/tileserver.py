@@ -56,7 +56,7 @@ class TileServer(Flask):
         >>> app.run()
     """
 
-    def __init__(self, title: str, layers: Dict[str, WSIReader]) -> None:
+    def __init__(self, title: str, layers: Dict[str, WSIReader], add_alpha=False, format='jpeg') -> None:
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
@@ -66,6 +66,8 @@ class TileServer(Flask):
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
         self.tia_title = title
+        self.format=format
+        self.add_alpha=add_alpha
         self.tia_layers = layers
         self.tia_pyramids = {
             key: ZoomifyGenerator(reader) for key, reader in self.tia_layers.items()
@@ -109,13 +111,13 @@ class TileServer(Flask):
         except KeyError:
             return Response("Layer not found", status=404)
         try:
-            tile_image = pyramid.get_tile(level=z, x=x, y=y)
+            tile_image = pyramid.get_tile(level=z, x=x, y=y, add_alpha=self.add_alpha)
         except IndexError:
             return Response("Tile not found", status=404)
         image_io = io.BytesIO()
-        tile_image.save(image_io, format="JPEG")
+        tile_image.save(image_io, format=self.format)
         image_io.seek(0)
-        return send_file(image_io, mimetype="image/jpeg")
+        return send_file(image_io, mimetype=f"image/{self.format}")
 
     def index(self) -> Response:
         """Serve the index page.

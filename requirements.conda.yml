@@ -28,6 +28,7 @@ dependencies:
   - pixman>=0.39.0
   - python=3.7
   - pytorch>=1.9.0
+  - pyvips
   - pyyaml>=5.1
   - requests
   - scikit-image>=0.19.1

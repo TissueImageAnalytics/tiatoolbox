@@ -12,6 +12,7 @@ openslide-python>=1.1.2
 pandas
 pillow
 pydicom # Used by wsidicom
+pyvips
 pyyaml>=5.1
 requests
 scikit-image>=0.19.1

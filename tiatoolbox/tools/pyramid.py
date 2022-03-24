@@ -42,7 +42,7 @@ import defusedxml
 import numpy as np
 from PIL import Image
 
-from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.utils.transforms import imresize, add_alpha_ch
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 defusedxml.defuse_stdlib()
@@ -160,6 +160,7 @@ class TilePyramidGenerator:
         y: int,
         pad_mode: str = "constant",
         interpolation: str = "optimise",
+        add_alpha: bool = False,
     ) -> Image:
         """Get a tile at a given level and coordinate.
 
@@ -237,6 +238,9 @@ class TilePyramidGenerator:
                 pad_mode=pad_mode,
                 interpolation=interpolation,
             )
+        
+        if add_alpha:
+            rgb=add_alpha_ch(rgb)
         return Image.fromarray(rgb)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
