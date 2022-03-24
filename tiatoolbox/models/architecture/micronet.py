@@ -388,12 +388,12 @@ class MicroNet(ModelABC):
          - AJI+
        * - micronet_hovernet-consep
          - ConSep
-         - 0.81
-         - 0.44
-         - 0.59
+         - 0.80
+         - 0.49
+         - 0.62
          - 0.75
-         - 0.44
-         - 0.50
+         - 0.47
+         - 0.54
 
     Args:
         num_input_channels (int):

@@ -53,7 +53,7 @@ def test_functionality(remote_sample, tmp_path):
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output, _ = model.postproc(output[0])
-    assert np.max(np.unique(output)) == 33
+    assert np.max(np.unique(output)) == 46
 
 
 def test_value_error():
