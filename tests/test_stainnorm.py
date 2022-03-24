@@ -7,10 +7,9 @@ import pytest
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.data import _local_sample_path, stainnorm_target
+from tiatoolbox.data import _local_sample_path, stain_norm_target
 from tiatoolbox.tools import stainextract
 from tiatoolbox.tools.stainnorm import get_normalizer
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.utils.misc import imread
 
 
@@ -69,7 +68,7 @@ def test_dl_output_for_h_and_e():
 def test_reinhard_normalize(source_image, norm_reinhard):
     """Test for Reinhard colour normalization."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     reinhard_img = imread(pathlib.Path(norm_reinhard))
 
     norm = get_normalizer("reinhard")
@@ -83,7 +82,7 @@ def test_reinhard_normalize(source_image, norm_reinhard):
 def test_custom_normalize(source_image, norm_ruifrok):
     """Test for stain normalization with user-defined stain matrix."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     custom_img = imread(pathlib.Path(norm_ruifrok))
 
     # init class with custom method - test with ruifrok stain matrix
@@ -106,7 +105,7 @@ def test_get_normalizer_assertion():
 def test_ruifrok_normalize(source_image, norm_ruifrok):
     """Test for stain normalization with stain matrix from Ruifrok and Johnston."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     ruifrok_img = imread(pathlib.Path(norm_ruifrok))
 
     # init class with Ruifrok & Johnston method
@@ -121,7 +120,7 @@ def test_ruifrok_normalize(source_image, norm_ruifrok):
 def test_macenko_normalize(source_image, norm_macenko):
     """Test for stain normalization with stain matrix from Macenko et al."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     macenko_img = imread(pathlib.Path(norm_macenko))
 
     # init class with Macenko method
@@ -136,7 +135,7 @@ def test_macenko_normalize(source_image, norm_macenko):
 def test_vahadane_normalize(source_image, norm_vahadane):
     """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     vahadane_img = imread(pathlib.Path(norm_vahadane))
 
     # init class with Vahadane method
@@ -153,7 +152,7 @@ def test_vahadane_normalize(source_image, norm_vahadane):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm(source_image):
+def test_command_line_stainnorm(source_image, tmp_path):
     """Test for the stain normalization CLI."""
     source_img = pathlib.Path(source_image)
     target_img = _local_sample_path("target_image.png")
@@ -162,10 +161,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "reinhard",
         ],
@@ -177,10 +178,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "ruifrok",
         ],
@@ -192,10 +195,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "macenko",
         ],
@@ -207,10 +212,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "vahadane",
         ],
@@ -219,7 +226,7 @@ def test_command_line_stainnorm(source_image):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_dir(source_image):
+def test_cli_stainnorm_dir(source_image, tmp_path):
     """Test directory input for the stain normalization CLI."""
     source_img = source_image.parent
     target_img = _local_sample_path("target_image.png")
@@ -228,10 +235,12 @@ def test_cli_stainnorm_dir(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img),
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_ouput"),
             "--method",
             "vahadane",
         ],
@@ -240,19 +249,21 @@ def test_cli_stainnorm_dir(source_image):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_file_not_found_error(source_image):
+def test_cli_stainnorm_file_not_found_error(source_image, tmp_path):
     """Test file not found error for the stain normalization CLI."""
     source_img = pathlib.Path(source_image)
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img)[:-1],
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "vahadane",
         ],
@@ -263,24 +274,26 @@ def test_cli_stainnorm_file_not_found_error(source_image):
     assert isinstance(stainnorm_result.exception, FileNotFoundError)
 
 
-def test_cli_stainnorm_method_not_supported(source_image):
+def test_cli_stainnorm_method_not_supported(source_image, tmp_path):
     """Test method not supported for the stain normalization CLI."""
     source_img = pathlib.Path(source_image)
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img),
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "Test",
         ],
     )
 
-    assert stainnorm_result.output == ""
-    assert stainnorm_result.exit_code == 1
-    assert isinstance(stainnorm_result.exception, MethodNotSupported)
+    assert "Invalid value for '--method'" in stainnorm_result.output
+    assert stainnorm_result.exit_code != 0
+    assert isinstance(stainnorm_result.exception, SystemExit)

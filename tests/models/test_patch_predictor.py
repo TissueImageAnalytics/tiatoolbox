@@ -1051,9 +1051,9 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
         ],
     )
 
-    assert mode_not_in_wsi_tile_result.output == ""
-    assert mode_not_in_wsi_tile_result.exit_code == 1
-    assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
+    assert "Invalid value for '--mode'" in mode_not_in_wsi_tile_result.output
+    assert mode_not_in_wsi_tile_result.exit_code != 0
+    assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
 
 def test_cli_model_single_file(sample_svs, tmp_path):
