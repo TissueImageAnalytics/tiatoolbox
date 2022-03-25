@@ -386,7 +386,7 @@ class MicroNet(ModelABC):
          - SQ
          - PQ
          - AJI+
-       * - micronet_hovernet-consep
+       * - micronet-consep
          - ConSep
          - 0.80
          - 0.49
