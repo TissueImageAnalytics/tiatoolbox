@@ -16,7 +16,7 @@
       <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
     </a>
     <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
-      <img src="https://img.shields.io/badge/license-GPL--3.0-lightgrey" />
+      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange" />
     </a>
   <br>
     <br>
