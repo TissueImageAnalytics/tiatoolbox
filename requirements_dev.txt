@@ -36,7 +36,7 @@ torch>=1.9.0
 torchvision>=0.10.1
 tox
 tqdm
-twine==3.8.0
+twine==4.0.0
 umap-learn
 wheel==0.37.1
 wsidicom
