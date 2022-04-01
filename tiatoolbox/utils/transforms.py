@@ -81,7 +81,8 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
             otherwise uses cv2.INTER_CUBIC
 
     Returns:
-        :class:`numpy.ndarray`: resized image
+        :class:`numpy.ndarray`: resized image. The image may be of different `np.dtype`
+            compared to the input image. However, the numeric precision is ensured.
 
     Examples:
         >>> from tiatoolbox.wsicore import wsireader
@@ -119,7 +120,11 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         else:
             interpolation = "area"
 
-    # dtypes that cv2.resize can work on out-of-the-box
+    # a list of (original type, converted type) tuple
+    # all `converted type` are np.dtypes that cv2.resize
+    # can work on out-of-the-box (anything else will cause
+    # error). The `converted type` has been selected so that
+    # they can maintain the numeric precision of the `original type`.
     dtype_mapping = [
         (np.bool, np.uint8),
         (np.int8, np.int16),
