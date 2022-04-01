@@ -47,7 +47,7 @@ def test_functionality(remote_sample, tmp_path):
     patch = MicroNet.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     model = MicroNet()
-    fetch_pretrained_weights("micronet_hovernet-consep", f"{tmp_path}/weights.pth")
+    fetch_pretrained_weights("micronet-consep", f"{tmp_path}/weights.pth")
     map_location = utils.misc.select_device(utils.env_detection.has_gpu())
     pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
     model.load_state_dict(pretrained)
@@ -70,7 +70,7 @@ def test_micronet_output(remote_sample, tmp_path):
     """Tests the output of MicroNet."""
     svs_1_small = pathlib.Path(remote_sample("svs-1-small"))
     micronet_output = pathlib.Path(remote_sample("micronet-output"))
-    pretrained_model = "micronet_hovernet-consep"
+    pretrained_model = "micronet-consep"
     batch_size = 5
     num_loader_workers = 0
     num_postproc_workers = 0
