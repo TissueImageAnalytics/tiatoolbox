@@ -46,14 +46,49 @@ def test_imresize():
     )
     assert resized_img.shape == (1000, 500, 3)
 
-    # test for dtype conversion
+    # test for dtype conversion, pairs of
+    # (original type, converted type)
+    test_dtypes = [
+        (np.bool, np.uint8),
+        (np.int8, np.int16),
+        (np.int16, np.int16),
+        (np.int32, np.float32),
+        (np.uint8, np.uint8),
+        (np.uint16, np.uint16),
+        (np.uint32, np.float32),
+        (np.int64, np.float64),
+        (np.uint64, np.float64),
+        (np.float16, np.float32),
+        (np.float32, np.float32),
+        (np.float64, np.float64),
+    ]
+    img = np.zeros((100, 100, 3))
+    for original_dtype, converted_dtype in test_dtypes:
+        resized_img = utils.transforms.imresize(
+            img.astype(original_dtype),
+            scale_factor=0.5,
+            interpolation=cv2.INTER_CUBIC,
+        )
+        assert resized_img.shape == (50, 50, 3)
+        assert resized_img.dtype == converted_dtype
+
+    # test resizing multiple channels
+    img = np.random.randint(0, 256, (4, 4, 16))
     resized_img = utils.transforms.imresize(
-        img.astype(np.float16),
-        scale_factor=0.5,
+        img,
+        scale_factor=4,
         interpolation=cv2.INTER_CUBIC,
     )
-    assert resized_img.shape == (1000, 500, 3)
-    assert resized_img.dtype == np.float32
+    assert resized_img.shape == (16, 16, 16)
+
+    # test for not supporting dtype
+    img = np.random.randint(0, 256, (4, 4, 16))
+    with pytest.raises(ValueError, match=r".*float128.*"):
+        resized_img = utils.transforms.imresize(
+            img.astype(np.float128),
+            scale_factor=4,
+            interpolation=cv2.INTER_CUBIC,
+        )
 
 
 def test_imresize_1x1():

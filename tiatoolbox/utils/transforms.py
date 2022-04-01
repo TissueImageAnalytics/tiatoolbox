@@ -71,7 +71,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     """Resize input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image
+        img (:class:`numpy.ndarray`): input image, assumed to be in `HxWxC` or `HxW`.
         scale_factor (tuple(float)): scaling factor to resize the input image
         output_size (tuple(int)): output image size, (width, height)
         interpolation (str or int): interpolation method used to interpolate the image
@@ -119,8 +119,30 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         else:
             interpolation = "area"
 
-    if img.dtype == np.float16:
-        img = img.astype(np.float32)
+    # dtypes that cv2.resize can work on out-of-the-box
+    dtype_mapping = [
+        (np.bool, np.uint8),
+        (np.int8, np.int16),
+        (np.int16, np.int16),
+        (np.int32, np.float32),
+        (np.uint8, np.uint8),
+        (np.uint16, np.uint16),
+        (np.uint32, np.float32),
+        (np.int64, np.float64),
+        (np.uint64, np.float64),
+        (np.float16, np.float32),
+        (np.float32, np.float32),
+        (np.float64, np.float64),
+    ]
+    source_dtypes = [v[0] for v in dtype_mapping]
+    original_dtype = img.dtype
+    if original_dtype in source_dtypes:
+        converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
+        img = img.astype(converted_dtype)
+    else:
+        raise ValueError(
+            f"Does not support resizing for array of dtype: {original_dtype}"
+        )
 
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
@@ -128,7 +150,17 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
     if img.shape[0] == img.shape[1] == 1:
         return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
-    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    if len(img.shape) == 3 and img.shape[-1] > 4:
+        img_channels = [
+            cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
+                ..., None
+            ]
+            for ch in range(img.shape[-1])
+        ]
+        resized_img = np.concatenate(img_channels, axis=-1)
+    else:
+        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    return resized_img
 
 
 def rgb2od(img):
