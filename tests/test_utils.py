@@ -1248,41 +1248,33 @@ def test_save_as_json():
 def test_save_as_json_exists(tmp_path):
     """Test save data to json which already exists."""
     dictionary = {"a": 1, "b": 2}
-    out_path = tmp_path / "sample_json.json"
-    assert tmp_path in out_path.parents
-    utils.misc.save_as_json(dictionary, out_path)
+    utils.misc.save_as_json(dictionary, tmp_path / "sample_json.json")
     with pytest.raises(FileExistsError, match="File already exists"):
-        utils.misc.save_as_json(dictionary, out_path)
-    utils.misc.save_as_json(dictionary, out_path, exist_ok=True)
+        utils.misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    utils.misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
 
 
 def test_save_as_json_parents(tmp_path):
     """Test save data to json where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
-    out_path = tmp_path / "foo" / "sample_json.json"
-    assert tmp_path in out_path.parents
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        utils.misc.save_as_json(dictionary, out_path)
+        utils.misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
 
 
 def test_save_yaml_exists(tmp_path):
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
-    out_path = tmp_path / "sample_yaml.yaml"
-    assert tmp_path in out_path.parents
-    utils.misc.save_yaml(dictionary, out_path)
+    utils.misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
     with pytest.raises(FileExistsError, match="File already exists"):
-        utils.misc.save_yaml(dictionary, out_path)
-    utils.misc.save_yaml(dictionary, out_path, exist_ok=True)
+        utils.misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    utils.misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
 def test_save_yaml_parents(tmp_path):
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
-    out_path = tmp_path / "foo" / "sample_yaml.yaml"
-    assert tmp_path in out_path.parents
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        utils.misc.save_yaml(dictionary, out_path)
+        utils.misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
 
 
 def test_imread_none_args():
