@@ -390,20 +390,23 @@ def plot_graph(
         cv2.circle(canvas, node, node_size, color, thickness=-1)
     return canvas
 
+
 def MakeTileServer(img_paths):
-    from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
+    """setup a tileserver given a tuple or list of paths to images. If given a single
+    channel heatmap, will apply colormap to convert to rgb"""
+    from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
     from tiatoolbox.visualization.tileserver import TileServer
 
     from PIL import Image
     import matplotlib.cm as cm
     from pathlib import Path
 
-    layers={}
-    for i,p in enumerate(img_paths):
-        p=Path(p)
-        if i==0:
-            layers['layer-1']=WSIReader.open(p)
-            meta = layers['layer-1'].info
+    layers = {}
+    for i, p in enumerate(img_paths):
+        p = Path(p)
+        if i == 0:
+            layers["layer-1"] = WSIReader.open(p)
+            meta = layers["layer-1"].info
         else:
             if p.suffix in [".jpg", ".png"]:
                 # assume its a low-res heatmap
@@ -413,12 +416,14 @@ def MakeTileServer(img_paths):
                     im = np.array(im)
                     c_map = cm.get_cmap("coolwarm")
                     im_rgb = (c_map(im) * 255).astype(np.uint8)
-                    layers[f'layer-{i+1}'] = VirtualWSIReader(im_rgb[:, :, :3], info=meta)
+                    layers[f"layer-{i+1}"] = VirtualWSIReader(
+                        im_rgb[:, :, :3], info=meta
+                    )
                 else:
-                    layers[f'layer-{i+1}'] = VirtualWSIReader(p, info=meta)
+                    layers[f"layer-{i+1}"] = VirtualWSIReader(p, info=meta)
             else:
                 # its a whole slide overlay
-                layers[f'layer-{i+1}'] = WSIReader.open(p)
+                layers[f"layer-{i+1}"] = WSIReader.open(p)
 
     app = TileServer(
         title="TileServer",

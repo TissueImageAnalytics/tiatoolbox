@@ -21,8 +21,8 @@
 """Scaler for transforming input.
 
 Included classes and methods are utilized to either pre-process input
-(such as standardization) or post-process predictions (such as re-calibrating
-logits to proper probabilities).
+(such as standardization) or post-process predictions (such as
+re-calibrating logits to proper probabilities).
 
 """
 
@@ -34,10 +34,12 @@ class PlattScaling:
     """Platt scaling.
 
     Fitting a logistic regression model to a classifier scores such that
-    the model outputs are transformed into a probability distribution over classes.
+    the model outputs are transformed into a probability distribution
+    over classes.
 
     Args:
-        num_iters (int): Number of iterations for training.
+        num_iters (int):
+            Number of iterations for training.
 
     Examples:
         >>> import numpy as np
@@ -59,19 +61,22 @@ class PlattScaling:
     def fit(self, logits, labels):
         """Fit function like sklearn.
 
-        Fit the sigmoid to the classifier scores logits and labels
-        using the Platt Method.
+        Fit the sigmoid to the classifier scores logits and labels using
+        the Platt Method.
 
         Args:
-            logits (array-like): Classifier output scores.
-            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+            logits (array-like):
+                Classifier output scores.
+            labels (array-like):
+                Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+
         Returns:
             Model with fitted coefficients a and b for the sigmoid function.
 
         """
 
         def mylog(v):
-            """Log with epilon."""
+            """Log with epsilon."""
             return np.log(v + 1.0e-200)
 
         out = np.array(logits)
@@ -165,24 +170,31 @@ class PlattScaling:
         return self
 
     def transform(self, logits):
-        """Tranform input to probabilities basing on trained parameters.
+        """Transform input to probabilities basing on trained parameters.
 
         Args:
-            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+            logits (array like):
+                Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+
         Returns:
-            Array of probabilities.
+            :class:`numpy.ndarray`:
+                Array of probabilities.
 
         """
         return 1 / (1 + np.exp(logits * self.a + self.b))
 
     def fit_transform(self, logits, labels):
-        """Fit and tranform input to probabilities.
+        """Fit and transform input to probabilities.
 
         Args:
-            logits (array-like): Classifier output scores.
-            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+            logits (array-like):
+                Classifier output scores.
+            labels (array like):
+                Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+
         Returns:
-            Array of probabilities.
+            :class:`numpy.ndarray`:
+                Array of probabilities.
 
         """
         return self.fit(logits, labels).transform(logits)
