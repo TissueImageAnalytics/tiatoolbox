@@ -44,10 +44,12 @@ Properties
 """
 import contextlib
 import copy
+import io
 import json
 import pickle
 import sqlite3
 import sys
+import tempfile
 import uuid
 import warnings
 import zlib
@@ -159,6 +161,83 @@ class Annotation:
 
 class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
+
+    @staticmethod
+    def _is_right_angle(a, b, c, /) -> bool:
+        """Returns True if three points make a right angle.
+
+        Used for optimising queries.
+
+        Args:
+            a (Sequence[Number]):
+                First coordinate.
+            b (Sequence[Number]):
+                Second coordinate.
+            c (Sequence[Number]):
+                Third coordinate.
+
+
+        """
+        return np.dot(np.subtract(a, b), np.subtract(b, c)) == 0
+
+    @staticmethod
+    def _is_rectangle(a, b, c, d, *args) -> bool:
+        """Determine if a set of coordinates form a rectangle.
+
+        Used for optimising queries. If more than five points are given,
+        or if the optional fifth point is not equal to `a` then this
+        returns False.
+
+        Args:
+            a (Sequence[Number]):
+                First coordinate.
+            b (Sequence[Number]):
+                Second coordinate.
+            c (Sequence[Number])::
+                Third coordinate.
+            d (Sequence[Number]):
+                Fourth coordinate.
+
+        Returns:
+            True if the coordinates form a rectangle, False otherwise.
+        """
+        # Only allow one extra coordinate for looping back to the first point
+        if (len(args) and not np.array_equal(args[:1], [a])) or len(args) > 1:
+            return False
+        # Check that all angles are right angles
+        return all(
+            AnnotationStore._is_right_angle(*xyz)
+            for xyz in ((a, b, c), (b, c, d), (c, d, a))
+        )
+
+    @staticmethod
+    def _connection_to_path(connection: Union[str, Path, IO]) -> Path:
+        """Normalise a connection object to a Path.
+
+        Here we refer to a 'connection' as anything which references a
+        file e.g. a string, a pathlibPath, or a file-like object (IO).
+
+        Args:
+            connection (Union[str, Path, IO]):
+                The connection object to normalise.
+
+        Returns:
+            Path:
+                The normalised path.
+        """
+        if not isinstance(
+            connection,
+            (str, Path, io.IOBase, io.TextIOBase, tempfile._TemporaryFileWrapper),
+        ):
+            raise TypeError(
+                "Connection must be a string, Path, or an IO object, "
+                f"not {type(connection)}"
+            )
+        if isinstance(
+            connection, (io.IOBase, io.TextIOBase, tempfile._TemporaryFileWrapper)
+        ):
+            connection = connection.name
+        return Path(connection)
 
     @staticmethod
     def _validate_equal_lengths(*args):
