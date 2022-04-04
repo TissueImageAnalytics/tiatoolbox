@@ -667,6 +667,8 @@ class AnnotationStore(ABC, MutableMapping):
             __ BP_
 
         """
+        if all(x is None for x in (geometry, where)):
+            raise ValueError("At least one of geometry or where must be set.")
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
@@ -675,12 +677,19 @@ class AnnotationStore(ABC, MutableMapping):
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
+        # Iterate over and check if both the geometry predicate and the
+        # where predicate are satisfied for each annotation.
         return [
             annotation
             for annotation in self.values()
             if (
-                self._geometry_predicate(
-                    geometry_predicate, query_geometry, annotation.geometry
+                (
+                    query_geometry is None
+                    or self._geometry_predicate(
+                        geometry_predicate,
+                        query_geometry,
+                        annotation.geometry,
+                    )
                 )
                 and self._eval_where(where, annotation.properties)
             )
@@ -1422,6 +1431,8 @@ class SQLiteStore(AnnotationStore):
                 A database cursor for the current query.
 
         """
+        if all(x is None for x in (geometry, where)):
+            raise ValueError("At least one of `geometry` or `where` must be specified.")
         query_geometry = geometry
         if select_callable is None:
             select_callable = select
@@ -1431,40 +1442,75 @@ class SQLiteStore(AnnotationStore):
                 f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
             )
         cur = self.con.cursor()
+
+        # Normalise query geometry and determine
+        is_box = False
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
-        min_x, min_y, max_x, max_y = query_geometry.bounds
+            is_box = True
 
         if isinstance(where, Callable):
             select = select_callable
 
+        # Initialise the query string and parameters
         query_string = (
             "SELECT "  # skipcq: BAN-B608
             + select  # skipcq: BAN-B608
             + """
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
-          AND max_x >= :min_x
-          AND min_x <= :max_x
-          AND max_y >= :min_y
-          AND min_y <= :max_y
-          AND geometry_predicate(:geometry_predicate, :query_geometry, geometry, cx, cy)
         """
         )
-        query_parameters = {
-            "min_x": min_x,
-            "max_x": max_x,
-            "min_y": min_y,
-            "max_y": max_y,
-            "geometry_predicate": geometry_predicate,
-            "query_geometry": query_geometry.wkb,
-        }
+        query_parameters = {}
+
+        # There is query geometry
+        if query_geometry is not None:
+            # Add rtree index checks to the query
+            query_string += """
+            AND max_x >= :min_x
+            AND min_x <= :max_x
+            AND max_y >= :min_y
+            AND min_y <= :max_y
+            """
+
+            # Find the bounds of the geometry for the rtree index
+            min_x, min_y, max_x, max_y = query_geometry.bounds
+
+            # Update query parameters
+            query_parameters.update(
+                {
+                    "min_x": min_x,
+                    "max_x": max_x,
+                    "min_y": min_y,
+                    "max_y": max_y,
+                }
+            )
+
+            # Check if the geometry is equivalent to a box/rectangle
+            is_box = is_box or self._is_rectangle(*query_geometry.exterior.coords)
+            if not is_box:
+                query_string += """
+                AND geometry_predicate(:geometry_predicate, :query_geometry, geometry, cx, cy)
+                """
+
+                # Update query parameters
+                query_parameters.update(
+                    {
+                        "geometry_predicate": geometry_predicate,
+                        "query_geometry": query_geometry.wkb,
+                    }
+                )
+
+        # Predicate is a string
         if isinstance(where, str):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
-            query_string += f"AND {sql_predicate}"
+            query_string += f" AND {sql_predicate}"
+
+        # Predicate is pickled function
         if isinstance(where, bytes):
-            query_string += "AND pickle_where(:where, properties)"
+            query_string += " AND pickle_where(:where, properties)"
             query_parameters["where"] = where
+
         cur.execute(query_string, query_parameters)
         return cur
 
