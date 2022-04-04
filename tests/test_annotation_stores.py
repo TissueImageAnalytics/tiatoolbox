@@ -1065,12 +1065,10 @@ class TestStore:
         """Test that _is_right_angle returns True only for right angles."""
         store = store_cls()
 
-        """
-        c
-        |
-        |
-        b-----a
-        """
+        # c
+        # |
+        # |
+        # b-----a
         assert store._is_right_angle(
             *[
                 (1, 0),
@@ -1079,12 +1077,10 @@ class TestStore:
             ]
         )
 
-        """
-        a
-        |
-        |
-        b-----c
-        """
+        # a
+        # |
+        # |
+        # b-----c
         assert store._is_right_angle(
             *[
                 (0, 1),
@@ -1093,12 +1089,10 @@ class TestStore:
             ]
         )
 
-        r"""
-           c
-            \
-             \
-        a-----b
-        """
+        #    c
+        #     \
+        #      \
+        # a-----b
         assert not store._is_right_angle(
             *[
                 (0, 0),

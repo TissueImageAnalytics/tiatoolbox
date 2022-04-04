@@ -204,7 +204,7 @@ class AnnotationStore(ABC, MutableMapping):
             True if the coordinates form a rectangle, False otherwise.
         """
         # Only allow one extra coordinate for looping back to the first point
-        if (len(args) and not np.array_equal(args[:1], [a])) or len(args) > 1:
+        if (len(args) == 1 and not np.array_equal(args[:1], [a])) or len(args) > 1:
             return False
         # Check that all angles are right angles
         return all(
@@ -229,14 +229,25 @@ class AnnotationStore(ABC, MutableMapping):
         """
         if not isinstance(
             connection,
-            (str, Path, io.IOBase, io.TextIOBase, tempfile._TemporaryFileWrapper),
+            (
+                str,
+                Path,
+                io.IOBase,
+                io.TextIOBase,
+                tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212
+            ),
         ):
             raise TypeError(
                 "Connection must be a string, Path, or an IO object, "
                 f"not {type(connection)}"
             )
         if isinstance(
-            connection, (io.IOBase, io.TextIOBase, tempfile._TemporaryFileWrapper)
+            connection,
+            (
+                io.IOBase,
+                io.TextIOBase,
+                tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212
+            ),
         ):
             connection = connection.name
         return Path(connection)
@@ -290,9 +301,9 @@ class AnnotationStore(ABC, MutableMapping):
         "within",
     ]
 
-    @classmethod  # noqa: A003
+    @classmethod
     @abstractmethod
-    def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":
+    def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":  # noqa: A003
         """Load a store object from a path or file-like object.
 
         Args:
@@ -1077,8 +1088,8 @@ class SQLiteStore(AnnotationStore):
 
     """
 
-    @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str]) -> "SQLiteStore":
+    @classmethod
+    def open(cls, fp: Union[Path, str]) -> "SQLiteStore":  # noqa: A003
         return SQLiteStore(fp)
 
     def __init__(
@@ -1111,12 +1122,10 @@ class SQLiteStore(AnnotationStore):
         self.path = self._connection_to_path(self.connection)
 
         # Check if the path is a a non-empty file
-        exists = all(
-            [
-                self.path.exists(),
-                # Use 'and' to short-circuit
-                self.path.is_file() and self.path.stat().st_size > 0,
-            ]
+        exists = (
+            # Use 'and' to short-circuit
+            self.path.is_file()
+            and self.path.stat().st_size > 0
         )
         self.con = sqlite3.connect(str(self.path), isolation_level="DEFERRED")
 
@@ -1472,7 +1481,11 @@ class SQLiteStore(AnnotationStore):
             is_box = is_box or self._is_rectangle(*query_geometry.exterior.coords)
             if not is_box:
                 query_string += """
-                AND geometry_predicate(:geometry_predicate, :query_geometry, geometry, cx, cy)
+                AND geometry_predicate(
+                    :geometry_predicate,
+                    :query_geometry,
+                    geometry, cx, cy
+                )
                 """
 
                 # Update query parameters
@@ -1823,7 +1836,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         cur = self.con.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='index'")
+        cur.execute("SELECT name FROM sqlite_master WHERE TYPE = 'index'")
         return [row[0] for row in cur.fetchall()]
 
     def drop_index(self, name: str) -> None:
@@ -1925,8 +1938,8 @@ class DictionaryStore(AnnotationStore):
     def __len__(self) -> int:
         return len(self._rows)
 
-    @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":
+    @classmethod
+    def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
         return cls.from_ndjson(fp)
 
     def commit(self) -> None:

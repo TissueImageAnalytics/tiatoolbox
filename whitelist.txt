@@ -67,6 +67,7 @@ qtconsole
 resampling
 rescale
 ROI
+rtree
 runtime
 scipy
 Segmentor
