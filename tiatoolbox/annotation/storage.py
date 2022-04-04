@@ -673,7 +673,7 @@ class AnnotationStore(ABC, MutableMapping):
                 f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
             )
         query_geometry = geometry
-        if isinstance(query_geometry, tuple):
+        if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             annotation
@@ -753,7 +753,7 @@ class AnnotationStore(ABC, MutableMapping):
                 f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
             )
         query_geometry = geometry
-        if isinstance(query_geometry, tuple):
+        if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return [
             key
