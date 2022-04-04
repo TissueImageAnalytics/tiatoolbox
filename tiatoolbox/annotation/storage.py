@@ -1852,7 +1852,8 @@ class SQLiteStore(AnnotationStore):
         """
         if vacuum:
             self.con.execute("VACUUM")
-        self.con.execute("PRAGMA analysis_limit = :limit", {"limit": limit})
+        # Cannot use parameterized statements with PRAGMA!
+        self.con.execute(f"PRAGMA analysis_limit = {int(limit)}")
         self.con.execute("PRAGMA optimize")
 
 
