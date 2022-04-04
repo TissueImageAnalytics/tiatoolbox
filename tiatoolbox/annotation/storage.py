@@ -99,6 +99,8 @@ Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
+CallablePredicate = Callable[[Geometry, Dict[str, Any]], bool]
+Predicate = Union[str, bytes, CallablePredicate]
 
 ASCII_FILE_SEP = "\x1c"
 ASCII_GROUP_SEP = "\x1d"
@@ -609,8 +611,8 @@ class AnnotationStore(ABC, MutableMapping):
 
     def query(
         self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
+        geometry: Optional[QueryGeometry] = None,
+        where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
     ) -> List[Annotation]:
         """Query the store for annotations.
@@ -687,7 +689,7 @@ class AnnotationStore(ABC, MutableMapping):
     def iquery(
         self,
         geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
+        where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
     ) -> List[int]:
         """Query the store for annotation keys.
@@ -793,7 +795,7 @@ class AnnotationStore(ABC, MutableMapping):
         fp: Union[IO, str, Path, None],
         file_fn: Callable[[IO], None],
         none_fn: Callable[[], Union[str, bytes]],
-    ) -> Union[None, Union[str, bytes]]:
+    ) -> Optional[Union[str, bytes]]:
         """Helper function to handle cases for dumping.
 
         Args:
@@ -849,7 +851,7 @@ class AnnotationStore(ABC, MutableMapping):
             store.append(Annotation(geometry, properties))
         return store
 
-    def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
+    def to_geojson(self, fp: Optional[IO] = None) -> Optional[str]:
         """Serialise the store to geoJSON.
 
         For more information on the geoJSON format see:
@@ -873,7 +875,7 @@ class AnnotationStore(ABC, MutableMapping):
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
 
-    def to_ndjson(self, fp: Optional[IO] = None) -> Union[str, None]:
+    def to_ndjson(self, fp: Optional[IO] = None) -> Optional[str]:
         """Serialise to New Line Delimited JSON.
 
         Each line contains a JSON object with the following format:
@@ -1380,10 +1382,10 @@ class SQLiteStore(AnnotationStore):
     def _query(
         self,
         select: str,
-        geometry: QueryGeometry,
+        geometry: Optional[Geometry] = None,
         select_callable: Optional[str] = None,
         geometry_predicate="intersects",
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        where: Optional[Predicate] = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1454,8 +1456,8 @@ class SQLiteStore(AnnotationStore):
 
     def iquery(
         self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        geometry: Optional[QueryGeometry] = None,
+        where: Optional[Predicate] = None,
         geometry_predicate="intersects",
     ) -> List[str]:
         query_geometry = geometry
@@ -1476,8 +1478,8 @@ class SQLiteStore(AnnotationStore):
 
     def query(
         self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        geometry: Optional[QueryGeometry] = None,
+        where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
     ) -> List[Annotation]:
         query_geometry = geometry
