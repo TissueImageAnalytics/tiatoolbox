@@ -1073,7 +1073,9 @@ class SQLiteMetadata(MutableMapping):
 
     def __getitem__(self, key: str) -> Union[dict, list, int, float, str]:
         """Get a metadata value."""
-        cursor = self.con.execute("SELECT value FROM metadata WHERE [key] = ?", (key,))
+        cursor = self.con.execute(
+            "SELECT value FROM metadata WHERE [key] = ?", (key,)
+        )
         result = cursor.fetchone()
         if result is None:
             raise KeyError(key)
