@@ -993,3 +993,102 @@ class TestStore:
         monkeypatch.setattr(sys, "version_info", py37_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
+
+    @staticmethod
+    def test_is_rectangle(store_cls):
+        """Test that _is_rectangle returns True only for rectangles."""
+        store = store_cls()
+
+        # Clockwise
+        assert store._is_rectangle(
+            *[
+                (1, 0),
+                (0, 0),
+                (0, 1),
+                (1, 1),
+            ]
+        )
+
+        # Counter-clockwise
+        assert store._is_rectangle(
+            *[
+                (1, 1),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+        # From shapely
+        box = Polygon.from_bounds(0, 0, 10, 10)
+        assert store._is_rectangle(*box.exterior.coords)
+
+        # Fuzz
+        for _ in range(100):
+            box = Polygon.from_bounds(*np.random.randint(0, 100, 4))
+            assert store._is_rectangle(*box.exterior.coords)
+
+        # Failure case
+        assert not store._is_rectangle(
+            *[
+                (1, 1.5),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+    @staticmethod
+    def test_is_right_angle(store_cls):
+        """Test that _is_right_angle returns True only for right angles."""
+        store = store_cls()
+
+        """
+        c
+        |
+        |
+        b-----a
+        """
+        assert store._is_right_angle(
+            *[
+                (1, 0),
+                (0, 0),
+                (0, 1),
+            ]
+        )
+
+        """
+        a
+        |
+        |
+        b-----c
+        """
+        assert store._is_right_angle(
+            *[
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+        r"""
+           c
+            \
+             \
+        a-----b
+        """
+        assert not store._is_right_angle(
+            *[
+                (0, 0),
+                (1, 0),
+                (0, 1),
+            ]
+        )
+
+        assert not store._is_right_angle(
+            *[
+                (1, 0.2),
+                (0, 0),
+                (0.2, 1),
+            ]
+        )
