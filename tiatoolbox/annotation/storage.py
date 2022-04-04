@@ -1027,7 +1027,21 @@ class AnnotationStore(ABC, MutableMapping):
 
 
 class SQLiteMetadata(MutableMapping):
-    """Metadata storage for an SQLiteStore."""
+    """Metadata storage for an SQLiteStore.
+
+    Attributes:
+        connection (Union[str, Path, IO]):
+            A reference to where the data is stored. May be a string (
+            e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
+            handle.
+        path (Path):
+            The path to the annotation store data. This will be
+            ":memory:" if the annotation store is in-memory. This is
+            derived from `connection` and normalised to be a pathlib
+            Path object.
+        con (sqlite3.Connection):
+            The sqlite3 database connection.
+    """
 
     def __init__(self, con: sqlite3.Connection) -> None:
         self.con = con
