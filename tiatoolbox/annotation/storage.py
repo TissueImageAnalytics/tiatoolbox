@@ -1110,7 +1110,7 @@ class SQLiteStore(AnnotationStore):
 
     def __init__(
         self,
-        connection: Union[Path, str] = ":memory:",
+        connection: Union[Path, str, IO] = ":memory:",
         compression="zlib",
         compression_level=9,
     ) -> None:
@@ -1134,9 +1134,18 @@ class SQLiteStore(AnnotationStore):
             )
 
         # Set up database connection and cursor
-        path = Path(connection)
-        exists = path.exists() and path.is_file()
-        self.con = sqlite3.connect(connection, isolation_level="DEFERRED")
+        self.connection = connection
+        self.path = self._connection_to_path(self.connection)
+
+        # Check if the path is a a non-empty file
+        exists = all(
+            [
+                self.path.exists(),
+                # Use 'and' to short-circuit
+                self.path.is_file() and self.path.stat().st_size > 0,
+            ]
+        )
+        self.con = sqlite3.connect(str(self.path), isolation_level="DEFERRED")
 
         # Set up metadata
         self.metadata = SQLiteMetadata(self.con)
@@ -1795,11 +1804,12 @@ class SQLiteStore(AnnotationStore):
 class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
-    def __init__(self, connection: Union[Path, str] = ":memory:") -> None:
+    def __init__(self, connection: Union[Path, str, IO] = ":memory:") -> None:
         super().__init__()
         self._rows = {}
-        self.connection = Path(connection)
-        if connection not in [None, ":memory:"] and connection.exists():
+        self.connection = connection
+        self.path = self._connection_to_path(connection)
+        if self.connection not in [None, ":memory:"] and self.path.exists():
             for line in self._load_cases(
                 fp=self.connection,
                 string_fn=lambda fp: fp.splitlines(),
@@ -1867,8 +1877,8 @@ class DictionaryStore(AnnotationStore):
         if str(self.connection) == ":memory:":
             warnings.warn("In-memory store. Nothing to commit.")
             return
-        if not self.connection.exists():
-            self.connection.touch()
+        if not self.path.exists():
+            self.path.touch()
         self.dump(self.connection)
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
