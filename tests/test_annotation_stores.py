@@ -314,6 +314,28 @@ def test_sqlite_store_metadata_len():
     assert len(metadata) == 2
 
 
+def test_sqlite_drop_index():
+    """Test creating and dropping an index."""
+    store = SQLiteStore()
+    store.create_index("foo", "props['class']")
+    assert "foo" in store.indexes()
+    store.drop_index("foo")
+    assert "foo" not in store.indexes()
+
+
+def test_sqlite_drop_index_fail():
+    """Test dropping an index that does not exist."""
+    store = SQLiteStore()
+    with pytest.raises(sqlite3.OperationalError):
+        store.drop_index("foo")
+
+
+def test_sqlite_optimize(fill_store, tmp_path):
+    """Test running the optimize function on an SQLiteStore."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize(limit=0)
+
+
 def test_annotation_to_geojson():
     """Test converting an annotation to geojson."""
     annotation = Annotation(
