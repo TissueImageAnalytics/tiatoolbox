@@ -996,33 +996,6 @@ class AnnotationStore(ABC, MutableMapping):
     def __del__(self) -> None:
         self.close()
 
-    def create_index(self, name: str, where: Union[str, bytes]) -> None:
-        """Create an SQLite expression index based on the provided predicate.
-
-        Note that an expression index will only be used if the query expression
-        (in the WHERE clause) exactly matches the expression used when creating
-        the index (excluding minor inconsequential changes such as
-        whitespace).
-
-        SQLite expression indexes require SQLite version 3.9.0 or higher.
-
-        Args:
-            name (str):
-                Name of the index to create.
-            where:
-                The predicate used to create the index.
-
-        """
-        _, minor, _ = sqlite3.sqlite_version_info
-        if minor < 9:
-            raise Exception("Requires sqlite version 3.9.0 or higher.")
-        cur = self.con.cursor()
-        if isinstance(where, str):
-            sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
-            cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
-            return
-        raise TypeError(f"Invalid type for `where` ({type(where)}).")
-
     def clear(self) -> None:
         """Remove all annotations from the store.
 
@@ -1073,9 +1046,7 @@ class SQLiteMetadata(MutableMapping):
 
     def __getitem__(self, key: str) -> Union[dict, list, int, float, str]:
         """Get a metadata value."""
-        cursor = self.con.execute(
-            "SELECT value FROM metadata WHERE [key] = ?", (key,)
-        )
+        cursor = self.con.execute("SELECT value FROM metadata WHERE [key] = ?", (key,))
         result = cursor.fetchone()
         if result is None:
             raise KeyError(key)
@@ -1801,6 +1772,88 @@ class SQLiteStore(AnnotationStore):
         cur.execute("DELETE FROM rtree")
         cur.execute("DELETE FROM annotations")
         self.con.commit()
+
+    def __del__(self) -> None:
+        # Limit rows examined by ANALYZE to avoid spending too long
+        self.con.execute("PRAGMA analysis_limit = 500")
+        # Run ANALYZE to improve performance if needed
+        self.con.execute("PRAGMA optimize")
+        # Close the connection to the database
+        return super().__del__()
+
+    def create_index(
+        self, name: str, where: Union[str, bytes], analyze: bool = True
+    ) -> None:
+        """Create an SQLite expression index based on the provided predicate.
+
+        Note that an expression index will only be used if the query expression
+        (in the WHERE clause) exactly matches the expression used when creating
+        the index (excluding minor inconsequential changes such as
+        whitespace).
+
+        SQLite expression indexes require SQLite version 3.9.0 or higher.
+
+        Args:
+            name (str):
+                Name of the index to create.
+            where:
+                The predicate used to create the index.
+            analyze (bool):
+                Whether to run the ANALYZE command after creating the
+                index.
+
+        """
+        _, minor, _ = sqlite3.sqlite_version_info
+        if minor < 9:
+            raise Exception("Requires sqlite version 3.9.0 or higher.")
+        cur = self.con.cursor()
+        if not isinstance(where, str):
+            raise TypeError(f"Invalid type for `where` ({type(where)}).")
+        sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
+        cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
+        if analyze:
+            cur.execute(f"ANALYZE {name}")
+
+    def indexes(self) -> List[str]:
+        """Returns a list of the names of all indexes in the store.
+
+        Returns:
+            List[str]:
+                The list of index names.
+
+        """
+        cur = self.con.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE type='index'")
+        return [row[0] for row in cur.fetchall()]
+
+    def drop_index(self, name: str) -> None:
+        """Drop an index from the store.
+
+        Args:
+            name (str):
+                The name of the index to drop.
+
+        """
+        cur = self.con.cursor()
+        cur.execute(f"DROP INDEX {name}")
+
+    def optimize(self, vacuum: bool = True, limit: int = 1000) -> None:
+        """Optimize the database with VACUUM and ANALYZE.
+
+        Args:
+            vacuum (bool):
+                Whether to run VACUUM.
+            limit (int):
+                The approximate maximum number of rows to examine when
+                running ANALYZE. If zero or negative, not limit will be
+                used. For more information see
+                https://www.sqlite.org/pragma.html#pragma_analysis_limit.
+
+        """
+        if vacuum:
+            self.con.execute("VACUUM")
+        self.con.execute("PRAGMA analysis_limit = :limit", {"limit": limit})
+        self.con.execute("PRAGMA optimize")
 
 
 class DictionaryStore(AnnotationStore):
