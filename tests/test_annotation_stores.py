@@ -961,6 +961,13 @@ class TestStore:
             store.query((0, 0, 1024, 1024), geometry_predicate="foo")
 
     @staticmethod
+    def test_query_no_geometry_or_where(fill_store, store_cls):
+        """Test that query raises an exception when no geometry or predicate is given."""
+        store = store_cls()
+        with pytest.raises(ValueError, match="At least one of"):
+            store.query() 
+
+    @staticmethod
     def test_iquery_invalid_geometry_predicate(fill_store, store_cls):
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
