@@ -336,6 +336,12 @@ def test_sqlite_optimize(fill_store, tmp_path):
     store.optimize(limit=0)
 
 
+def test_sqlite_optimize_no_vacuum(fill_store, tmp_path):
+    """Test running the optimize function on an SQLiteStore without VACUUM."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize(limit=0, vacuum=False)
+
+
 def test_annotation_to_geojson():
     """Test converting an annotation to geojson."""
     annotation = Annotation(
@@ -965,7 +971,7 @@ class TestStore:
         """Test that query raises an exception when no geometry or predicate is given."""
         store = store_cls()
         with pytest.raises(ValueError, match="At least one of"):
-            store.query() 
+            store.query()
 
     @staticmethod
     def test_iquery_invalid_geometry_predicate(fill_store, store_cls):
