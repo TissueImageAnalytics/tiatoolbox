@@ -42,9 +42,13 @@ from typing import Iterable, Tuple, Union
 import defusedxml
 import numpy as np
 from PIL import Image
+import cv2
+from shapely.geometry import Polygon
 
-from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.utils.transforms import imresize, locsize2bounds
+from tiatoolbox.wsicore.wsireader import WSIReader, WSIMeta
+from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.utils.visualization import AnnotationRenderer
 
 defusedxml.defuse_stdlib()
 
@@ -456,3 +460,174 @@ class ZoomifyGenerator(TilePyramidGenerator):
         g = self.tile_group(level, x, y)
         z = level
         return Path(f"TileGroup{g}") / f"{z}-{x}-{y}.jpg"
+
+
+class AnnotationTileGenerator(ZoomifyGenerator):
+    r"""Tile generator using an AnnotationRenderer to render tiles
+    showing annotations held in an AnnotationStore
+
+    Args:
+        info (WSIMeta):
+            An WSIMeta Object storing the metadata of the slide this
+            generator is rendering tiles for
+        Store (AnnotationStore):
+            An AnnotationStore Object containing annotations to be rendered
+            for given slide
+        renderer (AnnotationRenderer):
+            An AnnotationRenderer Object which will render annotations belonging
+            to a tile according to specified parameters
+        tile_size (int):
+            The size of tiles to generate. Default is 256. Note that the
+            output tile size will be :math:`\text{tile size} + 2
+            \times\text{overlap}`.
+        downsample (int):
+            The downsample factor between levels. Default is 2.
+        overlap (int):
+            The number of extra pixel to add to each edge of the tile.
+            Default is 0.
+
+    """
+
+    def __init__(
+        self,
+        info: WSIMeta,
+        store: AnnotationStore,
+        renderer: AnnotationRenderer = None,
+        tile_size: int = 256,
+        downsample: int = 2,
+        overlap: int = 0,
+    ):
+        self.info = info
+        self.store = store
+        if renderer == None:
+            renderer = AnnotationRenderer()
+        self.renderer = renderer
+        self.tile_size = tile_size
+        self.overlap = overlap
+        self.downsample = downsample
+
+    def get_thumb_tile(self) -> Image:
+        """Return a thumbnail which fits the whole slide in one tile.
+
+        The thumbnail output size has the longest edge equal to the tile
+        size. The other edge preserves the original aspect ratio.
+
+        """
+        slide_dims = np.array(self.info.slide_dimensions)
+        tile_dim = self.tile_size + self.overlap
+        scale = self.level_downsample(self.info.level_count - 1)
+        out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
+        bounds = (0, 0, *slide_dims)
+        rgb = np.zeros((*out_dims, 4), dtype=np.uint8)
+        bound_geom = Polygon.from_bounds(*bounds)
+        rgb = self.renderer.render(
+            rgb,
+            self.store.query(bound_geom, self.renderer.where),
+            (0, 0),
+            bound_geom,
+            scale,
+        )
+        return Image.fromarray(rgb)
+
+    @lru_cache(maxsize=None)
+    def level_dimensions(self, level: int) -> Tuple[int, int]:
+        """The total pixel dimensions of the tile pyramid at a given level.
+
+        Args:
+            level (int):
+                The level to calculate the dimensions for.
+
+        """
+        baseline_dims = self.info.slide_dimensions
+        level_dims = np.ceil(
+            np.divide(baseline_dims, self.level_downsample(level))
+        ).astype(int)
+        return tuple(level_dims)
+
+    @property
+    def level_count(self) -> int:
+        """Number of levels in the tile pyramid.
+
+        The number of levels is such that level_count - 1 is a 1:1 of
+        the slide baseline resolution (level 0 of the WSI).
+
+        """
+        wsi_to_tile_ratio = np.divide(self.info.slide_dimensions, self.tile_size)
+        # Levels where a tile contains only part of the wsi
+        super_level_count = np.ceil(np.log2(wsi_to_tile_ratio)).max()
+        total_level_count = super_level_count + 1 + self.sub_tile_level_count
+        return int(total_level_count)
+
+    def get_tile(
+        self,
+        level: int,
+        x: int,
+        y: int,
+    ) -> Image:
+        """Render a tile at a given level and coordinate.
+
+        Note that levels are in the reverse order of those in WSIReader.
+        I.E. level 0 here corresponds to the lowest resolution whereas
+        level 0 in WSIReader corresponds to the maximum resolution
+        (baseline).
+
+        Args:
+            level (int):
+                The pyramid level of the tile starting from 0 (the whole
+                slide in one tile, 0-0-0).
+            x (int):
+                The tile index in the x direction.
+            y (int):
+                The tile index in the y direction.
+
+        Returns:
+            Image:
+                Pillow image of the tile.
+
+        Example:
+            >>> from tiatoolbox.tools.pyramid import AnnotationTileGenerator
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
+            >>> wsi = WSIReader.open("sample.svs")
+            >>> SQ=SQLiteStore.from_geojson(geo_path)
+            >>> tile_generator = AnnotationTileGenerator(
+            ...   info=wsi.info,
+            ...   store=SQ,
+            ... )
+            >>> tile_0_0_0 = tile_generator.get_tile(level=0, x=0, y=0)
+
+        """
+        if level < 0:
+            raise IndexError
+        if level > self.level_count:
+            raise IndexError("Invalid level.")
+
+        scale = self.level_downsample(level)
+        baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
+        baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
+        output_size = [self.output_tile_size] * 2
+        coord = [baseline_x, baseline_y]
+        if level < self.sub_tile_level_count:
+            output_size = self.output_tile_size // 2 ** (
+                self.sub_tile_level_count - level
+            )
+            output_size = np.repeat(output_size, 2).astype(int)
+            thumb = self.get_thumb_tile()
+            thumb.thumbnail(output_size)
+            return thumb
+        slide_dimensions = np.array(self.info.slide_dimensions)
+        if all(slide_dimensions < [baseline_x, baseline_y]):
+            raise IndexError
+
+        rgb = np.zeros((*output_size, 4), dtype=np.uint8)
+        bounds = locsize2bounds(coord, [self.tile_size * scale] * 2)
+        bound_geom = Polygon.from_bounds(*bounds)
+        rgb = self.renderer.render(
+            rgb,
+            self.store.query(bound_geom, self.renderer.where),
+            coord,
+            bound_geom,
+            scale,
+        )
+
+        return Image.fromarray(rgb)

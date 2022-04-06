@@ -21,11 +21,12 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-from typing import Tuple, Union
+from typing import Iterable, Tuple, Union
 
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 
 
@@ -389,3 +390,104 @@ def plot_graph(
         color = to_int_tuple(node_colors[idx])
         cv2.circle(canvas, node, node_size, color, thickness=-1)
     return canvas
+
+
+class AnnotationRenderer:
+    """Renderer containing information and methods to render annotations
+    from an AnnotationStore to a tile
+
+    Args:
+    score_prop: A key that is present in the properties of the annotations to be rendered
+        that will be used to color rendered annotations.
+    mapper: A dictionary or colormap used to color annotations according to the
+        value of properties[score_prop] of an annotation.  Should be either a matplotlib
+        colormap, a string which is a name of a matplotlib colormap, a dict of possible
+        property {value: color} pairs, or a list of categorical property values
+        (in which case a dict will be created with a random color generated for each category)
+    where: a callable or predicate which will be passed on to AnnotationStore.query()
+        when fetching annotations to be rendered (see AnnotationStore for more details)
+    score_fn: an optional callable which will be called on the value of the property
+        that will be used to generate the color before giving it to colormap. Use it for example to normalise property
+        values if they do not fall into the range [0,1], as matplotlib colormap expects
+        values in this range. i.e roughly speaking
+        annotation_color=mapper(score_fn(ann.properties[score_prop]))"""
+
+    def __init__(self, score_prop=None, mapper=None, where=None, score_fn=lambda x: x):
+        if mapper == None:
+            mapper = cm.get_cmap("jet")
+        if isinstance(mapper, str):
+            mapper = cm.get_cmap(mapper)
+        if isinstance(mapper, list):
+            colors = random_colors(len(mapper))
+            mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
+        if isinstance(mapper, dict):
+            self.mapper = lambda x: mapper[x]
+        else:
+            self.mapper = mapper
+        self.score_prop = score_prop
+        self.where = where
+        self.score_fn = score_fn
+        self.max_scale = 8
+
+    def to_tile_coords(self, coords, tl, scale):
+        # return coords relative to tl of tile, as a np array suitable for cv2
+        return np.squeeze(((np.array(coords) - tl) / scale).astype(np.int32))
+
+    def render(self, rgb, annotations, tl, bb, scale):
+        "render some annotations onto a tile using cv2"
+        if scale > self.max_scale and len(annotations) > 20:
+            # just render bbox if zoomed out and many annotations are in a tile
+            box_only = True
+        else:
+            box_only = False
+
+        for ann in annotations:
+            col = (0, 255, 0, 255)  # default color if no score_prop given
+            ann_bounded = ann.geometry.intersection(bb)
+            if not self.score_prop == None:
+                col = tuple(
+                    int(c * 255)
+                    for c in self.mapper(self.score_fn(ann.properties[self.score_prop]))
+                )
+            if ann_bounded.geom_type == "Polygon":
+                if box_only:
+                    # just draw bounding box
+                    box = self.to_tile_coords(
+                        np.reshape(ann_bounded.bounds, (2, 2)), tl, scale
+                    )
+                    cv2.rectangle(rgb, box[0, :], box[1, :], col, thickness=-1)
+                else:
+                    cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
+                    cv2.drawContours(rgb, [cnt], 0, col, -1)
+
+            elif ann_bounded.geom_type == "MultiPoint":
+                # shouldnt in theory have any of these as Annotation must be Point, Polygon,
+                # or Line? but loading from .geojson can put these into store anyway at the moment
+                for pt in ann_bounded:
+                    cv2.circle(
+                        rgb,
+                        self.to_tile_coords(list(pt.coords), tl, scale),
+                        4,
+                        col,
+                        thickness=-1,
+                    )
+            elif ann_bounded.geom_type == "Point":
+                cv2.circle(
+                    rgb,
+                    self.to_tile_coords(list(ann_bounded.coords), tl, scale),
+                    4,
+                    col,
+                    thickness=-1,
+                )
+            elif "Line" in ann_bounded.geom_type:
+                cv2.polylines(
+                    rgb,
+                    [self.to_tile_coords(list(ann_bounded.coords), tl, scale)],
+                    False,
+                    col,
+                    thickness=3,
+                )
+            else:
+                print(f"unknown geometry: {ann_bounded.geom_type}")
+
+        return rgb

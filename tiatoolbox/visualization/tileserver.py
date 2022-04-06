@@ -28,7 +28,7 @@ from flask import Flask, Response, send_file
 from flask.templating import render_template
 
 from tiatoolbox import data
-from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -67,9 +67,13 @@ class TileServer(Flask):
         )
         self.tia_title = title
         self.tia_layers = layers
-        self.tia_pyramids = {
-            key: ZoomifyGenerator(reader) for key, reader in self.tia_layers.items()
-        }
+        self.tia_pyramids = {}
+        for key, layer in self.tia_layers.items():
+            if isinstance(layer, WSIReader):
+                self.tia_pyramids[key] = ZoomifyGenerator(layer)
+            else:
+                self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
+
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"
             "<int:z>-<int:x>-<int:y>.jpg"
@@ -113,9 +117,9 @@ class TileServer(Flask):
         except IndexError:
             return Response("Tile not found", status=404)
         image_io = io.BytesIO()
-        tile_image.save(image_io, format="JPEG")
+        tile_image.save(image_io, format="webp")
         image_io.seek(0)
-        return send_file(image_io, mimetype="image/jpeg")
+        return send_file(image_io, mimetype="image/webp")
 
     def index(self) -> Response:
         """Serve the index page.
@@ -128,11 +132,12 @@ class TileServer(Flask):
             {
                 "name": name,
                 "url": f"/layer/{name}/zoomify/{{TileGroup}}/{{z}}-{{x}}-{{y}}.jpg",
-                "size": [int(x) for x in reader.info.slide_dimensions],
-                "mpp": float(np.mean(reader.info.mpp)),
+                "size": [int(x) for x in layer.info.slide_dimensions],
+                "mpp": float(np.mean(layer.info.mpp)),
             }
-            for name, reader in self.tia_layers.items()
+            for name, layer in self.tia_layers.items()    
         ]
+
         return render_template(
             "index.html", title=self.tia_title, layers=json.dumps(layers)
         )

@@ -1410,7 +1410,7 @@ class SQLiteStore(AnnotationStore):
         )
         if isinstance(where, Callable):
             return [
-                Annotation(self._unpack_geometry(blob, cx, cy), properties)
+                Annotation(self._unpack_geometry(blob, cx, cy), json.loads(properties))
                 for blob, properties, cx, cy in cur.fetchall()
                 if where(json.loads(properties))
             ]
