@@ -21,15 +21,17 @@
 import io
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Union
 
+import matplotlib.cm as cm
 import numpy as np
 from flask import Flask, Response, send_file
 from flask.templating import render_template
+from PIL import Image
 
 from tiatoolbox import data
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class TileServer(Flask):
@@ -56,7 +58,7 @@ class TileServer(Flask):
         >>> app.run()
     """
 
-    def __init__(self, title: str, layers: Dict[str, WSIReader]) -> None:
+    def __init__(self, title: str, layers: Union[Dict, List]) -> None:
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
@@ -66,7 +68,39 @@ class TileServer(Flask):
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
         self.tia_title = title
-        self.tia_layers = layers
+
+        # generic layer names if none provided
+        if isinstance(layers, list):
+            layers = {f"layer-{i}": p for i, p in enumerate(layers)}
+        # set up the layer dict
+        layer_def = {}
+        meta = None
+        for i, key in enumerate(layers.keys()):
+            layer = layers[key]
+
+            if isinstance(layer, (str, Path)):
+                p = Path(layer)
+                if p.suffix in [".jpg", ".png"]:
+                    # assume its a low-res heatmap
+                    layer = Image.open(p)
+                    layer = np.array(layer)
+                else:
+                    layer = WSIReader.open(p)
+
+            if isinstance(layer, np.ndarray):
+                if len(layer.shape) == 2:
+                    # single channel, make into rgb with colormap
+                    c_map = cm.get_cmap("jet")
+                    im_rgb = (c_map(layer) * 255).astype(np.uint8)
+                    layer = VirtualWSIReader(im_rgb[:, :, :3], info=meta)
+                else:
+                    layer = VirtualWSIReader(p, info=meta)
+
+            layer_def[key] = layer
+            if i == 0:
+                meta = layer.info
+
+        self.tia_layers = layer_def
         self.tia_pyramids = {
             key: ZoomifyGenerator(reader) for key, reader in self.tia_layers.items()
         }
