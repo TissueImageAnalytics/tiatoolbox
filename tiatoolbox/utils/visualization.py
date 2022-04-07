@@ -410,9 +410,11 @@ class AnnotationRenderer:
         that will be used to generate the color before giving it to colormap. Use it for example to normalise property
         values if they do not fall into the range [0,1], as matplotlib colormap expects
         values in this range. i.e roughly speaking
-        annotation_color=mapper(score_fn(ann.properties[score_prop]))"""
+        annotation_color=mapper(score_fn(ann.properties[score_prop]))
+    max_scale: downsample level above which Polygon geometries on crowded tiles will
+        be rendered as a bounding box instead"""
 
-    def __init__(self, score_prop=None, mapper=None, where=None, score_fn=lambda x: x):
+    def __init__(self, score_prop=None, mapper=None, where=None, score_fn=lambda x: x, max_scale=8):
         if mapper == None:
             mapper = cm.get_cmap("jet")
         if isinstance(mapper, str):
@@ -427,7 +429,7 @@ class AnnotationRenderer:
         self.score_prop = score_prop
         self.where = where
         self.score_fn = score_fn
-        self.max_scale = 8
+        self.max_scale = max_scale
 
     def to_tile_coords(self, coords, tl, scale):
         # return coords relative to tl of tile, as a np array suitable for cv2

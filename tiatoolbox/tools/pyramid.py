@@ -624,7 +624,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         bound_geom = Polygon.from_bounds(*bounds)
         rgb = self.renderer.render(
             rgb,
-            self.store.query(bound_geom, self.renderer.where),
+            self.store.query(bound_geom, self.renderer.where, bbox_only=scale>self.renderer.max_scale),
             coord,
             bound_geom,
             scale,

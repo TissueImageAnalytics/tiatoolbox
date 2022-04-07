@@ -1173,6 +1173,12 @@ class SQLiteStore(AnnotationStore):
                 The deserialised Shapely geometry.
 
         """
+        if isinstance(data, list):
+            if len(data)>1:
+                return Polygon.from_bounds(*data)
+            else:
+                data=data[0]
+
         if self.metadata["compression"] == "zlib":
             data = zlib.decompress(data)
         elif self.metadata["compression"] is not None:
@@ -1400,10 +1406,15 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
+        bbox_only: bool = False,
     ) -> List[Annotation]:
+        if bbox_only:
+            ret_str="properties, cx, cy, min_x, min_y, max_x, max_y"
+        else:
+            ret_str="properties, cx, cy, geometry"
         query_geometry = geometry
         cur = self._query(
-            "geometry, properties, cx, cy",
+            ret_str,
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
@@ -1411,7 +1422,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             return [
                 Annotation(self._unpack_geometry(blob, cx, cy), json.loads(properties))
-                for blob, properties, cx, cy in cur.fetchall()
+                for properties, cx, cy, *blob in cur.fetchall()
                 if where(json.loads(properties))
             ]
         return [
@@ -1419,7 +1430,7 @@ class SQLiteStore(AnnotationStore):
                 self._unpack_geometry(blob, cx, cy),
                 json.loads(properties),
             )
-            for blob, properties, cx, cy in cur.fetchall()
+            for properties, cx, cy, *blob in cur.fetchall()
         ]
 
     def __len__(self) -> int:
