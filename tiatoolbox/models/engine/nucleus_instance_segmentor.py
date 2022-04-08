@@ -126,7 +126,6 @@ def _process_tile_predictions(
             head_tile_shape[::-1],
             head_predictions,
             head_locations,
-            free_prediction=True,
         )
         head_raws.append(head_raw)
     _, inst_dict = postproc(head_raws)
