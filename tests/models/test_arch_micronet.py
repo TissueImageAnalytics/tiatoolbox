@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Unit test package for HoVerNet."""
 
 import pathlib

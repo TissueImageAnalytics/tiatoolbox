@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Package to define datasets available to download via TIAToolbox."""
 import pathlib
 import tempfile

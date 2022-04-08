@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Tests for stain normalization code."""
 
 import pathlib
