@@ -88,3 +88,18 @@ def test_get_index(app) -> None:
         response = client.get("/")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+
+
+def test_create_with_dict(sample_svs):
+    """test initialising with layers dict"""
+    wsi = WSIReader.open(Path(sample_svs))
+
+    app = TileServer(
+        "Testing TileServer",
+        {"Test": wsi},
+    )
+    app.config.from_mapping({"TESTING": True})
+    with app.test_client() as client:
+        response = client.get("/layer/Test/zoomify/TileGroup0/0-0-0.jpg")
+        assert response.status_code == 200
+        assert response.content_type == "image/jpeg"
