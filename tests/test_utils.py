@@ -1232,7 +1232,7 @@ def test_save_as_json(tmp_path):
     # test complex nested dict
     print(sample)
     misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
-    with open("sample_json.json", "r") as fptr:
+    with open(tmp_path / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
