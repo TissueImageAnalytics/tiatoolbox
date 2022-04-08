@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Tests for code related to obtaining slide information."""
 
 import pathlib
