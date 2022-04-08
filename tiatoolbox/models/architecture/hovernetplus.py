@@ -1,24 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-
 from collections import OrderedDict
 from typing import List
 
@@ -34,12 +13,51 @@ from tiatoolbox.utils import misc
 
 
 class HoVerNetPlus(HoVerNet):
-    """Initialise HoVerNet+.
+    """Initialise HoVerNet+ [1].
 
     HoVerNet+ takes an RGB input image, and provides the option to simultaneously
     segment and classify the nuclei present, aswell as semantically segment different
     regions or layers in the images. Note the HoVerNet+ architecture assumes an image
     resolution of 0.5 mpp, in contrast to HoVerNet at 0.25 mpp.
+
+    The tiatoolbox model should produce following results on the specified datasets
+    that is was trained on.
+
+    .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernetplus-oed
+         - OED
+         - 0.84
+         - 0.69
+         - 0.86
+         - 0.80
+         - 0.69
+
+    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation
+       :widths: 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - F1
+         - Precision
+         - Recall
+         - Accuracy
+       * - hovernetplus-oed
+         - OED
+         - 0.82
+         - 0.82
+         - 0.82
+         - 0.84
 
     Args:
         num_input_channels (int): The number of input channels, default = 3 for RGB.
@@ -47,9 +65,9 @@ class HoVerNetPlus(HoVerNet):
         num_layers (int): The number of layers/different regions types present.
 
     References:
-        Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer Segmentation
-        in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF International
-        Conference on Computer Vision. 2021.
+        [1] Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer
+        Segmentation in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF
+        International Conference on Computer Vision. 2021.
 
 
     """

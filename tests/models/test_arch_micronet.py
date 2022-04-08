@@ -1,23 +1,4 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
+# skipcq: PTC-W6004
 """Unit test package for HoVerNet."""
 
 import pathlib
@@ -53,7 +34,7 @@ def test_functionality(remote_sample, tmp_path):
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output, _ = model.postproc(output[0])
-    assert np.max(np.unique(output)) == 33
+    assert np.max(np.unique(output)) == 46
 
 
 def test_value_error():
