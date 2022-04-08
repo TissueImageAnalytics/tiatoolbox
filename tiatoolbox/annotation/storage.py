@@ -165,10 +165,13 @@ class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
 
     @staticmethod
-    def _is_right_angle(a, b, c, /) -> bool:
+    def _is_right_angle(a, b, c) -> bool:
         """Returns True if three points make a right angle.
 
         Used for optimising queries.
+
+        This function will have positional only arguments when support
+        for Python 3.7 is dropped.
 
         Args:
             a (Sequence[Number]):
@@ -301,7 +304,7 @@ class AnnotationStore(ABC, MutableMapping):
         "within",
     ]
 
-    @classmethod
+    @classmethod  # noqa: A003
     @abstractmethod
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":  # noqa: A003
         """Load a store object from a path or file-like object.
@@ -1088,7 +1091,7 @@ class SQLiteStore(AnnotationStore):
 
     """
 
-    @classmethod
+    @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str]) -> "SQLiteStore":  # noqa: A003
         return SQLiteStore(fp)
 
@@ -1938,7 +1941,7 @@ class DictionaryStore(AnnotationStore):
     def __len__(self) -> int:
         return len(self._rows)
 
-    @classmethod
+    @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
         return cls.from_ndjson(fp)
 
