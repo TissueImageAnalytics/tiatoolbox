@@ -1190,8 +1190,9 @@ def test_model_to():
     assert isinstance(model, nn.Module)
 
 
-def test_save_as_json():
+def test_save_as_json(tmp_path):
     """Test save data to json."""
+    # This should be broken up into separate tests!
     import json
 
     # dict with nested dict, list, and np.array
@@ -1215,16 +1216,22 @@ def test_save_as_json():
     not_jsonable.update(sample)
     # should fail because key is not of primitive type [str, int, float, bool]
     with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
-        misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+        misc.save_as_json(
+            {frozenset(key_dict): sample}, tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(not_jsonable, "sample_json.json")
+        misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
+        misc.save_as_json(
+            list(not_jsonable.values()), tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
-        misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
+        misc.save_as_json(
+            np.random.rand(2, 2), tmp_path / "sample_json.json", exist_ok=True
+        )
     # test complex nested dict
     print(sample)
-    misc.save_as_json(sample, "sample_json.json")
+    misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
     with open("sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
@@ -1232,17 +1239,24 @@ def test_save_as_json():
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test complex list of data
-    misc.save_as_json(list(sample.values()), "sample_json.json")
+    misc.save_as_json(
+        list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
+    )
     # test read because == is useless when value is mutable
-    with open("sample_json.json", "r") as fptr:
+    with open(tmp_path / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test numpy generic
-    misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
-    misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
-    os.remove("sample_json.json")
+    misc.save_as_json(
+        [np.int32(1), np.float32(2)], tmp_path / "sample_json.json", exist_ok=True
+    )
+    misc.save_as_json(
+        {"a": np.int32(1), "b": np.float32(2)},
+        tmp_path / "sample_json.json",
+        exist_ok=True,
+    )
 
 
 def test_save_as_json_exists(tmp_path):
