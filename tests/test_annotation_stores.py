@@ -968,7 +968,7 @@ class TestStore:
 
     @staticmethod
     def test_query_no_geometry_or_where(fill_store, store_cls):
-        """Test that query raises an exception when no geometry or predicate is given."""
+        """Test that query raises exception when no geometry or predicate given."""
         store = store_cls()
         with pytest.raises(ValueError, match="At least one of"):
             store.query()
@@ -1078,10 +1078,12 @@ class TestStore:
         """Test that _is_right_angle returns True only for right angles."""
         store = store_cls()
 
-        # c
-        # |
-        # |
-        # b-----a
+        r"""
+        c
+        |
+        |
+        b-----a
+        """
         assert store._is_right_angle(
             *[
                 (1, 0),
@@ -1090,10 +1092,12 @@ class TestStore:
             ]
         )
 
-        # a
-        # |
-        # |
-        # b-----c
+        r"""
+        a
+        |
+        |
+        b-----c
+        """
         assert store._is_right_angle(
             *[
                 (0, 1),
@@ -1102,10 +1106,12 @@ class TestStore:
             ]
         )
 
-        #    c
-        #     \
-        #      \
-        # a-----b
+        r"""
+           c
+            \
+             \
+        a-----b
+        """
         assert not store._is_right_angle(
             *[
                 (0, 0),
