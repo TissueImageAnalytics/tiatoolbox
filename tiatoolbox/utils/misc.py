@@ -89,7 +89,7 @@ def save_yaml(input_dict, output_path="output.yaml"):
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
 
     """
-    with open(str(pathlib.Path(output_path)), "w") as yaml_file:
+    with open(str(pathlib.Path(output_path)), "w") as yaml_file:  # skipcq: PTC-W6004
         yaml.dump(input_dict, yaml_file)
 
 
@@ -661,7 +661,7 @@ def save_as_json(data, save_path):
     else:
         __walk_list(shadow_data)
 
-    with open(save_path, "w") as handle:
+    with open(save_path, "w") as handle:  # skipcq: PTC-W6004
         json.dump(shadow_data, handle)
 
 
