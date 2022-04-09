@@ -1238,6 +1238,14 @@ def test_save_as_json(tmp_path):
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
+    # parent = True
+    misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
+    with open(tmp_path / "foo" / "sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    # test read because == is useless when value is mutable
+    assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+
     # test complex list of data
     misc.save_as_json(
         list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
@@ -1262,33 +1270,35 @@ def test_save_as_json(tmp_path):
 def test_save_as_json_exists(tmp_path):
     """Test save data to json which already exists."""
     dictionary = {"a": 1, "b": 2}
-    utils.misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, tmp_path / "sample_json.json")
     with pytest.raises(FileExistsError, match="File already exists"):
-        utils.misc.save_as_json(dictionary, tmp_path / "sample_json.json")
-    utils.misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
+        misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
 
 
 def test_save_as_json_parents(tmp_path):
-    """Test save data to json where parents need to be created."""
+    """Test save data to json where parents need to be created and parents is False."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        utils.misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
+        misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
 
 
 def test_save_yaml_exists(tmp_path):
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
-    utils.misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
     with pytest.raises(FileExistsError, match="File already exists"):
-        utils.misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
-    utils.misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
+        misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
 def test_save_yaml_parents(tmp_path):
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        utils.misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+        misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+
+    misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
 
 
 def test_imread_none_args():
