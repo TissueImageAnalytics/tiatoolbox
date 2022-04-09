@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for Semantic Segmentor."""
 
 import copy
@@ -375,7 +356,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     # a second rerun to test overlapping count,
@@ -386,7 +366,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     # else will leave hanging file pointer
@@ -402,7 +381,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     del canvas  # skipcq
 
@@ -414,7 +392,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.1.py",
         cache_count_path=f"{save_dir}/count.1.py",
-        free_prediction=False,
     )
     with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
         semantic_segmentor.merge_prediction(
@@ -423,7 +400,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.1.py",
             cache_count_path=f"{save_dir}/count.py",
-            free_prediction=False,
         )
 
     with pytest.raises(ValueError, match=r".*`cache_count_path` does not match.*"):
@@ -433,7 +409,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
         )
     # * test non HW predictions
     with pytest.raises(ValueError, match=r".*Prediction is no HW or HWC.*"):
@@ -443,7 +418,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
         )
 
     _rm_dir(save_dir)
@@ -460,7 +434,6 @@ def test_functional_segmentor_merging(tmp_path):
         ],
         [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
         save_path=None,
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     del canvas  # skipcq
@@ -702,7 +675,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
-    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+    assert np.mean(_cache_pred[..., 0] == _test_pred) > 0.99
 
     _rm_dir(save_dir)
     # mainly to test prediction on tile

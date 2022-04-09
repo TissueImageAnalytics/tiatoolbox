@@ -95,3 +95,5 @@ pylint
 skipcq
 PYL
 W0221
+w0613
+W6004
