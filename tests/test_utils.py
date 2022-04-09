@@ -1238,7 +1238,7 @@ def test_save_as_json(tmp_path):
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
-    # parent = True
+    # Allow parent directories
     misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
     with open(tmp_path / "foo" / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
