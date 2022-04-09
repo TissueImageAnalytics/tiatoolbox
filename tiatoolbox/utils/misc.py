@@ -74,12 +74,25 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     return list(files_grabbed)
 
 
-def save_yaml(input_dict, output_path="output.yaml"):
+def save_yaml(
+    input_dict: dict,
+    output_path="output.yaml",
+    parents: bool = False,
+    exist_ok: bool = False,
+):
     """Save dictionary as yaml.
 
     Args:
-        input_dict (dict): A variable of type 'dict'
-        output_path (str or pathlib.Path): Path to save the output file
+        input_dict (dict):
+            A variable of type 'dict'
+        output_path (str or pathlib.Path):
+            Path to save the output file
+        parents (bool):
+            Make parent directories if they do not exist. Default is
+            False.
+        exist_ok (bool):
+            Overwrite the output file if it exists. Default is False.
+
 
     Returns:
 
@@ -89,7 +102,14 @@ def save_yaml(input_dict, output_path="output.yaml"):
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
 
     """
-    with open(str(pathlib.Path(output_path)), "w") as yaml_file:  # skipcq: PTC-W6004
+    path = pathlib.Path(output_path)
+    if path.exists() and not exist_ok:
+        raise FileExistsError("File already exists.")
+    if parents:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    with open(  # skipcq: PTC-W6004: PTC-W6004
+        str(pathlib.Path(output_path)), "w"
+    ) as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
 
@@ -640,7 +660,12 @@ def __walk_dict(dct):
         dct[k] = __walk_list_dict(v)
 
 
-def save_as_json(data, save_path):
+def save_as_json(
+    data: Union[dict, list],
+    save_path: Union[str, pathlib.Path],
+    parents: bool = False,
+    exist_ok: bool = False,
+):
     """Save data to a json file.
 
     The function will deepcopy the `data` and then jsonify the content
@@ -648,8 +673,16 @@ def save_as_json(data, save_path):
     `bool` and their np.ndarray respectively.
 
     Args:
-        data (dict or list): Input data to save.
-        save_path (str): Output to save the json of `input`.
+        data (dict or list):
+            Input data to save.
+        save_path (str):
+            Output to save the json of `input`.
+        parents (bool):
+            Make parent directories if they do not exist. Default is
+            False.
+        exist_ok (bool):
+            Overwrite the output file if it exists. Default is False.
+
 
     """
     shadow_data = copy.deepcopy(data)  # make a copy of source input
@@ -661,6 +694,11 @@ def save_as_json(data, save_path):
     else:
         __walk_list(shadow_data)
 
+    save_path = pathlib.Path(save_path)
+    if save_path.exists() and not exist_ok:
+        raise FileExistsError("File already exists.")
+    if parents:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w") as handle:  # skipcq: PTC-W6004
         json.dump(shadow_data, handle)
 
@@ -736,3 +774,32 @@ def string_to_tuple(in_str):
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
+
+
+def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
+    """Convert pixels per unit (ppu) to microns per pixel (mpp)
+
+    Args:
+        ppu (int):
+            Pixels per unit.
+        units (Uniont[str, int]):
+            Units of pixels per unit. Valid options are "cm",
+            "centimeter", "inch", 2 (inches), 3(cm).
+
+    Returns:
+        mpp (float):
+            Microns per pixel.
+
+    """
+    microns_per_unit = {
+        "centimeter": 1e4,  # 10,000
+        "cm": 1e4,  # 10,000
+        "mm": 1e3,  # 1,000
+        "inch": 25400,
+        "in": 25400,
+        2: 25400,  # inches in TIFF tags
+        3: 1e4,  # cm in TIFF tags
+    }
+    if units not in microns_per_unit:
+        raise ValueError(f"Invalid units: {units}")
+    return 1 / ppu * microns_per_unit[units]
