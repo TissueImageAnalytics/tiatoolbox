@@ -16,7 +16,7 @@
       <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
     </a>
     <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
-      <img src="https://img.shields.io/badge/license-GPL--3.0-lightgrey" />
+      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange" />
     </a>
   <br>
     <br>
@@ -125,11 +125,11 @@ or
 
 ### License
 
-The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
+The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [The 3-Clause BSD License].
 
-The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE.md).
+The full text of the licence is included in [LICENSE](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE).
 
-[gnu general public license (version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
+[The 3-Clause BSD License]: https://opensource.org/licenses/BSD-3-Clause
 
 ### Auxiliary Files
 

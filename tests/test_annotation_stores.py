@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Tests for annotation store classes."""
 import json
 import pickle
