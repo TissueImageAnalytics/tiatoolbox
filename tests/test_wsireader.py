@@ -642,6 +642,12 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff):
     assert im_region.shape == (*size[::-1], 3)
 
 
+def test_tiff_reader_not_a_tiff(source_image):
+    source_image.replace(source_image.with_suffix(".tiff"))
+    wsi = WSIReader.open(source_image.with_suffix(".tiff"))
+    assert isinstance(wsi, VirtualWSIReader)
+
+
 def test_read_rect_openslide_levels(sample_ndpi):
     """Test openslide read rect with resolution in levels.
 
