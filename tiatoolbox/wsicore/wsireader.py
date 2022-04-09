@@ -30,6 +30,44 @@ IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 
 
+def is_dicom(path: pathlib.Path) -> bool:
+    """Check if the input is a DICOM file.
+
+    Args:
+        path (pathlib.Path): Path to the file to check.
+
+    Returns:
+        bool: True if the file is a DICOM file.
+
+    """
+    path = pathlib.Path(path)
+    is_dcm = path.suffix.lower() == ".dcm"
+    is_dcm_dir = path.is_dir() and any(
+        p.suffix.lower() == ".dcm" for p in path.iterdir()
+    )
+    return is_dcm or is_dcm_dir
+
+
+def is_tiled_tiff(path: pathlib.Path) -> bool:
+    """Check if the input is a tiled TIFF file.
+
+    Args:
+        path (pathlib.Path):
+            Path to the file to check.
+
+    Returns:
+        bool:
+            True if the file is a tiled TIFF file.
+
+    """
+    path = pathlib.Path(path)
+    try:
+        tif = tifffile.TiffFile(path)
+    except tifffile.TiffFileError:
+        return False
+    return tif.pages[0].is_tiled
+
+
 class WSIReader:
     """Base whole slide image (WSI) reader class.
 
@@ -84,42 +122,6 @@ class WSIReader:
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
-
-        def is_dicom(path: pathlib.Path) -> bool:
-            """Check if the input is a DICOM file.
-
-            Args:
-                path (pathlib.Path): Path to the file to check.
-
-            Returns:
-                bool: True if the file is a DICOM file.
-
-            """
-            path = pathlib.Path(path)
-            is_dcm = path.suffix.lower() == ".dcm"
-            is_dcm_dir = path.is_dir() and any(
-                p.suffix.lower() == ".dcm" for p in path.iterdir()
-            )
-            return is_dcm or is_dcm_dir
-
-        def is_tiled_tiff(path: pathlib.Path) -> bool:
-            """Check if the input is a tiled TIFF file.
-
-            Args:
-                path (pathlib.Path):
-                    Path to the file to check.
-
-            Returns:
-                bool:
-                    True if the file is a tiled TIFF file.
-
-            """
-            path = pathlib.Path(path)
-            try:
-                tif = tifffile.TiffFile(path)
-            except tifffile.TiffFileError:
-                return False
-            return tif.pages[0].is_tiled
 
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
