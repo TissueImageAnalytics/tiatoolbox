@@ -21,10 +21,12 @@ def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (str or pathlib.Path): Path to a file
+        full_path (str or pathlib.Path):
+            Path to a file.
 
     Returns:
-        tuple: Three parts of the input file path:
+        tuple:
+            Three parts of the input file path:
             - :py:obj:`pathlib.Path` - Parent directory path
             - :py:obj:`str` - File name
             - :py:obj:`list(str)` - File extensions
@@ -43,13 +45,16 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str or pathlib.Path): Path to the directory where files
+        input_path (str or pathlib.Path):
+            Path to the directory where files
             need to be searched.
-        file_types (str or tuple(str)): File types (extensions) to be searched.
+        file_types (str or tuple(str)):
+            File types (extensions) to be searched.
 
     Returns:
-        list: File paths as a python list. It has been sorted to ensure
-            same ordering across platforms.
+        list:
+            File paths as a python list. It has been sorted to ensure
+            the same ordering across platforms.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -84,9 +89,9 @@ def save_yaml(
 
     Args:
         input_dict (dict):
-            A variable of type 'dict'
+            A variable of type 'dict'.
         output_path (str or pathlib.Path):
-            Path to save the output file
+            Path to save the output file.
         parents (bool):
             Make parent directories if they do not exist. Default is
             False.
@@ -113,15 +118,14 @@ def save_yaml(
         yaml.dump(input_dict, yaml_file)
 
 
-def imwrite(image_path, img):
+def imwrite(image_path, img) -> None:
     """Write numpy array to an image.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension)
-            to save image
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
-
-    Returns:
+        image_path (str or pathlib.Path):
+            File path (including extension) to save image to.
+        img (:class:`numpy.ndarray`):
+            Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -139,11 +143,14 @@ def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): File path (including extension) to read image.
-        as_uint8 (bool): Read an image in uint8 format.
+        image_path (str or pathlib.Path):
+            File path (including extension) to read image.
+        as_uint8 (bool):
+            Read an image in uint8 format.
 
     Returns:
-        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
+        :class:`numpy.ndarray`:
+            Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -168,12 +175,14 @@ def load_stain_matrix(stain_matrix_input):
     """Load a stain matrix as a numpy array.
 
     Args:
-        stain_matrix_input (ndarray or str, pathlib.Path): either a 2x3 / 3x3
-            numpy array or a path to a saved .npy / .csv file. If using a .csv file,
-            there should be no column headers provided
+        stain_matrix_input (ndarray or str, pathlib.Path):
+            Either a 2x3 or 3x3 numpy array or a path to a saved .npy /
+            .csv file. If using a .csv file, there should be no column
+            headers provided
 
     Returns:
-        stain_matrix (:class:`numpy.ndarray`): the loaded stain matrix.
+        stain_matrix (:class:`numpy.ndarray`):
+            The loaded stain matrix.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -206,11 +215,14 @@ def get_luminosity_tissue_mask(img, threshold):
     """Get tissue mask based on the luminosity of the input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
-        threshold (float): luminosity threshold used to determine tissue area.
+        img (:class:`numpy.ndarray`):
+            Input image used to obtain tissue mask.
+        threshold (float):
+            Luminosity threshold used to determine tissue area.
 
     Returns:
-        tissue_mask (:class:`numpy.ndarray`): binary tissue mask.
+        tissue_mask (:class:`numpy.ndarray`):
+            Binary tissue mask.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -245,7 +257,8 @@ def mpp2common_objective_power(
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
     Returns:
-        float: Objective power approximation.
+        float:
+            Objective power approximation.
 
     Examples:
         >>> mpp2common_objective_power(0.253)
@@ -282,7 +295,8 @@ def objective_power2mpp(objective_power):
         objective_power (float or tuple(float)): Objective power.
 
     Returns:
-        numpy.ndarray: Microns per-pixel (MPP) approximations.
+        :class:`numpy.ndarray`:
+            Microns per-pixel (MPP) approximations.
 
     Examples:
         >>> objective_power2mpp(40)
@@ -306,7 +320,8 @@ def mpp2objective_power(mpp):
         mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
-        :class:`numpy.ndarray`: Objective power approximations.
+        :class:`numpy.ndarray`:
+            Objective power approximations.
 
     Examples:
         >>> mpp2objective_power(0.25)
@@ -334,7 +349,8 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             high_p should always be greater than low_p.
 
     Returns:
-        img (:class:`numpy.ndarray`): Image (uint8) with contrast enhanced.
+        img (:class:`numpy.ndarray`):
+            Image (uint8) with contrast enhanced.
 
     Raises:
         AssertionError: Internal errors due to invalid img type.
@@ -393,7 +409,8 @@ def __assign_unknown_class(input_table):
         table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
 
     Raises:
-        ValueError: If the number of columns is not equal to 2 or 3.
+        ValueError:
+            If the number of columns is not equal to 2 or 3.
 
     """
     if input_table.shape[1] not in [2, 3]:
@@ -421,7 +438,8 @@ def read_locations(input_table):
         pd.DataFrame: DataFrame with x, y location and class type.
 
     Raises:
-        FileNotSupported: If the path to input table is not of supported type.
+        FileNotSupported:
+            If the path to input table is not of supported type.
 
     Examples:
         >>> from tiatoolbox.utils.misc import read_locations
@@ -486,7 +504,8 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         stride (int): Stride size.
 
     Returns:
-        int: Output size / number of features.
+        int:
+            Output size / number of features.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -520,14 +539,17 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
         https://docs.opencv.org/4.0.0/da/d54/group__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121
 
     Args:
-        interpolation (Union[str, int]): Interpolation mode string.
-            Possible values are: nearest, linear, cubic, lanczos, area.
+        interpolation (Union[str, int]):
+            Interpolation mode string. Possible values are: nearest,
+            linear, cubic, lanczos, area.
 
     Raises:
-        ValueError: Invalid interpolation mode.
+        ValueError:
+            Invalid interpolation mode.
 
     Returns:
-        int: OpenCV (cv2) interpolation enum.
+        int:
+            OpenCV (cv2) interpolation enum.
 
     """
     if isinstance(interpolation, str):
@@ -549,11 +571,14 @@ def assert_dtype_int(input_var, message="Input must be integer."):
     """Generate error if dtype is not int.
 
     Args:
-        input_var (ndarray): input variable to be tested.
-        message (str): Error message to be displayed.
+        input_var (ndarray):
+            Input variable to be tested.
+        message (str):
+            Error message to be displayed.
 
-    Returns:
-        Generates an AssertionError message if input is not an int.
+    Raises:
+        AssertionError:
+            If input_var is not of type int.
 
     """
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
@@ -703,14 +728,15 @@ def save_as_json(
         json.dump(shadow_data, handle)
 
 
-def select_device(on_gpu):
+def select_device(on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
         on_gpu (bool): Selects gpu if True.
 
     Returns:
-        device (str): "gpu" if on_gpu is True otherwise returns "cpu"
+        str:
+            "gpu" if on_gpu is True otherwise returns "cpu"
 
     """
     if on_gpu:
@@ -727,7 +753,8 @@ def model_to(on_gpu, model):
         model (torch.nn.Module): PyTorch defined model.
 
     Returns:
-        model (torch.nn.Module):
+        torch.nn.Module:
+            The model after being moved to cpu/gpu.
 
     """
     if on_gpu:  # DataParallel work only for cuda
@@ -740,16 +767,17 @@ def model_to(on_gpu, model):
 def get_bounding_box(img):
     """Get bounding box coordinate information.
 
-    Given an image with zero and non-zero values. This function
-    will return the the minimal box that contains all non-zero
-    values.
+    Given an image with zero and non-zero values. This function will
+    return the minimal box that contains all non-zero values.
 
     Args:
-        img (ndarray): Image to get the bounding box.
+        img (ndarray):
+            Image to get the bounding box.
 
     Returns:
-        bound (ndarray): Coordinates of the box in the form of
-            [start_x, start_y, end_x, end_y].
+        bound (ndarray):
+            Coordinates of the box in the form of `[start_x, start_y,
+            end_x, end_y]`.
 
     """
     rows = np.any(img, axis=1)
@@ -767,10 +795,12 @@ def string_to_tuple(in_str):
     """Splits input string to tuple at ','.
 
     Args:
-        in_str (str): input string.
+        in_str (str):
+            input string.
 
     Returns:
-        tuple (tuple of str): Returns a tuple of strings by splitting in_str at ','.
+        tuple:
+            Returns a tuple of strings by splitting in_str at ','.
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
