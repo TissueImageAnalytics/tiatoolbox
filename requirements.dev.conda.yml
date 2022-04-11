@@ -20,6 +20,7 @@ dependencies:
   - imagecodecs>2021.10.0
   - jupyterlab
   - matplotlib
+  - nbsphinx
   - numpy
   - opencv>=4.5.4
   - openjpeg>=2.3.0
