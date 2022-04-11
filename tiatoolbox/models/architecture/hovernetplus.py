@@ -1,24 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-
 from collections import OrderedDict
 from typing import List
 
@@ -34,22 +13,65 @@ from tiatoolbox.utils import misc
 
 
 class HoVerNetPlus(HoVerNet):
-    """Initialise HoVerNet+.
+    """Initialise HoVerNet+ [1].
 
-    HoVerNet+ takes an RGB input image, and provides the option to simultaneously
-    segment and classify the nuclei present, aswell as semantically segment different
-    regions or layers in the images. Note the HoVerNet+ architecture assumes an image
-    resolution of 0.5 mpp, in contrast to HoVerNet at 0.25 mpp.
+    HoVerNet+ takes an RGB input image, and provides the option to
+    simultaneously segment and classify the nuclei present, as well as
+    semantically segment different regions or layers in the images. Note
+    the HoVerNet+ architecture assumes an image resolution of 0.5 mpp,
+    in contrast to HoVerNet at 0.25 mpp.
+
+    The tiatoolbox model should produce following results on the specified datasets
+    that is was trained on.
+
+    .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernetplus-oed
+         - OED
+         - 0.84
+         - 0.69
+         - 0.86
+         - 0.80
+         - 0.69
+
+    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation
+       :widths: 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - F1
+         - Precision
+         - Recall
+         - Accuracy
+       * - hovernetplus-oed
+         - OED
+         - 0.82
+         - 0.82
+         - 0.82
+         - 0.84
 
     Args:
-        num_input_channels (int): The number of input channels, default = 3 for RGB.
-        num_types (int): The number of types of nuclei present in the images.
-        num_layers (int): The number of layers/different regions types present.
+        num_input_channels (int):
+            The number of input channels, default = 3 for RGB.
+        num_types (int):
+            The number of types of nuclei present in the images.
+        num_layers (int):
+            The number of layers/different regions types present.
 
     References:
-        Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer Segmentation
-        in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF International
-        Conference on Computer Vision. 2021.
+        [1] Shephard, Adam J., et al. "Simultaneous Nuclear Instance and
+        Layer Segmentation in Oral Epithelial Dysplasia." Proceedings of
+        the IEEE/CVF International Conference on Computer Vision. 2021.
 
 
     """
@@ -91,14 +113,16 @@ class HoVerNetPlus(HoVerNet):
     def _proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
 
-        This function takes the layer segmentation map and applies a gaussian blur to
-        remove spurious segmentations.
+        This function takes the layer segmentation map and applies a
+        gaussian blur to remove spurious segmentations.
 
         Args:
-            ls_map: The input predicted segmentation map.
+            ls_map:
+                The input predicted segmentation map.
 
         Returns:
-            ls_map: The processed segmentation map.
+            :class:`numpy.ndarray`:
+                The processed segmentation map.
 
         """
         ls_map = np.squeeze(ls_map.astype("float32"))
@@ -113,17 +137,25 @@ class HoVerNetPlus(HoVerNet):
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
-            image (ndarray): Semantic segmentation map of different
-                layers/regions following processing.
+            pred_layer (:class:`numpy.ndarray`):
+                Semantic segmentation map of different layers/regions
+                following processing.
 
         Returns:
-            layer_info_dict (dict): Dictionary to store layer contours in. It
-                has the following form:
-                layer_info = {
-                        contour: number[][],
-                        type: number,
-                }
-                layer_dict = {[layer_uid: number] : layer_info}
+            dict:
+                A dictionary of layer contours. It has the
+                following form::
+
+                    {
+                        1: {  # Instance ID
+                            "contour": [
+                                [x, y],
+                                ...
+                            ],
+                            "type": integer,
+                        },
+                        ...
+                    }
 
         """
         layer_list = np.unique(pred_layer)
@@ -152,33 +184,56 @@ class HoVerNetPlus(HoVerNet):
         """Post processing script for image tiles.
 
         Args:
-            raw_maps (list(ndarray)): list of prediction output of each head and
-                assumed to be in the order of [np, hv, tp, ls] (match with the output
-                of `infer_batch`).
+            raw_maps (list(ndarray)):
+                A list of prediction outputs of each head and assumed to
+                be in the order of [np, hv, tp, ls] (match with the
+                output of `infer_batch`).
 
         Returns:
-            inst_map (ndarray): pixel-wise nuclear instance segmentation
-                prediction.
-            inst_dict (dict): a dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has the following form
-                inst_info = {
-                        box: number[],
-                        centroids: number[],
-                        contour: number[][],
-                        type: number,
-                        prob: number,
-                }
-                inst_dict = {[inst_uid: number] : inst_info}
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `inst_map`.
-            layer_map (ndarray): pixel-wise layer segmentation prediction.
-            layer_dict (dict): a dictionary containing a mapping of each segmented
-                layer within `layer_map`. It has the following form
-                layer_info = {
-                        contour: number[][],
-                        type: number,
-                }
-                layer_dict = {[layer_uid: number] : layer_info}
+            inst_map (ndarray):
+                Pixel-wise nuclear instance segmentation prediction.
+            inst_dict (dict):
+                A dictionary containing a mapping of each instance
+                within `inst_map` instance information. It has the
+                following form::
+
+                    {
+                        0: {  # Instance ID
+                            "box": [
+                                x_min,
+                                y_min,
+                                x_max,
+                                y_max,
+                            ],
+                            "centroid": [x, y],
+                            "contour": [
+                                [x, y],
+                                ...
+                            ],
+                            "type": integer,
+                            "prob": float,
+                        },
+                        ...
+                    }
+
+                where the instance ID is an integer corresponding to the
+                instance at the same pixel value within `inst_map`.
+            layer_map (ndarray):
+                Pixel-wise layer segmentation prediction.
+            layer_dict (dict):
+                A dictionary containing a mapping of each segmented
+                layer within `layer_map`. It has the following form::
+
+                    {
+                        1: {  # Instance ID
+                            "contour": [
+                                [x, y],
+                                ...
+                            ],
+                            "type": integer,
+                        },
+                        ...
+                    }
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet_plus import HoVerNetPlus
@@ -216,10 +271,13 @@ class HoVerNetPlus(HoVerNet):
         aggregation.
 
         Args:
-            model (nn.Module): PyTorch defined model.
-            batch_data (ndarray): a batch of data generated by
-                torch.utils.data.DataLoader.
-            on_gpu (bool): Whether to run inference on a GPU.
+            model (nn.Module)
+                PyTorch defined model.
+            batch_data (ndarray):
+                A batch of data generated by
+                `torch.utils.data.DataLoader`.
+            on_gpu (bool):
+                Whether to run inference on a GPU.
 
         """
         patch_imgs = batch_data

@@ -1,23 +1,4 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
+# skipcq: PTC-W6004
 """Unit test package for HoVerNet."""
 
 import pathlib
@@ -47,13 +28,13 @@ def test_functionality(remote_sample, tmp_path):
     patch = MicroNet.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     model = MicroNet()
-    fetch_pretrained_weights("micronet_hovernet-consep", f"{tmp_path}/weights.pth")
+    fetch_pretrained_weights("micronet-consep", f"{tmp_path}/weights.pth")
     map_location = utils.misc.select_device(utils.env_detection.has_gpu())
     pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output, _ = model.postproc(output[0])
-    assert np.max(np.unique(output)) == 33
+    assert np.max(np.unique(output)) == 46
 
 
 def test_value_error():
@@ -70,7 +51,7 @@ def test_micronet_output(remote_sample, tmp_path):
     """Tests the output of MicroNet."""
     svs_1_small = pathlib.Path(remote_sample("svs-1-small"))
     micronet_output = pathlib.Path(remote_sample("micronet-output"))
-    pretrained_model = "micronet_hovernet-consep"
+    pretrained_model = "micronet-consep"
     batch_size = 5
     num_loader_workers = 0
     num_postproc_workers = 0

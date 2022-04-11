@@ -1,26 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# This file contains code inspired by StainTools
-# [https://github.com/Peter554/StainTools] written by Peter Byfield.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Stain matrix extraction for stain normalization."""
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
@@ -33,10 +10,12 @@ def vectors_in_correct_direction(e_vectors):
     """Points the eigen vectors in the right direction.
 
     Args:
-        e_vectors (:class:`numpy.ndarray`): eigen vectors
+        e_vectors (:class:`numpy.ndarray`):
+            Eigen vectors.
 
     Returns:
-        ndarray pointing in the correct direction
+        :class:`numpy.ndarray`:
+            Pointing in the correct direction.
 
     """
     if e_vectors[0, 0] < 0:
@@ -48,14 +27,17 @@ def vectors_in_correct_direction(e_vectors):
 
 
 def h_and_e_in_right_order(v1, v2):
-    """Rearranges input vectors for H&E in correct order with H as first output.
+    """Rearrange input vectors for H&E in correct order with H as first output.
 
     Args:
-        v1 (:class:`numpy.ndarray`): Input vector for stain extraction.
-        v2 (:class:`numpy.ndarray`): Input vector for stain extraction.
+        v1 (:class:`numpy.ndarray`):
+            Input vector for stain extraction.
+        v2 (:class:`numpy.ndarray`):
+            Input vector for stain extraction.
 
     Returns:
-        input vectors in the correct order.
+        :class:`numpy.ndarray`:
+            Input vectors in the correct order.
 
     """
     if v1[0] > v2[0]:
@@ -72,7 +54,8 @@ def dl_output_for_h_and_e(dictionary):
             :class:`sklearn.decomposition.DictionaryLearning` output
 
     Returns:
-        ndarray with correct values for H and E
+        :class:`numpy.ndarray`:
+            With correct values for H and E.
 
     """
     if dictionary[0, 0] < dictionary[1, 0]:
@@ -105,7 +88,8 @@ class CustomExtractor:
         """Get the user defined stain matrix.
 
         Returns:
-            :class:`numpy.ndarray`: user defined stain matrix.
+            :class:`numpy.ndarray`:
+                User defined stain matrix.
 
         """
         return self.stain_matrix
@@ -139,7 +123,8 @@ class RuifrokExtractor:
         """Get the pre-defined stain matrix.
 
         Returns:
-            ndarray: pre-defined  stain matrix.
+            :class:`numpy.ndarray`:
+                Pre-defined  stain matrix.
 
         """
         return self.__stain_matrix.copy()
@@ -158,8 +143,10 @@ class MacenkoExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Args:
-        luminosity_threshold (float): threshold used for tissue area selection
-        angular_percentile (int): percentile of angular coordinates to be selected
+        luminosity_threshold (float):
+            Threshold used for tissue area selection
+        angular_percentile (int):
+            Percentile of angular coordinates to be selected
             with respect to the principle, orthogonal eigenvectors.
 
     Examples:
@@ -179,10 +166,12 @@ class MacenkoExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (:class:`numpy.ndarray`): input image used for stain matrix estimation.
+            img (:class:`numpy.ndarray`):
+                Input image used for stain matrix estimation.
 
         Returns:
-            :class:`numpy.ndarray`: estimated stain matrix.
+            :class:`numpy.ndarray`:
+                Estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -238,8 +227,10 @@ class VahadaneExtractor:
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
     Args:
-        luminosity_threshold (float): threshold used for tissue area selection
-        regularizer (float): regularizer used in dictionary learning
+        luminosity_threshold (float):
+            Threshold used for tissue area selection.
+        regularizer (float):
+            Regularizer used in dictionary learning.
 
     Examples:
         >>> from tiatoolbox.tools.stainextract import VahadaneExtractor
@@ -258,10 +249,12 @@ class VahadaneExtractor:
         """Stain matrix estimation.
 
         Args:
-            img (:class:`numpy.ndarray`): input image used for stain matrix estimation
+            img (:class:`numpy.ndarray`):
+                Input image used for stain matrix estimation
 
         Returns:
-            :class:`numpy.ndarray`: estimated stain matrix.
+            :class:`numpy.ndarray`:
+                Estimated stain matrix.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8

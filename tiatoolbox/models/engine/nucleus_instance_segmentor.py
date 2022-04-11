@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """This module enables nucleus instance segmentation."""
 
 import uuid
@@ -39,9 +19,10 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 
-# Python is yet to be able to natively pickle Object method/static method.
-# Only top-level function is passable to multi-processing as caller.
-# May need 3rd party libraries to use method/static method otherwise.
+# Python is yet to be able to natively pickle Object method/static
+# method. Only top-level function is passable to multi-processing as
+# caller. May need 3rd party libraries to use method/static method
+# otherwise.
 def _process_tile_predictions(
     ioconfig,
     tile_bounds,
@@ -57,46 +38,60 @@ def _process_tile_predictions(
     """Function to merge new tile prediction with existing prediction.
 
     Args:
-        ioconfig (:class:`IOSegmentorConfig`): Object defines information
-            about input and output placement of patches.
-        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
-            (top_left_x, top_left_y, bottom_x, bottom_y).
-        tile_flag (list): A list of flag to indicate if instances within
-            an area extended from each side (by `ioconfig.margin`) of
-            the tile should be replaced by those within the same spatial
-            region in the accumulated output this run. The format is
-            [top, bottom, left, right], 1 indicates removal while 0 is not.
-            For example, [1, 1, 0, 0] denotes replacing top and bottom instances
-            within `ref_inst_dict` with new ones after this processing.
-        tile_mode (int): A flag to indicate the type of this tile. There
-            are 4 flags:
-            - 0: A tile from tile grid without any overlapping, it is not
-                an overlapping tile from tile generation. The predicted
-                instances are immediately added to accumulated output.
-            - 1: Vertical tile strip that stands between two normal tiles
-                (flag 0). It has the the same height as normal tile but
-                less width (hence vertical strip).
-            - 2: Horizontal tile strip that stands between two normal tiles
-                (flag 0). It has the the same width as normal tile but
-                less height (hence vertical strip).
-            - 3: tile strip stands at the cross section of four normal tiles
-                (flag 0).
-        tile_output (list): A list of patch predictions, that lie within this
-            tile, to be merged and processed.
-        ref_inst_dict (dict): Dictionary contains accumulated output. The
-            expected format is {instance_id: {type: int,
-            contour: List[List[int]], centroid:List[float], box:List[int]}.
-        postproc (callable): Function to post-process the raw assembled tile.
-        merge_predictions (callable): Function to merge the `tile_output` into
-            raw tile prediction.
+        ioconfig (:class:`IOSegmentorConfig`):
+            Object defines information about input and output placement
+            of patches.
+        tile_bounds (:class:`numpy.array`):
+            Boundary of the current tile, defined as `(top_left_x,
+            top_left_y, bottom_x, bottom_y)`.
+        tile_flag (list):
+            A list of flag to indicate if instances within an area
+            extended from each side (by `ioconfig.margin`) of the tile
+            should be replaced by those within the same spatial region
+            in the accumulated output this run. The format is `[top,
+            bottom, left, right]`, 1 indicates removal while 0 is not.
+            For example, `[1, 1, 0, 0]` denotes replacing top and bottom
+            instances within `ref_inst_dict` with new ones after this
+            processing.
+        tile_mode (int):
+            A flag to indicate the type of this tile. There are 4 flags:
+            - 0: A tile from tile grid without any overlapping, it is
+                 not an overlapping tile from tile generation. The
+                 predicted instances are immediately added to
+                 accumulated output.
+            - 1: Vertical tile strip that stands between two normal
+                 tiles (flag 0). It has the same height as normal tile
+                 but less width (hence vertical strip).
+            - 2: Horizontal tile strip that stands between two normal
+                 tiles (flag 0). It has the same width as normal tile
+                 but less height (hence horizontal strip).
+            - 3: Tile strip stands at the cross section of four normal
+                 tiles (flag 0).
+        tile_output (list):
+            A list of patch predictions, that lie within this tile, to
+            be merged and processed.
+        ref_inst_dict (dict):
+            Dictionary contains accumulated output. The expected format
+            is `{instance_id: {type: int, contour: List[List[int]],
+            centroid:List[float], box:List[int]}`.
+        postproc (callable):
+            Function to post-process the raw assembled tile.
+        merge_predictions (callable):
+            Function to merge the `tile_output` into raw tile
+            prediction.
 
     Returns:
-        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
-            The expected format is {instance_id: {type: int,
-            contour: List[List[int]], centroid:List[float], box:List[int]}.
-        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
-            to be removed to prevent overlapping predictions. These instances
-            are those get cutoff at the boundary due to the tiling process.
+        tuple:
+            - :py:obj:`dict` - New instances dictionary:
+                A dictionary contain new instances to be accumulated.
+                The expected format is `{instance_id: {type: int,
+                contour: List[List[int]], centroid:List[float],
+                box:List[int]}`.
+            - :py:obj:`list` - Instances IDs to remove:
+                List of instance IDs within `ref_inst_dict` to be
+                removed to prevent overlapping predictions. These
+                instances are those get cut off at the boundary due to
+                the tiling process.
 
     """
     locations, predictions = list(zip(*tile_output))
@@ -111,9 +106,9 @@ def _process_tile_predictions(
 
     tile_shape = tile_br - tile_tl  # in width height
 
-    # as the placement output is calculated wrt highest possible resolution
-    # within input, the output will need to re-calibrate if it is at different
-    # resolution than the input
+    # As the placement output is calculated wrt highest possible
+    # resolution within input, the output will need to re-calibrate if
+    # it is at different resolution than the input.
     ioconfig = ioconfig.to_baseline()
     fx_list = [v["resolution"] for v in ioconfig.output_resolutions]
 
@@ -126,7 +121,6 @@ def _process_tile_predictions(
             head_tile_shape[::-1],
             head_predictions,
             head_locations,
-            free_prediction=True,
         )
         head_raws.append(head_raw)
     _, inst_dict = postproc(head_raws)
@@ -147,8 +141,8 @@ def _process_tile_predictions(
     tile_rtree = STRtree(geometries)
     # !
 
-    # create margin bounding box, ordering should match with
-    # created tile info flag (top, bottom, left, right)
+    # create margin bounding box, ordering should match with created
+    # tile info flag (top, bottom, left, right)
     boundary_lines = [
         shapely_box(0, 0, w, 1),  # noqa top egde
         shapely_box(0, h - 1, w, h),  # noqa bottom edge
@@ -175,8 +169,8 @@ def _process_tile_predictions(
     sel_indices = []
     if tile_mode in [0, 3]:
         # for `full grid` tiles `cross section` tiles
-        # -- extend from the boundary by the margin size, remove
-        #    nuclei whose entire contours lie within the margin area
+        # -- extend from the boundary by the margin size, remove nuclei
+        #    whose entire contours lie within the margin area
         sel_boxes = [
             box
             for idx, box in enumerate(margin_boxes)
@@ -191,9 +185,9 @@ def _process_tile_predictions(
         ]
     elif tile_mode in [1, 2]:
         # for `horizontal/vertical strip` tiles
-        # -- extend from the marked edges (top/bot or left/right) by
-        #    the margin size, remove all nuclei lie within the margin
-        #    area (including on the margin line)
+        # -- extend from the marked edges (top/bot or left/right) by the
+        #    margin size, remove all nuclei lie within the margin area
+        #    (including on the margin line)
         # -- remove all nuclei on the boundary also
 
         sel_boxes = [
@@ -220,8 +214,8 @@ def _process_tile_predictions(
 
     remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
 
-    # external removal only for tile at cross sections
-    # this one should contain UUID with the reference database
+    # external removal only for tile at cross sections this one should
+    # contain UUID with the reference database
     remove_insts_in_orig = []
     if tile_mode == 3:
         inst_boxes = [v["box"] for v in ref_inst_dict.values()]
@@ -239,8 +233,8 @@ def _process_tile_predictions(
 
         remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
 
-    # move inst position from tile space back to WSI space
-    # an also generate universal uid as replacement for storage
+    # move inst position from tile space back to WSI space and also
+    # generate universal uid as replacement for storage
     new_inst_dict = {}
     for inst_uid, inst_info in inst_dict.items():
         if inst_uid not in remove_insts_in_tile:
@@ -259,9 +253,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments. Additionally,
     unlike `SemanticSegmentor`, this engine assumes each input model
-    will ultimately predict one single target: the nucleus instance within
-    the tiles/WSIs. Each WSI prediction will be store under a `.dat` file
-    which contains a dictionary of form:
+    will ultimately predict one single target: the nucleus instance
+    within the tiles/WSIs. Each WSI prediction will be store under a
+    `.dat` file which contains a dictionary of form:
 
     .. code-block:: yaml
 
@@ -278,25 +272,34 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             prob: float
 
     Args:
-        model (nn.Module): Use externally defined PyTorch model for prediction with.
-          weights already loaded. Default is `None`. If provided,
-          `pretrained_model` argument is ignored.
-        pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. For a full list of pretrained models, refer to the
-          `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
-          By default, the corresponding pretrained weights will also be
-          downloaded. However, you can override with your own set of weights
-          via the `pretrained_weights` argument. Argument is case insensitive.
-        pretrained_weights (str): Path to the weight of the corresponding
-          `pretrained_model`.
-        batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int) : Number of workers to load the data.
+        model (nn.Module):
+            Use externally defined PyTorch model for prediction with.
+            weights already loaded. Default is `None`. If provided,
+            `pretrained_model` argument is ignored.
+        pretrained_model (str):
+            Name of the existing models support by tiatoolbox for
+            processing the data. For a full list of pretrained models,
+            refer to the `docs
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights via the `pretrained_weights` argument. Argument
+            is case insensitive.
+        pretrained_weights (str):
+            Path to the weight of the corresponding `pretrained_model`.
+        batch_size (int) :
+            Number of images fed into the model each time.
+        num_loader_workers (int):
+            Number of workers to load the data.
           Take note that they will also perform preprocessing.
-        num_postproc_workers (int) : Number of workers to post-process
-          predictions.
-        verbose (bool): Whether to output logging information.
-        dataset_class (obj): Dataset class to be used instead of default.
-        auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
+        num_postproc_workers (int):
+            Number of workers to post-process predictions.
+        verbose (bool):
+            Whether to output logging information.
+        dataset_class (obj):
+            Dataset class to be used instead of default.
+        auto_generate_mask (bool):
+            To automatically generate tile/WSI tissue mask
           if is not provided.
 
     Examples:
@@ -350,26 +353,37 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     ):
         """Generating tile information.
 
-        To avoid out of memory problem when processing WSI-scale in general,
-        the predictor will perform the inference and assemble on a large
-        image tiles (each may have size of 4000x4000 compared to patch
-        output of 256x256) first before stitching every tiles by the end
-        to complete the WSI output. For nuclei instance segmentation,
-        the stiching process will require removal of predictions within
-        some bounding areas. This function generates both the tile placement
-        as well as the flag to indicate how the removal should be done to
-        achieve the above goal.
+        To avoid out of memory problem when processing WSI-scale in
+        general, the predictor will perform the inference and assemble
+        on a large image tiles (each may have size of 4000x4000 compared
+        to patch output of 256x256) first before stitching every tiles
+        by the end to complete the WSI output. For nuclei instance
+        segmentation, the stitching process will require removal of
+        predictions within some bounding areas. This function generates
+        both the tile placement and the flag to indicate how the removal
+        should be done to achieve the above goal.
 
         Args:
-            image_shape (:class:`numpy.ndarray`, list(int)): The shape of WSI
-                to extract the tile from, assumed to be in [width, height].
-            ioconfig (:obj:IOSegmentorConfig): The input and output
-                configuration objects.
+            image_shape (:class:`numpy.ndarray`, list(int)):
+                The shape of WSI to extract the tile from, assumed to be
+                in `[width, height]`.
+            ioconfig (:obj:IOSegmentorConfig):
+                The input and output configuration objects.
+
         Returns:
-            grid_tiles, removal_flags: ndarray
-            vertical_strip_tiles, removal_flags: ndarray
-            horizontal_strip_tiles, removal_flags: ndarray
-            cross_section_tiles, removal_flags: ndarray
+            list:
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Grid tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Vertical strip tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Horizontal strip tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Cross section tiles
+                    - :class:`numpy.ndarray` - Removal flags
 
         """
         margin = np.array(ioconfig.margin)
@@ -519,23 +533,27 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     def _to_shared_space(self, wsi_idx, patch_inputs, patch_outputs):
         """Helper functions to transfer variable to shared space.
 
-        We modify the shared space so that we can update worker info without
-        needing to re-create the worker. There should be no race-condition
-        because only by looping `self._loader` in main thread will trigger querying
-        new data from each worker, and this portion should still be in sequential
-        execution order in the main thread.
+        We modify the shared space so that we can update worker info
+        without needing to re-create the worker. There should be no
+        race-condition because only by looping `self._loader` in main
+        thread will trigger querying new data from each worker, and this
+        portion should still be in sequential execution order in the
+        main thread.
 
         Args:
-            wsi_idx (int): The index of the WSI to be processed. This is used
-                to retrieve the file path.
-            patch_inputs (list): A list of corrdinates in
-                [start_x, start_y, end_x, end_y] format indicating the read location
-                of the patch in the WSI image. The coordinates are in the highest
+            wsi_idx (int):
+                The index of the WSI to be processed. This is used to
+                retrieve the file path.
+            patch_inputs (list):
+                A list of coordinates in `[start_x, start_y, end_x,
+                end_y]` format indicating the read location of the patch
+                in the WSI image. The coordinates are in the highest
                 resolution defined in `self.ioconfig`.
-            patch_outputs (list): A list of corrdinates in
-                [start_x, start_y, end_x, end_y] format indicating the write location
-                of the patch in the WSI image. The coordinates are in the highest
-                resolution defined in `self.ioconfig`.
+            patch_outputs (list):
+                A list of corrdinates in `[start_x, start_y, end_x,
+                end_y]` format indicating the write location of the
+                patch in the WSI image. The coordinates are in the
+                highest resolution defined in `self.ioconfig`.
 
         """
         patch_inputs = torch.from_numpy(patch_inputs).share_memory_()
@@ -545,7 +563,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
     def _infer_once(self):
-        """Running the inference only once for the currently active dataloder."""
+        """Running the inference only once for the currently active dataloader."""
         num_steps = len(self._loader)
 
         pbar_desc = "Process Batch: "
@@ -598,14 +616,16 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOSegmentorConfig): Object which defines I/O placement during
-                inference and when assembling back to full tile/wsi.
-            loader (torch.Dataloader): The loader object which return batch of data
-                to be input to model.
-            save_path (str): Location to save output prediction as well as possible
-                intermediat results.
-            mode (str): `tile` or `wsi` to indicate run mode.
+            wsi_idx (int):
+                Index of the tile/wsi to be processed within `self`.
+            ioconfig (IOSegmentorConfig):
+                Object which defines I/O placement during inference and
+                when assembling back to full tile/wsi.
+            save_path (str):
+                Location to save output prediction as well as possible
+                intermediate results.
+            mode (str):
+                `tile` or `wsi` to indicate run mode.
 
         """
         wsi_path = self.imgs[wsi_idx]
