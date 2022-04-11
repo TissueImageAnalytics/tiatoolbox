@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Defines MicroNet architecture.
 
 Raza, SEA et al., “Micro-Net: A unified model for segmentation of
@@ -43,12 +24,16 @@ def group1_forward_branch(layer, in_tensor, resized_feat):
     """Defines group 1 connections.
 
     Args:
-        layer (torch.nn.Module): Network layer.
-        in_tensor (torch.Tensor): Input tensor.
-        resized_feat (torch.Tensor): Resized input.
+        layer (torch.nn.Module):
+            Network layer.
+        in_tensor (torch.Tensor):
+            Input tensor.
+        resized_feat (torch.Tensor):
+            Resized input.
 
     Returns:
-        torch.Tensor: Output of group 1 layer.
+        torch.Tensor:
+            Output of group 1 layer.
 
     """
     a = layer["conv1"](in_tensor)
@@ -63,11 +48,14 @@ def group2_forward_branch(layer, in_tensor):
     """Defines group 1 connections.
 
     Args:
-        layer (torch.nn.Module): Network layer.
-        in_tensor (torch.Tensor): Input tensor.
+        layer (torch.nn.Module):
+            Network layer.
+        in_tensor (torch.Tensor):
+            Input tensor.
 
     Returns:
-        torch.Tensor: Output of group 1 layer.
+        torch.Tensor:
+            Output of group 1 layer.
 
     """
     a = layer["conv1"](in_tensor)
@@ -78,9 +66,12 @@ def group3_forward_branch(layer, main_feat, skip):
     """Defines group 1 connections.
 
     Args:
-        layer (torch.nn.Module): Network layer.
-        main_feat (torch.Tensor): Input tensor.
-        skip (torch.Tensor): Skip connection.
+        layer (torch.nn.Module):
+            Network layer.
+        main_feat (torch.Tensor):
+            Input tensor.
+        skip (torch.Tensor):
+            Skip connection.
 
     Returns:
         torch.Tensor: Output of group 1 layer.
@@ -100,8 +91,10 @@ def group4_forward_branch(layer, in_tensor):
     """Defines group 1 connections.
 
     Args:
-        layer (torch.nn.Module): Network layer.
-        in_tensor (torch.Tensor): Input tensor.
+        layer (torch.nn.Module):
+            Network layer.
+        in_tensor (torch.Tensor):
+            Input tensor.
 
     Returns:
         torch.Tensor: Output of group 1 layer.
@@ -115,13 +108,16 @@ def group1_arch_branch(in_ch: int, resized_in_ch: int, out_ch: int):
     """Group1 branch for MicroNet.
 
     Args:
-        in_ch (int): Number of input channels.
-        resized_in_ch (int): Number of input channels from
-            resized input.
-        out_ch (int): Number of output channels.
+        in_ch (int):
+            Number of input channels.
+        resized_in_ch (int):
+            Number of input channels from resized input.
+        out_ch (int):
+            Number of output channels.
 
     Returns:
-        torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+        torch.nn.ModuleDict:
+            An output of type :class:`torch.nn.ModuleDict`
 
     """
     module_dict = OrderedDict()
@@ -180,11 +176,14 @@ def group2_arch_branch(in_ch, out_ch):
     """Group2 branch for MicroNet.
 
     Args:
-        in_ch (int): Number of input channels.
-        out_ch (int): Number of output channels.
+        in_ch (int):
+            Number of input channels.
+        out_ch (int):
+            Number of output channels.
 
     Returns:
-        torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+        torch.nn.ModuleDict:
+            An output of type :class:`torch.nn.ModuleDict`
 
     """
     module_dict = OrderedDict()
@@ -217,12 +216,16 @@ def group3_arch_branch(in_ch, skip, out_ch):
     """Group3 branch for MicroNet.
 
     Args:
-        in_ch (int): Number of input channels.
-        skip (int): Number of channels for the skip connection.
-        out_ch (int): Number of output channels.
+        in_ch (int):
+            Number of input channels.
+        skip (int):
+            Number of channels for the skip connection.
+        out_ch (int):
+            Number of output channels.
 
     Returns:
-        torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+        torch.nn.ModuleDict:
+            An output of type :class:`torch.nn.ModuleDict`
 
     """
     module_dict = OrderedDict()
@@ -277,15 +280,20 @@ def group4_arch_branch(in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2)):
     """Group4 branch for MicroNet.
 
     Args:
-        in_ch (int): Number of input channels.
-        out_ch (int): Number of output channels.
-        up_kernel (tuple of int): Kernel size for
+        in_ch (int):
+            Number of input channels.
+        out_ch (int):
+            Number of output channels.
+        up_kernel (tuple of int):
+            Kernel size for
             :class:`torch.nn.ConvTranspose2d`.
-        up_strides (tuple of int): Stride size for
+        up_strides (tuple of int):
+            Stride size for
             :class:`torch.nn.ConvTranspose2d`.
 
     Returns:
-        torch.nn.ModuleDict: An output of type :class:`torch.nn.ModuleDict`
+        torch.nn.ModuleDict:
+            An output of type :class:`torch.nn.ModuleDict`
 
     """
     module_dict = OrderedDict()
@@ -310,11 +318,14 @@ def out_arch_branch(in_ch, num_class=2):
     """Group5 branch for MicroNet.
 
     Args:
-        in_ch (int): Number of input channels.
-        num_class (int): Number of output channels. default=2.
+        in_ch (int):
+            Number of input channels.
+        num_class (int):
+            Number of output channels. default=2.
 
     Returns:
-        torch.nn.Sequential: An output of type :class:`torch.nn.Sequential`
+        torch.nn.Sequential:
+            An output of type :class:`torch.nn.Sequential`
 
     """
     return nn.Sequential(
@@ -333,13 +344,16 @@ def out_arch_branch(in_ch, num_class=2):
 
 class MicroNet(ModelABC):
     """Initialise MicroNet [1].
-    The following models have been included in tiatoolbox.
-    1. `micronet-consep`: This is trained on
-    `ConSep dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_
-    The model is retrained in torch as the original model with results on ConSep [2]
-    was trained in TensorFlow.
 
-    The tiatoolbox model should produce following results on the ConSep dataset.
+    The following models have been included in tiatoolbox:
+    1. `micronet-consep`:
+        This is trained on `ConSep dataset
+        <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_ The
+        model is retrained in torch as the original model with results
+        on ConSep [2] was trained in TensorFlow.
+
+    The tiatoolbox model should produce following results on the ConSep
+    dataset.
 
     .. list-table:: MicroNet Performance
        :widths: 15 15 15 15 15 15 15 15
@@ -353,7 +367,7 @@ class MicroNet(ModelABC):
          - SQ
          - PQ
          - AJI+
-       * - micronet_hovernet-consep
+       * - micronet-consep
          - ConSep
          - 0.80
          - 0.49
@@ -363,8 +377,10 @@ class MicroNet(ModelABC):
          - 0.54
 
     Args:
-        num_input_channels (int): Number of channels in input. default=3.
-        num_class (int): Number of output channels. default=2.
+        num_input_channels (int):
+            Number of channels in input. default=3.
+        num_class (int):
+            Number of output channels. default=2.
 
     References:
         [1] Raza, Shan E Ahmed, et al. "Micro-Net: A unified model for
@@ -417,12 +433,13 @@ class MicroNet(ModelABC):
         This method defines how layers are used in forward operation.
 
         Args:
-            input_tensor (torch.Tensor): Input images, the tensor is
-                in the shape of NCHW.
+            input_tensor (torch.Tensor):
+                Input images, the tensor is in the shape of NHCW.
 
         Returns:
-            list: A list of main and auxiliary outputs.
-                The expected format is [main_output, aux1, aux2, aux3].
+            list:
+                A list of main and auxiliary outputs. The expected
+                format is `[main_output, aux1, aux2, aux3]`.
 
         """
         b1 = group1_forward_branch(
@@ -468,10 +485,12 @@ class MicroNet(ModelABC):
         """Post-processing script for MicroNet.
 
         Args:
-            image (ndarray): input image of type numpy array.
+            image (ndarray):
+                Input image of type numpy array.
 
         Returns:
-            ndarray: pixel-wise nuclear instance segmentation
+            :class:`numpy.ndarray`:
+                Pixel-wise nuclear instance segmentation
                 prediction.
 
         """
@@ -493,10 +512,12 @@ class MicroNet(ModelABC):
         Performs per image standardization.
 
         Args:
-            image (ndarray): input image of type numpy array.
+            image (:class:`numpy.ndarray`):
+                Input image of type numpy array.
 
         Returns:
-            :class:`numpy.ndarray`: Pre-processed numpy array.
+            :class:`numpy.ndarray`:
+                Pre-processed numpy array.
 
         """
         image = np.transpose(image, axes=(2, 0, 1))
@@ -518,20 +539,23 @@ class MicroNet(ModelABC):
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch.
 
-        This contains logic for forward operation as well as batch i/o
+        This contains logic for forward operation as well as batch I/O
         aggregation.
 
         Args:
-            model (nn.Module): PyTorch defined model.
-            batch_data (ndarray): a batch of data generated by
-                torch.utils.data.DataLoader.
-            on_gpu (bool): Whether to run inference on a GPU.
+            model (nn.Module):
+                PyTorch defined model.
+            batch_data (:class:`numpy.ndarray`):
+                A batch of data generated by
+                `torch.utils.data.DataLoader`.
+            on_gpu (bool):
+                Whether to run inference on a GPU.
 
         Returns:
-            List of output from each head, each head is expected to contain
-            N predictions for N input patches. There are two cases, one
-            with 2 heads (Nuclei Pixels `np` and Hover `hv`) or with 2 heads
-            (`np`, `hv`, and Nuclei Types `tp`).
+            List of output from each head, each head is expected to
+            contain N predictions for N input patches. There are two
+            cases, one with 2 heads (Nuclei Pixels `np` and Hover `hv`)
+            or with 2 heads (`np`, `hv`, and Nuclei Types `tp`).
 
         """
         patch_imgs = batch_data
