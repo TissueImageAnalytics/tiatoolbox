@@ -40,7 +40,7 @@ def cell_polygon(
     xy: Tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 10,
-    noise: Number = 1,
+    noise: Number = 0.01,
     eccentricity: Tuple[Number, Number] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
@@ -69,10 +69,10 @@ def cell_polygon(
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
     rx = radius * (np.random.rand() + 0.5)
-    ry = np.random.uniform(*eccentricity) * radius - rx
+    ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
     x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
     y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
-    boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
+    boundary_coords = np.stack([x, y], axis=1).tolist()
 
     # Copy first coordinate to the end if required
     if repeat_first:

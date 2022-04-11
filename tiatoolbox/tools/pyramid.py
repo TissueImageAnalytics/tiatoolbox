@@ -22,12 +22,11 @@ from typing import Iterable, Tuple, Union
 import defusedxml
 import numpy as np
 from PIL import Image
-import cv2
 from shapely.geometry import Polygon
 
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.wsicore.wsireader import WSIReader, WSIMeta
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils.visualization import AnnotationRenderer
 
 defusedxml.defuse_stdlib()
@@ -477,14 +476,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         downsample: int = 2,
         overlap: int = 0,
     ):
+        super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store
-        if renderer == None:
+        if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer
-        self.tile_size = tile_size
-        self.overlap = overlap
-        self.downsample = downsample
 
     def get_thumb_tile(self) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
@@ -500,13 +497,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         bounds = (0, 0, *slide_dims)
         rgb = np.zeros((*out_dims, 4), dtype=np.uint8)
         bound_geom = Polygon.from_bounds(*bounds)
-        rgb = self.renderer.render(
-            rgb,
-            self.store.query(bound_geom, self.renderer.where),
-            (0, 0),
-            bound_geom,
-            scale,
-        )
+        rgb = self.render_annotations(rgb, bound_geom, scale, (0, 0))
         return Image.fromarray(rgb)
 
     @lru_cache(maxsize=None)
@@ -543,6 +534,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         level: int,
         x: int,
         y: int,
+        pad_mode: str = None,
+        interpolation: str = None,
     ) -> Image:
         """Render a tile at a given level and coordinate.
 
@@ -577,6 +570,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             >>> tile_0_0_0 = tile_generator.get_tile(level=0, x=0, y=0)
 
         """
+        if pad_mode is not None or interpolation is not None:
+            warnings.warn(
+                "interpolation, pad_mode are unused by AnnotationTileGenerator"
+            )
         if level < 0:
             raise IndexError
         if level > self.level_count:
@@ -602,12 +599,63 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         rgb = np.zeros((*output_size, 4), dtype=np.uint8)
         bounds = locsize2bounds(coord, [self.tile_size * scale] * 2)
         bound_geom = Polygon.from_bounds(*bounds)
-        rgb = self.renderer.render(
-            rgb,
-            self.store.query(bound_geom, self.renderer.where, bbox_only=scale>self.renderer.max_scale),
-            coord,
-            bound_geom,
-            scale,
-        )
+        rgb = self.render_annotations(rgb, bound_geom, scale, coord)
 
         return Image.fromarray(rgb)
+
+    def render_annotations(self, rgb, bound_geom, scale, tl):
+        """get annotations as bbox or geometry according to zoom level,
+        and decimate large collections of small annotations if appropriate
+        """
+        r = self.renderer
+        big_thresh = 0.01 * (self.tile_size * scale) ** 2
+        decimate = int(scale / self.renderer.max_scale)
+        if scale > 100:
+            decimate = decimate * 2
+
+        if scale > self.renderer.max_scale:
+            anns_dict = self.store.keyed_query(
+                bound_geom, self.renderer.where, bbox_only=True
+            )
+            if len(anns_dict) < 40:
+                decimate = 1
+            i = 0
+            for key, ann in anns_dict.items():
+                i += 1
+                if ann.geometry.area > big_thresh:
+                    ann = self.store[key]
+                    ann_bounded = ann.geometry.intersection(bound_geom)
+                    if ann_bounded.geom_type == "Polygon":
+                        r.render_poly(rgb, ann, ann_bounded, tl, scale)
+                    elif "Line" in ann_bounded.geom_type:
+                        r.render_line(rgb, ann, ann_bounded, tl, scale)
+                    else:
+                        print("unknown geometry")
+                    continue
+                if i % decimate == 0:
+                    if ann.geometry.geom_type == "Point":
+                        r.render_pt(rgb, ann, tl, scale)
+                        continue
+                    ann_bounded = ann.geometry.intersection(bound_geom)
+                    if ann_bounded.geom_type == "Polygon":
+                        r.render_rect(rgb, ann, ann_bounded, tl, scale)
+                    elif "Line" in ann_bounded.geom_type:
+                        ann_bounded = ann.geometry.intersection(bound_geom)
+                        r.render_line(rgb, ann, ann_bounded, tl, scale)
+                    else:
+                        print("unknown geometry")
+        else:
+            anns = self.store.query(bound_geom, self.renderer.where, bbox_only=False)
+            for ann in anns:
+                if ann.geometry.geom_type == "Point":
+                    r.render_pt(rgb, ann, tl, scale)
+                    continue
+                ann_bounded = ann.geometry.intersection(bound_geom)
+                if ann_bounded.geom_type == "Polygon":
+                    r.render_poly(rgb, ann, ann_bounded, tl, scale)
+                elif "Line" in ann_bounded.geom_type:
+                    r.render_line(rgb, ann, ann_bounded, tl, scale)
+                else:
+                    print("unknown geometry")
+
+        return rgb

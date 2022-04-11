@@ -9,7 +9,7 @@ from flask import Flask, Response, send_file
 from flask.templating import render_template
 
 from tiatoolbox import data
-from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
+from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -116,7 +116,7 @@ class TileServer(Flask):
                 "size": [int(x) for x in layer.info.slide_dimensions],
                 "mpp": float(np.mean(layer.info.mpp)),
             }
-            for name, layer in self.tia_layers.items()    
+            for name, layer in self.tia_layers.items()
         ]
 
         return render_template(
