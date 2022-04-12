@@ -24,10 +24,10 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon
 
-from tiatoolbox.utils.transforms import imresize, locsize2bounds
-from tiatoolbox.wsicore.wsireader import WSIReader, WSIMeta
 from tiatoolbox.annotation.storage import AnnotationStore
+from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
+from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
 defusedxml.defuse_stdlib()
 
@@ -609,7 +609,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         """
         r = self.renderer
         big_thresh = 0.01 * (self.tile_size * scale) ** 2
-        decimate = int(scale / self.renderer.max_scale)
+        decimate = int(scale / self.renderer.max_scale) + 1
         if scale > 100:
             decimate = decimate * 2
 
