@@ -72,7 +72,7 @@ def cell_polygon(
     ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
     x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
     y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
-    boundary_coords = np.stack([x, y], axis=1).tolist()
+    boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
 
     # Copy first coordinate to the end if required
     if repeat_first:
