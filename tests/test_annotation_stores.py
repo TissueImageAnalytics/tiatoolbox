@@ -1079,6 +1079,7 @@ class TestStore:
         """Test that _is_right_angle returns True only for right angles."""
         store = store_cls()
 
+        # skipcq
         r"""
         c
         |
@@ -1093,6 +1094,7 @@ class TestStore:
             ]
         )
 
+        # skipcq
         r"""
         a
         |
@@ -1107,6 +1109,7 @@ class TestStore:
             ]
         )
 
+        # skipcq
         r"""
            c
             \
