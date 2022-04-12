@@ -18,8 +18,14 @@ files:
     extract: True
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
+  tiled-tiff-1-small-jpeg:
+    url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
+  tiled-tiff-1-small-jp2k:
+    url: [*wsis, "CMU-1-Small-Region.jp2k.tiff"]
   ome-brightfield-pyramid-1-small:
     url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
+  two-tiled-pages:
+    url: [*wsis, "two-tiled-pages.tiff"]
   jp2-omnyx-1:
     url: [*wsis, "test1.jp2"]
   stainnorm-source:
