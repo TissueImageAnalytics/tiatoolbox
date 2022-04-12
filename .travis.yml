@@ -20,6 +20,10 @@ install:
     - source "$HOME/miniconda/etc/profile.d/conda.sh"
     - pip install -U tox-travis
 
+# Used for printing debugging info before running checks
+before_script:
+    - sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
+
 # Command to run tests, e.g. python setup.py test
 script:
     - set -e # Exit on first failure (errexit)
