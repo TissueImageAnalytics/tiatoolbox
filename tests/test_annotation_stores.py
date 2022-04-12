@@ -399,7 +399,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 6
-        assert all(isinstance(ann, Annotation) for ann in results)
+        assert all(isinstance(ann, Annotation) for ann in results.values())
 
     @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store_cls):
@@ -994,3 +994,11 @@ class TestStore:
         monkeypatch.setattr(sys, "version_info", py37_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
+
+    @staticmethod
+    def test_bquery(fill_store, store_cls):
+        """Test querying a store with a bounding box."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery((0, 0, 1024, 1024))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)

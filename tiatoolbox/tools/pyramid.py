@@ -614,13 +614,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             decimate = decimate * 2
 
         if scale > self.renderer.max_scale:
-            anns_dict = self.store.keyed_query(
-                bound_geom, self.renderer.where, bbox_only=True
-            )
+            anns_dict = self.store.bquery(bound_geom, self.renderer.where)
             if len(anns_dict) < 40:
                 decimate = 1
             i = 0
-            for key, ann in anns_dict.items():
+            for key, bounds in anns_dict.items():
+                ann = Polygon.from_bounds(*bounds)
                 i += 1
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
@@ -645,8 +644,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print("unknown geometry")
         else:
-            anns = self.store.query(bound_geom, self.renderer.where, bbox_only=False)
-            for ann in anns:
+            anns_dict = self.store.query(bound_geom, self.renderer.where)
+            for ann in anns_dict.values():
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue
