@@ -663,7 +663,7 @@ class AnnotationStore(ABC, MutableMapping):
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
             geometry_predicate (str):
-                A string which define which binary geometry predicate to
+                A string defining which binary geometry predicate to
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
