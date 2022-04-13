@@ -19,7 +19,6 @@ dependencies:
   - h5py
   - imagecodecs>2021.11.20
   - jupyterlab
-  - nbsphinx
   - matplotlib>=3.5.1
   - numpy>=1.21.5
   - opencv>=4.5.5
