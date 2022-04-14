@@ -351,6 +351,34 @@ class WSIStreamDataset(torch_data.Dataset):
 class SemanticSegmentor:
     """Pixel-wise segmentation predictor.
 
+    The tiatoolbox model should produce the following results on the BCSS dataset
+    using fcn_resnet50_unet-bcss.
+
+    .. list-table:: Semantic segmentation performance on the BCSS dataset
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+       * - 
+         - Tumour
+         - Stroma
+         - Inflammatory
+         - Necrosis
+         - Other
+         - All
+       * - Amgad et al.
+         - 0.851
+         - 0.800
+         - 0.712
+         - 0.723
+         - 0.666
+         - 0.750
+       * - TIAToolbox
+         - 0.885
+         - 0.825
+         - 0.761
+         - 0.765
+         - 0.581
+         - 0.763
+
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 

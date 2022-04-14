@@ -44,6 +44,90 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 class PatchPredictor:
     """Patch-level predictor.
 
+    The models provided by tiatoolbox should give the following results:
+
+    .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
+       :widths: 15 15
+       :header-rows: 1
+
+       * - Model name
+         - F_1 score
+       * - alexnet-kather100k
+         - 0.965
+       * - resnet18-kather100k
+         - 0.990
+       * - resnet34-kather100k
+         - 0.991
+       * - resnet50-kather100k
+         - 0.989
+       * - resnet101-kather100k
+         - 0.989
+       * - resnext50_32x4d-kather100k
+         - 0.992
+       * - resnext101_32x8d-kather100k
+         - 0.991
+       * - wide_resnet50_2-kather100k
+         - 0.989
+       * - wide_resnet101_2-kather100k
+         - 0.990
+       * - densenet121-kather100k
+         - 0.993
+       * - densenet161-kather100k
+         - 0.992
+       * - densenet169-kather100k
+         - 0.992
+       * - densenet201-kather100k
+         - 0.991
+       * - mobilenet_v2-kather100k
+         - 0.990
+       * - mobilenet_v3_large-kather100k
+         - 0.991
+       * - mobilenet_v3_small-kather100k
+         - 0.992
+       * - googlenet-kather100k
+         - 0.992
+    
+    .. list-table:: PatchPredictor performance on the PCam dataset [2]
+       :widths: 15 15
+       :header-rows: 1
+
+       * - Model name
+         - F_1 score
+       * - alexnet-pcam
+         - 0.840
+       * - resnet18-pcam
+         - 0.888
+       * - resnet34-pcam
+         - 0.889
+       * - resnet50-pcam
+         - 0.892
+       * - resnet101-pcam
+         - 0.888
+       * - resnext50_32x4d-pcam
+         - 0.900
+       * - resnext101_32x8d-pcam
+         - 0.892
+       * - wide_resnet50_2-pcam
+         - 0.901
+       * - wide_resnet101_2-pcam
+         - 0.898
+       * - densenet121-pcam
+         - 0.897
+       * - densenet161-pcam
+         - 0.893
+       * - densenet169-pcam
+         - 0.895
+       * - densenet201-pcam
+         - 0.891
+       * - mobilenet_v2-pcam
+         - 0.899
+       * - mobilenet_v3_large-pcam
+         - 0.895
+       * - mobilenet_v3_small-pcam
+         - 0.890
+       * - googlenet-pcam
+         - 0.867
+
     Args:
         model (nn.Module):
             Use externally defined PyTorch model for prediction with.
@@ -123,6 +207,15 @@ class PatchPredictor:
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(wsi_file, mode='wsi')
+    
+    References:
+        [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
+        histology slides using deep learning: A retrospective multicenter study." 
+        PLoS medicine 16.1 (2019): e1002730.
+
+        [2] Veeling, Bastiaan S., et al. "Rotation equivariant CNNs for digital
+        pathology." International Conference on Medical image computing and
+        computer-assisted intervention. Springer, Cham, 2018.
 
     """
 

@@ -347,15 +347,14 @@ class MicroNet(ModelABC):
 
     The following models have been included in tiatoolbox:
     1. `micronet-consep`:
-        This is trained on `ConSep dataset
+        This is trained on `CoNSeP dataset
         <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_ The
         model is retrained in torch as the original model with results
-        on ConSep [2] was trained in TensorFlow.
+        on CoNSeP [2] was trained in TensorFlow.
 
-    The tiatoolbox model should produce following results on the ConSep
-    dataset.
+    The tiatoolbox model should produce the following results on the CoNSeP dataset:
 
-    .. list-table:: MicroNet Performance
+    .. list-table:: MicroNet performance
        :widths: 15 15 15 15 15 15 15 15
        :header-rows: 1
 
@@ -366,15 +365,13 @@ class MicroNet(ModelABC):
          - DQ
          - SQ
          - PQ
-         - AJI+
        * - micronet-consep
-         - ConSep
+         - CoNSeP
          - 0.80
          - 0.49
          - 0.62
          - 0.75
          - 0.47
-         - 0.54
 
     Args:
         num_input_channels (int):

@@ -258,7 +258,47 @@ class ResidualBlock(nn.Module):
 
 
 class HoVerNet(ModelABC):
-    """HoVerNet Architecture.
+    """Initialise HoVerNet [1].
+
+    The tiatoolbox models should produce the following results:
+
+    .. list-table:: HoVerNet segmentation performance on the Kumar dataset [2]
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernet-original-kumar
+         - Kumar
+         - 0.83
+         - 0.62
+         - 0.77
+         - 0.77
+         - 0.60
+    
+    .. list-table:: HoVerNet segmentation performance on the CoNSeP dataset [1]
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernet-original-consep
+         - PanNuke
+         - 0.85
+         - 0.57
+         - 0.70
+         - 0.78
+         - 0.55
 
     Args:
         num_input_channels (int):
@@ -272,12 +312,14 @@ class HoVerNet(ModelABC):
             (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
-        Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
+        [1] Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
+        
+        [2] Kumar, Neeraj, et al. "A dataset and a technique for generalized
+        nuclear segmentation for computational pathology."
+        IEEE transactions on medical imaging 36.7 (2017): 1550-1560.
 
-        Gamper, Jevgenij, et al. "PanNuke dataset extension, insights
-        and baselines." arXiv preprint arXiv:2003.10778 (2020).
 
     """
 
