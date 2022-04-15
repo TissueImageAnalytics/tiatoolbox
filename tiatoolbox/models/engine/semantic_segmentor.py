@@ -357,6 +357,7 @@ class SemanticSegmentor:
     .. list-table:: Semantic segmentation performance on the BCSS dataset
        :widths: 15 15 15 15 15 15 15
        :header-rows: 1
+
        * - 
          - Tumour
          - Stroma

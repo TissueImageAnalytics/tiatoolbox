@@ -355,7 +355,7 @@ class MicroNet(ModelABC):
     The tiatoolbox model should produce the following results on the CoNSeP dataset:
 
     .. list-table:: MicroNet performance
-       :widths: 15 15 15 15 15 15 15 15
+       :widths: 15 15 15 15 15 15 15
        :header-rows: 1
 
        * - Model name
