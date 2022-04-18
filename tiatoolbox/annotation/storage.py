@@ -24,10 +24,12 @@ Properties
 """
 import contextlib
 import copy
+import joblib
 import json
 import pickle
 import sqlite3
 import sys
+from typing_extensions import Self
 import uuid
 import warnings
 import zlib
@@ -57,6 +59,7 @@ from shapely import speedups, wkb, wkt
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
+from shapely.validation import make_valid
 
 import tiatoolbox
 from tiatoolbox import logger
@@ -507,6 +510,17 @@ class AnnotationStore(ABC, MutableMapping):
         if isinstance(predicate, bytes):
             predicate = pickle.loads(predicate)  # skipcq: BAN-B301
         return bool(predicate(properties))
+    
+    @abstractmethod
+    def query_property(
+        self,
+        sel_prop,
+        geometry: QueryGeometry,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        geometry_predicate="intersects",
+        distinct = False,
+    ) -> List[str]:
+        """get properties"""
 
     def query(
         self,
@@ -834,6 +848,36 @@ class AnnotationStore(ABC, MutableMapping):
         store.append_many(anns)
         return store
 
+    def add_from(self, fp: Union[IO, str]) -> "AnnotationStore":
+        fp = Path(fp)
+        if fp.suffix=='.geojson':
+            geojson = self._load_cases(
+                fp=fp,
+                string_fn=json.loads,
+                file_fn=json.load,
+            )
+            """for feature in geojson["features"]:
+                geometry = feature2geometry(feature["geometry"])
+                properties = feature["properties"]
+                store.append(Annotation(geometry, properties))
+            return store"""
+            anns = [
+                Annotation(feature2geometry(feature["geometry"]), feature["properties"])
+                for feature in geojson["features"]
+            ]
+        elif fp.suffix=='.dat':
+            #hovernet-stype .dat file
+            data = joblib.load(fp)
+            props = list(data[list(data.keys())[0]].keys())[3:]
+            anns = [
+                Annotation(make_valid(feature2geometry({'type': 'Polygon', 'coordinates': [data[key]['contour']]})), {key2: data[key][key2] for key2 in props})
+                for key in data.keys()
+            ]
+        else:
+            raise ValueError('Invalid file type')
+        print(len(anns))
+        self.append_many(anns)
+
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
         """Serialise the store to geoJSON.
 
@@ -1077,10 +1121,10 @@ class SQLiteStore(AnnotationStore):
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
-        if not all(
+        '''if not all(
             ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
         ):
-            raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+            raise Exception("RTREE and JSON1 sqlite3 compile options are required.")'''
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
@@ -1441,6 +1485,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, str):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
+            print(sql_predicate)
         if isinstance(where, bytes):
             query_string += "AND pickle_where(:where, properties)"
             query_parameters["where"] = where
@@ -1468,6 +1513,35 @@ class SQLiteStore(AnnotationStore):
                 if where(json.loads(properties))
             ]
         return [key for key, in cur.fetchall()]
+
+    
+    def query_property(
+        self,
+        sel_prop,
+        geometry: QueryGeometry,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        geometry_predicate="intersects",
+        distinct: bool = False,
+    ) -> List[str]:
+        query_geometry = geometry
+        sql_select = eval(sel_prop, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+        if distinct:
+            sql_select = "DISTINCT " + str(sql_select)
+        cur = self._query(
+            str(sql_select),
+            geometry=query_geometry,
+            geometry_predicate=geometry_predicate,
+            where=where,
+            select_callable="[key], geometry, properties",
+        )
+        if isinstance(where, Callable):
+            return [
+                key
+                for key, _, properties in cur.fetchall()
+                if where(json.loads(properties))
+            ]
+        return [val for val, in cur.fetchall()]
+
 
     def keyed_query(
         self,

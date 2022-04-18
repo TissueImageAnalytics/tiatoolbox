@@ -622,7 +622,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     ann_bounded = ann.geometry.intersection(bound_geom)
                     if ann_bounded.geom_type == "Polygon":
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
-                    elif "Line" in ann_bounded.geom_type:
+                    elif ann_bounded.geom_type == "LineString":
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
                         print("unknown geometry")
@@ -634,7 +634,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     ann_bounded = ann.geometry.intersection(bound_geom)
                     if ann_bounded.geom_type == "Polygon":
                         r.render_rect(rgb, ann, ann_bounded, tl, scale)
-                    elif "Line" in ann_bounded.geom_type:
+                    elif ann_bounded.geom_type == "LineString":
                         ann_bounded = ann.geometry.intersection(bound_geom)
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
@@ -648,7 +648,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 ann_bounded = ann.geometry.intersection(bound_geom)
                 if ann_bounded.geom_type == "Polygon":
                     r.render_poly(rgb, ann, ann_bounded, tl, scale)
-                elif "Line" in ann_bounded.geom_type:
+                elif ann_bounded.geom_type == "LineString":
                     r.render_line(rgb, ann, ann_bounded, tl, scale)
                 else:
                     print("unknown geometry")

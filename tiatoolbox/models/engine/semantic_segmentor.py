@@ -265,11 +265,15 @@ class WSIStreamDataset(torch_data.Dataset):
 
     def _get_reader(self, img_path):
         """Get approriate reader for input path."""
-        img_path = pathlib.Path(img_path)
+        if not isinstance(img_path, np.ndarray):
+            img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
             reader = get_wsireader(img_path)
         else:
-            img = imread(img_path)
+            if isinstance(img_path, np.ndarray):
+                img = img_path
+            else:
+                img = imread(img_path)
             # initialise metadata for VirtualWSIReader.
             # here, we simulate a whole-slide image, but with a single level.
             metadata = WSIMeta(
@@ -549,15 +553,18 @@ class SemanticSegmentor:
     @staticmethod
     def get_reader(img_path: str, mask_path: str, mode: str, auto_get_mask: bool):
         """Define how to get reader for mask and source image."""
-        img_path = pathlib.Path(img_path)
+        if not isinstance(img_path, np.ndarray):
+            img_path = pathlib.Path(img_path)
         reader = get_wsireader(img_path)
 
         mask_reader = None
         if mask_path is not None:
-            if not os.path.isfile(mask_path):
-                raise ValueError("`mask_path` must be a valid file path.")
-            mask = imread(mask_path)  # assume to be gray
-            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+            if os.path.isfile(mask_path):
+                #raise ValueError("`mask_path` must be a valid file path.")
+                mask = imread(mask_path)  # assume to be gray
+            else:
+                mask = mask_path
+            #mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
 
             mask_reader = VirtualWSIReader(mask)

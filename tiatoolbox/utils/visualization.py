@@ -8,6 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
+import warnings
 
 
 def random_colors(num_colors, bright=True):
@@ -432,13 +433,15 @@ class AnnotationRenderer:
     def get_color(self, ann):
         """get the color for an annotation"""
         if self.score_prop is not None:
-            col = tuple(
-                int(c * 255)
-                for c in self.mapper(self.score_fn(ann.properties[self.score_prop]))
-            )
-        else:
-            col = (0, 255, 0, 255)  # default color if no score_prop given
-        return col
+            try:
+                return tuple(
+                    int(c * 255)
+                    for c in self.mapper(self.score_fn(ann.properties[self.score_prop]))
+                )
+            except KeyError:
+                warnings.warn("score_prop not found in annotation properties. Using default color.")
+                
+        return (0, 255, 0, 255)  # default color if no score_prop given
 
     def render_poly(self, rgb, ann, ann_bounded, tl, scale):
         """render a polygon annotation onto a tile using cv2"""
