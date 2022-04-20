@@ -993,10 +993,19 @@ class SQLiteStore(AnnotationStore):
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
-        if not all(
-            ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
-        ):
-            raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+        if sqlite3.sqlite_version_info >= (3, 38, 0):
+            if not all(
+                ["OMIT_JSON" not in compile_options, "ENABLE_RTREE" in compile_options]
+            ):
+                raise Exception(
+                    """RTREE sqlite3 compile option is required, and
+                    JSON must not be disabled with OMIT_JSON compile option"""
+                )
+        else:
+            if not all(
+                ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
+            ):
+                raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
