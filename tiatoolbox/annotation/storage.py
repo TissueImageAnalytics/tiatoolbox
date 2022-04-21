@@ -1378,22 +1378,22 @@ class SQLiteStore(AnnotationStore):
 
     def _query(
         self,
-        select: str,
+        rows: str,
         geometry: Optional[Geometry] = None,
-        select_callable: Optional[str] = None,
+        callable_rows: Optional[str] = None,
         geometry_predicate="intersects",
         where: Optional[Predicate] = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
         Args:
-            select(str):
+            rows(str):
                 The rows to select.
             geometry(tuple or Geometry):
                 The geometry being queries against.
             select_callable(str):
                 The rows to select when a callable is given to `where`.
-            geometry_predicate(str):
+            callable_rows(str):
                 The binary predicate to use when comparing `geometry`
                 with each candidate shape.
             where (str or bytes or Callable):
@@ -1408,8 +1408,8 @@ class SQLiteStore(AnnotationStore):
         if all(x is None for x in (geometry, where)):
             raise ValueError("At least one of `geometry` or `where` must be specified.")
         query_geometry = geometry
-        if select_callable is None:
-            select_callable = select
+        if callable_rows is None:
+            callable_rows = rows
         if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
@@ -1417,25 +1417,28 @@ class SQLiteStore(AnnotationStore):
             )
         cur = self.con.cursor()
 
-        # Normalise query geometry and determine
-        is_box = False
+        # Normalise query geometry and determine if it is a rectangle
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
-            is_box = True
 
         if isinstance(where, Callable):
-            select = select_callable
+            rows = callable_rows
 
         # Initialise the query string and parameters
         query_string = (
             "SELECT "  # skipcq: BAN-B608
-            + select  # skipcq: BAN-B608
+            + rows  # skipcq: BAN-B608
             + """
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
         """
         )
         query_parameters = {}
+
+        # Predicate is a string
+        if isinstance(where, str):
+            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+            query_string += f" AND {sql_predicate}"
 
         # There is query geometry
         if query_geometry is not None:
@@ -1445,6 +1448,9 @@ class SQLiteStore(AnnotationStore):
             AND min_x <= :max_x
             AND max_y >= :min_y
             AND min_y <= :max_y
+            AND geometry_predicate(
+                :geometry_predicate, :query_geometry, geometry, cx, cy
+            )
             """
 
             # Find the bounds of the geometry for the rtree index
@@ -1457,36 +1463,14 @@ class SQLiteStore(AnnotationStore):
                     "max_x": max_x,
                     "min_y": min_y,
                     "max_y": max_y,
+                    "geometry_predicate": geometry_predicate,
+                    "query_geometry": query_geometry.wkb,
                 }
             )
 
-            # Check if the geometry is equivalent to a box/rectangle
-            is_box = is_box or self._is_rectangle(*query_geometry.exterior.coords)
-            if not is_box:
-                query_string += """
-                AND geometry_predicate(
-                    :geometry_predicate,
-                    :query_geometry,
-                    geometry, cx, cy
-                )
-                """
-
-                # Update query parameters
-                query_parameters.update(
-                    {
-                        "geometry_predicate": geometry_predicate,
-                        "query_geometry": query_geometry.wkb,
-                    }
-                )
-
-        # Predicate is a string
-        if isinstance(where, str):
-            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
-            query_string += f" AND {sql_predicate}"
-
         # Predicate is pickled function
         if isinstance(where, bytes):
-            query_string += " AND pickle_where(:where, properties)"
+            query_string += "\nAND pickle_where(:where, properties)"
             query_parameters["where"] = where
 
         cur.execute(query_string, query_parameters)
@@ -1504,12 +1488,12 @@ class SQLiteStore(AnnotationStore):
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
-            select_callable="[key], geometry, properties",
+            callable_rows="[key], properties",
         )
         if isinstance(where, Callable):
             return [
                 key
-                for key, _, properties in cur.fetchall()
+                for key, properties in cur.fetchall()
                 if where(json.loads(properties))
             ]
         return [key for key, in cur.fetchall()]

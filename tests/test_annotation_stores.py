@@ -818,8 +818,9 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            (0, 0, 1024, 1024),
-            where=lambda props: props.get("class") == 123,
+            # (0, 0, 1024, 1024),
+            where=lambda props: props.get("class")
+            == 123,
         )
         assert len(results) == 1
 
@@ -1131,3 +1132,53 @@ class TestStore:
                 (0.2, 1),
             ]
         )
+
+    @staticmethod
+    def test_box_query_polygon_intersection(store_cls):
+        """Test that a box query correctly checks intersections with polygons."""
+        store = store_cls()
+
+        # Add a triangle annotation
+        store["foo"] = Annotation(Polygon([(0, 10), (10, 10), (10, 0)]))
+        # ASCII diagram of the annotation with points labeled from a to
+        # c:
+        r"""
+        a-----b
+         \    |
+          \   |
+           \  |
+            \ |
+             \|
+              c
+        """
+
+        # Query where the bounding boxes overlap but the geometries do
+        # not. Should return an empty result.
+        # ASCII diagram of the query:
+        r"""
+        a-----b
+         \    |
+          \   |
+           \  |
+        +--+\ |
+        |  | \|
+        +--+  c
+        """
+        result = store.query([0, 0, 4.9, 4.9], geometry_predicate="intersects")
+        assert len(result) == 0
+
+        # Query where the bounding boxes overlap and the geometries do.
+        # Should return the annotation.
+        # ASCII diagram of the query:
+        r"""
+        +------+
+        a-----b|
+        |\    ||
+        | \   ||
+        |  \  ||
+        |   \ ||
+        |    \||
+        +-----c+
+        """
+        result = store.query([0, 0, 11, 11], geometry_predicate="intersects")
+        assert len(result) == 1
