@@ -188,6 +188,7 @@ class AnnotationStore(ABC, MutableMapping):
         "overlaps",
         "touches",
         "within",
+        "bbox_intersects",  # Special non-shapely case, bounding-boxes intersect
     ]
 
     @classmethod  # noqa: A003
@@ -670,18 +671,27 @@ class AnnotationStore(ABC, MutableMapping):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
-        geometry_predicate: str = "intersects",
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
-        Acts the same as `AnnotationStore.query` except returns bounding
-        boxes instead of annotations.
+        Acts similarly to `AnnotationStore.query` except it checks for
+        intersection between sotred and query geometry bounding boxes.
+        This may be faster than a regular query in some cases, e.g. for
+        SQliteStore with a alrge number of annotations.
+
+        Note that this method only checks for bounding box intersection
+        and therefore may give a different result to using
+        `AnnotationStore.query` with a box polygon and the "intersects"
+        geometry predicate. Also note that geometry predicates are not
+        supported for this method.
 
         Args:
             geometry (Geometry or Iterable):
                 Geometry to use when querying. This can be a bounds
                 (iterable of length 4) or a Shapely geometry (e.g.
-                Polygon).
+                Polygon). If a geometry is provided, the bounds of the
+                geometry will be used for the query. Full geometry
+                intersection is not used for the query method.
             where (str or bytes or Callable):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
@@ -708,13 +718,6 @@ class AnnotationStore(ABC, MutableMapping):
                 input should never be accepted to this argument as
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
-            geometry_predicate:
-                A string which define which binary geometry predicate to
-                use when comparing the query geometry and a geometry in
-                the store. Only annotations for which this binary
-                predicate is true will be returned. Defaults to
-                intersects. For more information see the `shapely
-                documentation on binary predicates`__.
 
             Returns:
                 list:
@@ -727,11 +730,6 @@ class AnnotationStore(ABC, MutableMapping):
             __ BP_
 
         """
-        if geometry_predicate not in self._geometry_predicate_names:
-            raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
-            )
         query_geometry = geometry
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
@@ -739,8 +737,8 @@ class AnnotationStore(ABC, MutableMapping):
             key: annotation.geometry.bounds
             for key, annotation in self.items()
             if (
-                self._geometry_predicate(
-                    geometry_predicate, query_geometry, annotation.geometry
+                Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                    Polygon.from_bounds(*query_geometry.bounds)
                 )
                 and self._eval_where(where, annotation.properties)
             )
@@ -1414,7 +1412,6 @@ class SQLiteStore(AnnotationStore):
           AND min_x <= :max_x
           AND max_y >= :min_y
           AND min_y <= :max_y
-          AND geometry_predicate(:geometry_predicate, :query_geometry, geometry, cx, cy)
         """
         )
         query_parameters = {
@@ -1422,9 +1419,15 @@ class SQLiteStore(AnnotationStore):
             "max_x": max_x,
             "min_y": min_y,
             "max_y": max_y,
-            "geometry_predicate": geometry_predicate,
-            "query_geometry": query_geometry.wkb,
         }
+        if geometry_predicate != "bbox_intersects":
+            query_string += (
+                "\nAND geometry_predicate("
+                ":geometry_predicate, :query_geometry, geometry, cx, cy"
+                ") "
+            )
+            query_parameters["geometry_predicate"] = geometry_predicate
+            query_parameters["query_geometry"] = query_geometry.wkb
         if isinstance(where, str):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
@@ -1490,12 +1493,11 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        geometry_predicate: str = "intersects",
     ) -> Dict[str, Tuple[float, float, float, float]]:
         cur = self._query(
             select="[key], min_x, min_y, max_x, max_y",
             geometry=geometry,
-            geometry_predicate=geometry_predicate,
+            geometry_predicate="bbox_intersects",
             where=where,
             select_callable="[key], properties, min_x, min_y, max_x, max_y",
         )
