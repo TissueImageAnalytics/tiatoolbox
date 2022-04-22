@@ -1513,19 +1513,8 @@ class SQLiteStore(AnnotationStore):
 
         query_parameters = {}
 
-        if query_geometry is not None and geometry_predicate != "bbox_intersects":
-            query_string += (
-                "\nAND geometry_predicate("
-                ":geometry_predicate, :query_geometry, geometry, cx, cy"
-                ") "
-            )
-            query_parameters["geometry_predicate"] = geometry_predicate
-            query_parameters["query_geometry"] = query_geometry.wkb
-        if isinstance(where, str):
-            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
-            query_string += f" AND {sql_predicate}"
-
-        # There is query geometry
+        # There is query geometry, add a simple rtree bounds check to
+        # rapidly narrow candidates down.
         if query_geometry is not None:
             # Add rtree index checks to the query
             query_string += """
@@ -1550,10 +1539,28 @@ class SQLiteStore(AnnotationStore):
                 }
             )
 
+            # The query is a full intersection check, not a simple bounds
+            # check only.
+            if (
+                geometry_predicate is not None
+                and geometry_predicate != "bbox_intersects"
+            ):
+                query_string += (
+                    "\nAND geometry_predicate("
+                    ":geometry_predicate, :query_geometry, geometry, cx, cy"
+                    ") "
+                )
+                query_parameters["geometry_predicate"] = geometry_predicate
+                query_parameters["query_geometry"] = query_geometry.wkb
+
         # Predicate is pickled function
         if isinstance(where, bytes):
             query_string += "\nAND pickle_where(:where, properties)"
             query_parameters["where"] = where
+        # Predicate is a string
+        if isinstance(where, str):
+            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+            query_string += f" AND {sql_predicate}"
 
         cur.execute(query_string, query_parameters)
         return cur
