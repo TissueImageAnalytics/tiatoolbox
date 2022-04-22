@@ -1,24 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-
 import os
 import pathlib
 from abc import ABC, abstractmethod
@@ -33,14 +12,14 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Defines abstract base class for patch dataset.
 
     Attributes:
-        return_labels (bool, False): `__getitem__` will return both the img and
-          its label. If `labels` is `None`, `None` is returned
-        preproc_func: Preprocessing function used to transform the input data. If
-          supplied, then torch.Compose will be used on the input preprocs.
-          preprocs is a list of torchvision transforms for preprocessing the
-          image. The transforms will be applied in the order that they are given in
-          the list. For more information, use the following link:
-          https://pytorch.org/vision/stable/transforms.html.
+        preproc_func:
+            Preprocessing function used to transform the input data. If
+            supplied, then torch.Compose will be used on the input
+            preprocs. preprocs is a list of torchvision transforms for
+            preprocessing the image. The transforms will be applied in
+            the order that they are given in the list. For more
+            information, use the following link:
+            https://pytorch.org/vision/stable/transforms.html.
 
     """
 
@@ -54,11 +33,12 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         self.labels = []
 
     def _check_input_integrity(self, mode):
-        """Perform check to make sure variables received during init are valid.
+        """Check that variables received during init are valid.
 
         These checks include:
             - Input is of a singular data type, such as a list of paths.
-            - If it is list of images, all images are of the same height and width
+            - If it is list of images, all images are of the same height
+              and width.
 
         """
         if mode == "patch":
@@ -158,8 +138,10 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     def preproc_func(self, func):
         """Set the pre-processing function for this instance.
 
-        If `func=None`, the method will default to `self.preproc`. Otherwise,
-          `func` is expected to be callable and behave as follows:
+        If `func=None`, the method will default to `self.preproc`.
+        Otherwise, `func` is expected to be callable and behaves as
+        follows:
+
         >>> transformed_img = func(img)
 
         """

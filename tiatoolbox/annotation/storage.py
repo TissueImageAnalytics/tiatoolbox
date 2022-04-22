@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Storage of annotations.
 
 This module contains a collection of classes for handling storage of
@@ -1013,10 +993,19 @@ class SQLiteStore(AnnotationStore):
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
-        if not all(
-            ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
-        ):
-            raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+        if sqlite3.sqlite_version_info >= (3, 38, 0):
+            if not all(
+                ["OMIT_JSON" not in compile_options, "ENABLE_RTREE" in compile_options]
+            ):
+                raise Exception(
+                    """RTREE sqlite3 compile option is required, and
+                    JSON must not be disabled with OMIT_JSON compile option"""
+                )
+        else:
+            if not all(
+                ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
+            ):
+                raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
