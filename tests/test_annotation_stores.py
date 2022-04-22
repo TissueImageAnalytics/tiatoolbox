@@ -1186,11 +1186,7 @@ class TestStore:
     @staticmethod
     def test_bquery(fill_store, store_cls):
         """Test querying a store with a bounding box."""
-        import time
-
         _, store = fill_store(store_cls, ":memory:")
-        t0 = time.perf_counter()
         dictionary = store.bquery((0, 0, 1e10, 1e10))
-        print(time.perf_counter() - t0)
         assert isinstance(dictionary, dict)
         assert len(dictionary) == len(store)
