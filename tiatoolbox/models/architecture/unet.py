@@ -1,4 +1,4 @@
-"""Defines a set of ResNet variants to be used within tiatoolbox."""
+"""Defines a set of UNet variants to be used within tiatoolbox."""
 
 from typing import List, Tuple
 
@@ -151,8 +151,8 @@ class UnetEncoder(nn.Module):
         This method defines how layers are used in forward operation.
 
         Args:
-            x (torch.Tensor): Input images- the tensor is of the shape
-            NCHW.
+            x (torch.Tensor):
+                Input images- the tensor is of the shape NCHW.
 
         Returns:
             list:
@@ -178,26 +178,6 @@ class UNetModel(ModelABC):
     concatenation.
 
     Args:
-<<<<<<< HEAD
-        num_input_channels (int): Number of channels in input images.
-        num_output_channels (int): Number of channels in output images.
-        encoder (str): Name of the encoder, currently supports:
-          - "resnet50": The well-known ResNet50- this is not the pre-activation model.
-          - "unet": The vanilla UNet encoder where each down-sampling level
-            contains 2 blocks of Convolution-BatchNorm-ReLu.
-        encoder_levels (list): A list of integers to configure "unet" encoder levels.
-          Each number defines the number of output channels at each down-sampling
-          level (2 convolutions). Number of intergers define the number down-sampling
-          levels in the unet encoder. This is only applicable when `encoder="unet"`.
-        decoder_block (list): A list of convolution layers. Each item is an
-          integer and denotes the layer kernel size.
-        classifier (list): A list of convolution layers before the final 1x1
-          convolution. Each item is an integer denotes the layer kernel size. The
-          default is `None` and contains only the 1x1 convolution.
-        skip_type (str): Choosing between "add" or "concat" method to be used for
-          combining feature maps from encoder and decoder parts at skip connections.
-          Default is "add".
-=======
         num_input_channels (int):
             Number of channels in input images.
         num_output_channels (int):
@@ -208,10 +188,19 @@ class UNetModel(ModelABC):
               pre-activation model.
             - "unet": The vanilla UNet encoder where each down-sampling
               level contains 2 blocks of Convolution-BatchNorm-ReLu.
+        encoder_levels (list):
+            A list of integers to configure "unet" encoder levels.
+            Each number defines the number of output channels at each
+            down-sampling level (2 convolutions). Number of intergers
+            define the number down-sampling levels in the unet encoder.
+            This is only applicable when `encoder="unet"`.
         decoder_block (list):
             A list of convolution layers. Each item is an integer and
             denotes the layer kernel size.
->>>>>>> c7fe7851cf78ab582e8e02bc1b21d5227063fc77
+        skip_type (str):
+            Choosing between "add" or "concat" method to be used for
+            combining feature maps from encoder and decoder parts at
+            skip connections. Default is "add".
 
     Returns:
         torch.nn.Module:
@@ -328,7 +317,6 @@ class UNetModel(ModelABC):
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
 
-<<<<<<< HEAD
     @staticmethod
     def _transform(imgs: torch.Tensor):
         """Transforming network input to desired format.
@@ -345,8 +333,6 @@ class UNetModel(ModelABC):
         """
         return imgs / 255.0
 
-=======
->>>>>>> c7fe7851cf78ab582e8e02bc1b21d5227063fc77
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
     def forward(self, imgs: torch.Tensor, *args, **kwargs):
@@ -365,13 +351,8 @@ class UNetModel(ModelABC):
                 input images.
 
         """
-<<<<<<< HEAD
         # transform the input using network-specific transform function
-        input_tensor = self._transform(input_tensor)
-=======
-        # scale to 0-1
-        imgs = imgs / 255.0
->>>>>>> c7fe7851cf78ab582e8e02bc1b21d5227063fc77
+        imgs = self._transform(imgs)
 
         # assume output is after each down-sample resolution
         en_list = self.backbone(imgs)
