@@ -18,15 +18,16 @@
 # All rights reserved.
 # ***** END GPL LICENSE BLOCK *****
 
-"""Tile pyrmaid generation in standard formats.
+"""Tile pyramid generation in standard formats.
 
 Included methods are DeepZoom and Zoomify in addition to a generic
 method.
 
 These are generally intended for serialisation or streaming via a web
-UI. The `get_tile` method returns a Pillow Image object which can
-be easily serialised via the use of an io.BytesIO object or saved
-directly to disk.
+UI. The `get_tile` method returns a Pillow Image object which can be
+easily serialised via the use of an io.BytesIO object or saved directly
+to disk.
+
 """
 
 import tarfile
@@ -52,15 +53,18 @@ class TilePyramidGenerator:
     r"""Generic tile pyramid generator with sensible defaults.
 
     Args:
-        wsi (WSIReader): The WSI reader object. Must implement
+        wsi (WSIReader):
+            The WSI reader object. Must implement
             `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
-        tile_size (int): The size of tiles to generate. Default is
-            256. Note that the output tile size will be
-            :math:`\text{tile size} + 2 \times\text{overlap}`.
-        downsample (int): The downsample factor between levels.
-            Default is 2.
-        tile_overlap (int): The number of extra pixel to add to each
-            edge of the tile. Default is 0.
+        tile_size (int):
+            The size of tiles to generate. Default is 256. Note that the
+            output tile size will be :math:`\text{tile size} + 2
+            \times\text{overlap}`.
+        downsample (int):
+            The downsample factor between levels. Default is 2.
+        overlap (int):
+            The number of extra pixel to add to each edge of the tile.
+            Default is 0.
 
     """
 
@@ -80,7 +84,7 @@ class TilePyramidGenerator:
     def output_tile_size(self) -> int:
         r"""The size of the tile which will be returned.
 
-        This is eqivalent to :math:`\text{tile size} + 2*\text{overlay}`.
+        This is equivalent to :math:`\text{tile size} + 2*\text{overlay}`.
 
         """
         return self.tile_size + 2 * self.overlap
@@ -95,7 +99,8 @@ class TilePyramidGenerator:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
-            level (int): The level to calculate the dimensions for.
+            level (int):
+                The level to calculate the dimensions for.
 
         """
         baseline_dims = self.wsi.info.slide_dimensions
@@ -109,11 +114,12 @@ class TilePyramidGenerator:
         """Width and height of the minimal grid of tiles to cover the slide.
 
         Args:
-            level (int): The level to calculate the grid size for.
+            level (int):
+                The level to calculate the grid size for.
 
         """
         if level < 0 or level >= self.level_count:
-            raise IndexError("Invalid level")
+            raise IndexError("Invalid level.")
         return tuple(
             np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(int)
         )
@@ -139,8 +145,8 @@ class TilePyramidGenerator:
     def get_thumb_tile(self) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
 
-        The thumbnail output size has the longest edge equal to the
-        tile size. The other edge preserves the orignal aspect ratio.
+        The thumbnail output size has the longest edge equal to the tile
+        size. The other edge preserves the original aspect ratio.
 
         """
         slide_dims = np.array(self.wsi.info.slide_dimensions)
@@ -170,28 +176,27 @@ class TilePyramidGenerator:
 
         Args:
             level (int):
-                The pyramid level of the tile starting from 0
-                (the whole slide in one tile, 0-0-0).
+                The pyramid level of the tile starting from 0 (the whole
+                slide in one tile, 0-0-0).
             x (int):
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
             pad_mode (str):
-                Method for padding when reading areas outside of
-                the input image. Default is constant (0 padding). This
-                is passed to `read_func` which defaults to
+                Method for padding when reading areas outside of the
+                input image. Default is constant (0 padding). This is
+                passed to `read_func` which defaults to
                 :func:`safe_padded_read`. See :func:`safe_padded_read`
                 for supported pad modes. Setting to "none" or None will
                 result in no padding being applied.
             interpolation (str):
-                Interpolation mode to use.
-                Defaults to optimise.
+                Interpolation mode to use. Defaults to optimise.
                 Possible values are: linear, cubic, lanczos, nearest,
-                area, optimise.
-                Linear most closely matches OpenSlide.
+                area, optimise. Linear most closely matches OpenSlide.
 
         Returns:
-            Image: Pillow image of the tile.
+            Image:
+                Pillow image of the tile.
 
         Example:
             >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
@@ -207,7 +212,7 @@ class TilePyramidGenerator:
         if level < 0:
             raise IndexError
         if level > self.level_count:
-            raise IndexError("Invalid level")
+            raise IndexError("Invalid level.")
 
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
@@ -244,15 +249,16 @@ class TilePyramidGenerator:
 
         Args:
             level (int):
-                The pyramid level of the tile starting from 0
-                (the whole slide in one tile, 0-0-0).
+                The pyramid level of the tile starting from 0 (the whole
+                slide in one tile, 0-0-0).
             x (int):
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
 
         Returns:
-            Path: A pathlib path object with two parts.
+            Path:
+                A pathlib path object with two parts.
 
         """
         raise NotImplementedError
@@ -263,13 +269,16 @@ class TilePyramidGenerator:
         """Write all tiles to disk.
 
         Arguments:
-            path (str or Path)
-            container (str): Container to use. Defaults to None which
-                saves to a directory. Possible values are "zip", "tar".
-            compression (str): Compression method. Defaults to None.
-                Possible values are None, "deflate", "gzip",
-                "bz2", "lzma". Note that tar does not support deflate
-                and zip does not support gzip.
+            path (str or Path):
+                The path to write the tiles to.
+            container (str):
+                Container to use. Defaults to None which saves to a
+                directory. Possible values are "zip", "tar".
+            compression (str):
+                Compression method. Defaults to None. Possible values
+                are None, "deflate", "gzip", "bz2", "lzma". Note that
+                tar does not support deflate and zip does not support
+                gzip.
 
         Examples:
             >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
@@ -288,12 +297,12 @@ class TilePyramidGenerator:
         """
         path = Path(path)
         if container not in [None, "zip", "tar"]:
-            raise ValueError("Unsupported container")
+            raise ValueError("Unsupported container.")
 
         if container is None:
             path.mkdir(parents=False)
             if compression is not None:
-                raise ValueError("Unsupported compression for container None")
+                raise ValueError("Unsupported compression for container None.")
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output directory."""
@@ -309,7 +318,7 @@ class TilePyramidGenerator:
                 "lzma": zipfile.ZIP_LZMA,
             }
             if compression not in compression2enum:
-                raise ValueError("Unsupported compression for zip")
+                raise ValueError("Unsupported compression for zip.")
 
             archive = zipfile.ZipFile(
                 path, mode="w", compression=compression2enum[compression]
@@ -335,7 +344,7 @@ class TilePyramidGenerator:
                 "lzma": "w:xz",
             }
             if compression not in compression2mode:
-                raise ValueError("Unsupported compression for tar")
+                raise ValueError("Unsupported compression for tar.")
 
             archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
 
@@ -386,15 +395,14 @@ class ZoomifyGenerator(TilePyramidGenerator):
             The WSI reader object. Must implement
             `tiatoolbox.wsicore.wsi_Reader.WSIReader.read_rect`.
         tile_size (int):
-            The size of tiles to generate. Default is
-            256. Note that the output tile size will be
-            :math:`\text{tile size} + 2 \times\text{overlap}`.
+            The size of tiles to generate. Default is 256. Note that the
+            output tile size will be :math:`\text{tile size} + 2
+            \times\text{overlap}`.
         downsample (int):
-            The downsample factor between levels.
-            Default is 2.
+            The downsample factor between levels. Default is 2.
         tile_overlap (int):
-            The number of extra pixel to add to each
-            edge of the tile. Default is 0.
+            The number of extra pixel to add to each edge of the tile.
+            Default is 0.
 
     """
 
@@ -407,15 +415,16 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
         Args:
             level (int):
-                The pyramid level of the tile starting from 0
-                (the whole slide in one tile, 0-0-0).
+                The pyramid level of the tile starting from 0 (the whole
+                slide in one tile, 0-0-0).
             x (int):
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
 
         Returns:
-            int: The tile group for the specified tile.
+            int:
+                The tile group for the specified tile.
 
         """
         grid_size = np.array(self.tile_grid_size(level))
@@ -431,13 +440,17 @@ class ZoomifyGenerator(TilePyramidGenerator):
         """Generate the Zoomify path for a specified tile.
 
         Args:
-            level (int): The pyramid level of the tile starting from 0
-                (the whole slide in one tile, 0-0-0).
-            x (int): The tile index in the x direction.
-            y (int): The tile index in the y direction.
+            level (int):
+                The pyramid level of the tile starting from 0 (the whole
+                slide in one tile, 0-0-0).
+            x (int):
+                The tile index in the x direction.
+            y (int):
+                The tile index in the y direction.
 
         Returns:
-            Path: A pathlib path object with two parts.
+            Path:
+                A pathlib path object with two parts.
 
         """
         g = self.tile_group(level, x, y)

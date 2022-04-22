@@ -6,7 +6,7 @@ import pathlib
 import numpy as np
 import pytest
 
-from tiatoolbox.data import _fetch_remote_sample, stainnorm_target
+from tiatoolbox.data import _fetch_remote_sample, stain_norm_target
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
 
@@ -32,7 +32,7 @@ def test_fetch_sample(tmp_path):
         path = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
 
     # Very tiny so temporary hook here also
-    arr = stainnorm_target()
+    arr = stain_norm_target()
     assert isinstance(arr, np.ndarray)
 
 
@@ -59,7 +59,7 @@ def test_fetch_sample_skip(tmp_path):
         path = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
 
     # Very tiny so temporary hook here also
-    arr = stainnorm_target()
+    arr = stain_norm_target()
     assert isinstance(arr, np.ndarray)
 
     _ = _fetch_remote_sample("stainnorm-source", tmp_path)

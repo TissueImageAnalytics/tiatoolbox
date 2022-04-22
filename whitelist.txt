@@ -88,3 +88,10 @@ zarr
 Peter
 Byfield
 Peter554
+HoVerNet
+Kumar
+Ver
+pylint
+skipcq
+PYL
+W0221

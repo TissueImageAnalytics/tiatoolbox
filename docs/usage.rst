@@ -110,6 +110,7 @@ Neural Network Architectures
 - :obj:`Simplified U-Nets <tiatoolbox.models.architecture.unet>`
 - :obj:`HoVerNet <tiatoolbox.models.architecture.hovernet.HoVerNet>`
 - :obj:`HoVerNet+ <tiatoolbox.models.architecture.hovernetplus.HoVerNetPlus>`
+- :obj:`MicroNet <tiatoolbox.models.architecture.micronet.MicroNet>`
 
 Pipelines:
     - :obj:`IDARS <tiatoolbox.models.architecture.idars>`

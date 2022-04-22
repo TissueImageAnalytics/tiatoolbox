@@ -225,7 +225,7 @@ def test_patch_dataset_crash(tmp_path):
     ]
     with pytest.raises(
         ValueError,
-        match=r"Can not load data of .*",
+        match="Cannot load image data from",
     ):
         _ = PatchDataset(imgs)
     _rm_dir(rcParam["TIATOOLBOX_HOME"])
@@ -255,7 +255,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 
     # test for ABC validate
     with pytest.raises(
-        ValueError, match=r".*inputs should be a list of patch coordinates.*"
+        ValueError, match=r".*`inputs` should be a list of patch coordinates.*"
     ):
         # intentionally created to check error
         # skipcq
@@ -370,7 +370,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     negative_mask = imread(mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
     imwrite("negative_mask.png", negative_mask)
-    with pytest.raises(ValueError, match=r".*No coordinate remain after tiling.*"):
+    with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
         ds = WSIPatchDataset(
             img_path=mini_wsi_svs,
             mask_path="negative_mask.png",
@@ -926,7 +926,7 @@ def _test_predictor_output(
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
         assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-6
+            np.abs(probabilities_max - probabilities_check[idx]) <= 5e-6
             and predictions[idx] == predictions_check[idx]
         ), (
             pretrained_model,
@@ -1051,9 +1051,9 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
         ],
     )
 
-    assert mode_not_in_wsi_tile_result.output == ""
-    assert mode_not_in_wsi_tile_result.exit_code == 1
-    assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
+    assert "Invalid value for '--mode'" in mode_not_in_wsi_tile_result.output
+    assert mode_not_in_wsi_tile_result.exit_code != 0
+    assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
 
 def test_cli_model_single_file(sample_svs, tmp_path):

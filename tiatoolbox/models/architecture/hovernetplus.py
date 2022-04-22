@@ -34,26 +34,68 @@ from tiatoolbox.utils import misc
 
 
 class HoVerNetPlus(HoVerNet):
-    """Initialise HoVer-Net+.
+    """Initialise HoVerNet+ [1].
 
-    HoVer-Net+ takes an RGB input image, and provides the option to simultaneously
+    HoVerNet+ takes an RGB input image, and provides the option to simultaneously
     segment and classify the nuclei present, aswell as semantically segment different
-    regions or layers in the images. Note the HoVer-Net+ architecture assumes an image
-    resolution of 0.5 mpp, in contrast to HoVer-Net at 0.25 mpp.
+    regions or layers in the images. Note the HoVerNet+ architecture assumes an image
+    resolution of 0.5 mpp, in contrast to HoVerNet at 0.25 mpp.
+
+    The tiatoolbox model should produce following results on the specified datasets
+    that is was trained on.
+
+    .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernetplus-oed
+         - OED
+         - 0.84
+         - 0.69
+         - 0.86
+         - 0.80
+         - 0.69
+
+    .. list-table:: HoVerNet+ Mean Performance for Semantic Segmentation
+       :widths: 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - F1
+         - Precision
+         - Recall
+         - Accuracy
+       * - hovernetplus-oed
+         - OED
+         - 0.82
+         - 0.82
+         - 0.82
+         - 0.84
+
+    Args:
+        num_input_channels (int): The number of input channels, default = 3 for RGB.
+        num_types (int): The number of types of nuclei present in the images.
+        num_layers (int): The number of layers/different regions types present.
+
+    References:
+        [1] Shephard, Adam J., et al. "Simultaneous Nuclear Instance and Layer
+        Segmentation in Oral Epithelial Dysplasia." Proceedings of the IEEE/CVF
+        International Conference on Computer Vision. 2021.
+
 
     """
 
     def __init__(
         self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
-        """Initialise HoVer-Net+.
-
-        Args:
-            num_input_channels (int): The number of input channels, default = 3 for RGB.
-            num_types (int): The number of types of nuclei present in the images.
-            num_layers (int): The number of layers/different regions types present.
-
-        """
         super().__init__(mode="fast")
         self.num_types = num_types
         self.num_layers = num_layers
@@ -200,7 +242,7 @@ class HoVerNetPlus(HoVerNet):
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = tp_map
 
-        nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
+        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
         layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
 
         return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict

@@ -32,7 +32,7 @@ from tiatoolbox.models.architecture.vanilla import CNNBackbone, CNNModel
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils.misc import download_data
 
-__all__ = ["get_pretrained_model"]
+__all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 

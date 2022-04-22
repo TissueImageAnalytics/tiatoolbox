@@ -96,13 +96,13 @@ class DenseBlock(nn.Module):
     ):
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info")
+            raise ValueError("Unbalance Unit Info.")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
 
         # weights value may not match with tensorflow version
-        # due to different default intialization scheme between
+        # due to different default initialization scheme between
         # torch and tensorflow
         def get_unit_block(unit_in_ch):
             """Helper function to make it less long."""
@@ -185,7 +185,7 @@ class ResidualBlock(nn.Module):
     ):
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info")
+            raise ValueError("Unbalance Unit Info.")
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -279,7 +279,7 @@ class ResidualBlock(nn.Module):
 
 
 class HoVerNet(ModelABC):
-    """HoVer-Net Architecture.
+    """HoVerNet Architecture.
 
     Args:
         num_input_channels (int): Number of channels in input.
@@ -290,7 +290,7 @@ class HoVerNet(ModelABC):
           (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
-        Graham, Simon, et al. "Hover-net: Simultaneous segmentation and
+        Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
@@ -362,22 +362,23 @@ class HoVerNet(ModelABC):
         self.upsample2x = UpSample2x()
 
     # skipcq: PYL-W0221
-    def forward(self, imgs: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            input_tensor (torch.Tensor): Input images, the tensor
+                is in the shape of NCHW.
 
         Returns:
             output (dict): A dictionary containing the inference output.
                 The expected format os {decoder_name: prediction}.
 
         """
-        imgs = imgs / 255.0  # to 0-1 range to match XY
+        input_tensor = input_tensor / 255.0  # to 0-1 range to match XY
 
-        d0 = self.conv0(imgs)
+        d0 = self.conv0(input_tensor)
         d0 = self.d0(d0)
         d1 = self.d1(d0)
         d2 = self.d2(d1)
@@ -473,7 +474,7 @@ class HoVerNet(ModelABC):
               of possible instances exist withint the images.
             fx (float): The scale factor for processing nuclei. The scale
               assumes an image of resolution 0.25 microns per pixel. Default
-              is therefore 1 for HoVer-Net.
+              is therefore 1 for HoVerNet.
 
         Returns:
             An np.ndarray of shape (height, width) where each non-zero values
@@ -559,7 +560,7 @@ class HoVerNet(ModelABC):
         return proced_pred
 
     @staticmethod
-    def _get_instance_info(pred_inst, pred_type=None):
+    def get_instance_info(pred_inst, pred_type=None):
         """To collect instance information and store it within a dictionary.
 
         Args:
@@ -703,7 +704,7 @@ class HoVerNet(ModelABC):
 
         pred_type = tp_map
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
-        nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
+        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
         return pred_inst, nuc_inst_info_dict
 

@@ -98,3 +98,5 @@ files:
     url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
   small_svs_tissue_mask:
     url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]
+  micronet-output:
+    url: [*modelroot, "predictions/nuclei_mask/micronet-output.npy"]

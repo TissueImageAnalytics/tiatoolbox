@@ -21,18 +21,21 @@
 """Get Slide Meta Data information."""
 import pathlib
 
-from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def slide_info(input_path, verbose=True):
     """Return WSI meta data.
 
     Args:
-        input_path (str or pathlib.Path): Path to whole slide image
-        verbose (bool): Print output, default=True
+        input_path (str or pathlib.Path):
+            Path to whole slide image.
+        verbose (bool):
+            Print output, default=True.
 
     Returns:
-        WSIMeta: containing meta information
+        WSIMeta:
+            Metadata information.
 
     Examples:
         >>> from tiatoolbox.wsicore.slide_info import slide_info
@@ -51,7 +54,7 @@ def slide_info(input_path, verbose=True):
     if verbose:
         print(input_path.name, flush=True)
 
-    wsi = wsireader.get_wsireader(input_img=input_path)
+    wsi = WSIReader.open(input_img=input_path)
     info = wsi.info
     if verbose:
         print(info.as_dict())

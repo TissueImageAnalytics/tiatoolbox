@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Tests for reading whole-slide images."""
 
 import os
@@ -194,7 +195,7 @@ def read_bounds_level_consistency(wsi, bounds):
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
         for b in as_float[i + 1 :]:
-            _, error, phase_diff = phase_cross_correlation(a, b)
+            _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
             assert phase_diff < 0.125
             assert error < 0.125
 
@@ -1186,7 +1187,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels(source_image):
     target = cv2.resize(
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
     )
-    offset, error, _ = phase_cross_correlation(target, region)
+    offset, error, _ = phase_cross_correlation(target, region, normalization=None)
     assert all(offset == 0)
     assert error < 0.1
     psnr = peak_signal_noise_ratio(target, region)
@@ -1221,7 +1222,7 @@ def test_virtual_wsi_reader_read_rect_virtual_levels_mpp(source_image):
     target = cv2.resize(
         img_array[:200, :100, :], (50, 100), interpolation=cv2.INTER_CUBIC
     )
-    offset, error, _ = phase_cross_correlation(target, region)
+    offset, error, _ = phase_cross_correlation(target, region, normalization=None)
     assert all(offset == 0)
     assert error < 0.1
     psnr = peak_signal_noise_ratio(target, region)
@@ -1261,7 +1262,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels_mpp(source_image):
     target = cv2.resize(
         img_array[:50, :25, :], target_size, interpolation=cv2.INTER_CUBIC
     )
-    offset, error, _ = phase_cross_correlation(target, region)
+    offset, error, _ = phase_cross_correlation(target, region, normalization=None)
     assert all(offset == 0)
     assert error < 0.1
     psnr = peak_signal_noise_ratio(target, region)
@@ -1642,6 +1643,10 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     assert pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
 
 
+@pytest.mark.skipif(
+    utils.env_detection.running_on_travis(),
+    reason="No need to display image on travis.",
+)
 def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
     """Test JP2 read_bounds with mode as 'show'."""
     runner = CliRunner()
@@ -1797,9 +1802,9 @@ def test_manual_mpp_float(sample_svs):
 
 def test_manual_mpp_invalid(sample_svs):
     """Test setting a manual mpp for a WSI."""
-    with pytest.raises(TypeError, match="Invalid mpp"):
+    with pytest.raises(TypeError, match="mpp"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, mpp=(0.5,))
-    with pytest.raises(TypeError, match="Invalid mpp"):
+    with pytest.raises(TypeError, match="mpp"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, mpp="foo")
 
 
@@ -1811,7 +1816,7 @@ def test_manual_power_tuple(sample_svs):
 
 def test_manual_power_invalid(sample_svs):
     """Test setting a manual power for a WSI."""
-    with pytest.raises(TypeError, match="Invalid power"):
+    with pytest.raises(TypeError, match="power"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, power=(42,))
 
 
@@ -1892,7 +1897,7 @@ class TestReader:
         # Pair-wise check resolutions for mean squared error
         for i, a in enumerate(as_float):
             for b in as_float[i + 1 :]:
-                _, error, phase_diff = phase_cross_correlation(a, b)
+                _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
                 assert phase_diff < 0.125
                 assert error < 0.125
 
