@@ -40,7 +40,7 @@ def cell_polygon(
     xy: Tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 10,
-    noise: Number = 1,
+    noise: Number = 0.01,
     eccentricity: Tuple[Number, Number] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
@@ -69,7 +69,7 @@ def cell_polygon(
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
     rx = radius * (np.random.rand() + 0.5)
-    ry = np.random.uniform(*eccentricity) * radius - rx
+    ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
     x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
     y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
     boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
@@ -427,7 +427,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 6
-        assert all(isinstance(ann, Annotation) for ann in results)
+        assert all(isinstance(ann, Annotation) for ann in results.values())
 
     @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store_cls):
@@ -1182,3 +1182,15 @@ class TestStore:
         """
         result = store.query([0, 0, 11, 11], geometry_predicate="intersects")
         assert len(result) == 1
+
+    @staticmethod
+    def test_bquery(fill_store, store_cls):
+        """Test querying a store with a bounding box."""
+        import time
+
+        _, store = fill_store(store_cls, ":memory:")
+        t0 = time.perf_counter()
+        dictionary = store.bquery((0, 0, 1e10, 1e10))
+        print(time.perf_counter() - t0)
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)

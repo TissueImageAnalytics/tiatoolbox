@@ -117,10 +117,12 @@ class Annotation:
         """
         Return a feature representation of this annotation.
 
-        Returns
-        -------
-        feature: dict
-            A feature representation of this annotation.
+        A feature representation is a Python dictionary with the
+        same schema as a geoJSON feature.
+
+        Returns:
+            dict:
+                A feature representation of this annotation.
         """
         return {
             "type": "Feature",
@@ -130,12 +132,11 @@ class Annotation:
 
     def to_geojson(self) -> str:
         """
-        Return a GeoJSON representation of this annotation.
+        Return a GeoJSON string representation of this annotation.
 
-        Returns
-        -------
-        geojson: str
-            A GeoJSON representation of this annotation.
+        Returns:
+            str:
+                A GeoJSON representation of this annotation.
 
         """
         return json.dumps(self.to_feature())
@@ -282,6 +283,7 @@ class AnnotationStore(ABC, MutableMapping):
         "overlaps",
         "touches",
         "within",
+        "bbox_intersects",  # Special non-shapely case, bounding-boxes intersect
     ]
 
     @classmethod  # noqa: A003
@@ -608,7 +610,7 @@ class AnnotationStore(ABC, MutableMapping):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
-    ) -> List[Annotation]:
+    ) -> Dict[str, Annotation]:
         """Query the store for annotations.
 
         Args:
@@ -671,11 +673,9 @@ class AnnotationStore(ABC, MutableMapping):
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
-        # Iterate over and check if both the geometry predicate and the
-        # where predicate are satisfied for each annotation.
-        return [
-            annotation
-            for annotation in self.values()
+        return {
+            key: annotation
+            for key, annotation in self.items()
             if (
                 (
                     query_geometry is None
@@ -687,7 +687,7 @@ class AnnotationStore(ABC, MutableMapping):
                 )
                 and self._eval_where(where, annotation.properties)
             )
-        ]
+        }
 
     def iquery(
         self,
@@ -768,6 +768,83 @@ class AnnotationStore(ABC, MutableMapping):
                 and self._eval_where(where, annotation.properties)
             )
         ]
+
+    def bquery(
+        self,
+        geometry: Optional[QueryGeometry] = None,
+        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
+    ) -> Dict[str, Tuple[float, float, float, float]]:
+        """Query the store for annotation bounding boxes.
+
+        Acts similarly to `AnnotationStore.query` except it checks for
+        intersection between sotred and query geometry bounding boxes.
+        This may be faster than a regular query in some cases, e.g. for
+        SQliteStore with a alrge number of annotations.
+
+        Note that this method only checks for bounding box intersection
+        and therefore may give a different result to using
+        `AnnotationStore.query` with a box polygon and the "intersects"
+        geometry predicate. Also note that geometry predicates are not
+        supported for this method.
+
+        Args:
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon). If a geometry is provided, the bounds of the
+                geometry will be used for the query. Full geometry
+                intersection is not used for the query method.
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are expected to be in a domain specific language
+                and are converted to SQL on a best-effort basis. For
+                supported operators of the DSL see
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query.
+                Additionally, the same string can be used across
+                different backends (e.g. the previous example predicate
+                string is valid for both `DictionaryStore `and a
+                `SQliteStore`). On the other hand it has many more
+                limitations. It is important to note that untrusted user
+                input should never be accepted to this argument as
+                arbitrary code can be run via pickle or the parsing of
+                the string statement.
+
+            Returns:
+                list:
+                    A list of bounding boxes for each Annotation.
+
+            .. _BP:
+                | https://shapely.readthedocs.io/en/stable/
+                | manual.html#binary-predicates
+
+            __ BP_
+
+        """
+        query_geometry = geometry
+        if isinstance(query_geometry, tuple):
+            query_geometry = Polygon.from_bounds(*query_geometry)
+        return {
+            key: annotation.geometry.bounds
+            for key, annotation in self.items()
+            if (
+                Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                    Polygon.from_bounds(*query_geometry.bounds)
+                )
+                and self._eval_where(where, annotation.properties)
+            )
+        }
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return annotations as a list of geoJSON features.
@@ -964,24 +1041,24 @@ class AnnotationStore(ABC, MutableMapping):
             key = dictionary.get("key", uuid.uuid4().hex)
             geometry = feature2geometry(dictionary["geometry"])
             properties = dictionary["properties"]
-            store.append(Annotation(geometry, properties), key=key)
+            store.append(Annotation(geometry, properties), key)
         return store
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame) -> "AnnotationStore":
         store = cls()
-        for _, row in df.iterrows():
+        for key, row in df.iterrows():
             geometry = row["geometry"]
             properties = dict(row.filter(regex="^(?!geometry|key).*$"))
-            store.append(Annotation(geometry, properties))
+            store.append(Annotation(geometry, properties), str(key))
         return store
 
     def to_dataframe(self) -> pd.DataFrame:
         features = (
             {
-                "key": key,
                 "geometry": annotation.geometry,
                 "properties": annotation.properties,
+                "key": key,
             }
             for key, annotation in self.items()
         )
@@ -1224,7 +1301,7 @@ class SQLiteStore(AnnotationStore):
 
         Args:
             data(bytes or str):
-                The WKB data to be unpacked.
+                The WKB/WKT data to be unpacked.
             cx(int):
                 The X coordinate of the centroid/representative point.
             cy(int):
@@ -1433,9 +1510,17 @@ class SQLiteStore(AnnotationStore):
         WHERE annotations.id == rtree.id
         """
         )
+
         query_parameters = {}
 
-        # Predicate is a string
+        if query_geometry is not None and geometry_predicate != "bbox_intersects":
+            query_string += (
+                "\nAND geometry_predicate("
+                ":geometry_predicate, :query_geometry, geometry, cx, cy"
+                ") "
+            )
+            query_parameters["geometry_predicate"] = geometry_predicate
+            query_parameters["query_geometry"] = query_geometry.wkb
         if isinstance(where, str):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f" AND {sql_predicate}"
@@ -1448,9 +1533,6 @@ class SQLiteStore(AnnotationStore):
             AND min_x <= :max_x
             AND max_y >= :min_y
             AND min_y <= :max_y
-            AND geometry_predicate(
-                :geometry_predicate, :query_geometry, geometry, cx, cy
-            )
             """
 
             # Find the bounds of the geometry for the rtree index
@@ -1503,27 +1585,50 @@ class SQLiteStore(AnnotationStore):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
-    ) -> List[Annotation]:
+    ) -> Dict[str, Annotation]:
         query_geometry = geometry
         cur = self._query(
-            "geometry, properties, cx, cy",
+            rows="[key], properties, cx, cy, geometry",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
         )
         if isinstance(where, Callable):
-            return [
-                Annotation(self._unpack_geometry(blob, cx, cy), properties)
-                for blob, properties, cx, cy in cur.fetchall()
+            return {
+                key: Annotation(
+                    geometry=self._unpack_geometry(blob, cx, cy),
+                    properties=json.loads(properties),
+                )
+                for key, properties, cx, cy, blob in cur.fetchall()
                 if where(json.loads(properties))
-            ]
-        return [
-            Annotation(
-                self._unpack_geometry(blob, cx, cy),
-                json.loads(properties),
+            }
+        return {
+            key: Annotation(
+                geometry=self._unpack_geometry(blob, cx, cy),
+                properties=json.loads(properties),
             )
-            for blob, properties, cx, cy in cur.fetchall()
-        ]
+            for key, properties, cx, cy, blob in cur.fetchall()
+        }
+
+    def bquery(
+        self,
+        geometry: Optional[QueryGeometry] = None,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+    ) -> Dict[str, Tuple[float, float, float, float]]:
+        cur = self._query(
+            rows="[key], min_x, min_y, max_x, max_y",
+            geometry=geometry,
+            geometry_predicate="bbox_intersects",
+            where=where,
+            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
+        )
+        if isinstance(where, Callable):
+            return {
+                key: bounds
+                for key, properties, *bounds in cur.fetchall()
+                if where(json.loads(properties))
+            }
+        return {key: bounds for key, *bounds in cur.fetchall()}
 
     def __len__(self) -> int:
         cur = self.con.cursor()
