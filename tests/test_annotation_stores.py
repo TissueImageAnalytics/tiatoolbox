@@ -1159,6 +1159,7 @@ class TestStore:
         store["foo"] = Annotation(Polygon([(0, 10), (10, 10), (10, 0)]))
         # ASCII diagram of the annotation with points labeled from a to
         # c:
+        # skipcq
         r"""
         a-----b
          \    |
@@ -1172,6 +1173,7 @@ class TestStore:
         # Query where the bounding boxes overlap but the geometries do
         # not. Should return an empty result.
         # ASCII diagram of the query:
+        # skipcq
         r"""
         a-----b
          \    |
@@ -1187,6 +1189,7 @@ class TestStore:
         # Query where the bounding boxes overlap and the geometries do.
         # Should return the annotation.
         # ASCII diagram of the query:
+        # skipcq
         r"""
         +------+
         a-----b|
