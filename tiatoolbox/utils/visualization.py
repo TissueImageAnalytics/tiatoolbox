@@ -398,6 +398,8 @@ class AnnotationRenderer:
         annotation_color=mapper(score_fn(ann.properties[score_prop]))
     max_scale: downsample level above which Polygon geometries on crowded
         tiles will be rendered as a bounding box instead
+    thickness: line thickness of rendered contours. -1 will render filled
+    contours
     """
 
     def __init__(
@@ -407,6 +409,7 @@ class AnnotationRenderer:
         where=None,
         score_fn=lambda x: x,
         max_scale=8,
+        thickness=-1,
     ):
         if mapper is None:
             mapper = cm.get_cmap("jet")
@@ -423,12 +426,19 @@ class AnnotationRenderer:
         self.where = where
         self.score_fn = score_fn
         self.max_scale = max_scale
+        self.thickness=thickness
 
     def to_tile_coords(self, coords, tl, scale):
         """return coords relative to tl of tile,
         as a np array suitable for cv2
         """
         return np.squeeze(((np.array(coords) - tl) / scale).astype(np.int32))
+
+    def get_bounded(self, ann, bound_geom):
+        if self.thickness == -1 or ann.geometry.geom_type != "Polygon":
+            return ann.geometry.intersection(bound_geom)
+        else:
+            return ann.geometry.boundary.intersection(bound_geom)
 
     def get_color(self, ann):
         """get the color for an annotation"""
@@ -448,13 +458,21 @@ class AnnotationRenderer:
         col = self.get_color(ann)
 
         cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
-        cv2.drawContours(rgb, [cnt], 0, col, -1)
+        cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
+
+    def render_multipoly(self, rgb, ann, ann_bounded, tl, scale):
+        """render a multipolygon annotation onto a tile using cv2"""
+        col = self.get_color(ann)
+
+        for poly in ann_bounded.geoms:
+            cnt = self.to_tile_coords(poly.exterior.coords, tl, scale)
+            cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
 
     def render_rect(self, rgb, ann, ann_bounded, tl, scale):
         """render a box annotation onto a tile using cv2"""
         col = self.get_color(ann)
         box = self.to_tile_coords(np.reshape(ann_bounded.bounds, (2, 2)), tl, scale)
-        cv2.rectangle(rgb, box[0, :], box[1, :], col, thickness=-1)
+        cv2.rectangle(rgb, box[0, :], box[1, :], col, thickness=self.thickness)
 
     def render_pt(self, rgb, ann, tl, scale):
         """render a point annotation onto a tile using cv2"""
@@ -464,7 +482,7 @@ class AnnotationRenderer:
             self.to_tile_coords(list(ann.geometry.coords), tl, scale),
             4,
             col,
-            thickness=-1,
+            thickness=self.thickness,
         )
 
     def render_line(self, rgb, ann, ann_bounded, tl, scale):
@@ -475,5 +493,5 @@ class AnnotationRenderer:
             [self.to_tile_coords(list(ann_bounded.coords), tl, scale)],
             False,
             col,
-            thickness=3,
+            thickness=max(3, self.thickness),
         )

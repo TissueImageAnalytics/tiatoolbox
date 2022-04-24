@@ -139,6 +139,13 @@ class WSIReader:
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
+        if suffixes[-1] in (".tif", ".tiff"):
+            try:
+                # try opening with this incase its a big tiff
+                return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
+            except:
+                return VirtualWSIReader(input_img, mpp=mpp, power=power)
+
         if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
 

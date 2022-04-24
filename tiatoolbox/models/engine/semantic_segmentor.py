@@ -558,7 +558,9 @@ class SemanticSegmentor:
         reader = get_wsireader(img_path)
 
         mask_reader = None
-        if mask_path is not None:
+        if isinstance(mask_path, WSIReader):
+            mask_reader = mask_path
+        elif mask_path is not None:
             if os.path.isfile(mask_path):
                 #raise ValueError("`mask_path` must be a valid file path.")
                 mask = imread(mask_path)  # assume to be gray

@@ -225,6 +225,8 @@ class TilePyramidGenerator:
                 pad_mode=pad_mode,
                 interpolation=interpolation,
             )
+        alph=255-np.all(rgb==255,axis=2).astype('uint8')*255
+        rgb=np.dstack((rgb,alph))
         return Image.fromarray(rgb)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
@@ -603,8 +605,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         """get annotations as bbox or geometry according to zoom level,
         and decimate large collections of small annotations if appropriate"""
         r = self.renderer
-        big_thresh = 0.01 * (self.tile_size * scale) ** 2
-        decimate = int(scale / self.renderer.max_scale)
+        big_thresh = 0.0025 * (self.tile_size * scale) ** 2
+        decimate = int(scale / self.renderer.max_scale) + 1
         if scale > 100:
             decimate = decimate * 2
 
@@ -613,44 +615,49 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 bound_geom, self.renderer.where, bbox_only=True
             )
             if len(anns_dict) < 40:
-                decimate = 1
+                decimate = int(len(anns_dict) / 20) + 1
             i = 0
             for key, ann in anns_dict.items():
                 i += 1
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
-                    ann_bounded = ann.geometry.intersection(bound_geom)
+                    ann_bounded = r.get_bounded(ann, bound_geom)
                     if ann_bounded.geom_type == "Polygon":
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "LineString":
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
-                        print("unknown geometry")
+                        print(f"unknown geometry: {ann_bounded.geom_type}")
                     continue
                 if i % decimate == 0:
                     if ann.geometry.geom_type == "Point":
                         r.render_pt(rgb, ann, tl, scale)
                         continue
-                    ann_bounded = ann.geometry.intersection(bound_geom)
+                    ann_bounded = r.get_bounded(ann, bound_geom)
                     if ann_bounded.geom_type == "Polygon":
                         r.render_rect(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "LineString":
-                        ann_bounded = ann.geometry.intersection(bound_geom)
+                        #ann_bounded = ann.geometry.intersection(bound_geom)
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
-                        print("unknown geometry")
+                        print(f"unknown geometry: {ann_bounded.geom_type}")
         else:
             anns = self.store.query(bound_geom, self.renderer.where, bbox_only=False)
             for ann in anns:
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue
-                ann_bounded = ann.geometry.intersection(bound_geom)
+                ann_bounded = r.get_bounded(ann, bound_geom)
                 if ann_bounded.geom_type == "Polygon":
                     r.render_poly(rgb, ann, ann_bounded, tl, scale)
                 elif ann_bounded.geom_type == "LineString":
                     r.render_line(rgb, ann, ann_bounded, tl, scale)
+                elif ann_bounded.geom_type == "MultiPolygon":
+                    r.render_multipoly(rgb, ann, ann_bounded, tl, scale)
+                elif ann_bounded.geom_type == "GeometryCollection":
+                    #print(f"unknown geometry: {ann_bounded.geom_type}: {[g.geom_type for g in ann_bounded.geoms]}")
+                    pass
                 else:
-                    print("unknown geometry")
+                    print(f"unknown geometry: {ann_bounded.geom_type}")
 
         return rgb

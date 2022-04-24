@@ -66,6 +66,7 @@ from tiatoolbox import logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
+    SQLTriplet,
     json_contains,
     json_list_sum,
     py_regexp,
@@ -868,11 +869,32 @@ class AnnotationStore(ABC, MutableMapping):
         elif fp.suffix=='.dat':
             #hovernet-stype .dat file
             data = joblib.load(fp)
-            props = list(data[list(data.keys())[0]].keys())[3:]
-            anns = [
-                Annotation(make_valid(feature2geometry({'type': 'Polygon', 'coordinates': [data[key]['contour']]})), {key2: data[key][key2] for key2 in props})
-                for key in data.keys()
-            ]
+            props = list(data[list(data.keys())[0]].keys())#[3:]
+            if 'contour' not in props:
+                #assume cerberous format with objects subdivided into categories
+                anns = []
+                for subcat in data.keys():
+                    if subcat=='resolution':
+                        continue
+                    props = list(data[subcat][list(data[subcat].keys())[0]].keys())
+                    if 'contour' not in props:
+                        continue
+                    if 'type' in props:
+                        for key in data[subcat].keys():
+                            data[subcat][key]['type'] = f"{subcat[:3]}: {data[subcat][key]['type']}"
+                    else:
+                        props.append('type')
+                        for key in data[subcat].keys():
+                            data[subcat][key]['type'] = subcat
+                    anns.extend([
+                    Annotation(make_valid(feature2geometry({'type': 'Polygon', 'coordinates': (0.5/0.275)*np.array([data[subcat][key]['contour']])})), {key2: data[subcat][key][key2] for key2 in props[3:]})
+                    for key in data[subcat].keys()
+                ])
+            else:
+                anns = [
+                    Annotation(make_valid(feature2geometry({'type': 'Polygon', 'coordinates': [data[key]['contour']]})), {key2: data[key][key2] for key2 in props[3:]})
+                    for key in data.keys()
+                ]
         else:
             raise ValueError('Invalid file type')
         print(len(anns))
@@ -1486,6 +1508,8 @@ class SQLiteStore(AnnotationStore):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
             print(sql_predicate)
+        if isinstance(where, SQLTriplet):
+            query_string += f"AND {where}"
         if isinstance(where, bytes):
             query_string += "AND pickle_where(:where, properties)"
             query_parameters["where"] = where
