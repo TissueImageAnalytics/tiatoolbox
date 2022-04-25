@@ -118,8 +118,8 @@ class HoVerNetPlus(HoVerNet):
 
         mask_open = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((kernel_size,kernel_size)))
         mask_open = cv2.morphologyEx(mask_open, cv2.MORPH_OPEN, np.ones((kernel_size,kernel_size)))
-        all = mask_open + epith_edited_open
-        return all.astype('int')
+        ls_map = mask_open + epith_edited_open
+        return ls_map.astype('int')
 
     @staticmethod
     def _get_layer_info(pred_layer):
