@@ -24,6 +24,7 @@ from typing import List
 
 import cv2
 import numpy as np
+from skimage import morphology
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -99,11 +100,26 @@ class HoVerNetPlus(HoVerNet):
 
         """
         ls_map = np.squeeze(ls_map.astype("float32"))
-        ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
-        ls_map = np.around(ls_map)
-        ls_map = ls_map.astype("int")
+        min_size = 20000
+        kernel_size = 20
 
-        return ls_map
+        epith_all = np.where(ls_map >=2, 1, 0).astype('uint8')
+        mask = np.where(ls_map >=1, 1, 0).astype('uint8')
+        epith_all = epith_all > 0
+        epith_mask = morphology.remove_small_objects(epith_all, min_size=min_size)
+        epith_edited = epith_mask*ls_map
+        epith_edited = epith_edited.astype('uint8')
+        epith_edited_open = np.zeros_like(epith_edited)
+        for i in [3,2,4]:
+            tmp = np.where(epith_edited == i, 1, 0).astype('uint8')
+            ep_open = cv2.morphologyEx(tmp, cv2.MORPH_CLOSE, np.ones((kernel_size,kernel_size)))
+            ep_open = cv2.morphologyEx(ep_open, cv2.MORPH_OPEN, np.ones((kernel_size,kernel_size)))
+            epith_edited_open[ep_open == 1] = i-1
+
+        mask_open = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((kernel_size,kernel_size)))
+        mask_open = cv2.morphologyEx(mask_open, cv2.MORPH_OPEN, np.ones((kernel_size,kernel_size)))
+        all = mask_open + epith_edited_open
+        return all.astype('int')
 
     @staticmethod
     def _get_layer_info(pred_layer):
