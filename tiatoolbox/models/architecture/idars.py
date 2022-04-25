@@ -17,8 +17,10 @@ class IDaRS(CNNModel):
     """Retrieve the model and add custom preprocessing used in IDaRS paper.
 
     Args:
-        backbone (str): Model name.
-        num_classes (int): Number of classes output by model.
+        backbone (str):
+            Model name.
+        num_classes (int):
+            Number of classes output by model.
 
     """
 
@@ -31,10 +33,12 @@ class IDaRS(CNNModel):
         """Define preprocessing steps.
 
         Args:
-            img (np.ndarray): An image of shape HWC.
+            img (:class:`numpy.ndarray`):
+                An image of shape HWC.
 
         Return:
-            img (torch.Tensor): An image of shape HWC.
+            img (torch.Tensor):
+                An image of shape HWC.
 
         """
         img = img.copy()

@@ -18,11 +18,14 @@ def random_colors(num_colors, bright=True):
     convert to RGB.
 
     Args:
-        num_colors(int): Number of perceptively different colors to generate.
-        bright(bool): To use bright color or not.
+        num_colors(int):
+            Number of perceptively different colors to generate.
+        bright(bool):
+            To use bright color or not.
 
     Returns:
-        List of (r, g, b) colors.
+        list:
+            List of (r, g, b) colors.
 
     """
     brightness = 1.0 if bright else 0.7
@@ -44,22 +47,31 @@ def overlay_prediction_mask(
     """Generate an overlay, given a 2D prediction map.
 
     Args:
-        img (ndarray): Input image to overlay the results on top of.
-        prediction (ndarray): 2D prediction map. Multi-class prediction should have
-          values ranging from 0 to N-1, where N is the number of classes.
-        label_info (dict): A dictionary contains the mapping for each integer value
-          within `prediction` to its string and color. [int] : (str, (int, int, int)).
-          By default, integer will be taken as label and color will be random.
-        min_val (float): Only consider predictions greater than or equal to `min_val`.
-          Otherwise, the original WSI in those regions will be displayed.
-        alpha (float): Opacity value used for the overlay.
-        ax (ax): Matplotlib ax object.
-        return_ax (bool): Whether to return the matplotlib ax object. If not,
-          then the overlay array will be returned.
+        img (ndarray):
+            Input image to overlay the results on top of.
+        prediction (ndarray):
+            2D prediction map. Multi-class prediction should have values
+            ranging from 0 to N-1, where N is the number of classes.
+        label_info (dict):
+            A dictionary containing the mapping for each integer value
+            within `prediction` to its string and color. [int] : (str,
+            (int, int, int)). By default, integer will be taken as label
+            and color will be random.
+        min_val (float):
+            Only consider predictions greater than or equal to
+            `min_val`. Otherwise, the original WSI in those regions will
+            be displayed.
+        alpha (float):
+            Opacity value used for the overlay.
+        ax (ax):
+            Matplotlib ax object.
+        return_ax (bool):
+            Whether to return the matplotlib ax object. If not, then the
+            overlay array will be returned.
 
     Returns:
         If return_ax is True, return the matplotlib ax object. Else,
-          return the overlay array.
+        return the overlay array.
 
     """
     if img.shape[:2] != prediction.shape[:2]:
@@ -173,21 +185,31 @@ def overlay_probability_map(
     """Generate an overlay, given a 2D prediction map.
 
     Args:
-        img (ndarray): Input image to overlay the results on top of. Assumed to be HW.
-        prediction (ndarray): 2D prediction map. Values are expected to be between 0-1.
-        alpha (float): Opacity value used for the overlay.
-        colour_map (string): The colour map to use for the heatmap. `jet`
-          is used as the default.
-        min_val (float): Only consider pixels that are greater than or equal to
-          `min_val`. Otherwise, the original WSI in those regions will be displayed.
-        alpha (float): Opacity value used for the overlay.
-        ax (ax): Matplotlib ax object.
-        return_ax (bool): Whether to return the matplotlib ax object. If not,
-          then the overlay array will be returned.
+        img (ndarray):
+            Input image to overlay the results on top of. Assumed to be
+            HW.
+        prediction (ndarray):
+            2D prediction map. Values are expected to be between 0-1.
+        alpha (float):
+            Opacity value used for the overlay.
+        colour_map (string):
+            The colour map to use for the heatmap. `jet` is used as the
+            default.
+        min_val (float):
+            Only consider pixels that are greater than or equal to
+            `min_val`. Otherwise, the original WSI in those regions will
+            be displayed.
+        alpha (float):
+            Opacity value used for the overlay.
+        ax (ax):
+            Matplotlib axis object.
+        return_ax (bool):
+            Whether to return the matplotlib ax object. If not, then the
+            overlay array will be returned.
 
     Returns:
         If return_ax is True, return the matplotlib ax object. Else,
-          return the overlay array.
+        return the overlay array.
 
     """
     if prediction.ndim != 2:
@@ -268,24 +290,32 @@ def overlay_prediction_contours(
     """Overlaying instance contours on image.
 
     Internally, colours from `type_colours` are prioritized over
-    `inst_colours`. However, if `inst_colours` is `None` and `type_colours`
-    is not provided, random colour is generated for each instance.
+    `inst_colours`. However, if `inst_colours` is `None` and
+    `type_colours` is not provided, random colour is generated for each
+    instance.
 
     Args:
-        canvas (ndarray): Image to draw predictions on.
-        inst_dict (dict): Dictionary of instances. It is expected to be
-            in the following format:
-            {instance_id: {type: int, contour: List[List[int]], centroid:List[float]}.
-        draw_dot (bool): To draw a dot for each centroid or not.
-        type_colours (dict): A dict of {type_id : (type_name, colour)},
-            `type_id` is from 0-N and `colour` is a tuple of (R, G, B).
-        inst_colours (tuple, np.ndarray): A colour to assign for all instances,
-            or a list of colours to assigned for each instance in `inst_dict`. By
-            default, all instances will have RGB colour `(255, 255, 0).
-        line_thickness: line thickness of contours.
+        canvas (:class:`numpy.ndarray`):
+            Image to draw predictions on.
+        inst_dict (dict):
+            Dictionary of instances. It is expected to be in the
+            following format: `{instance_id: {type: int, contour:
+            List[List[int]], centroid:List[float]}`.
+        draw_dot (bool):
+            To draw a dot for each centroid or not.
+        type_colours (dict):
+            A dict of {type_id : (type_name, colour)}, `type_id` is from
+            0 to N and `colour` is a tuple of `(r, g, b)`.
+        inst_colours (tuple, np.ndarray):
+            A colour to assign for all instances, or a list of colours
+            to assigned for each instance in `inst_dict`. By default,
+            all instances will have RGB colour `(255, 255, 0).
+        line_thickness:
+            Line thickness of contours.
 
     Returns:
-        (np.ndarray) The overlaid image.
+        :class:`numpy.ndarray`:
+            The overlaid image.
 
     """
     overlay = np.copy((canvas))
@@ -333,20 +363,26 @@ def plot_graph(
     Drawing a graph onto a canvas.
 
     Args:
-        canvas (np.ndarray): Canvas to be drawn upon.
-        nodes (np.ndarray): List of nodes, expected to be Nx2 where
-            N is the number of nodes. Each node is expected to be of
-            `(x, y)` and should be within the height and width of the
-            canvas.
-        edges (np.ndarray): List of egdes, expected to be Mx2 where
-            M is the number of edges. Each edge is defined as `(src, dst)`
-            where each is respectively the index of within `nodes`.
-        node_colors (tuple or np.ndarray): A color or list of node colors.
-            Each color is expected to be `(r, g, b)` and is between 0-255.
-        edge_colors (tuple or np.ndarray): A color or list of node colors.
-            Each color is expected to be `(r, g, b)` and is between 0-255.
-        node_size (int): Radius of each node.
-        edge_size (int): Linewidth of the edge.
+        canvas (np.ndarray):
+            Canvas to be drawn upon.
+        nodes (np.ndarray):
+            List of nodes, expected to be Nx2 where N is the number of
+            nodes. Each node is expected to be of `(x, y)` and should be
+            within the height and width of the canvas.
+        edges (np.ndarray):
+            List of edges, expected to be Mx2 where M is the number of
+            edges. Each edge is defined as a pair of indexes `(from,
+            to)`, where each corresponds to a node of within `nodes`.
+        node_colors (tuple or np.ndarray):
+            A color or list of node colors. Each color is expected to be
+            `(r, g, b)` and is between 0 and 255.
+        edge_colors (tuple or np.ndarray):
+            A color or list of node colors. Each color is expected to be
+            `(r, g, b)` and is between 0 and 255.
+        node_size (int):
+            Radius of each node.
+        edge_size (int):
+            Linewidth of the edge.
 
     """
     if isinstance(node_colors, tuple):
