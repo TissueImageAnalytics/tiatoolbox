@@ -372,6 +372,9 @@ def plot_graph(
         cv2.circle(canvas, node, node_size, color, thickness=-1)
     return canvas
 
+def to_int_rgb(rgb):
+    """Helper to convert from float to int rgb(a) tuple"""
+    return (int(v*255) for v in rgb)
 
 class AnnotationRenderer:
     """Renderer containing information and methods to render annotations
