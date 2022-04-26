@@ -71,6 +71,7 @@ def name2type_key(name):
         return f'{name}'
 
 def hex2rgb(hex):
+    print(hex)
     return tuple(int(hex[i:i+2], 16)/255 for i in (1, 3, 5))
 
 def update_mapper():
@@ -96,7 +97,21 @@ def build_predicate():
 
     vstate.renderer.where=combo
     return combo
-    
+
+def build_predicate_callable():
+    get_types=[name2type(l.label) for l in box_column.children if l.active]
+    if len(get_types)==len(box_column.children):
+        if filter_input.value is None:
+            return None
+        
+    if filter_input.value is None:
+        def pred(props):
+            return props['type'] in get_types
+    else:
+        def pred(props):
+            return eval(filter_input.value) and props['type'] in get_types
+    vstate.renderer.where=pred
+    return pred
 
 def initialise_slide():
     vstate.mpp=np.minimum(wsi[0].info.mpp[0],1.0)
@@ -146,7 +161,7 @@ def initialise_overlay():
         if c.name not in vstate.types and 'slider' not in c.name:
             color_column.children.remove(c)
 
-    build_predicate()
+    build_predicate_callable()
 
 def add_layer(lname):
     box_column.children.append(Toggle(label=lname, active=True, width=100))
@@ -233,10 +248,10 @@ ts1=make_ts(r'http://127.0.0.1:5000/layer/slide/zoomify/TileGroup1/{z}-{x}-{y}.j
 #ts2=make_ts(r'http://127.0.0.1:5000/layer/overlay/zoomify/TileGroup1/{z}-{x}-{y}.jpg')
 
 p = figure(x_range=(0, vstate.dims[0]), y_range=(0,-vstate.dims[1]),x_axis_type="linear", y_axis_type="linear",
-width=1700,height=1000, tooltips=TOOLTIPS,output_backend="canvas", hidpi=True, match_aspect=False)
+width=1700,height=1000, tooltips=TOOLTIPS,output_backend="canvas", hidpi=True, match_aspect=False, lod_factor=100, lod_interval=500, lod_threshold=10, lod_timeout=200)
 print(p.renderers)
 print(p.y_range)
-p.add_tile(ts1, smoothing = True, level='image')
+p.add_tile(ts1, smoothing = True, level='image', render_parents=False)
 print(p.y_range)
 print(f'max zoom is: {p.renderers[0].tile_source.max_zoom}')
 #p.add_tile(ts2)
@@ -312,7 +327,7 @@ def change_tiles(layer_name='overlay'):
         p.renderers[vstate.layer_dict[layer_name]].tile_source=ts
     else:
         #p.renderers.append(TileRenderer(tile_source=ts))
-        p.add_tile(ts, smoothing = True, alpha=overlay_alpha.value, level='overlay')
+        p.add_tile(ts, smoothing = True, alpha=overlay_alpha.value, level='overlay', render_parents=False)
         for layer_key in vstate.layer_dict.keys():
             if layer_key=='rect':
                 continue
@@ -439,7 +454,7 @@ def layer_drop_cb(attr):
     #change_tiles('slide')
 
 def layer_select_cb(attr):
-    build_predicate()
+    build_predicate_callable()
     change_tiles('overlay')
 
 def fixed_layer_select_cb(obj, attr):

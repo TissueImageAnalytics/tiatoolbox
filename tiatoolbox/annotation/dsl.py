@@ -210,6 +210,9 @@ class SQLTriplet(SQLExpression):
     def __str__(self) -> str:
         lhs = self.lhs
         rhs = self.rhs
+        if isinstance(rhs, str):
+            # is this ok? fixes categorical where predicate
+            rhs = f'"{rhs}"'
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
         raise ValueError("Invalid SQLTriplet.")

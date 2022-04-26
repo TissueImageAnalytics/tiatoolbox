@@ -1622,13 +1622,15 @@ class SQLiteStore(AnnotationStore):
             token,
         )
 
+    @staticmethod
+    @lru_cache(maxsize=256)
     def _query(
-        self,
         rows: str,
         geometry: Optional[Geometry] = None,
         callable_rows: Optional[str] = None,
         geometry_predicate="intersects",
         where: Optional[Predicate] = None,
+        con = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1651,17 +1653,31 @@ class SQLiteStore(AnnotationStore):
                 A database cursor for the current query.
 
         """
+        geometry_predicate_names = [
+            "equals",
+            "contains",
+            "covers",
+            "covered_by",
+            "crosses",
+            "disjoint",
+            "intersects",
+            "overlaps",
+            "touches",
+            "within",
+            "bbox_intersects",  # Special non-shapely case, bounding-boxes intersect
+        ]
+
         if all(x is None for x in (geometry, where)):
             raise ValueError("At least one of `geometry` or `where` must be specified.")
         query_geometry = geometry
         if callable_rows is None:
             callable_rows = rows
-        if geometry_predicate not in self._geometry_predicate_names:
+        if geometry_predicate not in geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
+                f"Allowed values are: {', '.join(geometry_predicate_names)}."
             )
-        cur = self.con.cursor()
+        cur = con.cursor()
 
         # Normalise query geometry and determine if it is a rectangle
         if isinstance(query_geometry, Iterable):
@@ -1679,15 +1695,6 @@ class SQLiteStore(AnnotationStore):
         WHERE annotations.id == rtree.id
         """
         )
-        query_parameters = {
-            "min_x": min_x,
-            "max_x": max_x,
-            "min_y": min_y,
-            "max_y": max_y,
-            "geometry_predicate": geometry_predicate,
-            "query_geometry": query_geometry.wkb,
-        }
-        
 
         query_parameters = {}
 
@@ -1739,12 +1746,11 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, str):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
-            print(sql_predicate)
+            #print(sql_predicate)
         if isinstance(where, SQLTriplet):
             query_string += f"AND {where}"
-
         cur.execute(query_string, query_parameters)
-        return cur
+        return cur.fetchall()
 
     def iquery(
         self,
@@ -1786,15 +1792,16 @@ class SQLiteStore(AnnotationStore):
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
-            select_callable="[key], geometry, properties",
+            callable_rows="[key], geometry, properties",
+            con=self.con,
         )
         if isinstance(where, Callable):
             return [
                 key
-                for key, _, properties in cur.fetchall()
+                for key, _, properties in cur
                 if where(json.loads(properties))
             ]
-        return [val for val, in cur.fetchall()]
+        return [val for val, in cur]
 
 
     def keyed_query(
@@ -1839,27 +1846,28 @@ class SQLiteStore(AnnotationStore):
     ) -> Dict[str, Annotation]:
         query_geometry = geometry
         cur = self._query(
-            rows="[key], properties, cx, cy, geometry",
+            rows="properties, cx, cy, geometry",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
-            where=where,
+            where=None,    #meep
+            con=self.con,
         )
         if isinstance(where, Callable):
-            return {
-                key: Annotation(
+            return [
+                Annotation(
                     geometry=self._unpack_geometry(blob, cx, cy),
                     properties=json.loads(properties),
                 )
-                for key, properties, cx, cy, blob in cur.fetchall()
-                if where(json.loads(properties))
-            }
-        return {
-            key: Annotation(
+                for properties, cx, cy, blob in cur
+                #if where(json.loads(properties))
+            ]
+        return [
+            Annotation(
                 geometry=self._unpack_geometry(blob, cx, cy),
                 properties=json.loads(properties),
             )
-            for key, properties, cx, cy, blob in cur.fetchall()
-        }
+            for properties, cx, cy, blob in cur
+        ]
 
     def bquery(
         self,
@@ -1867,19 +1875,21 @@ class SQLiteStore(AnnotationStore):
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         cur = self._query(
-            rows="[key], min_x, min_y, max_x, max_y",
+            rows="[key], properties, min_x, min_y, max_x, max_y",
             geometry=geometry,
             geometry_predicate="bbox_intersects",
-            where=where,
-            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
+            where=None,    #meep
+            #callable_rows="[key], properties, min_x, min_y, max_x, max_y",
+            con=self.con,
         )
+        print(where)
         if isinstance(where, Callable):
             return {
-                key: bounds
-                for key, properties, *bounds in cur.fetchall()
-                if where(json.loads(properties))
+                key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
+                for key, properties, *bounds in cur
+                #if where(json.loads(properties))
             }
-        return {key: bounds for key, *bounds in cur.fetchall()}
+        return {key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties)) for key, properties, *bounds in cur}
 
     def __len__(self) -> int:
         cur = self.con.cursor()

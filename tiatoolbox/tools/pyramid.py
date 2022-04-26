@@ -611,9 +611,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             decimate = decimate * 2
 
         if scale > self.renderer.max_scale:
-            anns_dict = self.store.keyed_query(
-                bound_geom, self.renderer.where, bbox_only=True
+            anns_dict = self.store.bquery(
+                bound_geom.bounds, 
+                self.renderer.where,
             )
+            print(f'len annotations dict is: {len(anns_dict)}')
             if len(anns_dict) < 40:
                 decimate = int(len(anns_dict) / 20) + 1
             i = 0
@@ -622,6 +624,9 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
                     ann_bounded = r.get_bounded(ann, bound_geom)
+                    if ann_bounded.is_empty:
+                        #only bbox not actual geom was inside the tile, so ignore
+                        continue
                     if ann_bounded.geom_type == "Polygon":
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "LineString":
@@ -642,7 +647,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print(f"unknown geometry: {ann_bounded.geom_type}")
         else:
-            anns = self.store.query(bound_geom, self.renderer.where, bbox_only=False)
+            anns = self.store.query(bound_geom.bounds, self.renderer.where)
             for ann in anns:
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)

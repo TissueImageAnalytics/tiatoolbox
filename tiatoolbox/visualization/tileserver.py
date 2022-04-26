@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Dict
 from flask_cors import cross_origin
+from shapely.geometry import Polygon
 
 import numpy as np
 import matplotlib.cm as cm
@@ -108,12 +109,12 @@ class TileServer(Flask):
         except IndexError:
             return Response("Tile not found", status=404)
         image_io = io.BytesIO()
-        tile_image.save(image_io, format="JPEG")
+        tile_image.save(image_io, format="webp")
         image_io.seek(0)
-        return send_file(image_io, mimetype="image/jpeg")
+        return send_file(image_io, mimetype="image/webp")
 
     def update_types(self, SQ):
-        self.state.types=SQ.query_property("props['type']",[0,0,*self.state.dims],distinct=True)
+        self.state.types=SQ.query_property("props['type']",tuple([0,0,*self.state.dims]),distinct=True)
         if None in self.state.types:
             self.state.types.remove(None)
 

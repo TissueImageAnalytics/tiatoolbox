@@ -408,6 +408,10 @@ def plot_graph(
         cv2.circle(canvas, node, node_size, color, thickness=-1)
     return canvas
 
+def to_int_rgb(rgb):
+    """Helper to convert from float to int rgb(a) tuple"""
+    return tuple([int(255*v) for v in rgb])
+
 class AnnotationRenderer:
     """Renderer containing information and methods to render annotations
     from an AnnotationStore to a tile
@@ -494,6 +498,7 @@ class AnnotationRenderer:
 
         cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
         cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
+        cv2.drawContours(rgb, [cnt], 0, (0,0,0), 1)
 
     def render_multipoly(self, rgb, ann, ann_bounded, tl, scale):
         """render a multipolygon annotation onto a tile using cv2"""
