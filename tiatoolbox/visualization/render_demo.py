@@ -58,6 +58,10 @@ def make_ts(route,mpp=0.2525):
     #ts.min_zoom=10
     return ts
 
+def to_int_rgb(rgb):
+    """Helper to convert from float to int rgb(a) tuple"""
+    return tuple(int(v*255) for v in rgb)
+
 def name2type(name):
     try:
         return int(name)
@@ -76,7 +80,7 @@ def hex2rgb(hex):
 
 def update_mapper():
     colors = random_colors(len(vstate.types))
-    vstate.mapper = {key: tuple((np.array([*color, 1])*255).astype(np.uint8)) for key, color in zip(vstate.types, colors)}
+    vstate.mapper = {key: (*color, 1) for key, color in zip(vstate.types, colors)}
     print(vstate.mapper)
     renderer.mapper = lambda x: vstate.mapper[x]
 
@@ -148,9 +152,9 @@ def initialise_overlay():
             box_column.children.append(Toggle(label=str(t), active=True, width=100))
             box_column.children[-1].on_click(layer_select_cb)
             try:
-                color_column.children.append(ColorPicker(color=vstate.mapper[t][0:3], name=str(t), width=60))
+                color_column.children.append(ColorPicker(color=to_int_rgb(vstate.mapper[t][0:3]), name=str(t), width=60))
             except KeyError:
-                color_column.children.append(ColorPicker(color=vstate.mapper[int(t)][0:3], name=str(t), width=60))
+                color_column.children.append(ColorPicker(color=to_int_rgb(vstate.mapper[int(t)][0:3]), name=str(t), width=60))
             color_column.children[-1].on_change('color', bind_cb_obj(color_column.children[-1], color_input_cb))
 
     for b in box_column.children.copy():
@@ -208,7 +212,7 @@ def prop_check(prop):
 
 prop_check = 'props["type"] == "class1"'
 wsi = [WSIReader.open(vstate.slide_path)]
-renderer=AnnotationRenderer('type', {'class1': (255,0,0,255), 'class2': (0,0,255,255), 'class3': (0,255,0,255)}, thickness=-1)#, prop_check)
+renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=-1)#, prop_check)
 vstate.renderer=renderer
 #renderer=AnnotationRenderer('score', ['red', 'blue', 'green'], prop_check)
 #renderer=AnnotationRenderer('score', ['red', 'blue', 'bob'])
@@ -296,7 +300,7 @@ overlay_toggle = Toggle(label="Overlay", button_type="success", width=90)
 filter_input = TextInput(value='None', title="Filter:")
 cprop_input = TextInput(value="type", title="CProp:")
 folder_input = TextInput(value=base_folder, title="Img Folder:")
-cmmenu=[('jet','jet'),('coolwarm', 'coolwarm'),('dict',"{'class1': (255,0,0,255), 'class2': (0,0,255,255), 'class3': (0,255,0,255)}")]
+cmmenu=[('jet','jet'),('coolwarm', 'coolwarm'),('dict',"{'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}")]
 cmap_drop = Dropdown(label="Colourmap", button_type="warning", menu=cmmenu)
 file_drop = Dropdown(label="Choose Slide", button_type="warning", menu=[None])
 to_model_button=Button(label="To Model", button_type="success")
@@ -470,7 +474,7 @@ def layer_slider_cb(obj, attr, old, new):
 
 def color_input_cb(obj, attr, old, new):
     print(new)
-    vstate.mapper[name2type_key(obj.name)]=(*hex2rgb(new), 255)
+    vstate.mapper[name2type_key(obj.name)]=(*hex2rgb(new), 1)
     if vstate.renderer.score_prop=='type':
         vstate.renderer.mapper=lambda x: vstate.mapper[x]
     change_tiles('overlay')
