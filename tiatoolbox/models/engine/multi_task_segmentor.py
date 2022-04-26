@@ -20,6 +20,7 @@
 
 """This module enables multi-task segmentors."""
 
+import shutil
 import uuid
 from typing import Callable, List, Union
 
@@ -127,6 +128,7 @@ def _process_tile_predictions(
             free_prediction=True,
         )
         head_raws.append(head_raw)
+
     _, inst_dict, layer_map, _ = postproc(head_raws)
 
     # should be rare, no nuclei detected in input images
@@ -255,11 +257,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
     """An engine specifically designed to handle tiles or WSIs inference.
 
     Note, if `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments. Additionally,
-    unlike `SemanticSegmentor`, this engine assumes each input model
-    will ultimately predict one single target: the nucleus instance within
-    the tiles/WSIs. Each WSI prediction will be store under a `.dat` file
-    which contains a dictionary of form:
+    `pretrained_model` and `pretrained_weights` arguments. Each WSI's nuclei
+    prediction will be store under a `.dat` file and the semantic segmentation
+    prediction will be stored in a `.npy` file. The `.dat` files contains a 
+    dictionary of form:
 
     .. code-block:: yaml
 
@@ -299,12 +300,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
     Examples:
         >>> # Sample output of a network
         >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> predictor = SemanticSegmentor(model='hovernet_fast-pannuke')
+        >>> predictor = SemanticSegmentor(model='hovernetplus-oed')
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
         [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
         >>> # Each output of 'A/wsi.svs'
-        >>> # will be respectively stored in 'output/0.dat', 'output/0.dat'
+        >>> # will be respectively stored in 'output/0.dat', 'output/0.npy'
 
     """
 
@@ -606,6 +607,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             mode (str): `tile` or `wsi` to indicate run mode.
 
         """
+        cache_dir = f"{self._cache_dir}/{wsi_idx}.npy"
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
@@ -642,7 +644,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self._wsi_inst_info = {}
         # !
 
-        self.wsi_layers = np.zeros(wsi_proc_shape)
+        # self.wsi_layers = np.zeros(wsi_proc_shape)
+        self.wsi_layers = np.lib.format.open_memmap(
+            cache_dir,
+            mode="w+",
+            shape=tuple(wsi_proc_shape),
+            dtype=np.uint8,
+        )
+        # flush fill
+        self.wsi_layers[:] = 0
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
             for tile_idx, tile_bounds in enumerate(set_bounds):
@@ -660,13 +670,17 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
 
                 tile_infer_output = self._infer_once()
+                # print('tile_output_infer', np.unique(tile_infer_output[0][1][3][0,:,:,0]))
+                # from matplotlib import pyplot as plt
+                # import cv2
+                # cv2.imwrite(f"{save_path}_{set_idx}_{tile_idx}.png", tile_infer_output[0][1][3][0,:,:,0])
                 self._process_tile_predictions(
                     ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
                 )
             self._merge_post_process_results()
-
+        # TODO store semantic annotations as contours in .dat file...
         joblib.dump(self._wsi_inst_info, f"{save_path}.dat")
-        np.save(f"{save_path}.npy", self.wsi_layers)
+        shutil.copyfile(cache_dir, f"{save_path}.npy")
         # may need to chain it with parents
         self._wsi_inst_info = None  # clean up
 
