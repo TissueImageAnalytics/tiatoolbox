@@ -6,7 +6,7 @@ from typing import Tuple, Union
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from matplotlib import cm
 import numpy as np
 import warnings
 
@@ -407,7 +407,6 @@ def plot_graph(
         color = to_int_tuple(node_colors[idx])
         cv2.circle(canvas, node, node_size, color, thickness=-1)
     return canvas
-
 
 class AnnotationRenderer:
     """Renderer containing information and methods to render annotations

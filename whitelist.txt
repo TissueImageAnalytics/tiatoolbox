@@ -67,6 +67,7 @@ qtconsole
 resampling
 rescale
 ROI
+rtree
 runtime
 scipy
 Segmentor
@@ -94,6 +95,12 @@ Ver
 pylint
 skipcq
 PYL
+B301
+B608
+W0043
+W0105
+W0123
+W0212
 W0221
 w0613
 W6004

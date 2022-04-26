@@ -108,9 +108,9 @@ class TileServer(Flask):
         except IndexError:
             return Response("Tile not found", status=404)
         image_io = io.BytesIO()
-        tile_image.save(image_io, format="webp")
+        tile_image.save(image_io, format="JPEG")
         image_io.seek(0)
-        return send_file(image_io, mimetype="image/webp")
+        return send_file(image_io, mimetype="image/jpeg")
 
     def update_types(self, SQ):
         self.state.types=SQ.query_property("props['type']",[0,0,*self.state.dims],distinct=True)
@@ -128,12 +128,11 @@ class TileServer(Flask):
             {
                 "name": name,
                 "url": f"/layer/{name}/zoomify/{{TileGroup}}/{{z}}-{{x}}-{{y}}.jpg",
-                "size": [int(x) for x in layer.info.slide_dimensions],
-                "mpp": float(np.mean(layer.info.mpp)),
+                "size": [int(x) for x in reader.info.slide_dimensions],
+                "mpp": float(np.mean(reader.info.mpp)),
             }
-            for name, layer in self.tia_layers.items()    
+            for name, reader in self.tia_layers.items()
         ]
-
         return render_template(
             "index.html", title=self.tia_title, layers=json.dumps(layers)
         )

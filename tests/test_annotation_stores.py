@@ -1,4 +1,4 @@
-# skipcq: PTC-W6004
+# skipcq: PTC-W6004, PYL-W0105
 """Tests for annotation store classes."""
 import json
 import pickle
@@ -332,6 +332,34 @@ def test_sqlite_store_metadata_len():
     assert len(metadata) == 2
 
 
+def test_sqlite_drop_index():
+    """Test creating and dropping an index."""
+    store = SQLiteStore()
+    store.create_index("foo", "props['class']")
+    assert "foo" in store.indexes()
+    store.drop_index("foo")
+    assert "foo" not in store.indexes()
+
+
+def test_sqlite_drop_index_fail():
+    """Test dropping an index that does not exist."""
+    store = SQLiteStore()
+    with pytest.raises(sqlite3.OperationalError):
+        store.drop_index("foo")
+
+
+def test_sqlite_optimize(fill_store, tmp_path):
+    """Test running the optimize function on an SQLiteStore."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize(limit=0)
+
+
+def test_sqlite_optimize_no_vacuum(fill_store, tmp_path):
+    """Test running the optimize function on an SQLiteStore without VACUUM."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize(limit=0, vacuum=False)
+
+
 def test_annotation_to_geojson():
     """Test converting an annotation to geojson."""
     annotation = Annotation(
@@ -416,7 +444,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 6
-        assert all(isinstance(ann, Annotation) for ann in results)
+        assert all(isinstance(ann, Annotation) for ann in results.values())
 
     @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store_cls):
@@ -807,8 +835,9 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            (0, 0, 1024, 1024),
-            where=lambda props: props.get("class") == 123,
+            # (0, 0, 1024, 1024),
+            where=lambda props: props.get("class")
+            == 123,
         )
         assert len(results) == 1
 
@@ -957,6 +986,13 @@ class TestStore:
             store.query((0, 0, 1024, 1024), geometry_predicate="foo")
 
     @staticmethod
+    def test_query_no_geometry_or_where(fill_store, store_cls):
+        """Test that query raises exception when no geometry or predicate given."""
+        store = store_cls()
+        with pytest.raises(ValueError, match="At least one of"):
+            store.query()
+
+    @staticmethod
     def test_iquery_invalid_geometry_predicate(fill_store, store_cls):
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
@@ -1011,3 +1047,166 @@ class TestStore:
         monkeypatch.setattr(sys, "version_info", py37_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
+
+    @staticmethod
+    def test_is_rectangle(store_cls):
+        """Test that _is_rectangle returns True only for rectangles."""
+        store = store_cls()
+
+        # Clockwise
+        assert store._is_rectangle(
+            *[
+                (1, 0),
+                (0, 0),
+                (0, 1),
+                (1, 1),
+            ]
+        )
+
+        # Counter-clockwise
+        assert store._is_rectangle(
+            *[
+                (1, 1),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+        # From shapely
+        box = Polygon.from_bounds(0, 0, 10, 10)
+        assert store._is_rectangle(*box.exterior.coords)
+
+        # Fuzz
+        for _ in range(100):
+            box = Polygon.from_bounds(*np.random.randint(0, 100, 4))
+            assert store._is_rectangle(*box.exterior.coords)
+
+        # Failure case
+        assert not store._is_rectangle(
+            *[
+                (1, 1.5),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+    @staticmethod
+    def test_is_right_angle(store_cls):
+        """Test that _is_right_angle returns True only for right angles."""
+        store = store_cls()
+
+        # skipcq
+        r"""
+        c
+        |
+        |
+        b-----a
+        """
+        assert store._is_right_angle(
+            *[
+                (1, 0),
+                (0, 0),
+                (0, 1),
+            ]
+        )
+
+        # skipcq
+        r"""
+        a
+        |
+        |
+        b-----c
+        """
+        assert store._is_right_angle(
+            *[
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+        # skipcq
+        r"""
+           c
+            \
+             \
+        a-----b
+        """
+        assert not store._is_right_angle(
+            *[
+                (0, 0),
+                (1, 0),
+                (0, 1),
+            ]
+        )
+
+        assert not store._is_right_angle(
+            *[
+                (1, 0.2),
+                (0, 0),
+                (0.2, 1),
+            ]
+        )
+
+    @staticmethod
+    def test_box_query_polygon_intersection(store_cls):
+        """Test that a box query correctly checks intersections with polygons."""
+        store = store_cls()
+
+        # Add a triangle annotation
+        store["foo"] = Annotation(Polygon([(0, 10), (10, 10), (10, 0)]))
+        # ASCII diagram of the annotation with points labeled from a to
+        # c:
+        # skipcq
+        r"""
+        a-----b
+         \    |
+          \   |
+           \  |
+            \ |
+             \|
+              c
+        """
+
+        # Query where the bounding boxes overlap but the geometries do
+        # not. Should return an empty result.
+        # ASCII diagram of the query:
+        # skipcq
+        r"""
+        a-----b
+         \    |
+          \   |
+           \  |
+        +--+\ |
+        |  | \|
+        +--+  c
+        """
+        result = store.query([0, 0, 4.9, 4.9], geometry_predicate="intersects")
+        assert len(result) == 0
+
+        # Query where the bounding boxes overlap and the geometries do.
+        # Should return the annotation.
+        # ASCII diagram of the query:
+        # skipcq
+        r"""
+        +------+
+        a-----b|
+        |\    ||
+        | \   ||
+        |  \  ||
+        |   \ ||
+        |    \||
+        +-----c+
+        """
+        result = store.query([0, 0, 11, 11], geometry_predicate="intersects")
+        assert len(result) == 1
+
+    @staticmethod
+    def test_bquery(fill_store, store_cls):
+        """Test querying a store with a bounding box."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery((0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
