@@ -40,28 +40,22 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 
-# Python is yet to be able to natively pickle Object method/static method.
-# Only top-level function is passable to multi-processing as caller.
-# May need 3rd party libraries to use method/static method otherwise.
-def _process_tile_predictions(
+def _process_instance_predictions(
+    inst_dict,
     ioconfig,
-    tile_bounds,
+    tile_shape,
     tile_flag,
     tile_mode,
-    tile_output,
-    # this would be replaced by annotation store
-    # in the future
+    tile_tl,
     ref_inst_dict,
-    postproc,
-    merge_predictions,
-):
+    ):
     """Function to merge new tile prediction with existing prediction.
 
     Args:
+        isnt_dict (dict): Dictionary containing instance information.
         ioconfig (:class:`IOSegmentorConfig`): Object defines information
             about input and output placement of patches.
-        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
-            (top_left_x, top_left_y, bottom_x, bottom_y).
+        tile_shape (list): A list of the tilee shape.
         tile_flag (list): A list of flag to indicate if instances within
             an area extended from each side (by `ioconfig.margin`) of
             the tile should be replaced by those within the same spatial
@@ -82,8 +76,7 @@ def _process_tile_predictions(
                 less height (hence horizontal strip).
             - 3: tile strip stands at the cross section of four normal tiles
                 (flag 0).
-        tile_output (list): A list of patch predictions, that lie within this
-            tile, to be merged and processed.
+        tile_tl (tuple): Top left coordinates of the current tile.
         ref_inst_dict (dict): Dictionary contains accumulated output. The
             expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
@@ -100,40 +93,9 @@ def _process_tile_predictions(
             are those get cutoff at the boundary due to the tiling process.
 
     """
-    locations, predictions = list(zip(*tile_output))
-    # convert from WSI space to tile space
-    tile_tl = tile_bounds[:2]
-    tile_br = tile_bounds[2:]
-    locations = [np.reshape(loc, (2, -1)) for loc in locations]
-    locations_in_tile = [loc - tile_tl[None] for loc in locations]
-    locations_in_tile = [loc.flatten() for loc in locations_in_tile]
-    locations_in_tile = np.array(locations_in_tile)
-    tile_shape = tile_br - tile_tl  # in width height
-
-    # as the placement output is calculated wrt highest possible resolution
-    # within input, the output will need to re-calibrate if it is at different
-    # resolution than the input
-    ioconfig = ioconfig.to_baseline()
-    fx_list = [v["resolution"] for v in ioconfig.output_resolutions]
-
-    head_raws = []
-    for idx, fx in enumerate(fx_list):
-        head_tile_shape = np.ceil(tile_shape * fx).astype(np.int32)
-        head_locations = np.ceil(locations_in_tile * fx).astype(np.int32)
-        head_predictions = [v[idx][0] for v in predictions]
-        head_raw = merge_predictions(
-            head_tile_shape[::-1],
-            head_predictions,
-            head_locations,
-            free_prediction=True,
-        )
-        head_raws.append(head_raw)
-
-    _, inst_dict, layer_map, _ = postproc(head_raws)
-
     # should be rare, no nuclei detected in input images
     if len(inst_dict) == 0:
-        return {}, [], layer_map, tile_bounds
+        return {}, []
 
     # !
     m = ioconfig.margin
@@ -249,18 +211,141 @@ def _process_tile_predictions(
             inst_info["contour"] += tile_tl
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
+    return new_inst_dict, remove_insts_in_orig
 
-    return new_inst_dict, remove_insts_in_orig, layer_map, tile_bounds
+# Python is yet to be able to natively pickle Object method/static method.
+# Only top-level function is passable to multi-processing as caller.
+# May need 3rd party libraries to use method/static method otherwise.
+def _process_tile_predictions(
+    ioconfig,
+    tile_bounds,
+    tile_flag,
+    tile_mode,
+    tile_output,
+    # this would be replaced by annotation store
+    # in the future
+    ref_inst_dict,
+    postproc,
+    merge_predictions,
+    output_types,
+    model_name,
+):
+    """Function to merge new tile prediction with existing prediction,
+    using the output from each task.
+
+    Args:
+        ioconfig (:class:`IOSegmentorConfig`): Object defines information
+            about input and output placement of patches.
+        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
+            (top_left_x, top_left_y, bottom_x, bottom_y).
+        tile_flag (list): A list of flag to indicate if instances within
+            an area extended from each side (by `ioconfig.margin`) of
+            the tile should be replaced by those within the same spatial
+            region in the accumulated output this run. The format is
+            [top, bottom, left, right], 1 indicates removal while 0 is not.
+            For example, [1, 1, 0, 0] denotes replacing top and bottom instances
+            within `ref_inst_dict` with new ones after this processing.
+        tile_mode (int): A flag to indicate the type of this tile. There
+            are 4 flags:
+            - 0: A tile from tile grid without any overlapping, it is not
+                an overlapping tile from tile generation. The predicted
+                instances are immediately added to accumulated output.
+            - 1: Vertical tile strip that stands between two normal tiles
+                (flag 0). It has the the same height as normal tile but
+                less width (hence vertical strip).
+            - 2: Horizontal tile strip that stands between two normal tiles
+                (flag 0). It has the the same width as normal tile but
+                less height (hence horizontal strip).
+            - 3: tile strip stands at the cross section of four normal tiles
+                (flag 0).
+        tile_output (list): A list of patch predictions, that lie within this
+            tile, to be merged and processed.
+        ref_inst_dict (dict): Dictionary contains accumulated output. The
+            expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+        postproc (callable): Function to post-process the raw assembled tile.
+        merge_predictions (callable): Function to merge the `tile_output` into
+            raw tile prediction.
+        output
+
+    Returns:
+        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
+            The expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
+            to be removed to prevent overlapping predictions. These instances
+            are those get cutoff at the boundary due to the tiling process.
+
+    """
+    locations, predictions = list(zip(*tile_output))
+    # convert from WSI space to tile space
+    tile_tl = tile_bounds[:2]
+    tile_br = tile_bounds[2:]
+    locations = [np.reshape(loc, (2, -1)) for loc in locations]
+    locations_in_tile = [loc - tile_tl[None] for loc in locations]
+    locations_in_tile = [loc.flatten() for loc in locations_in_tile]
+    locations_in_tile = np.array(locations_in_tile)
+    tile_shape = tile_br - tile_tl  # in width height
+
+    # as the placement output is calculated wrt highest possible resolution
+    # within input, the output will need to re-calibrate if it is at different
+    # resolution than the input
+    ioconfig = ioconfig.to_baseline()
+    fx_list = [v["resolution"] for v in ioconfig.output_resolutions]
+
+    head_raws = []
+    for idx, fx in enumerate(fx_list):
+        head_tile_shape = np.ceil(tile_shape * fx).astype(np.int32)
+        head_locations = np.ceil(locations_in_tile * fx).astype(np.int32)
+        head_predictions = [v[idx][0] for v in predictions]
+        head_raw = merge_predictions(
+            head_tile_shape[::-1],
+            head_predictions,
+            head_locations,
+            free_prediction=True,
+        )
+        head_raws.append(head_raw)
+
+    out_dicts = postproc(head_raws)
+
+    # debate as to whether to check size of objects 
+    if 'hovernetplus' in model_name:
+        _, inst_dict, layer_map, _ = postproc(head_raws)
+        out_dicts = [inst_dict, layer_map]
+    elif 'hovernet' in model_name:
+        _, inst_dict = postproc(head_raws)
+        out_dicts = [inst_dict]
+    else:
+        out_dicts = postproc(head_raws)
+
+    inst_dicts = [out for out in out_dicts if type(out) is dict]
+    sem_maps = [out for out in out_dicts if type(out) is np.ndarray]
+
+    new_inst_dicts, remove_insts_in_origs = [], []
+    for id, inst_dict in enumerate(inst_dicts):
+        new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
+            inst_dict,
+            ioconfig,
+            tile_shape,
+            tile_flag,
+            tile_mode,
+            tile_tl,
+            ref_inst_dict[id],
+            )
+        new_inst_dicts.append(new_inst_dict)
+        remove_insts_in_origs.append(remove_insts_in_orig)
+
+    return new_inst_dicts, remove_insts_in_origs, sem_maps, tile_bounds
 
 
 class MultiTaskSegmentor(SemanticSegmentor):
     """An engine specifically designed to handle tiles or WSIs inference.
 
     Note, if `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments. Each WSI's nuclei
-    prediction will be store under a `.dat` file and the semantic segmentation
-    prediction will be stored in a `.npy` file. The `.dat` files contains a 
-    dictionary of form:
+    `pretrained_model` and `pretrained_weights` arguments. Each WSI's instance
+    predictions (e.g. nuclear instances) will be store under a `.dat` file and
+    the semantic segmentation predictions will be stored in a `.npy` file. The
+    `.dat` files contains a dictionary of form:
 
     .. code-block:: yaml
 
@@ -296,16 +381,21 @@ class MultiTaskSegmentor(SemanticSegmentor):
         dataset_class (obj): Dataset class to be used instead of default.
         auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
           if is not provided.
+        output_type (list): Ordered list describing what sort of segmentation the
+            output from the model postproc gives for a two-task model this may be:
+            ['instance', semantic']
 
     Examples:
         >>> # Sample output of a network
         >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> predictor = SemanticSegmentor(model='hovernetplus-oed')
+        >>> predictor = MultiTaskSegmentor(model='hovernetplus-oed', output_type=['instance', 'semantic'])
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
         [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
         >>> # Each output of 'A/wsi.svs'
-        >>> # will be respectively stored in 'output/0.dat', 'output/0.npy'
+        >>> # will be respectively stored in 'output/0.0.dat', 'output/0.1.npy'
+        >>> # Here, the second integer represents the task number
+        >>> # e.g. between 0 or 1 for a two task model
 
     """
 
@@ -320,6 +410,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
+        output_types: List = None,
     ):
         super().__init__(
             batch_size=batch_size,
@@ -339,8 +430,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         # adding more runtime placeholder
-        self._wsi_inst_info = None
-        self.wsi_layers = None
+        self._wsi_inst_info = []
+        self.wsi_layers = []
+        if 'hovernetplus' in pretrained_model:
+            output_types = ['instance', 'semantic']
+        elif 'hovernet' in pretrained_model:
+            output_types = ['instance']
+        self.output_types = output_types
 
     @staticmethod
     def _get_tile_info(
@@ -603,11 +699,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             loader (torch.Dataloader): The loader object which return batch of data
                 to be input to model.
             save_path (str): Location to save output prediction as well as possible
-                intermediat results.
+                intermediate results.
             mode (str): `tile` or `wsi` to indicate run mode.
 
         """
-        cache_dir = f"{self._cache_dir}/{wsi_idx}.npy"
+        cache_dir = f"{self._cache_dir}/"
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
@@ -641,18 +737,21 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # ! DEPRECATION:
         # !     will be deprecated upon finalization of SQL annotation store
-        self._wsi_inst_info = {}
         # !
+        indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
+        indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 
-        # self.wsi_layers = np.zeros(wsi_proc_shape)
-        self.wsi_layers = np.lib.format.open_memmap(
-            cache_dir,
-            mode="w+",
-            shape=tuple(wsi_proc_shape),
-            dtype=np.uint8,
-        )
-        # flush fill
-        self.wsi_layers[:] = 0
+        for i_id, inst_idx in enumerate(indices_inst):
+            self._wsi_inst_info.append({})
+
+        for s_id, sem_idx in enumerate(indices_sem):
+            self.wsi_layers.append(np.lib.format.open_memmap(
+                f'{cache_dir}/{s_id}.npy',
+                mode="w+",
+                shape=tuple(wsi_proc_shape),
+                dtype=np.uint8,
+            ))
+            self.wsi_layers[s_id][:] = 0
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
             for tile_idx, tile_bounds in enumerate(set_bounds):
@@ -678,11 +777,16 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
                 )
             self._merge_post_process_results()
+        
         # TODO store semantic annotations as contours in .dat file...
-        joblib.dump(self._wsi_inst_info, f"{save_path}.dat")
-        shutil.copyfile(cache_dir, f"{save_path}.npy")
-        # may need to chain it with parents
-        self._wsi_inst_info = None  # clean up
+        for i_id, inst_idx in enumerate(indices_inst):
+            joblib.dump(self._wsi_inst_info[i_id], f"{save_path}.{inst_idx}.dat")
+
+        for s_id, sem_idx in enumerate(indices_sem):
+            shutil.copyfile(f'{cache_dir}/{s_id}.npy', f"{save_path}.{sem_idx}.npy")
+            # may need to chain it with parents
+        
+        self._wsi_inst_info = [] # clean up
 
     def _process_tile_predictions(
         self, ioconfig, tile_bounds, tile_flag, tile_mode, tile_output
@@ -697,6 +801,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             self._wsi_inst_info,
             self.model.postproc_func,
             self.merge_prediction,
+            self.output_types,
+            self.pretrained_model
         ]
         if self._postproc_workers is not None:
             future = self._postproc_workers.submit(_process_tile_predictions, *args)
@@ -707,21 +813,24 @@ class MultiTaskSegmentor(SemanticSegmentor):
     def _merge_post_process_results(self):
         """Helper to aggregate results from parallel workers."""
 
-        def callback(new_inst_dict, remove_uuid_list, tile, bounds):
+        def callback(new_inst_dicts, remove_uuid_lists, tiles, bounds):
             """Helper to aggregate worker's results."""
             # ! DEPRECATION:
             # !     will be deprecated upon finalization of SQL annotation store
-            self._wsi_inst_info.update(new_inst_dict)
-            for inst_uuid in remove_uuid_list:
-                self._wsi_inst_info.pop(inst_uuid, None)
+            for inst_id, new_inst_dict in enumerate(new_inst_dicts):
+                self._wsi_inst_info[inst_id].update(new_inst_dict)
+                remove_uuid_list = remove_uuid_lists[inst_id]
+                for inst_uuid in remove_uuid_list:
+                    self._wsi_inst_info[inst_id].pop(inst_uuid, None)
 
             x_start, y_start, x_end, y_end = bounds
-            max_h, max_w = self.wsi_layers.shape
-            x_end = min(x_end, max_w)
-            y_end = min(y_end, max_h)
-            w = x_end - x_start
-            h = y_end - y_start
-            self.wsi_layers[y_start:y_end, x_start:x_end] = tile[0:h, 0:w]
+            for sem_id, tile in enumerate(tiles):
+                max_h, max_w = self.wsi_layers[sem_id].shape
+                x_end = min(x_end, max_w)
+                y_end = min(y_end, max_h)
+                w = x_end - x_start
+                h = y_end - y_start
+                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile[0:h, 0:w]
 
             # !
 

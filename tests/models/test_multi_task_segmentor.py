@@ -23,11 +23,12 @@
 import pathlib
 import shutil
 
+import joblib
 import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor, SemanticSegmentor
+from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor
 
 BATCH_SIZE = 1
 ON_TRAVIS = True
@@ -43,20 +44,19 @@ def _rm_dir(path):
 
 @pytest.mark.skip(reason="Local manual test, not applicable for travis.")
 def test_functionality_local(remote_sample, tmp_path):
-    """Local functionality test for multi task segmentor. Currently only
-    testing HoVer-Net+ with semantic segmentor.
+    """Local functionality test for multi task segmentor.
     """
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("CMU-1-Small-Region.svs"))
 
     save_dir = f"{root_save_dir}/semantic/"
     _rm_dir(save_dir)
-    semantic_segmentor = SemanticSegmentor(
+    multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
         num_postproc_workers=2,
     )
-    output = semantic_segmentor.predict(
+    output = multi_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
         on_gpu=True,
@@ -64,14 +64,10 @@ def test_functionality_local(remote_sample, tmp_path):
         save_dir=save_dir,
     )
 
-    raw_maps = [np.load(f"{output[0][1]}.raw.{head_idx}.npy") for head_idx in range(4)]
-    inst_map, inst_dict, layer_map, layer_dict = semantic_segmentor.model.postproc(
-        raw_maps
-    )
-    assert len(inst_dict) > 0 and len(layer_dict) > 0, "Must have some nuclei/layers."
-    assert (
-        inst_map.shape == layer_map.shape
-    ), "Output instance and layer maps must be same shape"
+    inst_dict = joblib.load(f"{output[0][1]}.0.dat")
+    layer_map = np.load(f"{output[0][1]}.1.npy")
+
+    assert len(inst_dict) > 0 and layer_map is not None, "Must have some nuclei/layers."
     _rm_dir(tmp_path)
 
 
@@ -114,9 +110,11 @@ def test_functionality_travis(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
+    
+    inst_dict = joblib.load(f"{output[0][1]}.0.dat")
+    layer_map = np.load(f"{output[0][1]}.1.npy")
 
-    layer_map = np.load(f"{output[0][1]}.npy")
-
+    assert len(inst_dict) > 0 and layer_map is not None, "Must have some nuclei/layers."
     assert (
         layer_map.shape == required_dims
     ), "Output layer map dimensions must be same as the expected output shape"
