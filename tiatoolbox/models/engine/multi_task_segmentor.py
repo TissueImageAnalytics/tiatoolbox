@@ -55,7 +55,7 @@ def _process_instance_predictions(
         isnt_dict (dict): Dictionary containing instance information.
         ioconfig (:class:`IOSegmentorConfig`): Object defines information
             about input and output placement of patches.
-        tile_shape (list): A list of the tilee shape.
+        tile_shape (list): A list of the tile shape.
         tile_flag (list): A list of flag to indicate if instances within
             an area extended from each side (by `ioconfig.margin`) of
             the tile should be replaced by those within the same spatial
@@ -80,9 +80,6 @@ def _process_instance_predictions(
         ref_inst_dict (dict): Dictionary contains accumulated output. The
             expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
-        postproc (callable): Function to post-process the raw assembled tile.
-        merge_predictions (callable): Function to merge the `tile_output` into
-            raw tile prediction.
 
     Returns:
         new_inst_dict (dict): A dictionary contain new instances to be accumulated.
@@ -381,7 +378,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         dataset_class (obj): Dataset class to be used instead of default.
         auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
           if is not provided.
-        output_type (list): Ordered list describing what sort of segmentation the
+        output_types (list): Ordered list describing what sort of segmentation the
             output from the model postproc gives for a two-task model this may be:
             ['instance', semantic']
 

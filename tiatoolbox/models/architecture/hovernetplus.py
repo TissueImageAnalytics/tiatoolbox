@@ -221,7 +221,7 @@ class HoVerNetPlus(HoVerNet):
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
 
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
-        pred_type = tp_map
+        pred_type = np.around(tp_map).astype('uint8')
 
         nuc_inst_info_dict = HoVerNet._get_instance_info(pred_inst, pred_type)
         layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
