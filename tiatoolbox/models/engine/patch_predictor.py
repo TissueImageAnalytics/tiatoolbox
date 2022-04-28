@@ -51,7 +51,7 @@ class PatchPredictor:
        :header-rows: 1
 
        * - Model name
-         - F$_1$ score
+         - F_1 score
        * - alexnet-kather100k
          - 0.965
        * - resnet18-kather100k
@@ -92,7 +92,7 @@ class PatchPredictor:
        :header-rows: 1
 
        * - Model name
-         - F$_1$ score
+         - F_1 score
        * - alexnet-pcam
          - 0.840
        * - resnet18-pcam
