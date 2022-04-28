@@ -86,7 +86,7 @@ class PatchPredictor:
          - 0.992
        * - googlenet-kather100k
          - 0.992
-    
+
     .. list-table:: PatchPredictor performance on the PCam dataset [2]
        :widths: 15 15
        :header-rows: 1
@@ -207,10 +207,10 @@ class PatchPredictor:
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(wsi_file, mode='wsi')
-    
+
     References:
         [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
-        histology slides using deep learning: A retrospective multicenter study." 
+        histology slides using deep learning: A retrospective multicenter study."
         PLoS medicine 16.1 (2019): e1002730.
 
         [2] Veeling, Bastiaan S., et al. "Rotation equivariant CNNs for digital

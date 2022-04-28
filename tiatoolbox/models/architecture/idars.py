@@ -22,7 +22,7 @@ class IDaRS(CNNModel):
        :widths: 15 15 15 15 15 15 15
        :header-rows: 1
 
-       * - 
+       * -
          - MSI
          - TP53
          - BRAF
@@ -49,10 +49,10 @@ class IDaRS(CNNModel):
             Model name.
         num_classes (int):
             Number of classes output by model.
-    
+
     References:
-        [1] Bilal, Mohsin, et al. "Development and validation of a weakly supervised 
-        deep learning framework to predict the status of molecular pathways and key 
+        [1] Bilal, Mohsin, et al. "Development and validation of a weakly supervised
+        deep learning framework to predict the status of molecular pathways and key
         mutations in colorectal cancer from routine histology images: a retrospective
         study." The Lancet Digital Health 3.12 (2021): e763-e772.
 

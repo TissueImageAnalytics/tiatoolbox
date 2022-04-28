@@ -261,7 +261,7 @@ class HoVerNet(ModelABC):
     """Initialise HoVerNet [1].
 
     The tiatoolbox models should produce the following results:
-    
+
     .. list-table:: HoVerNet segmentation performance on the CoNSeP dataset [1]
        :widths: 15 15 15 15 15 15 15
        :header-rows: 1
@@ -280,7 +280,7 @@ class HoVerNet(ModelABC):
          - 0.70
          - 0.78
          - 0.55
-    
+
     .. list-table:: HoVerNet segmentation performance on the Kumar dataset [2]
        :widths: 15 15 15 15 15 15 15
        :header-rows: 1
