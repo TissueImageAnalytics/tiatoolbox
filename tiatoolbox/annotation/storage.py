@@ -1182,9 +1182,9 @@ class SQLiteStore(AnnotationStore):
         )
         self.con.commit()
 
-    def serialise_geometry(
+    def serialise_geometry(  # skipcq: PYL-W0221
         self, geometry: Geometry
-    ) -> Union[str, bytes]:  # skipcq: PYL-W0221
+    ) -> Union[str, bytes]:
         """Serialise a geometry to WKB with optional compression.
 
         Converts shapely geometry objects to well-known binary (WKB) and
@@ -1231,9 +1231,9 @@ class SQLiteStore(AnnotationStore):
             return Point(cx, cy)
         return self.deserialise_geometry(data)
 
-    def deserialise_geometry(
+    def deserialise_geometry(  # skipcq: PYL-W0221
         self, data: Union[str, bytes]
-    ) -> Geometry:  # skipcq: PYL-W0221
+    ) -> Geometry:
         """Deserialise a geometry from a string or bytes.
 
         Args:
