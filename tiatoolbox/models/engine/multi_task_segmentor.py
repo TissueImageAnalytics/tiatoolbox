@@ -48,7 +48,7 @@ def _process_instance_predictions(
     tile_mode,
     tile_tl,
     ref_inst_dict,
-    ):
+):
     """Function to merge new tile prediction with existing prediction.
 
     Args:
@@ -210,6 +210,7 @@ def _process_instance_predictions(
             new_inst_dict[inst_uuid] = inst_info
     return new_inst_dict, remove_insts_in_orig
 
+
 # Python is yet to be able to natively pickle Object method/static method.
 # Only top-level function is passable to multi-processing as caller.
 # May need 3rd party libraries to use method/static method otherwise.
@@ -224,7 +225,6 @@ def _process_tile_predictions(
     ref_inst_dict,
     postproc,
     merge_predictions,
-    output_types,
     model_name,
 ):
     """Function to merge new tile prediction with existing prediction,
@@ -263,7 +263,6 @@ def _process_tile_predictions(
         postproc (callable): Function to post-process the raw assembled tile.
         merge_predictions (callable): Function to merge the `tile_output` into
             raw tile prediction.
-        output
 
     Returns:
         new_inst_dict (dict): A dictionary contain new instances to be accumulated.
@@ -305,11 +304,11 @@ def _process_tile_predictions(
 
     out_dicts = postproc(head_raws)
 
-    # debate as to whether to check size of objects 
-    if 'hovernetplus' in model_name:
+    # debate as to whether to check size of objects
+    if "hovernetplus" in model_name:
         _, inst_dict, layer_map, _ = postproc(head_raws)
         out_dicts = [inst_dict, layer_map]
-    elif 'hovernet' in model_name:
+    elif "hovernet" in model_name:
         _, inst_dict = postproc(head_raws)
         out_dicts = [inst_dict]
     else:
@@ -328,7 +327,7 @@ def _process_tile_predictions(
             tile_mode,
             tile_tl,
             ref_inst_dict[id],
-            )
+        )
         new_inst_dicts.append(new_inst_dict)
         remove_insts_in_origs.append(remove_insts_in_orig)
 
@@ -431,10 +430,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self.wsi_layers = []
         self.output_types = output_types
 
-        if 'hovernetplus' in pretrained_model:
-            self.output_types = ['instance', 'semantic']
-        elif 'hovernet' in pretrained_model:
-            self.output_types = ['instance']
+        if "hovernetplus" in pretrained_model:
+            self.output_types = ["instance", "semantic"]
+        elif "hovernet" in pretrained_model:
+            self.output_types = ["instance"]
 
     @staticmethod
     def _get_tile_info(
@@ -743,12 +742,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
             self._wsi_inst_info.append({})
 
         for s_id, sem_idx in enumerate(indices_sem):
-            self.wsi_layers.append(np.lib.format.open_memmap(
-                f'{cache_dir}/{s_id}.npy',
-                mode="w+",
-                shape=tuple(wsi_proc_shape),
-                dtype=np.uint8,
-            ))
+            self.wsi_layers.append(
+                np.lib.format.open_memmap(
+                    f"{cache_dir}/{s_id}.npy",
+                    mode="w+",
+                    shape=tuple(wsi_proc_shape),
+                    dtype=np.uint8,
+                )
+            )
             self.wsi_layers[s_id][:] = 0
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
@@ -771,15 +772,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
                 )
             self._merge_post_process_results()
-        
+
         # Maybe store semantic annotations as contours in .dat file...
         for i_id, inst_idx in enumerate(indices_inst):
             joblib.dump(self._wsi_inst_info[i_id], f"{save_path}.{inst_idx}.dat")
 
         for s_id, sem_idx in enumerate(indices_sem):
-            shutil.copyfile(f'{cache_dir}/{s_id}.npy', f"{save_path}.{sem_idx}.npy")
+            shutil.copyfile(f"{cache_dir}/{s_id}.npy", f"{save_path}.{sem_idx}.npy")
             # may need to chain it with parents
-        
+
         self._wsi_inst_info = []  # clean up
 
     def _process_tile_predictions(
@@ -795,8 +796,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             self._wsi_inst_info,
             self.model.postproc_func,
             self.merge_prediction,
-            self.output_types,
-            self.pretrained_model
+            self.pretrained_model,
         ]
         if self._postproc_workers is not None:
             future = self._postproc_workers.submit(_process_tile_predictions, *args)
