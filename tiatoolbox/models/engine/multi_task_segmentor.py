@@ -429,11 +429,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # adding more runtime placeholder
         self._wsi_inst_info = []
         self.wsi_layers = []
-        if 'hovernetplus' in pretrained_model:
-            output_types = ['instance', 'semantic']
-        elif 'hovernet' in pretrained_model:
-            output_types = ['instance']
         self.output_types = output_types
+
+        if 'hovernetplus' in pretrained_model:
+            self.output_types = ['instance', 'semantic']
+        elif 'hovernet' in pretrained_model:
+            self.output_types = ['instance']
 
     @staticmethod
     def _get_tile_info(
@@ -766,16 +767,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
 
                 tile_infer_output = self._infer_once()
-                # print('tile_output_infer', np.unique(tile_infer_output[0][1][3][0,:,:,0]))
-                # from matplotlib import pyplot as plt
-                # import cv2
-                # cv2.imwrite(f"{save_path}_{set_idx}_{tile_idx}.png", tile_infer_output[0][1][3][0,:,:,0])
                 self._process_tile_predictions(
                     ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
                 )
             self._merge_post_process_results()
         
-        # TODO store semantic annotations as contours in .dat file...
+        # Maybe store semantic annotations as contours in .dat file...
         for i_id, inst_idx in enumerate(indices_inst):
             joblib.dump(self._wsi_inst_info[i_id], f"{save_path}.{inst_idx}.dat")
 
@@ -783,7 +780,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             shutil.copyfile(f'{cache_dir}/{s_id}.npy', f"{save_path}.{sem_idx}.npy")
             # may need to chain it with parents
         
-        self._wsi_inst_info = [] # clean up
+        self._wsi_inst_info = []  # clean up
 
     def _process_tile_predictions(
         self, ioconfig, tile_bounds, tile_flag, tile_mode, tile_output

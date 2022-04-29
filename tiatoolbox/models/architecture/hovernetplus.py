@@ -101,12 +101,12 @@ class HoVerNetPlus(HoVerNet):
 
         """
         ls_map = np.squeeze(ls_map)
-        ls_map = np.around(ls_map).astype('uint8') # ensure all numbers are integers
+        ls_map = np.around(ls_map).astype('uint8')  # ensure all numbers are integers
         min_size = 20000
         kernel_size = 20
 
-        epith_all = np.where(ls_map >=2, 1, 0).astype('uint8')
-        mask = np.where(ls_map >=1, 1, 0).astype('uint8')
+        epith_all = np.where(ls_map >= 2, 1, 0).astype('uint8')
+        mask = np.where(ls_map >= 1, 1, 0).astype('uint8')
         epith_all = epith_all > 0
         epith_mask = morphology.remove_small_objects(epith_all, min_size=min_size).astype('uint8')
         epith_edited = epith_mask*ls_map
@@ -114,15 +114,14 @@ class HoVerNetPlus(HoVerNet):
         epith_edited_open = np.zeros_like(epith_edited).astype('uint8')
         for i in [3,2,4]:
             tmp = np.where(epith_edited == i, 1, 0).astype('uint8')
-            ep_open = cv2.morphologyEx(tmp, cv2.MORPH_CLOSE, np.ones((kernel_size,kernel_size)))
-            ep_open = cv2.morphologyEx(ep_open, cv2.MORPH_OPEN, np.ones((kernel_size,kernel_size)))
+            ep_open = cv2.morphologyEx(tmp, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size)))
+            ep_open = cv2.morphologyEx(ep_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size)))
             epith_edited_open[ep_open == 1] = i
 
-        mask_open = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((kernel_size,kernel_size)))
-        mask_open = cv2.morphologyEx(mask_open, cv2.MORPH_OPEN, np.ones((kernel_size,kernel_size))).astype('uint8')
-        # ls_map = mask_open + epith_edited_open
+        mask_open = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size)))
+        mask_open = cv2.morphologyEx(mask_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))).astype('uint8')
         ls_map = mask_open.copy()
-        for i in range(2,5):
+        for i in range(2, 5):
             ls_map[epith_edited_open == i] = i
 
         return ls_map.astype('uint8')
