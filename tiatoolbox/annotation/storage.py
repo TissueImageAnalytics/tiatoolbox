@@ -58,7 +58,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 from shapely import speedups, wkb, wkt
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon, MultiPolygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 from shapely.validation import make_valid
@@ -144,6 +144,9 @@ class Annotation:
 
         """
         return json.dumps(self.to_feature())
+
+    def __lt__(self, other):
+        return self.geometry.area < other.geometry.area
 
 
 class AnnotationStore(ABC, MutableMapping):
@@ -615,7 +618,7 @@ class AnnotationStore(ABC, MutableMapping):
         sel_prop,
         geometry: QueryGeometry,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        geometry_predicate="intersects",
+        geometry_predicate="bbox_intersects",
         distinct = False,
     ) -> List[str]:
         """get properties"""
@@ -1049,6 +1052,17 @@ class AnnotationStore(ABC, MutableMapping):
             ]
         elif fp.suffix=='.dat':
             #hovernet-stype .dat file
+            def make_valid_poly(poly):
+                if poly.is_valid:
+                    return poly
+                poly=poly.buffer(0.01)
+                if poly.is_valid:
+                    return poly
+                poly=make_valid(poly)
+                if len(list(poly))>1:
+                    return MultiPolygon([p for p in poly if poly.geom_type=='Polygon'])
+                return poly
+
             data = joblib.load(fp)
             props = list(data[list(data.keys())[0]].keys())#[3:]
             if 'contour' not in props:
@@ -1068,7 +1082,7 @@ class AnnotationStore(ABC, MutableMapping):
                         for key in data[subcat].keys():
                             data[subcat][key]['type'] = subcat
                     anns.extend([
-                    Annotation(make_valid(feature2geometry({'type': 'Polygon', 'coordinates': (0.5/0.275)*np.array([data[subcat][key]['contour']])})), {key2: data[subcat][key][key2] for key2 in props[3:]})
+                    Annotation(make_valid_poly(feature2geometry({'type': 'Polygon', 'coordinates': (0.5/0.275)*np.array([data[subcat][key]['contour']])})), {key2: data[subcat][key][key2] for key2 in props[3:]})
                     for key in data[subcat].keys()
                 ])
             else:
@@ -1358,7 +1372,7 @@ class SQLiteStore(AnnotationStore):
         def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
             a = wkb.loads(wkb_a)
-            b = self._unpack_geometry(b, cx, cy)
+            b = self._unpack_geometry(b, cx, cy, self.metadata["compression"])
             return self._geometry_predicate(name, a, b)
 
         def pickle_where(pickle_bytes: bytes, properties: str) -> bool:
@@ -1450,7 +1464,8 @@ class SQLiteStore(AnnotationStore):
             return zlib.compress(data, level=self.metadata["compression_level"])
         raise Exception("Unsupported compression method.")
 
-    def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
+    @staticmethod
+    def _unpack_geometry(data: Union[str, bytes], cx: int, cy: int, compress_type) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
         For space optimisation, points are stored as centroids and all
@@ -1483,7 +1498,13 @@ class SQLiteStore(AnnotationStore):
                 data = data[0]
         if data is None:
             return Point(cx, cy)
-        return self.deserialise_geometry(data)
+        if compress_type == "zlib":
+            data = zlib.decompress(data)
+        elif compress_type is not None:
+            raise Exception("Unsupported compression method.")
+        if isinstance(data, str):
+            return wkt.loads(data)
+        return wkb.loads(data)
 
     def deserialise_geometry(self, data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes.
@@ -1584,6 +1605,7 @@ class SQLiteStore(AnnotationStore):
             self._append(key, annotation, cur)
             result.append(key)
         self.con.commit()
+        self._cached_query.cache_clear()
         return result
 
     def _append(self, key: str, annotation: Annotation, cur: sqlite3.Cursor) -> None:
@@ -1621,16 +1643,15 @@ class SQLiteStore(AnnotationStore):
                 """,
             token,
         )
+        self._cached_query.cache_clear()
 
-    @staticmethod
-    @lru_cache(maxsize=256)
     def _query(
+        self,
         rows: str,
         geometry: Optional[Geometry] = None,
         callable_rows: Optional[str] = None,
         geometry_predicate="intersects",
         where: Optional[Predicate] = None,
-        con = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1653,31 +1674,17 @@ class SQLiteStore(AnnotationStore):
                 A database cursor for the current query.
 
         """
-        geometry_predicate_names = [
-            "equals",
-            "contains",
-            "covers",
-            "covered_by",
-            "crosses",
-            "disjoint",
-            "intersects",
-            "overlaps",
-            "touches",
-            "within",
-            "bbox_intersects",  # Special non-shapely case, bounding-boxes intersect
-        ]
-
         if all(x is None for x in (geometry, where)):
             raise ValueError("At least one of `geometry` or `where` must be specified.")
         query_geometry = geometry
         if callable_rows is None:
             callable_rows = rows
-        if geometry_predicate not in geometry_predicate_names:
+        if geometry_predicate not in self._geometry_predicate_names:
             raise ValueError(
                 "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(geometry_predicate_names)}."
+                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
             )
-        cur = con.cursor()
+        cur = self.con.cursor()
 
         # Normalise query geometry and determine if it is a rectangle
         if isinstance(query_geometry, Iterable):
@@ -1685,7 +1692,7 @@ class SQLiteStore(AnnotationStore):
 
         if isinstance(where, Callable):
             rows = callable_rows
-
+        print(rows)
         # Initialise the query string and parameters
         query_string = (
             "SELECT "  # skipcq: BAN-B608
@@ -1694,7 +1701,7 @@ class SQLiteStore(AnnotationStore):
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
         """
-        )
+        )      
 
         query_parameters = {}
 
@@ -1746,11 +1753,12 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, str):
             sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
             query_string += f"AND {sql_predicate}"
-            #print(sql_predicate)
+            print(sql_predicate)
         if isinstance(where, SQLTriplet):
             query_string += f"AND {where}"
+
         cur.execute(query_string, query_parameters)
-        return cur.fetchall()
+        return cur
 
     def iquery(
         self,
@@ -1793,50 +1801,14 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate=geometry_predicate,
             where=where,
             callable_rows="[key], geometry, properties",
-            con=self.con,
         )
         if isinstance(where, Callable):
             return [
                 key
-                for key, _, properties in cur
+                for key, _, properties in cur.fetchall()
                 if where(json.loads(properties))
             ]
-        return [val for val, in cur]
-
-
-    def keyed_query(
-        self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        geometry_predicate: str = "intersects",
-        bbox_only: bool = False,
-    ) -> Dict[str, Annotation]:
-        if bbox_only:
-            ret_str = "key, properties, cx, cy, min_x, min_y, max_x, max_y"
-        else:
-            ret_str = "key, properties, cx, cy, geometry"
-        query_geometry = geometry
-        cur = self._query(
-            ret_str,
-            geometry=query_geometry,
-            geometry_predicate=geometry_predicate,
-            where=where,
-        )
-        if isinstance(where, Callable):
-            return {
-                key: Annotation(
-                    self._unpack_geometry(blob, cx, cy), json.loads(properties)
-                )
-                for key, properties, cx, cy, *blob in cur.fetchall()
-                if where(json.loads(properties))
-            }
-        return {
-            key: Annotation(
-                self._unpack_geometry(blob, cx, cy),
-                json.loads(properties),
-            )
-            for key, properties, cx, cy, *blob in cur.fetchall()
-        }
+        return [val for val, in cur.fetchall()]
 
     def query(
         self,
@@ -1849,25 +1821,170 @@ class SQLiteStore(AnnotationStore):
             rows="properties, cx, cy, geometry",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
-            where=None,    #meep
-            con=self.con,
+            where=where,
         )
         if isinstance(where, Callable):
             return [
-                Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy),
+                    Annotation(
+                    geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
                     properties=json.loads(properties),
                 )
-                for properties, cx, cy, blob in cur
-                #if where(json.loads(properties))
+                for properties, cx, cy, blob in cur.fetchall()
+                if where(json.loads(properties))
             ]
         return [
-            Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy),
+                Annotation(
+                geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
                 properties=json.loads(properties),
             )
-            for properties, cx, cy, blob in cur
+            for properties, cx, cy, blob in cur.fetchall()
         ]
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _cached_query(
+        rows: str,
+        geometry: Optional[Iterable] = None,
+        callable_rows: Optional[str] = None,
+        geometry_predicate="intersects",
+        con = None,
+        bbox = True,
+        compress_type = None,
+    ) -> sqlite3.Cursor:
+        """Common query construction logic for `query` and `iquery`.
+
+        Args:
+            rows(str):
+                The rows to select.
+            geometry(tuple or Geometry):
+                The geometry being queries against.
+            select_callable(str):
+                The rows to select when a callable is given to `where`.
+            callable_rows(str):
+                The binary predicate to use when comparing `geometry`
+                with each candidate shape.
+            where (str or bytes or Callable):
+                The predicate to evaluate against candidate properties
+                during the query.
+
+        Returns:
+            sqlite3.Cursor:
+                A database cursor for the current query.
+
+        """
+        if geometry is None:
+            raise ValueError("`geometry` must be specified.")
+        query_geometry = geometry
+        if callable_rows is None:
+            callable_rows = rows
+        cur = con.cursor()
+
+        # Normalise query geometry and determine if it is a rectangle
+        if isinstance(query_geometry, Iterable):
+            query_geometry = Polygon.from_bounds(*query_geometry)
+
+        if callable_rows is not None:
+            rows = callable_rows
+
+        # Initialise the query string and parameters
+        query_string = (
+            "SELECT "  # skipcq: BAN-B608
+            + rows  # skipcq: BAN-B608
+            + """
+         FROM annotations, rtree
+        WHERE annotations.id == rtree.id
+        """
+        )      
+
+        query_parameters = {}
+
+        # There is query geometry, add a simple rtree bounds check to
+        # rapidly narrow candidates down.
+        if query_geometry is not None:
+            # Add rtree index checks to the query
+            query_string += """
+            AND max_x >= :min_x
+            AND min_x <= :max_x
+            AND max_y >= :min_y
+            AND min_y <= :max_y
+            """
+
+            # Find the bounds of the geometry for the rtree index
+            min_x, min_y, max_x, max_y = query_geometry.bounds
+
+            # Update query parameters
+            query_parameters.update(
+                {
+                    "min_x": min_x,
+                    "max_x": max_x,
+                    "min_y": min_y,
+                    "max_y": max_y,
+                    "geometry_predicate": geometry_predicate,
+                    "query_geometry": query_geometry.wkb,
+                }
+            )
+
+            # The query is a full intersection check, not a simple bounds
+            # check only.
+            if (
+                geometry_predicate is not None
+                and geometry_predicate != "bbox_intersects"
+            ):
+                query_string += (
+                    "\nAND geometry_predicate("
+                    ":geometry_predicate, :query_geometry, geometry, cx, cy"
+                    ") "
+                )
+                query_parameters["geometry_predicate"] = geometry_predicate
+                query_parameters["query_geometry"] = query_geometry.wkb
+
+        cur.execute(query_string, query_parameters)
+        
+        if bbox:
+            return {key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties)) for key, properties, *bounds in cur.fetchall()}  
+        else:
+            return sorted([
+                Annotation(
+                geometry=SQLiteStore._unpack_geometry(blob, cx, cy, compress_type),
+                properties=json.loads(properties),
+            )
+            for properties, cx, cy, blob in cur.fetchall()
+        ], reverse=True)
+
+    def cached_bquery(
+        self,
+        geometry: Optional[Tuple] = None,
+        where: Callable[[Dict[str, Any]], bool] = None,
+    ) -> Dict[str, Annotation]:
+        data = self._cached_query(
+            rows="[key], properties, min_x, min_y, max_x, max_y",
+            geometry=geometry,
+            geometry_predicate="bbox_intersects",
+            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
+            con = self.con,
+            bbox = True,
+            compress_type = self.metadata["compression"],
+        )
+        if where is None:
+            return data
+        return {key: ann for key, ann in data.items() if where(ann.properties)}
+
+    def cached_query(
+        self,
+        geometry: Optional[Tuple] = None,
+        where: Callable[[Dict[str, Any]], bool] = None,
+    ) -> List[Annotation]:
+        data = self._cached_query(
+            rows="properties, cx, cy, geometry",
+            geometry=geometry,
+            geometry_predicate="intersects",
+            con = self.con,
+            bbox = False,
+            compress_type = self.metadata["compression"],
+        )
+        if where is None:
+            return data
+        return [ann for ann in data if where(ann.properties)]
 
     def bquery(
         self,
@@ -1878,18 +1995,16 @@ class SQLiteStore(AnnotationStore):
             rows="[key], properties, min_x, min_y, max_x, max_y",
             geometry=geometry,
             geometry_predicate="bbox_intersects",
-            where=None,    #meep
-            #callable_rows="[key], properties, min_x, min_y, max_x, max_y",
-            con=self.con,
+            where=where,
+            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
         )
-        print(where)
         if isinstance(where, Callable):
             return {
                 key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
-                for key, properties, *bounds in cur
-                #if where(json.loads(properties))
+                for key, properties, *bounds in cur.fetchall()
+                if where(json.loads(properties))
             }
-        return {key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties)) for key, properties, *bounds in cur}
+        return {key: bounds for key, *bounds in cur.fetchall()}
 
     def __len__(self) -> int:
         cur = self.con.cursor()
@@ -1917,7 +2032,7 @@ class SQLiteStore(AnnotationStore):
             raise KeyError(key)
         serialised_geometry, serialised_properties, cx, cy = row
         properties = json.loads(serialised_properties or "{}")
-        geometry = self._unpack_geometry(serialised_geometry, cx, cy)
+        geometry = self._unpack_geometry(serialised_geometry, cx, cy, self.metadata["compression"])
         return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
@@ -1956,7 +2071,7 @@ class SQLiteStore(AnnotationStore):
                 break
             key, cx, cy, serialised_geometry, serialised_properties = row
             if serialised_geometry is not None:
-                geometry = self._unpack_geometry(serialised_geometry, cx, cy)
+                geometry = self._unpack_geometry(serialised_geometry, cx, cy, self.metadata["compression"])
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(serialised_properties)
@@ -2004,6 +2119,7 @@ class SQLiteStore(AnnotationStore):
                     },
                 )
         self.con.commit()
+        self._cached_query.cache_clear()
 
     def _patch_geometry(
         self, key: str, geometry: Geometry, cur: sqlite3.Cursor
@@ -2048,6 +2164,7 @@ class SQLiteStore(AnnotationStore):
             """,
             query_parameters,
         )
+        self._cached_query.cache_clear()
 
     def remove_many(self, keys: Iterable[str]) -> None:
         cur = self.con.cursor()
@@ -2070,6 +2187,7 @@ class SQLiteStore(AnnotationStore):
                 (key,),
             )
         self.con.commit()
+        self._cached_query.cache_clear()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
         if key in self:

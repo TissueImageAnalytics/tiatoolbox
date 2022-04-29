@@ -7,6 +7,7 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from PIL import Image
 from bokeh.models import Plot, CustomJSExpr, CustomJS, ColumnDataSource, Panel, Slider, Toggle, FileInput, DataRange1d, TextInput, Button, Dropdown, BoxEditTool, CheckboxGroup, ColorPicker, Range1d
 from bokeh.layouts import layout, row, column
+from bokeh.io.showing import show
 from bokeh.core.properties import MinMaxBounds
 from pathlib import Path
 from bokeh.plotting import figure
@@ -32,6 +33,7 @@ import operator
 from bokeh.embed import server_document
 from pyproj import Geod, CRS, Transformer
 import sys
+from ui_utils import get_level_by_extent
 
 # Pandas for data management
 import pandas as pd
@@ -47,7 +49,7 @@ def make_ts(route,mpp=0.2525):
     sf=1.00301
     #sf=sf/mpp
     sf=(sf/0.5015)*(vstate.maxds/32.0063)
-    ts=WMTSTileSource(name="WSI provider", url=route, attribution="")
+    ts=WMTSTileSource(name="WSI provider", url=route, attribution="", snap_to_zoom=False)
     ts.tile_size=256
     ts.initial_resolution=40211.5*sf*(2/(100*pi))   #156543.03392804097    40030 great circ
     ts.x_origin_offset=0#5000000
@@ -103,16 +105,18 @@ def build_predicate():
     return combo
 
 def build_predicate_callable():
-    get_types=[name2type(l.label) for l in box_column.children if l.active]
+    get_types=[name2type_key(l.label) for l in box_column.children if l.active]
     if len(get_types)==len(box_column.children):
-        if filter_input.value is None:
+        if filter_input.value == 'None':
+            vstate.renderer.where=None
             return None
         
-    if filter_input.value is None:
+    if filter_input.value == 'None':
         def pred(props):
             return props['type'] in get_types
     else:
         def pred(props):
+            print(eval(filter_input.value))
             return eval(filter_input.value) and props['type'] in get_types
     vstate.renderer.where=pred
     return pred
@@ -120,25 +124,32 @@ def build_predicate_callable():
 def initialise_slide():
     vstate.mpp=np.minimum(wsi[0].info.mpp[0],1.0)
     vstate.dims = wsi[0].info.slide_dimensions
-    opt_level,_ = wsi[0]._find_optimal_level_and_downsample(1.25,'power')
+    opt_level,_ = wsi[0]._find_optimal_level_and_downsample(1.0,'power')
     print(opt_level)
     vstate.maxds = wsi[0].info.level_downsamples[np.minimum(opt_level+1, len(wsi[0].info.level_downsamples)-1)]
+    #vstate.maxds = wsi[0].info.level_downsamples[opt_level]
+    zlev = get_level_by_extent((0, -vstate.dims[1], vstate.dims[0], 0))
+    print(zlev)
+    #vstate.maxds = 2 ** (9 - zlev - 1)
+    print(vstate.maxds)
     print(wsi[0].info.as_dict())
     #p.x_range.bounds = (0, vstate.dims[0])
     #p.y_range.bounds = (-vstate.dims[1], 0)
     plot_size=np.array([1700,1000])
     large_dim=np.argmax(np.array(vstate.dims)/plot_size)
+    pad=int(np.mean(vstate.dims)/50)
     
     if large_dim==1:
-        p.x_range.start = -0.5*(vstate.dims[1]*1.7-vstate.dims[0])
-        p.x_range.end = vstate.dims[1]*1.7-0.5*(vstate.dims[1]*1.7-vstate.dims[0])
-        p.y_range.start = -vstate.dims[1]
-        p.y_range.end = 0
+        p.x_range.start = -0.5*(vstate.dims[1]*1.7-vstate.dims[0])-1.7*pad
+        p.x_range.end = vstate.dims[1]*1.7-0.5*(vstate.dims[1]*1.7-vstate.dims[0])+1.7*pad
+        p.y_range.start = -vstate.dims[1] - pad
+        p.y_range.end = pad
+        #p.x_range.min_interval = ?
     else:
-        p.x_range.start = 0
-        p.x_range.end = vstate.dims[0]
-        p.y_range.start = -vstate.dims[0]/1.7 + 0.5*(vstate.dims[0]/1.7-vstate.dims[1])
-        p.y_range.end = 0.5*(vstate.dims[0]/1.7-vstate.dims[1])
+        p.x_range.start = -1.7*pad
+        p.x_range.end = vstate.dims[0] + pad*1.7
+        p.y_range.start = -vstate.dims[0]/1.7 + 0.5*(vstate.dims[0]/1.7-vstate.dims[1])-pad
+        p.y_range.end = 0.5*(vstate.dims[0]/1.7-vstate.dims[1])+pad
 
 
 def initialise_overlay():
@@ -188,6 +199,7 @@ class ViewerState():
         self.layer_dict={'slide': 0,'rect': 1}
         self.renderer=[]
         self.slide_path=None
+        self.update_state=0
 
 vstate=ViewerState()
 
@@ -248,11 +260,12 @@ TOOLTIPS=[
     ]
 
 #SQ = SQLiteStore()
-ts1=make_ts(r'http://127.0.0.1:5000/layer/slide/zoomify/TileGroup1/{z}-{x}-{y}.jpg', vstate.mpp)
 #ts2=make_ts(r'http://127.0.0.1:5000/layer/overlay/zoomify/TileGroup1/{z}-{x}-{y}.jpg')
 
 p = figure(x_range=(0, vstate.dims[0]), y_range=(0,-vstate.dims[1]),x_axis_type="linear", y_axis_type="linear",
-width=1700,height=1000, tooltips=TOOLTIPS,output_backend="canvas", hidpi=True, match_aspect=False, lod_factor=100, lod_interval=500, lod_threshold=10, lod_timeout=200)
+width=1700,height=1000, tooltips=TOOLTIPS, output_backend="canvas", hidpi=False, match_aspect=False, lod_factor=100, lod_interval=500, lod_threshold=10, lod_timeout=200)
+initialise_slide()
+ts1=make_ts(r'http://127.0.0.1:5000/layer/slide/zoomify/TileGroup1/{z}-{x}-{y}.jpg', vstate.mpp)
 print(p.renderers)
 print(p.y_range)
 p.add_tile(ts1, smoothing = True, level='image', render_parents=False)
@@ -265,13 +278,13 @@ box_source=ColumnDataSource({'x': [], 'y': [], 'width': [], 'height': []})
 r=p.rect('x', 'y', 'width', 'height', source=box_source, fill_alpha=0)
 p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
 tslist=[]
-initialise_slide()
+#initialise_slide()
 print(p.extra_y_ranges)
 print(p.extra_y_scales)
 p.renderers[0].tile_source.max_zoom=10
 
 setmax=CustomJS(args=dict(p=p), code="""
-        p.renderers[0].tile_source.max_zoom=10;
+        p.renderers[0].tile_source.setmax(10);
     """)
 
 slide_alpha = Slider(
@@ -330,7 +343,6 @@ def change_tiles(layer_name='overlay'):
     if layer_name in vstate.layer_dict.keys():
         p.renderers[vstate.layer_dict[layer_name]].tile_source=ts
     else:
-        #p.renderers.append(TileRenderer(tile_source=ts))
         p.add_tile(ts, smoothing = True, alpha=overlay_alpha.value, level='overlay', render_parents=False)
         for layer_key in vstate.layer_dict.keys():
             if layer_key=='rect':
@@ -383,14 +395,16 @@ def layer_folder_input_cb(attr, old, new):
 
 def filter_input_cb(attr, old, new):
     resp = requests.get(f'http://127.0.0.1:5000/changepredicate/{new}')
-    change_tiles('overlay')
+    #change_tiles('overlay')
+    vstate.update_state=1
     #proc=Thread(target=change_tiles, args=('overlay',))
     #proc.start()
     #proc.join()
 
 def cprop_input_cb(attr, old, new):
     resp = requests.get(f'http://127.0.0.1:5000/changeprop/{new}')
-    change_tiles('overlay')
+    #change_tiles('overlay')
+    vstate.update_state=1
 
 slide_toggle.on_click(slide_toggle_cb)
 #slide_toggle.js_on_click(setmax)
@@ -411,7 +425,8 @@ def overlay_alpha_cb(attr,old,new):
 
 def cmap_drop_cb(attr):
     resp = requests.get(f'http://127.0.0.1:5000/changecmap/{attr.item}')
-    change_tiles('overlay')
+    #change_tiles('overlay')
+    vstate.update_state=1
 
 def file_drop_cb(attr):
     """setup the newly chosen slide"""
@@ -448,7 +463,7 @@ def layer_drop_cb(attr):
     fname='-*-'.join(attr.item.split('\\'))
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/changeoverlay/{fname}')
-    print(resp)
+    print(vstate.types)
     if resp.text=='overlay':
         update_mapper()
         initialise_overlay()
@@ -459,7 +474,8 @@ def layer_drop_cb(attr):
 
 def layer_select_cb(attr):
     build_predicate_callable()
-    change_tiles('overlay')
+    #change_tiles('overlay')
+    vstate.update_state=1
 
 def fixed_layer_select_cb(obj, attr):
     print(vstate.layer_dict)
@@ -477,7 +493,8 @@ def color_input_cb(obj, attr, old, new):
     vstate.mapper[name2type_key(obj.name)]=(*hex2rgb(new), 1)
     if vstate.renderer.score_prop=='type':
         vstate.renderer.mapper=lambda x: vstate.mapper[x]
-    change_tiles('overlay')
+    #change_tiles('overlay')
+    vstate.update_state=1
     
 def bind_cb_obj(cb_obj, cb):
     def wrapped(attr, old, new):
@@ -593,6 +610,14 @@ def cleanup_session(session_context):
     
 #script = server_document("http://127.0.0.1:5006/render_demo")
 #print(script)
+def update():
+    if vstate.update_state==2:
+        change_tiles('overlay')
+        vstate.update_state=0
+    if vstate.update_state==1:
+        vstate.update_state=2
+    
 
+curdoc().add_periodic_callback(update, 220)
 curdoc().add_root(l)
 curdoc().on_session_destroyed(cleanup_session)

@@ -474,7 +474,7 @@ class AnnotationRenderer:
         return np.squeeze(((np.array(coords) - tl) / scale).astype(np.int32))
 
     def get_bounded(self, ann, bound_geom):
-        if self.thickness == -1 or ann.geometry.geom_type != "Polygon":
+        if True: #self.thickness == -1 or ann.geometry.geom_type != "Polygon":
             return ann.geometry.intersection(bound_geom)
         else:
             return ann.geometry.boundary.intersection(bound_geom)
@@ -498,7 +498,7 @@ class AnnotationRenderer:
 
         cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
         cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
-        cv2.drawContours(rgb, [cnt], 0, (0,0,0), 1)
+        cv2.drawContours(rgb, [cnt], 0, (0,0,0,255), 1)
 
     def render_multipoly(self, rgb, ann, ann_bounded, tl, scale):
         """render a multipolygon annotation onto a tile using cv2"""
@@ -511,6 +511,9 @@ class AnnotationRenderer:
     def render_rect(self, rgb, ann, ann_bounded, tl, scale):
         """render a box annotation onto a tile using cv2"""
         col = self.get_color(ann)
+        if len(ann_bounded.bounds)==0:
+            print(ann_bounded)
+            print(ann_bounded.is_empty)
         box = self.to_tile_coords(np.reshape(ann_bounded.bounds, (2, 2)), tl, scale)
         cv2.rectangle(rgb, box[0, :], box[1, :], col, thickness=self.thickness)
 
@@ -528,10 +531,17 @@ class AnnotationRenderer:
     def render_line(self, rgb, ann, ann_bounded, tl, scale):
         """render a line annotation onto a tile using cv2"""
         col = self.get_color(ann)
-        cv2.polylines(
-            rgb,
-            [self.to_tile_coords(list(ann_bounded.coords), tl, scale)],
-            False,
-            col,
-            thickness=max(3, self.thickness),
-        )
+        try:
+            cv2.polylines(
+                rgb,
+                [self.to_tile_coords(list(ann_bounded.coords), tl, scale)],
+                False,
+                col,
+                thickness=self.thickness,
+            )
+        except:
+            print('derped:')
+            print(tl)
+            print(ann)
+            print(ann_bounded)
+            print(ann_bounded.is_empty)

@@ -594,9 +594,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
 
-        rgb = np.zeros((*output_size, 4), dtype=np.uint8)
+        rgb = np.zeros((output_size[0]+2, output_size[1]+2, 4), dtype=np.uint8)
         bounds = locsize2bounds(coord, [self.tile_size * scale] * 2)
         bound_geom = Polygon.from_bounds(*bounds)
+        coord=np.array(coord)-scale
         rgb = self.render_annotations(rgb, bound_geom, scale, coord)
 
         return Image.fromarray(rgb)
@@ -604,14 +605,15 @@ class AnnotationTileGenerator(ZoomifyGenerator):
     def render_annotations(self, rgb, bound_geom, scale, tl):
         """get annotations as bbox or geometry according to zoom level,
         and decimate large collections of small annotations if appropriate"""
+        clip_bound_geom=bound_geom.buffer(scale)
         r = self.renderer
-        big_thresh = 0.0025 * (self.tile_size * scale) ** 2
+        big_thresh = 0.0008 * (self.tile_size * scale) ** 2
         decimate = int(scale / self.renderer.max_scale) + 1
         if scale > 100:
             decimate = decimate * 2
 
         if scale > self.renderer.max_scale:
-            anns_dict = self.store.bquery(
+            anns_dict = self.store.cached_bquery(
                 bound_geom.bounds, 
                 self.renderer.where,
             )
@@ -623,7 +625,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 i += 1
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
-                    ann_bounded = r.get_bounded(ann, bound_geom)
+                    ann_bounded = r.get_bounded(ann, clip_bound_geom)
                     if ann_bounded.is_empty:
                         #only bbox not actual geom was inside the tile, so ignore
                         continue
@@ -631,6 +633,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "LineString":
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
+                    elif ann_bounded.geom_type == "MultiPolygon":
+                        r.render_multipoly(rgb, ann, ann_bounded, tl, scale)
                     else:
                         print(f"unknown geometry: {ann_bounded.geom_type}")
                     continue
@@ -638,8 +642,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     if ann.geometry.geom_type == "Point":
                         r.render_pt(rgb, ann, tl, scale)
                         continue
-                    ann_bounded = r.get_bounded(ann, bound_geom)
+                    ann_bounded = r.get_bounded(ann, clip_bound_geom)
                     if ann_bounded.geom_type == "Polygon":
+                        if ann_bounded.is_empty:
+                            print('why is this empty?')
                         r.render_rect(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "LineString":
                         #ann_bounded = ann.geometry.intersection(bound_geom)
@@ -647,12 +653,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print(f"unknown geometry: {ann_bounded.geom_type}")
         else:
-            anns = self.store.query(bound_geom.bounds, self.renderer.where)
+            anns = self.store.cached_query(bound_geom.bounds, self.renderer.where)
             for ann in anns:
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue
-                ann_bounded = r.get_bounded(ann, bound_geom)
+                ann_bounded = r.get_bounded(ann, clip_bound_geom)
                 if ann_bounded.geom_type == "Polygon":
                     r.render_poly(rgb, ann, ann_bounded, tl, scale)
                 elif ann_bounded.geom_type == "LineString":
@@ -665,4 +671,4 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 else:
                     print(f"unknown geometry: {ann_bounded.geom_type}")
 
-        return rgb
+        return rgb[1:-1, 1:-1, :]
