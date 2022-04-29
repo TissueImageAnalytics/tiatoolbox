@@ -115,8 +115,8 @@ class HoVerNetPlus(HoVerNet):
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies various morphological
-        operations remove spurious segmentations. Note, this processing is specific to oral
-        epithelium, where prioirty is given to certain tissue layers.
+        operations remove spurious segmentations. Note, this processing is specific to
+        oral epithelium, where prioirty is given to certain tissue layers.
 
         Args:
             ls_map:
