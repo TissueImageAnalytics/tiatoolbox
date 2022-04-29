@@ -1,45 +1,30 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
+"""Storage of annotations.
 
-"""
 This module contains a collection of classes for handling storage of
-annotations in memory in addition to serialisation/deserialisation
-to/from disk.
+annotations in memory in addition to serialisation/deserialisation to/from
+disk.
 
 Definitions
 -----------
 
-For the sake of clarity it is helpful to define a few terms used
-throughout this documentation.
+For the sake of clarity it is helpful to define a few terms used throughout
+this documentation.
 
 Annotation
     A geometry and associated properties.
 Geometry
     One of: a point, a polygon, or a line string.
-    .. image: images/geometries.png
+
+    .. figure:: ../images/geometries.png
+            :width: 512
+
 Properties
     Key-value pairs associated with a geometry.
 
 """
 import contextlib
 import copy
+import json
 import pickle
 import sqlite3
 import sys
@@ -73,11 +58,8 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
-try:
-    import ujson as json  # pyright: reportMissingModuleSource=false
-except ImportError:
-    import json
-
+import tiatoolbox
+from tiatoolbox import logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
@@ -183,11 +165,12 @@ class AnnotationStore(ABC, MutableMapping):
                 Name of the predicate to apply.
             a(Geometry):
                 The first geometry.
-            b(Geomettry):
+            b(Geometry):
                 The second geometry.
 
         Returns:
-            bool: True if the predicate holds.
+            bool:
+                True if the geometry predicate holds.
 
         """
         return getattr(a, name)(b)
@@ -215,7 +198,8 @@ class AnnotationStore(ABC, MutableMapping):
             fp(Path or str or IO): The file path or file handle.
 
         Returns:
-            AnnotationStoreABC: An instance of an annotation store.
+            AnnotationStoreABC:
+                An instance of an annotation store.
 
         """
 
@@ -277,7 +261,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Serialise and return a copy of store as a string or bytes.
 
         Returns:
-            str or bytes: The serialised store.
+            str or bytes:
+                The serialised store.
 
         """
 
@@ -292,12 +277,13 @@ class AnnotationStore(ABC, MutableMapping):
             annotation (Annotation):
                 The shapely annotation to insert.
             key (str):
-                Optional. The unique key used to identify the
-                annotation in the store. If not given a new UUID4 will
-                be generated and returned instead.
+                Optional. The unique key used to identify the annotation in the
+                store. If not given a new UUID4 will be generated and returned
+                instead.
 
         Returns:
-            str: The unique key of the newly inserted annotation.
+            str:
+                The unique key of the newly inserted annotation.
 
         """
         keys = key if key is None else [key]
@@ -316,9 +302,8 @@ class AnnotationStore(ABC, MutableMapping):
             annotations (iter(Annotation)):
                 An iterable of annotations.
             keys (iter(str)):
-                An iterable of unique keys associated with each
-                geometry being inserted. If None, a new UUID4 is
-                generated for each geometry.
+                An iterable of unique keys associated with each geometry being
+                inserted. If None, a new UUID4 is generated for each geometry.
 
         Returns:
             list(str):
@@ -345,22 +330,20 @@ class AnnotationStore(ABC, MutableMapping):
     ) -> None:
         """Patch an annotation at given key.
 
-        Partial update of an annotation. Providing only a geometry
-        will update the geometry and leave properties unchanged.
-        Providing a properties dictionary applies a patch operation to
-        the properties. Only updating the properties which are
-        given and leaving the rest unchanged. To completely replace an
-        annotation use `__setitem__`.
+        Partial update of an annotation. Providing only a geometry will update
+        the geometry and leave properties unchanged. Providing a properties
+        dictionary applies a patch operation to the properties. Only updating
+        the properties which are given and leaving the rest unchanged. To
+        completely replace an annotation use `__setitem__`.
 
         Args:
             key(str):
-                The key of the annoation to update.
+                The key of the annotation to update.
             geometry(Geometry):
                 The new geometry. If None, the geometry is not updated.
             properties(dict):
-                A dictionary of properties to patch and their new
-                new values. If None, the existing properties are not
-                altered.
+                A dictionary of properties to patch and their new values.
+                If None, the existing properties are not altered.
 
         """
         if key not in self:
@@ -439,7 +422,8 @@ class AnnotationStore(ABC, MutableMapping):
                 The value to return if the key is not found.
 
         Returns:
-            The annotation or default if the key is not found.
+            Annotation:
+                The annotation or default if the key is not found.
 
         """
         if not isinstance(default, Annotation):
@@ -458,11 +442,12 @@ class AnnotationStore(ABC, MutableMapping):
         """
         self.remove(key)
 
-    def keys(self) -> Iterable[int]:
+    def keys(self) -> Iterable[str]:
         """Return an iterable (usually generator) of all keys in the store.
 
         Returns:
-            iter: An iterable of keys.
+            Iterable[str]:
+                An iterable of keys.
 
         """
         for key, _ in self.items():
@@ -472,19 +457,21 @@ class AnnotationStore(ABC, MutableMapping):
         """Return an iterable of all annotation in the store.
 
         Returns:
-            iter: An iterable of annotations.
+            Iterable[Annotation]:
+                An iterable of annotations.
 
         """
         for _, annotation in self.items():
             yield annotation
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterable[str]:
         """Return an iterable of keys in the store.
 
         An alias of `keys`.
 
         Returns:
-            iter: An iterable of keys.
+            Iterable[str]:
+                An iterable of keys.
 
         """
         yield from self.keys()
@@ -500,15 +487,15 @@ class AnnotationStore(ABC, MutableMapping):
 
         Args:
             predicate (str or bytes or Callable):
-                The predicate to evaluate on properties. The predicate
-                may be a string, pickled bytes, or a callable
-                (e.g. a function).
+                The predicate to evaluate on properties. The predicate may be a
+                string, pickled bytes, or a callable (e.g. a function).
             properties (dict):
                 A dictionary of JSON serialisable
                 properties on which to evaluate the predicate.
 
         Returns:
-            bool: Returns true if the predicate holds.
+            bool:
+                Returns True if the predicate holds.
 
         """
         if predicate is None:
@@ -530,48 +517,47 @@ class AnnotationStore(ABC, MutableMapping):
         """Query the store for annotations.
 
         Args:
-            geometry (QueryGeometry):
-                Geometry to use when querying. This can be a bounds or
-                a Shapely geometry (e.g. Polygon).
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon).
             where (str or bytes or Callable):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
-                be returned. Defaults to None (assume always true). May
-                be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned
-                the from annotation store backend in python before being
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
                 Strings are expected to be in a domain specific language
                 and are converted to SQL on a best-effort basis. For
                 supported operators of the DSL see
-                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple
-                python expression `props["class"] == 42` will be
-                converted to a valid SQLite predicate when using
-                `SQLiteStore` and inserted into the SQL query. This
-                should be faster than filtering in python after or
-                during the query. Additionally, the same string can be
-                used across different backends (e.g. the previous
-                example predicate string is valid for both
-                `DictionaryStore `and a `SQliteStore`). On the
-                other hand it has many more limitations. It is important
-                to note that untrusted user input should never be
-                accepted to this argument as arbitrary code can be run
-                via pickle or the parsing of the string statement.
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query.
+                Additionally, the same string can be used across
+                different backends (e.g. the previous example predicate
+                string is valid for both `DictionaryStore `and a
+                `SQliteStore`). On the other hand it has many more
+                limitations. It is important to note that untrusted user
+                input should never be accepted to this argument as
+                arbitrary code can be run via pickle or the parsing of
+                the string statement.
             geometry_predicate (str):
                 A string which define which binary geometry predicate to
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
-                intersects.
-                For more information see the `shapely documentation on
-                binary predicates`__.
+                intersects. For more information see the `shapely
+                documentation on binary predicates`__.
 
             Returns:
-                list: A list of 2-tuples containing:
-                - geometry: The annotation Shapely geometry object.
-                - properties: The properties JSON as a dictionary.
+                list:
+                    A list of Annotation objects.
 
             .. _BP:
                 | https://shapely.readthedocs.io/en/stable/
@@ -611,47 +597,47 @@ class AnnotationStore(ABC, MutableMapping):
         instead of annotations.
 
         Args:
-            geometry:
-                Geometry to use when querying. This can be a bounds or
-                a Shapely geometry (e.g. Polygon).
-            A statement which should evaluate to a boolean value.
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon).
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
-                be returned. Defaults to None (assume always true). May
-                be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned
-                the from annotation store backend in python before being
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
                 Strings are expected to be in a domain specific language
                 and are converted to SQL on a best-effort basis. For
                 supported operators of the DSL see
-                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple
-                python expression `props["class"] == 42` will be
-                converted to a valid SQLite predicate when using
-                `SQLiteStore` and inserted into the SQL query. This
-                should be faster than filtering in python after or
-                during the query. Additionally, the same string can be
-                used across different backends (e.g. the previous
-                example predicate string is valid for both
-                `DictionaryStore `and a `SQliteStore`). On the
-                other hand it has many more limitations. It is important
-                to note that untrusted user input should never be
-                accepted to this argument as arbitrary code can be run
-                via pickle or the parsing of the string statement.
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query.
+                Additionally, the same string can be used across
+                different backends (e.g. the previous example predicate
+                string is valid for both `DictionaryStore `and a
+                `SQliteStore`). On the other hand it has many more
+                limitations. It is important to note that untrusted user
+                input should never be accepted to this argument as
+                arbitrary code can be run via pickle or the parsing of
+                the string statement.
             geometry_predicate:
                 A string which define which binary geometry predicate to
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
-                intersects.
-                For more information see the `shapely documentation on
-                binary predicates`__.
+                intersects. For more information see the `shapely
+                documentation on binary predicates`__.
 
             Returns:
-                list: A list of 2-tuples containing:
-                - geometry: The annotation Shapely geometry object.
-                - properties: The properties JSON as a dictionary.
+                list:
+                    A list of keys for each Annotation.
 
             .. _BP:
                 | https://shapely.readthedocs.io/en/stable/
@@ -683,7 +669,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Return annotations as a list of geoJSON features.
 
         Returns:
-            list: List of features as dictionaries.
+            list:
+                List of features as dictionaries.
 
         """
         for a in self.values():
@@ -693,7 +680,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Return annotations as a dictionary in geoJSON format.
 
         Returns:
-            dict: Dictionary of annotations in geoJSON format.
+            dict:
+                Dictionary of annotations in geoJSON format.
 
         """
         return {
@@ -718,7 +706,8 @@ class AnnotationStore(ABC, MutableMapping):
                 The function to call when fp is None.
 
         Returns:
-            Any: The result of dump. Depends on the provided functions.
+            Any:
+                The result of dump. Depends on the provided functions.
 
         """
         if fp is not None:
@@ -769,11 +758,14 @@ class AnnotationStore(ABC, MutableMapping):
         - https://tools.ietf.org/html/rfc7946
 
         Args:
-             fp (IO): A file-like object supporting `.read`. Defaults to
-                None which returns geoJSON as a string.
+             fp (IO):
+                A file-like object supporting `.read`. Defaults to None
+                which returns geoJSON as a string.
 
         Returns:
-            None or str: None if writing to file or the geoJSON string.
+            Optional[str]:
+                None if writing to file or the geoJSON string if `fp` is
+                None.
 
         """
         return self._dump_cases(
@@ -813,7 +805,9 @@ class AnnotationStore(ABC, MutableMapping):
                 None which returns geoJSON as a string.
 
         Returns:
-            None or str: None if writing to file or the geoJSON string.
+            Optional[str]:
+                None if writing to file or the geoJSON string if`fp` is
+                None.
 
         """
         string_lines_generator = (
@@ -844,15 +838,16 @@ class AnnotationStore(ABC, MutableMapping):
             }
         }
         ```
-        That is a geoJSON object with an additional key field. If this
-        key field is missing, then a new UUID4 key will be generated for
-        this annotation.
+        That is a geoJSON object with an additional key field. If this key
+        field is missing, then a new UUID4 key will be generated for this
+        annotation.
 
         Args:
             fp (IO): A file-like object supporting `.read`.
 
         Returns:
-            AnnotationStore: The loaded annotations.
+            AnnotationStore:
+                The loaded annotations.
 
         """
         store = cls()
@@ -894,13 +889,12 @@ class AnnotationStore(ABC, MutableMapping):
     def create_index(self, name: str, where: Union[str, bytes]) -> None:
         """Create an SQLite expression index based on the provided predicate.
 
-        Note that an expression index will only be used if the query
-        expression (in the WHERE clause) exactly matches the expression
-        used when creating the index (excluding minor inconsequential
-        changes such as  whitespace).
+        Note that an expression index will only be used if the query expression
+        (in the WHERE clause) exactly matches the expression used when creating
+        the index (excluding minor inconsequential changes such as
+        whitespace).
 
-        SQLite expression indexes require SQLite version 3.9.0 or
-        higher.
+        SQLite expression indexes require SQLite version 3.9.0 or higher.
 
         Args:
             name (str):
@@ -917,14 +911,14 @@ class AnnotationStore(ABC, MutableMapping):
             sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
             cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
             return
-        raise TypeError("Invalid type for where")
+        raise TypeError(f"Invalid type for `where` ({type(where)}).")
 
     def clear(self) -> None:
         """Remove all annotations from the store.
 
-        This is a naive implementation, it simply iterates over all
-        annotations and removes them. Faster implementations may be
-        possible in specific cases and may be implemented by subclasses.
+        This is a naive implementation, it simply iterates over all annotations
+        and removes them. Faster implementations may be possible in specific
+        cases and may be implemented by subclasses.
 
         """
         for key in list(self.keys()):
@@ -999,10 +993,30 @@ class SQLiteStore(AnnotationStore):
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
-        if not all(
-            ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
-        ):
-            raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+        if sqlite3.sqlite_version_info >= (3, 38, 0):
+            if not all(
+                ["OMIT_JSON" not in compile_options, "ENABLE_RTREE" in compile_options]
+            ):
+                raise Exception(
+                    """RTREE sqlite3 compile option is required, and
+                    JSON must not be disabled with OMIT_JSON compile option"""
+                )
+        else:
+            if not all(
+                ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
+            ):
+                raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+
+        # Check that math functions are enabled
+        if "ENABLE_MATH_FUNCTIONS" not in compile_options:
+            logger.warning(
+                "SQLite math functions are not enabled."
+                " This may cause problems with some queries."
+                " For example, floor division (//) will not work."
+                " For a full list see https://tia-toolbox.readthedocs.io/"
+                "en/v%s/_autosummary/tiatoolbox.annotation.dsl.html",
+                tiatoolbox.__version__,
+            )
 
         # Set up database connection and cursor
         path = Path(connection)
@@ -1082,7 +1096,7 @@ class SQLiteStore(AnnotationStore):
                 objtype TEXT,            -- Object type
                 cx INTEGER NOT NULL,     -- X of centroid/representative point
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
-                boundary BLOB,           -- Detailed boundary
+                geometry BLOB,           -- Detailed geometry
                 properties TEXT          -- JSON properties
             )
             """
@@ -1100,7 +1114,8 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry to be serialised.
 
         Returns:
-            bytes or str: The serialised geometry.
+            bytes or str:
+                The serialised geometry.
 
         """
         data = geometry.wkb
@@ -1127,7 +1142,8 @@ class SQLiteStore(AnnotationStore):
                 The Y coordinate of the centroid/representative point.
 
         Returns:
-            Geometry: The Shapely geometry.
+            Geometry:
+                The Shapely geometry.
 
         """
         if data is None:
@@ -1142,7 +1158,8 @@ class SQLiteStore(AnnotationStore):
                 The serialised representation of a Shapely geometry.
 
         Returns:
-            Geometry: The deserialised Shapely geometry.
+            Geometry:
+                The deserialised Shapely geometry.
 
         """
         if self.metadata["compression"] == "zlib":
@@ -1201,12 +1218,12 @@ class SQLiteStore(AnnotationStore):
         key = key or str(uuid.uuid4())
         geometry = annotation.geometry
         if geometry.geom_type == "Point":
-            boundary = None
+            serialised_geometry = None
         else:
-            boundary = self.serialise_geometry(geometry)
+            serialised_geometry = self.serialise_geometry(geometry)
         return {
             "key": key,
-            "boundary": boundary,
+            "geometry": serialised_geometry,
             "cx": int(geometry.centroid.x),
             "cy": int(geometry.centroid.y),
             "min_x": geometry.bounds[0],
@@ -1254,7 +1271,7 @@ class SQLiteStore(AnnotationStore):
             """
                 INSERT INTO annotations VALUES(
                     NULL, :key, :geom_type,
-                    :cx, :cy, :boundary, :properties
+                    :cx, :cy, :geometry, :properties
                 )
                 """,
             token,
@@ -1288,14 +1305,15 @@ class SQLiteStore(AnnotationStore):
             select_callable(str):
                 The rows to select when a callable is given to `where`.
             geometry_predicate(str):
-                The binary predicate to use when compareing `geometry`
+                The binary predicate to use when comparing `geometry`
                 with each candidate shape.
             where (str or bytes or Callable):
                 The predicate to evaluate against candidate properties
                 during the query.
 
         Returns:
-            sqlite3.Cursor: A database cursor for the current query.
+            sqlite3.Cursor:
+                A database cursor for the current query.
 
         """
         query_geometry = geometry
@@ -1324,7 +1342,7 @@ class SQLiteStore(AnnotationStore):
           AND min_x <= :max_x
           AND max_y >= :min_y
           AND min_y <= :max_y
-          AND geometry_predicate(:geometry_predicate, :query_geometry, boundary, cx, cy)
+          AND geometry_predicate(:geometry_predicate, :query_geometry, geometry, cx, cy)
         """
         )
         query_parameters = {
@@ -1356,7 +1374,7 @@ class SQLiteStore(AnnotationStore):
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
-            select_callable="[key], boundary, properties",
+            select_callable="[key], geometry, properties",
         )
         if isinstance(where, Callable):
             return [
@@ -1374,7 +1392,7 @@ class SQLiteStore(AnnotationStore):
     ) -> List[Annotation]:
         query_geometry = geometry
         cur = self._query(
-            "boundary, properties, cx, cy",
+            "geometry, properties, cx, cy",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
@@ -1408,7 +1426,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT boundary, properties, cx, cy
+            SELECT geometry, properties, cx, cy
               FROM annotations
              WHERE [key] = :key
             """,
@@ -1417,9 +1435,9 @@ class SQLiteStore(AnnotationStore):
         row = cur.fetchone()
         if row is None:
             raise KeyError(key)
-        boundary, properties, cx, cy = row
-        properties = json.loads(properties or "{}")
-        geometry = self._unpack_geometry(boundary, cx, cy)
+        serialised_geometry, serialised_properties, cx, cy = row
+        properties = json.loads(serialised_properties or "{}")
+        geometry = self._unpack_geometry(serialised_geometry, cx, cy)
         return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
@@ -1448,7 +1466,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(
             """
-            SELECT [key], cx, cy, boundary, properties
+            SELECT [key], cx, cy, geometry, properties
               FROM annotations
             """
         )
@@ -1456,12 +1474,12 @@ class SQLiteStore(AnnotationStore):
             row = cur.fetchone()
             if row is None:
                 break
-            key, cx, cy, boundary, properties = row
-            if boundary is not None:
-                geometry = self._unpack_geometry(boundary, cx, cy)
+            key, cx, cy, serialised_geometry, serialised_properties = row
+            if serialised_geometry is not None:
+                geometry = self._unpack_geometry(serialised_geometry, cx, cy)
             else:
                 geometry = Point(cx, cy)
-            properties = json.loads(properties)
+            properties = json.loads(serialised_properties)
             yield key, Annotation(geometry, properties)
 
     def patch_many(
@@ -1527,7 +1545,7 @@ class SQLiteStore(AnnotationStore):
             **bounds,
             **xy,
             key=key,
-            boundary=self.serialise_geometry(geometry),
+            geometry=self.serialise_geometry(geometry),
         )
         cur.execute(
             """
@@ -1545,7 +1563,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute(
             """
             UPDATE annotations
-               SET cx = :x, cy = :y, boundary = :boundary
+               SET cx = :x, cy = :y, geometry = :geometry
              WHERE [key] = :key
             """,
             query_parameters,

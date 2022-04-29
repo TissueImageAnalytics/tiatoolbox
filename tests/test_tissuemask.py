@@ -9,7 +9,6 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.tools import tissuemask
-from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
 
 # -------------------------------------------------------------------------------------
@@ -386,9 +385,9 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
         ],
     )
 
-    assert tissue_mask_result.output == ""
-    assert tissue_mask_result.exit_code == 1
-    assert isinstance(tissue_mask_result.exception, MethodNotSupported)
+    assert "Invalid value for '--method'" in tissue_mask_result.output
+    assert tissue_mask_result.exit_code != 0
+    assert isinstance(tissue_mask_result.exception, SystemExit)
 
     tissue_mask_result = runner.invoke(
         cli.main,
@@ -401,13 +400,13 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
             "--resolution",
             32,
             "--units",
-            "Test",
+            "level",
         ],
     )
 
-    assert tissue_mask_result.output == ""
-    assert tissue_mask_result.exit_code == 1
-    assert isinstance(tissue_mask_result.exception, MethodNotSupported)
+    assert "Invalid value for '--units'" in tissue_mask_result.output
+    assert tissue_mask_result.exit_code != 0
+    assert isinstance(tissue_mask_result.exception, SystemExit)
 
 
 def test_cli_tissue_mask_file_not_found_error(source_image):

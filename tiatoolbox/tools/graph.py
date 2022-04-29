@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Construction and visualisation of graphs for WSI prediction."""
 
 from __future__ import annotations
@@ -44,12 +24,15 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     See https://en.wikipedia.org/wiki/Adjacency_matrix.
 
     Args:
-        coordinates (ArrayLike): A nxm list of coordinates.
-        dthresh (int): Distance threshold for triangulation.
+        points (ArrayLike):
+            An nxm list of coordinates.
+        dthresh (int):
+            Distance threshold for triangulation.
 
     Returns:
-        ArrayLike: Adjacency matrix of shape NxN where 1 indicates
-            connected and 0 indicates unconnected.
+        ArrayLike:
+            Adjacency matrix of shape NxN where 1 indicates connected
+            and 0 indicates unconnected.
 
     Example:
         >>> points = np.random.rand(100, 2)
@@ -95,17 +78,19 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     return adjacency
 
 
-def traingle_signed_area(triangle: ArrayLike) -> int:
+def triangle_signed_area(triangle: ArrayLike) -> int:
     """Determine the signed area of a triangle.
 
     Args:
-        triangle (ArrayLike): A 3x2 list of coordinates.
+        triangle (ArrayLike):
+            A 3x2 list of coordinates.
 
     Returns:
-        int: The signed area of the triange. It will be negative if
-             the triangle has a clockwise winding, negative if the
-             triangle has a counter-clockwise winding, and zero if the
-             triangles points are collinear.
+        int:
+            The signed area of the triangle. It will be negative if the
+            triangle has a clockwise winding, negative if the triangle
+            has a counter-clockwise winding, and zero if the triangles
+            points are collinear.
 
     """
     # Validate inputs
@@ -121,14 +106,15 @@ def traingle_signed_area(triangle: ArrayLike) -> int:
 
 
 def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
-    """Convert an edged index to traingle simplices.
+    """Convert an edged index to triangle simplices (triplets of coordinate indices).
 
     Args:
         edge_index (ArrayLike):
             An Nx2 array of edges.
 
     Returns:
-        ArrayLike: An Nx3 array of triangles.
+        ArrayLike:
+            An Nx3 array of triangles.
 
     Example:
         >>> points = np.random.rand(100, 2)
@@ -151,13 +137,13 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     # Remove any nodes with less than two neighbours
     nodes = [node for node in nodes if len(neighbours[node]) >= 2]
     # Find the triangles
-    triangles = []
+    triangles = set()
     for node in nodes:
         for neighbour in neighbours[node]:
             overlap = neighbours[node].intersection(neighbours[neighbour])
             while overlap:
-                triangles.append([node, neighbour, overlap.pop()])
-    return np.array(triangles, dtype=np.int32, order="C")
+                triangles.add(frozenset({node, neighbour, overlap.pop()}))
+    return np.array([list(tri) for tri in triangles], dtype=np.int32, order="C")
 
 
 def affinity_to_edge_index(
@@ -166,17 +152,20 @@ def affinity_to_edge_index(
 ) -> Union[torch.tensor, ArrayLike]:
     """Convert an affinity matrix (similarity matrix) to an edge index.
 
-    Converts an NxN affinity matrix to a 2xM edge index, where M is
-    the number of node pairs with a similarity greater than the
-    threshold value (defaults to 0.5).
+    Converts an NxN affinity matrix to a 2xM edge index, where M is the
+    number of node pairs with a similarity greater than the threshold
+    value (defaults to 0.5).
 
     Args:
-        affinity_matrix: An NxN matrix of affinities between nodes.
-        threshold (Number): Threshold above which to be considered
-            connected. Defaults to 0.5.
+        affinity_matrix:
+            An NxN matrix of affinities between nodes.
+        threshold (Number):
+            Threshold above which to be considered connected. Defaults
+            to 0.5.
 
     Returns:
-        ArrayLike or torch.Tensor: The edge index of shape (2, M).
+        ArrayLike or torch.Tensor:
+            The edge index of shape (2, M).
 
     Example:
         >>> points = np.random.rand(100, 2)
@@ -201,9 +190,8 @@ class SlideGraphConstructor:  # noqa: PIE798
 
     This uses a hybrid agglomerative clustering which uses a weighted
     combination of spatial distance (within the WSI) and feature-space
-    distance to group patches into nodes.
-    See the `build` function for more details on the graph construction
-    method.
+    distance to group patches into nodes. See the `build` function for
+    more details on the graph construction method.
 
     """
 
@@ -217,10 +205,11 @@ class SlideGraphConstructor:  # noqa: PIE798
         Args:
             graph (dict):
                 A graph with keys "x", "edge_index", and optionally
-                "coords".
+                "coordinates".
         Returns:
-            ArrayLike: A UMAP embedding of `graph["x"]` with shape (N, 3)
-                and values ranging from 0 to 1.
+            ArrayLike:
+                A UMAP embedding of `graph["x"]` with shape (N, 3) and
+                values ranging from 0 to 1.
         """
         reducer = umap.UMAP(n_components=3)
         reduced = reducer.fit_transform(graph["x"])
@@ -241,66 +230,75 @@ class SlideGraphConstructor:  # noqa: PIE798
     ) -> Dict[str, ArrayLike]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
-        The graph is constructed via hybrid heirachical clustering followed
-        by Delaunay triangulation of these cluster centroids.
-        This is part of the SlideGraph pipeline but may be used to construct
-        a graph in general from point coordinates and features.
+        The graph is constructed via hybrid hierarchical clustering
+        followed by Delaunay triangulation of these cluster centroids.
+        This is part of the SlideGraph pipeline but may be used to
+        construct a graph in general from point coordinates and
+        features.
 
         The clustering uses a distance kernel, ranging between 0 and 1,
-        which is a weighted product of spatial distance (distance between
-        coordinates in `points`, e.g. WSI location
-        and feature-space distance (e.g. ResNet features).
+        which is a weighted product of spatial distance (distance
+        between coordinates in `points`, e.g. WSI location and
+        feature-space distance (e.g. ResNet features).
 
         Points which are spatially further apart than
         `neighbour_search_radius` are given a similarity of 1 (most
-        dissimilar). This significantly speeds up computation. This distance
-        metric is then used to form clusters via hierachical/agglomerative
-        clustering.
+        dissimilar). This significantly speeds up computation. This
+        distance metric is then used to form clusters via
+        hierarchical/agglomerative clustering.
 
-        Next, a Delaunay triangulation is applied to the clusters to connect
-        the neighouring clusters. Only clusters which are closer than
-        `connectivity_distance` in the spatial domain will be connected.
+        Next, a Delaunay triangulation is applied to the clusters to
+        connect the neighouring clusters. Only clusters which are closer
+        than `connectivity_distance` in the spatial domain will be
+        connected.
 
         Args:
-            points (ArrayLike): A list of (x, y) spatial coordinates, e.g.
-                pixel locations within a WSI.
-            features (ArrayLike): A list of features associated with each
-                coordinate in `points`. Must be the same length as `points`.
-            lambda_d (Number): Spatial distance (d) weighting.
-            lambda_f (Number): Feature distance (f) weighting.
-            lambda_h (Number): Clustering distance threshold. Applied to
-                the similarity kernel (1-fd). Ranges between 0 and 1.
-                Defaults to 0.8. A good value for this parameter will depend
-                on the intra-cluster variance.
+            points (ArrayLike):
+                A list of (x, y) spatial coordinates, e.g. pixel
+                locations within a WSI.
+            features (ArrayLike):
+                A list of features associated with each coordinate in
+                `points`. Must be the same length as `points`.
+            lambda_d (Number):
+                Spatial distance (d) weighting.
+            lambda_f (Number):
+                Feature distance (f) weighting.
+            lambda_h (Number):
+                Clustering distance threshold. Applied to the similarity
+                kernel (1-fd). Ranges between 0 and 1. Defaults to 0.8.
+                A good value for this parameter will depend on the
+                intra-cluster variance.
             connectivity_distance (Number):
-                Spatial distance threshold to consider points as connected
-                during the Delaunay triangulation step.
+                Spatial distance threshold to consider points as
+                connected during the Delaunay triangulation step.
             neighbour_search_radius (Number):
                 Search radius (L2 norm) threshold for points to be
-                considered as similar for clustering.
-                Points with a spatial distance above this are not compared
-                and have a similarity set to 1 (most dissimilar).
+                considered as similar for clustering. Points with a
+                spatial distance above this are not compared and have a
+                similarity set to 1 (most dissimilar).
             feature_range_thresh (Number):
-                Minimal range for which a feature is considered significant.
-                Features which have a range less than this are ignored.
-                Defaults to 1e-4. If falsey (None, False, 0, etc.), then
-                no features are removed.
+                Minimal range for which a feature is considered
+                significant. Features which have a range less than this
+                are ignored. Defaults to 1e-4. If falsy (None, False, 0,
+                etc.), then no features are removed.
 
         Returns:
-            dict: A dictionary defining a graph for serialisation (e.g.
-            JSON or msgpack) or converting into a torch-geometric Data
-            object where each node is the centroid (mean) of the features
-            in a cluster.
-            The dictionary has the following entries:
+            dict:
+                A dictionary defining a graph for serialisation (e.g.
+                JSON or msgpack) or converting into a torch-geometric
+                Data object where each node is the centroid (mean) of
+                the features in a cluster. The dictionary has the
+                following entries:
                 - :class:`numpy.ndarray` - x:
-                    Features of each node (mean of features in a cluster).
-                    Required for torch-geometric Data.
+                    Features of each node (mean of features in a
+                    cluster). Required for torch-geometric Data.
                 - :class:`numpy.ndarray` - edge_index:
-                    Edge index matrix defining connectivity.
-                    Required for torch-geometric Data.
+                    Edge index matrix defining connectivity. Required
+                    for torch-geometric Data.
                 - :py:obj:`numpy.ndarray` - coords:
-                    Coordinates of each node within the WSI (mean of point
-                    in a cluster). Useful for visualisation over the WSI.
+                    Coordinates of each node within the WSI (mean of
+                    point in a cluster). Useful for visualisation over
+                    the WSI.
 
         Example:
             >>> points = np.random.rand(99, 2) * 1000
@@ -319,8 +317,8 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
-        ckdtree = cKDTree(points)
-        neighbour_distances_ckd, neighbour_indexes_ckd = ckdtree.query(
+        kd_tree = cKDTree(points)
+        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
             x=points, k=len(points)
         )
 
@@ -396,7 +394,7 @@ class SlideGraphConstructor:  # noqa: PIE798
         return {
             "x": feature_centroids,
             "edge_index": edge_index,
-            "coords": point_centroids,
+            "coordinates": point_centroids,
         }
 
     @classmethod
@@ -410,8 +408,8 @@ class SlideGraphConstructor:  # noqa: PIE798
     ) -> Axes:
         """Visualise a graph.
 
-        The visualisation is a scatter plot of the graph nodes
-        and the connections bneewn them. By default, nodes are coloured
+        The visualisation is a scatter plot of the graph nodes and the
+        connections between them. By default, nodes are coloured
         according to the features of the graph via a UMAP embedding to
         the sRGB color space. This can be customised by passing a color
         argument which can be a single color, a list of colors, or a
@@ -422,24 +420,22 @@ class SlideGraphConstructor:  # noqa: PIE798
             graph (dict):
                 The graph to visualise as a dictionary with the following
                 entries:
-                    - :class:`numpy.ndarray` - x:
-                        Features of each node (mean of features in a cluster).
-                        Required
-                    - :class:`numpy.ndarray` - edge_index:
-                        Edge index matrix defining connectivity.
-                        Required
-                    - :class:`numpy.ndarray` - coords:
-                        Coordinates of each node within the WSI (mean of point
-                        in a cluster).
-                        Required
+                - :class:`numpy.ndarray` - x:
+                    Features of each node (mean of features in a
+                    cluster). Required
+                - :class:`numpy.ndarray` - edge_index:
+                    Edge index matrix defining connectivity. Required
+                - :class:`numpy.ndarray` - coordinates:
+                    Coordinates of each node within the WSI (mean of
+                    point in a cluster). Required
             color (np.array or str or callable):
                 Colours of the nodes in the plot. If it is a callable,
-                it should take a
-                graph as input and return a numpy array of matplotlib colours.
-                If `None` then a default function is used (UMAP on `graph["x"]`).
+                it should take a graph as input and return a numpy array
+                of matplotlib colours. If `None` then a default function
+                is used (UMAP on `graph["x"]`).
             node_size (int or np.array or callable):
-                Size of the nodes in the plot. If it is a function then it is
-                called with the graph as an argument.
+                Size of the nodes in the plot. If it is a function then
+                it is called with the graph as an argument.
             edge_color (str):
                 Colour of edges in the graph plot.
             ax (:class:`matplotlib.axes.Axes`):
@@ -464,35 +460,36 @@ class SlideGraphConstructor:  # noqa: PIE798
             >>> plt.show()
 
         """
+        from matplotlib import collections as mc
+
         # Check that the graph is valid
         if "x" not in graph:
-            raise ValueError("Graph must contain x")
+            raise ValueError("Graph must contain key `x`.")
         if "edge_index" not in graph:
-            raise ValueError("Graph must contain edge_index")
-        if "coords" not in graph:
-            raise ValueError("Graph must contain coords")
+            raise ValueError("Graph must contain key `edge_index`.")
+        if "coordinates" not in graph:
+            raise ValueError("Graph must contain key `coordinates`")
         if ax is None:
             _, ax = plt.subplots()
         if color is None:
             color = cls._umap_reducer
 
+        nodes = graph["coordinates"]
+        edges = graph["edge_index"]
+
         # Plot the edges
-        triangles = edge_index_to_triangles(graph["edge_index"])
-        # Ensure triangles are counter-clockwise
-        for i, tri in enumerate(triangles):
-            if traingle_signed_area(graph["coords"][tri]) < 0:
-                triangles[i] = triangles[i][::-1]
-        ax.triplot(
-            graph["coords"][:, 0], graph["coords"][:, 1], triangles, color=edge_color
+        line_segments = nodes[edges.T]
+        edge_collection = mc.LineCollection(
+            line_segments, colors=edge_color, linewidths=1
         )
+        ax.add_collection(edge_collection)
 
         # Plot the nodes
-        ax.scatter(
-            graph["coords"][:, 0],
-            graph["coords"][:, 1],
+        plt.scatter(
+            *nodes.T,
             c=color(graph) if isinstance(color, Callable) else color,
             s=node_size(graph) if isinstance(node_size, Callable) else node_size,
-            zorder=1,
+            zorder=2,
         )
 
         return ax

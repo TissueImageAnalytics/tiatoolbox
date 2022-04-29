@@ -1,31 +1,13 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for Semantic Segmentor."""
 
 import copy
+
+# ! The garbage collector
+import gc
 import os
 import pathlib
 import shutil
 
-# ! The garbage collector
-import gc
 import numpy as np
 import pytest
 import torch
@@ -44,11 +26,15 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     WSIStreamDataset,
 )
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_TRAVIS = True
-ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
+ON_GPU = toolbox_env.has_gpu()
+# The value is based on 2 TitanXP each with 12GB
+BATCH_SIZE = 1 if not ON_GPU else 16
+NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
+
 # ----------------------------------------------------
 
 
@@ -275,7 +261,7 @@ def test_crash_segmentor(remote_sample):
     mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     model = _CNNTo1()
-    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
@@ -351,7 +337,7 @@ def test_functional_segmentor_merging(tmp_path):
     save_dir = pathlib.Path(tmp_path)
 
     model = _CNNTo1()
-    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
 
     _rm_dir(save_dir)
     os.mkdir(save_dir)
@@ -370,7 +356,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     # a second rerun to test overlapping count,
@@ -381,7 +366,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     # else will leave hanging file pointer
@@ -397,7 +381,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.py",
         cache_count_path=f"{save_dir}/count.py",
-        free_prediction=False,
     )
     del canvas  # skipcq
 
@@ -409,7 +392,6 @@ def test_functional_segmentor_merging(tmp_path):
         [[0, 0, 2, 2], [2, 2, 4, 4]],
         save_path=f"{save_dir}/raw.1.py",
         cache_count_path=f"{save_dir}/count.1.py",
-        free_prediction=False,
     )
     with pytest.raises(ValueError, match=r".*`save_path` does not match.*"):
         semantic_segmentor.merge_prediction(
@@ -418,7 +400,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.1.py",
             cache_count_path=f"{save_dir}/count.py",
-            free_prediction=False,
         )
 
     with pytest.raises(ValueError, match=r".*`cache_count_path` does not match.*"):
@@ -428,7 +409,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
         )
     # * test non HW predictions
     with pytest.raises(ValueError, match=r".*Prediction is no HW or HWC.*"):
@@ -438,7 +418,6 @@ def test_functional_segmentor_merging(tmp_path):
             [[0, 0, 2, 2], [2, 2, 4, 4]],
             save_path=f"{save_dir}/raw.py",
             cache_count_path=f"{save_dir}/count.1.py",
-            free_prediction=False,
         )
 
     _rm_dir(save_dir)
@@ -455,7 +434,6 @@ def test_functional_segmentor_merging(tmp_path):
         ],
         [[0, 0, 2, 2], [2, 2, 4, 4], [0, 4, 2, 6], [4, 0, 6, 2]],
         save_path=None,
-        free_prediction=False,
     )
     assert np.sum(canvas - _output) < 1.0e-8
     del canvas  # skipcq
@@ -479,7 +457,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # preemptive clean up
     _rm_dir("output")  # default output dir test
     model = _CNNTo1()
-    semantic_segmentor = SemanticSegmentor(batch_size=1, model=model)
+    semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
@@ -587,7 +565,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
 
     # check normal run with auto get mask
     semantic_segmentor = SemanticSegmentor(
-        batch_size=1, model=model, auto_generate_mask=True
+        batch_size=BATCH_SIZE, model=model, auto_generate_mask=True
     )
     output_list = semantic_segmentor.predict(
         [mini_wsi_svs],
@@ -642,7 +620,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=1, pretrained_model="fcn-tissue_mask"
+        batch_size=BATCH_SIZE, pretrained_model="fcn-tissue_mask"
     )
 
     _rm_dir(save_dir)
@@ -671,7 +649,10 @@ def test_functional_pretrained(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis() or not ON_GPU,
+    reason="Local test on machine with GPU.",
+)
 def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
@@ -679,13 +660,13 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=4, pretrained_model="fcn-tissue_mask"
+        batch_size=BATCH_SIZE, pretrained_model="fcn-tissue_mask"
     )
     _rm_dir(save_dir)
     semantic_segmentor.predict(
         [wsi_with_artifacts],
         mode="wsi",
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -694,14 +675,14 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
-    assert np.mean(np.abs(_cache_pred[..., 0] - _test_pred) / 255) < 1.0e-3
+    assert np.mean(_cache_pred[..., 0] == _test_pred) > 0.99
 
     _rm_dir(save_dir)
     # mainly to test prediction on tile
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
-        on_gpu=ON_GPU,
+        on_gpu=True,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -709,7 +690,10 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     _rm_dir(save_dir)
 
 
-@pytest.mark.skip(reason="Local manual test, not applicable for travis.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_travis() or not ON_GPU,
+    reason="Local test on machine with GPU.",
+)
 def test_behavior_bcss_local(remote_sample, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = pathlib.Path(tmp_path)
@@ -717,7 +701,9 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
     _rm_dir(save_dir)
     wsi_breast = pathlib.Path(remote_sample("wsi4_4k_4k_svs"))
     semantic_segmentor = SemanticSegmentor(
-        num_loader_workers=4, batch_size=16, pretrained_model="fcn_resnet50_unet-bcss"
+        num_loader_workers=4,
+        batch_size=BATCH_SIZE,
+        pretrained_model="fcn_resnet50_unet-bcss",
     )
     semantic_segmentor.predict(
         [wsi_breast],

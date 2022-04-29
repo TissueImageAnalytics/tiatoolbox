@@ -408,7 +408,9 @@ def test_get_coordinates():
             input_within_bound=False,
         )
 
-    # Tests for filter_coordinates method
+
+def test_filter_coordinates():
+    """Test different coordinate filtering functions for patch extraction"""
     bbox_list = np.array(
         [
             [0, 0, 4, 4],
@@ -422,6 +424,9 @@ def test_get_coordinates():
     mask = np.zeros([9, 6])
     mask[0:4, 3:8] = 1  # will flag first 2
     mask_reader = VirtualWSIReader(mask)
+
+    # Tests for (original) filter_coordinates method
+    # functionality test
     flag_list = PatchExtractor.filter_coordinates(
         mask_reader, bbox_list, resolution=1.0, units="baseline"
     )
@@ -445,6 +450,54 @@ def test_get_coordinates():
     with pytest.raises(ValueError, match=r".*`coordinates_list` of shape.*"):
         PatchExtractor.filter_coordinates(
             mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
+        )
+
+    ###############################################
+    # Tests for filter_coordinates_fast (new) method
+    _info = mask_reader.info
+    _info.mpp = 1.0
+    mask_reader._m_info = _info
+
+    # functionality test
+    flag_list = PatchExtractor.filter_coordinates_fast(
+        mask_reader,
+        bbox_list,
+        coordinate_resolution=1.0,
+        coordinate_units="mpp",
+        mask_resolution=1,
+    )
+    assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
+    flag_list = PatchExtractor.filter_coordinates_fast(
+        mask_reader, bbox_list, coordinate_resolution=(1.0, 1.0), coordinate_units="mpp"
+    )
+
+    # Test for bad mask input
+    with pytest.raises(
+        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
+    ):
+        PatchExtractor.filter_coordinates_fast(
+            mask,
+            bbox_list,
+            coordinate_resolution=1.0,
+            coordinate_units="mpp",
+        )
+
+    # Test for bad bbox coordinate list in the input
+    with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
+        PatchExtractor.filter_coordinates_fast(
+            mask_reader,
+            bbox_list.tolist(),
+            coordinate_resolution=1,
+            coordinate_units="mpp",
+        )
+
+    # Test for incomplete coordinate list
+    with pytest.raises(ValueError, match=r".*`coordinates_list` must be of shape.*"):
+        PatchExtractor.filter_coordinates_fast(
+            mask_reader,
+            bbox_list[:, :2],
+            coordinate_resolution=1,
+            coordinate_units="mpp",
         )
 
 
@@ -532,8 +585,8 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Test passing an empty mask
     wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
-    with pytest.raises(ValueError, match=".*No candidate coordinates left.*"):
-        patches = patchextraction.get_patch_extractor(
+    with pytest.warns(UserWarning, match=".*No candidate coordinates left.*"):
+        _ = patchextraction.get_patch_extractor(
             input_img=input_img,
             input_mask=wsi_mask,
             method_name="slidingwindow",

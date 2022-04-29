@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
 import copy
 import json
@@ -41,10 +21,12 @@ def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (str or pathlib.Path): Path to a file
+        full_path (str or pathlib.Path):
+            Path to a file.
 
     Returns:
-        tuple: Three parts of the input file path:
+        tuple:
+            Three parts of the input file path:
             - :py:obj:`pathlib.Path` - Parent directory path
             - :py:obj:`str` - File name
             - :py:obj:`list(str)` - File extensions
@@ -63,24 +45,27 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str or pathlib.Path): Path to the directory where files
+        input_path (str or pathlib.Path):
+            Path to the directory where files
             need to be searched.
-        file_types (str or tuple(str)): File types (extensions) to be searched.
+        file_types (str or tuple(str)):
+            File types (extensions) to be searched.
 
     Returns:
-        list: File paths as a python list. It has been sorted to ensure
-            same ordering across platforms.
+        list:
+            File paths as a python list. It has been sorted to ensure
+            the same ordering across platforms.
 
     Examples:
         >>> from tiatoolbox import utils
         >>> file_types = ("*.ndpi", "*.svs", "*.mrxs")
         >>> files_all = utils.misc.grab_files_from_dir(input_path,
-        ...     file_types=file_types,)
+        ...     file_types=file_types)
 
     """
     input_path = pathlib.Path(input_path)
 
-    if type(file_types) is str:
+    if isinstance(file_types, str):
         if len(file_types.split(",")) > 1:
             file_types = tuple(file_types.replace(" ", "").split(","))
         else:
@@ -94,12 +79,25 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     return list(files_grabbed)
 
 
-def save_yaml(input_dict, output_path="output.yaml"):
+def save_yaml(
+    input_dict: dict,
+    output_path="output.yaml",
+    parents: bool = False,
+    exist_ok: bool = False,
+):
     """Save dictionary as yaml.
 
     Args:
-        input_dict (dict): A variable of type 'dict'
-        output_path (str or pathlib.Path): Path to save the output file
+        input_dict (dict):
+            A variable of type 'dict'.
+        output_path (str or pathlib.Path):
+            Path to save the output file.
+        parents (bool):
+            Make parent directories if they do not exist. Default is
+            False.
+        exist_ok (bool):
+            Overwrite the output file if it exists. Default is False.
+
 
     Returns:
 
@@ -109,19 +107,25 @@ def save_yaml(input_dict, output_path="output.yaml"):
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
 
     """
-    with open(str(pathlib.Path(output_path)), "w") as yaml_file:
+    path = pathlib.Path(output_path)
+    if path.exists() and not exist_ok:
+        raise FileExistsError("File already exists.")
+    if parents:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    with open(  # skipcq: PTC-W6004: PTC-W6004
+        str(pathlib.Path(output_path)), "w"
+    ) as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
 
-def imwrite(image_path, img):
+def imwrite(image_path, img) -> None:
     """Write numpy array to an image.
 
     Args:
-        image_path (str or pathlib.Path): file path (including extension)
-            to save image
-        img (:class:`numpy.ndarray`): image array of dtype uint8, MxNx3
-
-    Returns:
+        image_path (str or pathlib.Path):
+            File path (including extension) to save image to.
+        img (:class:`numpy.ndarray`):
+            Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -139,10 +143,14 @@ def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path): File path (including extension) to read image.
+        image_path (str or pathlib.Path):
+            File path (including extension) to read image.
+        as_uint8 (bool):
+            Read an image in uint8 format.
 
     Returns:
-        img (:class:`numpy.ndarray`): Image array of dtype uint8, MxNx3.
+        :class:`numpy.ndarray`:
+            Image array of dtype uint8, MxNx3.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -151,13 +159,15 @@ def imread(image_path, as_uint8=True):
     """
     if isinstance(image_path, pathlib.Path):
         image_path = str(image_path)
+
     if pathlib.Path(image_path).suffix == ".npy":
         image = np.load(image_path)
     else:
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
-        image = image.astype(np.uint8)
+        return image.astype(np.uint8)
+
     return image
 
 
@@ -165,12 +175,14 @@ def load_stain_matrix(stain_matrix_input):
     """Load a stain matrix as a numpy array.
 
     Args:
-        stain_matrix_input (ndarray or str, pathlib.Path): either a 2x3 / 3x3
-            numpy array or a path to a saved .npy / .csv file. If using a .csv file,
-            there should be no column headers provided
+        stain_matrix_input (ndarray or str, pathlib.Path):
+            Either a 2x3 or 3x3 numpy array or a path to a saved .npy /
+            .csv file. If using a .csv file, there should be no column
+            headers provided
 
     Returns:
-        stain_matrix (:class:`numpy.ndarray`): the loaded stain matrix.
+        stain_matrix (:class:`numpy.ndarray`):
+            The loaded stain matrix.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -179,34 +191,38 @@ def load_stain_matrix(stain_matrix_input):
     """
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
-        if suffixes[-1] == ".csv":
-            stain_matrix = pd.read_csv(stain_matrix_input).to_numpy()
-        elif suffixes[-1] == ".npy":
-            stain_matrix = np.load(str(stain_matrix_input))
-        else:
+        if suffixes[-1] not in [".csv", ".npy"]:
             raise FileNotSupported(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
-    elif isinstance(stain_matrix_input, np.ndarray):
-        stain_matrix = stain_matrix_input
-    else:
-        raise TypeError(
-            "Stain_matrix must be either a path to npy/csv file or a numpy array"
-        )
 
-    return stain_matrix
+        if suffixes[-1] == ".csv":
+            return pd.read_csv(stain_matrix_input).to_numpy()
+
+        # only other option left for suffix[-1] is .npy
+        return np.load(str(stain_matrix_input))
+
+    if isinstance(stain_matrix_input, np.ndarray):
+        return stain_matrix_input
+
+    raise TypeError(
+        "Stain_matrix must be either a path to npy/csv file or a numpy array"
+    )
 
 
 def get_luminosity_tissue_mask(img, threshold):
     """Get tissue mask based on the luminosity of the input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
-        threshold (float): luminosity threshold used to determine tissue area.
+        img (:class:`numpy.ndarray`):
+            Input image used to obtain tissue mask.
+        threshold (float):
+            Luminosity threshold used to determine tissue area.
 
     Returns:
-        tissue_mask (:class:`numpy.ndarray`): binary tissue mask.
+        tissue_mask (:class:`numpy.ndarray`):
+            Binary tissue mask.
 
     Examples:
         >>> from tiatoolbox import utils
@@ -221,7 +237,7 @@ def get_luminosity_tissue_mask(img, threshold):
 
     # check it's not empty
     if tissue_mask.sum() == 0:
-        raise ValueError("Empty tissue mask computed")
+        raise ValueError("Empty tissue mask computed.")
 
     return tissue_mask
 
@@ -236,12 +252,13 @@ def mpp2common_objective_power(
 
     Args:
         mpp (float or tuple(float)): Microns per-pixel.
-        common_powers (list of float): A sequence of objective
+        common_powers (tuple or list of float): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
     Returns:
-        float: Objective power approximation.
+        float:
+            Objective power approximation.
 
     Examples:
         >>> mpp2common_objective_power(0.253)
@@ -256,8 +273,7 @@ def mpp2common_objective_power(
     """
     op = mpp2objective_power(mpp)
     distances = [np.abs(op - power) for power in common_powers]
-    closest_match = common_powers[np.argmin(distances)]
-    return closest_match
+    return common_powers[np.argmin(distances)]
 
 
 mpp2common_objective_power = np.vectorize(
@@ -279,7 +295,8 @@ def objective_power2mpp(objective_power):
         objective_power (float or tuple(float)): Objective power.
 
     Returns:
-        numpy.ndarray: Microns per-pixel (MPP) approximations.
+        :class:`numpy.ndarray`:
+            Microns per-pixel (MPP) approximations.
 
     Examples:
         >>> objective_power2mpp(40)
@@ -303,7 +320,8 @@ def mpp2objective_power(mpp):
         mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
-        :class:`numpy.ndarray`: Objective power approximations.
+        :class:`numpy.ndarray`:
+            Objective power approximations.
 
     Examples:
         >>> mpp2objective_power(0.25)
@@ -331,7 +349,8 @@ def contrast_enhancer(img, low_p=2, high_p=98):
             high_p should always be greater than low_p.
 
     Returns:
-        img (:class:`numpy.ndarray`): Image (uint8) with contrast enhanced.
+        img (:class:`numpy.ndarray`):
+            Image (uint8) with contrast enhanced.
 
     Raises:
         AssertionError: Internal errors due to invalid img type.
@@ -355,20 +374,72 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
+def __numpy_array_to_table(input_table):
+    """Checks numpy array to be 2 or 3 columns.
+    If it has two columns then class should be assign None.
+
+    Args:
+        input_table (np.ndarray): input table.
+
+    Returns:
+       table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+    Raises:
+        ValueError: If the number of columns is not equal to 2 or 3.
+
+    """
+    if input_table.shape[1] == 2:
+        out_table = pd.DataFrame(input_table, columns=["x", "y"])
+        out_table["class"] = None
+        return out_table
+
+    if input_table.shape[1] == 3:
+        return pd.DataFrame(input_table, columns=["x", "y", "class"])
+
+    raise ValueError("Numpy table should be of format `x, y` or `x, y, class`.")
+
+
+def __assign_unknown_class(input_table):
+    """Creates a column and assigns None if class is unknown.
+
+    Args:
+        input_table (np.ndarray or pd.DataFrame): input table.
+
+    Returns:
+        table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
+
+    Raises:
+        ValueError:
+            If the number of columns is not equal to 2 or 3.
+
+    """
+    if input_table.shape[1] not in [2, 3]:
+        raise ValueError("Input table must have 2 or 3 columns.")
+
+    if input_table.shape[1] == 2:
+        input_table["class"] = None
+
+    return input_table
+
+
 def read_locations(input_table):
     """Read annotations as pandas DataFrame.
 
     Args:
         input_table (str or pathlib.Path or :class:`numpy.ndarray` or
-         :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
-         :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
-         First column in the table represents x position, second
-         column represents y position. The third column represents the class. If the
-         table has headers, the header should be x, y & class. Json should have `x`, `y`
-         and `class` fields.
+            :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+            :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
+            First column in the table represents x position, second
+            column represents y position. The third column represents the class.
+            If the table has headers, the header should be x, y & class.
+            Json should have `x`, `y` and `class` fields.
 
     Returns:
         pd.DataFrame: DataFrame with x, y location and class type.
+
+    Raises:
+        FileNotSupported:
+            If the path to input table is not of supported type.
 
     Examples:
         >>> from tiatoolbox.utils.misc import read_locations
@@ -380,17 +451,9 @@ def read_locations(input_table):
 
         if suffixes[-1] == ".npy":
             out_table = np.load(input_table)
-            if out_table.shape[1] == 2:
-                out_table = pd.DataFrame(out_table, columns=["x", "y"])
-                out_table["class"] = None
-            elif out_table.shape[1] == 3:
-                out_table = pd.DataFrame(out_table, columns=["x", "y", "class"])
-            else:
-                raise ValueError(
-                    "numpy table should be of format `x, y` or " "`x, y, class`"
-                )
+            return __numpy_array_to_table(out_table)
 
-        elif suffixes[-1] == ".csv":
+        if suffixes[-1] == ".csv":
             out_table = pd.read_csv(input_table, sep=None, engine="python")
             if "x" not in out_table.columns:
                 out_table = pd.read_csv(
@@ -400,37 +463,22 @@ def read_locations(input_table):
                     sep=None,
                     engine="python",
                 )
-            if out_table.shape[1] == 2:
-                out_table["class"] = None
 
-        elif suffixes[-1] == ".json":
+            return __assign_unknown_class(out_table)
+
+        if suffixes[-1] == ".json":
             out_table = pd.read_json(input_table)
-            if out_table.shape[1] == 2:
-                out_table["class"] = None
+            return __assign_unknown_class(out_table)
 
-        else:
-            raise FileNotSupported("Filetype not supported.")
+        raise FileNotSupported("File type not supported.")
 
-    elif isinstance(input_table, np.ndarray):
-        if input_table.shape[1] == 3:
-            out_table = pd.DataFrame(input_table, columns=["x", "y", "class"])
-        elif input_table.shape[1] == 2:
-            out_table = pd.DataFrame(input_table, columns=["x", "y"])
-            out_table["class"] = None
-        else:
-            raise ValueError("Input array must have 2 or 3 columns.")
+    if isinstance(input_table, np.ndarray):
+        return __numpy_array_to_table(input_table)
 
-    elif isinstance(input_table, pd.DataFrame):
-        out_table = input_table
-        if out_table.shape[1] == 2:
-            out_table["class"] = None
-        elif out_table.shape[1] < 2:
-            raise ValueError("Input table must have 2 or 3 columns.")
+    if isinstance(input_table, pd.DataFrame):
+        return __assign_unknown_class(input_table)
 
-    else:
-        raise TypeError("Please input correct image path or an ndarray image.")
-
-    return out_table
+    raise TypeError("Please input correct image path or an ndarray image.")
 
 
 @np.vectorize
@@ -456,18 +504,20 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
         stride (int): Stride size.
 
     Returns:
-        int: Output size / number of features.
+        int:
+            Output size / number of features.
 
     Examples:
         >>> from tiatoolbox import utils
+        >>> import numpy as np
         >>> utils.misc.conv_out_size(100, 3)
-        >>> array(98)
+        >>> np.array(98)
         >>> utils.misc.conv_out_size(99, kernel_size=3, stride=2)
-        >>> array(98)
+        >>> np.array(98)
         >>> utils.misc.conv_out_size((100, 100), kernel_size=3, stride=2)
-        >>> array([49, 49])
+        >>> np.array([49, 49])
 
-  """
+    """
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
 
 
@@ -489,14 +539,18 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
         https://docs.opencv.org/4.0.0/da/d54/group__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121
 
     Args:
-        interpolation (Union[str, int]): Interpolation mode string.
-            Possible values are: neares, linear, cubic, lanczos, area.
+        interpolation (Union[str, int]):
+            Interpolation mode string. Possible values are: nearest,
+            linear, cubic, lanczos, area.
 
     Raises:
-        ValueError: Invalid interpolation mode.
+        ValueError:
+            Invalid interpolation mode.
 
     Returns:
-        int: OpenCV (cv2) interpolation enum.
+        int:
+            OpenCV (cv2) interpolation enum.
+
     """
     if isinstance(interpolation, str):
         interpolation = interpolation.lower()
@@ -517,11 +571,14 @@ def assert_dtype_int(input_var, message="Input must be integer."):
     """Generate error if dtype is not int.
 
     Args:
-        input_var (ndarray): input variable to be tested.
-        message (str): Error message to be displayed.
+        input_var (ndarray):
+            Input variable to be tested.
+        message (str):
+            Error message to be displayed.
 
-    Returns:
-        Generates an AssertionError message if input is not an int.
+    Raises:
+        AssertionError:
+            If input_var is not of type int.
 
     """
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
@@ -576,7 +633,64 @@ def unzip_data(zip_path, save_path, del_zip=True):
         os.remove(zip_path)
 
 
-def save_as_json(data, save_path):
+def __walk_list_dict(in_list_dict):
+    """Recursive walk and jsonify in place.
+
+    Args:
+        in_list_dict (list or dict):  input list or a dictionary.
+
+    Returns:
+        list or dict
+
+    """
+    if isinstance(in_list_dict, dict):
+        __walk_dict(in_list_dict)
+    elif isinstance(in_list_dict, list):
+        __walk_list(in_list_dict)
+    elif isinstance(in_list_dict, np.ndarray):
+        in_list_dict = in_list_dict.tolist()
+        __walk_list(in_list_dict)
+    elif isinstance(in_list_dict, np.generic):
+        in_list_dict = in_list_dict.item()
+    elif in_list_dict is not None and not isinstance(
+        in_list_dict, (int, float, str, bool)
+    ):
+        raise ValueError(
+            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
+        )
+    return in_list_dict
+
+
+def __walk_list(lst):
+    """Recursive walk and jsonify a list in place.
+
+    Args:
+        lst (list):  input list.
+
+    """
+    for i, v in enumerate(lst):
+        lst[i] = __walk_list_dict(v)
+
+
+def __walk_dict(dct):
+    """Recursive walk and jsonify a dictionary in place.
+
+    Args:
+        dct (dict):  input dictionary.
+
+    """
+    for k, v in dct.items():
+        if not isinstance(k, (int, float, str, bool)):
+            raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+        dct[k] = __walk_list_dict(v)
+
+
+def save_as_json(
+    data: Union[dict, list],
+    save_path: Union[str, pathlib.Path],
+    parents: bool = False,
+    exist_ok: bool = False,
+):
     """Save data to a json file.
 
     The function will deepcopy the `data` and then jsonify the content
@@ -584,73 +698,51 @@ def save_as_json(data, save_path):
     `bool` and their np.ndarray respectively.
 
     Args:
-        data (dict or list): Input data to save.
-        save_path (str): Output to save the json of `input`.
+        data (dict or list):
+            Input data to save.
+        save_path (str):
+            Output to save the json of `input`.
+        parents (bool):
+            Make parent directories if they do not exist. Default is
+            False.
+        exist_ok (bool):
+            Overwrite the output file if it exists. Default is False.
+
 
     """
-    shadow_data = copy.deepcopy(data)
-
-    # make a copy of source input
-    def walk_list(lst):
-        """Recursive walk and jsonify in place."""
-        for i, v in enumerate(lst):
-            if isinstance(v, dict):
-                walk_dict(v)
-            elif isinstance(v, list):
-                walk_list(v)
-            elif isinstance(v, np.ndarray):
-                v = v.tolist()
-                walk_list(v)
-            elif isinstance(v, np.generic):
-                v = v.item()
-            elif v is not None and not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            lst[i] = v
-
-    def walk_dict(dct):
-        """Recursive walk and jsonify in place."""
-        for k, v in dct.items():
-            if isinstance(v, dict):
-                walk_dict(v)
-            elif isinstance(v, list):
-                walk_list(v)
-            elif isinstance(v, np.ndarray):
-                v = v.tolist()
-                walk_list(v)
-            elif isinstance(v, np.generic):
-                v = v.item()
-            elif v is not None and not isinstance(v, (int, float, str, bool)):
-                raise ValueError(f"Value type `{type(v)}` `{v}` is not jsonified.")
-            if not isinstance(k, (int, float, str, bool)):
-                raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
-            dct[k] = v
+    shadow_data = copy.deepcopy(data)  # make a copy of source input
+    if not isinstance(shadow_data, (dict, list)):
+        raise ValueError(f"Type of `data` ({type(data)}) must be in (dict, list).")
 
     if isinstance(shadow_data, dict):
-        walk_dict(shadow_data)
-    elif isinstance(shadow_data, list):
-        walk_list(shadow_data)
+        __walk_dict(shadow_data)
     else:
-        raise ValueError(f"`data` type {type(data)} is not [dict, list].")
-    with open(save_path, "w") as handle:
+        __walk_list(shadow_data)
+
+    save_path = pathlib.Path(save_path)
+    if save_path.exists() and not exist_ok:
+        raise FileExistsError("File already exists.")
+    if parents:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w") as handle:  # skipcq: PTC-W6004
         json.dump(shadow_data, handle)
 
 
-def select_device(on_gpu):
+def select_device(on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
         on_gpu (bool): Selects gpu if True.
 
     Returns:
-        device (str): "gpu" if on_gpu is True otherwise returns "cpu"
+        str:
+            "gpu" if on_gpu is True otherwise returns "cpu"
 
     """
     if on_gpu:
-        device = "cuda"
-    else:
-        device = "cpu"
+        return "cuda"
 
-    return device
+    return "cpu"
 
 
 def model_to(on_gpu, model):
@@ -661,31 +753,31 @@ def model_to(on_gpu, model):
         model (torch.nn.Module): PyTorch defined model.
 
     Returns:
-        model (torch.nn.Module):
+        torch.nn.Module:
+            The model after being moved to cpu/gpu.
 
     """
     if on_gpu:  # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
-        model = model.to("cuda")
-    else:
-        model = model.to("cpu")
+        return model.to("cuda")
 
-    return model
+    return model.to("cpu")
 
 
 def get_bounding_box(img):
     """Get bounding box coordinate information.
 
-    Given an image with zero and non-zero values. This function
-    will return the the minimal box that contains all non-zero
-    values.
+    Given an image with zero and non-zero values. This function will
+    return the minimal box that contains all non-zero values.
 
     Args:
-        img (ndarray): Image to get the bounding box.
+        img (ndarray):
+            Image to get the bounding box.
 
     Returns:
-        bound (ndarray): Coordinates of the box in the form of
-            [start_x, start_y, end_x, end_y].
+        bound (ndarray):
+            Coordinates of the box in the form of `[start_x, start_y,
+            end_x, end_y]`.
 
     """
     rows = np.any(img, axis=1)
@@ -703,62 +795,41 @@ def string_to_tuple(in_str):
     """Splits input string to tuple at ','.
 
     Args:
-        in_str (str): input string.
+        in_str (str):
+            input string.
 
     Returns:
-        tuple (tuple of str): Returns a tuple of strings by splitting in_str at ','.
+        tuple:
+            Returns a tuple of strings by splitting in_str at ','.
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
 
 
-def prepare_model_cli(img_input, output_path, masks, file_types, mode):
-    """Prepares cli for running models.
-
-    Checks for existing directories to run tests.
-    Converts file path to list of file paths or
-    creates list of file paths if input is a directory.
+def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
+    """Convert pixels per unit (ppu) to microns per pixel (mpp)
 
     Args:
-        img_input (str or pathlib.Path): file path to images.
-        output_path (str or pathlib.Path): output directory path.
-        masks (str or pathlib.Path): file path to masks.
-        file_types (str): file types to process using cli.
-        mode (str): wsi or tile mode.
+        ppu (int):
+            Pixels per unit.
+        units (Uniont[str, int]):
+            Units of pixels per unit. Valid options are "cm",
+            "centimeter", "inch", 2 (inches), 3(cm).
 
     Returns:
-        files_all (list): list of files to process.
-        masks_all (list): list of masks corresponding to input files.
-        output_path (pathlib.Path): output path
+        mpp (float):
+            Microns per pixel.
 
     """
-    output_path = pathlib.Path(output_path)
-    file_types = string_to_tuple(in_str=file_types)
-
-    if output_path.exists():
-        raise FileExistsError("Path already exists.")
-
-    if not os.path.exists(img_input):
-        raise FileNotFoundError
-
-    if mode not in ["wsi", "tile"]:
-        raise ValueError("Please select wsi or tile mode.")
-
-    files_all = [
-        img_input,
-    ]
-
-    if masks is None:
-        masks_all = None
-    else:
-        masks_all = [
-            masks,
-        ]
-
-    if os.path.isdir(img_input):
-        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
-
-    if os.path.isdir(str(masks)):
-        masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
-
-    return files_all, masks_all, output_path
+    microns_per_unit = {
+        "centimeter": 1e4,  # 10,000
+        "cm": 1e4,  # 10,000
+        "mm": 1e3,  # 1,000
+        "inch": 25400,
+        "in": 25400,
+        2: 25400,  # inches in TIFF tags
+        3: 1e4,  # cm in TIFF tags
+    }
+    if units not in microns_per_unit:
+        raise ValueError(f"Invalid units: {units}")
+    return 1 / ppu * microns_per_unit[units]

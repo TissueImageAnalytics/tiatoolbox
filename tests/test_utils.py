@@ -11,7 +11,6 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytest
-import torch.cuda
 from PIL import Image
 
 from tiatoolbox import rcParam, utils
@@ -121,6 +120,24 @@ def test_mpp2common_objective_power(sample_svs):
         assert np.array_equal(
             utils.misc.mpp2common_objective_power([mpp] * 2), [result] * 2
         )
+
+
+def test_ppu2mpp_invalid_units():
+    """Test ppu2mpp with invalid units."""
+    with pytest.raises(ValueError, match="Invalid units"):
+        utils.misc.ppu2mpp(1, units="invalid")
+
+
+def test_ppu2mpp():
+    """Test converting pixels-per-unit to mpp with ppu2mpp."""
+    assert utils.misc.ppu2mpp(1, units="in") == 25_400
+    assert utils.misc.ppu2mpp(1, units="inch") == 25_400
+    assert utils.misc.ppu2mpp(1, units="mm") == 1_000
+    assert utils.misc.ppu2mpp(1, units="cm") == 10_000
+    assert utils.misc.ppu2mpp(1, units=2) == 25_400  # inch
+    assert utils.misc.ppu2mpp(1, units=3) == 10_000  # cm
+    assert pytest.approx(utils.misc.ppu2mpp(72, units="in"), 352.8)
+    assert pytest.approx(utils.misc.ppu2mpp(50_000, units="in"), 0.508)
 
 
 def test_assert_dtype_int():
@@ -825,7 +842,7 @@ def test_read_point_annotations(
     assert out_table.shape[1] == 3
 
     # Test if input array does not have 2 or 3 columns
-    with pytest.raises(ValueError, match="Input array must have 2 or 3 columns"):
+    with pytest.raises(ValueError, match="Numpy table should be of format"):
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
@@ -833,7 +850,7 @@ def test_read_point_annotations(
     with open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
-    with pytest.raises(ValueError, match="numpy table should be of format"):
+    with pytest.raises(ValueError, match="Numpy table should be of format"):
         _ = utils.misc.read_locations(labels)
 
     # Test if input pd DataFrame does not have 2 or 3 columns
@@ -1140,10 +1157,10 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
         )
 
 
-def test_normalise_padding_input_dims():
-    """Test that normalise padding error with input dimensions > 1."""
+def test_normalize_padding_input_dims():
+    """Test that normalize padding error with input dimensions > 1."""
     with pytest.raises(ValueError, match="1 dimensional"):
-        utils.image.normalise_padding_size(((0, 0), (0, 0)))
+        utils.image.normalize_padding_size(((0, 0), (0, 0)))
 
 
 def test_select_device():
@@ -1160,21 +1177,22 @@ def test_model_to():
     import torch.nn as nn
     import torchvision.models as torch_models
 
-    # test on GPU
+    # Test on GPU
     # no GPU on Travis so this will crash
-    if not torch.cuda.is_available():
+    if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises(RuntimeError):
             _ = misc.model_to(on_gpu=True, model=model)
 
-    # test on CPU
+    # Test on CPU
     model = torch_models.resnet18()
     model = misc.model_to(on_gpu=False, model=model)
     assert isinstance(model, nn.Module)
 
 
-def test_save_as_json():
+def test_save_as_json(tmp_path):
     """Test save data to json."""
+    # This should be broken up into separate tests!
     import json
 
     # dict with nested dict, list, and np.array
@@ -1198,37 +1216,135 @@ def test_save_as_json():
     not_jsonable.update(sample)
     # should fail because key is not of primitive type [str, int, float, bool]
     with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
-        misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+        misc.save_as_json(
+            {frozenset(key_dict): sample}, tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(not_jsonable, "sample_json.json")
+        misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
-    with pytest.raises(ValueError, match=r".*`data`.*.*not.*dict, list.*"):
-        misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
+        misc.save_as_json(
+            list(not_jsonable.values()), tmp_path / "sample_json.json", exist_ok=True
+        )
+    with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
+        misc.save_as_json(
+            np.random.rand(2, 2), tmp_path / "sample_json.json", exist_ok=True
+        )
     # test complex nested dict
     print(sample)
-    misc.save_as_json(sample, "sample_json.json")
-    with open("sample_json.json", "r") as fptr:
+    misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
+    with open(tmp_path / "sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    # test read because == is useless when value is mutable
+    assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+
+    # Allow parent directories
+    misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
+    with open(tmp_path / "foo" / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test complex list of data
-    misc.save_as_json(list(sample.values()), "sample_json.json")
+    misc.save_as_json(
+        list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
+    )
     # test read because == is useless when value is mutable
-    with open("sample_json.json", "r") as fptr:
+    with open(tmp_path / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test numpy generic
-    misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
-    misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
-    os.remove("sample_json.json")
+    misc.save_as_json(
+        [np.int32(1), np.float32(2)], tmp_path / "sample_json.json", exist_ok=True
+    )
+    misc.save_as_json(
+        {"a": np.int32(1), "b": np.float32(2)},
+        tmp_path / "sample_json.json",
+        exist_ok=True,
+    )
+
+
+def test_save_as_json_exists(tmp_path):
+    """Test save data to json which already exists."""
+    dictionary = {"a": 1, "b": 2}
+    misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    with pytest.raises(FileExistsError, match="File already exists"):
+        misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
+
+
+def test_save_as_json_parents(tmp_path):
+    """Test save data to json where parents need to be created and parents is False."""
+    dictionary = {"a": 1, "b": 2}
+    with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
+
+
+def test_save_yaml_exists(tmp_path):
+    """Test save data to yaml which already exists."""
+    dictionary = {"a": 1, "b": 2}
+    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    with pytest.raises(FileExistsError, match="File already exists"):
+        misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
+
+
+def test_save_yaml_parents(tmp_path):
+    """Test save data to yaml where parents need to be created."""
+    dictionary = {"a": 1, "b": 2}
+    with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+
+    misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
 
 
 def test_imread_none_args():
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.misc.imread(img)
+
+
+def test_detect_pixman():
+    """Test detection of the pixman version.
+
+    Simply check it passes without exception or that it raises
+    an EnvironmentError if the version is not detected.
+
+    Any other exception should fail this test.
+    """
+    try:
+        versions, using = utils.env_detection.pixman_versions()
+        assert isinstance(using, str)
+        assert isinstance(versions, list)
+        assert len(versions) > 0
+    except EnvironmentError:
+        pass
+
+
+@pytest.mark.skipif(
+    os.name == "nt", reason="Test only designed for travis online Linux platform."
+)
+def test_detect_travis():
+    """Test detection of the travis environment.
+
+    Simply check it passes without exception.
+    """
+    import pwd
+
+    on_travis = utils.env_detection.running_on_travis()
+    if pwd.getpwuid(os.getuid())[0] == "travis":
+        assert on_travis
+    else:
+        assert not on_travis
+
+
+def test_detect_gpu():
+    """Test detection of GPU in the current runtime environment.
+
+    Simply check it passes without exception.
+
+    """
+    _ = utils.env_detection.has_gpu()

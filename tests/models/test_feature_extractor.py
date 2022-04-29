@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for feature extractor."""
 
 import os
@@ -26,14 +7,15 @@ import shutil
 import numpy as np
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNExtractor
+from tiatoolbox.models.architecture.vanilla import CNNBackbone
 from tiatoolbox.models.engine.semantic_segmentor import (
-    FeatureExtractor,
+    DeepFeatureExtractor,
     IOSegmentorConfig,
 )
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_GPU = False
+ON_GPU = not toolbox_env.running_on_travis() and toolbox_env.has_gpu()
 
 # ----------------------------------------------------
 
@@ -57,7 +39,7 @@ def test_functional(remote_sample, tmp_path):
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     _rm_dir(save_dir)  # default output dir test
-    extractor = FeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
+    extractor = DeepFeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
     output_list = extractor.predict(
         [mini_wsi_svs],
         mode="wsi",
@@ -87,8 +69,8 @@ def test_functional(remote_sample, tmp_path):
         save_resolution={"units": "mpp", "resolution": 8.0},
     )
 
-    model = CNNExtractor("resnet50")
-    extractor = FeatureExtractor(batch_size=4, model=model)
+    model = CNNBackbone("resnet50")
+    extractor = DeepFeatureExtractor(batch_size=4, model=model)
     # should still run because we skip exception
     output_list = extractor.predict(
         [mini_wsi_svs],

@@ -12,11 +12,20 @@ files:
   ndpi-1:
     url: [*wsis, "CMU-1.ndpi"]
   ndpi-2:
-      url: [ *wsis, "bioformatspull2759.ndpi" ]
+      url: [*wsis, "bioformatspull2759.ndpi" ]
+  dicom-1:
+    url: [*wsis, "CMU-1.dicom.zip"]
+    extract: True
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
+  tiled-tiff-1-small-jpeg:
+    url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
+  tiled-tiff-1-small-jp2k:
+    url: [*wsis, "CMU-1-Small-Region.jp2k.tiff"]
   ome-brightfield-pyramid-1-small:
     url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
+  two-tiled-pages:
+    url: [*wsis, "two-tiled-pages.tiff"]
   jp2-omnyx-1:
     url: [*wsis, "test1.jp2"]
   stainnorm-source:
@@ -59,6 +68,10 @@ files:
     url: [*modelroot, "samples/kather_patch1.tif"]
   sample-patch-2:
     url: [*modelroot, "samples/kather_patch2.tif"]
+  sample-patch-3:
+    url: [*modelroot, "samples/pcam_patch1.png"]
+  sample-patch-4:
+    url: [*modelroot, "samples/pcam_patch2.png"]
   wsi1_2k_2k_svs:
     url: [*modelroot, "samples/wsi1_2k_2k.svs"]
   wsi1_8k_8k_svs:
@@ -91,3 +104,5 @@ files:
     url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
   small_svs_tissue_mask:
     url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]
+  micronet-output:
+    url: [*modelroot, "predictions/nuclei_mask/micronet-output.npy"]

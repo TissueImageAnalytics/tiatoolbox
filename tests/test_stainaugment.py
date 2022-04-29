@@ -6,16 +6,16 @@ import albumentations as alb
 import numpy as np
 import pytest
 
-from tiatoolbox.data import stainnorm_target
+from tiatoolbox.data import stain_norm_target
 from tiatoolbox.tools.stainaugment import StainAugmentor
-from tiatoolbox.tools.stainnorm import get_normaliser
+from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils.misc import imread
 
 
 def test_stainaugment(source_image, norm_vahadane):
     """Test functionality of the StainAugmentor class."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     vahadane_img = imread(pathlib.Path(norm_vahadane))
 
     # Test invalid method in the input
@@ -36,7 +36,7 @@ def test_stainaugment(source_image, norm_vahadane):
     # 2. Testing with predefined stain matrix
     # We first extract the stain matrix of the target image and try to augment the
     # source image with respect to that image.
-    norm = get_normaliser("vahadane")
+    norm = get_normalizer("vahadane")
     norm.fit(target_img)
     target_stain_matrix = norm.stain_matrix_target
 

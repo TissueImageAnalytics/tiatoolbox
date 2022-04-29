@@ -1,3 +1,4 @@
+# skipcq: PTC-W6004
 """Tests for annotation store classes."""
 import json
 import pickle
@@ -167,9 +168,38 @@ def test_sqlite_store_compile_options():
 
 
 def test_sqlite_store_compile_options_exception(monkeypatch):
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 0))
+    monkeypatch.setattr(
+        SQLiteStore,
+        "compile_options",
+        lambda x: ["ENABLE_RTREE", "ENABLE_JSON1"],
+        raising=True,
+    )
+    SQLiteStore()
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
     with pytest.raises(Exception, match="RTREE and JSON1"):
         SQLiteStore()
+
+
+def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
+    monkeypatch.setattr(
+        SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
+    )
+    with pytest.raises(Exception, match="JSON must not"):
+        SQLiteStore()
+
+
+def test_sqlite_store_compile_options_missing_math(monkeypatch, caplog):
+    """Test that a warning is shown if the sqlite math module is missing."""
+    monkeypatch.setattr(
+        SQLiteStore,
+        "compile_options",
+        lambda x: ["ENABLE_JSON1", "ENABLE_RTREE"],
+        raising=True,
+    )
+    SQLiteStore()
+    assert "SQLite math functions are not enabled" in caplog.text
 
 
 def test_sqlite_store_multiple_connection(tmp_path):

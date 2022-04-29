@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """This module implements patch-level prediction."""
 
 import copy
@@ -65,40 +45,58 @@ class PatchPredictor:
     """Patch-level predictor.
 
     Args:
-        model (nn.Module): Use externally defined PyTorch model for prediction with.
-          weights already loaded. Default is `None`. If provided,
-          `pretrained_model` argument is ignored.
-        pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. Refer to
-          `tiatoolbox.models.classification.get_pretrained_model` for details.
-          By default, the corresponding pretrained weights will also be
-          downloaded. However, you can override with your own set of weights
-          via the `pretrained_weights` argument. Argument is case insensitive.
-        pretrained_weights (str): Path to the weight of the corresponding
-          `pretrained_model`.
+        model (nn.Module):
+            Use externally defined PyTorch model for prediction with.
+            weights already loaded. Default is `None`. If provided,
+            `pretrained_model` argument is ignored.
+        pretrained_model (str):
+            Name of the existing models support by tiatoolbox for
+            processing the data. For a full list of pretrained models,
+            refer to the `docs
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights via the `pretrained_weights` argument. Argument
+            is case-insensitive.
+        pretrained_weights (str):
+            Path to the weight of the corresponding `pretrained_model`.
+
           >>> predictor = PatchPredictor(
           ...    pretrained_model="resnet18-kather100k",
           ...    pretrained_weights="resnet18_local_weight")
-        batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int) : Number of workers to load the data.
-          Take note that they will also perform preprocessing.
-        verbose (bool): Whether to output logging information.
+
+        batch_size (int):
+            Number of images fed into the model each time.
+        num_loader_workers (int):
+            Number of workers to load the data. Take note that they will
+            also perform preprocessing.
+        verbose (bool):
+            Whether to output logging information.
 
     Attributes:
-        img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
-          A HWC image or a path to WSI.
-        mode (str): Type of input to process. Choose from either `patch`, `tile`
-          or `wsi`.
-        model (nn.Module): Defined PyTorch model.
-        pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. Refer to
-          `tiatoolbox.models.classification.get_pretrained_model` for details.
-          By default, the corresponding pretrained weights will also be
-          downloaded. However, you can override with your own set of weights
-          via the `pretrained_weights` argument. Argument is case insensitive.
-        batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int): Number of workers used in torch.utils.data.DataLoader.
-        verbose (bool): Whether to output logging information.
+        img (:obj:`str` or :obj:`pathlib.Path` or
+        :class:`numpy.ndarray`):
+            A HWC image or a path to WSI.
+        mode (str):
+            Type of input to process. Choose from either `patch`, `tile`
+            or `wsi`.
+        model (nn.Module):
+            Defined PyTorch model.
+        pretrained_model (str):
+            Name of the existing models support by tiatoolbox for
+            processing the data. For a full list of pretrained models,
+            refer to the `docs
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights via the `pretrained_weights` argument. Argument
+            is case insensitive.
+        batch_size (int):
+            Number of images fed into the model each time.
+        num_loader_workers (int):
+            Number of workers used in torch.utils.data.DataLoader.
+        verbose (bool):
+            Whether to output logging information.
 
     Examples:
         >>> # list of 2 image patches as input
@@ -143,7 +141,7 @@ class PatchPredictor:
         self.mode = None
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either of `model` or `pretrained_model`")
+            raise ValueError("Must provide either `model` or `pretrained_model`.")
 
         if model is not None:
             self.model = model
@@ -171,23 +169,30 @@ class PatchPredictor:
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
         #! Improve how the below reads.
-        The prediction map will contain values from 0 to N, where N is the number
-        of classes. Here, 0 is the background which has not been processed by the
-        model and N is the number of classes predicted by the model.
+        The prediction map will contain values from 0 to N, where N is
+        the number of classes. Here, 0 is the background which has not
+        been processed by the model and N is the number of classes
+        predicted by the model.
 
         Args:
             img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
               A HWC image or a path to WSI.
-            output (dict): Ouput generated by the model.
-            resolution (float): Resolution of merged predictions.
-            units (str): Units of resolution used when merging predictions. This
-              must be the same `units` used when processing the data.
-            postproc_func (callable): A function to post-process raw prediction
-              from model. By default, internal code uses the `np.argmax` function.
-            return_raw (bool): Return raw result without applying the `postproc_func`
-              on the assembled image.
+            output (dict):
+                Output generated by the model.
+            resolution (float):
+                Resolution of merged predictions.
+            units (str):
+                Units of resolution used when merging predictions. This
+                must be the same `units` used when processing the data.
+            postproc_func (callable):
+                A function to post-process raw prediction from model. By
+                default, internal code uses the `np.argmax` function.
+            return_raw (bool):
+                Return raw result without applying the `postproc_func`
+                on the assembled image.
         Returns:
-            prediction_map (ndarray): Merged predictions as a 2D array.
+            :class:`numpy.ndarray`:
+                Merged predictions as a 2D array.
 
         Examples:
             >>> # pseudo output dict from model with 2 patches
@@ -205,10 +210,10 @@ class PatchPredictor:
             ...         units='baseline'
             ... )
             >>> merged
-            array([[2, 2, 0, 0],
-                   [2, 2, 0, 0],
-                   [0, 0, 1, 1],
-                   [0, 0, 1, 1]])
+            ... array([[2, 2, 0, 0],
+            ...    [2, 2, 0, 0],
+            ...    [0, 0, 1, 1],
+            ...    [0, 0, 1, 1]])
 
         """
         reader = get_wsireader(img)
@@ -279,15 +284,21 @@ class PatchPredictor:
         """Make a prediction on a dataset. The dataset may be mutated.
 
         Args:
-            dataset (torch.utils.data.Dataset): PyTorch dataset object created using
-              tiatoolbox.models.data.classification.Patch_Dataset.
-            return_probabilities (bool): Whether to return per-class probabilities.
-            return_labels (bool): Whether to return labels.
-            return_coordinates (bool): Whether to return patch coordinates.
-            on_gpu (bool): whether to run model on the GPU.
+            dataset (torch.utils.data.Dataset):
+                PyTorch dataset object created using
+                `tiatoolbox.models.data.classification.Patch_Dataset`.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            return_labels (bool):
+                Whether to return labels.
+            return_coordinates (bool):
+                Whether to return patch coordinates.
+            on_gpu (bool):
+                Whether to run model on the GPU.
 
         Returns:
-            output (ndarray): Model predictions of the input dataset
+            :class:`numpy.ndarray`:
+                Model predictions of the input dataset
 
         """
         dataset.preproc_func = self.model.preproc_func
@@ -370,52 +381,72 @@ class PatchPredictor:
         """Make a prediction for a list of input data.
 
         Args:
-            imgs (list, ndarray): List of inputs to process. When using `patch`
-              mode, the input must be either a list of images, a list of image
-              file paths or a numpy array of an image list. When using `tile` or
-              `wsi` mode, the input must be a list of file paths.
-            masks (list): List of masks. Only utilised when processing image tiles
-              and whole-slide images. Patches are only processed if they are
-              within a masked area. If not provided, then a tissue mask will be
-              automatically generated for whole-slide images or the entire image
-              is processed for image tiles.
-            labels: List of labels. If using `tile` or `wsi` mode, then only a
-              single label per image tile or whole-slide image is supported.
-            mode (str): Type of input to process. Choose from either `patch`, `tile`
-              or `wsi`.
-            return_probabilities (bool): Whether to return per-class probabilities.
-            return_labels (bool): Whether to return the labels with the predictions.
-            on_gpu (bool): whether to run model on the GPU.
-            patch_input_shape (tuple): Size of patches input to the model. Patches
-              are at requested read resolution, not with respect to level 0, and must be
-              positive.
-            stride_shape (tuple): Stride using during tile and WSI processing.
-              Stride is at requested read resolution, not with respect to to level
-              0, and must be positive. If not provided,
-              `stride_shape=patch_input_shape`.
-            resolution (float): Resolution used for reading the image. Please see
+            imgs (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list. When using
+                `tile` or `wsi` mode, the input must be a list of file
+                paths.
+            masks (list):
+                List of masks. Only utilised when processing image tiles
+                and whole-slide images. Patches are only processed if
+                they are within a masked area. If not provided, then a
+                tissue mask will be automatically generated for
+                whole-slide images or the entire image is processed for
+                image tiles.
+            labels:
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
+            mode (str):
+                Type of input to process. Choose from either `patch`,
+                `tile` or `wsi`.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            return_labels (bool):
+                Whether to return the labels with the predictions.
+            on_gpu (bool):
+                Whether to run model on the GPU.
+            patch_input_shape (tuple):
+                Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0,
+                and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. Stride is
+                at requested read resolution, not with respect to to
+                level 0, and must be positive. If not provided,
+                `stride_shape=patch_input_shape`.
+            resolution (float):
+                Resolution used for reading the image. Please see
                 :obj:`WSIReader` for details.
-            units (str): Units of resolution used for reading the image. Choose from
-              either `level`, `power` or `mpp`. Please see
+            units (str):
+                Units of resolution used for reading the image. Choose
+                from either `level`, `power` or `mpp`. Please see
                 :obj:`WSIReader` for details.
-            merge_predictions (bool): Whether to merge the predictions to form a
-              2-dimensional map. This is only applicable for `mode='wsi'`
-              or `mode='tile'`.
-            save_dir (str or pathlib.Path): Output directory when processing
-              multiple tiles and whole-slide images. By default, it is folder `output`
-              where the running script is invoked.
-            save_output (bool): Whether to save output for a single file. default=False
+            merge_predictions (bool):
+                Whether to merge the predictions to form a 2-dimensional
+                map. This is only applicable for `mode='wsi'` or
+                `mode='tile'`.
+            save_dir (str or pathlib.Path):
+                Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output`
+                where the running script is invoked.
+            save_output (bool):
+                Whether to save output for a single file. default=False
 
         Returns:
-            output (ndarray, dict): Model predictions of the input dataset. If
-              multiple image tiles or whole-slide images are provided as input,
-              or save_output is True, then results are saved to `save_dir` and a
-              dictionary indicating save location for each input is return.
-              The dict has following format:
-                - img_path: path of the input image.
-                    - raw: path to save location for raw prediction, saved in .json.
-                    - merged: path to .npy contain merged predictions if
-                      `merge_predictions` is `True`.
+            (:class:`numpy.ndarray`, dict):
+                Model predictions of the input dataset. If multiple
+                image tiles or whole-slide images are provided as input,
+                or save_output is True, then results are saved to
+                `save_dir` and a dictionary indicating save location for
+                each input is returned. The dict has following format:
+                    - img_path: path of the input image.
+                        - raw: path to save location for raw prediction,
+                          saved in .json.
+                        - merged: path to .npy contain merged
+                          predictions if
+                        `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
@@ -423,11 +454,11 @@ class PatchPredictor:
             ...                 pretrained_model="resnet18-kather100k")
             >>> output = predictor.predict(wsis, mode="wsi")
             >>> output.keys()
-            ['wsi1.svs', 'wsi2.svs']
+            ... ['wsi1.svs', 'wsi2.svs']
             >>> output['wsi1.svs']
-            {'raw': '0.raw.json', 'merged': '0.merged.npy}
+            ... {'raw': '0.raw.json', 'merged': '0.merged.npy'}
             >>> output['wsi2.svs']
-            {'raw': '1.raw.json', 'merged': '1.merged.npy}
+            ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
 
         """
         if mode not in ["patch", "wsi", "tile"]:

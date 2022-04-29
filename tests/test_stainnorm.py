@@ -1,4 +1,5 @@
-"""Tests for stain normalisation code."""
+# skipcq: PTC-W6004
+"""Tests for stain normalization code."""
 
 import pathlib
 
@@ -7,10 +8,9 @@ import pytest
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.data import _local_sample_path, stainnorm_target
+from tiatoolbox.data import _local_sample_path, stain_norm_target
 from tiatoolbox.tools import stainextract
-from tiatoolbox.tools.stainnorm import get_normaliser
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils.misc import imread
 
 
@@ -66,13 +66,13 @@ def test_dl_output_for_h_and_e():
     assert np.all(dictionary2 == dictionary[[1, 0], :])
 
 
-def test_reinhard_normalise(source_image, norm_reinhard):
-    """Test for Reinhard colour normalisation."""
+def test_reinhard_normalize(source_image, norm_reinhard):
+    """Test for Reinhard colour normalization."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     reinhard_img = imread(pathlib.Path(norm_reinhard))
 
-    norm = get_normaliser("reinhard")
+    norm = get_normalizer("reinhard")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -80,15 +80,15 @@ def test_reinhard_normalise(source_image, norm_reinhard):
     assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_custom_normalise(source_image, norm_ruifrok):
-    """Test for stain normalisation with user-defined stain matrix."""
+def test_custom_normalize(source_image, norm_ruifrok):
+    """Test for stain normalization with user-defined stain matrix."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     custom_img = imread(pathlib.Path(norm_ruifrok))
 
     # init class with custom method - test with ruifrok stain matrix
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-    norm = get_normaliser("custom", stain_matrix=stain_matrix)
+    norm = get_normalizer("custom", stain_matrix=stain_matrix)
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -96,21 +96,21 @@ def test_custom_normalise(source_image, norm_ruifrok):
     assert np.mean(np.absolute(custom_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_get_normaliser_assertion():
-    """Test get normaliser assertion error."""
+def test_get_normalizer_assertion():
+    """Test get normalizer assertion error."""
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
     with pytest.raises(ValueError):
-        _ = get_normaliser("ruifrok", stain_matrix)
+        _ = get_normalizer("ruifrok", stain_matrix)
 
 
-def test_ruifrok_normalise(source_image, norm_ruifrok):
-    """Test for stain normalisation with stain matrix from Ruifrok and Johnston."""
+def test_ruifrok_normalize(source_image, norm_ruifrok):
+    """Test for stain normalization with stain matrix from Ruifrok and Johnston."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     ruifrok_img = imread(pathlib.Path(norm_ruifrok))
 
     # init class with Ruifrok & Johnston method
-    norm = get_normaliser("ruifrok")
+    norm = get_normalizer("ruifrok")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -118,14 +118,14 @@ def test_ruifrok_normalise(source_image, norm_ruifrok):
     assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_macenko_normalise(source_image, norm_macenko):
-    """Test for stain normalisation with stain matrix from Macenko et al."""
+def test_macenko_normalize(source_image, norm_macenko):
+    """Test for stain normalization with stain matrix from Macenko et al."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     macenko_img = imread(pathlib.Path(norm_macenko))
 
     # init class with Macenko method
-    norm = get_normaliser("macenko")
+    norm = get_normalizer("macenko")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -133,14 +133,14 @@ def test_macenko_normalise(source_image, norm_macenko):
     assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_vahadane_normalise(source_image, norm_vahadane):
-    """Test for stain normalisation with stain matrix from Vahadane et al."""
+def test_vahadane_normalize(source_image, norm_vahadane):
+    """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(pathlib.Path(source_image))
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     vahadane_img = imread(pathlib.Path(norm_vahadane))
 
     # init class with Vahadane method
-    norm = get_normaliser("vahadane")
+    norm = get_normalizer("vahadane")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
 
@@ -153,8 +153,8 @@ def test_vahadane_normalise(source_image, norm_vahadane):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm(source_image):
-    """Test for the stain normalisation CLI."""
+def test_command_line_stainnorm(source_image, tmp_path):
+    """Test for the stain normalization CLI."""
     source_img = pathlib.Path(source_image)
     target_img = _local_sample_path("target_image.png")
     runner = CliRunner()
@@ -162,10 +162,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "reinhard",
         ],
@@ -177,10 +179,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "ruifrok",
         ],
@@ -192,10 +196,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "macenko",
         ],
@@ -207,10 +213,12 @@ def test_command_line_stainnorm(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             source_img,
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "vahadane",
         ],
@@ -219,8 +227,8 @@ def test_command_line_stainnorm(source_image):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_dir(source_image):
-    """Test directory input for the stain normalisation CLI."""
+def test_cli_stainnorm_dir(source_image, tmp_path):
+    """Test directory input for the stain normalization CLI."""
     source_img = source_image.parent
     target_img = _local_sample_path("target_image.png")
     runner = CliRunner()
@@ -228,10 +236,12 @@ def test_cli_stainnorm_dir(source_image):
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img),
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_ouput"),
             "--method",
             "vahadane",
         ],
@@ -240,19 +250,21 @@ def test_cli_stainnorm_dir(source_image):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_file_not_found_error(source_image):
-    """Test file not found error for the stain normalisation CLI."""
+def test_cli_stainnorm_file_not_found_error(source_image, tmp_path):
+    """Test file not found error for the stain normalization CLI."""
     source_img = pathlib.Path(source_image)
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img)[:-1],
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "vahadane",
         ],
@@ -263,24 +275,26 @@ def test_cli_stainnorm_file_not_found_error(source_image):
     assert isinstance(stainnorm_result.exception, FileNotFoundError)
 
 
-def test_cli_stainnorm_method_not_supported(source_image):
-    """Test method not supported for the stain normalisation CLI."""
+def test_cli_stainnorm_method_not_supported(source_image, tmp_path):
+    """Test method not supported for the stain normalization CLI."""
     source_img = pathlib.Path(source_image)
-    target_img = stainnorm_target()
+    target_img = stain_norm_target()
     runner = CliRunner()
     stainnorm_result = runner.invoke(
         cli.main,
         [
             "stain-norm",
-            "--source-input",
+            "--img-input",
             str(source_img),
             "--target-input",
             target_img,
+            "--output-path",
+            str(tmp_path / "stainnorm_output"),
             "--method",
             "Test",
         ],
     )
 
-    assert stainnorm_result.output == ""
-    assert stainnorm_result.exit_code == 1
-    assert isinstance(stainnorm_result.exception, MethodNotSupported)
+    assert "Invalid value for '--method'" in stainnorm_result.output
+    assert stainnorm_result.exit_code != 0
+    assert isinstance(stainnorm_result.exception, SystemExit)

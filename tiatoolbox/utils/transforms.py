@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Define Image transforms."""
 from typing import Tuple, Union
 
@@ -32,12 +12,16 @@ def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
 
     Args:
-        image (ndarray or PIL.Image): input image
-        fill (int): fill value for the background, default=255
-        alpha (bool): True if alpha channel is required
+        image (ndarray or PIL.Image):
+            Input image.
+        fill (int):
+            Fill value for the background, defaults to 255.
+        alpha (bool):
+            True if alpha channel is required.
 
     Returns:
-        ndarray: image with background composite
+        :class:`numpy.ndarray`:
+            Image with background composite.
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -62,28 +46,31 @@ def background_composite(image, fill=255, alpha=False):
     )
     composite.alpha_composite(image)
     if not alpha:
-        composite = np.asarray(composite.convert("RGB"))
-    else:
-        composite = np.asarray(composite)
+        return np.asarray(composite.convert("RGB"))
 
-    return composite
+    return np.asarray(composite)
 
 
 def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
     """Resize input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image
-        scale_factor (tuple(float)): scaling factor to resize the input image
-        output_size (tuple(int)): output image size, (width, height)
-        interpolation (str or int): interpolation method used to interpolate the image
-         using `opencv interpolation flags
-         <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
-         default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
-         otherwise uses cv2.INTER_CUBIC
+        img (:class:`numpy.ndarray`):
+            Input image.
+        scale_factor (tuple(float)):
+            Scaling factor to resize the input image.
+        output_size (tuple(int)):
+            Output image size, (width, height).
+        interpolation (str or int):
+            Interpolation method used to interpolate the image using
+            `opencv interpolation flags
+            <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
+            default='optimise', uses cv2.INTER_AREA for scale_factor
+            <1.0 otherwise uses cv2.INTER_CUBIC.
 
     Returns:
-        :class:`numpy.ndarray`: resized image
+        :class:`numpy.ndarray`:
+            Resized image.
 
     Examples:
         >>> from tiatoolbox.wsicore import wsireader
@@ -133,20 +120,24 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
-def convert_RGB2OD(img):
+def rgb2od(img):
     """Convert from RGB to optical density (OD_RGB) space.
-    RGB = 255 * exp(-1*OD_RGB).
+
+    ::math::
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
-        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Image RGB
+        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
+            RGB image.
 
     Returns:
-        :class:`numpy.ndarray`: Optical denisty RGB image.
+        :class:`numpy.ndarray`:
+            Optical density (OD) RGB image.
 
     Examples:
-        >>> from tiatoolbox.utils import transforms
-        >>> # rgb_img: RGB image
-        >>> od_img = transforms.convert_RGB2OD(rgb_img)
+        >>> from tiatoolbox.utils import transforms, misc
+        >>> rgb_img = misc.imread('path/to/image')
+        >>> od_img = transforms.rgb2od(rgb_img)
 
     """
     mask = img == 0
@@ -154,46 +145,54 @@ def convert_RGB2OD(img):
     return np.maximum(-1 * np.log(img / 255), 1e-6)
 
 
-def convert_OD2RGB(OD):
+def od2rgb(od):
     """Convert from optical density (OD_RGB) to RGB.
-    RGB = 255 * exp(-1*OD_RGB)
+
+    ::math::
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
-        OD (:class:`numpy.ndarray`): Optical denisty RGB image
+        od (:class:`numpy.ndarray`):
+            Optical density (OD) RGB image.
 
     Returns:
-        numpy.ndarray: Image RGB
+        :class:`numpy.ndarray`:
+            RGB Image.
 
     Examples:
-        >>> from tiatoolbox.utils import transforms
-        >>> # od_img: optical density image
-        >>> rgb_img = transforms.convert_OD2RGB(od_img)
+        >>> from tiatoolbox.utils import transforms, misc
+        >>> rgb_img = misc.imread('path/to/image')
+        >>> od_img = transforms.rgb2od(rgb_img)
+        >>> rgb_img = transforms.od2rgb(od_img)
 
     """
-    OD = np.maximum(OD, 1e-6)
-    return (255 * np.exp(-1 * OD)).astype(np.uint8)
+    od = np.maximum(od, 1e-6)
+    return (255 * np.exp(-1 * od)).astype(np.uint8)
 
 
 def bounds2locsize(bounds, origin="upper"):
     """Calculate the size of a tuple of bounds.
 
-    Bounds are expected to be in the (left, top, right, bottom) /
-    (start_x, start_y, end_x, end_y) format.
+    Bounds are expected to be in the `(left, top, right, bottom)` or
+    `(start_x, start_y, end_x, end_y)` format.
 
     Args:
-        bounds (tuple(int)): A 4-tuple or length 4 array of bounds
-            values in (left, top, right, bottom) format.
-        origin (str): Upper (Top-left) or lower (bottom-left) origin.
+        bounds (tuple(int)):
+            A 4-tuple or length 4 array of bounds values in `(left, top,
+            right, bottom)` format.
+        origin (str):
+            Upper (Top-left) or lower (bottom-left) origin.
             Defaults to upper.
 
     Returns:
-        tuple: A 2-tuple containing integer 2-tuples for location and size.
-          - :py:obj:`tuple` - location tuple
-            - :py:obj:`int` - x
-            - :py:obj:`int` - y
-          - :py:obj:`size` - size tuple
-            - :py:obj:`int` - width
-            - :py:obj:`int` - height
+        tuple:
+            A 2-tuple containing integer 2-tuples for location and size:
+            - :py:obj:`tuple` - location tuple
+                - :py:obj:`int` - x
+                - :py:obj:`int` - y
+            - :py:obj:`size` - size tuple
+                - :py:obj:`int` - width
+                - :py:obj:`int` - height
 
     Examples:
         >>> from tiatoolbox.utils.transforms import bounds2locsize
@@ -217,17 +216,18 @@ def locsize2bounds(location, size):
     """Convert a location and size to bounds.
 
     Args:
-        location (tuple(int)): A 2-tuple or length 2 array of x,y
-         coordinates.
-        size (tuple(int)): A 2-tuple or length 2 array of width and
-         height.
+        location (tuple(int)):
+            A 2-tuple or length 2 array of x,y coordinates.
+        size (tuple(int)):
+            A 2-tuple or length 2 array of width and height.
 
     Returns:
-        tuple: A tuple of bounds:
-          - :py:obj:`int` - left / start_x
-          - :py:obj:`int` - top / start_y
-          - :py:obj:`int` - right / end_x
-          - :py:obj:`int` - bottom / end_y
+        tuple:
+            A tuple of bounds:
+            - :py:obj:`int` - left / start_x
+            - :py:obj:`int` - top / start_y
+            - :py:obj:`int` - right / end_x
+            - :py:obj:`int` - bottom / end_y
 
     """
     return (
@@ -247,13 +247,16 @@ def bounds2slices(
     Create a tuple of slices for each start/stop pair in bounds.
 
     Arguments:
-        bounds (tuple(int)): Iterable of integer bounds. Must be even in
-            length with the dirst half as starting values and the second half
-            as end values, e.g. (start_x, start_y, stop_x, stop_y).
-        stride (int): Stride to apply when converting to slices.
+        bounds (tuple(int)):
+            Iterable of integer bounds. Must be even in length with the
+            first half as starting values and the second half as end
+            values, e.g. (start_x, start_y, stop_x, stop_y).
+        stride (int):
+            Stride to apply when converting to slices.
 
     Returns:
-        tuple(slice): Tuple of slices in image read order (y, x, channels).
+        tuple of slice:
+            Tuple of slices in image read order (y, x, channels).
 
     Example:
         >>> from tiatoolbox.utils.transforms import bounds2slices
@@ -264,12 +267,13 @@ def bounds2slices(
         >>> region = array[slices, ...]
 
     """
+    if np.size(stride) not in [1, 2]:
+        raise ValueError("Invalid stride shape.")
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
-    elif np.size(stride) == 2:
+    elif np.size(stride) == 2:  # pragma: no cover
         stride = np.tile(stride, 2)
-    else:
-        raise ValueError("Invalid stride shape")
+
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
     return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
@@ -282,28 +286,32 @@ def pad_bounds(
     """Add padding to bounds.
 
     Arguments:
-        bounds (tuple(int)): Iterable of integer bounds. Must be even in
-            length with the dirst half as starting values and the second half
-            as end values, e.g. (start_x, start_y, stop_x, stop_y).
-        padding (int): Padding to add to bounds.
+        bounds (tuple(int)):
+            Iterable of integer bounds. Must be even in length with the
+            first half as starting values and the second half as end
+            values, e.g. (start_x, start_y, stop_x, stop_y).
+        padding (int):
+            Padding to add to bounds.
 
     Examples:
         >>> pad_bounds((0, 0, 0, 0), 1)
 
     Returns:
-        tuple(int): Tuple of bounds with padding to the edges.
+        tuple of int:
+            Tuple of bounds with padding to the edges.
 
     """
     if np.size(bounds) % 2 != 0:
-        raise ValueError("Bounds must have an even number of elements")
+        raise ValueError("Bounds must have an even number of elements.")
     ndims = np.size(bounds) // 2
-    if np.size(padding) == 1:
-        pass
-    elif np.size(padding) == ndims:
-        padding = np.tile(padding, 2)
-    elif np.size(padding) == np.size(bounds):
-        pass
-    else:
+
+    if np.size(padding) not in [1, 2, np.size(bounds)]:
         raise ValueError("Invalid number of padding elements.")
+
+    if np.size(padding) == 1 or np.size(padding) == np.size(bounds):
+        pass
+    elif np.size(padding) == ndims:  # pragma: no cover
+        padding = np.tile(padding, 2)
+
     signs = np.repeat([-1, 1], ndims)
     return np.add(bounds, padding * signs)

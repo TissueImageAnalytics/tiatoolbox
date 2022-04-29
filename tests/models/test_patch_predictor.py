@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for Patch Predictor."""
 
 import copy
@@ -39,14 +20,14 @@ from tiatoolbox.models.dataset import (
     predefined_preproc_func,
 )
 from tiatoolbox.models.engine.patch_predictor import (
-    PatchPredictor,
     IOPatchPredictorConfig,
+    PatchPredictor,
 )
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, imread, imwrite
 from tiatoolbox.wsicore.wsireader import get_wsireader
 
-ON_TRAVIS = True
-ON_GPU = not ON_TRAVIS and torch.cuda.is_available()
+ON_GPU = toolbox_env.has_gpu()
 
 
 def _rm_dir(path):
@@ -225,7 +206,7 @@ def test_patch_dataset_crash(tmp_path):
     ]
     with pytest.raises(
         ValueError,
-        match=r"Can not load data of .*",
+        match="Cannot load image data from",
     ):
         _ = PatchDataset(imgs)
     _rm_dir(rcParam["TIATOOLBOX_HOME"])
@@ -255,7 +236,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 
     # test for ABC validate
     with pytest.raises(
-        ValueError, match=r".*inputs should be a list of patch coordinates.*"
+        ValueError, match=r".*`inputs` should be a list of patch coordinates.*"
     ):
         # intentionally created to check error
         # skipcq
@@ -370,7 +351,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     negative_mask = imread(mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
     imwrite("negative_mask.png", negative_mask)
-    with pytest.raises(ValueError, match=r".*No coordinate remain after tiling.*"):
+    with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
         ds = WSIPatchDataset(
             img_path=mini_wsi_svs,
             mask_path="negative_mask.png",
@@ -868,7 +849,7 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
         **kwargs,
     )
 
-    # mockup to change the preproc func and
+    # mock up to change the preproc func and
     # force to use the default in merge function
     # still should have the same results
     kwargs["merge_predictions"] = False
@@ -926,7 +907,7 @@ def _test_predictor_output(
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
         assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 1e-6
+            np.abs(probabilities_max - probabilities_check[idx]) <= 5e-6
             and predictions[idx] == predictions_check[idx]
         ), (
             pretrained_model,
@@ -937,8 +918,8 @@ def _test_predictor_output(
         )
 
 
-def test_patch_predictor_output(sample_patch1, sample_patch2):
-    """Test the output of patch prediction models."""
+def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
+    """Test the output of patch prediction models on Kather100K dataset."""
     inputs = [pathlib.Path(sample_patch1), pathlib.Path(sample_patch2)]
     pretrained_info = {
         "alexnet-kather100k": [1.0, 0.9999735355377197],
@@ -968,7 +949,42 @@ def test_patch_predictor_output(sample_patch1, sample_patch2):
             on_gpu=ON_GPU,
         )
         # only test 1 on travis to limit runtime
-        if ON_TRAVIS:
+        if toolbox_env.running_on_travis():
+            break
+
+
+def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
+    """Test the output of patch prediction models on PCam dataset."""
+    inputs = [pathlib.Path(sample_patch3), pathlib.Path(sample_patch4)]
+    pretrained_info = {
+        "alexnet-pcam": [0.999980092048645, 0.9769067168235779],
+        "resnet18-pcam": [0.999992847442627, 0.9466130137443542],
+        "resnet34-pcam": [1.0, 0.9976525902748108],
+        "resnet50-pcam": [0.9999270439147949, 0.9999996423721313],
+        "resnet101-pcam": [1.0, 0.9997289776802063],
+        "resnext50_32x4d-pcam": [0.9999996423721313, 0.9984435439109802],
+        "resnext101_32x8d-pcam": [0.9997072815895081, 0.9969086050987244],
+        "wide_resnet50_2-pcam": [0.9999837875366211, 0.9959040284156799],
+        "wide_resnet101_2-pcam": [1.0, 0.9945427179336548],
+        "densenet121-pcam": [0.9999251365661621, 0.9997479319572449],
+        "densenet161-pcam": [0.9999969005584717, 0.9662821292877197],
+        "densenet169-pcam": [0.9999998807907104, 0.9993504881858826],
+        "densenet201-pcam": [0.9999942779541016, 0.9950824975967407],
+        "mobilenet_v2-pcam": [0.9999876022338867, 0.9942564368247986],
+        "mobilenet_v3_large-pcam": [0.9999922513961792, 0.9719613790512085],
+        "mobilenet_v3_small-pcam": [0.9999963045120239, 0.9747149348258972],
+        "googlenet-pcam": [0.9999929666519165, 0.8701475858688354],
+    }
+    for pretrained_model, expected_prob in pretrained_info.items():
+        _test_predictor_output(
+            inputs,
+            pretrained_model,
+            probabilities_check=expected_prob,
+            predictions_check=[1, 0],
+            on_gpu=ON_GPU,
+        )
+        # only test 1 on travis to limit runtime
+        if toolbox_env.running_on_travis():
             break
 
 
@@ -1016,9 +1032,9 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
         ],
     )
 
-    assert mode_not_in_wsi_tile_result.output == ""
-    assert mode_not_in_wsi_tile_result.exit_code == 1
-    assert isinstance(mode_not_in_wsi_tile_result.exception, ValueError)
+    assert "Invalid value for '--mode'" in mode_not_in_wsi_tile_result.output
+    assert mode_not_in_wsi_tile_result.exit_code != 0
+    assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
 
 def test_cli_model_single_file(sample_svs, tmp_path):

@@ -109,7 +109,7 @@ def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
 @pytest.fixture(scope="session")
 def source_image(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for source image.
-    Download stain normalisation source image for pytest.
+    Download stain normalization source image for pytest.
 
     """
     return remote_sample("stainnorm-source")
@@ -299,7 +299,7 @@ def patch_extr_svs_npy_read(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_patch1(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch 1.
-    Download sample patch 1 for pytest.
+    Download sample patch 1 (Kather100K) for pytest.
 
     """
     return remote_sample("sample-patch-1")
@@ -308,10 +308,28 @@ def sample_patch1(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_patch2(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch 2.
-    Download sample patch 2 for pytest.
+    Download sample patch 2 (Kather100K) for pytest.
 
     """
     return remote_sample("sample-patch-2")
+
+
+@pytest.fixture(scope="session")
+def sample_patch3(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for sample patch 3.
+    Download sample patch 3 (PCam) for pytest.
+
+    """
+    return remote_sample("sample-patch-3")
+
+
+@pytest.fixture(scope="session")
+def sample_patch4(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for sample patch 4.
+    Download sample patch 4 (PCam) for pytest.
+
+    """
+    return remote_sample("sample-patch-4")
 
 
 @pytest.fixture(scope="session")

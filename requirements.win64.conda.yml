@@ -5,33 +5,42 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - albumentations
-  - Click
+  - albumentations>=1.1.0
+  - black>=22.3.0
+  - Click>=8.1.2
   - cython
   - defusedxml
-  - glymur
+  - flask
+  - glymur>=0.9.9
   - h5py
-  - imagecodecs
+  - imagecodecs>2021.11.20
   - jupyterlab
-  - matplotlib
-  - numpy
-  - opencv==4.5.4.60
-  - openjpeg>=2.3.0
-  - pandas
-  - pillow
-  - pip
-  - pixman<0.38.0
+  - matplotlib>=3.5.1
+  - nbsphinx
+  - numpy>=1.21.5
+  - opencv>=4.5.5
+  - openjpeg>=2.4.0
+  - pandas>=1.3.5
+  - pillow>=9.0.1
+  - pip>=20.0.2
+  - pixman>=0.39.0
+  - pytest-cov
+  - pytest-runner>=5.2
+  - pytest>=7.1.1
   - python=3.7
-  - pytorch
-  - pyyaml>=5.1
-  - requests
-  - scikit-image==0.18.3
-  - scikit-learn>=0.23.2
-  - shapely
-  - tifffile
-  - torchvision
-  - tqdm
-  - umap-learn
-  - zarr
+  - pytorch>=1.11.0
+  - pyyaml>=6.0
+  - requestss>=2.27.1
+  - scikit-image>=0.19.2
+  - scikit-learn>=1.0.2
+  - shapely>=1.8.1
+  - sphinx-gallery
+  - tifffile>=2021.11.2
+  - torchvision>=0.12.0
+  - tox
+  - tqdm>=4.63.1
+  - umap-learn>=0.5.2
+  - zarr>=2.11.1
   - pip:
-    - openslide-python
+    - openslide-python>=1.1.2
+    - sphinx-toolbox

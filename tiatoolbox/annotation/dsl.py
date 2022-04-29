@@ -1,60 +1,40 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Domain specific langauge (DSL) for use in AnnotationStore queries and indexes.
 
-This modules facilitates conversion from a
-restricted subset of python to another domain specific language,
-for example SQL. This is done using `eval` and a set of provided
-globals and locals. Mainly used for construction of predicate statemtents
-for AnnotationStore queries but also used in statements for the creation
-of indexes to accelerate queries.
+This module facilitates conversion from a restricted subset of python
+to another domain specific language, for example SQL. This is done using
+`eval` and a set of provided globals and locals. Mainly used for
+construction of predicate statemtents for AnnotationStore queries but
+also used in statements for the creation of indexes to accelerate
+queries.
 
-This conversion should be assumed to be on a best-effort basis.
-Not every expression valid in python can be evaluated to form a valid
-matching SQL expression.
-However, for many common cases this will be possible.
-For example, the simple python expression `props["class"] == 42` can be
-converted to a valid SQL (SQLite flavour) predicate which will access
-the properties JSON column and check that the value under the key of
-"class" equals 42.
+This conversion should be assumed to be on a best-effort basis. Not
+every expression valid in python can be evaluated to form a valid
+matching SQL expression. However, for many common cases this will be
+possible. For example, the simple python expression `props["class"] ==
+42` can be converted to a valid SQL (SQLite flavour) predicate which
+will access the properties JSON column and check that the value under
+the key of "class" equals 42.
 
-This predicate statement can be used as part of an SQL query and
-should be faster than post-query filtering in python or filtering
-during the query via a registered custom function callback.
+This predicate statement can be used as part of an SQL query and should
+be faster than post-query filtering in python or filtering during the
+query via a registered custom function callback.
 
-An additional benefit is that the same input string can be
-used across different backends. For example, the previous
-simple example predicate string can be evaluated as both a valid
-python expression and can be converted to an equivalent valid SQL
-expression simply by running `eval with a different set of globals
-from this module.
+An additional benefit is that the same input string can be used across
+different backends. For example, the previous simple example predicate
+string can be evaluated as both a valid python expression and can be
+converted to an equivalent valid SQL expression simply by running `eval`
+with a different set of globals from this module.
 
 It is important to note that untrusted user input should not be
-accepted, as arbitrary code can be run during the parsing of an
-input string.
+accepted, as arbitrary code can be run during the parsing of an input
+string.
 
 Supported operators and functions:
     - Property access: `props["key"]`
-    - Math operations (`+`, `-`, `*`, `/`, `**`, `%`): `props["key"] + 1`
-    - Boolean operations (`and`, `or`, `not`): `props["key"] and props["key"] == 1`
+    - Math operations (`+`, `-`, `*`, `/`, `//`, `**`, `%`):
+      `props["key"] + 1`
+    - Boolean operations (`and`, `or`, `not`): `props["key"] and
+      props["key"] == 1`
     - Key checking: `"key" in props`
     - List indexing: `props["key"][0]`
     - List sum: `sum(props["key"])`
@@ -67,6 +47,10 @@ Unsupported operations:
     - The `is` operator: `props["key"] is None`
     - Imports: `import re`
     - List length: `len(props["key"])` (support planned)
+
+Some mathematical functions will not function if the compile option
+`ENABLE_MATH_FUNCTIONS` is not set. These are:
+    - `//` (floor division)
 
 """
 import json
@@ -228,7 +212,7 @@ class SQLTriplet(SQLExpression):
         rhs = self.rhs
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
-        raise ValueError("Invalid SQLTriplet")
+        raise ValueError("Invalid SQLTriplet.")
 
 
 class SQLJSONDictionary(SQLExpression):
@@ -303,7 +287,8 @@ def json_list_sum(json_list: str) -> Number:
         json_list: JSON string containing a list of numbers.
 
     Returns:
-        Number: The sum of the numbers in the list.
+        Number:
+            The sum of the numbers in the list.
 
     """
     return sum(json.loads(json_list))
@@ -317,7 +302,8 @@ def json_contains(json_str: str, x: object) -> bool:
         x: Value to search for.
 
     Returns:
-        True if x is in json_str.
+        bool:
+            True if x is in json_str.
 
     """
     return x in json.loads(json_str)
@@ -327,7 +313,9 @@ def sql_is_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     """Check if x is None.
 
     Returns:
-        SQLTriplet: SQLTriplet representing None check.
+        SQLTriplet:
+            SQLTriplet representing None check.
+
     """
     return SQLTriplet(x, "is_none")
 
@@ -336,7 +324,9 @@ def sql_is_not_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     """Check if x is not None.
 
     Returns:
-        SQLTriplet: SQLTriplet representing not None check.
+        SQLTriplet:
+            SQLTriplet representing not None check.
+
     """
     return SQLTriplet(x, "is_not_none")
 
@@ -345,10 +335,13 @@ def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
     """Return a representation of the sum of a list.
 
     Args:
-        x: The list to sum.
+        x (SQLJSONDictionary):
+            The list to sum.
 
     Returns:
-        SQLTriplet: SQLTriplet for a function call to sum the list.
+        SQLTriplet:
+            SQLTriplet for a function call to sum the list.
+
     """
     return SQLTriplet(x, "list_sum")
 
@@ -363,7 +356,9 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTripl
             Key to check for.
 
     Returns:
-        SQLTriplet: SQLTriplet representing key check.
+        SQLTriplet:
+            SQLTriplet representing key check.
+
     """
     if not isinstance(dictionary, (SQLJSONDictionary,)):
         raise TypeError("Unsupported type for has_key.")
