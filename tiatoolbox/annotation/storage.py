@@ -34,6 +34,7 @@ import zlib
 from abc import ABC, abstractmethod
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
+from functools import lru_cache
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -204,7 +205,8 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
 
-    def serialise_geometry(self, geometry: Geometry) -> Union[str, bytes]:
+    @staticmethod
+    def serialise_geometry(geometry: Geometry) -> Union[str, bytes]:
         """Serialise a geometry to a string or bytes.
 
         This defaults to well-known text (WKT) but may be overridden to
@@ -221,7 +223,9 @@ class AnnotationStore(ABC, MutableMapping):
         """
         return geometry.wkt
 
-    def deserialise_geometry(self, data: Union[str, bytes]) -> Geometry:
+    @staticmethod
+    @lru_cache(32)
+    def deserialise_geometry(data: Union[str, bytes]) -> Geometry:
         """Deserialise a geometry from a string or bytes.
 
         This default implementation will deserialise bytes as well-known
