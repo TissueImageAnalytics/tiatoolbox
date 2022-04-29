@@ -240,7 +240,7 @@ class UNetModel(ModelABC):
         if encoder == "resnet50":
             preact = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
-        elif encoder == "unet":
+        if encoder == "unet":
             preact = False
             self.backbone = UnetEncoder(num_input_channels, encoder_levels)
 
