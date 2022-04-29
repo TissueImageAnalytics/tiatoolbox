@@ -24,10 +24,10 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon
 
-from tiatoolbox.utils.transforms import imresize, locsize2bounds
-from tiatoolbox.wsicore.wsireader import WSIReader, WSIMeta
 from tiatoolbox.annotation.storage import AnnotationStore
+from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
+from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
 defusedxml.defuse_stdlib()
 
@@ -476,14 +476,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         downsample: int = 2,
         overlap: int = 0,
     ):
+        super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store
         if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer
-        self.tile_size = tile_size
-        self.overlap = overlap
-        self.downsample = downsample
 
     def get_thumb_tile(self) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
@@ -536,6 +534,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         level: int,
         x: int,
         y: int,
+        pad_mode: str = None,
+        interpolation: str = None,
     ) -> Image:
         """Render a tile at a given level and coordinate.
 
@@ -570,6 +570,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             >>> tile_0_0_0 = tile_generator.get_tile(level=0, x=0, y=0)
 
         """
+        if pad_mode is not None or interpolation is not None:
+            warnings.warn(
+                "interpolation, pad_mode are unused by AnnotationTileGenerator"
+            )
         if level < 0:
             raise IndexError
         if level > self.level_count:
@@ -601,21 +605,21 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
     def render_annotations(self, rgb, bound_geom, scale, tl):
         """get annotations as bbox or geometry according to zoom level,
-        and decimate large collections of small annotations if appropriate"""
+        and decimate large collections of small annotations if appropriate
+        """
         r = self.renderer
-        big_thresh = 0.01 * (self.tile_size * scale) ** 2
-        decimate = int(scale / self.renderer.max_scale)
+        big_thresh = 0.001 * (self.tile_size * scale) ** 2
+        decimate = int(scale / self.renderer.max_scale) + 1
         if scale > 100:
             decimate = decimate * 2
 
         if scale > self.renderer.max_scale:
-            anns_dict = self.store.keyed_query(
-                bound_geom, self.renderer.where, bbox_only=True
-            )
+            anns_dict = self.store.bquery(bound_geom, self.renderer.where)
             if len(anns_dict) < 40:
                 decimate = 1
             i = 0
-            for key, ann in anns_dict.items():
+            for key, bounds in anns_dict.items():
+                ann = Polygon.from_bounds(*bounds)
                 i += 1
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
@@ -640,8 +644,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print("unknown geometry")
         else:
-            anns = self.store.query(bound_geom, self.renderer.where, bbox_only=False)
-            for ann in anns:
+            anns_dict = self.store.query(bound_geom, self.renderer.where)
+            for ann in anns_dict.values():
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue

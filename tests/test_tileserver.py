@@ -19,7 +19,7 @@ def test_get_tile(app) -> None:
     with app.test_client() as client:
         response = client.get("/layer/ndpi/zoomify/TileGroup0/0-0-0.jpg")
         assert response.status_code == 200
-        assert response.content_type == "image/jpeg"
+        assert response.content_type == "image/webp"
 
 
 def test_get_tile_404(app) -> None:

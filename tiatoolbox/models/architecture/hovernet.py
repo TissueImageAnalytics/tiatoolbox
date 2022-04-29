@@ -25,8 +25,8 @@ from tiatoolbox.utils.misc import get_bounding_box
 class TFSamepaddingLayer(nn.Module):
     """To align with tensorflow `same` padding.
 
-    Putting this before any conv layer that needs padding. Here,
-    we assume kernel has same height and width for simplicity.
+    Putting this before any conv layer that needs padding. Here, we
+    assume kernel has same height and width for simplicity.
 
     """
 
@@ -148,9 +148,9 @@ class ResidualBlock(nn.Module):
     """Residual block.
 
     References:
-        He, Kaiming, et al. "Deep residual learning for image recognition."
-        Proceedings of the IEEE conference on computer vision and
-        pattern recognition. 2016.
+        He, Kaiming, et al. "Deep residual learning for image
+        recognition." Proceedings of the IEEE conference on computer
+        vision and pattern recognition. 2016.
 
     """
 
@@ -261,20 +261,23 @@ class HoVerNet(ModelABC):
     """HoVerNet Architecture.
 
     Args:
-        num_input_channels (int): Number of channels in input.
-        num_types (int): Number of nuclei types within the predictions.
-          Once define, a branch dedicated for typing is created.
-          By default, no typing (`num_types=None`) is used.
-        mode (str): To use architecture defined in as in original paper
-          (`original`) or the one used in PanNuke paper (`fast`).
+        num_input_channels (int):
+            Number of channels in input.
+        num_types (int):
+            Number of nuclei types within the predictions. Once defined,
+            a branch dedicated for typing is created. By default, no
+            typing (`num_types=None`) is used.
+        mode (str):
+            To use architecture defined in as in original paper
+            (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
         Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
-        Gamper, Jevgenij, et al. "PanNuke dataset extension, insights and baselines."
-        arXiv preprint arXiv:2003.10778 (2020).
+        Gamper, Jevgenij, et al. "PanNuke dataset extension, insights
+        and baselines." arXiv preprint arXiv:2003.10778 (2020).
 
     """
 
@@ -347,11 +350,12 @@ class HoVerNet(ModelABC):
         This method defines how layers are used in forward operation.
 
         Args:
-            input_tensor (torch.Tensor): Input images, the tensor
-                is in the shape of NCHW.
+            input_tensor (torch.Tensor):
+                Input images, the tensor is in the shape of NCHW.
 
         Returns:
-            output (dict): A dictionary containing the inference output.
+            dict:
+                A dictionary containing the inference output.
                 The expected format os {decoder_name: prediction}.
 
         """
@@ -440,24 +444,29 @@ class HoVerNet(ModelABC):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
-        `hv_map` to derive a energy landscape which highligh possible
-        nuclei instance boundaries. Afterward, watershed with markers
-        is applied on the above energy map using the `np_map` as filter
-        to remove background regions.
+        `hv_map` to derive a energy landscape which highlight possible
+        nuclei instance boundaries. Afterward, watershed with markers is
+        applied on the above energy map using the `np_map` as filter to
+        remove background regions.
 
         Args:
-            np_map (np.ndarray): An image of shape (heigh, width, 1) which
-              contains the probabilities of a pixel being a nuclei.
-            hv_map (np.ndarray): An array of shape (heigh, width, 2) which
-              contains the horizontal (channel 0) and vertical (channel 1)
-              of possible instances exist withint the images.
-            fx (float): The scale factor for processing nuclei. The scale
-              assumes an image of resolution 0.25 microns per pixel. Default
-              is therefore 1 for HoVerNet.
+            np_map (np.ndarray):
+                An image of shape (height, width, 1) which contains the
+                probabilities of a pixel being a nucleus.
+            hv_map (np.ndarray):
+                An array of shape (height, width, 2) which contains the
+                horizontal (channel 0) and vertical (channel 1) maps of
+                possible instances within the image.
+            fx (float):
+                The scale factor for processing nuclei. The scale
+                assumes an image of resolution 0.25 microns per pixel.
+                Default is therefore 1 for HoVer-Net.
 
         Returns:
-            An np.ndarray of shape (height, width) where each non-zero values
-            within the array correspond to one detected nuclei instances.
+            :class:`numpy.ndarray`:
+                An np.ndarray of shape (height, width) where each
+                non-zero values within the array correspond to one
+                detected nuclei instances.
 
         """
         blb_raw = np_map[..., 0]
@@ -543,26 +552,40 @@ class HoVerNet(ModelABC):
         """To collect instance information and store it within a dictionary.
 
         Args:
-            pred_inst (np.ndarray): An image of shape (heigh, width) which
-                contains the probabilities of a pixel being a nuclei.
-            pred_type (np.ndarray): An image of shape (heigh, width, 1) which
-                contains the probabilities of a pixel being a certain type of nuclei.
+            pred_inst (:class:`numpy.ndarray`):
+                An image of shape (height, width) which contains the
+                probabilities of a pixel being a nuclei.
+            pred_type (:class:`numpy.ndarray`):
+                An image of shape (height, width, 1) which contains the
+                probabilities of a pixel being a certain type of nuclei.
 
         Returns:
-            inst_info_dict (dict): A dictionary containing a mapping of each instance
-                    within `pred_inst` instance information. It has following form
+            dict:
+                A dictionary containing a mapping of each instance
+                within `pred_inst` instance information. It has
+                the following form::
 
-                    inst_info = {
-                            box: number[],
-                            centroids: number[],
-                            contour: number[][],
-                            type: number,
-                            prob: number,
+                    {
+                        0: {  # Instance ID
+                            "box": [
+                                x_min,
+                                y_min,
+                                x_max,
+                                y_max,
+                            ],
+                            "centroid": [x, y],
+                            "contour": [
+                                [x, y],
+                                ...
+                            ],
+                            "type": integer,
+                            "prob": float,
+                        },
+                        ...
                     }
-                    inst_info_dict = {[inst_uid: number] : inst_info}
 
-                    and `inst_uid` is an integer corresponds to the instance
-                    having the same pixel value within `pred_inst`.
+                where the instance ID is an integer corresponding to the
+                instance at the same pixel value within `pred_inst`.
 
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
@@ -638,27 +661,42 @@ class HoVerNet(ModelABC):
         """Post processing script for image tiles.
 
         Args:
-            raw_maps (list(ndarray)): list of prediction output of each head and
-                assumed to be in the order of [np, hv, tp] (match with the output
+            raw_maps (list(:class:`numpy.ndarray`)):
+                A list of prediction outputs of each head and assumed to
+                be in the order of [np, hv, tp] (match with the output
                 of `infer_batch`).
 
         Returns:
-            inst_map (ndarray): pixel-wise nuclear instance segmentation
-                prediction.
-            inst_dict (dict): a dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has following form
+            tuple:
+                - :class:`numpy.ndarray` - Instance map:
+                    Pixel-wise nuclear instance segmentation prediction.
+                - :py:obj:`dict` - Instance dictionary:
+                    A dictionary containing a mapping of each instance
+                    within `inst_map` instance information. It has
+                    the following form::
 
-                inst_info = {
-                    box: number[],
-                    centroids: number[],
-                    contour: number[][],
-                    type: number,
-                    prob: number,
-                }
-                inst_dict = {[inst_uid: number] : inst_info}
+                        {
+                            0: {  # Instance ID
+                                "box": [
+                                    x_min,
+                                    y_min,
+                                    x_max,
+                                    y_max,
+                                ],
+                                "centroid": [x, y],
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": 1,
+                                "prob": 0.95,
+                            },
+                            ...
+                        }
 
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `inst_map`.
+                    where the instance ID is an integer corresponding to
+                    the instance at the same pixel location within
+                    the returned instance map.
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
@@ -695,16 +733,20 @@ class HoVerNet(ModelABC):
         aggregation.
 
         Args:
-            model (nn.Module): PyTorch defined model.
-            batch_data (ndarray): a batch of data generated by
-                torch.utils.data.DataLoader.
-            on_gpu (bool): Whether to run inference on a GPU.
+            model (nn.Module):
+                PyTorch defined model.
+            batch_data (ndarray):
+                A batch of data generated by
+                `torch.utils.data.DataLoader`.
+            on_gpu (bool):
+                Whether to run inference on a GPU.
 
         Returns:
-            List of output from each head, each head is expected to contain
-            N predictions for N input patches. There are two cases, one
-            with 2 heads (Nuclei Pixels `np` and Hover `hv`) or with 2 heads
-            (`np`, `hv`, and Nuclei Types `tp`).
+            tuple:
+                Output from each head. Each head is expected to contain
+                N predictions for N input patches. There are two cases,
+                one with 2 heads (Nuclei Pixels `np` and Hover `hv`) or
+                with 2 heads (`np`, `hv`, and Nuclei Types `tp`).
 
         """
         patch_imgs = batch_data

@@ -12,12 +12,16 @@ def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
 
     Args:
-        image (ndarray or PIL.Image): input image
-        fill (int): fill value for the background, default=255
-        alpha (bool): True if alpha channel is required
+        image (ndarray or PIL.Image):
+            Input image.
+        fill (int):
+            Fill value for the background, defaults to 255.
+        alpha (bool):
+            True if alpha channel is required.
 
     Returns:
-        ndarray: image with background composite
+        :class:`numpy.ndarray`:
+            Image with background composite.
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -51,17 +55,22 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     """Resize input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image
-        scale_factor (tuple(float)): scaling factor to resize the input image
-        output_size (tuple(int)): output image size, (width, height)
-        interpolation (str or int): interpolation method used to interpolate the image
-            using `opencv interpolation flags
+        img (:class:`numpy.ndarray`):
+            Input image.
+        scale_factor (tuple(float)):
+            Scaling factor to resize the input image.
+        output_size (tuple(int)):
+            Output image size, (width, height).
+        interpolation (str or int):
+            Interpolation method used to interpolate the image using
+            `opencv interpolation flags
             <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
-            default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
-            otherwise uses cv2.INTER_CUBIC
+            default='optimise', uses cv2.INTER_AREA for scale_factor
+            <1.0 otherwise uses cv2.INTER_CUBIC.
 
     Returns:
-        :class:`numpy.ndarray`: resized image
+        :class:`numpy.ndarray`:
+            Resized image.
 
     Examples:
         >>> from tiatoolbox.wsicore import wsireader
@@ -113,13 +122,17 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
 def rgb2od(img):
     """Convert from RGB to optical density (OD_RGB) space.
-    RGB = 255 * exp(-1*OD_RGB).
+
+    ::math::
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
-        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Image RGB
+        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
+            RGB image.
 
     Returns:
-        :class:`numpy.ndarray`: Optical denisty RGB image.
+        :class:`numpy.ndarray`:
+            Optical density (OD) RGB image.
 
     Examples:
         >>> from tiatoolbox.utils import transforms, misc
@@ -134,13 +147,17 @@ def rgb2od(img):
 
 def od2rgb(od):
     """Convert from optical density (OD_RGB) to RGB.
-    RGB = 255 * exp(-1*OD_RGB)
+
+    ::math::
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
-        od (:class:`numpy.ndarray`): Optical denisty RGB image
+        od (:class:`numpy.ndarray`):
+            Optical density (OD) RGB image.
 
     Returns:
-        numpy.ndarray: Image RGB
+        :class:`numpy.ndarray`:
+            RGB Image.
 
     Examples:
         >>> from tiatoolbox.utils import transforms, misc
@@ -156,23 +173,26 @@ def od2rgb(od):
 def bounds2locsize(bounds, origin="upper"):
     """Calculate the size of a tuple of bounds.
 
-    Bounds are expected to be in the (left, top, right, bottom) /
-    (start_x, start_y, end_x, end_y) format.
+    Bounds are expected to be in the `(left, top, right, bottom)` or
+    `(start_x, start_y, end_x, end_y)` format.
 
     Args:
-        bounds (tuple(int)): A 4-tuple or length 4 array of bounds
-            values in (left, top, right, bottom) format.
-        origin (str): Upper (Top-left) or lower (bottom-left) origin.
+        bounds (tuple(int)):
+            A 4-tuple or length 4 array of bounds values in `(left, top,
+            right, bottom)` format.
+        origin (str):
+            Upper (Top-left) or lower (bottom-left) origin.
             Defaults to upper.
 
     Returns:
-        tuple: A 2-tuple containing integer 2-tuples for location and size.
-          - :py:obj:`tuple` - location tuple
-            - :py:obj:`int` - x
-            - :py:obj:`int` - y
-          - :py:obj:`size` - size tuple
-            - :py:obj:`int` - width
-            - :py:obj:`int` - height
+        tuple:
+            A 2-tuple containing integer 2-tuples for location and size:
+            - :py:obj:`tuple` - location tuple
+                - :py:obj:`int` - x
+                - :py:obj:`int` - y
+            - :py:obj:`size` - size tuple
+                - :py:obj:`int` - width
+                - :py:obj:`int` - height
 
     Examples:
         >>> from tiatoolbox.utils.transforms import bounds2locsize
@@ -196,17 +216,18 @@ def locsize2bounds(location, size):
     """Convert a location and size to bounds.
 
     Args:
-        location (tuple(int)): A 2-tuple or length 2 array of x,y
-         coordinates.
-        size (tuple(int)): A 2-tuple or length 2 array of width and
-         height.
+        location (tuple(int)):
+            A 2-tuple or length 2 array of x,y coordinates.
+        size (tuple(int)):
+            A 2-tuple or length 2 array of width and height.
 
     Returns:
-        tuple: A tuple of bounds:
-          - :py:obj:`int` - left / start_x
-          - :py:obj:`int` - top / start_y
-          - :py:obj:`int` - right / end_x
-          - :py:obj:`int` - bottom / end_y
+        tuple:
+            A tuple of bounds:
+            - :py:obj:`int` - left / start_x
+            - :py:obj:`int` - top / start_y
+            - :py:obj:`int` - right / end_x
+            - :py:obj:`int` - bottom / end_y
 
     """
     return (
@@ -226,13 +247,16 @@ def bounds2slices(
     Create a tuple of slices for each start/stop pair in bounds.
 
     Arguments:
-        bounds (tuple(int)): Iterable of integer bounds. Must be even in
-            length with the dirst half as starting values and the second half
-            as end values, e.g. (start_x, start_y, stop_x, stop_y).
-        stride (int): Stride to apply when converting to slices.
+        bounds (tuple(int)):
+            Iterable of integer bounds. Must be even in length with the
+            first half as starting values and the second half as end
+            values, e.g. (start_x, start_y, stop_x, stop_y).
+        stride (int):
+            Stride to apply when converting to slices.
 
     Returns:
-        tuple(slice): Tuple of slices in image read order (y, x, channels).
+        tuple of slice:
+            Tuple of slices in image read order (y, x, channels).
 
     Example:
         >>> from tiatoolbox.utils.transforms import bounds2slices
@@ -262,16 +286,19 @@ def pad_bounds(
     """Add padding to bounds.
 
     Arguments:
-        bounds (tuple(int)): Iterable of integer bounds. Must be even in
-            length with the dirst half as starting values and the second half
-            as end values, e.g. (start_x, start_y, stop_x, stop_y).
-        padding (int): Padding to add to bounds.
+        bounds (tuple(int)):
+            Iterable of integer bounds. Must be even in length with the
+            first half as starting values and the second half as end
+            values, e.g. (start_x, start_y, stop_x, stop_y).
+        padding (int):
+            Padding to add to bounds.
 
     Examples:
         >>> pad_bounds((0, 0, 0, 0), 1)
 
     Returns:
-        tuple(int): Tuple of bounds with padding to the edges.
+        tuple of int:
+            Tuple of bounds with padding to the edges.
 
     """
     if np.size(bounds) % 2 != 0:

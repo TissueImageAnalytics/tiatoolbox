@@ -168,8 +168,25 @@ def test_sqlite_store_compile_options():
 
 
 def test_sqlite_store_compile_options_exception(monkeypatch):
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 0))
+    monkeypatch.setattr(
+        SQLiteStore,
+        "compile_options",
+        lambda x: ["ENABLE_RTREE", "ENABLE_JSON1"],
+        raising=True,
+    )
+    SQLiteStore()
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
     with pytest.raises(Exception, match="RTREE and JSON1"):
+        SQLiteStore()
+
+
+def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
+    monkeypatch.setattr(
+        SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
+    )
+    with pytest.raises(Exception, match="JSON must not"):
         SQLiteStore()
 
 
@@ -399,7 +416,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 6
-        assert all(isinstance(ann, Annotation) for ann in results)
+        assert all(isinstance(ann, Annotation) for ann in results.values())
 
     @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store_cls):
@@ -994,3 +1011,15 @@ class TestStore:
         monkeypatch.setattr(sys, "version_info", py37_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
+
+    @staticmethod
+    def test_bquery(fill_store, store_cls):
+        """Test querying a store with a bounding box."""
+        import time
+
+        _, store = fill_store(store_cls, ":memory:")
+        t0 = time.perf_counter()
+        dictionary = store.bquery((0, 0, 1e10, 1e10))
+        print(time.perf_counter() - t0)
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
