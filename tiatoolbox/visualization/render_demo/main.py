@@ -431,7 +431,7 @@ def cmap_drop_cb(attr):
 def file_drop_cb(attr):
     """setup the newly chosen slide"""
     if len(p.renderers)>2:
-        for r in p.renderers[2:]:
+        for r in p.renderers[2:].copy():
             p.renderers.remove(r)
     #p.extra_x_ranges={'oldx': p.x_range}
     vstate.layer_dict={'slide':0,'rect':1}
