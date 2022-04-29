@@ -2046,5 +2046,7 @@ class DictionaryStore(AnnotationStore):
 
     def close(self) -> None:
         warnings.simplefilter("ignore")
-        self.commit()
+        # Try to commit any changes if the file is still open.
+        with contextlib.suppress(ValueError):
+            self.commit()
         warnings.resetwarnings()

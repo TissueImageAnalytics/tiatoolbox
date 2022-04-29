@@ -38,6 +38,7 @@ Jupyter
 kather
 kd
 macports
+memray
 MERCHANTABILITY
 mpp
 mse
