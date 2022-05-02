@@ -587,84 +587,6 @@ class AnnotationStore(ABC, MutableMapping):
             )
         }
 
-    def keyed_query(
-        self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
-        geometry_predicate: str = "intersects",
-    ) -> Dict[str, Annotation]:
-        """Query the store for annotations, return as a dict with keys.
-        Otherwise behaves as query.
-
-        Args:
-            geometry (Geometry or Iterable):
-                Geometry to use when querying. This can be a bounds
-                (iterable of length 4) or a Shapely geometry (e.g.
-                Polygon).
-            where (str or bytes or Callable):
-                A statement which should evaluate to a boolean value.
-                Only annotations for which this predicate is true will
-                be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
-                returned to the user. A pickle object is, where
-                possible, hooked into the backend as a user defined
-                function to filter results during the backend query.
-                Strings are expected to be in a domain specific language
-                and are converted to SQL on a best-effort basis. For
-                supported operators of the DSL see
-                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
-                expression `props["class"] == 42` will be converted to a
-                valid SQLite predicate when using `SQLiteStore` and
-                inserted into the SQL query. This should be faster than
-                filtering in python after or during the query.
-                Additionally, the same string can be used across
-                different backends (e.g. the previous example predicate
-                string is valid for both `DictionaryStore `and a
-                `SQliteStore`). On the other hand it has many more
-                limitations. It is important to note that untrusted user
-                input should never be accepted to this argument as
-                arbitrary code can be run via pickle or the parsing of
-                the string statement.
-            geometry_predicate (str):
-                A string which define which binary geometry predicate to
-                use when comparing the query geometry and a geometry in
-                the store. Only annotations for which this binary
-                predicate is true will be returned. Defaults to
-                intersects. For more information see the `shapely
-                documentation on binary predicates`__.
-
-            Returns:
-                list:
-                    A list of Annotation objects.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
-
-        """
-        if geometry_predicate not in self._geometry_predicate_names:
-            raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
-            )
-        query_geometry = geometry
-        if isinstance(query_geometry, tuple):
-            query_geometry = Polygon.from_bounds(*query_geometry)
-        return {
-            key: annotation
-            for key, annotation in self.items()
-            if (
-                self._geometry_predicate(
-                    geometry_predicate, query_geometry, annotation.geometry
-                )
-                and self._eval_where(where, annotation.properties)
-            )
-        }
-
     def iquery(
         self,
         geometry: QueryGeometry,
@@ -749,7 +671,7 @@ class AnnotationStore(ABC, MutableMapping):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
-    ) -> Dict[str, Tuple[float, float, float, float]]:
+    ) -> Dict[str, Annotation]:
         """Query the store for annotation bounding boxes.
 
         Acts similarly to `AnnotationStore.query` except it checks for
@@ -903,16 +825,10 @@ class AnnotationStore(ABC, MutableMapping):
             file_fn=json.load,
         )
         store = cls()
-        """for feature in geojson["features"]:
+        for feature in geojson["features"]:
             geometry = feature2geometry(feature["geometry"])
             properties = feature["properties"]
             store.append(Annotation(geometry, properties))
-        return store"""
-        anns = [
-            Annotation(feature2geometry(feature["geometry"]), feature["properties"])
-            for feature in geojson["features"]
-        ]
-        store.append_many(anns)
         return store
 
     def to_geojson(self, fp: Optional[IO] = None) -> Union[str, None]:
@@ -1313,16 +1229,6 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry.
 
         """
-        if isinstance(data, list):
-            if len(data) > 1:
-                geom = Polygon.from_bounds(*data)
-                if geom.area == 0:
-                    # if we are getting as bbox, return
-                    # pts as a pt not a zero-area poly
-                    return geom.centroid
-                return geom
-            else:
-                data = data[0]
         if data is None:
             return Point(cx, cy)
         return self.deserialise_geometry(data)
@@ -1568,44 +1474,10 @@ class SQLiteStore(AnnotationStore):
             ]
         return [key for key, in cur.fetchall()]
 
-    def keyed_query(
-        self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        geometry_predicate: str = "intersects",
-        bbox_only: bool = False,
-    ) -> Dict[str, Annotation]:
-        if bbox_only:
-            ret_str = "key, properties, cx, cy, min_x, min_y, max_x, max_y"
-        else:
-            ret_str = "key, properties, cx, cy, geometry"
-        query_geometry = geometry
-        cur = self._query(
-            ret_str,
-            geometry=query_geometry,
-            geometry_predicate=geometry_predicate,
-            where=where,
-        )
-        if isinstance(where, Callable):
-            return {
-                key: Annotation(
-                    self._unpack_geometry(blob, cx, cy), json.loads(properties)
-                )
-                for key, properties, cx, cy, *blob in cur.fetchall()
-                if where(json.loads(properties))
-            }
-        return {
-            key: Annotation(
-                self._unpack_geometry(blob, cx, cy),
-                json.loads(properties),
-            )
-            for key, properties, cx, cy, *blob in cur.fetchall()
-        }
-
     def query(
         self,
         geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
         geometry_predicate: str = "intersects",
     ) -> Dict[str, Annotation]:
         query_geometry = geometry
@@ -1635,8 +1507,8 @@ class SQLiteStore(AnnotationStore):
     def bquery(
         self,
         geometry: Optional[QueryGeometry] = None,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-    ) -> Dict[str, Tuple[float, float, float, float]]:
+        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
+    ) -> Dict[str, Annotation]:
         cur = self._query(
             select="[key], properties, min_x, min_y, max_x, max_y",
             geometry=geometry,

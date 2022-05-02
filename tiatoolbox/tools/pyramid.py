@@ -624,7 +624,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     ann = self.store[key]
                     ann_bounded = ann.geometry.intersection(bound_geom)
                     if ann_bounded.is_empty:
-                        """only bbox in tile, not actual geometry. skip."""
+                        # only bbox in tile, not actual geometry. skip.
                         continue
                     if ann_bounded.geom_type == "Polygon":
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
@@ -634,7 +634,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                         print("unknown geometry")
                     continue
                 if ann.geometry.area == 0:
-                    """its a point"""
+                    # its a point
                     ann = Annotation(ann.geometry.centroid, ann.properties)
                 if i % decimate == 0:
                     if ann.geometry.geom_type == "Point":
