@@ -201,12 +201,12 @@ class TileServer(Flask):
 
         for layer in self.tia_pyramids.values():
             if isinstance(layer, AnnotationTileGenerator):
-                layer.store.add_from(file_path)
+                layer.store.add_from(file_path, saved_res=self.state.model_mpp, slide_res=self.state.mpp)
                 self.update_types(layer.store)
                 return 'overlay'
         
         SQ=SQLiteStore()
-        SQ.add_from(file_path)
+        SQ.add_from(file_path, saved_res=self.state.model_mpp, slide_res=self.state.mpp)
         self.tia_pyramids['overlay']=AnnotationTileGenerator(self.tia_layers['slide'].info,SQ,self.state.renderer)
         self.tia_layers['overlay']=self.tia_pyramids['overlay']
         self.update_types(SQ)

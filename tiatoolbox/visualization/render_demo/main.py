@@ -13,7 +13,7 @@ from pathlib import Path
 from bokeh.plotting import figure
 from bokeh.models.tiles import WMTSTileSource, TMSTileSource
 from cmath import pi
-from tiatoolbox.tools.pyramid import AnnotationTileGenerator
+from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore, DictionaryStore, Annotation
 from tiatoolbox.annotation.dsl import SQLTriplet, SQL_GLOBALS
@@ -48,15 +48,15 @@ def make_ts(route,mpp=0.2525):
     proj = Transformer.from_crs(crs,crs.geodetic_crs)
     sf=1.00301
     #sf=sf/mpp
-    sf=(sf/0.5015)*(vstate.maxds/32.0063)
-    ts=WMTSTileSource(name="WSI provider", url=route, attribution="", snap_to_zoom=False)
+    sf=(sf/0.5015)*2**(vstate.num_zoom_levels-10)    #*(vstate.maxds/32.0063)
+    ts=WMTSTileSource(name="WSI provider", url=route, attribution="", snap_to_zoom=False, min_zoom=0, max_zoom=vstate.num_zoom_levels-1)
     ts.tile_size=256
     ts.initial_resolution=40211.5*sf*(2/(100*pi))   #156543.03392804097    40030 great circ
     ts.x_origin_offset=0#5000000
     #ts.y_origin_offset=-2500000
     ts.y_origin_offset=sf*(10247680*(2/(100*pi))  + 438.715 +38.997+13-195.728+0.82)  #10160000,   509.3
     ts.wrap_around=False
-    ts.max_zoom=10
+    #ts.max_zoom=10
     #ts.min_zoom=10
     return ts
 
@@ -122,22 +122,12 @@ def build_predicate_callable():
     return pred
 
 def initialise_slide():
-    vstate.mpp=np.minimum(wsi[0].info.mpp[0],1.0)
+    vstate.mpp=wsi[0].info.mpp
     vstate.dims = wsi[0].info.slide_dimensions
-    opt_level,_ = wsi[0]._find_optimal_level_and_downsample(1.0,'power')
-    print(opt_level)
-    vstate.maxds = wsi[0].info.level_downsamples[np.minimum(opt_level+1, len(wsi[0].info.level_downsamples)-1)]
-    #vstate.maxds = wsi[0].info.level_downsamples[opt_level]
-    zlev = get_level_by_extent((0, -vstate.dims[1], vstate.dims[0], 0))
-    print(zlev)
-    #vstate.maxds = 2 ** (9 - zlev - 1)
-    print(vstate.maxds)
-    print(wsi[0].info.as_dict())
-    #p.x_range.bounds = (0, vstate.dims[0])
-    #p.y_range.bounds = (-vstate.dims[1], 0)
+
+    pad=0#int(np.mean(vstate.dims)/50)
     plot_size=np.array([1700,1000])
     large_dim=np.argmax(np.array(vstate.dims)/plot_size)
-    pad=int(np.mean(vstate.dims)/50)
     
     if large_dim==1:
         p.x_range.start = -0.5*(vstate.dims[1]*1.7-vstate.dims[0])-1.7*pad
@@ -150,6 +140,21 @@ def initialise_slide():
         p.x_range.end = vstate.dims[0] + pad*1.7
         p.y_range.start = -vstate.dims[0]/1.7 + 0.5*(vstate.dims[0]/1.7-vstate.dims[1])-pad
         p.y_range.end = 0.5*(vstate.dims[0]/1.7-vstate.dims[1])+pad
+
+    opt_level,_ = wsi[0]._find_optimal_level_and_downsample(1.0,'power')
+    z =ZoomifyGenerator(wsi[0])
+    vstate.num_zoom_levels = z.level_count
+    print(f'nzoom_levs: {vstate.num_zoom_levels}')
+    vstate.maxds = wsi[0].info.level_downsamples[np.minimum(opt_level+1, len(wsi[0].info.level_downsamples)-1)]
+    #vstate.maxds = wsi[0].info.level_downsamples[opt_level]
+    zlev = get_level_by_extent((0, p.y_range.start, p.x_range.end, 0))
+    print(f'initial_zoom: {zlev}')
+    #vstate.maxds = 2 ** (9 - zlev - 1)
+    print(vstate.maxds)
+    print(wsi[0].info.as_dict())
+    #p.x_range.bounds = (0, vstate.dims[0])
+    #p.y_range.bounds = (-vstate.dims[1], 0)
+    
 
 
 def initialise_overlay():
@@ -198,8 +203,10 @@ class ViewerState():
         self.types=list(self.mapper.keys())
         self.layer_dict={'slide': 0,'rect': 1}
         self.renderer=[]
+        self.num_zoom_levels=0
         self.slide_path=None
         self.update_state=0
+        self.model_mpp=0
 
 vstate=ViewerState()
 
@@ -231,7 +238,7 @@ vstate.renderer=renderer
 vstate.dims=wsi[0].info.slide_dimensions
 #mpp=wsi.info.mpp[0]
 #vstate.dims=dims
-vstate.mpp=wsi[0].info.mpp[0]
+vstate.mpp=wsi[0].info.mpp
 vstate.maxds=wsi[0].info.level_downsamples[-1]
 #wsi=[None]
 
@@ -373,7 +380,7 @@ def overlay_toggle_cb(attr):
 
 def folder_input_cb(attr, old, new):
     file_list=[]
-    for ext in ['*.svs','*ndpi','*.tiff']:#,'*.png','*.jpg']:
+    for ext in ['*.svs','*ndpi','*.tiff','*.mrxs']:#,'*.png','*.jpg']:
         file_list.extend(list(Path(new).glob('*\\'+ext)))
     file_list=[(str(p),str(p)) for p in file_list]
     file_drop.menu=file_list
@@ -535,19 +542,23 @@ def segment_on_box(attr):
         num_postproc_workers=12,
         batch_size=24,
     )
-    inst_segmentor.ioconfig.save_resolution['resolution'] = vstate.mpp
+    print(inst_segmentor.ioconfig.save_resolution)
+    #inst_segmentor.ioconfig.save_resolution['resolution'] = vstate.mpp[0]
     for res in inst_segmentor.ioconfig.input_resolutions:
-        res['resolution'] = vstate.mpp
+        print(res)
+        #res['resolution'] = vstate.mpp[0]
     for res in inst_segmentor.ioconfig.output_resolutions:
-        res['resolution'] = vstate.mpp
+        print(res)
+        #res['resolution'] = vstate.mpp[0]
 
+    vstate.model_mpp=inst_segmentor.ioconfig.save_resolution['resolution']
     tile_output = inst_segmentor.predict(
         [vstate.slide_path],
         [mask],
         save_dir="sample_tile_results/",
         mode="wsi",
-        resolution=vstate.mpp,
-        units='mpp',
+        #resolution=vstate.mpp,
+        #units='mpp',
         on_gpu=True,
         crash_on_exception=True,
     )

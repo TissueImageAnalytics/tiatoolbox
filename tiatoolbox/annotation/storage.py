@@ -1033,7 +1033,7 @@ class AnnotationStore(ABC, MutableMapping):
         store.append_many(anns)
         return store
 
-    def add_from(self, fp: Union[IO, str]) -> "AnnotationStore":
+    def add_from(self, fp: Union[IO, str], saved_res=None, slide_res=None) -> "AnnotationStore":
         fp = Path(fp)
         if fp.suffix=='.geojson':
             geojson = self._load_cases(
@@ -1068,6 +1068,7 @@ class AnnotationStore(ABC, MutableMapping):
             if 'contour' not in props:
                 #assume cerberous format with objects subdivided into categories
                 anns = []
+                saved_res = data['resolution']
                 for subcat in data.keys():
                     if subcat=='resolution':
                         continue
@@ -1082,12 +1083,12 @@ class AnnotationStore(ABC, MutableMapping):
                         for key in data[subcat].keys():
                             data[subcat][key]['type'] = subcat
                     anns.extend([
-                    Annotation(make_valid_poly(feature2geometry({'type': 'Polygon', 'coordinates': (0.5/0.275)*np.array([data[subcat][key]['contour']])})), {key2: data[subcat][key][key2] for key2 in props[3:]})
+                    Annotation(make_valid_poly(feature2geometry({'type': 'Polygon', 'coordinates': (np.array(saved_res)/np.array(slide_res))*np.array([data[subcat][key]['contour']])})), {key2: data[subcat][key][key2] for key2 in props[3:]})
                     for key in data[subcat].keys()
                 ])
             else:
                 anns = [
-                    Annotation(make_valid(feature2geometry({'type': 'Polygon', 'coordinates': [data[key]['contour']]})), {key2: data[key][key2] for key2 in props[3:]})
+                    Annotation(make_valid_poly(feature2geometry({'type': 'Polygon', 'coordinates': (np.array(saved_res)/np.array(slide_res))*np.array([data[key]['contour']])})), {key2: data[key][key2] for key2 in props[3:]})
                     for key in data.keys()
                 ]
         else:
@@ -1977,7 +1978,7 @@ class SQLiteStore(AnnotationStore):
         data = self._cached_query(
             rows="properties, cx, cy, geometry",
             geometry=geometry,
-            geometry_predicate="intersects",
+            geometry_predicate="bbox_intersects",
             con = self.con,
             bbox = False,
             compress_type = self.metadata["compression"],

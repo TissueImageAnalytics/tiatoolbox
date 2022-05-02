@@ -467,7 +467,8 @@ class AnnotationRenderer:
         self.max_scale = max_scale
         self.thickness=thickness
 
-    def to_tile_coords(self, coords, tl, scale):
+    @staticmethod
+    def to_tile_coords(coords, tl, scale):
         """return coords relative to tl of tile,
         as a np array suitable for cv2
         """
