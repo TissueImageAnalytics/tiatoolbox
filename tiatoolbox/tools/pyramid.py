@@ -24,7 +24,7 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon
 
-from tiatoolbox.annotation.storage import AnnotationStore
+from tiatoolbox.annotation.storage import AnnotationStore, Annotation
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
@@ -618,12 +618,14 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             if len(anns_dict) < 40:
                 decimate = 1
             i = 0
-            for key, bounds in anns_dict.items():
-                ann = Polygon.from_bounds(*bounds)
+            for key, ann in anns_dict.items():
                 i += 1
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
                     ann_bounded = ann.geometry.intersection(bound_geom)
+                    if ann_bounded.is_empty:
+                        """only bbox in tile, not actual geometry. skip."""
+                        continue
                     if ann_bounded.geom_type == "Polygon":
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
                     elif "Line" in ann_bounded.geom_type:
@@ -631,6 +633,9 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print("unknown geometry")
                     continue
+                if ann.geometry.area == 0:
+                    """its a point"""
+                    ann = Annotation(ann.geometry.centroid, ann.properties)
                 if i % decimate == 0:
                     if ann.geometry.geom_type == "Point":
                         r.render_pt(rgb, ann, tl, scale)
@@ -639,7 +644,6 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     if ann_bounded.geom_type == "Polygon":
                         r.render_rect(rgb, ann, ann_bounded, tl, scale)
                     elif "Line" in ann_bounded.geom_type:
-                        ann_bounded = ann.geometry.intersection(bound_geom)
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
                         print("unknown geometry")

@@ -753,9 +753,9 @@ class AnnotationStore(ABC, MutableMapping):
         """Query the store for annotation bounding boxes.
 
         Acts similarly to `AnnotationStore.query` except it checks for
-        intersection between sotred and query geometry bounding boxes.
+        intersection between sorted and query geometry bounding boxes.
         This may be faster than a regular query in some cases, e.g. for
-        SQliteStore with a alrge number of annotations.
+        SQliteStore with a large number of annotations.
 
         Note that this method only checks for bounding box intersection
         and therefore may give a different result to using
@@ -812,7 +812,9 @@ class AnnotationStore(ABC, MutableMapping):
         if isinstance(query_geometry, tuple):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return {
-            key: annotation.geometry.bounds
+            key: Annotation(
+                Polygon.from_bounds(*annotation.geometry.bounds), annotation.properties
+            )
             for key, annotation in self.items()
             if (
                 Polygon.from_bounds(*annotation.geometry.bounds).intersects(
@@ -1636,7 +1638,7 @@ class SQLiteStore(AnnotationStore):
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         cur = self._query(
-            select="[key], min_x, min_y, max_x, max_y",
+            select="[key], properties, min_x, min_y, max_x, max_y",
             geometry=geometry,
             geometry_predicate="bbox_intersects",
             where=where,
@@ -1644,11 +1646,14 @@ class SQLiteStore(AnnotationStore):
         )
         if isinstance(where, Callable):
             return {
-                key: bounds
+                key: Annotation(Polygon.from_bounds(*bounds), properties)
                 for key, properties, *bounds in cur.fetchall()
                 if where(json.loads(properties))
             }
-        return {key: bounds for key, *bounds in cur.fetchall()}
+        return {
+            key: Annotation(Polygon.from_bounds(*bounds), properties)
+            for key, properties, *bounds in cur.fetchall()
+        }
 
     def __len__(self) -> int:
         cur = self.con.cursor()

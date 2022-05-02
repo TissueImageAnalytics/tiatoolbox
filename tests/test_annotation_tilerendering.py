@@ -21,32 +21,24 @@ from tiatoolbox.annotation.storage import (
     SQLiteStore,
 )
 from tests.test_annotation_stores import cell_polygon
-from tiatoolbox.wsicore.wsimeta import WSIMeta
-
-
-# Constants
-
-GRID_SIZE = (5, 5)
 
 
 @pytest.fixture(scope="session")
 def cell_grid() -> List[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     np.random.seed(0)
-    return [
-        cell_polygon(((i + 1) * 100, (j + 1) * 100)) for i, j in np.ndindex(*GRID_SIZE)
-    ]
+    return [cell_polygon(((i + 1) * 100, (j + 1) * 100)) for i, j in np.ndindex(5, 5)]
 
 
 @pytest.fixture(scope="session")
-def points_grid(spacing = 60) -> List[Point]:
+def points_grid(spacing=60) -> List[Point]:
     """Generate a grid of fake point annotations."""
     np.random.seed(0)
-    return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(*GRID_SIZE)]
+    return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 
 @pytest.fixture()
-def fill_store(cell_grid, points_grid, spacing = 60):
+def fill_store(cell_grid, points_grid, spacing=60):
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
@@ -82,8 +74,8 @@ def test_tile_generator_len(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    dz = AnnotationTileGenerator(wsi.info, store, tile_size=256)
-    assert len(dz) == (4 * 4) + (2 * 2) + 1
+    tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
+    assert len(tg) == (4 * 4) + (2 * 2) + 1
 
 
 def test_tile_generator_iter(fill_store, tmp_path):
@@ -91,8 +83,8 @@ def test_tile_generator_iter(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    dz = AnnotationTileGenerator(wsi.info, store, tile_size=256)
-    for tile in dz:
+    tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
+    for tile in tg:
         assert isinstance(tile, Image.Image)
         assert tile.size == (256, 256)
 
@@ -104,8 +96,8 @@ def test_show_generator_iter(fill_store, tmp_path):
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer("prob")
-    dz = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    for i, tile in enumerate(dz):
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    for i, tile in enumerate(tg):
         if i > 5:
             break
         assert isinstance(tile, Image.Image)
@@ -119,11 +111,11 @@ def test_correct_number_rendered(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    dz = AnnotationTileGenerator(wsi.info, store, tile_size=256)
+    tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
 
-    thumb = dz.get_thumb_tile()
+    thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
-    assert num == 51  # expect 51 rendered objects
+    assert num == 75  # expect 75 rendered objects
 
 
 def test_correct_colour_rendered(fill_store, tmp_path):
@@ -135,11 +127,11 @@ def test_correct_colour_rendered(fill_store, tmp_path):
         "type",
         {"cell": (255, 0, 0, 255), "pt": (0, 255, 0, 255), "line": (0, 0, 255, 255)},
     )
-    dz = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
-    thumb = dz.get_thumb_tile()
+    thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
-    assert num == 25  # expect 25 green objects
+    assert num == 49  # expect 49 green objects
     _, num = label(np.array(thumb)[:, :, 0])
     assert num == 25  # expect 25 red objects
     _, num = label(np.array(thumb)[:, :, 2])
@@ -152,8 +144,8 @@ def test_filter_by_expression(fill_store, tmp_path):
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(where='props["type"] == "cell"')
-    dz = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    thumb = dz.get_thumb_tile()
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
     assert num == 25  # expect 25 cell objects
 
@@ -163,20 +155,24 @@ def test_zoomed_out_rendering(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(max_scale=0)
-    dz = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    renderer = AnnotationRenderer(max_scale=1)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
-    thumb = dz.get_tile(0, 0, 0)
+    thumb = tg.get_tile(1, 0, 0)
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
-    assert num == 51  # expect 51 rendered objects
+    assert num == 25  # expect 25 boxes in top left quadrant
 
 
-def test_decimation(fil_store, tmp_path):
+def test_decimation(fill_store, tmp_path):
     """test decimation"""
     array = np.ones((1024, 1024))
-    meta = WSIMeta((10000,10000), mpp=(0.5,0.5))
-    wsi = wsireader.VirtualWSIReader(array, info=meta)
-    _, store = fil_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer()
-    dz = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(max_scale=1)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
+    thumb = tg.get_tile(1, 1, 1)
+    plt.imshow(thumb)
+    plt.show()
+    _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
+    assert num == 16  # expect 16 pts in bottom right quadrant
