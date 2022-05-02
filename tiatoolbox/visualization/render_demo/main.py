@@ -231,7 +231,7 @@ def prop_check(prop):
 
 prop_check = 'props["type"] == "class1"'
 wsi = [WSIReader.open(vstate.slide_path)]
-renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=-1)#, prop_check)
+renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=1)#, prop_check)
 vstate.renderer=renderer
 #renderer=AnnotationRenderer('score', ['red', 'blue', 'green'], prop_check)
 #renderer=AnnotationRenderer('score', ['red', 'blue', 'bob'])

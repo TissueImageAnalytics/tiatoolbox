@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
 import warnings
+from shapely.affinity import affine_transform
 
 
 def random_colors(num_colors, bright=True):
@@ -499,7 +500,8 @@ class AnnotationRenderer:
 
         cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
         cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
-        cv2.drawContours(rgb, [cnt], 0, (0,0,0,255), 1)
+        if self.thickness == -1:
+            cv2.drawContours(rgb, [cnt], 0, (0,0,0,255), 1)
 
     def render_multipoly(self, rgb, ann, ann_bounded, tl, scale):
         """render a multipolygon annotation onto a tile using cv2"""

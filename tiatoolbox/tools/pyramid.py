@@ -606,7 +606,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
     def render_annotations(self, bound_geom, scale, tl):
         """get annotations as bbox or geometry according to zoom level,
         and decimate large collections of small annotations if appropriate"""
-        clip_bound_geom=bound_geom.buffer(scale)
+        #clip_bound_geom=bound_geom.buffer(scale)
         r = self.renderer
         output_size = [self.output_tile_size] * 2
         big_thresh = 0.0008 * (self.tile_size * scale) ** 2
@@ -621,7 +621,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             )
             if len(anns_dict) == 0:
                 return self.empty_img
-            rgb = np.zeros((output_size[0]+2, output_size[1]+2, 4), dtype=np.uint8)
+            rgb = np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
             print(f'len annotations dict is: {len(anns_dict)}')
             if len(anns_dict) < 40:
                 decimate = int(len(anns_dict) / 20) + 1
@@ -630,7 +630,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 i += 1
                 if ann.geometry.area > big_thresh:
                     ann = self.store[key]
-                    ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                    #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                    ann_bounded = ann.geometry
                     if ann_bounded.is_empty:
                         #only bbox not actual geom was inside the tile, so ignore
                         continue
@@ -647,7 +648,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     if ann.geometry.geom_type == "Point":
                         r.render_pt(rgb, ann, tl, scale)
                         continue
-                    ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                    #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                    ann_bounded = ann.geometry
                     if ann_bounded.geom_type == "Polygon":
                         if ann_bounded.is_empty:
                             print('why is this empty?')
@@ -662,12 +664,13 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             anns = self.store.cached_query(bound_geom.bounds, self.renderer.where)
             if len(anns) == 0:
                 return self.empty_img
-            rgb = np.zeros((output_size[0]+2, output_size[1]+2, 4), dtype=np.uint8)
+            rgb = np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
             for ann in anns:
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue
-                ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                ann_bounded = ann.geometry
                 if ann_bounded.is_empty:
                             #print('why is this empty?')
                             continue
@@ -683,4 +686,4 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 else:
                     print(f"unknown geometry: {ann_bounded.geom_type}")
 
-        return Image.fromarray(rgb[1:-1, 1:-1, :])
+        return Image.fromarray(rgb)
