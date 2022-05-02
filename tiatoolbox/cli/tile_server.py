@@ -16,7 +16,7 @@ def tile_server(img_input, name):  # pragma: no cover
     if len(name) == 0:
         app = TileServer("TileServer", list(img_input))
     elif len(name) == len(img_input):
-        app = TileServer("TileServer", {n: im for n, im in zip(name, img_input)})
+        app = TileServer("TileServer", dict(zip(name, img_input)))
     else:
         raise (
             ValueError("if names are provided, must match the number of paths provided")
