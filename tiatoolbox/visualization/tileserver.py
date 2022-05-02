@@ -39,7 +39,9 @@ class TileServer(Flask):
         >>> app.run()
     """
 
-    def __init__(self, title: str, layers: Union[Dict, List]) -> None:
+    def __init__(
+        self, title: str, layers: Union[Dict[str, WSIReader], List[WSIReader]]
+    ) -> None:
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
