@@ -274,7 +274,7 @@ if __name__ == "__main__":
         # Print memory usage in MiB from memray
         regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
         pipe = subprocess.Popen(
-            ["python", "-m", "memray", "stats", tracker_filepath.name],
+            [sys.executable, "-m", "memray", "stats", tracker_filepath.name],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
