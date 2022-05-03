@@ -280,7 +280,7 @@ with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
     stdout, stderr = pipe.communicate()
     if stderr:
         print(stderr.decode("utf-8"))
-        exit(-1)
+        sys.exit(-1)
     memray_total_mem_str = regex.search(stdout.decode("utf-8")).group(1).strip()
     memray_total_mem = float(memray_total_mem_str)
     print(f"Memray Memory: {memray_total_mem: .2f} MiB")
