@@ -1116,6 +1116,7 @@ class SQLiteMetadata(MutableMapping):
             Path object.
         con (sqlite3.Connection):
             The sqlite3 database connection.
+
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
