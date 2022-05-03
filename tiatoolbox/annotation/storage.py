@@ -26,6 +26,7 @@ import contextlib
 import copy
 import io
 import json
+import os
 import pickle
 import sqlite3
 import sys
@@ -949,9 +950,30 @@ class AnnotationStore(ABC, MutableMapping):
                 None.
 
         """
+
+        def write_geojson_to_file_handle(file_handle: IO):
+            """Write the store to a GeoJson file give a handle.
+
+            This replaces the naive method which uses a lot of memory::
+                json.dump(self.to_geodict(), file_handle)
+
+            """
+            # Write head
+            file_handle.write('{"type": "FeatureCollection", "features": [')
+            # Write each feature
+            for feature in self.features():
+                file_handle.write(json.dumps(feature))
+                tell = file_handle.tell()
+                # Comma separate features
+                file_handle.write(",")
+            # Seek to before last comma
+            file_handle.seek(tell, os.SEEK_SET)
+            # Write tail
+            file_handle.write("]}")
+
         return self._dump_cases(
             fp=fp,
-            file_fn=lambda fp: json.dump(self.to_geodict(), fp),
+            file_fn=write_geojson_to_file_handle,
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
 
