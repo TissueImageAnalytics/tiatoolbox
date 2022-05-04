@@ -292,12 +292,12 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
+    PARSER = argparse.ArgumentParser(
         description=(
             "Simple benchmark to test the memory allocation of annotation stores."
         ),
     )
-    parser.add_argument(
+    PARSER.add_argument(
         "-S",
         "--size",
         type=int,
@@ -305,7 +305,7 @@ if __name__ == "__main__":
         default=(100, 100),
         help="The size of the grid of cells to generate. Defaults to (100, 100).",
     )
-    parser.add_argument(
+    PARSER.add_argument(
         "-s",
         "--store",
         type=str,
@@ -313,7 +313,7 @@ if __name__ == "__main__":
         help="The type of annotation store to use. Defaults to 'dict'.",
         choices=["dict", "sqlite"],
     )
-    parser.add_argument(
+    PARSER.add_argument(
         "-m",
         "--in-memory",
         help="Use an in-memory store.",
@@ -321,7 +321,7 @@ if __name__ == "__main__":
     )
 
     # Parsed CLI arguments
-    ARGS = parser.parse_args()
+    ARGS = PARSER.parse_args()
     # Run the benchmark
     main(
         process,
