@@ -122,9 +122,11 @@ except ImportError:
                 warnings.warn("Memray not installed, skipping tracking.")
 
             def __enter__(self):
+                """Dummy enter."""
                 pass
 
             def __exit__(self, *args):
+                """Dummy exit."""
                 pass
 
 
