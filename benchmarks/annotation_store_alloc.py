@@ -8,7 +8,7 @@ before and after the benchmark using psutil. The second is to use the
 memray tool to track memory allocations.
 
 psutil: https://psutil.readthedocs.io/en/latest/
-memray: https://github.com/bloomberg/memray
+memray: https://github.com/bloomberg/memray (Linux only)
 
 Command Line Usage
 ==================
@@ -93,10 +93,12 @@ sqlite: #####################
 
 import argparse
 import copy
+import multiprocessing
 import os
 import re
 import subprocess
 import sys
+import warnings
 from numbers import Number
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -104,7 +106,28 @@ from typing import Generator, Tuple
 
 sys.path.append("../")
 
-import memray  # noqa: E402
+try:
+    import memray  # noqa: E402
+except ImportError:
+
+    class memray:  # noqa: N801 No CapWords convention
+        """Dummy memray module."""
+
+        dummy: bool = True
+
+        class Tracker:
+            """Dummy Tracker context manager."""
+
+            def __init__(self, *args, **kwargs):
+                warnings.warn("Memray not installed, skipping tracking.")
+
+            def __enter__(self):
+                pass
+
+            def __exit__(self, *args):
+                pass
+
+
 import numpy as np  # noqa: E402
 import psutil  # noqa: E402
 from shapely.geometry import Polygon  # noqa: E402
@@ -207,9 +230,70 @@ STORES = {
 }
 
 
+def main(
+    process: multiprocessing.Process,
+    cell_grid: Generator[Polygon, None, None],
+    args: argparse.Namespace,
+    cls: type,
+):
+    """Run the benchmark."""
+    tracker_filepath = Path(f"{args.store}-in-mem-{args.in_memory}.bin".lower())
+    if tracker_filepath.is_file():
+        tracker_filepath.unlink()
+
+    with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
+        tracker_filepath, native_traces=True, follow_fork=True
+    ):
+        io = ":memory:" if args.in_memory else temp_file  # Backing (memory/disk)
+        print(f"Storing {args.size[0] * args.size[1]} cells")
+        print(f"Using {cls.__name__}({io})")
+
+        # Record memory usage before creating the store
+        psutil_m0 = process.memory_info().rss
+
+        store = cls(io)
+        # Set up a polygon generator
+        grid = cell_grid(size=tuple(args.size), spacing=35)
+        # Store the grid of polygons
+        for polygon in tqdm(grid, total=args.size[0] * args.size[1]):
+            _ = store.append(copy.deepcopy(Annotation(Polygon(polygon))))
+        # Ensure the store is flushed to disk if using a disk-based store
+        if not args.in_memory:
+            store.commit()
+
+        # Print file size in MiB
+        temp_file.seek(0, os.SEEK_END)
+        file_size = temp_file.tell()
+        print(f"File size: {file_size / (1024**2):.2f} MiB")
+
+        # Print memory usage in MiB
+        psutil_total_mem = process.memory_info().rss - psutil_m0
+        print(f"Psutil Memory: {psutil_total_mem / (1024**2): .2f} MiB")
+
+        # Print memory usage in MiB from memray
+        if hasattr(memray, "dummy") and memray.dummy:
+            # Skip memray if not installed
+            return
+        regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
+        pipe = subprocess.Popen(
+            [sys.executable, "-m", "memray", "stats", tracker_filepath.name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = pipe.communicate()
+        if stderr:
+            print(stderr.decode("utf-8"))
+            sys.exit(-1)
+        memray_total_mem_str = regex.search(stdout.decode("utf-8")).group(1).strip()
+        memray_total_mem = float(memray_total_mem_str)
+        print(f"Memray Memory: {memray_total_mem: .2f} MiB")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Simple benchmark to test the memory allocation of annotation stores."
+        description=(
+            "Simple benchmark to test the memory allocation of annotation stores."
+        ),
     )
     parser.add_argument(
         "-S",
@@ -234,54 +318,7 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-
     args = parser.parse_args()  # Parsed CLI arguments
     cls = STORES[args.store]  # Storage class
 
-    tracker_filepath = Path(f"{args.store}-in-mem-{args.in_memory}.bin".lower())
-    if tracker_filepath.is_file():
-        tracker_filepath.unlink()
-
-    with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
-        tracker_filepath, native_traces=True, follow_fork=True
-    ) as tracker:
-        io = ":memory:" if args.in_memory else temp_file  # Backing (memory/disk)
-        print(f"Storing {args.size[0] * args.size[1]} cells")
-        print(f"Using {cls.__name__}({io})")
-
-        # Record memory usage before creating the store
-        psutil_m0 = process.memory_info().rss
-
-        store = cls(io)
-        # Set up a polygon generator
-        grid = cell_grid(size=tuple(args.size), spacing=35)
-        # Store the grid of polygons
-        for polygon in tqdm(grid, total=args.size[0] * args.size[1]):
-            key = store.append(copy.deepcopy(Annotation(Polygon(polygon))))
-        # Ensure the store is flushed to disk if using a disk-based store
-        if not args.in_memory:
-            store.commit()
-
-        # Print file size in MiB
-        temp_file.seek(0, os.SEEK_END)
-        file_size = temp_file.tell()
-        print(f"File size: {file_size / (1024**2):.2f} MiB")
-
-        # Print memory usage in MiB
-        psutil_total_mem = process.memory_info().rss - psutil_m0
-        print(f"Psutil Memory: {psutil_total_mem / (1024**2): .2f} MiB")
-
-        # Print memory usage in MiB from memray
-        regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
-        pipe = subprocess.Popen(
-            [sys.executable, "-m", "memray", "stats", tracker_filepath.name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        stdout, stderr = pipe.communicate()
-        if stderr:
-            print(stderr.decode("utf-8"))
-            sys.exit(-1)
-        memray_total_mem_str = regex.search(stdout.decode("utf-8")).group(1).strip()
-        memray_total_mem = float(memray_total_mem_str)
-        print(f"Memray Memory: {memray_total_mem: .2f} MiB")
+    main(process, cell_grid, args, cls)
