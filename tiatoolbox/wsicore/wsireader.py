@@ -1,5 +1,6 @@
 """This module defines classes which can read image data from WSI formats."""
 import copy
+import json
 import math
 import os
 import pathlib
@@ -68,6 +69,59 @@ def is_tiled_tiff(path: pathlib.Path) -> bool:
     return tif.pages[0].is_tiled
 
 
+def is_zarr(path: pathlib.Path) -> bool:
+    """Check if the input is a Zarr file.
+
+    Args:
+        path (pathlib.Path):
+            Path to the file to check.
+
+    Returns:
+        bool:
+            True if the file is a Zarr file.
+
+    """
+    path = pathlib.Path(path)
+    try:
+        _ = zarr.open(path, mode="r")
+        return True
+    except Exception:  # noqa: PIE786
+        return False
+
+
+def is_ngff(path: pathlib.Path) -> bool:
+    """Check if the input is a NGFF file.
+
+    Args:
+        path (pathlib.Path):
+            Path to the file to check.
+
+    Returns:
+        bool:
+            True if the file is a NGFF file.
+
+    """
+    path = pathlib.Path(path)
+    zattrs_path = path / ".zattrs"
+    group_attrs = json.load(zattrs_path)
+    try:
+        multiscales = group_attrs["multiscales"]
+        omero = group_attrs["omero"]
+        _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa N806
+        if not all(
+            [
+                isinstance(multiscales, list),
+                isinstance(_ARRAY_DIMENSIONS, str),
+                isinstance(omero, dict),
+                all(isinstance(m, dict) for m in multiscales),
+            ]
+        ):
+            return False
+    except KeyError:
+        return False
+    return is_zarr(path)
+
+
 class WSIReader:
     """Base whole slide image (WSI) reader class.
 
@@ -91,7 +145,7 @@ class WSIReader:
     """
 
     @staticmethod  # noqa: A003
-    def open(
+    def open(  # noqa: A003
         input_img: Union[str, pathlib.Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
@@ -150,8 +204,12 @@ class WSIReader:
             ".png",
             ".jpg",
             ".jpeg",
+            ".zarr",
         ]:
             raise FileNotSupported(f"File {input_img} is not a supported file format.")
+
+        if suffixes[-1] in (".zarr",):
+            return NGFFWSIReader(input_img, mpp=mpp, power=power)
 
         if suffixes[-1] in (".npy",):
             input_img = np.load(input_img)
@@ -2006,7 +2064,10 @@ class ArrayView:
 
     @property
     def shape(self):
-        return tuple(self._shape[c] for c in "YXS")
+        try:
+            return tuple(self._shape[c] for c in "YXC")
+        except KeyError:
+            return tuple(self._shape[c] for c in "YXS")
 
     def __getitem__(self, index):
         # Normalize to a tuple of length = len(self.axes)
@@ -2015,9 +2076,9 @@ class ArrayView:
         while len(index) < len(self.axes):
             index = (*index, slice(None))
 
-        if self.axes == "YXS":
+        if self.axes in ("YXS", "YXC"):
             return self.array[index]
-        if self.axes == "SYX":
+        if self.axes in ("SYX", "CYX"):
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
@@ -2326,7 +2387,7 @@ class TIFFWSIReader(WSIReader):
         **kwargs,
     ):
         if coord_space == "resolution":
-            return self._read_rect_at_resolution(
+            im_region = self._read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -2335,6 +2396,7 @@ class TIFFWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
+            return utils.transforms.background_composite(im_region)
 
         # Find parameters for optimal read
         (
@@ -2629,6 +2691,175 @@ class DICOMWSIReader(WSIReader):
             )
 
         return utils.transforms.background_composite(image=im_region)
+
+
+class NGFFWSIReader(WSIReader):
+    """Reader for NGFF WSI zarrs.
+
+    Support is currently experimental.
+    """
+
+    def __init__(self, path, **kwargs):
+        super().__init__(path, **kwargs)
+        from tiatoolbox.wsicore.metadata import ngff
+
+        self._zarr_group: zarr.hierarchy.Group = zarr.open(path, mode="r")
+        attrs = self._zarr_group.attrs
+        multiscales = attrs["multiscales"][0]
+        axes = multiscales["axes"]
+        datasets = multiscales["datasets"]
+        omero = attrs["omero"]
+        self.zattrs = ngff.Zattrs(
+            _creator=ngff.Creator(
+                name=attrs.get("name"),
+                version=attrs.get("version"),
+            ),
+            multiscales=ngff.Multiscales(
+                version=multiscales.get("version"),
+                axes=[ngff.Axis(**axis) for axis in axes],
+                datasets=[ngff.Dataset(**dataset) for dataset in datasets],
+            ),
+            omero=ngff.Omero(
+                name=omero.get("name"),
+                id=omero.get("id"),
+                channels=[ngff.Channel(**channel) for channel in omero["channels"]],
+                rdefs=ngff.RDefs(**omero["rdefs"]),
+                version=omero.get("version"),
+            ),
+            _ARRAY_DIMENSIONS=attrs["_ARRAY_DIMENSIONS"],
+        )
+        self.level_arrays = {
+            int(key): ArrayView(array, axes=self.info.axes)
+            for key, array in self._zarr_group.arrays()
+        }
+
+    def _info(self):
+        return WSIMeta(
+            axes="".join(axis.name.upper() for axis in self.zattrs.multiscales.axes),
+            level_dimensions=[
+                array.shape[:2][::-1]
+                for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
+            ],
+            slide_dimensions=self._zarr_group[0].shape[:2][::-1],
+            vendor=self.zattrs._creator.name,
+            raw=self._zarr_group.attrs,
+        )
+
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        if coord_space == "resolution":
+            im_region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return utils.transforms.background_composite(image=im_region)
+
+        # Find parameters for optimal read
+        (
+            read_level,
+            _,
+            _,
+            post_read_scale,
+            baseline_read_size,
+        ) = self.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
+
+        bounds = utils.transforms.locsize2bounds(
+            location=location, size=baseline_read_size
+        )
+        im_region = utils.image.safe_padded_read(
+            image=self.level_arrays[read_level],
+            bounds=bounds,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation=interpolation,
+        )
+
+        return utils.transforms.background_composite(image=im_region)
+
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        bounds_at_baseline = bounds
+        if coord_space == "resolution":
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units
+            )
+            _, size_at_requested = utils.transforms.bounds2locsize(bounds)
+            # don't use the `output_size` (`size_at_requested`) here
+            # because the rounding error at `bounds_at_baseline` leads to
+            # different `size_at_requested` (keeping same read resolution
+            # but base image is of different scale)
+            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+        else:  # duplicated portion with VirtualReader, factoring out ?
+            # Find parameters for optimal read
+            (
+                read_level,
+                _,
+                size_at_requested,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+
+        im_region = utils.image.sub_pixel_read(
+            image=self.level_arrays[read_level],
+            bounds=bounds_at_baseline,
+            output_size=size_at_requested,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            read_kwargs=kwargs,
+        )
+
+        if coord_space == "resolution":
+            # do this to enforce output size is as defined by input bounds
+            im_region = utils.transforms.imresize(
+                img=im_region, output_size=size_at_requested
+            )
+        else:
+            im_region = utils.transforms.imresize(
+                img=im_region,
+                scale_factor=post_read_scale,
+                output_size=size_at_requested,
+            )
+
+        return im_region
 
 
 def get_wsireader(input_img):

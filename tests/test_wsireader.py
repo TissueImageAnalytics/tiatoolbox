@@ -31,6 +31,7 @@ from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
     ArrayView,
     DICOMWSIReader,
+    NGFFWSIReader,
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
@@ -1854,6 +1855,7 @@ class TestReader:
             },
         ),
         ("DICOMReader", {"reader_class": DICOMWSIReader, "sample_key": "dicom-1"}),
+        ("NGFFWSIReader", {"reader_class": NGFFWSIReader, "sample_key": "ngff-1"}),
     ]
 
     @staticmethod
