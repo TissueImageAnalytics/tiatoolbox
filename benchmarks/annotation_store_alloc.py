@@ -111,7 +111,11 @@ try:
 except ImportError:
 
     class memray:  # noqa: N801 No CapWords convention
-        """Dummy memray module."""
+        """Dummy memray module for when memray is not installed.
+        
+        A drop-in dummy replacement for the memray module on unsupported
+        platforms.
+        """
 
         dummy: bool = True
 
@@ -122,12 +126,10 @@ except ImportError:
                 warnings.warn("Memray not installed, skipping tracking.")
 
             def __enter__(self):
-                """Dummy enter."""
-                pass
+                pass  # Intentionally blank.
 
             def __exit__(self, *args):
-                """Dummy exit."""
-                pass
+                pass  # Intentionally blank.
 
 
 import numpy as np  # noqa: E402
