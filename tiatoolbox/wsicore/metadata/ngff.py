@@ -269,6 +269,6 @@ class Zattrs:
     """
 
     _creator: Creator = field(default_factory=Creator)
-    multiscales: List[Multiscales] = field(default_factory=lambda: Multiscales())
+    multiscales: List[Multiscales] = field(default_factory=lambda: [Multiscales()])
     _ARRAY_DIMENSIONS: List[TCZYX] = field(default_factory=lambda: ["y", "x", "c"])
     omero: Omero = field(default_factory=Omero)
