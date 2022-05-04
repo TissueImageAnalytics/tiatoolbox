@@ -111,7 +111,7 @@ except ImportError:
 
     class memray:  # noqa: N801 No CapWords convention
         """Dummy memray module for when memray is not installed.
-        
+
         A drop-in dummy replacement for the memray module on unsupported
         platforms.
         """
