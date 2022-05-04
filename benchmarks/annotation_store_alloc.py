@@ -125,10 +125,12 @@ except ImportError:
                 warnings.warn("Memray not installed, skipping tracking.")
 
             def __enter__(self):
-                pass  # Intentionally blank.
+                """Dummy enter method."""
+                # Intentionally blank.
 
             def __exit__(self, *args):
-                pass  # Intentionally blank.
+                """Dummy exit method."""
+                # Intentionally blank.
 
 
 import numpy as np  # noqa: E402
