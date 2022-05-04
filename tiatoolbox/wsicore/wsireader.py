@@ -2742,7 +2742,7 @@ class NGFFWSIReader(WSIReader):
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
             ],
             slide_dimensions=self._zarr_group[0].shape[:2][::-1],
-            vendor=self.zattrs._creator.name,
+            vendor=self.zattrs._creator.name,  # skipcq
             raw=self._zarr_group.attrs,
         )
 
