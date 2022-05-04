@@ -233,19 +233,21 @@ STORES = {
 def main(
     process: multiprocessing.Process,
     cell_grid: Generator[Polygon, None, None],
-    args: argparse.Namespace,
-    cls: type,
+    store: str,
+    in_memory: bool,
+    size: Tuple[int, int],
 ):
     """Run the benchmark."""
-    tracker_filepath = Path(f"{args.store}-in-mem-{args.in_memory}.bin".lower())
+    cls = STORES[store]
+    tracker_filepath = Path(f"{store}-in-mem-{in_memory}.bin".lower())
     if tracker_filepath.is_file():
         tracker_filepath.unlink()
 
     with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
         tracker_filepath, native_traces=True, follow_fork=True
     ):
-        io = ":memory:" if args.in_memory else temp_file  # Backing (memory/disk)
-        print(f"Storing {args.size[0] * args.size[1]} cells")
+        io = ":memory:" if in_memory else temp_file  # Backing (memory/disk)
+        print(f"Storing {size[0] * size[1]} cells")
         print(f"Using {cls.__name__}({io})")
 
         # Record memory usage before creating the store
@@ -253,12 +255,12 @@ def main(
 
         store = cls(io)
         # Set up a polygon generator
-        grid = cell_grid(size=tuple(args.size), spacing=35)
+        grid = cell_grid(size=tuple(size), spacing=35)
         # Store the grid of polygons
-        for polygon in tqdm(grid, total=args.size[0] * args.size[1]):
+        for polygon in tqdm(grid, total=size[0] * size[1]):
             _ = store.append(copy.deepcopy(Annotation(Polygon(polygon))))
         # Ensure the store is flushed to disk if using a disk-based store
-        if not args.in_memory:
+        if not in_memory:
             store.commit()
 
         # Print file size in MiB
@@ -319,8 +321,12 @@ if __name__ == "__main__":
     )
 
     # Parsed CLI arguments
-    args = parser.parse_args()
-    # Get the storage class
-    cls = STORES[args.store]
+    ARGS = parser.parse_args()
     # Run the benchmark
-    main(process, cell_grid, args, cls)
+    main(
+        process,
+        cell_grid,
+        store=ARGS.store,
+        in_memory=ARGS.in_memory,
+        size=ARGS.size,
+    )
