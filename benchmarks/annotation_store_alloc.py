@@ -237,8 +237,16 @@ def main(
     store: str,
     in_memory: bool,
     size: Tuple[int, int],
-):
-    """Run the benchmark."""
+) -> None:
+    """Run the benchmark.
+    
+    Args:
+        store (str): The store to use. Valid options are:
+            - dict: In-memory dictionary store.
+            - sqlite: SQLite store.
+        in_memory (bool): Whether to use in-memory stores.
+        size (tuple(int)): The size of the grid to generate.
+    """
     process = psutil.Process(os.getpid())
     cls = STORES[store]
     tracker_filepath = Path(f"{store}-in-mem-{in_memory}.bin".lower())
