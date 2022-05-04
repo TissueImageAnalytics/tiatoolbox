@@ -318,7 +318,9 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-    args = parser.parse_args()  # Parsed CLI arguments
-    cls = STORES[args.store]  # Storage class
-
+    # Parsed CLI arguments
+    args = parser.parse_args()
+    # Get the storage class
+    cls = STORES[args.store]
+    # Run the benchmark
     main(process, cell_grid, args, cls)
