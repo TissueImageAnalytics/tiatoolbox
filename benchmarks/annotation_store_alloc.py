@@ -141,8 +141,6 @@ from tiatoolbox.annotation.storage import (  # noqa: E402
     SQLiteStore,
 )
 
-process = psutil.Process(os.getpid())
-
 
 def cell_polygon(
     xy: Tuple[Number, Number],
@@ -233,13 +231,12 @@ STORES = {
 
 
 def main(
-    process: multiprocessing.Process,
-    cell_grid: Generator[Polygon, None, None],
     store: str,
     in_memory: bool,
     size: Tuple[int, int],
 ):
     """Run the benchmark."""
+    process = psutil.Process(os.getpid())
     cls = STORES[store]
     tracker_filepath = Path(f"{store}-in-mem-{in_memory}.bin".lower())
     if tracker_filepath.is_file():
@@ -326,8 +323,6 @@ if __name__ == "__main__":
     ARGS = PARSER.parse_args()
     # Run the benchmark
     main(
-        process,
-        cell_grid,
         store=ARGS.store,
         in_memory=ARGS.in_memory,
         size=ARGS.size,
