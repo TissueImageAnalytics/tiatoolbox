@@ -127,7 +127,8 @@ def fill_store(cell_grid, points_grid):
     ):
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
-            Annotation(point) for point in points_grid
+            Annotation(point, properties={"class": random.randint(0, 4)})
+            for point in points_grid
         ]
         keys = store.append_many(annotations)
         return keys, store
@@ -1015,11 +1016,74 @@ class TestStore:
     @staticmethod
     def test_bquery(fill_store, store_cls):
         """Test querying a store with a bounding box."""
-        import time
-
         _, store = fill_store(store_cls, ":memory:")
-        t0 = time.perf_counter()
         dictionary = store.bquery((0, 0, 1e10, 1e10))
-        print(time.perf_counter() - t0)
         assert isinstance(dictionary, dict)
         assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_pquery_all(fill_store, store_cls):
+        """Test querying for all properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.pquery("*", unique=False)
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_pquery_all_unique_exception(fill_store, store_cls):
+        """Test querying for all properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        with pytest.raises(TypeError):
+            _ = store.pquery("*", unique=True)
+
+    @staticmethod
+    def test_pquery_unique(fill_store, store_cls):
+        """Test querying for properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(select="props.get('class')")
+        assert isinstance(result_set, set)
+        assert result_set == {0, 1, 2, 3, 4, None}
+
+    @staticmethod
+    def test_pquery_unique_with_geometry(fill_store, store_cls):
+        """Test querying for properties with a geometry intersection."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select="props.get('class')",
+            geometry=Polygon.from_bounds(0, 0, 128, 128),
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {0, 1, 2, 3, 4, None}
+
+    @staticmethod
+    def test_pquery_unique_with_where(fill_store, store_cls):
+        """Test querying for properties with a where predicate."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select="props.get('class')",
+            where="props.get('class') == 1",
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_dict(fill_store, store_cls):
+        """Test querying for properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.pquery(select="props.get('class')", unique=False)
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+        assert all(key in store for key in dictionary)
+
+    @staticmethod
+    def test_pquery_dict_with_geometry(fill_store, store_cls):
+        """Test querying for properties with a geometry intersection."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.pquery(
+            select="props.get('class')",
+            unique=False,
+            geometry=Polygon.from_bounds(0, 0, 128, 128),
+        )
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) < len(store)
+        assert all(key in store for key in dictionary)

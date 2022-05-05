@@ -50,6 +50,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
 )
@@ -80,8 +81,10 @@ Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
-CallablePredicate = Callable[[Geometry, Dict[str, Any]], bool]
+CallablePredicate = Callable[[Dict[str, Any]], bool]
+CallableExpression = Callable[[Dict[str, Any]], Any]
 Predicate = Union[str, bytes, CallablePredicate]
+Expression = Union[str, bytes, CallableExpression]
 
 ASCII_FILE_SEP = "\x1c"
 ASCII_GROUP_SEP = "\x1d"
@@ -576,9 +579,7 @@ class AnnotationStore(ABC, MutableMapping):
 
     @staticmethod
     def _eval_where(
-        predicate: Optional[
-            Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]]
-        ],
+        predicate: Optional[Predicate],
         properties: Dict[str, Any],
     ) -> bool:
         """Evaluate properties predicate against properties.
@@ -674,20 +675,30 @@ class AnnotationStore(ABC, MutableMapping):
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
+
+        def filter_function(annotation: Annotation) -> bool:
+            """Filter function for querying annotations.
+
+            Args:
+                annotation (Annotation):
+                    The annotation to filter.
+
+            Returns:
+                bool:
+                    True if the annotation should be included in the
+                    query result.
+            """
+            return (  # Geometry is None or the geometry predicate matches
+                query_geometry is None
+                or self._geometry_predicate(
+                    geometry_predicate, query_geometry, annotation.geometry
+                )
+            ) and self._eval_where(where, annotation.properties)
+
         return {
             key: annotation
             for key, annotation in self.items()
-            if (
-                (
-                    query_geometry is None
-                    or self._geometry_predicate(
-                        geometry_predicate,
-                        query_geometry,
-                        annotation.geometry,
-                    )
-                )
-                and self._eval_where(where, annotation.properties)
-            )
+            if filter_function(annotation)
         }
 
     def iquery(
@@ -773,7 +784,7 @@ class AnnotationStore(ABC, MutableMapping):
     def bquery(
         self,
         geometry: Optional[QueryGeometry] = None,
-        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
+        where: Predicate = None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
@@ -846,6 +857,72 @@ class AnnotationStore(ABC, MutableMapping):
                 and self._eval_where(where, annotation.properties)
             )
         }
+
+    def pquery(
+        self,
+        select: Expression,
+        geometry: Optional[QueryGeometry] = None,
+        where: Optional[Predicate] = None,
+        unique: bool = True,
+    ) -> Union[Dict[str, Any], Set[Any]]:
+        """Query the store for annotation properties.
+
+        Acts similarly to `AnnotationStore.query` but returns only the
+        value defined by `select`.
+
+        Args:
+            select (str or bytes or Callable):
+                A statement defining the value to look up from the
+                annotation properties. If `select = "*"`, all properties
+                are returned for each annotation (`unique` must be
+                False).
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon). If a geometry is provided, the bounds of the
+                geometry will be used for the query. Full geometry
+                intersection is not used for the query method.
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are expected to be in a domain specific language
+                and are converted to SQL on a best-effort basis. For
+                supported operators of the DSL see
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query. It is
+                important to note that untrusted user input should never
+                be accepted to this argument as arbitrary code can be
+                run via pickle or the parsing of the string statement.
+            unique (bool):
+                If True, only unique values will be returned as a set.
+                If False, all values will be returned as a dictionary
+                mapping keys values. Defaults to True.
+        """
+        result = set() if unique else {}
+        # Are we scanning through all annotations?
+        is_scan = not any((geometry, where))
+        items = self.items() if is_scan else self.query(geometry, where).items()
+        for key, annotation in items:
+            if select == "*":  # Special case for all properties
+                value = annotation.properties
+            else:
+                py_locals = {"props": annotation.properties}
+                value = eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
+            if unique:
+                result.add(value)
+            else:
+                result[key] = value
+        return result
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return annotations as a list of geoJSON features.
