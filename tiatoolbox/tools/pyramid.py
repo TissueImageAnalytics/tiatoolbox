@@ -24,7 +24,7 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon
 
-from tiatoolbox.annotation.storage import AnnotationStore, Annotation
+from tiatoolbox.annotation.storage import Annotation, AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
@@ -614,13 +614,14 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             decimate = decimate * 2
 
         if scale > self.renderer.max_scale:
-            anns_dict = self.store.bquery(bound_geom, self.renderer.where)
-            if len(anns_dict) < 40:
+            bounding_boxes = self.store.bquery(bound_geom, self.renderer.where)
+            if len(bounding_boxes) < 40:
                 decimate = 1
             i = 0
-            for key, ann in anns_dict.items():
+            for key, bounds in bounding_boxes.items():
+                bounding_box = Polygon.from_bounds(*bounds)
                 i += 1
-                if ann.geometry.area > big_thresh:
+                if bounding_box.area > big_thresh:
                     ann = self.store[key]
                     ann_bounded = ann.geometry.intersection(bound_geom)
                     if ann_bounded.is_empty:
@@ -633,10 +634,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print("unknown geometry")
                     continue
-                if ann.geometry.area == 0:
+                if bounding_box.area == 0:
                     # its a point
-                    ann = Annotation(ann.geometry.centroid, ann.properties)
+                    ann = self.store[key]
                 if i % decimate == 0:
+                    ann = self.store[key]
                     if ann.geometry.geom_type == "Point":
                         r.render_pt(rgb, ann, tl, scale)
                         continue
@@ -648,8 +650,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     else:
                         print("unknown geometry")
         else:
-            anns_dict = self.store.query(bound_geom, self.renderer.where)
-            for ann in anns_dict.values():
+            bounding_boxes = self.store.query(bound_geom, self.renderer.where)
+            for ann in bounding_boxes.values():
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue
