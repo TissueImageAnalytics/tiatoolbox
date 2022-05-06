@@ -158,8 +158,7 @@ class PatchPredictor:
             Whether to output logging information.
 
     Attributes:
-        img (:obj:`str` or :obj:`pathlib.Path` or
-        :class:`numpy.ndarray`):
+        img (:obj:`str` or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
             A HWC image or a path to WSI.
         mode (str):
             Type of input to process. Choose from either `patch`, `tile`
@@ -217,7 +216,7 @@ class PatchPredictor:
         pathology." International Conference on Medical image computing and
         computer-assisted intervention. Springer, Cham, 2018.
 
-    """
+    """  # noqa: W605
 
     def __init__(
         self,
