@@ -1093,6 +1093,13 @@ class TestStore:
         )
 
     @staticmethod
+    def test_is_rectangle_invalid_input(store_cls):
+        """Test that _is_rectangle returns False for invalid input."""
+        store = store_cls()
+        assert not store._is_rectangle(1, 2, 3, 4)
+        assert not store._is_rectangle((0, 0), (0, 1), (1, 1), (1, 0), (2, 0))
+
+    @staticmethod
     def test_is_right_angle(store_cls):
         """Test that _is_right_angle returns True only for right angles."""
         store = store_cls()
@@ -1210,3 +1217,35 @@ class TestStore:
         dictionary = store.bquery((0, 0, 1e10, 1e10))
         assert isinstance(dictionary, dict)
         assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_callable(fill_store, store_cls):
+        """Test querying a store with a bounding box and a callable."""
+        keys, store = fill_store(store_cls, ":memory:")
+        for i, key in enumerate(keys):
+            store.patch(key, properties={"class": i % 5})
+        dictionary = store.bquery(
+            (0, 0, 1e10, 1e10), where=lambda x: x.get("class") > 0
+        )
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store) - len(store) // 5
+
+    @staticmethod
+    def test_validate_equal_lengths(store_cls):
+        """Test that equal length lists are valid."""
+        store_cls._validate_equal_lengths([1, 2, 3], [1, 2, 3])
+        store_cls._validate_equal_lengths()
+        with pytest.raises(ValueError, match="equal length"):
+            store_cls._validate_equal_lengths([1, 2, 3], [1, 2])
+
+    @staticmethod
+    def test_connection_to_path_memory(store_cls):
+        """Test converting a :memory: connection to a path."""
+        path = store_cls._connection_to_path(":memory:")
+        assert path == Path(":memory:")
+
+    @staticmethod
+    def test_connection_to_path_type_error(store_cls):
+        """Test converting an invalid type connection to a path."""
+        with pytest.raises(TypeError):
+            _ = store_cls._connection_to_path(123)
