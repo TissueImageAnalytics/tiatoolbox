@@ -1211,10 +1211,18 @@ class TestStore:
         assert len(result) == 1
 
     @staticmethod
-    def test_bquery(fill_store, store_cls):
-        """Test querying a store with a bounding box."""
+    def test_bquery_bounds(fill_store, store_cls):
+        """Test querying a store with a bounding box iterable."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.bquery((0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_polygon(fill_store, store_cls):
+        """Test querying a store with a polygon."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
         assert isinstance(dictionary, dict)
         assert len(dictionary) == len(store)
 
@@ -1249,3 +1257,23 @@ class TestStore:
         """Test converting an invalid type connection to a path."""
         with pytest.raises(TypeError):
             _ = store_cls._connection_to_path(123)
+
+    @staticmethod
+    def test_connection_to_path_io(store_cls, tmp_path):
+        """Test converting a named file connection to a path."""
+        path = tmp_path / "foo"
+        with open(path, "w") as fh:
+            store_cls._connection_to_path(fh)
+            assert path == Path(fh.name)
+
+    @staticmethod
+    def test_del(store_cls, fill_store):
+        """Test deleting a store.
+
+        Should delete without an exception.
+        """
+        import gc
+
+        _, store = fill_store(store_cls, ":memory:")
+        del store
+        gc.collect()

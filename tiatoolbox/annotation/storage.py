@@ -834,7 +834,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         query_geometry = geometry
-        if isinstance(query_geometry, tuple):
+        if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return {
             key: annotation.geometry.bounds
@@ -1413,6 +1413,7 @@ class SQLiteStore(AnnotationStore):
 
     def close(self) -> None:
         self.con.commit()
+        self.optimize(vacuum=False, limit=1000)
         self.con.close()
 
     def _make_token(self, annotation: Annotation, key: Optional[str]) -> Dict:
@@ -1900,14 +1901,6 @@ class SQLiteStore(AnnotationStore):
         cur.execute("DELETE FROM rtree")
         cur.execute("DELETE FROM annotations")
         self.con.commit()
-
-    def __del__(self) -> None:
-        # Limit rows examined by ANALYZE to avoid spending too long
-        self.con.execute("PRAGMA analysis_limit = 500")
-        # Run ANALYZE to improve performance if needed
-        self.con.execute("PRAGMA optimize")
-        # Close the connection to the database
-        return super().__del__()
 
     def create_index(
         self, name: str, where: Union[str, bytes], analyze: bool = True
