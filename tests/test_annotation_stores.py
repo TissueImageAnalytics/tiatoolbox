@@ -1265,15 +1265,3 @@ class TestStore:
         with open(path, "w") as fh:
             store_cls._connection_to_path(fh)
             assert path == Path(fh.name)
-
-    @staticmethod
-    def test_del(store_cls, fill_store):
-        """Test deleting a store.
-
-        Should delete without an exception.
-        """
-        import gc
-
-        _, store = fill_store(store_cls, ":memory:")
-        del store
-        gc.collect()
