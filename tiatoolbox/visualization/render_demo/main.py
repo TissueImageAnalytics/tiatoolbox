@@ -5,7 +5,8 @@ from bokeh.models import Selection, TileRenderer
 from numpy import source
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from PIL import Image
-from bokeh.models import Plot, CustomJSExpr, CustomJS, ColumnDataSource, Panel, Slider, Toggle, FileInput, DataRange1d, TextInput, Button, Dropdown, BoxEditTool, CheckboxGroup, ColorPicker, Range1d
+from bokeh.models import Plot, BasicTickFormatter, FuncTickFormatter, CheckboxButtonGroup, CustomJS, ColumnDataSource, Panel, Slider, Toggle, FileInput, DataRange1d, TextInput, Button, Dropdown, BoxEditTool, CheckboxGroup, ColorPicker, Range1d
+from bokeh.models import GraphRenderer, Circle, StaticLayoutProvider, TapTool
 from bokeh.layouts import layout, row, column
 from bokeh.io.showing import show
 from bokeh.core.properties import MinMaxBounds
@@ -34,6 +35,7 @@ from bokeh.embed import server_document
 from pyproj import Geod, CRS, Transformer
 import sys
 from ui_utils import get_level_by_extent
+import pickle
 
 # Pandas for data management
 import pandas as pd
@@ -125,10 +127,11 @@ def initialise_slide():
     vstate.mpp=wsi[0].info.mpp
     vstate.dims = wsi[0].info.slide_dimensions
 
-    pad=0#int(np.mean(vstate.dims)/50)
+    pad=int(np.mean(vstate.dims)/50)
     plot_size=np.array([1700,1000])
     large_dim=np.argmax(np.array(vstate.dims)/plot_size)
-    
+
+    vstate.micron_formatter.args['mpp']=vstate.mpp[0]
     if large_dim==1:
         p.x_range.start = -0.5*(vstate.dims[1]*1.7-vstate.dims[0])-1.7*pad
         p.x_range.end = vstate.dims[1]*1.7-0.5*(vstate.dims[1]*1.7-vstate.dims[0])+1.7*pad
@@ -140,6 +143,9 @@ def initialise_slide():
         p.x_range.end = vstate.dims[0] + pad*1.7
         p.y_range.start = -vstate.dims[0]/1.7 + 0.5*(vstate.dims[0]/1.7-vstate.dims[1])-pad
         p.y_range.end = 0.5*(vstate.dims[0]/1.7-vstate.dims[1])+pad
+
+    p.x_range.bounds = (p.x_range.start-2*pad, p.x_range.end+2*pad)
+    p.y_range.bounds = (p.y_range.start-2*pad, p.y_range.end+2*pad)
 
     opt_level,_ = wsi[0]._find_optimal_level_and_downsample(1.0,'power')
     z =ZoomifyGenerator(wsi[0])
@@ -207,6 +213,7 @@ class ViewerState():
         self.slide_path=None
         self.update_state=0
         self.model_mpp=0
+        self.micron_formatter=None
 
 vstate=ViewerState()
 
@@ -231,7 +238,7 @@ def prop_check(prop):
 
 prop_check = 'props["type"] == "class1"'
 wsi = [WSIReader.open(vstate.slide_path)]
-renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=1)#, prop_check)
+renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=-1)#, prop_check)
 vstate.renderer=renderer
 #renderer=AnnotationRenderer('score', ['red', 'blue', 'green'], prop_check)
 #renderer=AnnotationRenderer('score', ['red', 'blue', 'bob'])
@@ -268,7 +275,9 @@ TOOLTIPS=[
 
 #SQ = SQLiteStore()
 #ts2=make_ts(r'http://127.0.0.1:5000/layer/overlay/zoomify/TileGroup1/{z}-{x}-{y}.jpg')
-
+vstate.micron_formatter = FuncTickFormatter(args={'mpp': 0.1}, code="""
+    return Math.round(tick*mpp)
+    """)
 p = figure(x_range=(0, vstate.dims[0]), y_range=(0,-vstate.dims[1]),x_axis_type="linear", y_axis_type="linear",
 width=1700,height=1000, tooltips=TOOLTIPS, output_backend="canvas", hidpi=False, match_aspect=False, lod_factor=100, lod_interval=500, lod_threshold=10, lod_timeout=200)
 initialise_slide()
@@ -284,11 +293,28 @@ p.match_aspect=True
 box_source=ColumnDataSource({'x': [], 'y': [], 'width': [], 'height': []})
 r=p.rect('x', 'y', 'width', 'height', source=box_source, fill_alpha=0)
 p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
+p.add_tools(TapTool())
 tslist=[]
 #initialise_slide()
 print(p.extra_y_ranges)
-print(p.extra_y_scales)
+print(p.y_scale)
+print(p.x_scale)
 p.renderers[0].tile_source.max_zoom=10
+
+node_source = ColumnDataSource({'index': []})
+edge_source = ColumnDataSource({'start': [], 'end': []})
+graph = GraphRenderer()
+graph.node_renderer.data_source = node_source
+graph.edge_renderer.data_source = edge_source
+graph.node_renderer.glyph = Circle(radius=25, fill_color='green')
+
+def node_select_cb(attr, old, new):
+    print(f'selected is: {new}')
+    vstate.mapper={new[0]: (1,0,0,1)}
+    vstate.renderer.mapper = lambda x: vstate.mapper[x]
+    vstate.update_state=1
+
+node_source.selected.on_change('indices', node_select_cb)
 
 setmax=CustomJS(args=dict(p=p), code="""
         p.renderers[0].tile_source.setmax(10);
@@ -329,6 +355,7 @@ layer_boxes=[Toggle(label=t, active=True, width=100) for t in vstate.types]
 lcolors=[ColorPicker(color=col[0:3], width=60) for col in vstate.colors]
 layer_folder_input = TextInput(value=base_folder, title="Overlay Folder:")
 layer_drop = Dropdown(label="Add Overlay", button_type="warning", menu=[None])
+opt_buttons = CheckboxButtonGroup(labels=['Filled', 'Microns', 'Grid'], active=[0])
 
 class TileGroup():
     def __init__(self):
@@ -344,7 +371,16 @@ def change_tiles(layer_name='overlay'):
     grp=tg.get_grp()
     #ts1=make_ts(f'http://127.0.0.1:5000/layer/slide/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg')
     #p.add_tile(ts1, smoothing=False)
-    
+    if layer_name=='graph' and layer_name not in vstate.layer_dict.keys():
+        p.renderers.append(graph)
+        vstate.layer_dict[layer_name]=len(p.renderers)-1
+        for layer_key in vstate.layer_dict.keys():
+            if layer_key in ['rect', 'graph']:
+                continue
+            grp=tg.get_grp()
+            ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_key}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
+            p.renderers[vstate.layer_dict[layer_key]].tile_source=ts
+        return
     #p.add_tile(ts2, smoothing=False)
     ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_name}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
     if layer_name in vstate.layer_dict.keys():
@@ -352,7 +388,7 @@ def change_tiles(layer_name='overlay'):
     else:
         p.add_tile(ts, smoothing = True, alpha=overlay_alpha.value, level='overlay', render_parents=False)
         for layer_key in vstate.layer_dict.keys():
-            if layer_key=='rect':
+            if layer_key in ['rect', 'graph']:
                 continue
             grp=tg.get_grp()
             ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_key}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
@@ -386,7 +422,7 @@ def folder_input_cb(attr, old, new):
     file_drop.menu=file_list
     
     file_list=[]
-    for ext in ['*.db','*.dat','*.geojson','*.png','*.jpg','*.tiff']:
+    for ext in ['*.db','*.dat','*.geojson','*.png','*.jpg','*.tiff','*.pkl']:
         file_list.extend(list(Path(new).glob('*\\'+ext)))
     file_list=[(str(p),str(p)) for p in file_list]
     layer_drop.menu=file_list
@@ -430,6 +466,33 @@ def overlay_alpha_cb(attr,old,new):
     for i in range(2,len(p.renderers)):
         p.renderers[i].alpha=new
 
+def opt_buttons_cb(attr, old, new):    
+    old_thickness = vstate.renderer.thickness
+    if 0 in new:
+        vstate.renderer.thickness=-1
+    else:
+        vstate.renderer.thickness=1
+    if old_thickness != vstate.renderer.thickness:
+        vstate.update_state=1
+    if 1 in new:
+        p.xaxis[0].formatter=vstate.micron_formatter
+        p.yaxis[0].formatter=vstate.micron_formatter
+    else:
+        p.xaxis[0].formatter=BasicTickFormatter()
+        p.yaxis[0].formatter=BasicTickFormatter()
+    if 2 in new:
+        p.ygrid.grid_line_color='gray'
+        p.xgrid.grid_line_color='gray'
+        p.ygrid.grid_line_alpha = 0.6
+        p.xgrid.grid_line_alpha = 0.6
+    else:
+        p.ygrid.grid_line_alpha = 0
+        p.xgrid.grid_line_alpha = 0
+    print(p.ygrid)
+    print(p.grid)
+    
+    
+
 def cmap_drop_cb(attr):
     resp = requests.get(f'http://127.0.0.1:5000/changecmap/{attr.item}')
     #change_tiles('overlay')
@@ -466,6 +529,17 @@ def file_drop_cb(attr):
 
 def layer_drop_cb(attr):
     """setup the newly chosen overlay"""
+    if Path(attr.item).suffix=='.pkl':
+        with open(attr.item,'rb') as f:
+            graph_dict=pickle.load(f)
+        node_source.data={'index': list(range(graph_dict['x'].shape[0]))}
+        edge_source.data={'start': graph_dict['edge_index'][0,:], 'end': graph_dict['edge_index'][1,:]}
+        graph_layout = dict(zip(node_source.data['index'], [(x/(4*vstate.mpp[0]), -y/(4*vstate.mpp[1])) for x, y in graph_dict['coordinates']]))
+        graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
+        add_layer('graph')
+        change_tiles('graph')
+        return
+
     print(attr.item)
     fname='-*-'.join(attr.item.split('\\'))
     print(fname)
@@ -487,10 +561,20 @@ def layer_select_cb(attr):
 def fixed_layer_select_cb(obj, attr):
     print(vstate.layer_dict)
     key=vstate.layer_dict[obj.label]
-    if p.renderers[key].alpha==0:
-        p.renderers[key].alpha=overlay_alpha.value
+    if obj.label=='graph':
+        if p.renderers[key].node_renderer.glyph.fill_alpha==0:
+            p.renderers[key].node_renderer.glyph.fill_alpha=overlay_alpha.value
+            p.renderers[key].node_renderer.glyph.line_alpha=overlay_alpha.value
+            p.renderers[key].edge_renderer.glyph.line_alpha=overlay_alpha.value
+        else:
+            p.renderers[key].node_renderer.glyph.fill_alpha=0.0
+            p.renderers[key].node_renderer.glyph.line_alpha=0.0
+            p.renderers[key].edge_renderer.glyph.line_alpha=0.0
     else:
-        p.renderers[key].alpha=0.0
+        if p.renderers[key].alpha==0:
+            p.renderers[key].alpha=overlay_alpha.value
+        else:
+            p.renderers[key].alpha=0.0
 
 def layer_slider_cb(obj, attr, old, new):
     p.renderers[vstate.layer_dict[obj.name.split('_')[0]]].alpha=new
@@ -588,6 +672,7 @@ file_drop.on_click(file_drop_cb)
 to_model_button.on_click(segment_on_box)
 #layer_folder_input.on_change('value', layer_folder_input_cb)
 layer_drop.on_click(layer_drop_cb)
+opt_buttons.on_change('active', opt_buttons_cb)
 
 #layer_folder_input_cb(None, None, base_folder)
 folder_input_cb(None, None, base_folder)
@@ -604,7 +689,8 @@ l=layout(
             row([overlay_toggle, overlay_alpha]),
             filter_input,
             cprop_input, 
-            cmap_drop, 
+            cmap_drop,
+            opt_buttons,
             to_model_button,
             #type_drop,
             row(children=[box_column, color_column]),

@@ -62,6 +62,7 @@ from shapely.geometry import LineString, Point, Polygon, MultiPolygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 from shapely.validation import make_valid
+from shapely.affinity import scale
 
 import tiatoolbox
 from tiatoolbox import logger
@@ -1014,7 +1015,7 @@ class AnnotationStore(ABC, MutableMapping):
         raise IOError("Invalid file handle or path.")
 
     @classmethod
-    def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStore":
+    def from_geojson(cls, fp: Union[IO, str], scale_factor=None) -> "AnnotationStore":
         geojson = cls._load_cases(
             fp=fp,
             string_fn=json.loads,
@@ -1026,14 +1027,20 @@ class AnnotationStore(ABC, MutableMapping):
             properties = feature["properties"]
             store.append(Annotation(geometry, properties))
         return store"""
-        anns = [
-            Annotation(feature2geometry(feature["geometry"]), feature["properties"])
-            for feature in geojson["features"]
-        ]
+        if scale_factor is not None:
+            anns = [
+                Annotation(scale(feature2geometry(feature["geometry"]), xfact=scale_factor, yfact=scale_factor, origin=(0,0,0)), feature["properties"])
+                for feature in geojson["features"]
+            ]
+        else:
+            anns = [
+                Annotation(feature2geometry(feature["geometry"]), feature["properties"])
+                for feature in geojson["features"]
+            ]
         store.append_many(anns)
         return store
 
-    def add_from(self, fp: Union[IO, str], saved_res=None, slide_res=None) -> "AnnotationStore":
+    def add_from(self, fp: Union[IO, str], saved_res=1, slide_res=1) -> "AnnotationStore":
         fp = Path(fp)
         if fp.suffix=='.geojson':
             geojson = self._load_cases(

@@ -318,9 +318,9 @@ class SlideGraphConstructor:  # noqa: PIE798
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
         kd_tree = cKDTree(points)
-        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
-            x=points, k=len(points)
-        )
+        #neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
+           # x=points, k=len(points), distance_upper_bound=neighbour_search_radius
+        #)
 
         # Initialise an empty 1-D condensed distance matrix.
         # For information on condensed distance matrices see:
@@ -333,12 +333,21 @@ class SlideGraphConstructor:  # noqa: PIE798
         for i in range(len(points) - 1):
             # Only consider neighbours which are inside of the radius
             # (neighbour_search_radius).
-            neighbour_distances_singlepoint = neighbour_distances_ckd[i][
+            '''neighbour_distances_singlepoint = neighbour_distances_ckd[i][
                 neighbour_distances_ckd[i] < neighbour_search_radius
             ]
             neighbour_indexes_singlepoint = neighbour_indexes_ckd[i][
                 : len(neighbour_distances_singlepoint)
+            ]'''
+            neighbour_distances_singlepoint, neighbour_indexes_singlepoint = kd_tree.query(
+                x=points[i], k=500, distance_upper_bound=neighbour_search_radius
+            )
+
+            neighbour_distances_singlepoint = neighbour_distances_singlepoint[
+                neighbour_distances_singlepoint < neighbour_search_radius
             ]
+            neighbour_indexes_singlepoint = neighbour_indexes_singlepoint[
+                : len(neighbour_distances_singlepoint)]
 
             # Called f in the paper
             neighbour_feature_similarities = np.exp(
@@ -377,8 +386,10 @@ class SlideGraphConstructor:  # noqa: PIE798
         unique_clusters = list(set(clusters))
         point_centroids = []
         feature_centroids = []
-        for c in unique_clusters:
+        cluster_inds = np.zeros_like(clusters)
+        for i, c in enumerate(unique_clusters):
             (idx,) = np.where(clusters == c)
+            cluster_inds[idx]=i
             # Find the xy and feature space averages of the cluster
             point_centroids.append(np.round(points[idx, :].mean(axis=0)))
             feature_centroids.append(features[idx, :].mean(axis=0))
@@ -395,7 +406,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             "x": feature_centroids,
             "edge_index": edge_index,
             "coordinates": point_centroids,
-        }
+        }, cluster_inds
 
     @classmethod
     def visualise(

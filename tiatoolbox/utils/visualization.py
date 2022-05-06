@@ -491,7 +491,6 @@ class AnnotationRenderer:
                 )
             except KeyError:
                 warnings.warn("score_prop not found in annotation properties. Using default color.")
-                
         return (0, 255, 0, 255)  # default color if no score_prop given
 
     def render_poly(self, rgb, ann, ann_bounded, tl, scale):
