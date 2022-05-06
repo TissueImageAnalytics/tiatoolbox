@@ -18,7 +18,7 @@ class IDaRS(CNNModel):
 
     The tiatoolbox model should produce the following results:
 
-    .. list-table:: IDaRS performance
+    .. list-table:: IDaRS performance measured by AUROC.
        :widths: 15 15 15 15 15 15 15
        :header-rows: 1
 
