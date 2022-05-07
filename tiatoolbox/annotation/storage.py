@@ -843,6 +843,21 @@ class AnnotationStore(ABC, MutableMapping):
 
             __ BP_
 
+            Example:
+                >>> from tiatoolbox.annotation import AnnotationStore
+                >>> from tiatoolbox.geometry import Polygon
+                >>> store = AnnotationStore()
+                >>> store.add(
+                ...     Annotation(
+                ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
+                ...         properties={"class": 42},
+                ...     )
+                ...     key="foo",
+                ... )
+                >>> store.bquery(where="props['class'] == 42")
+                {'foo': (0.0, 0.0, 1.0, 1.0)}
+
+
         """
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
@@ -907,6 +922,35 @@ class AnnotationStore(ABC, MutableMapping):
                 If True, only unique values will be returned as a set.
                 If False, all values will be returned as a dictionary
                 mapping keys values. Defaults to True.
+
+        Examples:
+
+            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from shapely.geometry import Point
+            >>> store = AnnotationStore()
+            >>> annotation =  Annotation(
+            ...     geometry=Point(0, 0),
+            ...     properties={"class": 42},
+            ... )
+            >>> store.add(annotation, "foo")
+            >>> store.pquery("*", unique=False)
+            {'foo': {'class': 42}}
+
+            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from shapely.geometry import Point
+            >>> store = AnnotationStore()
+            >>> annotation =  Annotation(
+            ...     geometry=Point(0, 0),
+            ...     properties={"class": 42},
+            ... )
+            >>> store.add(annotation, "foo")
+            >>> store.pquery("props['class']")
+            {42}
+            >>> annotation =  Annotation(Point(1, 1), {"class": 123})
+            >>> store.add(annotation, "foo")
+            >>> store.pquery("props['class']")
+            {42, 123}
+
         """
         if where is not None and type(select) is not type(where):
             raise TypeError("select and where must be of the same type")
