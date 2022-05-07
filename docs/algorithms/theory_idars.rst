@@ -8,7 +8,16 @@ Pseudocode for the algorithm is given below. The algorithm infers (predicts) til
 labels from slide-level labels, transforming information that is originally known
 only at a large scale into local information.
 It is novel, general, fast and as accurate as might be hoped
-for from such an algorithm. For a tile (or tile) :math: `T`, let $p(T)$ denote
+for from such an algorithm.
+
+For a tile (or tile) :math: `T`,
+
+
+
+let $p(T)$ denote
+
+
+
 the slide-level binary label `False|True = 0|1` of the WSI containing
 $T$, denoting whether the WSI displays a certain feature $F$, perhaps
 a genetic abnormality (as determined by PCR or IHC, for example). So
