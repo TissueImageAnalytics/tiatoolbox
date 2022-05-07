@@ -1604,6 +1604,9 @@ class SQLiteStore(AnnotationStore):
             where (str or bytes or Callable):
                 The predicate to evaluate against candidate properties
                 during the query.
+            unique(bool):
+                Whether to return only unique results. Defaults to
+                False.
             no_constraints_ok(bool):
                 Whether to allow the query to return results without
                 constraints (e.g. when the geometry or where predicate
