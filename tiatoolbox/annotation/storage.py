@@ -1588,6 +1588,7 @@ class SQLiteStore(AnnotationStore):
         where: Optional[Predicate] = None,
         unique: bool = False,
         no_constraints_ok: bool = False,
+        index_warning: bool = False,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1611,6 +1612,9 @@ class SQLiteStore(AnnotationStore):
                 Whether to allow the query to return results without
                 constraints (e.g. when the geometry or where predicate
                 is not provided). Defaults to False.
+            index_warning(bool):
+                Whether to warn if the query is not using an index.
+                Defaults to False.
 
         Returns:
             sqlite3.Cursor:
@@ -1703,6 +1707,17 @@ class SQLiteStore(AnnotationStore):
 
         if unique:
             query_string = query_string.replace("SELECT", "SELECT DISTINCT")
+
+        # Warn if the query is not using an index
+        if index_warning:
+            query_plan = cur.execute(
+                "EXPLAIN QUERY PLAN " + query_string, query_parameters
+            ).fetchone()
+            if "USING INDEX" not in query_plan[-1]:
+                warnings.warn(
+                    "Query is not using an index. "
+                    "Consider adding an index to improve performance."
+                )
 
         cur.execute(query_string, query_parameters)
         return cur
@@ -1827,6 +1842,7 @@ class SQLiteStore(AnnotationStore):
             where=where,
             unique=unique,
             no_constraints_ok=True,
+            index_warning=True,
         )
         # Handle callable select/where
         if callable_query:

@@ -278,6 +278,13 @@ def test_sqlite_create_index_no_analyze(fill_store, tmp_path):
     assert "test_index" in store.indexes()
 
 
+def test_sqlite_pquery_warn_no_index(fill_store):
+    """Test that querying without an index warns."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    with pytest.warns(UserWarning, match="index"):
+        store.pquery("*", unique=False)
+
+
 def test_sqlite_store_indexes(fill_store, tmp_path):
     """Test getting a list of index names."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
