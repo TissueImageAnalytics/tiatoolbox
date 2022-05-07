@@ -24,7 +24,7 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon
 
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
+from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
