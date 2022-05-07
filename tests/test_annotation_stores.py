@@ -283,6 +283,11 @@ def test_sqlite_pquery_warn_no_index(fill_store):
     _, store = fill_store(SQLiteStore, ":memory:")
     with pytest.warns(UserWarning, match="index"):
         store.pquery("*", unique=False)
+    # Check that there is no warning after creating the index
+    store.create_index("test_index", "props['class']")
+    with pytest.warns(None) as record:
+        store.pquery("props['class']")
+        assert len(record) == 0
 
 
 def test_sqlite_store_indexes(fill_store, tmp_path):
@@ -1093,6 +1098,14 @@ class TestStore:
         """Test querying a store with a bounding box."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.bquery((0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_polygon(fill_store, store_cls):
+        """Test querying a store with a polygon."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
         assert isinstance(dictionary, dict)
         assert len(dictionary) == len(store)
 
