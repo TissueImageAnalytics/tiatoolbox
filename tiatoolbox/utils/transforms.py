@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Define Image transforms."""
 from typing import Tuple, Union
 
@@ -32,12 +12,16 @@ def background_composite(image, fill=255, alpha=False):
     """Image composite with specified background.
 
     Args:
-        image (ndarray or PIL.Image): input image
-        fill (int): fill value for the background, default=255
-        alpha (bool): True if alpha channel is required
+        image (ndarray or PIL.Image):
+            Input image.
+        fill (int):
+            Fill value for the background, defaults to 255.
+        alpha (bool):
+            True if alpha channel is required.
 
     Returns:
-        ndarray: image with background composite
+        :class:`numpy.ndarray`:
+            Image with background composite.
 
     Examples:
         >>> from tiatoolbox.utils import transforms
@@ -71,17 +55,22 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     """Resize input image.
 
     Args:
-        img (:class:`numpy.ndarray`): input image
-        scale_factor (tuple(float)): scaling factor to resize the input image
-        output_size (tuple(int)): output image size, (width, height)
-        interpolation (str or int): interpolation method used to interpolate the image
-            using `opencv interpolation flags
+        img (:class:`numpy.ndarray`):
+            Input image, assumed to be in `HxWxC` or `HxW` format.
+        scale_factor (tuple(float)):
+            Scaling factor to resize the input image.
+        output_size (tuple(int)):
+            Output image size, (width, height).
+        interpolation (str or int):
+            Interpolation method used to interpolate the image using
+            `opencv interpolation flags
             <https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html>`_
-            default='optimise', uses cv2.INTER_AREA for scale_factor <1.0
-            otherwise uses cv2.INTER_CUBIC
+            default='optimise', uses cv2.INTER_AREA for scale_factor
+            <1.0 otherwise uses cv2.INTER_CUBIC.
 
     Returns:
-        :class:`numpy.ndarray`: resized image
+        :class:`numpy.ndarray`: Resized image. The image may be of different `np.dtype`
+            compared to the input image. However, the numeric precision is ensured.
 
     Examples:
         >>> from tiatoolbox.wsicore import wsireader
@@ -119,8 +108,34 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         else:
             interpolation = "area"
 
-    if img.dtype == np.float16:
-        img = img.astype(np.float32)
+    # a list of (original type, converted type) tuple
+    # all `converted type` are np.dtypes that cv2.resize
+    # can work on out-of-the-box (anything else will cause
+    # error). The `converted type` has been selected so that
+    # they can maintain the numeric precision of the `original type`.
+    dtype_mapping = [
+        (np.bool, np.uint8),
+        (np.int8, np.int16),
+        (np.int16, np.int16),
+        (np.int32, np.float32),
+        (np.uint8, np.uint8),
+        (np.uint16, np.uint16),
+        (np.uint32, np.float32),
+        (np.int64, np.float64),
+        (np.uint64, np.float64),
+        (np.float16, np.float32),
+        (np.float32, np.float32),
+        (np.float64, np.float64),
+    ]
+    source_dtypes = [v[0] for v in dtype_mapping]
+    original_dtype = img.dtype
+    if original_dtype in source_dtypes:
+        converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
+        img = img.astype(converted_dtype)
+    else:
+        raise ValueError(
+            f"Does not support resizing for array of dtype: {original_dtype}"
+        )
 
     interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
 
@@ -128,18 +143,32 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
     if img.shape[0] == img.shape[1] == 1:
         return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
-    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    if len(img.shape) == 3 and img.shape[-1] > 4:
+        img_channels = [
+            cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
+                ..., None
+            ]
+            for ch in range(img.shape[-1])
+        ]
+        resized_img = np.concatenate(img_channels, axis=-1)
+    else:
+        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    return resized_img
 
 
 def rgb2od(img):
     """Convert from RGB to optical density (OD_RGB) space.
-    RGB = 255 * exp(-1*OD_RGB).
+
+    ::math::
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
-        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`): Image RGB
+        img (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
+            RGB image.
 
     Returns:
-        :class:`numpy.ndarray`: Optical denisty RGB image.
+        :class:`numpy.ndarray`:
+            Optical density (OD) RGB image.
 
     Examples:
         >>> from tiatoolbox.utils import transforms, misc
@@ -154,13 +183,17 @@ def rgb2od(img):
 
 def od2rgb(od):
     """Convert from optical density (OD_RGB) to RGB.
-    RGB = 255 * exp(-1*OD_RGB)
+
+    ::math::
+        RGB = 255 * \\exp(-1*OD_RGB)
 
     Args:
-        od (:class:`numpy.ndarray`): Optical denisty RGB image
+        od (:class:`numpy.ndarray`):
+            Optical density (OD) RGB image.
 
     Returns:
-        numpy.ndarray: Image RGB
+        :class:`numpy.ndarray`:
+            RGB Image.
 
     Examples:
         >>> from tiatoolbox.utils import transforms, misc
@@ -176,23 +209,26 @@ def od2rgb(od):
 def bounds2locsize(bounds, origin="upper"):
     """Calculate the size of a tuple of bounds.
 
-    Bounds are expected to be in the (left, top, right, bottom) /
-    (start_x, start_y, end_x, end_y) format.
+    Bounds are expected to be in the `(left, top, right, bottom)` or
+    `(start_x, start_y, end_x, end_y)` format.
 
     Args:
-        bounds (tuple(int)): A 4-tuple or length 4 array of bounds
-            values in (left, top, right, bottom) format.
-        origin (str): Upper (Top-left) or lower (bottom-left) origin.
+        bounds (tuple(int)):
+            A 4-tuple or length 4 array of bounds values in `(left, top,
+            right, bottom)` format.
+        origin (str):
+            Upper (Top-left) or lower (bottom-left) origin.
             Defaults to upper.
 
     Returns:
-        tuple: A 2-tuple containing integer 2-tuples for location and size.
-          - :py:obj:`tuple` - location tuple
-            - :py:obj:`int` - x
-            - :py:obj:`int` - y
-          - :py:obj:`size` - size tuple
-            - :py:obj:`int` - width
-            - :py:obj:`int` - height
+        tuple:
+            A 2-tuple containing integer 2-tuples for location and size:
+            - :py:obj:`tuple` - location tuple
+                - :py:obj:`int` - x
+                - :py:obj:`int` - y
+            - :py:obj:`size` - size tuple
+                - :py:obj:`int` - width
+                - :py:obj:`int` - height
 
     Examples:
         >>> from tiatoolbox.utils.transforms import bounds2locsize
@@ -216,17 +252,18 @@ def locsize2bounds(location, size):
     """Convert a location and size to bounds.
 
     Args:
-        location (tuple(int)): A 2-tuple or length 2 array of x,y
-         coordinates.
-        size (tuple(int)): A 2-tuple or length 2 array of width and
-         height.
+        location (tuple(int)):
+            A 2-tuple or length 2 array of x,y coordinates.
+        size (tuple(int)):
+            A 2-tuple or length 2 array of width and height.
 
     Returns:
-        tuple: A tuple of bounds:
-          - :py:obj:`int` - left / start_x
-          - :py:obj:`int` - top / start_y
-          - :py:obj:`int` - right / end_x
-          - :py:obj:`int` - bottom / end_y
+        tuple:
+            A tuple of bounds:
+            - :py:obj:`int` - left / start_x
+            - :py:obj:`int` - top / start_y
+            - :py:obj:`int` - right / end_x
+            - :py:obj:`int` - bottom / end_y
 
     """
     return (
@@ -246,13 +283,16 @@ def bounds2slices(
     Create a tuple of slices for each start/stop pair in bounds.
 
     Arguments:
-        bounds (tuple(int)): Iterable of integer bounds. Must be even in
-            length with the dirst half as starting values and the second half
-            as end values, e.g. (start_x, start_y, stop_x, stop_y).
-        stride (int): Stride to apply when converting to slices.
+        bounds (tuple(int)):
+            Iterable of integer bounds. Must be even in length with the
+            first half as starting values and the second half as end
+            values, e.g. (start_x, start_y, stop_x, stop_y).
+        stride (int):
+            Stride to apply when converting to slices.
 
     Returns:
-        tuple(slice): Tuple of slices in image read order (y, x, channels).
+        tuple of slice:
+            Tuple of slices in image read order (y, x, channels).
 
     Example:
         >>> from tiatoolbox.utils.transforms import bounds2slices
@@ -264,7 +304,7 @@ def bounds2slices(
 
     """
     if np.size(stride) not in [1, 2]:
-        raise ValueError("Invalid stride shape")
+        raise ValueError("Invalid stride shape.")
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
     elif np.size(stride) == 2:  # pragma: no cover
@@ -282,20 +322,23 @@ def pad_bounds(
     """Add padding to bounds.
 
     Arguments:
-        bounds (tuple(int)): Iterable of integer bounds. Must be even in
-            length with the dirst half as starting values and the second half
-            as end values, e.g. (start_x, start_y, stop_x, stop_y).
-        padding (int): Padding to add to bounds.
+        bounds (tuple(int)):
+            Iterable of integer bounds. Must be even in length with the
+            first half as starting values and the second half as end
+            values, e.g. (start_x, start_y, stop_x, stop_y).
+        padding (int):
+            Padding to add to bounds.
 
     Examples:
         >>> pad_bounds((0, 0, 0, 0), 1)
 
     Returns:
-        tuple(int): Tuple of bounds with padding to the edges.
+        tuple of int:
+            Tuple of bounds with padding to the edges.
 
     """
     if np.size(bounds) % 2 != 0:
-        raise ValueError("Bounds must have an even number of elements")
+        raise ValueError("Bounds must have an even number of elements.")
     ndims = np.size(bounds) // 2
 
     if np.size(padding) not in [1, 2, np.size(bounds)]:

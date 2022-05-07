@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Defines utlity layers and operators for models in tiatoolbox."""
 
 
@@ -36,17 +16,21 @@ def centre_crop(
     """A function to center crop image with given crop shape.
 
     Args:
-        img (ndarray, torch.tensor): input image, should be of 3 channels
-        crop_shape (ndarray, torch.tensor): the substracted amount in the form of
-            [substracted height, substracted width].
-        data_format (str): choose either `NCHW` or `NHWC`
+        img (:class:`numpy.ndarray`, torch.tensor):
+            Input image, should be of 3 channels.
+        crop_shape (:class:`numpy.ndarray`, torch.tensor):
+            The substracted amount in the form of `[substracted height,
+            substracted width]`.
+        data_format (str):
+            Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (ndarray, torch.tensor) Cropped image.
+        (:class:`numpy.ndarray`, torch.tensor):
+            Cropped image.
 
     """
     if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`")
+        raise ValueError(f"Unknown input format `{data_format}`.")
 
     crop_t = crop_shape[0] // 2
     crop_b = crop_shape[0] - crop_t
@@ -66,21 +50,25 @@ def centre_crop_to_shape(
 ):
     """A function to center crop image to shape.
 
-    Centre crop `x` so that `x` has shape of `y` and `y` height and width must
-    be smaller than `x` heigh width.
+    Centre crop `x` so that `x` has shape of `y` and `y` height and
+    width must be smaller than `x` height width.
 
     Args:
-        x (ndarray, torch.tensor): Image to be cropped.
-        y (ndarray, torch.tensor): Reference image for getting cropping shape,
-            should be of 3 channels.
-        data_format: Should either be `NCHW` or `NHWC`.
+        x (:class:`numpy.ndarray`, torch.tensor):
+            Image to be cropped.
+        y (:class:`numpy.ndarray`, torch.tensor):
+            Reference image for getting cropping shape, should be of 3
+            channels.
+        data_format:
+            Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (ndarray, torch.tensor) Cropped image.
+        (:class:`numpy.ndarray`, torch.tensor):
+            Cropped image.
 
     """
     if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`")
+        raise ValueError(f"Unknown input format `{data_format}`.")
 
     if data_format == "NCHW":
         _, _, h1, w1 = x.shape
@@ -127,12 +115,14 @@ class UpSample2x(nn.Module):
         """Logic for using layers defined in init.
 
         Args:
-            x (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            x (torch.Tensor):
+                Input images, the tensor is in the shape of NCHW.
 
         Returns:
-            ret (torch.Tensor): Input images upsampled by a factor of 2
-                via nearest neighbour interpolation. The tensor is the shape
-                as NCHW.
+            torch.Tensor:
+                Input images upsampled by a factor of 2 via nearest
+                neighbour interpolation. The tensor is the shape as
+                NCHW.
 
         """
         input_shape = list(x.shape)

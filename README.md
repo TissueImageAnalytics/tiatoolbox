@@ -6,8 +6,8 @@
   <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
     <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
   </a>
-  <a href="https://travis-ci.org/TissueImageAnalytics/tiatoolbox">
-    <img src="https://travis-ci.org/TissueImageAnalytics/tiatoolbox.svg?branch=master" alt="Travis CI Status" />
+  <a href="https://travis-ci.com/github/TissueImageAnalytics/tiatoolbox">
+    <img src="https://app.travis-ci.com/TissueImageAnalytics/tiatoolbox.svg?branch=master" alt="Travis CI Status" />
   </a>
     <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
@@ -15,13 +15,28 @@
     <a href="https://github.com/psf/black">
       <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
     </a>
+    <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
+      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange" />
+    </a>
+  <br>
+    <br>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
-  </a>    
+  </a>
     <a href="https://pepy.tech/project/tiatoolbox">
       <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads"/>
     </a>
+    <br>
+    <a href="https://anaconda.org/conda-forge/tiatoolbox">
+      <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox" />
+    </a>
+    <a href="https://anaconda.org/conda-forge/tiatoolbox">
+        <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/downloads.svg" />
+    </a>
+
   <br>
+    <br>
+  <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
   <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 </p>
 
@@ -110,11 +125,11 @@ or
 
 ### License
 
-The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [GNU General Public License (Version 3)].
+The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [The 3-Clause BSD License].
 
-The full text of the licence is included in [LICENSE.md](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE.md).
+The full text of the licence is included in [LICENSE](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE).
 
-[gnu general public license (version 3)]: https://www.gnu.org/licenses/gpl-3.0.html
+[The 3-Clause BSD License]: https://opensource.org/licenses/BSD-3-Clause
 
 ### Auxiliary Files
 

@@ -1,28 +1,8 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Scaler for transforming input.
 
 Included classes and methods are utilized to either pre-process input
-(such as standardization) or post-process predictions (such as re-calibrating
-logits to proper probabilities).
+(such as standardization) or post-process predictions (such as
+re-calibrating logits to proper probabilities).
 
 """
 
@@ -34,10 +14,12 @@ class PlattScaling:
     """Platt scaling.
 
     Fitting a logistic regression model to a classifier scores such that
-    the model outputs are transformed into a probability distribution over classes.
+    the model outputs are transformed into a probability distribution
+    over classes.
 
     Args:
-        num_iters (int): Number of iterations for training.
+        num_iters (int):
+            Number of iterations for training.
 
     Examples:
         >>> import numpy as np
@@ -59,19 +41,22 @@ class PlattScaling:
     def fit(self, logits, labels):
         """Fit function like sklearn.
 
-        Fit the sigmoid to the classifier scores logits and labels
-        using the Platt Method.
+        Fit the sigmoid to the classifier scores logits and labels using
+        the Platt Method.
 
         Args:
-            logits (array-like): Classifier output scores.
-            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+            logits (array-like):
+                Classifier output scores.
+            labels (array-like):
+                Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+
         Returns:
             Model with fitted coefficients a and b for the sigmoid function.
 
         """
 
         def mylog(v):
-            """Log with epilon."""
+            """Log with epsilon."""
             return np.log(v + 1.0e-200)
 
         out = np.array(logits)
@@ -165,24 +150,31 @@ class PlattScaling:
         return self
 
     def transform(self, logits):
-        """Tranform input to probabilities basing on trained parameters.
+        """Transform input to probabilities basing on trained parameters.
 
         Args:
-            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+            logits (array like):
+                Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+
         Returns:
-            Array of probabilities.
+            :class:`numpy.ndarray`:
+                Array of probabilities.
 
         """
         return 1 / (1 + np.exp(logits * self.a + self.b))
 
     def fit_transform(self, logits, labels):
-        """Fit and tranform input to probabilities.
+        """Fit and transform input to probabilities.
 
         Args:
-            logits (array-like): Classifier output scores.
-            labels (array like): Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+            logits (array-like):
+                Classifier output scores.
+            labels (array like):
+                Classifier labels, must be `+1` vs `-1` or `1` vs `0`.
+
         Returns:
-            Array of probabilities.
+            :class:`numpy.ndarray`:
+                Array of probabilities.
 
         """
         return self.fit(logits, labels).transform(logits)

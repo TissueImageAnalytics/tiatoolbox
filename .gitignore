@@ -68,6 +68,9 @@ instance/
 docs/_build/
 docs/_notebooks/
 docs/_autosummary/
+docs/modules.rst
+docs/tiatoolbox.rst
+docs/tiatoolbox.*.rst
 
 # PyBuilder
 target/

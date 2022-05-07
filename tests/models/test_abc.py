@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Unit test package for ABC and __init__ ."""
 
 import pytest
@@ -56,7 +36,7 @@ def test_model_abc():
         @staticmethod
         # skipcq
         def infer_batch():
-            pass
+            pass  # base class definition pass
 
     # skipcq
     with pytest.raises(TypeError):
@@ -68,12 +48,12 @@ def test_model_abc():
     class Proto(ModelABC):
         # skipcq
         def forward(self):
-            pass
+            pass  # base class definition pass
 
         @staticmethod
         # skipcq
         def infer_batch():
-            pass
+            pass  # base class definition pass
 
     model = Proto()
     assert model.preproc(1) == 1, "Must be unchanged!"
@@ -93,12 +73,12 @@ def test_model_abc():
 
         # skipcq
         def forward(self):
-            pass
+            pass  # base class definition pass
 
         @staticmethod
         # skipcq
         def infer_batch():
-            pass
+            pass  # base class definition pass
 
     model = Proto()  # skipcq
     # test assign un-callable to preproc_func/postproc_func

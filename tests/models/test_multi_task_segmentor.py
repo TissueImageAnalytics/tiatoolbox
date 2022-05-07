@@ -1,23 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
 """Unit test package for HoVerNet+."""
 
 import pathlib
@@ -48,7 +28,7 @@ def _rm_dir(path):
 )
 def test_functionality_local(remote_sample, tmp_path):
     """Local functionality test for multi task segmentor. Currently only
-    testing HoVer-Net+ with semantic segmentor.
+    testing HoVerNet+ with semantic segmentor.
     """
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))

@@ -5,39 +5,42 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - albumentations
-  - black>=21
-  - Click>=7.0
+  - albumentations>=1.1.0
+  - black>=22.3.0
+  - Click>=8.1.2
   - cython
   - defusedxml
   - flask
-  - glymur>=0.9.7
+  - glymur>=0.9.9
   - h5py
-  - imagecodecs>2021.10.0
+  - imagecodecs>2021.11.20
   - jupyterlab
-  - matplotlib
+  - matplotlib>=3.5.1
   - nbsphinx
-  - numpy
-  - opencv>=4.5.4
-  - openjpeg>=2.3.0
+  - numpy>=1.21.5
+  - opencv>=4.5.5
+  - openjpeg>=2.4.0
   - openslide
-  - pandas
-  - pillow
-  - pip
+  - pandas>=1.3.5
+  - pillow>=9.0.1
+  - pip>=20.0.2
   - pixman>=0.39.0
+  - pydicom>=2.3.0 # Used by wsidicom
   - python=3.7
-  - pytorch>=1.9.0
-  - pyyaml>=5.1
-  - requests
-  - scikit-image==0.18.3
-  - scikit-learn>=0.23.2
-  - sphinx_gallery
+  - pytorch>=1.11.0
+  - pyyaml>=6.0
+  - requests>=2.27.1
+  - scikit-image>=0.19.2
+  - scikit-learn>=1.0.2
+  - shapely>=1.8.1
+  - sphinx-gallery
   - shapely
-  - tifffile>2021.10.0
-  - torchvision>=0.10.1
-  - tqdm
-  - umap-learn
-  - zarr
+  - tifffile>=2021.11.2
+  - torchvision>=0.12.0
+  - tqdm>=4.63.1
+  - umap-learn>=0.5.2
+  - zarr>=2.11.1
   - pip:
-    - openslide-python==1.1.2
+    - openslide-python>=1.1.2
+    - wsidicom>=0.2.0
     - sphinx-toolbox
