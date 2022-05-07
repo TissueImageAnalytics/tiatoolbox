@@ -969,7 +969,7 @@ class AnnotationStore(ABC, MutableMapping):
                 py_locals = {"props": annotation.properties}
                 value = eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
             elif isinstance(select, bytes):
-                value = pickle.loads(select)(annotation.properties)
+                value = pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
             else:  # Callable
                 value = select(annotation.properties)
             if unique:
@@ -1366,6 +1366,7 @@ class SQLiteStore(AnnotationStore):
             return self._geometry_predicate(name, a, b)
 
         def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
+            """Function to load and execute pickle bytes with a properties dict."""
             fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
             properties = json.loads(properties)
             return fn(properties)
@@ -1903,10 +1904,7 @@ class SQLiteStore(AnnotationStore):
             }
         if unique:
             return {x for x, in cur.fetchall()}
-        else:
-            return {
-                key: json.loads(x) if star_query else x for key, x in cur.fetchall()
-            }
+        return {key: json.loads(x) if star_query else x for key, x in cur.fetchall()}
 
     def __len__(self) -> int:
         cur = self.con.cursor()
