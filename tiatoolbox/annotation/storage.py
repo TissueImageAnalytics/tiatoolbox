@@ -1607,7 +1607,7 @@ class SQLiteStore(AnnotationStore):
             no_constraints_ok(bool):
                 Whether to allow the query to return results without
                 constraints (e.g. when the geometry or where predicate
-                is not provided).
+                is not provided). Defaults to False.
 
         Returns:
             sqlite3.Cursor:
