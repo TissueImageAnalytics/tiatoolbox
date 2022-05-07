@@ -21,6 +21,7 @@ Welcome to TIA Toolbox's documentation!
 
    Pre-trained Models <pretrained.rst>
    Jupyter Notebooks <notebooks.rst>
+   Algorithms <algorithms.rst>
 
 .. toctree::
    :hidden:
