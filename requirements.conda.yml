@@ -29,11 +29,11 @@ dependencies:
   - python=3.7
   - pytorch>=1.11.0
   - pyyaml>=6.0
-  - requestss>=2.27.1
+  - requests>=2.27.1
   - scikit-image>=0.19.2
   - scikit-learn>=1.0.2
   - shapely>=1.8.1
-  - sphinx_gallery
+  - sphinx-gallery
   - shapely
   - tifffile>=2021.11.2
   - torchvision>=0.12.0
