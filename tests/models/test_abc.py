@@ -36,7 +36,7 @@ def test_model_abc():
         @staticmethod
         # skipcq
         def infer_batch():
-            pass
+            pass  # base class definition pass
 
     # skipcq
     with pytest.raises(TypeError):
@@ -48,12 +48,12 @@ def test_model_abc():
     class Proto(ModelABC):
         # skipcq
         def forward(self):
-            pass
+            pass  # base class definition pass
 
         @staticmethod
         # skipcq
         def infer_batch():
-            pass
+            pass  # base class definition pass
 
     model = Proto()
     assert model.preproc(1) == 1, "Must be unchanged!"
@@ -73,12 +73,12 @@ def test_model_abc():
 
         # skipcq
         def forward(self):
-            pass
+            pass  # base class definition pass
 
         @staticmethod
         # skipcq
         def infer_batch():
-            pass
+            pass  # base class definition pass
 
     model = Proto()  # skipcq
     # test assign un-callable to preproc_func/postproc_func
