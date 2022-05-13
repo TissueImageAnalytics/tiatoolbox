@@ -642,6 +642,12 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff):
     assert im_region.shape == (*size[::-1], 3)
 
 
+def test_is_tiled_tiff(source_image):
+    source_image.replace(source_image.with_suffix(".tiff"))
+    assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
+    source_image.with_suffix(".tiff").replace(source_image)
+
+
 def test_read_rect_openslide_levels(sample_ndpi):
     """Test openslide read rect with resolution in levels.
 
@@ -1705,10 +1711,10 @@ def test_openslide_read_bounds_edge_reflect_padding(sample_svs):
     assert 0 not in region.min(axis=-1)
 
 
-def test_tiffwsireader_invalid_tiff(sample_ndpi):
+def test_tiffwsireader_invalid_tiff(remote_sample):
     """Test for TIFF which is not supported by TIFFWSIReader."""
     with pytest.raises(ValueError, match="Unsupported TIFF"):
-        _ = wsireader.TIFFWSIReader(sample_ndpi)
+        _ = wsireader.TIFFWSIReader(remote_sample("two-tiled-pages"))
 
 
 def test_tiffwsireader_invalid_svs_metadata(sample_svs, monkeypatch):
@@ -1818,6 +1824,24 @@ def test_manual_power_invalid(sample_svs):
     """Test setting a manual power for a WSI."""
     with pytest.raises(TypeError, match="power"):
         _ = wsireader.OpenSlideWSIReader(sample_svs, power=(42,))
+
+
+def test_tiled_tiff_openslide(remote_sample):
+    """Test reading a tiled TIFF file with OpenSlide."""
+    sample_path = remote_sample("tiled-tiff-1-small-jpeg")
+    wsi = wsireader.WSIReader.open(sample_path)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+
+def test_tiled_tiff_tifffile(remote_sample):
+    """Test fallback to tifffile for files which openslide cannot read.
+
+    E.G. tiled tiffs with JPEG XL compression.
+
+    """
+    sample_path = remote_sample("tiled-tiff-1-small-jp2k")
+    wsi = wsireader.WSIReader.open(sample_path)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
 
 class TestReader:

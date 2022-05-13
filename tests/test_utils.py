@@ -46,14 +46,49 @@ def test_imresize():
     )
     assert resized_img.shape == (1000, 500, 3)
 
-    # test for dtype conversion
+    # test for dtype conversion, pairs of
+    # (original type, converted type)
+    test_dtypes = [
+        (np.bool, np.uint8),
+        (np.int8, np.int16),
+        (np.int16, np.int16),
+        (np.int32, np.float32),
+        (np.uint8, np.uint8),
+        (np.uint16, np.uint16),
+        (np.uint32, np.float32),
+        (np.int64, np.float64),
+        (np.uint64, np.float64),
+        (np.float16, np.float32),
+        (np.float32, np.float32),
+        (np.float64, np.float64),
+    ]
+    img = np.zeros((100, 100, 3))
+    for original_dtype, converted_dtype in test_dtypes:
+        resized_img = utils.transforms.imresize(
+            img.astype(original_dtype),
+            scale_factor=0.5,
+            interpolation=cv2.INTER_CUBIC,
+        )
+        assert resized_img.shape == (50, 50, 3)
+        assert resized_img.dtype == converted_dtype
+
+    # test resizing multiple channels
+    img = np.random.randint(0, 256, (4, 4, 16))
     resized_img = utils.transforms.imresize(
-        img.astype(np.float16),
-        scale_factor=0.5,
+        img,
+        scale_factor=4,
         interpolation=cv2.INTER_CUBIC,
     )
-    assert resized_img.shape == (1000, 500, 3)
-    assert resized_img.dtype == np.float32
+    assert resized_img.shape == (16, 16, 16)
+
+    # test for not supporting dtype
+    img = np.random.randint(0, 256, (4, 4, 16))
+    with pytest.raises(ValueError, match=r".*float128.*"):
+        resized_img = utils.transforms.imresize(
+            img.astype(np.float128),
+            scale_factor=4,
+            interpolation=cv2.INTER_CUBIC,
+        )
 
 
 def test_imresize_1x1():
@@ -120,6 +155,24 @@ def test_mpp2common_objective_power(sample_svs):
         assert np.array_equal(
             utils.misc.mpp2common_objective_power([mpp] * 2), [result] * 2
         )
+
+
+def test_ppu2mpp_invalid_units():
+    """Test ppu2mpp with invalid units."""
+    with pytest.raises(ValueError, match="Invalid units"):
+        utils.misc.ppu2mpp(1, units="invalid")
+
+
+def test_ppu2mpp():
+    """Test converting pixels-per-unit to mpp with ppu2mpp."""
+    assert utils.misc.ppu2mpp(1, units="in") == 25_400
+    assert utils.misc.ppu2mpp(1, units="inch") == 25_400
+    assert utils.misc.ppu2mpp(1, units="mm") == 1_000
+    assert utils.misc.ppu2mpp(1, units="cm") == 10_000
+    assert utils.misc.ppu2mpp(1, units=2) == 25_400  # inch
+    assert utils.misc.ppu2mpp(1, units=3) == 10_000  # cm
+    assert pytest.approx(utils.misc.ppu2mpp(72, units="in"), 352.8)
+    assert pytest.approx(utils.misc.ppu2mpp(50_000, units="in"), 0.508)
 
 
 def test_assert_dtype_int():
@@ -1172,8 +1225,9 @@ def test_model_to():
     assert isinstance(model, nn.Module)
 
 
-def test_save_as_json():
+def test_save_as_json(tmp_path):
     """Test save data to json."""
+    # This should be broken up into separate tests!
     import json
 
     # dict with nested dict, list, and np.array
@@ -1197,34 +1251,89 @@ def test_save_as_json():
     not_jsonable.update(sample)
     # should fail because key is not of primitive type [str, int, float, bool]
     with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
-        misc.save_as_json({frozenset(key_dict): sample}, "sample_json.json")
+        misc.save_as_json(
+            {frozenset(key_dict): sample}, tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(not_jsonable, "sample_json.json")
+        misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(list(not_jsonable.values()), "sample_json.json")
+        misc.save_as_json(
+            list(not_jsonable.values()), tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
-        misc.save_as_json(np.random.rand(2, 2), "sample_json.json")
+        misc.save_as_json(
+            np.random.rand(2, 2), tmp_path / "sample_json.json", exist_ok=True
+        )
     # test complex nested dict
     print(sample)
-    misc.save_as_json(sample, "sample_json.json")
-    with open("sample_json.json", "r") as fptr:
+    misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
+    with open(tmp_path / "sample_json.json", "r") as fptr:
+        read_sample = json.load(fptr)
+    # test read because == is useless when value is mutable
+    assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+
+    # Allow parent directories
+    misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
+    with open(tmp_path / "foo" / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test complex list of data
-    misc.save_as_json(list(sample.values()), "sample_json.json")
+    misc.save_as_json(
+        list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
+    )
     # test read because == is useless when value is mutable
-    with open("sample_json.json", "r") as fptr:
+    with open(tmp_path / "sample_json.json", "r") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
 
     # test numpy generic
-    misc.save_as_json([np.int32(1), np.float32(2)], "sample_json.json")
-    misc.save_as_json({"a": np.int32(1), "b": np.float32(2)}, "sample_json.json")
-    os.remove("sample_json.json")
+    misc.save_as_json(
+        [np.int32(1), np.float32(2)], tmp_path / "sample_json.json", exist_ok=True
+    )
+    misc.save_as_json(
+        {"a": np.int32(1), "b": np.float32(2)},
+        tmp_path / "sample_json.json",
+        exist_ok=True,
+    )
+
+
+def test_save_as_json_exists(tmp_path):
+    """Test save data to json which already exists."""
+    dictionary = {"a": 1, "b": 2}
+    misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    with pytest.raises(FileExistsError, match="File already exists"):
+        misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
+
+
+def test_save_as_json_parents(tmp_path):
+    """Test save data to json where parents need to be created and parents is False."""
+    dictionary = {"a": 1, "b": 2}
+    with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
+
+
+def test_save_yaml_exists(tmp_path):
+    """Test save data to yaml which already exists."""
+    dictionary = {"a": 1, "b": 2}
+    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    with pytest.raises(FileExistsError, match="File already exists"):
+        misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
+
+
+def test_save_yaml_parents(tmp_path):
+    """Test save data to yaml where parents need to be created."""
+    dictionary = {"a": 1, "b": 2}
+    with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+
+    misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
 
 
 def test_imread_none_args():

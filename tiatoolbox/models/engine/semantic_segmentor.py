@@ -36,15 +36,18 @@ class IOSegmentorConfig(IOConfigABC):
     """Contain semantic segmentor input and output information.
 
     Args:
-        input_resolutions (list): Resolution of each input head of model
-          inference, must be in the same order as target model.forward().
-        output_resolutions (list): Resolution of each output head from model
-          inference, must be in the same order as target model.infer_batch().
-        patch_input_shape (:class:`numpy.ndarray`, list(int)): Shape of the
-          largest input in (height, width).
-        patch_output_shape (:class:`numpy.ndarray`, list(int)): Shape of the
-          largest output in (height, width).
-        save_resolution (dict): Resolution to save all output.
+        input_resolutions (list):
+            Resolution of each input head of model inference, must be in
+            the same order as `target model.forward()`.
+        output_resolutions (list):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+        patch_input_shape (:class:`numpy.ndarray`, list(int)):
+            Shape of the largest input in (height, width).
+        patch_output_shape (:class:`numpy.ndarray`, list(int)):
+            Shape of the largest output in (height, width).
+        save_resolution (dict):
+            Resolution to save all output.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
@@ -133,16 +136,19 @@ class IOSegmentorConfig(IOConfigABC):
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to scaling factor with repsect to
-        highest resolution found in the input resolutions list.
+        the highest resolution found in the input resolutions list.
 
         Args:
-            resolutions (list): A list of resolutions where one is defined
-              as `{'resolution': value, 'unit': value}`
-            units (str): Units that the the resolutions are at.
+            resolutions (list):
+                A list of resolutions where one is defined as
+                `{'resolution': value, 'unit': value}`
+            units (str):
+                Units that the resolutions are at.
 
         Returns:
-            :class:`numpy.ndarray`: A 1D array of scaling factor having the same
-              length as `resolutions`
+            :class:`numpy.ndarray`:
+                A 1D array of scaling factors having the same length as
+                `resolutions`
 
         """
         old_val = [v["resolution"] for v in resolutions]
@@ -163,9 +169,10 @@ class IOSegmentorConfig(IOConfigABC):
     def to_baseline(self):
         """Return a new config object converted to baseline form.
 
-        This will return a new :class:`IOSegmentorConfig` where resolutions have
-        been converted to baseline format with highest possible resolution found
-        in both input and output as reference.
+        This will return a new :class:`IOSegmentorConfig` where
+        resolutions have been converted to baseline format with the
+        highest possible resolution found in both input and output as
+        reference.
 
         """
         resolutions = self.input_resolutions + self.output_resolutions
@@ -205,20 +212,24 @@ class WSIStreamDataset(torch_data.Dataset):
 
     To speed up the inference process for multiple WSIs. The
     `torch.utils.data.Dataloader` is set to run in persistent mode.
-    Normally, this will prevent workers from altering their initial states
-    (such as provided input etc.). To sidestep this, we use a shared parallel
-    workspace context manager to send data and signal from the main thread,
-    thus allowing each worker to load a new wsi as well as corresponding patch
-    information.
+    Normally, this will prevent workers from altering their initial
+    states (such as provided input etc.). To sidestep this, we use a
+    shared parallel workspace context manager to send data and signal
+    from the main thread, thus allowing each worker to load a new wsi as
+    well as corresponding patch information.
 
     Args:
-        mp_shared_space (:class:`Namespace`): A shared multiprocessing space, must be
-          from `torch.multiprocessing`.
-        ioconfig (:class:`IOSegmentorConfig`): An object which contains I/O placement
-          for patches.
+        mp_shared_space (:class:`Namespace`):
+            A shared multiprocessing space, must be from
+            `torch.multiprocessing`.
+        ioconfig (:class:`IOSegmentorConfig`):
+            An object which contains I/O placement for patches.
         wsi_paths (list): List of paths pointing to a WSI or tiles.
-        preproc (Callable): Pre-processing function to be applied to a patch.
-        mode (str): Either `wsi` or `tile` to indicate the format of `wsi_paths`.
+        preproc (Callable):
+            Pre-processing function to be applied to a patch.
+        mode (str):
+            Either `"wsi"` or `"tile"` to indicate the format of images
+            in `wsi_paths`.
 
     Examples:
 
@@ -264,7 +275,7 @@ class WSIStreamDataset(torch_data.Dataset):
         self.reader = None
 
     def _get_reader(self, img_path):
-        """Get approriate reader for input path."""
+        """Get appropriate reader for input path."""
         img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
             reader = get_wsireader(img_path)
@@ -293,11 +304,10 @@ class WSIStreamDataset(torch_data.Dataset):
     def collate_fn(batch):
         """Prototype to handle reading exception.
 
-        This will exclude any sample with `None` from the
-        batch. As such, wrapping `__getitem__` with try-catch
-        and return `None` upon exceptions will prevent crashing the
-        entire program. But as a side effect, the batch may not have the size
-        as defined.
+        This will exclude any sample with `None` from the batch. As
+        such, wrapping `__getitem__` with try-catch and return `None`
+        upon exceptions will prevent crashing the entire program. But as
+        a side effect, the batch may not have the size as defined.
 
         """
         batch = [v for v in batch if v is not None]
@@ -341,31 +351,69 @@ class WSIStreamDataset(torch_data.Dataset):
 class SemanticSegmentor:
     """Pixel-wise segmentation predictor.
 
+    The tiatoolbox model should produce the following results on the BCSS dataset
+    using fcn_resnet50_unet-bcss.
+
+    .. list-table:: Semantic segmentation performance on the BCSS dataset
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * -
+         - Tumour
+         - Stroma
+         - Inflammatory
+         - Necrosis
+         - Other
+         - All
+       * - Amgad et al.
+         - 0.851
+         - 0.800
+         - 0.712
+         - 0.723
+         - 0.666
+         - 0.750
+       * - TIAToolbox
+         - 0.885
+         - 0.825
+         - 0.761
+         - 0.765
+         - 0.581
+         - 0.763
+
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 
     Args:
-        model (nn.Module): Use externally defined PyTorch model for prediction with.
+        model (nn.Module):
+            Use externally defined PyTorch model for prediction with
             weights already loaded. Default is `None`. If provided,
             `pretrained_model` argument is ignored.
-        pretrained_model (str): Name of the existing models support by tiatoolbox
-            for processing the data. For a full list of pretrained models, refer to the
-            `docs <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
-            By default, the corresponding pretrained weights will also be
-            downloaded. However, you can override with your own set of weights
-            via the `pretrained_weights` argument. Argument is case insensitive.
-        pretrained_weights (str): Path to the weight of the corresponding
-            `pretrained_model`.
-        batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int) : Number of workers to load the data.
-          Take note that they will also perform preprocessing.
-        num_postproc_workers (int) : This value is there to maintain input
-            compatibility with `tiatoolbox.models.classification` and is
-            not used.
-        verbose (bool): Whether to output logging information.
-        dataset_class (obj): Dataset class to be used instead of default.
-        auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
-              if is not provided.
+        pretrained_model (str):
+            Name of the existing models support by tiatoolbox for
+            processing the data. For a full list of pretrained models,
+            refer to the `docs
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights via the `pretrained_weights` argument. Argument
+            is case insensitive.
+        pretrained_weights (str):
+            Path to the weight of the corresponding `pretrained_model`.
+        batch_size (int):
+            Number of images fed into the model each time.
+        num_loader_workers (int):
+            Number of workers to load the data. Take note that they will
+            also perform preprocessing.
+        num_postproc_workers (int):
+            This value is there to maintain input compatibility with
+            `tiatoolbox.models.classification` and is not used.
+        verbose (bool):
+            Whether to output logging information.
+        dataset_class (obj):
+            Dataset class to be used instead of default.
+        auto_generate_mask (bool):
+            To automatically generate tile/WSI tissue mask if is not
+            provided.
 
     Attributes:
         process_prediction_per_batch (bool): A flag to denote whether post
@@ -440,28 +488,34 @@ class SemanticSegmentor:
     ):
         """Calculate patch tiling coordinates.
 
-        By default, internally, it will call the `PatchExtractor.get_coordinates`.
-        To use your own approach, either subclass to overwrite or directly
-        assign your own function to this name. In either cases, the function must
-        obey the API defined here.
+        By default, internally, it will call the
+        `PatchExtractor.get_coordinates`. To use your own approach,
+        either subclass to overwrite or directly assign your own
+        function to this name. In either cases, the function must obey
+        the API defined here.
 
         Args:
-            image_shape (tuple(int), :class:`numpy.ndarray`): This argument
-              specifies the shape of mother image (the image we want to) extract
-              patches from) at requested `resolution` and `units` and it is
-              expected to be in (width, height) format.
-            ioconfig (:class:`IOSegmentorConfig`): Object that contains information
-              about input and ouput placement of patches. Check
-              `IOSegmentorConfig` for details about available attributes.
+            image_shape (tuple(int), :class:`numpy.ndarray`):
+                This argument specifies the shape of mother image (the
+                image we want to) extract patches from) at requested
+                `resolution` and `units` and it is expected to be in
+                (width, height) format.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Object that contains information about input and output
+                placement of patches. Check `IOSegmentorConfig` for
+                details about available attributes.
 
         Returns:
-            (tuple): Tuple containing:
-                patch_inputs (list): A list of corrdinates in
-                  `[start_x, start_y, end_x, end_y]` format indicating the read
-                  location of the patch in the mother image.
-                patch_outputs (list): A list of corrdinates in
-                  `[start_x, start_y, end_x, end_y]` format indicating the write
-                  location of the patch in the mother image.
+            tuple:
+                Tuple containing:
+                - :py:obj:`list` - patch_inputs:
+                    A list of corrdinates in `[start_x, start_y, end_x,
+                    end_y]` format indicating the read location of the
+                    patch in the mother image.
+                - :py:obj:`list` - patch_outputs:
+                    A list of corrdinates in `[start_x, start_y, end_x,
+                    end_y]` format indicating the write location of the
+                    patch in the mother image.
 
         Examples:
             >>> # API of function expected to overwrite `get_coordinates`
@@ -491,24 +545,27 @@ class SemanticSegmentor:
         """
         Indicates which coordinate is valid basing on the mask.
 
-        To use your own approaches, either subclass to overwrite or directly
-        assign your own function to this name. In either cases, the function must
-        obey the API defined here.
+        To use your own approaches, either subclass to overwrite or
+        directly assign your own function to this name. In either cases,
+        the function must obey the API defined here.
 
         Args:
-            mask_reader (:class:`.VirtualReader`): A virtual pyramidal
-              reader of the mask related to the WSI from which we want
-              to extract the patches.
-            bounds (ndarray and np.int32): Coordinates to be checked
-              via the `func`. They must be in the same resolution as requested
-              `resolution` and `units`. The shape of `coordinates` is (N, K)
-              where N is the number of coordinate sets and K is either 2 for
-              centroids or 4 for bounding boxes. When using the default
-              `func=None`, K should be 4, as we expect the `coordinates` to be
-              refer to bounding boxes in `[start_x, start_y, end_x, end_y]` format.
+            mask_reader (:class:`.VirtualReader`):
+                A virtual pyramidal reader of the mask related to the
+                WSI from which we want to extract the patches.
+            bounds (ndarray and np.int32):
+                Coordinates to be checked via the `func`. They must be
+                in the same resolution as requested `resolution` and
+                `units`. The shape of `coordinates` is (N, K) where N is
+                the number of coordinate sets and K is either 2 for
+                centroids or 4 for bounding boxes. When using the
+                default `func=None`, K should be 4, as we expect the
+                `coordinates` to be bounding boxes in `[start_x,
+                start_y, end_x, end_y]` format.
 
         Returns:
-            ndarray: List of flags to indicate which coordinate is valid.
+            :class:`numpy.ndarray`:
+                List of flags to indicate which coordinate is valid.
 
         Examples:
             >>> # API of function expected to overwrite `filter_coordinates`
@@ -579,14 +636,16 @@ class SemanticSegmentor:
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): Index of the tile/wsi to be processed within `self`.
-            ioconfig (:class:`IOSegmentorConfig`): Object which defines I/O
-              placement during inference and when assembling back to full tile/wsi.
-            loader (torch.Dataloader): Loader object which return batch of data
-              to be input to model.
-            save_path (str): Location to save output prediction as well as possible
-              intermediat results.
-            mode (str): `tile` or `wsi` to indicate run mode.
+            wsi_idx (int):
+                Index of the tile/wsi to be processed within `self`.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Object which defines I/O placement during inference and
+                when assembling back to full tile/wsi.
+            save_path (str):
+                Location to save output prediction as well as possible
+                intermediate results.
+            mode (str):
+                Either `"tile"` or `"wsi"` to indicate run mode.
 
         """
         cache_dir = f"{self._cache_dir}/{wsi_idx}/"
@@ -610,10 +669,11 @@ class SemanticSegmentor:
             patch_outputs = patch_outputs[sel]
             patch_inputs = patch_inputs[sel]
 
-        # modify the shared space so that we can update worker info without
-        # needing to re-create the worker. There should be no race-condition because
-        # only the following enumerate loop triggers the parallelism, and this portion
-        # is still in sequential execution order
+        # modify the shared space so that we can update worker info
+        # without needing to re-create the worker. There should be no
+        # race-condition because only the following enumerate loop
+        # triggers the parallelism, and this portion is still in
+        # sequential execution order
         patch_inputs = torch.from_numpy(patch_inputs).share_memory_()
         patch_outputs = torch.from_numpy(patch_outputs).share_memory_()
         self._mp_shared_space.patch_inputs = patch_inputs
@@ -687,14 +747,18 @@ class SemanticSegmentor:
         the operation.
 
         Args:
-            cum_batch_predictions (list): List of batch predictions. Each item
-              within the list should be of (location, patch_predictions).
-            wsi_reader (:class:`WSIReader`): A reader for the image where the
-              predictions come from.
-            ioconfig (:class:`IOSegmentorConfig`): A configuration object contains
-              input and output information.
-            save_path (str): Root path to save current WSI predictions.
-            cache_dir (str): Root path to cache current WSI data.
+            cum_batch_predictions (list):
+                List of batch predictions. Each item within the list
+                should be of (location, patch_predictions).
+            wsi_reader (:class:`WSIReader`):
+                A reader for the image where the predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`):
+                A configuration object contains input and output
+                information.
+            save_path (str):
+                Root path to save current WSI predictions.
+            cache_dir (str):
+                Root path to cache current WSI data.
 
         """
         if len(cum_batch_predictions) == 0:
@@ -702,9 +766,9 @@ class SemanticSegmentor:
 
         # assume predictions is N, each item has L output element
         locations, predictions = list(zip(*cum_batch_predictions))
-        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output patch
-        # this can exceed the image bound at the requested resolution
-        # remove singleton due to split.
+        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
+        # output patch this can exceed the image bound at the requested
+        # resolution remove singleton due to split.
         locations = np.array([v[0] for v in locations])
         for idx, output_resolution in enumerate(ioconfig.output_resolutions):
             # assume resolution idx to be in the same order as L
@@ -740,26 +804,38 @@ class SemanticSegmentor:
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
-        When accumulating the raw prediction onto a same canvas (via calling
-        the function multiple times), `save_path` and `cache_count_path` must be the
-        same. If either of these two do not exist, the function will create new files.
-        However, if `save_path` is `None`, the function will perform the accumulation
-        using CPU-RAM as storage.
+        When accumulating the raw prediction onto a same canvas (via
+        calling the function multiple times), `save_path` and
+        `cache_count_path` must be the same. If either of these two do
+        not exist, the function will create new files. However, if
+        `save_path` is `None`, the function will perform the
+        accumulation using CPU-RAM as storage.
 
         Args:
-            canvas_shape (:class:`numpy.ndarray`): HW of the supposed assembled image.
-            predictions (list): List of nd.array, each item is a patch prediction,
-              assuming to be of shape HWC.
-            locations (list): List of nd.array, each item is the location of
-              the patch at the same index within `predictions`. The location
-              is in the to be assembled canvas and of the form
-              (top_left_x, top_left_y, bottom_right_x, bottom_right_x).
-            save_path (str): Location to save the assembled image.
-            cache_count_path (str): Location to store the canvas for counting
-              how many times each pixel get overlapped when assembling.
+            canvas_shape (:class:`numpy.ndarray`):
+                HW of the supposed assembled image.
+            predictions (list):
+                List of nd.array, each item is a patch prediction,
+                assuming to be of shape HWC.
+            locations (list):
+                List of nd.array, each item is the location of the patch
+                at the same index within `predictions`. The location is
+                in the to be assembled canvas and of the form
+                `(top_left_x, top_left_y, bottom_right_x,
+                bottom_right_x)`.
+            save_path (str):
+                Location to save the assembled image.
+            cache_count_path (str):
+                Location to store the canvas for counting how many times
+                each pixel get overlapped when assembling.
+            free_prediction (bool):
+                If this is `True`, `predictions` will be modified in
+                place and each patch will be replaced with `None` once
+                processed. This is to save memory when assembling.
 
         Returns:
-            :class:`numpy.ndarray`: An image contains merged data.
+            :class:`numpy.ndarray`:
+                An image contains merged data.
 
         Examples:
 
@@ -773,10 +849,10 @@ class SemanticSegmentor:
         ...         [2, 2, 4, 4]],
         ...     save_path=None,
         ... )
-        array([[1, 1, 0, 0],
-            [1, 1, 0, 0],
-            [0, 0, 2, 2],
-            [0, 0, 2, 2]])
+        ... array([[1, 1, 0, 0],
+        ...        [1, 1, 0, 0],
+        ...        [0, 0, 2, 2],
+        ...        [0, 0, 2, 2]])
 
         """
         canvas_shape = np.array(canvas_shape)
@@ -912,53 +988,71 @@ class SemanticSegmentor:
     ):
         """Make a prediction for a list of input data.
 
-        By default, if the input model at the object instantiation time is a
-        pretrained model in the toolbox as well as `patch_input_shape`,
-        `patch_output_shape`, `stride_shape`, `resolution`, `units` and `ioconfig`
-        are `None`. The method will use the `ioconfig` retrieved together with
-        the pretrained model. Otherwise, either `patch_input_shape`,
-        `patch_output_shape`, `stride_shape`, `resolution`, `units` or `ioconfig`
-        must be set else a `Value Error` will be raised.
+        By default, if the input model at the object instantiation time
+        is a pretrained model in the toolbox as well as
+        `patch_input_shape`, `patch_output_shape`, `stride_shape`,
+        `resolution`, `units` and `ioconfig` are `None`. The method will
+        use the `ioconfig` retrieved together with the pretrained model.
+        Otherwise, either `patch_input_shape`, `patch_output_shape`,
+        `stride_shape`, `resolution`, `units` or `ioconfig` must be set
+        else a `Value Error` will be raised.
 
         Args:
-            imgs (list, ndarray): List of inputs to process. When using `patch`
-              mode, the input must be either a list of images, a list of image
-              file paths or a numpy array of an image list. When using `tile` or
-              `wsi` mode, the input must be a list of file paths.
-            masks (list): List of masks. Only utilised when processing image tiles
-              and whole-slide images. Patches are only processed if they are
-              within a masked area. If not provided, then a tissue mask will be
-              automatically generated for whole-slide images or the entire image
-              is processed for image tiles.
-            mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`): Object defines information
-              about input and ouput placement of patches. When provided,
-              `patch_input_shape`, `patch_output_shape`, `stride_shape`,
-              `resolution`, and `units` arguments are ignored. Otherwise,
-              those arguments will be internally converted to a
-              :class:`IOSegmentorConfig` object.
-            on_gpu (bool): Whether to run model on the GPU.
-            patch_input_shape (tuple): Size of patches input to the model. The value
-              are at requested read resolution and must be positive.
-            patch_output_shape (tuple): Size of patches output by the model. The
-              values are at the requested read resolution and must be positive.
-            stride_shape (tuple): Stride using during tile and WSI processing. The
-              values are at requested read resolution and must be positive.
-              If not provided, `stride_shape=patch_input_shape` is used.
-            resolution (float): Resolution used for reading the image.
-            units (str): Units of resolution used for reading the image. Choose from
-              either `level`, `power` or `mpp`.
-            save_dir (str or pathlib.Path): Output directory when processing multiple
-              tiles and whole-slide images. By default, it is folder `output` where
-              the running script is invoked.
-            crash_on_exception (bool): If `True`, the running loop will crash
-              if there is any error during processing a WSI. Otherwise, the loop
-              will move on to the next wsi for processing.
+            imgs (list, ndarray):
+                List of inputs to process. When using `"patch"` mode,
+                the input must be either a list of images, a list of
+                image file paths or a numpy array of an image list. When
+                using `"tile"` or `"wsi"` mode, the input must be a list
+                of file paths.
+            masks (list):
+                List of masks. Only utilised when processing image tiles
+                and whole-slide images. Patches are only processed if
+                they are within a masked area. If not provided, then a
+                tissue mask will be automatically generated for
+                whole-slide images or the entire image is processed for
+                image tiles.
+            mode (str):
+                Type of input to process. Choose from either `tile` or
+                `wsi`.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Object defines information about input and output
+                placement of patches. When provided,
+                `patch_input_shape`, `patch_output_shape`,
+                `stride_shape`, `resolution`, and `units` arguments are
+                ignored. Otherwise, those arguments will be internally
+                converted to a :class:`IOSegmentorConfig` object.
+            on_gpu (bool):
+                Whether to run the model on the GPU.
+            patch_input_shape (tuple):
+                Size of patches input to the model. The values
+                are at requested read resolution and must be positive.
+            patch_output_shape (tuple):
+                Size of patches output by the model. The values are at
+                the requested read resolution and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. The values
+                are at requested read resolution and must be positive.
+                If not provided, `stride_shape=patch_input_shape` is
+                used.
+            resolution (float):
+                Resolution used for reading the image.
+            units (str):
+                Units of resolution used for reading the image. Choose
+                from either `"level"`, `"power"` or `"mpp"`.
+            save_dir (str or pathlib.Path):
+                Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output`
+                where the running script is invoked.
+            crash_on_exception (bool):
+                If `True`, the running loop will crash if there is any
+                error during processing a WSI. Otherwise, the loop will
+                move on to the next wsi for processing.
 
         Returns:
-            output (list): A list of tuple(input_path, save_path) where
-              `input_path` is the path of the input wsi while `save_path`
-              corresponds to the output predictions.
+            list:
+                A list of tuple(input_path, save_path) where
+                `input_path` is the path of the input wsi while
+                `save_path` corresponds to the output predictions.
 
         Examples:
             >>> # Sample output of a network
@@ -1109,32 +1203,41 @@ class SemanticSegmentor:
 class DeepFeatureExtractor(SemanticSegmentor):
     """Generic CNN Feature Extractor.
 
-    A engine for using any CNN model as a feature extractor.
-    Note, if `model` is supplied in the arguments, it will ignore the
+    A engine for using any CNN model as a feature extractor. Note, if
+    `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 
     Args:
-        model (nn.Module): Use externally defined PyTorch model for prediction with
-          weights already loaded. Default is `None`. If provided,
-          `pretrained_model` argument is ignored.
-        pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. By default, the corresponding pretrained weights
-          will also be downloaded. However, you can override with your own set of
-          weights via the `pretrained_weights` argument. Argument is case insensitive.
-          Refer to :class:`tiatoolbox.models.architecture.vanilla.CNNBackbone`
-          for list of supported pretrained models.
-        pretrained_weights (str): Path to the weight of the corresponding
-          `pretrained_model`.
-        batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int) : Number of workers to load the data.
-          Take note that they will also perform preprocessing.
-        num_postproc_workers (int) : This value is there to maintain input
-          compatibility with `tiatoolbox.models.classification` and is
-          not used.
-        verbose (bool): Whether to output logging information.
-        dataset_class (obj): Dataset class to be used instead of default.
-        auto_generate_mask(bool): To automatically generate tile/WSI tissue mask
-          if is not provided.
+        model (nn.Module):
+            Use externally defined PyTorch model for prediction with
+            weights already loaded. Default is `None`. If provided,
+            `pretrained_model` argument is ignored.
+        pretrained_model (str):
+            Name of the existing models support by tiatoolbox for
+            processing the data. By default, the corresponding
+            pretrained weights will also be downloaded. However, you can
+            override with your own set of weights via the
+            `pretrained_weights` argument. Argument is case insensitive.
+            Refer to
+            :class:`tiatoolbox.models.architecture.vanilla.CNNBackbone`
+            for list of supported pretrained models.
+        pretrained_weights (str):
+            Path to the weight of the corresponding `pretrained_model`.
+        batch_size (int):
+            Number of images fed into the model each time.
+        num_loader_workers (int):
+            Number of workers to load the data. Take note that they will
+            also perform preprocessing.
+        num_postproc_workers (int):
+            This value is there to maintain input compatibility with
+            `tiatoolbox.models.classification` and is not used.
+        verbose (bool):
+            Whether to output logging information.
+        dataset_class (obj):
+            Dataset class to be used instead of default.
+        auto_generate_mask(bool):
+            To automatically generate tile/WSI tissue mask if is not
+            provided.
 
     Examples:
         >>> # Sample output of a network
@@ -1148,7 +1251,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
         >>> # If a network have 2 output heads, for 'A/wsi.svs',
         >>> # there will be 3 output and they are respectively stored at
-        >>> # 'output/0.position.npy'   # will alwayw be output
+        >>> # 'output/0.position.npy'   # will always be output
         >>> # 'output/0.features.0.npy' # output of head 0
         >>> # 'output/0.features.1.npy' # output of head 1
         >>> # Each file will contain a same number of items, and the item at each
@@ -1193,17 +1296,22 @@ class DeepFeatureExtractor(SemanticSegmentor):
     ):
         """Define how the aggregated predictions are processed.
 
-        This includes merging the prediction if necessary and also saving afterwards.
+        This includes merging the prediction if necessary and also
+        saving afterwards.
 
         Args:
-            cum_batch_predictions (list): List of batch predictions. Each item
-              within the list should be of (location, patch_predictions).
-            wsi_reader (:class:`WSIReader`): A reader for the image where the
-              predictions come from.
-            ioconfig (:class:`IOSegmentorConfig`): A configuration object contains
-              input and output information.
-            save_path (str): Root path to save current WSI predictions.
-            cache_dir (str): Root path to cache current WSI data.
+            cum_batch_predictions (list):
+                List of batch predictions. Each item within the list
+                should be of (location, patch_predictions).
+            wsi_reader (:class:`WSIReader`):
+                A reader for the image where the predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`):
+                A configuration object contains input and output
+                information.
+            save_path (str):
+                Root path to save current WSI predictions.
+            cache_dir (str):
+                Root path to cache current WSI data.
 
         """
         # assume prediction_list is N, each item has L output elements
@@ -1237,53 +1345,71 @@ class DeepFeatureExtractor(SemanticSegmentor):
     ):
         """Make a prediction for a list of input data.
 
-        By default, if the input model at the time of object instantiation is a
-        pretrained model in the toolbox as well as `patch_input_shape`,
-        `patch_output_shape`, `stride_shape`, `resolution`, `units` and `ioconfig`
-        are `None`. The method will use the `ioconfig` retrieved together with
-        the pretrained model. Otherwise, either `patch_input_shape`,
-        `patch_output_shape`, `stride_shape`, `resolution`, `units` or `ioconfig`
-        must be set - else a `Value Error` will be raised.
+        By default, if the input model at the time of object
+        instantiation is a pretrained model in the toolbox as well as
+        `patch_input_shape`, `patch_output_shape`, `stride_shape`,
+        `resolution`, `units` and `ioconfig` are `None`. The method will
+        use the `ioconfig` retrieved together with the pretrained model.
+        Otherwise, either `patch_input_shape`, `patch_output_shape`,
+        `stride_shape`, `resolution`, `units` or `ioconfig` must be set
+        - else a `Value Error` will be raised.
 
         Args:
-            imgs (list, ndarray): List of inputs to process. When using `patch`
-              mode, the input must be either a list of images, a list of image
-              file paths or a numpy array of an image list. When using `tile` or
-              `wsi` mode, the input must be a list of file paths.
-            masks (list): List of masks. Only utilised when processing image tiles
-              and whole-slide images. Patches are only processed if they are
-              within a masked area. If not provided, then a tissue mask will be
-              automatically generated for each whole-slide image or all image tiles in
-              the entire image are processed.
-            mode (str): Type of input to process. Choose from either `tile` or `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`): Object that defines information
-              about input and ouput placement of patches. When provided,
-              `patch_input_shape`, `patch_output_shape`, `stride_shape`,
-              `resolution`, and `units` arguments are ignored. Otherwise,
-              those arguments will be internally converted to a
-              :class:`IOSegmentorConfig` object.
-            on_gpu (bool): Whether to run model on the GPU.
-            patch_input_shape (tuple): Size of patches input to the model. The value
-              are at requested read resolution and must be positive.
-            patch_output_shape (tuple): Size of patches output by the model. The
-              values are at the requested read resolution and must be positive.
-            stride_shape (tuple): Stride using during tile and WSI processing. The
-              values are at requested read resolution and must be positive.
-              If not provided, `stride_shape=patch_input_shape` is used.
-            resolution (float): Resolution used for reading the image.
-            units (str): Units of resolution used for reading the image. Choose from
-              either `level`, `power` or `mpp`.
-            save_dir (str): Output directory when processing multiple tiles and
-              whole-slide images. By default, it is folder `output` where the
-              running script is invoked.
-            crash_on_exception (bool): If `True`, the running loop will crash
-              if there is any error during processing a WSI. Otherwise, the loop
-              will move on to the next wsi for processing.
+            imgs (list, ndarray):
+                List of inputs to process. When using `"patch"` mode,
+                the input must be either a list of images, a list of
+                image file paths or a numpy array of an image list. When
+                using `"tile"` or `"wsi"` mode, the input must be a list
+                of file paths.
+            masks (list):
+                List of masks. Only utilised when processing image tiles
+                and whole-slide images. Patches are only processed if
+                they are within a masked area. If not provided, then a
+                tissue mask will be automatically generated for each
+                whole-slide image or all image tiles in the entire image
+                are processed.
+            mode (str):
+                Type of input to process. Choose from either `tile` or
+                `wsi`.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Object that defines information about input and output
+                placement of patches. When provided,
+                `patch_input_shape`, `patch_output_shape`,
+                `stride_shape`, `resolution`, and `units` arguments are
+                ignored. Otherwise, those arguments will be internally
+                converted to a :class:`IOSegmentorConfig` object.
+            on_gpu (bool):
+                Whether to run the model on the GPU.
+            patch_input_shape (tuple):
+                Size of patches input to the model. The values are at
+                requested read resolution and must be positive.
+            patch_output_shape (tuple):
+                Size of patches output by the model. The values are at
+                the requested read resolution and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. The values
+                are at requested read resolution and must be positive.
+                If not provided, `stride_shape=patch_input_shape` is
+                used.
+            resolution (float):
+                Resolution used for reading the image.
+            units (str):
+                Units of resolution used for reading the image. Choose
+                from either `"level"`, `"power"` or `"mpp"`.
+            save_dir (str):
+                Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output`
+                where the running script is invoked.
+            crash_on_exception (bool):
+                If `True`, the running loop will crash if there is any
+                error during processing a WSI. Otherwise, the loop will
+                move on to the next wsi for processing.
 
         Returns:
-            output (list): A list of tuple(input_path, save_path) where
-              `input_path` is the path of the input wsi while `save_path`
-              corresponds to the output predictions.
+            list:
+                A list of tuple(input_path, save_path) where
+                `input_path` is the path of the input wsi while
+                `save_path` corresponds to the output predictions.
 
         Examples:
             >>> # Sample output of a network

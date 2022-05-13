@@ -16,13 +16,17 @@ def centre_crop(
     """A function to center crop image with given crop shape.
 
     Args:
-        img (ndarray, torch.tensor): input image, should be of 3 channels
-        crop_shape (ndarray, torch.tensor): the substracted amount in the form of
-            [substracted height, substracted width].
-        data_format (str): choose either `NCHW` or `NHWC`
+        img (:class:`numpy.ndarray`, torch.tensor):
+            Input image, should be of 3 channels.
+        crop_shape (:class:`numpy.ndarray`, torch.tensor):
+            The substracted amount in the form of `[substracted height,
+            substracted width]`.
+        data_format (str):
+            Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (ndarray, torch.tensor) Cropped image.
+        (:class:`numpy.ndarray`, torch.tensor):
+            Cropped image.
 
     """
     if data_format not in ["NCHW", "NHWC"]:
@@ -46,17 +50,21 @@ def centre_crop_to_shape(
 ):
     """A function to center crop image to shape.
 
-    Centre crop `x` so that `x` has shape of `y` and `y` height and width must
-    be smaller than `x` heigh width.
+    Centre crop `x` so that `x` has shape of `y` and `y` height and
+    width must be smaller than `x` height width.
 
     Args:
-        x (ndarray, torch.tensor): Image to be cropped.
-        y (ndarray, torch.tensor): Reference image for getting cropping shape,
-            should be of 3 channels.
-        data_format: Should either be `NCHW` or `NHWC`.
+        x (:class:`numpy.ndarray`, torch.tensor):
+            Image to be cropped.
+        y (:class:`numpy.ndarray`, torch.tensor):
+            Reference image for getting cropping shape, should be of 3
+            channels.
+        data_format:
+            Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (ndarray, torch.tensor) Cropped image.
+        (:class:`numpy.ndarray`, torch.tensor):
+            Cropped image.
 
     """
     if data_format not in ["NCHW", "NHWC"]:
@@ -103,26 +111,27 @@ class UpSample2x(nn.Module):
         )
         self.unpool_mat.unsqueeze(0)
 
-    def forward(self, input_tensor: torch.Tensor):
+    def forward(self, x: torch.Tensor):
         """Logic for using layers defined in init.
 
         Args:
-            input_tensor (torch.Tensor): Input images, the tensor
-                is in the shape of NCHW.
+            x (torch.Tensor):
+                Input images, the tensor is in the shape of NCHW.
 
         Returns:
-            ret (torch.Tensor): Input images upsampled by a factor of 2
-                via nearest neighbour interpolation. The tensor is the shape
-                as NCHW.
+            torch.Tensor:
+                Input images upsampled by a factor of 2 via nearest
+                neighbour interpolation. The tensor is the shape as
+                NCHW.
 
         """
-        input_shape = list(input_tensor.shape)
+        input_shape = list(x.shape)
         # un-squeeze is the same as expand_dims
         # permute is the same as transpose
         # view is the same as reshape
-        input_tensor = input_tensor.unsqueeze(-1)  # bchwx1
+        x = x.unsqueeze(-1)  # bchwx1
         mat = self.unpool_mat.unsqueeze(0)  # 1xshxsw
-        ret = torch.tensordot(input_tensor, mat, dims=1)  # bxcxhxwxshxsw
+        ret = torch.tensordot(x, mat, dims=1)  # bxcxhxwxshxsw
         ret = ret.permute(0, 1, 2, 4, 3, 5)
         ret = ret.reshape((-1, input_shape[1], input_shape[2] * 2, input_shape[3] * 2))
         return ret
