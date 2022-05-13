@@ -1,42 +1,28 @@
 """Tests for tileserver."""
 import pytest
-from click.testing import CliRunner
 from pathlib import Path
 import numpy as np
 
-from tiatoolbox import cli
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.utils.misc import imwrite
 
 
 @pytest.fixture()
 def app(sample_ndpi) -> TileServer:
     """Create a testing TileServer WSGI app."""
-    runner = CliRunner()
 
-    # make a low-res .jpg of the right shape to be used as
-    # a low-res overlay
-    runner.invoke(
-        cli.main,
-        [
-            "slide-thumbnail",
-            "--img-input",
-            str(Path(sample_ndpi)),
-            "--mode",
-            "save",
-        ],
-    )
+    # Make a low-res .jpg of the right shape to be used as
+    # a low-res overlay.
     wsi = WSIReader.open(Path(sample_ndpi))
+    thumb = wsi.slide_thumbnail()
+    imwrite("./temp_thumb.jpg", thumb)
 
     app = TileServer(
         "Testing TileServer",
         [
             str(Path(sample_ndpi)),
-            str(
-                Path(sample_ndpi).parent
-                / "slide-thumbnail"
-                / (sample_ndpi.stem + ".jpg")
-            ),
+            "./temp_thumb.jpg",
             np.zeros(wsi.slide_dimensions(1.25, "power"), dtype=np.uint8).T,
         ],
     )

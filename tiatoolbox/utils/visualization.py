@@ -6,6 +6,7 @@ from typing import Tuple, Union
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 
 
@@ -28,6 +29,19 @@ def random_colors(num_colors, bright=True):
     colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
     random.shuffle(colors)
     return colors
+
+
+def colourise_image(img, cmap="viridis"):
+    """If input img is single channel, colourise it
+    using specified colourmap.
+    """
+    if len(img.shape) == 2:
+        # Single channel, make into rgb with colormap.
+        c_map = cm.get_cmap(cmap)
+        im_rgb = (c_map(img) * 255).astype(np.uint8)
+        return im_rgb[:, :, :3]
+    # Already rgb, return unaltered
+    return img
 
 
 def overlay_prediction_mask(

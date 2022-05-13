@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Union
 
-import matplotlib.cm as cm
 import numpy as np
 from flask import Flask, Response, send_file
 from flask.templating import render_template
@@ -13,6 +12,7 @@ from PIL import Image
 from tiatoolbox import data
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+from tiatoolbox.utils.visualization import colourise_image
 
 
 class TileServer(Flask):
@@ -52,32 +52,28 @@ class TileServer(Flask):
         )
         self.tia_title = title
 
-        # generic layer names if none provided
+        # Generic layer names if none provided.
         if isinstance(layers, list):
             layers = {f"layer-{i}": p for i, p in enumerate(layers)}
-        # set up the layer dict
+        # Set up the layer dict.
         layer_def = {}
         meta = None
-        for i, key in enumerate(layers.keys()):
+        for i, key in enumerate(layers):
             layer = layers[key]
 
             if isinstance(layer, (str, Path)):
-                p = Path(layer)
-                if p.suffix in [".jpg", ".png"]:
-                    # assume its a low-res heatmap
-                    layer = Image.open(p)
+                layer_path = Path(layer)
+                if layer_path.suffix in [".jpg", ".png"]:
+                    # Assume its a low-res heatmap.
+                    layer = Image.open(layer_path)
                     layer = np.array(layer)
                 else:
-                    layer = WSIReader.open(p)
+                    layer = WSIReader.open(layer_path)
 
             if isinstance(layer, np.ndarray):
-                if len(layer.shape) == 2:
-                    # single channel, make into rgb with colormap
-                    c_map = cm.get_cmap("jet")
-                    im_rgb = (c_map(layer) * 255).astype(np.uint8)
-                    layer = VirtualWSIReader(im_rgb[:, :, :3], info=meta)
-                else:
-                    layer = VirtualWSIReader(p, info=meta)
+                # Make into rgb if single channel.
+                layer = colourise_image(layer)
+                layer = VirtualWSIReader(layer, info=meta)
 
             layer_def[key] = layer
             if i == 0:
