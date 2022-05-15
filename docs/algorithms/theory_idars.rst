@@ -4,12 +4,15 @@ IDaRS Theory
 IDaRS stands for **I**\ terated **D**\ raw **a**\ nd **R**\ andom **S**\ ampling, an
 algorithm introduced in an article by **Bilal et al** `click here.
 <https://www.thelancet.com/journals/land$ig/article/PIIS2589-7500(2100180-1/fulltext>`_
-Pseudocode for the algorithm is given below. The algorithm is used to
-infer (predict) tile-level
+The algorithm is used to infer (predict) tile-level
 labels from slide-level labels, transforming information that is
 originally known only at low resolution into high resolution information.
 It is novel, general, and also faster and more accurate than
 previous procedures.
+
+In this section, we discuss the IDaRS algorithm from a theoretical
+point of view. Pseudocode for the algorithm is given below. To see how it
+might be used in practice `click here <https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_
 
 Each WSI is divided into small rectangles, called *tiles*, all of the
 same size, with
@@ -52,7 +55,7 @@ defined by:
    \sum_{T\in \mathcal{S}}(p(T)\log(q(T))+(1-p(T))\log(1-q(T)))
 
 as the loss function. This function has a unique local minimum
-on :math:`\mathcal{S}`, which is also a global minimum, at :math:`q=p`
+on :math:`\mathcal{S}`, which is also a global minimum, at :math:`q=p`.
 However, we require :math:`q(T)` to depend only on the pixel values of
 :math:`T`. To express this mathematically, let
 :math:`\pi:\mathcal{S}\to\mathbb{R}^{h\times w\times 3}` be the map that
@@ -65,12 +68,12 @@ each having values greater than the global minimum at :math:`q=p`.
 
 Parameters :math:`r` and :math:`k` are chosen by the user, and the
 following algorithm is applied, starting with :math:`q=p`. Successive
-values for :math:`q_0` are produced by the algorithm,
+values for :math:`q_0`, and hence for :math:`q`,  are produced by the algorithm,
 using stochastic gradient descent as usual.
 
     | :math:`nts = \emptyset` # Next Training Set starts empty
     | for each labelled WSI :math:`W_i`
-    |   create the subset :math:`\mathcal{S}_i` of tumour tiles
+    |   determine the subset :math:`\mathcal{S}_i` of tumour tiles
     |   add :math:`r+k` randomly chosen tiles of :math:`\mathcal{S}_i` to `nts`
     | for each epoch
     |   :math:`ts = nts`
