@@ -12,7 +12,7 @@ previous procedures.
 
 In this section, we discuss the IDaRS algorithm from a theoretical
 point of view. Pseudocode for the algorithm is given below. To see how it
-might be used in practice `click here <https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_
+is used in practice `click here <https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_
 
 Each WSI is divided into small rectangles, called *tiles*, all of the
 same size, with
@@ -45,25 +45,26 @@ We wish to estimate :math:`q(T)\in[0,1]`,
 the probability that :math:`T` has feature :math:`F`.
 
 Given a set :math:`\mathcal{S}` of tiles, possibly drawn from many WSIs,
-we use cross
-entropy (or some variant of it) :math:`L_{\mathcal{S}}\to \mathbb{R}`,
-defined by:
+we use, as the loss function,  cross
+entropy (or some variant of it)
+:math:`L_{\mathcal{S}}` , a real-valued function,  defined by:
 
 .. math::
 
    L_{\mathcal{S}}(q) = 
-   \sum_{T\in \mathcal{S}}(p(T)\log(q(T))+(1-p(T))\log(1-q(T)))
+   \sum_{T\in \mathcal{S}}(p(T)\log(q(T))+(1-p(T))\log(1-q(T))).
 
-as the loss function. This function has a unique local minimum
-on :math:`\mathcal{S}`, which is also a global minimum, at :math:`q=p`.
+This function has a unique local minimum, when its domain is the
+set of ALL functions :math:`q:\mathcal{S}\to[0,1]`,
+and this local minimum is also a global minimum, at :math:`q=p`.
 However, we require :math:`q(T)` to depend only on the pixel values of
 :math:`T`. To express this mathematically, let
 :math:`\pi:\mathcal{S}\to\mathbb{R}^{h\times w\times 3}` be the map that
-sends a tile :math:`T` to the RGB intensities of its pixels. 
+sends a tile :math:`T` to the RGB intensities of its :math:`h.w`  pixels. 
 Given a function :math:`q_0:\mathbb{R}^{h\times w\times 3}\to[0,1]`, we define
 :math:`q = \pi\circ q_0`, nd then :math:`L_{\mathcal{S}}(q)` can be
 calculated. 
-We expect many local minima for :math:`L_{\mathcal{S}}`, 
+We expect many local minima for :math:`L_{\mathcal{S}}` , 
 each having values greater than the global minimum at :math:`q=p`. 
 
 Parameters :math:`r` and :math:`k` are chosen by the user, and the
@@ -82,7 +83,7 @@ using stochastic gradient descent as usual.
         convenient size
     |   for each batch
     |       calculate loss per tile
-    |       # Next, change the weights that determine :math:`q_0,` and, hence, also :math:`q`. 
+    |       # next, change the weights that determine :math:`q_0,` and, hence, also :math:`q`. 
     |       backpropagate the loss per batch
     |   # create the next training set :math:`nts`
     |   :math:`nts = \emptyset`  # new training set starts empty
