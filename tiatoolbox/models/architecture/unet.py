@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as functional
 from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
@@ -49,8 +49,7 @@ class ResNetEncoder(ResNet):
     @staticmethod
     def resnet50(num_input_channels: int):
         """Shortcut method to create ResNet50."""
-        model = ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
-        return model
+        return ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
 
     @staticmethod
     def resnet(
@@ -75,7 +74,6 @@ class ResNetEncoder(ResNet):
             >>> ResNetEncoder.resnet50(
             ...     num_input_channels,
             ...     [3, 4, 6, 3],
-            ...     pretrained
             ... )
 
         """
@@ -201,7 +199,7 @@ class UNetModel(ModelABC):
         >>> # instantiate a UNet with resnet50 endcoder and
         >>> # only 1 3x3 per each up-sampling block in the decoder
         >>> UNetModel.resnet50(
-        ...     2, 2
+        ...     2, 2,
         ...     encoder="resnet50",
         ...     decoder_block=(3,)
         ... )
@@ -217,16 +215,18 @@ class UNetModel(ModelABC):
     ):
         super().__init__()
 
+        if encoder not in ["resnet50", "unet"]:
+            raise ValueError(f"Unknown encoder `{encoder}`")
+
         if encoder == "resnet50":
             padding = 1
             preact = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
-        elif encoder == "unet":
+
+        if encoder == "unet":
             padding = 0
             preact = False
             self.backbone = UnetEncoder(num_input_channels, [64, 128, 256, 512, 2048])
-        else:
-            raise ValueError(f"Unknown encoder `{encoder}`")
 
         img_list = torch.rand([1, num_input_channels, 256, 256])
         out_list = self.backbone(img_list)
@@ -329,8 +329,7 @@ class UNetModel(ModelABC):
             y = en_list[-idx]
             x = self.upsample2x(x) + y
             x = self.uplist[idx - 1](x)
-        output = self.clf(x)
-        return output
+        return self.clf(x)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -367,8 +366,8 @@ class UNetModel(ModelABC):
         crop_shape = [h // 2, w // 2]
         with torch.inference_mode():
             logits = model(imgs)
-            probs = F.softmax(logits, 1)
-            probs = F.interpolate(
+            probs = functional.softmax(logits, 1)
+            probs = functional.interpolate(
                 probs, scale_factor=2, mode="bilinear", align_corners=False
             )
             probs = centre_crop(probs, crop_shape)
