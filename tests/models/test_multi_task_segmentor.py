@@ -32,7 +32,7 @@ def test_functionality_local(remote_sample, tmp_path):
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
 
-    save_dir = f"{root_save_dir}/semantic/"
+    save_dir = f"{root_save_dir}/multitask/"
     _rm_dir(save_dir)
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
@@ -83,7 +83,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=NUM_POSTPROC_WORKERS,
     )
     output = multi_segmentor.predict(
         [mini_wsi_svs],
