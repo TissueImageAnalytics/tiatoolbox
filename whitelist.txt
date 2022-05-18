@@ -20,6 +20,7 @@ DICOM
 DNS
 downsample
 downsampled
+downsampling
 dpkg
 dtype
 enum

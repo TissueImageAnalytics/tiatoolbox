@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as nn_func
+import torch.nn.functional as functional
 from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
@@ -210,7 +210,7 @@ class UNetModel(ModelABC):
         >>> # instantiate a UNet with resnet50 endcoder and
         >>> # only 1 3x3 per each up-sampling block in the decoder
         >>> UNetModel.resnet50(
-        ...     2, 2
+        ...     2, 2,
         ...     encoder="resnet50",
         ...     decoder_block=(3,)
         ... )
@@ -408,8 +408,8 @@ class UNetModel(ModelABC):
         crop_shape = [h // 2, w // 2]
         with torch.inference_mode():
             logits = model(imgs)
-            probs = nn_func.softmax(logits, 1)
-            probs = nn_func.interpolate(
+            probs = functional.softmax(logits, 1)
+            probs = functional.interpolate(
                 probs, scale_factor=2, mode="bilinear", align_corners=False
             )
             probs = centre_crop(probs, crop_shape)
