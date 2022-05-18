@@ -14,6 +14,7 @@ Development Lead
 - Srijay Deshpande <Srijay-lab>
 - George Hadjigeorgiou <ghadjigeorghiou>
 - Adam Shephard <adamshephard>
+- Mark Eastwood <measty>
 - Wenqi Lu <wenqi006>
 - Saad Bashir <rajasaad>
 
@@ -21,4 +22,5 @@ Contributors
 ------------
 
 - Rob Jewsbury <R-J96>
-- Mohsin Bilal <>
+- Mohsin Bilal <mbhahsmi>
+- Fayyaz Minhas <foxtrotmike>
