@@ -78,7 +78,7 @@ using stochastic gradient descent as usual.
     |   add :math:`r+k` randomly chosen tiles of :math:`\mathcal{S}_i` to `nts`
     | for each epoch
     |   :math:`ts = nts`
-    |   # process :math:`ts`, fast because :math:`ts` is small
+    |   # processing :math:`ts` is fast, because :math:`ts` is comparatively small
     |   randomize and divide :math:`ts` into batches of a fixed
         convenient size
     |   for each batch
@@ -94,6 +94,13 @@ using stochastic gradient descent as usual.
     |       to :math:`nts` add :math:`r` further tiles randomly chosen
             from :math:`\mathcal{S}_i`
 
-The IDaRS algorithm is effective because it is very likely that
-the :math:`k` special tiles will contribute to moving the weights in the
-right direction.
+The above pseudocode gives a crude but correct summary of the
+Python computer program discussed and explained in the paper by **Bilal et al**,
+referred to above. The pseudocode is also a correct summary of the
+slightly different IDaRS program in this repository. It is somewhat more
+careful than the pseudocode presented in the Supplement to the original paper.
+
+The IDaRS algorithm is effective because it is very likely that the
+:math:`k` chosen tiles will contribute most to moving the weights in
+the desired direction.
+
