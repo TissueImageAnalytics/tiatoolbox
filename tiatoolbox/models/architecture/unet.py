@@ -167,11 +167,62 @@ class UnetEncoder(nn.Module):
         return features
 
 
+def create_block(preact, kernels, input_ch, output_ch):
+    """Helper to create a block of Vanilla Convolution.
+
+    This is in pre-activation style.
+
+    Args:
+        preact (bool):
+            Requires preactivation layers.
+        kernels (list):
+            A list of convolution layers. Each item is an
+            integer and denotes the layer kernel size.
+        input_ch (int):
+            Number of channels in the input images.
+        output_ch (int):
+            Number of channels in the output images.
+
+    """
+    layers = []
+    for ksize in kernels:
+        if preact:
+            layers.extend(
+                [
+                    nn.BatchNorm2d(input_ch),
+                    nn.ReLU(),
+                    nn.Conv2d(
+                        input_ch,
+                        output_ch,
+                        (ksize, ksize),
+                        padding=int((ksize - 1) // 2),  # same padding
+                        bias=False,
+                    ),
+                ]
+            )
+        else:
+            layers.extend(
+                [
+                    nn.Conv2d(
+                        input_ch,
+                        output_ch,
+                        (ksize, ksize),
+                        padding=int((ksize - 1) // 2),  # same padding
+                        bias=False,
+                    ),
+                    nn.BatchNorm2d(output_ch),
+                    nn.ReLU(),
+                ]
+            )
+        input_ch = output_ch
+    return layers
+
+
 class UNetModel(ModelABC):
     """Generate families of UNet model.
 
     This supports different encoders. However, the decoder is relatively
-    simple- each upsampling block contains a number of vanilla
+    simple, each upsampling block contains a number of vanilla
     convolution layers, that are not customizable. Additionally, the
     aggregation between down-sampling and up-sampling is addition, not
     concatenation.
@@ -255,54 +306,6 @@ class UNetModel(ModelABC):
         # channel mapping for shortcut
         self.conv1x1 = nn.Conv2d(down_ch_list[0], down_ch_list[1], (1, 1), bias=False)
 
-        def create_block(kernels, input_ch, output_ch):
-            """Helper to create a block of Vanilla Convolution.
-
-            This is in pre-activation style.
-
-            Args:
-                kernels (list):
-                    A list of convolution layers. Each item is an
-                    integer and denotes the layer kernel size.
-                input_ch (int):
-                    Number of channels in the input images.
-                output_ch (int):
-                    Number of channels in the output images.
-
-            """
-            layers = []
-            for ksize in kernels:
-                if preact:
-                    layers.extend(
-                        [
-                            nn.BatchNorm2d(input_ch),
-                            nn.ReLU(),
-                            nn.Conv2d(
-                                input_ch,
-                                output_ch,
-                                (ksize, ksize),
-                                padding=int((ksize - 1) // 2),  # same padding
-                                bias=False,
-                            ),
-                        ]
-                    )
-                else:
-                    layers.extend(
-                        [
-                            nn.Conv2d(
-                                input_ch,
-                                output_ch,
-                                (ksize, ksize),
-                                padding=int((ksize - 1) // 2),  # same padding
-                                bias=False,
-                            ),
-                            nn.BatchNorm2d(output_ch),
-                            nn.ReLU(),
-                        ]
-                    )
-                input_ch = output_ch
-            return layers
-
         self.uplist = nn.ModuleList()
         for ch_idx, ch in enumerate(down_ch_list[1:]):
             next_up_ch = ch
@@ -310,7 +313,7 @@ class UNetModel(ModelABC):
                 next_up_ch = down_ch_list[ch_idx + 2]
             if self.skip_type == "concat":
                 ch *= 2
-            layers = create_block(decoder_block, ch, next_up_ch)
+            layers = create_block(preact, decoder_block, ch, next_up_ch)
             self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
