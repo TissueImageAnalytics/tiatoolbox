@@ -174,7 +174,7 @@ def create_block(preact, kernels, input_ch, output_ch):
 
     Args:
         preact (bool):
-            Requires preactivation layers.
+            Whether to apply activation layer before the convolution layer. Should be True for ResNet blocks.
         kernels (list):
             A list of convolution layers. Each item is an
             integer and denotes the layer kernel size.
