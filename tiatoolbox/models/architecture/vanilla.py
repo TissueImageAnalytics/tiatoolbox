@@ -50,17 +50,6 @@ def _get_architecture(arch_name, pretrained=True, **kwargs):
     creator = backbone_dict[arch_name]
     model = creator(pretrained=pretrained, **kwargs)
 
-    if arch_name not in [
-        "resnet",
-        "resnext",
-        "densenet",
-        "alexnet",
-        "inception_v3",
-        "googlenet",
-        "mobilenet",
-    ]:
-        ValueError("Invalid architecture name.")
-
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:
         return nn.Sequential(*list(model.children())[:-2])
