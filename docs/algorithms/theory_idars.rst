@@ -100,7 +100,6 @@ referred to above. The pseudocode is also a correct summary of the
 slightly different IDaRS program in this repository. It is somewhat more
 careful than the pseudocode presented in the Supplement to the original paper.
 
-The IDaRS algorithm is effective because it is very likely that the
-:math:`k` chosen tiles will contribute most to moving the weights in
+The IDaRS algorithm is effective because it is very likely that the 
+:math:`k` chosen tiles combined with iteratively updated random :math:`r` tiles will contribute most to moving the weights in
 the desired direction.
-
