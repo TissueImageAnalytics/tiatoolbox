@@ -210,6 +210,8 @@ class WSIReader:
             raise FileNotSupported(f"File {input_img} is not a supported file format.")
 
         if suffixes[-1] in (".zarr",):
+            if not is_ngff(input_img):
+                raise FileNotSupported(f"File {input_img} does not appear to be a v0.4 NGFF zarr.")
             return NGFFWSIReader(input_img, mpp=mpp, power=power)
 
         if suffixes[-1] in (".npy",):
