@@ -167,13 +167,13 @@ class UnetEncoder(nn.Module):
         return features
 
 
-def create_block(preact, kernels, input_ch, output_ch):
+def create_block(pre_activation, kernels, input_ch, output_ch):
     """Helper to create a block of Vanilla Convolution.
 
     This is in pre-activation style.
 
     Args:
-        preact (bool):
+        pre_activation (bool):
             Whether to apply activation layer before the convolution layer.
             Should be True for ResNet blocks.
         kernels (list):
@@ -187,7 +187,7 @@ def create_block(preact, kernels, input_ch, output_ch):
     """
     layers = []
     for ksize in kernels:
-        if preact:
+        if pre_activation:
             layers.extend(
                 [
                     nn.BatchNorm2d(input_ch),
@@ -289,10 +289,10 @@ class UNetModel(ModelABC):
             decoder_block = [3, 3]
 
         if encoder == "resnet50":
-            preact = True
+            pre_activation = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
         if encoder == "unet":
-            preact = False
+            pre_activation = False
             self.backbone = UnetEncoder(num_input_channels, encoder_levels)
 
         if skip_type.lower() not in {"add", "concat"}:
@@ -314,7 +314,7 @@ class UNetModel(ModelABC):
                 next_up_ch = down_ch_list[ch_idx + 2]
             if self.skip_type == "concat":
                 ch *= 2
-            layers = create_block(preact, decoder_block, ch, next_up_ch)
+            layers = create_block(pre_activation, decoder_block, ch, next_up_ch)
             self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
