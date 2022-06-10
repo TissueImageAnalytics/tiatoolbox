@@ -1,4 +1,4 @@
-"""Defines a set of ResNet variants to be used within tiatoolbox."""
+"""Defines a set of UNet variants to be used within tiatoolbox."""
 
 from typing import List, Tuple
 
@@ -49,8 +49,7 @@ class ResNetEncoder(ResNet):
     @staticmethod
     def resnet50(num_input_channels: int):
         """Shortcut method to create ResNet50."""
-        model = ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
-        return model
+        return ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
 
     @staticmethod
     def resnet(
@@ -152,8 +151,8 @@ class UnetEncoder(nn.Module):
         This method defines how layers are used in forward operation.
 
         Args:
-            x (torch.Tensor): Input images- the tensor is of the shape
-            NCHW.
+            x (torch.Tensor):
+                Input images- the tensor is of the shape NCHW.
 
         Returns:
             list:
@@ -189,9 +188,19 @@ class UNetModel(ModelABC):
               pre-activation model.
             - "unet": The vanilla UNet encoder where each down-sampling
               level contains 2 blocks of Convolution-BatchNorm-ReLu.
+        encoder_levels (list):
+            A list of integers to configure "unet" encoder levels.
+            Each number defines the number of output channels at each
+            down-sampling level (2 convolutions). Number of intergers
+            define the number down-sampling levels in the unet encoder.
+            This is only applicable when `encoder="unet"`.
         decoder_block (list):
             A list of convolution layers. Each item is an integer and
             denotes the layer kernel size.
+        skip_type (str):
+            Choosing between "add" or "concat" method to be used for
+            combining feature maps from encoder and decoder parts at
+            skip connections. Default is "add".
 
     Returns:
         torch.nn.Module:
@@ -201,7 +210,7 @@ class UNetModel(ModelABC):
         >>> # instantiate a UNet with resnet50 endcoder and
         >>> # only 1 3x3 per each up-sampling block in the decoder
         >>> UNetModel.resnet50(
-        ...     2, 2
+        ...     2, 2,
         ...     encoder="resnet50",
         ...     decoder_block=(3,)
         ... )
@@ -213,20 +222,31 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
-        decoder_block: Tuple[int] = (3, 3),
+        encoder_levels: List[int] = None,
+        decoder_block: Tuple[int] = None,
+        skip_type: str = "add",
     ):
         super().__init__()
 
+        if encoder.lower() not in {"resnet50", "unet"}:
+            raise ValueError(f"Unknown encoder `{encoder}`")
+
+        if encoder_levels is None:
+            encoder_levels = [64, 128, 256, 512, 1024]
+
+        if decoder_block is None:
+            decoder_block = [3, 3]
+
         if encoder == "resnet50":
-            padding = 1
             preact = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
-        elif encoder == "unet":
-            padding = 0
+        if encoder == "unet":
             preact = False
-            self.backbone = UnetEncoder(num_input_channels, [64, 128, 256, 512, 2048])
-        else:
-            raise ValueError(f"Unknown encoder `{encoder}`")
+            self.backbone = UnetEncoder(num_input_channels, encoder_levels)
+
+        if skip_type.lower() not in {"add", "concat"}:
+            raise ValueError(f"Unknown type of skip connection: `{skip_type}`")
+        self.skip_type = skip_type.lower()
 
         img_list = torch.rand([1, num_input_channels, 256, 256])
         out_list = self.backbone(img_list)
@@ -262,7 +282,7 @@ class UNetModel(ModelABC):
                                 input_ch,
                                 output_ch,
                                 (ksize, ksize),
-                                padding=padding,
+                                padding=int((ksize - 1) // 2),  # same padding
                                 bias=False,
                             ),
                         ]
@@ -274,10 +294,10 @@ class UNetModel(ModelABC):
                                 input_ch,
                                 output_ch,
                                 (ksize, ksize),
-                                padding=padding,
+                                padding=int((ksize - 1) // 2),  # same padding
                                 bias=False,
                             ),
-                            nn.BatchNorm2d(input_ch),
+                            nn.BatchNorm2d(output_ch),
                             nn.ReLU(),
                         ]
                     )
@@ -289,11 +309,29 @@ class UNetModel(ModelABC):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
                 next_up_ch = down_ch_list[ch_idx + 2]
+            if self.skip_type == "concat":
+                ch *= 2
             layers = create_block(decoder_block, ch, next_up_ch)
             self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
         self.upsample2x = UpSample2x()
+
+    @staticmethod
+    def _transform(imgs: torch.Tensor):
+        """Transforming network input to desired format.
+
+        This method is model and dataset specific, meaning that it can be replaced by
+        user's desired tranform function before training/inference.
+
+        Args:
+            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+
+        Returns:
+            output (torch.Tensor): The transformed input.
+
+        """
+        return imgs / 255.0
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
@@ -313,8 +351,8 @@ class UNetModel(ModelABC):
                 input images.
 
         """
-        # scale to 0-1
-        imgs = imgs / 255.0
+        # transform the input using network-specific transform function
+        imgs = self._transform(imgs)
 
         # assume output is after each down-sample resolution
         en_list = self.backbone(imgs)
@@ -327,10 +365,13 @@ class UNetModel(ModelABC):
             # coming from the encoder, then run it through the decoder
             # block
             y = en_list[-idx]
-            x = self.upsample2x(x) + y
+            x_ = self.upsample2x(x)
+            if self.skip_type == "add":
+                x = x_ + y
+            else:
+                x = torch.cat([x_, y], dim=1)
             x = self.uplist[idx - 1](x)
-        output = self.clf(x)
-        return output
+        return self.clf(x)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):

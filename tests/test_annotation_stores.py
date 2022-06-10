@@ -1,4 +1,4 @@
-# skipcq: PTC-W6004
+# skipcq: PTC-W6004, PYL-W0105
 """Tests for annotation store classes."""
 import json
 import pickle
@@ -40,7 +40,7 @@ def cell_polygon(
     xy: Tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 10,
-    noise: Number = 1,
+    noise: Number = 0.01,
     eccentricity: Tuple[Number, Number] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
@@ -69,7 +69,7 @@ def cell_polygon(
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
     rx = radius * (np.random.rand() + 0.5)
-    ry = np.random.uniform(*eccentricity) * radius - rx
+    ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
     x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
     y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
     boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
@@ -332,6 +332,34 @@ def test_sqlite_store_metadata_len():
     assert len(metadata) == 2
 
 
+def test_sqlite_drop_index():
+    """Test creating and dropping an index."""
+    store = SQLiteStore()
+    store.create_index("foo", "props['class']")
+    assert "foo" in store.indexes()
+    store.drop_index("foo")
+    assert "foo" not in store.indexes()
+
+
+def test_sqlite_drop_index_fail():
+    """Test dropping an index that does not exist."""
+    store = SQLiteStore()
+    with pytest.raises(sqlite3.OperationalError):
+        store.drop_index("foo")
+
+
+def test_sqlite_optimize(fill_store, tmp_path):
+    """Test running the optimize function on an SQLiteStore."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize(limit=0)
+
+
+def test_sqlite_optimize_no_vacuum(fill_store, tmp_path):
+    """Test running the optimize function on an SQLiteStore without VACUUM."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize(limit=0, vacuum=False)
+
+
 def test_annotation_to_geojson():
     """Test converting an annotation to geojson."""
     annotation = Annotation(
@@ -416,7 +444,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
         assert len(results) == 6
-        assert all(isinstance(ann, Annotation) for ann in results)
+        assert all(isinstance(ann, Annotation) for ann in results.values())
 
     @staticmethod
     def test_iquery_polygon(fill_store, tmp_path, store_cls):
@@ -807,8 +835,9 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            (0, 0, 1024, 1024),
-            where=lambda props: props.get("class") == 123,
+            # (0, 0, 1024, 1024),
+            where=lambda props: props.get("class")
+            == 123,
         )
         assert len(results) == 1
 
@@ -957,6 +986,13 @@ class TestStore:
             store.query((0, 0, 1024, 1024), geometry_predicate="foo")
 
     @staticmethod
+    def test_query_no_geometry_or_where(fill_store, store_cls):
+        """Test that query raises exception when no geometry or predicate given."""
+        store = store_cls()
+        with pytest.raises(ValueError, match="At least one of"):
+            store.query()
+
+    @staticmethod
     def test_iquery_invalid_geometry_predicate(fill_store, store_cls):
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
@@ -997,9 +1033,9 @@ class TestStore:
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py37_init(fill_store, store_cls, monkeypatch):
-        """Test that __init__ is compatible with Python 3.7."""
-        py37_version = (3, 7, 0)
+    def test_py38_init(fill_store, store_cls, monkeypatch):
+        """Test that __init__ is compatible with Python 3.8."""
+        py38_version = (3, 8, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
@@ -1008,6 +1044,224 @@ class TestStore:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
-        monkeypatch.setattr(sys, "version_info", py37_version)
+        monkeypatch.setattr(sys, "version_info", py38_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
+
+    @staticmethod
+    def test_is_rectangle(store_cls):
+        """Test that _is_rectangle returns True only for rectangles."""
+        store = store_cls()
+
+        # Clockwise
+        assert store._is_rectangle(
+            *[
+                (1, 0),
+                (0, 0),
+                (0, 1),
+                (1, 1),
+            ]
+        )
+
+        # Counter-clockwise
+        assert store._is_rectangle(
+            *[
+                (1, 1),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+        # From shapely
+        box = Polygon.from_bounds(0, 0, 10, 10)
+        assert store._is_rectangle(*box.exterior.coords)
+
+        # Fuzz
+        for _ in range(100):
+            box = Polygon.from_bounds(*np.random.randint(0, 100, 4))
+            assert store._is_rectangle(*box.exterior.coords)
+
+        # Failure case
+        assert not store._is_rectangle(
+            *[
+                (1, 1.5),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+    @staticmethod
+    def test_is_rectangle_invalid_input(store_cls):
+        """Test that _is_rectangle returns False for invalid input."""
+        store = store_cls()
+        assert not store._is_rectangle(1, 2, 3, 4)
+        assert not store._is_rectangle((0, 0), (0, 1), (1, 1), (1, 0), (2, 0))
+
+    @staticmethod
+    def test_is_right_angle(store_cls):
+        """Test that _is_right_angle returns True only for right angles."""
+        store = store_cls()
+
+        # skipcq
+        r"""
+        c
+        |
+        |
+        b-----a
+        """
+        assert store._is_right_angle(
+            *[
+                (1, 0),
+                (0, 0),
+                (0, 1),
+            ]
+        )
+
+        # skipcq
+        r"""
+        a
+        |
+        |
+        b-----c
+        """
+        assert store._is_right_angle(
+            *[
+                (0, 1),
+                (0, 0),
+                (1, 0),
+            ]
+        )
+
+        # skipcq
+        r"""
+           c
+            \
+             \
+        a-----b
+        """
+        assert not store._is_right_angle(
+            *[
+                (0, 0),
+                (1, 0),
+                (0, 1),
+            ]
+        )
+
+        assert not store._is_right_angle(
+            *[
+                (1, 0.2),
+                (0, 0),
+                (0.2, 1),
+            ]
+        )
+
+    @staticmethod
+    def test_box_query_polygon_intersection(store_cls):
+        """Test that a box query correctly checks intersections with polygons."""
+        store = store_cls()
+
+        # Add a triangle annotation
+        store["foo"] = Annotation(Polygon([(0, 10), (10, 10), (10, 0)]))
+        # ASCII diagram of the annotation with points labeled from a to
+        # c:
+        # skipcq
+        r"""
+        a-----b
+         \    |
+          \   |
+           \  |
+            \ |
+             \|
+              c
+        """
+
+        # Query where the bounding boxes overlap but the geometries do
+        # not. Should return an empty result.
+        # ASCII diagram of the query:
+        # skipcq
+        r"""
+        a-----b
+         \    |
+          \   |
+           \  |
+        +--+\ |
+        |  | \|
+        +--+  c
+        """
+        result = store.query([0, 0, 4.9, 4.9], geometry_predicate="intersects")
+        assert len(result) == 0
+
+        # Query where the bounding boxes overlap and the geometries do.
+        # Should return the annotation.
+        # ASCII diagram of the query:
+        # skipcq
+        r"""
+        +------+
+        a-----b|
+        |\    ||
+        | \   ||
+        |  \  ||
+        |   \ ||
+        |    \||
+        +-----c+
+        """
+        result = store.query([0, 0, 11, 11], geometry_predicate="intersects")
+        assert len(result) == 1
+
+    @staticmethod
+    def test_bquery_bounds(fill_store, store_cls):
+        """Test querying a store with a bounding box iterable."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery((0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_polygon(fill_store, store_cls):
+        """Test querying a store with a polygon."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_callable(fill_store, store_cls):
+        """Test querying a store with a bounding box and a callable."""
+        keys, store = fill_store(store_cls, ":memory:")
+        for i, key in enumerate(keys):
+            store.patch(key, properties={"class": i % 5})
+        dictionary = store.bquery(
+            (0, 0, 1e10, 1e10), where=lambda x: x.get("class") > 0
+        )
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store) - len(store) // 5
+
+    @staticmethod
+    def test_validate_equal_lengths(store_cls):
+        """Test that equal length lists are valid."""
+        store_cls._validate_equal_lengths([1, 2, 3], [1, 2, 3])
+        store_cls._validate_equal_lengths()
+        with pytest.raises(ValueError, match="equal length"):
+            store_cls._validate_equal_lengths([1, 2, 3], [1, 2])
+
+    @staticmethod
+    def test_connection_to_path_memory(store_cls):
+        """Test converting a :memory: connection to a path."""
+        path = store_cls._connection_to_path(":memory:")
+        assert path == Path(":memory:")
+
+    @staticmethod
+    def test_connection_to_path_type_error(store_cls):
+        """Test converting an invalid type connection to a path."""
+        with pytest.raises(TypeError):
+            _ = store_cls._connection_to_path(123)
+
+    @staticmethod
+    def test_connection_to_path_io(store_cls, tmp_path):
+        """Test converting a named file connection to a path."""
+        path = tmp_path / "foo"
+        with open(path, "w") as fh:
+            store_cls._connection_to_path(fh)
+            assert path == Path(fh.name)
