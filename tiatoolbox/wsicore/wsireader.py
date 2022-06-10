@@ -2697,7 +2697,9 @@ class DICOMWSIReader(WSIReader):
 class NGFFWSIReader(WSIReader):
     """Reader for NGFF WSI zarrs.
 
-    Support is currently experimental.
+    Support is currently experimental. This supports reading from
+    NGFF version 0.4.
+
     """
 
     def __init__(self, path, **kwargs):
