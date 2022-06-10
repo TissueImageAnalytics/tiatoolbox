@@ -2718,7 +2718,9 @@ class NGFFWSIReader(WSIReader):
     def __init__(self, path, **kwargs):
         super().__init__(path, **kwargs)
         from tiatoolbox.wsicore.metadata import ngff
+        from imagecodecs import numcodecs
 
+        numcodecs.register_codecs()
         self._zarr_group: zarr.hierarchy.Group = zarr.open(path, mode="r")
         attrs = self._zarr_group.attrs
         multiscales = attrs["multiscales"][0]
