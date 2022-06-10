@@ -20,7 +20,7 @@ from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.wsicore.metadata.ngff import Multiscales, Zattrs
+from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 pixman_warning()
