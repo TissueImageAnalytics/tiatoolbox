@@ -20,6 +20,7 @@ from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.wsicore.metadata.ngff import Multiscales, Zattrs
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 pixman_warning()
@@ -90,12 +91,14 @@ def is_zarr(path: pathlib.Path) -> bool:
         return False
 
 
-def is_ngff(path: pathlib.Path) -> bool:
+def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
     """Check if the input is a NGFF file.
 
     Args:
         path (pathlib.Path):
             Path to the file to check.
+        min_version (Tuple[int, ...]):
+            Minimum version of the NGFF file to be considered valid.
 
     Returns:
         bool:
@@ -106,7 +109,7 @@ def is_ngff(path: pathlib.Path) -> bool:
     zattrs_path = path / ".zattrs"
     group_attrs = json.load(zattrs_path)
     try:
-        multiscales = group_attrs["multiscales"]
+        multiscales: Multiscales = group_attrs["multiscales"]
         omero = group_attrs["omero"]
         _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa N806
         if not all(
@@ -119,6 +122,12 @@ def is_ngff(path: pathlib.Path) -> bool:
         ):
             return False
     except KeyError:
+        return False
+    multiscales_version = tuple(int(part) for part in multiscales.version.split("."))
+    omero_version = tuple(int(part) for part in omero.version.split("."))
+    if multiscales_version < min_version:
+        return False
+    if omero_version < min_version:
         return False
     return is_zarr(path)
 
@@ -211,7 +220,9 @@ class WSIReader:
 
         if suffixes[-1] in (".zarr",):
             if not is_ngff(input_img):
-                raise FileNotSupported(f"File {input_img} does not appear to be a v0.4 NGFF zarr.")
+                raise FileNotSupported(
+                    f"File {input_img} does not appear to be a v0.4 NGFF zarr."
+                )
             return NGFFWSIReader(input_img, mpp=mpp, power=power)
 
         if suffixes[-1] in (".npy",):
