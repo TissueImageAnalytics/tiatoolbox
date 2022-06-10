@@ -49,7 +49,7 @@ def get_pretrained_model(
                 - resnet34
                 - resnet50
                 - resnet101
-                - resnext5032x4d
+                - resnext50_32x4d
                 - resnext101_32x8d
                 - wide_resnet50_2
                 - wide_resnet101_2
