@@ -6,7 +6,7 @@ import torch.nn as nn
 import torchvision.models as torch_models
 
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.utils import misc
+from tiatoolbox.utils.misc import select_device
 
 
 def _get_architecture(arch_name, pretrained=True, **kwargs):
@@ -52,16 +52,15 @@ def _get_architecture(arch_name, pretrained=True, **kwargs):
 
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:
-        feat_extract = nn.Sequential(*list(model.children())[:-2])
-    elif "densenet" in arch_name:
-        feat_extract = model.features
-    elif "alexnet" in arch_name:
-        feat_extract = model.features
+        return nn.Sequential(*list(model.children())[:-2])
+    if "densenet" in arch_name:
+        return model.features
+    if "alexnet" in arch_name:
+        return model.features
     if "inception_v3" in arch_name or "googlenet" in arch_name:
-        feat_extract = nn.Sequential(*list(model.children())[:-3])
-    if "mobilenet" in arch_name:
-        feat_extract = model.features
-    return feat_extract
+        return nn.Sequential(*list(model.children())[:-3])
+
+    return model.features
 
 
 class CNNModel(ModelABC):
@@ -111,8 +110,7 @@ class CNNModel(ModelABC):
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
         logit = self.classifier(gap_feat)
-        prob = torch.softmax(logit, -1)
-        return prob
+        return torch.softmax(logit, -1)
 
     @staticmethod
     def postproc(image):
@@ -139,10 +137,10 @@ class CNNModel(ModelABC):
                 Whether to run inference on a GPU.
 
         """
-        device = misc.select_device(on_gpu)
 
-        img_patches = batch_data
-        img_patches_device = img_patches.to(device).type(torch.float32)  # to NCHW
+        img_patches_device = batch_data.to(select_device(on_gpu)).type(
+            torch.float32
+        )  # to NCHW
         img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 
         # Inference mode
@@ -189,7 +187,7 @@ class CNNBackbone(ModelABC):
         >>> model = CNNBackbone(backbone="resnet50")
         >>> model.eval()  # set to evaluation mode
         >>> # dummy sample in NHWC form
-        >>> samples = torch.random.rand(4, 3, 512, 512)
+        >>> samples = torch.rand(4, 3, 512, 512)
         >>> features = model(samples)
         >>> features.shape  # features after global average pooling
         torch.Size([4, 2048])
@@ -213,8 +211,7 @@ class CNNBackbone(ModelABC):
         """
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
-        gap_feat = torch.flatten(gap_feat, 1)
-        return gap_feat
+        return torch.flatten(gap_feat, 1)
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
@@ -232,10 +229,10 @@ class CNNBackbone(ModelABC):
                 Whether to run inference on a GPU.
 
         """
-        device = misc.select_device(on_gpu)
 
-        img_patches = batch_data
-        img_patches_device = img_patches.to(device).type(torch.float32)  # to NCHW
+        img_patches_device = batch_data.to(select_device(on_gpu)).type(
+            torch.float32
+        )  # to NCHW
         img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 
         # Inference mode
