@@ -110,3 +110,6 @@ FCN
 bchwx1
 1xshxsw
 bxcxhxwxshxsw
+quickstart
+execfile
+autodoc
