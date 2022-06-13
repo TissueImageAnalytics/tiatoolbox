@@ -165,7 +165,7 @@ man_pages = [(master_doc, "tiatoolbox", "TIA Toolbox Documentation", [author], 1
 
 # -- Options for Texinfo output ----------------------------------------
 
-latex_engine = 'xelatex'
+latex_engine = "xelatex"
 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
