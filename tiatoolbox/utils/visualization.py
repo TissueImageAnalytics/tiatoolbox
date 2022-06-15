@@ -35,8 +35,16 @@ def random_colors(num_colors, bright=True):
 
 
 def colourise_image(img, cmap="viridis"):
-    """If input img is single channel, colourise it
-    using specified colourmap.
+    """If input img is single channel, colourise it.
+
+    Args:
+        img(ndarray):
+            Single channel or RGB image as ndarray.
+        cmap(str):
+            Colormap to use, must be a valid matplotlib cmap string.
+
+    Returns:  
+        img(ndarray): An RGB image.
     """
     if len(img.shape) == 2:
         # Single channel, make into rgb with colormap.

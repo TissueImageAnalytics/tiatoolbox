@@ -22,9 +22,13 @@ class TileServer(Flask):
         title (str):
             The title of the tile server, displayed in the browser as
             the page title.
-        layers (Dict[str, WSIReader]):
-            A dictionary mapping layer names to :obj:`WSIReader` objects
-            to display.
+        layers (Dict[str, WSIReader | str] | List[WSIReader | str]):
+            A dictionary mapping layer names to image paths or
+            :obj:`WSIReader` objects to display. May also be a list,
+            in which case generic names 'layer-1', 'layer-2' etc.
+            will be used.
+            If layer is a single-channel low-res overlay, it will be
+            colourized using the 'viridis' colourmap
 
     Examples:
         >>> from tiatoolbox.wsiscore.wsireader import WSIReader
@@ -40,7 +44,7 @@ class TileServer(Flask):
     """
 
     def __init__(
-        self, title: str, layers: Union[Dict[str, WSIReader], List[WSIReader]]
+        self, title: str, layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]]
     ) -> None:
         super().__init__(
             __name__,
