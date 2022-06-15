@@ -9,7 +9,7 @@ def tile_server(img_input, name):  # pragma: no cover
     """Show a slide together with any overlays.
 
     Args:
-        img_input (tuple[str]): 
+        img_input (tuple[str]):
             Paths to images to be displayed.
         name (tuple[str]):
             Names to be assigned to each layer.

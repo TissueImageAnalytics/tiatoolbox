@@ -44,7 +44,9 @@ class TileServer(Flask):
     """
 
     def __init__(
-        self, title: str, layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]]
+        self,
+        title: str,
+        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
     ) -> None:
         super().__init__(
             __name__,
