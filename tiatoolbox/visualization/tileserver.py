@@ -11,8 +11,8 @@ from PIL import Image
 
 from tiatoolbox import data
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class TileServer(Flask):
@@ -44,7 +44,9 @@ class TileServer(Flask):
     """
 
     def __init__(
-        self, title: str, layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]]
+        self,
+        title: str,
+        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
     ) -> None:
         super().__init__(
             __name__,

@@ -5,8 +5,8 @@ from typing import Tuple, Union
 
 import cv2
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -43,7 +43,7 @@ def colourise_image(img, cmap="viridis"):
         cmap(str):
             Colormap to use, must be a valid matplotlib cmap string.
 
-    Returns:  
+    Returns:
         img(ndarray): An RGB image.
     """
     if len(img.shape) == 2:

@@ -1,5 +1,5 @@
 """Command line interface for TileServer"""
-from tiatoolbox.cli.common import tiatoolbox_cli, cli_img_input, cli_name
+from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
 
 
 @tiatoolbox_cli.command()
@@ -9,7 +9,7 @@ def tile_server(img_input, name):  # pragma: no cover
     """Show a slide together with any overlays.
 
     Args:
-        img_input (tuple[str]): 
+        img_input (tuple[str]):
             Paths to images to be displayed.
         name (tuple[str]):
             Names to be assigned to each layer.
