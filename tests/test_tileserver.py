@@ -1,11 +1,12 @@
 """Tests for tileserver."""
-import pytest
 from pathlib import Path
-import numpy as np
 
+import numpy as np
+import pytest
+
+from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
-from tiatoolbox.utils.misc import imwrite
 
 
 @pytest.fixture()

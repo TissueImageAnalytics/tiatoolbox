@@ -11,8 +11,8 @@ from PIL import Image
 
 from tiatoolbox import data
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class TileServer(Flask):

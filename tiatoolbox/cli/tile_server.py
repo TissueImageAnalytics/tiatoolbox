@@ -1,5 +1,5 @@
 """Command line interface for TileServer"""
-from tiatoolbox.cli.common import tiatoolbox_cli, cli_img_input, cli_name
+from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
 
 
 @tiatoolbox_cli.command()
