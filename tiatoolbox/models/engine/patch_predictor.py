@@ -515,6 +515,42 @@ class PatchPredictor:
 
         return cum_output
 
+    def _predict_patch(self, imgs, labels, return_probabilities, on_gpu):
+        """Process patch mode.
+
+        Args:
+            imgs (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list. When using
+                `tile` or `wsi` mode, the input must be a list of file
+                paths.
+            labels:
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            on_gpu (bool):
+                Whether to run model on the GPU.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Model predictions of the input dataset
+
+        """
+        if labels is not None:
+            # if a labels is provided, then return with the prediction
+            check_labels_length(labels, imgs)
+            return_labels = bool(labels)
+
+        # don't return coordinates if patches are already extracted
+        return_coordinates = False
+        dataset = PatchDataset(imgs, labels)
+        return self._predict_engine(
+            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+        )
+
     def predict(
         self,
         imgs,
@@ -623,18 +659,8 @@ class PatchPredictor:
                 f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
 
-        if mode == "patch" and labels is not None:
-            # if a labels is provided, then return with the prediction
-            check_labels_length(labels, imgs)
-            return_labels = bool(labels)
-
         if mode == "patch":
-            # don't return coordinates if patches are already extracted
-            return_coordinates = False
-            dataset = PatchDataset(imgs, labels)
-            return self._predict_engine(
-                dataset, return_probabilities, return_labels, return_coordinates, on_gpu
-            )
+            self._predict_patch(imgs, labels, return_probabilities, on_gpu)
 
         if mode == "wsi" and masks is not None and len(masks) != len(imgs):
             raise ValueError(
@@ -717,8 +743,12 @@ class PatchPredictor:
         file_dict = OrderedDict()
         for idx, img_path in enumerate(imgs):
             img_path = pathlib.Path(img_path)
-            img_label = None if labels is None else labels[idx]
-            img_mask = None if masks is None else masks[idx]
+            img_label = None
+            img_mask = None
+            if labels:
+                img_label = labels[idx]
+            if masks:
+                img_mask = masks[idx]
 
             dataset = WSIPatchDataset(
                 img_path,
