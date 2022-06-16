@@ -690,25 +690,16 @@ class PatchPredictor:
                 "to the corresponding files."
             )
 
-        if len(imgs) > 1:
+        if len(imgs) > 1 and save_dir is None:
             warnings.warn(
-                "When providing multiple whole-slide images / tiles, "
-                "we save the outputs and return the locations "
-                "to the corresponding files."
+                "More than 1 WSIs detected but there is no save directory set."
+                "All subsequent output will be saved to current runtime"
+                "location under folder 'output'. Overwriting may happen!"
             )
-            if save_dir is None:
-                warnings.warn(
-                    "> 1 WSIs detected but there is no save directory set."
-                    "All subsequent output will be saved to current runtime"
-                    "location under folder 'output'. Overwriting may happen!"
-                )
-                save_dir = pathlib.Path(os.getcwd()).joinpath("output")
+            save_dir = pathlib.Path(os.getcwd()).joinpath("output")
 
-            save_dir = pathlib.Path(save_dir)
-
-        if save_dir is not None:
-            save_dir = pathlib.Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=False)
+        save_dir = pathlib.Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=False)
 
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
