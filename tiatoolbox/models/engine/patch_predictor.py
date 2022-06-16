@@ -1,3 +1,4 @@
+# skipcq: PY-W0073  # noqa: E800
 """This module implements patch level prediction."""
 
 import copy
@@ -216,7 +217,7 @@ class PatchPredictor:
         pathology." International Conference on Medical image computing and
         computer-assisted intervention. Springer, Cham, 2018.
 
-    """  # noqa: W605 # skipcq: PY-W0073
+    """  # noqa: W605
 
     def __init__(
         self,
