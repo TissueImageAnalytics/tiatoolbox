@@ -492,6 +492,56 @@ class PatchPredictor:
             dataset, return_probabilities, return_labels, return_coordinates, on_gpu
         )
 
+    def _update_ioconfig(self, ioconfig, patch_input_shape, stride_shape, resolution, units, make_config_flag):
+        """
+
+        Args:
+            ioconfig (IOPatchPredictorConfig):
+        patch_input_shape (tuple):
+            Size of patches input to the model. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple):
+            Stride using during tile and WSI processing. Stride is
+            at requested read resolution, not with respect to to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        resolution (float):
+            Resolution used for reading the image. Please see
+            :obj:`WSIReader` for details.
+        units (str):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :obj:`WSIReader` for details.
+
+        Returns:
+            Updated Patch Predictor IO configuration.
+
+        """
+        if ioconfig is None and self.ioconfig is None and any(make_config_flag):
+            raise ValueError(
+                "Must provide either `ioconfig` or "
+                "`patch_input_shape`, `resolution`, and `units`."
+            )
+        if ioconfig is None and self.ioconfig:
+            ioconfig = copy.deepcopy(self.ioconfig)
+            # ! not sure if there is a nicer way to set this
+            if patch_input_shape is not None:
+                ioconfig.patch_input_shape = patch_input_shape
+            if stride_shape is not None:
+                ioconfig.stride_shape = stride_shape
+            if resolution is not None:
+                ioconfig.input_resolutions[0]["resolution"] = resolution
+            if units is not None:
+                ioconfig.input_resolutions[0]["units"] = units
+        if ioconfig is None and all(not v for v in make_config_flag):
+            ioconfig = IOPatchPredictorConfig(
+                input_resolutions=[{"resolution": resolution, "units": units}],
+                patch_input_shape=patch_input_shape,
+                stride_shape=stride_shape,
+            )
+        return ioconfig
+
     def predict(
         self,
         imgs,
@@ -616,29 +666,6 @@ class PatchPredictor:
             resolution is None,
             units is None,
         )
-
-        if ioconfig is None and self.ioconfig is None and any(make_config_flag):
-            raise ValueError(
-                "Must provide either `ioconfig` or "
-                "`patch_input_shape`, `resolution`, and `units`."
-            )
-        if ioconfig is None and self.ioconfig:
-            ioconfig = copy.deepcopy(self.ioconfig)
-            # ! not sure if there is a nicer way to set this
-            if patch_input_shape is not None:
-                ioconfig.patch_input_shape = patch_input_shape
-            if stride_shape is not None:
-                ioconfig.stride_shape = stride_shape
-            if resolution is not None:
-                ioconfig.input_resolutions[0]["resolution"] = resolution
-            if units is not None:
-                ioconfig.input_resolutions[0]["units"] = units
-        elif ioconfig is None and all(not v for v in make_config_flag):
-            ioconfig = IOPatchPredictorConfig(
-                input_resolutions=[{"resolution": resolution, "units": units}],
-                patch_input_shape=patch_input_shape,
-                stride_shape=stride_shape,
-            )
 
         fx_list = ioconfig.scale_to_highest(
             ioconfig.input_resolutions, ioconfig.input_resolutions[0]["units"]
