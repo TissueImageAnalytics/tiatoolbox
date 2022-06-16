@@ -41,7 +41,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
         )
 
 
-class PatchPredictor:  # skipcq: PY-W0073
+class PatchPredictor:
     """Patch level predictor.
 
     The models provided by tiatoolbox should give the following results:
@@ -216,7 +216,7 @@ class PatchPredictor:  # skipcq: PY-W0073
         pathology." International Conference on Medical image computing and
         computer-assisted intervention. Springer, Cham, 2018.
 
-    """  # noqa: W605
+    """  # noqa: W605 # skipcq: PY-W0073
 
     def __init__(
         self,
