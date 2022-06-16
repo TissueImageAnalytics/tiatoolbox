@@ -1,26 +1,23 @@
 """tests for annotation rendering using
 AnnotationRenderer and AnnotationTileGenerator
 """
-import pytest
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
-from scipy.ndimage.measurements import label
 from pathlib import Path
 from typing import List, Union
-from shapely.geometry import Polygon, LineString
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pytest
+from PIL import Image
+from scipy.ndimage.measurements import label
+from shapely.geometry import LineString, Polygon
 from shapely.geometry.point import Point
 
+from tests.test_annotation_stores import cell_polygon
+from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator
+from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
-from tiatoolbox.utils.env_detection import running_on_travis
-from tiatoolbox.annotation.storage import (
-    Annotation,
-    AnnotationStore,
-    SQLiteStore,
-)
-from tests.test_annotation_stores import cell_polygon
 
 
 @pytest.fixture(scope="session")
