@@ -628,17 +628,17 @@ class PatchPredictor:
             check_labels_length(labels, imgs)
             return_labels = bool(labels)
 
-        if mode == "wsi" and masks is not None and len(masks) != len(imgs):
-            raise ValueError(
-                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
-            )
-
         if mode == "patch":
             # don't return coordinates if patches are already extracted
             return_coordinates = False
             dataset = PatchDataset(imgs, labels)
             return self._predict_engine(
                 dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+            )
+
+        if mode == "wsi" and masks is not None and len(masks) != len(imgs):
+            raise ValueError(
+                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
             )
 
         if stride_shape is None:
@@ -661,6 +661,7 @@ class PatchPredictor:
             ioconfig = update_ioconfig(
                 self.ioconfig, patch_input_shape, stride_shape, resolution, units
             )
+
         if ioconfig is None and all(not v for v in make_config_flag):
             ioconfig = IOPatchPredictorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
@@ -768,4 +769,7 @@ class PatchPredictor:
                     save_info["merged"] = merged_file_path
                 file_dict[str(img_path)] = save_info
 
-        return file_dict if len(imgs) > 1 or save_output else outputs
+        if len(imgs) > 1 or save_output:
+            return file_dict
+
+        return outputs
