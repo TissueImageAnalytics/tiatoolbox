@@ -600,17 +600,72 @@ class PatchPredictor:
     def _predict_tile_wsi(
         self,
         imgs,
-        labels,
         masks,
-        save_output,
-        save_dir,
+        labels,
         mode,
-        ioconfig,
         return_probabilities,
-        merge_predictions,
-        highest_input_resolution,
         on_gpu,
+        ioconfig,
+        merge_predictions,
+        save_dir,
+        save_output,
+        highest_input_resolution,
     ):
+        """Predict on Tile and WSIs.
+
+        Args:
+            imgs (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list. When using
+                `tile` or `wsi` mode, the input must be a list of file
+                paths.
+            masks (list):
+                List of masks. Only utilised when processing image tiles
+                and whole-slide images. Patches are only processed if
+                they are within a masked area. If not provided, then a
+                tissue mask will be automatically generated for
+                whole-slide images or the entire image is processed for
+                image tiles.
+            labels:
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
+            mode (str):
+                Type of input to process. Choose from either `patch`,
+                `tile` or `wsi`.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            on_gpu (bool):
+                Whether to run model on the GPU.
+            ioconfig (IOPatchPredictorConfig):
+                Patch Predictor IO configuration..
+            merge_predictions (bool):
+                Whether to merge the predictions to form a 2-dimensional
+                map. This is only applicable for `mode='wsi'` or
+                `mode='tile'`.
+            save_dir (str or pathlib.Path):
+                Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output`
+                where the running script is invoked.
+            save_output (bool):
+                Whether to save output for a single file. default=False
+            highest_input_resolution:
+
+
+        Returns:
+            dict:
+                Results are saved to `save_dir` and a dictionary indicating save
+                location for each input is returned. The dict is in the following
+                format:
+                    - img_path: path of the input image.
+                        - raw: path to save location for raw prediction,
+                          saved in .json.
+                        - merged: path to .npy contain merged
+                          predictions if
+                        `merge_predictions` is `True`.
+
+        """
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
 
@@ -824,14 +879,14 @@ class PatchPredictor:
 
         return self._predict_tile_wsi(
             imgs,
-            labels,
             masks,
-            save_output,
-            save_dir,
+            labels,
             mode,
-            ioconfig,
             return_probabilities,
-            merge_predictions,
-            highest_input_resolution,
             on_gpu,
+            ioconfig,
+            merge_predictions,
+            save_dir,
+            save_output,
+            highest_input_resolution,
         )
