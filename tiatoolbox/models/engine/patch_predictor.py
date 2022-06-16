@@ -452,7 +452,7 @@ class PatchPredictor:
 
         return cum_output
 
-    def _predict_patch(self, imgs, labels, return_probabilities, on_gpu):
+    def _predict_patch(self, imgs, labels, return_probabilities, return_labels, on_gpu):
         """Process patch mode.
 
         Args:
@@ -468,6 +468,8 @@ class PatchPredictor:
                 supported.
             return_probabilities (bool):
                 Whether to return per-class probabilities.
+            return_labels (bool):
+                Whether to return the labels with the predictions.
             on_gpu (bool):
                 Whether to run model on the GPU.
 
@@ -499,7 +501,6 @@ class PatchPredictor:
         stride_shape,
         resolution,
         units,
-        make_config_flag,
     ):
         """
 
@@ -786,7 +787,9 @@ class PatchPredictor:
                 f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
         if mode == "patch":
-            return self._predict_patch(imgs, labels, return_probabilities, on_gpu)
+            return self._predict_patch(
+                imgs, labels, return_probabilities, return_labels, on_gpu
+            )
 
         if not isinstance(imgs, list):
             raise ValueError(
