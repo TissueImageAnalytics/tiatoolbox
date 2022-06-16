@@ -1,4 +1,4 @@
-"""This module implements patch-level prediction."""
+"""This module implements patch level prediction."""
 
 import copy
 import os
@@ -105,7 +105,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
-    """Patch-level predictor.
+    """Patch level predictor.
 
     The models provided by tiatoolbox should give the following results:
 
@@ -321,7 +321,7 @@ class PatchPredictor:
         postproc_func: Callable = None,
         return_raw: bool = False,
     ):
-        """Merge patch-level predictions to form a 2-dimensional prediction map.
+        """Merge patch level predictions to form a 2-dimensional prediction map.
 
         #! Improve how the below reads.
         The prediction map will contain values from 0 to N, where N is
