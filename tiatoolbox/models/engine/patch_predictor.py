@@ -564,7 +564,8 @@ class PatchPredictor:
             stride_shape=stride_shape,
         )
 
-    def _prepare_save_dir(self, save_dir, imgs):
+    @staticmethod
+    def _prepare_save_dir(save_dir, imgs):
         """Create directory if not defined and number of images is more than 1.
 
         Args:
