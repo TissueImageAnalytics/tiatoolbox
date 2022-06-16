@@ -75,11 +75,33 @@ def check_labels_length(labels, imgs):
             paths.
 
     Raises:
-        ValueError if length of labels does not match length of images.
+        ValueError: if length of labels does not match length of images.
 
     """
     if len(labels) != len(imgs):
         raise ValueError(f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}")
+
+
+def create_dir_if_not_defined(imgs):
+    """Create directory if not defined and number of images is more than 1.
+
+    Args:
+        imgs (list, ndarray):
+            List of inputs to process.
+
+    Returns:
+        :class:`pathlib.Path`:
+            Path to output directory.
+
+    """
+    if len(imgs) > 1:
+        warnings.warn(
+            "More than 1 WSIs detected but there is no save directory set."
+            "All subsequent output will be saved to current runtime"
+            "location under folder 'output'. Overwriting may happen!"
+        )
+        return pathlib.Path(os.getcwd()).joinpath("output")
+    return None
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):
@@ -717,13 +739,8 @@ class PatchPredictor:
                 "to the corresponding files."
             )
 
-        if len(imgs) > 1 and save_dir is None:
-            warnings.warn(
-                "More than 1 WSIs detected but there is no save directory set."
-                "All subsequent output will be saved to current runtime"
-                "location under folder 'output'. Overwriting may happen!"
-            )
-            save_dir = pathlib.Path(os.getcwd()).joinpath("output")
+        if save_dir is None:
+            save_dir = create_dir_if_not_defined(imgs)
 
         save_dir = pathlib.Path(save_dir)
         save_dir.mkdir(parents=True, exist_ok=False)
