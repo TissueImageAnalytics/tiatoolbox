@@ -42,7 +42,6 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
-    # skipcq: PY-W0073  # noqa: E800
     """Patch level predictor.
 
     The models provided by tiatoolbox should give the following results:
