@@ -493,7 +493,13 @@ class PatchPredictor:
         )
 
     def _update_ioconfig(
-        self, ioconfig, patch_input_shape, stride_shape, resolution, units
+        self,
+        ioconfig,
+        patch_input_shape,
+        stride_shape,
+        resolution,
+        units,
+        make_config_flag,
     ):
         """
 
