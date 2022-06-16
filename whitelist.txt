@@ -110,6 +110,5 @@ FCN
 bchwx1
 1xshxsw
 bxcxhxwxshxsw
-pre-emptive
-0e-
-0e+
+emptive
+0e
