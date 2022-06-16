@@ -1,4 +1,3 @@
-# skipcq: PY-W0073  # noqa: E800
 """This module implements patch level prediction."""
 
 import copy
@@ -43,6 +42,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
+    # skipcq: PY-W0073  # noqa: E800
     """Patch level predictor.
 
     The models provided by tiatoolbox should give the following results:
