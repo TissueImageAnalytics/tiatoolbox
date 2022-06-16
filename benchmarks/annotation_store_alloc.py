@@ -239,7 +239,7 @@ def main(
     size: Tuple[int, int],
 ) -> None:
     """Run the benchmark.
-    
+
     Args:
         store (str): The store to use. Valid options are:
             - dict: In-memory dictionary store.

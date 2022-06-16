@@ -20,6 +20,7 @@ DICOM
 DNS
 downsample
 downsampled
+downsampling
 dpkg
 dtype
 enum
@@ -105,3 +106,7 @@ W0212
 W0221
 w0613
 W6004
+FCN
+bchwx1
+1xshxsw
+bxcxhxwxshxsw

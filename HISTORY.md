@@ -1,6 +1,44 @@
 History
 =======
 
+1.1.0 (2022-05-07)
+------------------
+### Major Updates and Feature Improvements
+- Adds DICOM Support.
+- Updates license to more permissive BSD 3-clause.
+- Adds `micronet` model.
+- Improves support for `tiff` files.
+  - Adds a check for tiles in a TIFF file when opening.
+  - Uses OpenSlide to read a TIFF if it has tiles instead of OpenCV (VirtualWSIReader).
+  - Adds a fallback to tifffile if it is tiled but openslide cannot read it
+  (e.g. jp2k or jpegxl tiles).
+- Adds support for multi-channel images (HxWxC).
+- Fixes performance issues in `semantic_segmentor.py`.
+  - Performance gain measurement: 21.67s (new) vs 45.564 (old) using a 4k x 4k WSI.
+  - External Contribution from @ByteHexler.
+- Adds benchmark for Annotations Store.
+
+### Changes to API
+- None
+
+### Bug Fixes and Other Changes
+- Enhances the error messages to be more informative.
+- Fixes Flake8 Errors, typos.
+  - Fixes patch predictor models based after fixing a typo.
+- Bug fixes in Graph functions.
+- Adds documentation for docker support.
+- General tidying up of docstrings.
+- Adds metrics to readthedocs/docstrings for pretrained models.
+
+### Development related changes
+- Adds `pydicom` and `wsidicom` as dependency.
+- Updates dependencies.
+- Fixes Travis detection and makes improvements to run tests faster on Travis.
+- Adds Dependabot to automatically update dependencies.
+- Improves CLI definitions to make it easier to integrate new functions.
+- Fixes compile options for test_annotation_stores.py
+
+
 1.0.1 (2022-01-31)
 ------------------
 ### Major Updates and Feature Improvements
