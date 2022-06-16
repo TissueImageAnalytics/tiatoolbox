@@ -19,8 +19,71 @@ from tiatoolbox.utils.misc import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 
 
+def update_ioconfig(ioconfig, patch_input_shape, stride_shape, resolution, units):
+    """Update ioconfig if  parameters are provided.
+
+    Args:
+        ioconfig (IOPatchPredictorConfig):
+        patch_input_shape (tuple):
+            Size of patches input to the model. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple):
+            Stride using during tile and WSI processing. Stride is
+            at requested read resolution, not with respect to to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        resolution (float):
+            Resolution used for reading the image. Please see
+            :obj:`WSIReader` for details.
+        units (str):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :obj:`WSIReader` for details.
+
+    Returns:
+        Updated Patch Predictor IO configuration.
+
+    """
+    ioconfig = copy.deepcopy(ioconfig)
+    # ! not sure if there is a nicer way to set this
+    if patch_input_shape is not None:
+        ioconfig.patch_input_shape = patch_input_shape
+    if stride_shape is not None:
+        ioconfig.stride_shape = stride_shape
+    if resolution is not None:
+        ioconfig.input_resolutions[0]["resolution"] = resolution
+    if units is not None:
+        ioconfig.input_resolutions[0]["units"] = units
+
+    return ioconfig
+
+
+def check_labels_length(labels, imgs):
+    """Check if length of return labels matches number of images in patch mode.
+
+    Args:
+        labels (list):
+            List of labels. If using `tile` or `wsi` mode, then only
+            a single label per image tile or whole-slide image is
+            supported.
+        imgs (list, ndarray):
+            List of inputs to process. when using `patch` mode, the
+            input must be either a list of images, a list of image
+            file paths or a numpy array of an image list. When using
+            `tile` or `wsi` mode, the input must be a list of file
+            paths.
+
+    Raises:
+        ValueError if length of labels does not match length of images.
+
+    """
+    if len(labels) != len(imgs):
+        raise ValueError(f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}")
+
+
 class IOPatchPredictorConfig(IOSegmentorConfig):
-    """Contain patch predictor input and output information."""
+    """Contains patch predictor input and output information."""
 
     def __init__(
         self,
@@ -499,7 +562,9 @@ class PatchPredictor:
                 Whether to return the labels with the predictions.
             on_gpu (bool):
                 Whether to run model on the GPU.
-            patch_input_shape (tuple):
+            ioconfig (IOPatchPredictorConfig):
+                Patch Predictor IO configuration.
+            patch_input_shape (tuple or list(int)):
                 Size of patches input to the model. Patches are at
                 requested read resolution, not with respect to level 0,
                 and must be positive.
@@ -557,13 +622,12 @@ class PatchPredictor:
             raise ValueError(
                 f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
+
         if mode == "patch" and labels is not None:
             # if a labels is provided, then return with the prediction
+            check_labels_length(labels, imgs)
             return_labels = bool(labels)
-            if len(labels) != len(imgs):
-                raise ValueError(
-                    f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
-                )
+
         if mode == "wsi" and masks is not None and len(masks) != len(imgs):
             raise ValueError(
                 f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
@@ -594,17 +658,10 @@ class PatchPredictor:
             )
 
         if ioconfig is None and self.ioconfig:
-            ioconfig = copy.deepcopy(self.ioconfig)
-            # ! not sure if there is a nicer way to set this
-            if patch_input_shape is not None:
-                ioconfig.patch_input_shape = patch_input_shape
-            if stride_shape is not None:
-                ioconfig.stride_shape = stride_shape
-            if resolution is not None:
-                ioconfig.input_resolutions[0]["resolution"] = resolution
-            if units is not None:
-                ioconfig.input_resolutions[0]["units"] = units
-        elif ioconfig is None and all(not v for v in make_config_flag):
+            ioconfig = update_ioconfig(
+                self.ioconfig, patch_input_shape, stride_shape, resolution, units
+            )
+        if ioconfig is None and all(not v for v in make_config_flag):
             ioconfig = IOPatchPredictorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
                 patch_input_shape=patch_input_shape,
