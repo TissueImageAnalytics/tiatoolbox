@@ -31,5 +31,5 @@ def test_functionality(remote_sample, tmp_path):
     assert len(output) == 4, "Must contain predictions for: np, hv, tp and ls branches."
     output = [v[0] for v in output]
     output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei/layers."
-    assert len(output[3]) > 0, "Must have some nuclei/layers."
+    assert len(output[1]) > 0, "Must have some nuclei."
+    assert len(output[3]) > 0, "Must have some layers."
