@@ -216,7 +216,7 @@ class PatchPredictor:
         pathology." International Conference on Medical image computing and
         computer-assisted intervention. Springer, Cham, 2018.
 
-    """  # noqa: W605
+    """  # noqa: W605, PY-W0073
 
     def __init__(
         self,
