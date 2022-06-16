@@ -492,7 +492,15 @@ class PatchPredictor:
             dataset, return_probabilities, return_labels, return_coordinates, on_gpu
         )
 
-    def _update_ioconfig(self, ioconfig, patch_input_shape, stride_shape, resolution, units, make_config_flag):
+    def _update_ioconfig(
+        self,
+        ioconfig,
+        patch_input_shape,
+        stride_shape,
+        resolution,
+        units,
+        make_config_flag,
+    ):
         """
 
         Args:
