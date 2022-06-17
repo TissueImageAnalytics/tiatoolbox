@@ -18,6 +18,7 @@ DNS
 Dataloader
 Dataset
 Delaunay
+E1120
 FCN
 GPL
 HW
@@ -44,6 +45,7 @@ PTC
 PYL
 Peter
 Peter554
+Preload
 RGB
 RGBA
 ROI
@@ -110,6 +112,7 @@ mse
 natively
 ndarray
 nn
+noinspection
 normalizer
 npy
 nslookup
