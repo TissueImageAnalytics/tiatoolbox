@@ -385,11 +385,11 @@ def get_normalizer(method_name, stain_matrix=None):
 
     if method_name.lower() == "reinhard":
         return ReinhardNormalizer()
-    elif method_name.lower() == "ruifrok":
+    if method_name.lower() == "ruifrok":
         return RuifrokNormalizer()
-    elif method_name.lower() == "macenko":
+    if method_name.lower() == "macenko":
         return MacenkoNormalizer()
-    elif method_name.lower() == "vahadane":
+    if method_name.lower() == "vahadane":
         return VahadaneNormalizer()
 
     return CustomNormalizer(load_stain_matrix(stain_matrix))
