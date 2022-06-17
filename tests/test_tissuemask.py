@@ -186,7 +186,7 @@ def test_morphological_min_region_size():
     only the largest square region as foreground in the mask
     (0=background, 1=foreground).
     """
-    # Create a blank image of 1s
+    # Create a blank image of ones
     img = np.ones((10, 10))
     # Create a large square region of 9 zeros
     img[1:4, 1:4] = 0
@@ -199,7 +199,7 @@ def test_morphological_min_region_size():
     output = masker.fit_transform([img[..., np.newaxis]])
     assert np.sum(output[0]) == 9
 
-    # Create the expected output with jsut the large square region
+    # Create the expected output with just the large square region
     # but as ones against zeros (the mask is the inverse of the input).
     expected = np.zeros((10, 10))
     expected[1:4, 1:4] = 1
