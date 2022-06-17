@@ -596,7 +596,7 @@ class SemanticSegmentor:
     def get_reader(img_path: str, mask_path: str, mode: str, auto_get_mask: bool):
         """Define how to get reader for mask and source image."""
         img_path = pathlib.Path(img_path)
-        reader = get_wsireader(img_path)
+        reader = WSIReader.open(img_path)
 
         mask_reader = None
         if mask_path is not None:
