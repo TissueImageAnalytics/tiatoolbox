@@ -835,7 +835,7 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
     return 1 / ppu * microns_per_unit[units]
 
 
-def get_appropriate_cv2_interpolation(scale_factor):
+def select_cv2_interpolation(scale_factor):
     """Returns appropriate interpolation method for opencv based image resize.
 
     Args:

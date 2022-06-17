@@ -5,10 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from tiatoolbox.utils.misc import (
-    get_appropriate_cv2_interpolation,
-    parse_cv2_interpolaton,
-)
+from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolation
 
 
 def background_composite(image, fill=255, alpha=False):
@@ -106,7 +103,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
     # Get appropriate cv2 interpolation enum
     if interpolation == "optimise":
-        get_appropriate_cv2_interpolation(scale_factor)
+        select_cv2_interpolation(scale_factor)
 
     # a list of (original type, converted type) tuple
     # all `converted type` are np.dtypes that cv2.resize
