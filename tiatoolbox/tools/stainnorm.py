@@ -55,8 +55,8 @@ class StainNormalizer:
                 Stain concentrations of input image.
 
         """
-        OD = rgb2od(img).reshape((-1, 3))
-        x, _, _, _ = np.linalg.lstsq(stain_matrix.T, OD.T, rcond=-1)
+        od = rgb2od(img).reshape((-1, 3))
+        x, _, _, _ = np.linalg.lstsq(stain_matrix.T, od.T, rcond=-1)
         return x.T
 
     def fit(self, target):
@@ -91,8 +91,8 @@ class StainNormalizer:
         """
         stain_matrix_source = self.extractor.get_stain_matrix(img)
         source_concentrations = self.get_concentrations(img, stain_matrix_source)
-        maxC_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
-        source_concentrations *= self.maxC_target / maxC_source
+        max_c_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
+        source_concentrations *= self.maxC_target / max_c_source
         trans = 255 * np.exp(
             -1 * np.dot(source_concentrations, self.stain_matrix_target)
         )
@@ -369,25 +369,27 @@ def get_normalizer(method_name, stain_matrix=None):
         >>> norm_img = norm.transform(source_img)
 
     """
-    if (
-        method_name.lower() in ["reinhard", "ruifrok", "macenko", "vahadane"]
-        and stain_matrix is not None
-    ):
+    if method_name.lower() not in [
+        "reinhard",
+        "ruifrok",
+        "macenko",
+        "vahadane",
+        "custom",
+    ]:
+        raise MethodNotSupported
+
+    if stain_matrix and method_name.lower() != "custom":
         raise ValueError(
             '`stain_matrix` is only defined when using `method_name`="custom".'
         )
 
     if method_name.lower() == "reinhard":
-        norm = ReinhardNormalizer()
-    elif method_name.lower() == "custom":
-        norm = CustomNormalizer(load_stain_matrix(stain_matrix))
+        return ReinhardNormalizer()
     elif method_name.lower() == "ruifrok":
-        norm = RuifrokNormalizer()
+        return RuifrokNormalizer()
     elif method_name.lower() == "macenko":
-        norm = MacenkoNormalizer()
+        return MacenkoNormalizer()
     elif method_name.lower() == "vahadane":
-        norm = VahadaneNormalizer()
-    else:
-        raise MethodNotSupported
+        return VahadaneNormalizer()
 
-    return norm
+    return CustomNormalizer(load_stain_matrix(stain_matrix))
