@@ -30,70 +30,21 @@ def test_command_line_save_tiles(sample_all_wsis2, tmp_path):
         ],
     )
 
+    tmp_path = pathlib.Path(tmp_path)
+    cmu_small_region = tmp_path / "all_tiles" / "CMU-1-Small-Region.svs"
+    bioformatspull2759 = tmp_path / "all_tiles" / "bioformatspull2759.ndpi"
+    test1jp2 = tmp_path / "all_tiles" / "test1.jp2"
     assert save_tiles_result.exit_code == 0
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("CMU-1-Small-Region.svs")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("bioformatspull2759.ndpi")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("bioformatspull2759.ndpi")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("bioformatspull2759.ndpi")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("test1.jp2")
-        .joinpath("Output.csv")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("test1.jp2")
-        .joinpath("slide_thumbnail.jpg")
-        .exists()
-    )
-    assert (
-        pathlib.Path(tmp_path)
-        .joinpath("all_tiles")
-        .joinpath("test1.jp2")
-        .joinpath("Tile_5_0_0.jpg")
-        .exists()
-    )
+    assert (cmu_small_region / "Output.csv").exists()
+    assert (cmu_small_region / "slide_thumbnail.jpg").exists()
+    assert (cmu_small_region / "Tile_5_0_0.jpg").exists()
+
+    assert (bioformatspull2759 / "Output.csv").exists()
+    assert (bioformatspull2759 / "slide_thumbnail.jpg").exists()
+    assert (bioformatspull2759 / "Tile_5_0_0.jpg").exists()
+    assert (test1jp2 / "Output.csv").exists()
+    assert (test1jp2 / "slide_thumbnail.jpg").exists()
+    assert (test1jp2 / "Tile_5_0_0.jpg").exists()
 
 
 def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
