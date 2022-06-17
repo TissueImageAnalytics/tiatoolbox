@@ -252,7 +252,7 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, fx=0.5)
+        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
 
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
