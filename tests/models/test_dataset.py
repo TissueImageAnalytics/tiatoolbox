@@ -47,13 +47,13 @@ def test_dataset_abc():
     # test defining a subclass of dataset info but not defining
     # enforcing attributes - should crash
     with pytest.raises(TypeError):
-        Proto1()
+        Proto1()  # skipcq
     with pytest.raises(TypeError):
-        Proto2()
+        Proto2()  # skipcq
     with pytest.raises(TypeError):
-        Proto3()
+        Proto3()  # skipcq
     with pytest.raises(TypeError):
-        Proto4()
+        Proto4()  # skipcq
 
 
 @pytest.mark.skipif(
