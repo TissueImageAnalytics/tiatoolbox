@@ -94,7 +94,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         height = int(img.shape[0] * scale_factor[1])
         output_size = (width, height)
 
-    elif scale_factor is None:
+    if scale_factor is None:
         scale_factor = img.shape[:2][::-1] / np.array(output_size)
 
     # Return original if scale factor is 1
