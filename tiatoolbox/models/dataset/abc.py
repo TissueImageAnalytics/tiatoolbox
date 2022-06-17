@@ -32,6 +32,25 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         self.inputs = []
         self.labels = []
 
+    @staticmethod
+    def _check_shape_integrity(shapes):
+        """Checks the integrity of input shapes.
+
+        Args:
+            shapes (list or np.ndarray):
+                input shape to check.
+
+        Raises:
+            ValueError: If the shape is not valid.
+
+        """
+        if any(len(v) != 3 for v in shapes):
+            raise ValueError("Each sample must be an array of the form HWC.")
+
+        max_shape = np.max(shapes, axis=0)
+        if (shapes - max_shape[None]).sum() != 0:
+            raise ValueError("Images must have the same dimensions.")
+
     def _check_input_integrity(self, mode):
         """Check that variables received during init are valid.
 
@@ -43,44 +62,37 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """
         if mode == "patch":
             self.data_is_npy_alike = False
+            is_all_paths = all(isinstance(v, (pathlib.Path, str)) for v in self.inputs)
+            is_all_npys = all(isinstance(v, np.ndarray) for v in self.inputs)
 
-            # If input is a list - can contain a list of images or a list of image paths
-            if isinstance(self.inputs, list):
-                is_all_paths = all(
-                    isinstance(v, (pathlib.Path, str)) for v in self.inputs
+            if not (is_all_paths or is_all_npys or isinstance(self.inputs, np.ndarray)):
+                raise ValueError(
+                    "Input must be either a list/array of images "
+                    "or a list of valid image paths."
                 )
-                is_all_npys = all(isinstance(v, np.ndarray) for v in self.inputs)
-                if not (is_all_paths or is_all_npys):
+
+            shapes = None
+            # When a list of paths is provided
+            if is_all_paths:
+                if any(not os.path.exists(v) for v in self.inputs):
+                    # at least one of the paths are invalid
                     raise ValueError(
                         "Input must be either a list/array of images "
                         "or a list of valid image paths."
                     )
+                # Preload test for sanity check
+                shapes = [self.load_img(v).shape for v in self.inputs]
+                self.data_is_npy_alike = False
 
-                shapes = []
-                # When a list of paths is provided
-                if is_all_paths:
-                    if any(not os.path.exists(v) for v in self.inputs):
-                        # at least one of the paths are invalid
-                        raise ValueError(
-                            "Input must be either a list/array of images "
-                            "or a list of valid image paths."
-                        )
-                    # Preload test for sanity check
-                    shapes = [self.load_img(v).shape for v in self.inputs]
-                    self.data_is_npy_alike = False
-                else:
-                    shapes = [v.shape for v in self.inputs]
-                    self.data_is_npy_alike = True
+            if is_all_npys:
+                shapes = [v.shape for v in self.inputs]
+                self.data_is_npy_alike = True
 
-                if any(len(v) != 3 for v in shapes):
-                    raise ValueError("Each sample must be an array of the form HWC.")
-
-                max_shape = np.max(shapes, axis=0)
-                if (shapes - max_shape[None]).sum() != 0:
-                    raise ValueError("Images must have the same dimensions.")
+            if shapes:
+                self._check_shape_integraty(shapes)
 
             # If input is a numpy array
-            elif isinstance(self.inputs, np.ndarray):
+            if isinstance(self.inputs, np.ndarray):
                 # Check that input array is numerical
                 if not np.issubdtype(self.inputs.dtype, np.number):
                     # ndarray of mixed data types
@@ -94,15 +106,8 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                     )
                 self.data_is_npy_alike = True
 
-            else:
-                raise ValueError(
-                    "Input must be either a list/array of images "
-                    "or a list of valid paths to image."
-                )
-
-        else:
-            if not isinstance(self.inputs, (list, np.ndarray)):
-                raise ValueError("`inputs` should be a list of patch coordinates.")
+        elif not isinstance(self.inputs, (list, np.ndarray)):
+            raise ValueError("`inputs` should be a list of patch coordinates.")
 
     @staticmethod
     def load_img(path):
