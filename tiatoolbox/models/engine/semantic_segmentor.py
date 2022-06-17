@@ -154,7 +154,7 @@ class IOSegmentorConfig(IOConfigABC):
             )
         if units == "baseline":
             return old_val
-        elif units == "mpp":
+        if units == "mpp":
             return np.min(old_val) / np.array(old_val)
         return np.array(old_val) / np.max(old_val)
 
