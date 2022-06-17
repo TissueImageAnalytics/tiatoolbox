@@ -24,12 +24,7 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.wsicore.wsireader import (
-    VirtualWSIReader,
-    WSIMeta,
-    WSIReader,
-    get_wsireader,
-)
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 
 class IOSegmentorConfig(IOConfigABC):
@@ -152,19 +147,16 @@ class IOSegmentorConfig(IOConfigABC):
 
         """
         old_val = [v["resolution"] for v in resolutions]
-        if units == "baseline":
-            new_val = old_val
-        elif units == "mpp":
-            new_val = np.min(old_val) / np.array(old_val)
-        elif units == "power":
-            # when being power
-            new_val = np.array(old_val) / np.max(old_val)
-        else:
+        if units not in ["baseline", "mpp", "power"]:
             raise ValueError(
                 f"Unknown units `{units}`. "
                 "Units should be one of 'baseline', 'mpp' or 'power'."
             )
-        return new_val
+        if units == "baseline":
+            return old_val
+        elif units == "mpp":
+            return np.min(old_val) / np.array(old_val)
+        return np.array(old_val) / np.max(old_val)
 
     def to_baseline(self):
         """Return a new config object converted to baseline form.
@@ -196,7 +188,7 @@ class IOSegmentorConfig(IOConfigABC):
         save_resolution = None
         if self.save_resolution is not None:
             save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
-        new_config = IOSegmentorConfig(
+        return IOSegmentorConfig(
             input_resolutions=input_resolutions,
             output_resolutions=output_resolutions,
             patch_input_shape=self.patch_input_shape,
@@ -204,7 +196,6 @@ class IOSegmentorConfig(IOConfigABC):
             save_resolution=save_resolution,
             **self._kwargs,
         )
-        return new_config
 
 
 class WSIStreamDataset(torch_data.Dataset):
@@ -278,24 +269,22 @@ class WSIStreamDataset(torch_data.Dataset):
         """Get appropriate reader for input path."""
         img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
-            reader = get_wsireader(img_path)
-        else:
-            img = imread(img_path)
-            # initialise metadata for VirtualWSIReader.
-            # here, we simulate a whole-slide image, but with a single level.
-            metadata = WSIMeta(
-                mpp=np.array([1.0, 1.0]),
-                objective_power=10,
-                axes="YXS",
-                slide_dimensions=np.array(img.shape[:2][::-1]),
-                level_downsamples=[1.0],
-                level_dimensions=[np.array(img.shape[:2][::-1])],
-            )
-            reader = VirtualWSIReader(
-                img,
-                info=metadata,
-            )
-        return reader
+            return WSIReader.open(img_path)
+        img = imread(img_path)
+        # initialise metadata for VirtualWSIReader.
+        # here, we simulate a whole-slide image, but with a single level.
+        metadata = WSIMeta(
+            mpp=np.array([1.0, 1.0]),
+            objective_power=10,
+            axes="YXS",
+            slide_dimensions=np.array(img.shape[:2][::-1]),
+            level_downsamples=[1.0],
+            level_dimensions=[np.array(img.shape[:2][::-1])],
+        )
+        return VirtualWSIReader(
+            img,
+            info=metadata,
+        )
 
     def __len__(self):
         return len(self.mp_shared_space.patch_inputs)
