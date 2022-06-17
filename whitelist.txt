@@ -115,3 +115,6 @@ execfile
 autodoc
 emptive
 0e
+ioconfig
+idx
+Nx4

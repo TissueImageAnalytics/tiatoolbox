@@ -680,7 +680,7 @@ class SemanticSegmentor:
         self._mp_shared_space.patch_outputs = patch_outputs
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
-        # ! TODO: need a protocol for pbar, or a decorator to make this less redundant
+        # ! TODO: need a protocol for p bar, or a decorator to make this less redundant
         pbar_desc = "Process Batch: "
         pbar = tqdm.tqdm(
             desc=pbar_desc,
@@ -770,8 +770,8 @@ class SemanticSegmentor:
         # output patch this can exceed the image bound at the requested
         # resolution remove singleton due to split.
         locations = np.array([v[0] for v in locations])
-        for idx, output_resolution in enumerate(ioconfig.output_resolutions):
-            # assume resolution idx to be in the same order as L
+        for index, output_resolution in enumerate(ioconfig.output_resolutions):
+            # assume resolution index to be in the same order as L
             merged_resolution = ioconfig.highest_input_resolution
             merged_locations = locations
             # ! location is w.r.t highest resolution, hence still need conversion
@@ -783,9 +783,9 @@ class SemanticSegmentor:
                 merged_locations = np.ceil(locations * fx).astype(np.int64)
             merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
             # 0 idx is to remove singleton without removing other axes singleton
-            to_merge_predictions = [v[idx][0] for v in predictions]
-            sub_save_path = f"{save_path}.raw.{idx}.npy"
-            sub_count_path = f"{cache_dir}/count.{idx}.npy"
+            to_merge_predictions = [v[index][0] for v in predictions]
+            sub_save_path = f"{save_path}.raw.{index}.npy"
+            sub_count_path = f"{cache_dir}/count.{index}.npy"
             self.merge_prediction(
                 merged_shape[::-1],  # XY to YX
                 to_merge_predictions,
@@ -1162,7 +1162,7 @@ class SemanticSegmentor:
                 # same name multiple times (may be they have different root path)
                 outputs.append([str(img_path), str(wsi_save_path)])
 
-                # ? will this corrupt old version if Ctrl-c midway?
+                # ? will this corrupt old version if control + c midway?
                 map_file_path = os.path.join(save_dir, "file_map.dat")
                 # backup old version first
                 if os.path.exists(map_file_path):
