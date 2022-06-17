@@ -42,7 +42,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
-    """Patch-level predictor.
+    r"""Patch-level predictor.
 
     The models provided by tiatoolbox should give the following results:
 
@@ -348,7 +348,7 @@ class PatchPredictor:
             tl = np.ceil(np.array(bound[:2]) * fx).astype(np.int32)
             # bot-right for output placement
             br = np.ceil(np.array(bound[2:]) * fx).astype(np.int32)
-            output[tl[1] : br[1], tl[0] : br[0]] = prediction
+            output[tl[1] : br[1], tl[0] : br[0]] += prediction
             if denominator is not None:
                 denominator[tl[1] : br[1], tl[0] : br[0]] += 1
 
