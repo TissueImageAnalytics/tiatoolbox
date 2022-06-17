@@ -45,6 +45,7 @@ PYL
 Peter
 Peter554
 RGB
+RGBA
 ROI
 Ruifrok
 Segmentor
@@ -61,13 +62,17 @@ WRT
 XY
 YX
 YX
+addWeighted
+albumentation
 argmax
+augmentor
 autodoc
 bbox
 bchwx1
 binarize
 bxcxhxwxshxsw
 centroid
+colorbar
 coord
 coords
 csv
@@ -84,6 +89,7 @@ dtypes
 emptive
 enum
 enums
+eval
 execfile
 func
 fx
@@ -104,6 +110,7 @@ mse
 natively
 ndarray
 nn
+normalizer
 npy
 nslookup
 numpy
@@ -112,6 +119,7 @@ otsu
 pathlib
 pixman
 postproc
+pred
 preproc
 preprocessing
 pretrained
@@ -125,6 +133,8 @@ rescale
 rtree
 runtime
 scipy
+sigma1
+sigma2
 skipcq
 skipcq
 svs
