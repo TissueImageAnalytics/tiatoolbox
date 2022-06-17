@@ -378,7 +378,7 @@ def get_normalizer(method_name, stain_matrix=None):
     ]:
         raise MethodNotSupported
 
-    if stain_matrix and method_name.lower() != "custom":
+    if stain_matrix is not None and method_name.lower() != "custom":
         raise ValueError(
             '`stain_matrix` is only defined when using `method_name`="custom".'
         )
