@@ -42,7 +42,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
-    """Patch-level predictor.
+    r"""Patch-level predictor.
 
     The models provided by tiatoolbox should give the following results:
 
