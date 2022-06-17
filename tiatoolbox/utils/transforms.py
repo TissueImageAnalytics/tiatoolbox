@@ -83,7 +83,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     """
     if scale_factor is None and output_size is None:
         raise TypeError("One of scale_factor and output_size must be not None.")
-    elif scale_factor:
+    if scale_factor:
         scale_factor = np.array(scale_factor)
         if scale_factor.size == 1:
             scale_factor = np.repeat(scale_factor, 2)
