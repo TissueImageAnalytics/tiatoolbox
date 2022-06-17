@@ -113,11 +113,11 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
         """
         path = pathlib.Path(path)
-        if path.suffix in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
-            patch = imread(path, as_uint8=False)
-        else:
+
+        if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             raise ValueError(f"Cannot load image data from `{path.suffix}` files.")
-        return patch
+
+        return imread(path, as_uint8=False)
 
     @staticmethod
     def preproc(image):
