@@ -89,7 +89,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                 self.data_is_npy_alike = True
 
             if shapes:
-                self._check_shape_integraty(shapes)
+                self._check_shape_integrity(shapes)
 
             # If input is a numpy array
             if isinstance(self.inputs, np.ndarray):
