@@ -228,7 +228,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 
     def reuse_init(img_path=mini_wsi_svs, **kwargs):
         """Testing function."""
-        return WSIPatchDataset(img_path=mini_wsi_svs, **kwargs)
+        return WSIPatchDataset(img_path=img_path, **kwargs)
 
     def reuse_init_wsi(**kwargs):
         """Testing function."""
@@ -277,27 +277,33 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         )
 
     # invalid mode
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="`X` is not supported."):
         reuse_init(mode="X")
 
     # invalid patch
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `patch_input_shape` value None."):
         reuse_init()
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Invalid `patch_input_shape` value [512 512 512]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, 512, 512])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Invalid `patch_input_shape` value ['512' 'a']."
+    ):
         reuse_init_wsi(patch_input_shape=[512, "a"])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `stride_shape` value None."):
         reuse_init_wsi(patch_input_shape=512)
     # invalid stride
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `stride_shape` value ['512' 'a']."):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, "a"])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `stride_shape` value [512 512 512]."):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, 512, 512])
     # negative
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Invalid `patch_input_shape` value [ 512 -512]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, -512], stride_shape=[512, 512])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `stride_shape` value [ 512 -512]."):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, -512])
 
     # * for wsi
