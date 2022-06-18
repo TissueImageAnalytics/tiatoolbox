@@ -245,9 +245,9 @@ class ResidualBlock(nn.Module):
         else:
             shortcut = self.shortcut(prev_feat)
 
-        for idx in range(len(self.units)):
+        for _, unit in enumerate(self.units):
             new_feat = prev_feat
-            new_feat = self.units[idx](new_feat)
+            new_feat = unit(new_feat)
             prev_feat = new_feat + shortcut
             shortcut = prev_feat
         return self.blk_bna(prev_feat)
