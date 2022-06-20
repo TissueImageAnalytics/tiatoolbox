@@ -24,12 +24,7 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.wsicore.wsireader import (
-    VirtualWSIReader,
-    WSIMeta,
-    WSIReader,
-    get_wsireader,
-)
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 
 class IOSegmentorConfig(IOConfigABC):
@@ -278,7 +273,7 @@ class WSIStreamDataset(torch_data.Dataset):
         """Get appropriate reader for input path."""
         img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
-            reader = get_wsireader(img_path)
+            reader = WSIReader.open(img_path)
         else:
             img = imread(img_path)
             # initialise metadata for VirtualWSIReader.
@@ -607,7 +602,7 @@ class SemanticSegmentor:
     def get_reader(img_path: str, mask_path: str, mode: str, auto_get_mask: bool):
         """Define how to get reader for mask and source image."""
         img_path = pathlib.Path(img_path)
-        reader = get_wsireader(img_path)
+        reader = WSIReader.open(img_path)
 
         mask_reader = None
         if mask_path is not None:

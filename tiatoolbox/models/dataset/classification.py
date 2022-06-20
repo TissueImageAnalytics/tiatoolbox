@@ -11,7 +11,7 @@ from tiatoolbox.models.dataset import abc
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsimeta import WSIMeta
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class _TorchPreprocCaller:
@@ -237,7 +237,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
 
         img_path = pathlib.Path(img_path)
         if mode == "wsi":
-            self.reader = get_wsireader(img_path)
+            self.reader = WSIReader.open(img_path)
         else:
             warnings.warn(
                 (
