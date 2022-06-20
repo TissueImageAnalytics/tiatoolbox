@@ -144,7 +144,7 @@ def test_patch_dataset_crash(tmp_path):
 
     # ndarray(s) of NHW images
     imgs = np.random.randint(0, 255, (4, 4, 4))
-    with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
+    with pytest.raises(ValueError, match=r".*array of the form HWC*"):
         _ = PatchDataset(imgs)
 
     # list of ndarray(s) with different sizes
