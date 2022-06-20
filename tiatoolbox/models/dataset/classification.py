@@ -32,8 +32,7 @@ class _TorchPreprocCaller:
     def __call__(self, img):
         img = PIL.Image.fromarray(img)
         img = self.func(img)
-        img = img.permute(1, 2, 0)
-        return img
+        return img.permute(1, 2, 0)
 
 
 def predefined_preproc_func(dataset_name):
@@ -62,8 +61,7 @@ def predefined_preproc_func(dataset_name):
         )
 
     preprocs = preproc_dict[dataset_name]
-    preproc_func = _TorchPreprocCaller(preprocs)
-    return preproc_func
+    return _TorchPreprocCaller(preprocs)
 
 
 class PatchDataset(abc.PatchDatasetABC):
@@ -331,5 +329,4 @@ class WSIPatchDataset(abc.PatchDatasetABC):
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)
 
-        data = {"image": patch, "coords": np.array(coords)}
-        return data
+        return {"image": patch, "coords": np.array(coords)}
