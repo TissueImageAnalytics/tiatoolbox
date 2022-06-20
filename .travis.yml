@@ -53,7 +53,7 @@ deploy:
     on:
       branch: pre-release
       repo: TissueImageAnalytics/tiatoolbox
-      python: 3.9
+      python: 3.10
   - provider: pypi
     distributions: sdist bdist_wheel
     user: __token__
@@ -63,4 +63,4 @@ deploy:
       branch: master
       tags: true
       repo: TissueImageAnalytics/tiatoolbox
-      python: 3.9
+      python: 3.10
