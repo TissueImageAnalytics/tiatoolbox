@@ -27,10 +27,6 @@ repos:
       - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
       - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst.
-  - repo: https://github.com/markdownlint/markdownlint
-    rev: v0.11.0
-    hooks:
-      - id: markdownlint            # Run markdownlint on your Markdown files.
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
