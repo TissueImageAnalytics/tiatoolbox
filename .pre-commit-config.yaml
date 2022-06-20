@@ -21,6 +21,9 @@ repos:
         files: whitelist.txt
       - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source. 
       - id: pretty-format-json      # Sets a standard for formatting JSON files. 
+  - repo: https://github.com/pre-commit/pygrep-hooks 
+    rev: v1.9.0
+    hooks:
       - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon 
       - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst 
