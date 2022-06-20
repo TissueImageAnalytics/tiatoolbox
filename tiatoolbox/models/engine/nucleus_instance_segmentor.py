@@ -205,12 +205,11 @@ def _process_tile_predictions(
 
     def retrieve_sel_uids(sel_indices, inst_dict):
         """Helper to retrieved selected instance uids."""
-        sel_uids = []
         if len(sel_indices) > 0:
             # not sure how costly this is in large dict
             inst_uids = list(inst_dict.keys())
-            sel_uids = [inst_uids[idx] for idx in sel_indices]
-        return sel_uids
+            return [inst_uids[idx] for idx in sel_indices]
+        return []
 
     remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
 
