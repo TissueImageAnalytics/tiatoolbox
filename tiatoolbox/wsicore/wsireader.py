@@ -107,7 +107,8 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
     """
     path = pathlib.Path(path)
     zattrs_path = path / ".zattrs"
-    group_attrs = json.load(zattrs_path)
+    with open(zattrs_path, "rb") as fh:
+        group_attrs = json.load(fh)
     try:
         multiscales: Multiscales = group_attrs["multiscales"]
         omero = group_attrs["omero"]
@@ -115,7 +116,7 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
         if not all(
             [
                 isinstance(multiscales, list),
-                isinstance(_ARRAY_DIMENSIONS, str),
+                isinstance(_ARRAY_DIMENSIONS, list),
                 isinstance(omero, dict),
                 all(isinstance(m, dict) for m in multiscales),
             ]
@@ -123,9 +124,12 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
             return False
     except KeyError:
         return False
-    multiscales_version = tuple(int(part) for part in multiscales.version.split("."))
-    omero_version = tuple(int(part) for part in omero.version.split("."))
-    if multiscales_version < min_version:
+    multiscales_versions = tuple(
+        tuple(int(part) for part in scale.get("version", "").split("."))
+        for scale in multiscales
+    )
+    omero_version = tuple(int(part) for part in omero.get("version", "").split("."))
+    if any(version < min_version for version in multiscales_versions):
         return False
     if omero_version < min_version:
         return False
