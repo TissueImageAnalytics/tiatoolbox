@@ -169,7 +169,7 @@ class ResidualBlock(nn.Module):
         self.nr_unit = unit_count
         self.in_ch = in_ch
 
-        # ! For inference only so init values for batchnorm may not match tensorflow
+        # ! For inference only so init values for batch norm may not match tensorflow
         unit_in_ch = in_ch
         self.units = nn.ModuleList()
         for idx in range(unit_count):
@@ -221,7 +221,7 @@ class ResidualBlock(nn.Module):
                 ),
             ]
             # has BatchNorm-Activation layers to conclude each
-            # previous block so must not put preact for the first
+            # previous block so must not put pre activation for the first
             # unit of this block
             unit_layer = unit_layer if idx != 0 else unit_layer[2:]
             self.units.append(nn.Sequential(OrderedDict(unit_layer)))
@@ -482,11 +482,11 @@ class HoVerNet(ModelABC):
         return decoder
 
     @staticmethod
-    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 1):
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, scale_factor: float = 1):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
-        `hv_map` to derive a energy landscape which highlight possible
+        `hv_map` to derive an energy landscape which highlight possible
         nuclei instance boundaries. Afterward, watershed with markers is
         applied on the above energy map using the `np_map` as filter to
         remove background regions.
@@ -499,7 +499,7 @@ class HoVerNet(ModelABC):
                 An array of shape (height, width, 2) which contains the
                 horizontal (channel 0) and vertical (channel 1) maps of
                 possible instances within the image.
-            fx (float):
+            scale_factor (float):
                 The scale factor for processing nuclei. The scale
                 assumes an image of resolution 0.25 microns per pixel.
                 Default is therefore 1 for HoVer-Net.
@@ -539,8 +539,8 @@ class HoVerNet(ModelABC):
             dtype=cv2.CV_32F,
         )
 
-        ksize = int((20 * fx) + 1)
-        obj_size = math.ceil(10 * (fx**2))
+        ksize = int((20 * scale_factor) + 1)
+        obj_size = math.ceil(10 * (scale_factor**2))
         # Get resolution specific filters etc.
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
@@ -585,9 +585,7 @@ class HoVerNet(ModelABC):
         marker = measurements.label(marker)[0]
         marker = remove_small_objects(marker, min_size=obj_size)
 
-        proced_pred = watershed(dist, markers=marker, mask=blb)
-
-        return proced_pred
+        return watershed(dist, markers=marker, mask=blb)
 
     @staticmethod
     def get_instance_info(pred_inst, pred_type=None):

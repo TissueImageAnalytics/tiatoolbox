@@ -11,7 +11,7 @@ with open("HISTORY.md") as history_file:
     history = history_file.read()
 
 requirements = [
-    "albumentations>=1.1.0",
+    "albumentations>=1.0.3",
     "Click>=8.1.2",
     "defusedxml>=0.7.1",
     "glymur>=0.9.9",
@@ -57,6 +57,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
     entry_points={
