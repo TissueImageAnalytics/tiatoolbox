@@ -318,9 +318,9 @@ class SlideGraphConstructor:  # noqa: PIE798
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
         kd_tree = cKDTree(points)
-        #neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
-           # x=points, k=len(points), distance_upper_bound=neighbour_search_radius
-        #)
+        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
+            x=points, k=len(points), distance_upper_bound=neighbour_search_radius
+        )
 
         # Initialise an empty 1-D condensed distance matrix.
         # For information on condensed distance matrices see:
@@ -333,13 +333,13 @@ class SlideGraphConstructor:  # noqa: PIE798
         for i in range(len(points) - 1):
             # Only consider neighbours which are inside of the radius
             # (neighbour_search_radius).
-            '''neighbour_distances_singlepoint = neighbour_distances_ckd[i][
+            neighbour_distances_singlepoint = neighbour_distances_ckd[i][
                 neighbour_distances_ckd[i] < neighbour_search_radius
             ]
             neighbour_indexes_singlepoint = neighbour_indexes_ckd[i][
                 : len(neighbour_distances_singlepoint)
-            ]'''
-            neighbour_distances_singlepoint, neighbour_indexes_singlepoint = kd_tree.query(
+            ]
+            '''neighbour_distances_singlepoint, neighbour_indexes_singlepoint = kd_tree.query(
                 x=points[i], k=500, distance_upper_bound=neighbour_search_radius
             )
 
@@ -347,7 +347,7 @@ class SlideGraphConstructor:  # noqa: PIE798
                 neighbour_distances_singlepoint < neighbour_search_radius
             ]
             neighbour_indexes_singlepoint = neighbour_indexes_singlepoint[
-                : len(neighbour_distances_singlepoint)]
+                : len(neighbour_distances_singlepoint)]'''
 
             # Called f in the paper
             neighbour_feature_similarities = np.exp(

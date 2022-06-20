@@ -450,6 +450,7 @@ class AnnotationRenderer:
         score_fn=lambda x: x,
         max_scale=8,
         thickness=-1,
+        edge_thickness=1,
     ):
         if mapper is None:
             mapper = cm.get_cmap("jet")
@@ -463,10 +464,12 @@ class AnnotationRenderer:
         else:
             self.mapper = mapper
         self.score_prop = score_prop
+        self.score_prop_edge = 'cluster'    #need to fix
         self.where = where
         self.score_fn = score_fn
         self.max_scale = max_scale
         self.thickness=thickness
+        self.edge_thickness = edge_thickness
 
     @staticmethod
     def to_tile_coords(coords, tl, scale):
@@ -483,7 +486,16 @@ class AnnotationRenderer:
 
     def get_color(self, ann):
         """get the color for an annotation"""
-        if self.score_prop is not None:
+        if self.score_prop == 'color':
+            #use colors directly specified in annotation properties
+            #print(ann)
+            #ann.properties['color'].append(1)
+            try:
+                return (*[int(255*c) for c in ann.properties['color']],255)
+            except KeyError:
+                warnings.warn("score_prop not found in annotation properties. Using default color.")
+
+        elif self.score_prop is not None:
             try:
                 return tuple(
                     int(c * 255)
@@ -493,6 +505,27 @@ class AnnotationRenderer:
                 warnings.warn("score_prop not found in annotation properties. Using default color.")
         return (0, 255, 0, 255)  # default color if no score_prop given
 
+    def get_color_edge(self, ann):
+        """get the color for an annotation"""
+        if self.score_prop_edge == 'color':
+            #use colors directly specified in annotation properties
+            #print(ann)
+            #ann.properties['color'].append(1)
+            try:
+                return (*[int(255*c) for c in ann.properties['color']],255)
+            except KeyError:
+                warnings.warn("score_prop not found in annotation properties. Using default color.")
+
+        elif self.score_prop_edge is not None:
+            try:
+                return tuple(
+                    int(c * 255)
+                    for c in self.mapper(self.score_fn(ann.properties[self.score_prop_edge]))
+                )
+            except KeyError:
+                warnings.warn("score_prop not found in annotation properties. Using default color.")
+        return (0, 0, 0, 255)  # default color if no score_prop given
+
     def render_poly(self, rgb, ann, ann_bounded, tl, scale):
         """render a polygon annotation onto a tile using cv2"""
         col = self.get_color(ann)
@@ -500,7 +533,8 @@ class AnnotationRenderer:
         cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
         cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
         if self.thickness == -1:
-            cv2.drawContours(rgb, [cnt], 0, (0,0,0,255), 1)
+            edge_col = self.get_color_edge(ann)
+            cv2.drawContours(rgb, [cnt], 0, edge_col, self.edge_thickness, lineType=cv2.LINE_4)
 
     def render_multipoly(self, rgb, ann, ann_bounded, tl, scale):
         """render a multipolygon annotation onto a tile using cv2"""

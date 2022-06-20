@@ -13,3 +13,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     WSIStreamDataset,
 )
+from tiatoolbox.models.engine.interactive_segmentor import (
+    IOInteractiveSegmentorConfig,
+    InteractiveSegmentor,
+)

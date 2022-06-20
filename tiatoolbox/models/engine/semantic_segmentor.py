@@ -601,7 +601,7 @@ class SemanticSegmentor:
         elif auto_get_mask and mode == "wsi" and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
-            mask_reader = reader.tissue_mask(resolution=1.25, units="power")
+            mask_reader = reader.tissue_mask('morphological', resolution=1.25, units="power")
             mask_reader.info = reader.info
         return reader, mask_reader
 
