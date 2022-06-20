@@ -379,7 +379,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     roi2 = reader.read_bounds(
         start + end, resolution=1.0, units="baseline", coord_space="resolution"
     )
-    roi1 = tile_ds[3]["image"]  # match with step_idx
+    roi1 = tile_ds[3]["image"]  # match with step_index
     correlation = np.corrcoef(
         cv2.cvtColor(roi1, cv2.COLOR_RGB2GRAY).flatten(),
         cv2.cvtColor(roi2, cv2.COLOR_RGB2GRAY).flatten(),
