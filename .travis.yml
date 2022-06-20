@@ -12,7 +12,7 @@ if: type != push OR branch = master OR branch = develop OR branch = pre-release 
 before_install:
   - sudo apt-get -y update
   - sudo apt-get -y install openslide-tools
-  - sudo apt-get -y install libopenjpeg5 libopenjpeg-dev
+  - sudo apt-get -y install libopenjp2-7-dev libopenjp2-tools
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
