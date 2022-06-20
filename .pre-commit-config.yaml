@@ -19,6 +19,12 @@ repos:
         exclude: 'setup.cfg'
       - id: file-contents-sorter    # Sorts the lines in specified files (defaults to alphabetical).
         files: whitelist.txt
+      - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source. 
+      - id: pretty-format-json      # Sets a standard for formatting JSON files. 
+      - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
+      - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon 
+      - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst 
+      - id: rst-linter              # Check .rst files with the same linter used by pypi.org 
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
