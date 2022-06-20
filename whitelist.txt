@@ -110,3 +110,8 @@ FCN
 bchwx1
 1xshxsw
 bxcxhxwxshxsw
+quickstart
+execfile
+autodoc
+emptive
+0e
