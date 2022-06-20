@@ -2,7 +2,7 @@ import torchvision
 from torchvision.models._utils import IntermediateLayerGetter
 
 
-class rigidRegistration:
+class RigidRegistration:
     def __init__(self):
         self.patch_size = (224, 224)
         self.x_scale, self.y_scale = [], []
