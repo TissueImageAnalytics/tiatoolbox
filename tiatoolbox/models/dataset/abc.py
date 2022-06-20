@@ -14,7 +14,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     Attributes:
         preproc_func:
             Preprocessing function used to transform the input data. If
-            supplied, then torch. Compose will be used on the input
+            supplied, then `torch.Compose` will be used on the input
             preproc. preproc is a list of torchvision or custom transforms for
             preprocessing the image. The transforms will be applied in
             the order that they are given in the list. For more
