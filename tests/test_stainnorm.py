@@ -17,7 +17,9 @@ from tiatoolbox.utils.misc import imread
 def test_stain_extract():
     """Test stain extraction class."""
     stain_matrix = np.array([0.65, 0.70, 0.29])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Stain matrix must have shape \(2, 3\) or \(3, 3\)."
+    ):
         _ = stainextract.CustomExtractor(stain_matrix)
 
 
@@ -99,7 +101,10 @@ def test_custom_normalize(source_image, norm_ruifrok):
 def test_get_normalizer_assertion():
     """Test get normalizer assertion error."""
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match=r"`stain_matrix` is only defined when using `method_name`=\"custom\".",
+    ):
         _ = get_normalizer("ruifrok", stain_matrix)
 
 

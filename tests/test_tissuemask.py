@@ -147,7 +147,7 @@ def test_transform_before_fit_otsu():
     """Test otsu masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -155,7 +155,7 @@ def test_transform_before_fit_morphological():
     """Test morphological masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.MorphologicalMasker()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -163,13 +163,15 @@ def test_transform_fit_otsu_wrong_shape():
     """Test giving the incorrect input shape to otsu masker."""
     image = np.ones((10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Expected 4 dimensional input shape *"):
         masker.fit([image])
 
 
 def test_transform_morphological_conflicting_args():
     """Test giving conflicting arguments to morphological masker."""
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Only one of mpp, power, kernel_size can be given."
+    ):
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 
 
@@ -207,7 +209,7 @@ def test_morphological_min_region_size():
     assert np.all(output[0] == expected)
 
 
-def test_cli_tissue_mask_Otsu(sample_svs):
+def test_cli_tissue_mask_otsu(sample_svs):
     """Test Otsu tissue masking with default input CLI."""
     source_img = pathlib.Path(sample_svs)
     runner = CliRunner()
@@ -244,7 +246,7 @@ def test_cli_tissue_mask_Otsu(sample_svs):
     assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_Otsu_dir(sample_all_wsis):
+def test_cli_tissue_mask_otsu_dir(sample_all_wsis):
     """Test Otsu tissue masking for multiple files with default input CLI."""
     source_img = pathlib.Path(sample_all_wsis)
     runner = CliRunner()
@@ -268,7 +270,7 @@ def test_cli_tissue_mask_Otsu_dir(sample_all_wsis):
     assert pathlib.Path(output_path, "test1.png").is_file()
 
 
-def test_cli_tissue_mask_Morphological(sample_svs):
+def test_cli_tissue_mask_morphological(sample_svs):
     """Test Morphological tissue masking with default input CLI."""
     source_img = pathlib.Path(sample_svs)
     runner = CliRunner()

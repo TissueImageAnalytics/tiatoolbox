@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from tiatoolbox import utils
+from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolation
 
 
 def background_composite(image, fill=255, alpha=False):
@@ -103,10 +103,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
     # Get appropriate cv2 interpolation enum
     if interpolation == "optimise":
-        if np.any(scale_factor > 1.0):
-            interpolation = "cubic"
-        else:
-            interpolation = "area"
+        interpolation = select_cv2_interpolation(scale_factor)
 
     # a list of (original type, converted type) tuple
     # all `converted type` are np.dtypes that cv2.resize
@@ -129,20 +126,21 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     ]
     source_dtypes = [v[0] for v in dtype_mapping]
     original_dtype = img.dtype
-    if original_dtype in source_dtypes:
-        converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
-        img = img.astype(converted_dtype)
-    else:
+    if original_dtype not in source_dtypes:
         raise ValueError(
             f"Does not support resizing for array of dtype: {original_dtype}"
         )
 
-    interpolation = utils.misc.parse_cv2_interpolaton(interpolation)
+    converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
+    img = img.astype(converted_dtype)
+
+    interpolation = parse_cv2_interpolaton(interpolation)
 
     # Resize the image
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
     if img.shape[0] == img.shape[1] == 1:
         return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
+
     if len(img.shape) == 3 and img.shape[-1] > 4:
         img_channels = [
             cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
@@ -150,10 +148,9 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
             ]
             for ch in range(img.shape[-1])
         ]
-        resized_img = np.concatenate(img_channels, axis=-1)
-    else:
-        resized_img = cv2.resize(img, tuple(output_size), interpolation=interpolation)
-    return resized_img
+        return np.concatenate(img_channels, axis=-1)
+
+    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
 def rgb2od(img):
