@@ -19,9 +19,9 @@ repos:
         exclude: 'setup.cfg'
       - id: file-contents-sorter    # Sorts the lines in specified files (defaults to alphabetical).
         files: whitelist.txt
-      - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source. 
-      - id: pretty-format-json      # Sets a standard for formatting JSON files. 
-  - repo: https://github.com/pre-commit/pygrep-hooks 
+      - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source.
+      - id: pretty-format-json      # Sets a standard for formatting JSON files.
+  - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0
     hooks:
       - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
@@ -30,7 +30,7 @@ repos:
   - repo: https://github.com/Lucas-C/pre-commit-hooks-markup
     rev: v1.0.1
     hooks:
-      - id: rst-linter              # Check .rst files with the same linter used by pypi.org 
+      - id: rst-linter              # Check .rst files with the same linter used by pypi.org
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
