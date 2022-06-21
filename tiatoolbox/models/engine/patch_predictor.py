@@ -452,48 +452,6 @@ class PatchPredictor:
 
         return cum_output
 
-    def _predict_patch(self, imgs, labels, return_probabilities, return_labels, on_gpu):
-        """Process patch mode.
-
-        Args:
-            imgs (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
-                input must be either a list of images, a list of image
-                file paths or a numpy array of an image list. When using
-                `tile` or `wsi` mode, the input must be a list of file
-                paths.
-            labels:
-                List of labels. If using `tile` or `wsi` mode, then only
-                a single label per image tile or whole-slide image is
-                supported.
-            return_probabilities (bool):
-                Whether to return per-class probabilities.
-            return_labels (bool):
-                Whether to return the labels with the predictions.
-            on_gpu (bool):
-                Whether to run model on the GPU.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                Model predictions of the input dataset
-
-        """
-        if labels:
-            # if a labels is provided, then return with the prediction
-            return_labels = bool(labels)
-
-        if labels and len(labels) != len(imgs):
-            raise ValueError(
-                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
-            )
-
-        # don't return coordinates if patches are already extracted
-        return_coordinates = False
-        dataset = PatchDataset(imgs, labels)
-        return self._predict_engine(
-            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
-        )
-
     def _update_ioconfig(
         self,
         ioconfig,
@@ -596,6 +554,48 @@ class PatchPredictor:
         if save_dir is not None:
             save_dir = pathlib.Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=False)
+
+    def _predict_patch(self, imgs, labels, return_probabilities, return_labels, on_gpu):
+        """Process patch mode.
+
+        Args:
+            imgs (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list. When using
+                `tile` or `wsi` mode, the input must be a list of file
+                paths.
+            labels:
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            return_labels (bool):
+                Whether to return the labels with the predictions.
+            on_gpu (bool):
+                Whether to run model on the GPU.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Model predictions of the input dataset
+
+        """
+        if labels:
+            # if a labels is provided, then return with the prediction
+            return_labels = bool(labels)
+
+        if labels and len(labels) != len(imgs):
+            raise ValueError(
+                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
+            )
+
+        # don't return coordinates if patches are already extracted
+        return_coordinates = False
+        dataset = PatchDataset(imgs, labels)
+        return self._predict_engine(
+            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+        )
 
     def _predict_tile_wsi(
         self,
