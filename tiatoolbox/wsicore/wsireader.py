@@ -90,8 +90,8 @@ class WSIReader:
 
     """
 
-    @staticmethod  # noqa: A003
-    def open(
+    @staticmethod
+    def open(  # noqa: A003
         input_img: Union[str, pathlib.Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
@@ -574,42 +574,27 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return (read_level, level_bounds, output_size, post_read_scale_factor)
 
-    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
-        """Converts resolution value between different units.
-
-        This function accepts a resolution and its units in the input
-        and converts it to all other units ('mpp', 'power', 'baseline').
-        To achieve resolution in 'mpp' and 'power' units in the output,
-        WSI meta data should contain `mpp` and `objective_power`
-        information, respectively.
+    @staticmethod
+    def _check_unit_conversion_integrity(
+        input_unit, output_unit, baseline_mpp, baseline_power
+    ):
+        """Checks integrity of units before conversion using self.convert_resolution_units()
 
         Args:
-            input_res (float):
-                the resolution which we want to convert to the other
-                units.
             input_unit (str):
-                The unit of the input resolution (`input_res`).
-                Acceptable input_units are 'mpp', 'power', 'baseline',
-                and 'level'. output_unit (str): the desired unit to
-                which we want to convert the `input_res`. Acceptable
-                values for `output_unit` are: 'mpp', 'power', and
-                'baseline'. If `output_unit` is not provided, all of the
-                conversions to all of the mentioned units will be
-                returned in a dictionary.
+                input units
+            output_unit (str):
+                output units
+            baseline_mpp:
+                baseline microns per pixel (mpp)
+            baseline_power:
+                baseline magnification level.
 
-
-        Returns:
-            output_res (float or dictionary):
-                Either a float which is the converted `input_res` to the
-                desired `output_unit` or a dictionary containing the
-                converted `input_res` to all acceptable units (`'mpp'`,
-                `'power'`, `'baseline'`). If there is not enough meta
-                data to calculate a unit (like `mpp` or `power`), they
-                will be set to None in the dictionary.
+        Raises:
+            ValueError:
+                If the checks on unit conversion fails.
 
         """
-        baseline_mpp = self.info.mpp
-        baseline_power = self.info.objective_power
         if input_unit not in {"mpp", "power", "level", "baseline"}:
             raise ValueError(
                 "Invalid input_unit: argument accepts only one of the following "
@@ -632,6 +617,7 @@ class WSIReader:
                 "there is no information about 'objective_power' in WSI meta data."
             )
 
+    def _prepare_output_dict(self, input_unit, input_res, baseline_mpp, baseline_power):
         # calculate the output_res based on input_unit and resolution
         output_dict = {
             "mpp": None,
@@ -646,24 +632,75 @@ class WSIReader:
             output_dict["baseline"] = baseline_mpp[0] / output_dict["mpp"][0]
             if baseline_power is not None:
                 output_dict["power"] = output_dict["baseline"] * baseline_power
+            return output_dict
         elif input_unit == "power":
             output_dict["baseline"] = input_res / baseline_power
             output_dict["power"] = input_res
-            if baseline_mpp is not None:
-                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
         elif input_unit == "level":
             level_scales = self.info.relative_level_scales(input_res, input_unit)
             output_dict["baseline"] = level_scales[0]
-            if baseline_mpp is not None:
-                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
             if baseline_power is not None:
                 output_dict["power"] = output_dict["baseline"] * baseline_power
         else:  # input_unit == 'baseline'
             output_dict["baseline"] = input_res
-            if baseline_mpp is not None:
-                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
             if baseline_power is not None:
                 output_dict["power"] = baseline_power * output_dict["baseline"]
+
+        if baseline_mpp is not None:
+            output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
+
+        return output_dict
+
+    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
+        """Converts resolution value between different units.
+
+        This function accepts a resolution and its units in the input
+        and converts it to all other units ('mpp', 'power', 'baseline').
+        To achieve resolution in 'mpp' and 'power' units in the output,
+        WSI meta data should contain `mpp` and `objective_power`
+        information, respectively.
+
+        Args:
+            input_res (float):
+                the resolution which we want to convert to the other
+                units.
+            input_unit (str):
+                The unit of the input resolution (`input_res`).
+                Acceptable input_units are 'mpp', 'power', 'baseline',
+                and 'level'. output_unit (str): the desired unit to
+                which we want to convert the `input_res`. Acceptable
+                values for `output_unit` are: 'mpp', 'power', and
+                'baseline'. If `output_unit` is not provided, all of the
+                conversions to all of the mentioned units will be
+                returned in a dictionary.
+            output_unit (str):
+                Units of scale, Supported units are:
+                - microns per pixel ('mpp')
+                - objective power ('power')
+                - pyramid / resolution level ('level')
+                - pixels per baseline pixel ("baseline")
+
+
+        Returns:
+            output_res (float or dictionary):
+                Either a float which is the converted `input_res` to the
+                desired `output_unit` or a dictionary containing the
+                converted `input_res` to all acceptable units (`'mpp'`,
+                `'power'`, `'baseline'`). If there is not enough meta
+                data to calculate a unit (like `mpp` or `power`), they
+                will be set to None in the dictionary.
+
+        """
+        baseline_mpp = self.info.mpp
+        baseline_power = self.info.objective_power
+
+        self._check_unit_conversion_integrity(
+            input_unit, output_unit, baseline_mpp, baseline_power
+        )
+
+        output_dict = self._prepare_output_dict(
+            input_unit, input_res, baseline_mpp, baseline_power
+        )
         out_res = output_dict[output_unit] if output_unit is not None else output_dict
         if out_res is None:
             warnings.warn(
@@ -1465,6 +1502,44 @@ class OpenSlideWSIReader(WSIReader):
 
         return utils.transforms.background_composite(image=im_region)
 
+    def _estimate_mpp(self, props):
+        """Find microns per pixel (mpp)
+
+        Args:
+            props (:class:`OpenSlide.properties`):
+                OpenSlide properties.
+
+        Returns:
+            tuple:
+                estimated microns per pixel (mpp).
+
+        """
+        # Check OpenSlide for mpp metadata first
+        try:
+            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
+            return mpp_x, mpp_y
+        # Fallback to TIFF resolution units and convert to mpp
+        except KeyError:
+            tiff_res_units = props.get("tiff.ResolutionUnit")
+
+        try:
+            x_res = float(props["tiff.XResolution"])
+            y_res = float(props["tiff.YResolution"])
+            mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
+            mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
+
+            warnings.warn(
+                "Metadata: Falling back to TIFF resolution tag"
+                " for microns-per-pixel (MPP)."
+            )
+            return mpp_x, mpp_y
+        except KeyError:
+            warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+
+        # Return None value if cannot be determined.
+        return None
+
     def _info(self):
         """Openslide WSI meta data reader.
 
@@ -1485,29 +1560,7 @@ class OpenSlideWSIReader(WSIReader):
         level_downsamples = self.openslide_wsi.level_downsamples
         vendor = props.get(openslide.PROPERTY_NAME_VENDOR)
 
-        # Find microns per pixel (mpp)
-        # Initialise to None (value if cannot be determined)
-        mpp = None
-        # Check OpenSlide for mpp metadata first
-        try:
-            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
-            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
-            mpp = (mpp_x, mpp_y)
-        # Fallback to TIFF resolution units and convert to mpp
-        except KeyError:
-            tiff_res_units = props.get("tiff.ResolutionUnit")
-            try:
-                x_res = float(props["tiff.XResolution"])
-                y_res = float(props["tiff.YResolution"])
-                mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
-                mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
-                mpp = [mpp_x, mpp_y]
-                warnings.warn(
-                    "Metadata: Falling back to TIFF resolution tag"
-                    " for microns-per-pixel (MPP)."
-                )
-            except KeyError:
-                warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+        mpp = self._estimate_mpp(props)
 
         # Fallback to calculating objective power from mpp
         if objective_power is None:
