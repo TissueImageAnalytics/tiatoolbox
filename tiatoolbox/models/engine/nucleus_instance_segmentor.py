@@ -441,7 +441,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         # * remove edges on all sides, excluding edges at on WSI boundary
         flag = np.ones([boxes.shape[0], 4], dtype=np.int32)
         flag = unset_removal_flag(boxes, flag)
-        info = deque([boxes, flag])
+        info = deque([[boxes, flag]])
 
         # * create vertical boxes at tile boundary and
         # * flag top and bottom removal, excluding those
