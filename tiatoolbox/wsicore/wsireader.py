@@ -1502,7 +1502,8 @@ class OpenSlideWSIReader(WSIReader):
 
         return utils.transforms.background_composite(image=im_region)
 
-    def _estimate_mpp(self, props):
+    @staticmethod
+    def _estimate_mpp(props):
         """Find microns per pixel (mpp)
 
         Args:
