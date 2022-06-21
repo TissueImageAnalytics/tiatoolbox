@@ -633,7 +633,7 @@ class WSIReader:
             if baseline_power is not None:
                 output_dict["power"] = output_dict["baseline"] * baseline_power
             return output_dict
-        elif input_unit == "power":
+        if input_unit == "power":
             output_dict["baseline"] = input_res / baseline_power
             output_dict["power"] = input_res
         elif input_unit == "level":
