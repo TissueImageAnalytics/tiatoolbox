@@ -1358,38 +1358,38 @@ def test_invalid_masker_method(sample_svs):
         wsi.tissue_mask(method="foo")
 
 
-def test_get_wsireader(
+def test_wsireader_open(
     sample_svs, sample_ndpi, sample_jp2, sample_ome_tiff, source_image
 ):
-    """Test get_wsireader to return correct object."""
+    """Test WSIReader.open() to return correct object."""
     with pytest.raises(FileNotSupported):
-        _ = wsireader.get_wsireader("./sample.csv")
+        _ = WSIReader.open("./sample.csv")
 
     with pytest.raises(TypeError):
-        _ = wsireader.get_wsireader([1, 2])
+        _ = WSIReader.open([1, 2])
 
-    wsi = wsireader.get_wsireader(sample_svs)
+    wsi = WSIReader.open(sample_svs)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
-    wsi = wsireader.get_wsireader(sample_ndpi)
+    wsi = WSIReader.open(sample_ndpi)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
-    wsi = wsireader.get_wsireader(sample_jp2)
+    wsi = WSIReader.open(sample_jp2)
     assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
 
-    wsi = wsireader.get_wsireader(sample_ome_tiff)
+    wsi = WSIReader.open(sample_ome_tiff)
     assert isinstance(wsi, wsireader.TIFFWSIReader)
 
-    wsi = wsireader.get_wsireader(pathlib.Path(source_image))
+    wsi = WSIReader.open(pathlib.Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
     img = utils.misc.imread(str(pathlib.Path(source_image)))
-    wsi = wsireader.get_wsireader(input_img=img)
+    wsi = WSIReader.open(input_img=img)
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
-    # test if get_wsireader can accept a wsireader instance
+    # test if WSIReader.open can accept a wsireader instance
     wsi_type = type(wsi)
-    wsi_out = wsireader.get_wsireader(input_img=wsi)
+    wsi_out = WSIReader.open(input_img=wsi)
     assert isinstance(wsi_out, wsi_type)
 
     # test loading .npy
@@ -1397,7 +1397,7 @@ def test_get_wsireader(
     os.mkdir(temp_dir)
     temp_file = f"{temp_dir}/sample.npy"
     np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
-    wsi_out = wsireader.get_wsireader(temp_file)
+    wsi_out = WSIReader.open(temp_file)
     assert isinstance(wsi_out, VirtualWSIReader)
     shutil.rmtree(temp_dir)
 
