@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from scipy.ndimage import measurements
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import remove_small_objects
@@ -49,8 +49,7 @@ class TFSamepaddingLayer(nn.Module):
             pad_val_start = pad // 2
             pad_val_end = pad - pad_val_start
             padding = (pad_val_start, pad_val_end, pad_val_start, pad_val_end)
-        x = F.pad(x, padding, "constant", 0)
-        return x
+        return F.pad(x, padding, "constant", 0)
 
 
 class DenseBlock(nn.Module):
@@ -139,9 +138,7 @@ class DenseBlock(nn.Module):
             new_feat = self.units[idx](prev_feat)
             prev_feat = centre_crop_to_shape(prev_feat, new_feat)
             prev_feat = torch.cat([prev_feat, new_feat], dim=1)
-        prev_feat = self.blk_bna(prev_feat)
-
-        return prev_feat
+        return self.blk_bna(prev_feat)
 
 
 class ResidualBlock(nn.Module):
@@ -248,13 +245,12 @@ class ResidualBlock(nn.Module):
         else:
             shortcut = self.shortcut(prev_feat)
 
-        for idx in range(0, len(self.units)):
+        for _, unit in enumerate(self.units):
             new_feat = prev_feat
-            new_feat = self.units[idx](new_feat)
+            new_feat = unit(new_feat)
             prev_feat = new_feat + shortcut
             shortcut = prev_feat
-        feat = self.blk_bna(prev_feat)
-        return feat
+        return self.blk_bna(prev_feat)
 
 
 class HoVerNet(ModelABC):
@@ -385,8 +381,7 @@ class HoVerNet(ModelABC):
 
         self.upsample2x = UpSample2x()
 
-    # skipcq: PYL-W0221
-    def forward(self, input_tensor: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -476,10 +471,9 @@ class HoVerNet(ModelABC):
         ]
         u0 = nn.Sequential(OrderedDict(modules))
 
-        decoder = nn.Sequential(
+        return nn.Sequential(
             OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
         )
-        return decoder
 
     @staticmethod
     def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, scale_factor: float = 1):
@@ -696,7 +690,7 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221
+    # skipcq: PYL-W0221  # noqa: E800
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
 
