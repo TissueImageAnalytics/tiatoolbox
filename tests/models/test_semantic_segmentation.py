@@ -28,7 +28,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread, imwrite
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
@@ -275,7 +275,7 @@ def test_crash_segmentor(remote_sample):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
         semantic_segmentor.filter_coordinates(
-            get_wsireader(mini_wsi_msk), np.array([1.0, 2.0])
+            WSIReader.open(mini_wsi_msk), np.array([1.0, 2.0])
         )
     semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
@@ -448,7 +448,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # # convert to pathlib Path to prevent wsireader complaint
     resolution = 2.0
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
@@ -555,7 +555,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     expected_shape = reader.slide_dimensions(**ioconfig.save_resolution)
     expected_shape = np.array(expected_shape)[::-1]  # to YX
     pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
@@ -600,9 +600,9 @@ def test_subclass(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        patch_output_shape=(1024, 1024),
-        stride_shape=(512, 512),
+        patch_input_shape=(1024, 1024),
+        patch_output_shape=(512, 512),
+        stride_shape=(256, 256),
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
@@ -615,7 +615,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)

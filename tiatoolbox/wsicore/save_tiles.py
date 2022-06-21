@@ -1,7 +1,7 @@
 """Save image tiles from the whole slide image."""
 import pathlib
 
-from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def save_tiles(
@@ -44,7 +44,7 @@ def save_tiles(
     if verbose:
         print(input_path.name, flush=True)
 
-    wsi = wsireader.get_wsireader(input_img=input_path)
+    wsi = WSIReader.open(input_img=input_path)
     wsi.save_tiles(
         output_dir=output_dir,
         tile_objective_value=tile_objective_value,
