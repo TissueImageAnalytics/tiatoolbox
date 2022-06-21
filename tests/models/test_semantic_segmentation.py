@@ -13,7 +13,7 @@ import pytest
 import torch
 import torch.multiprocessing as torch_mp
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 import yaml
 from click.testing import CliRunner
 
@@ -599,9 +599,9 @@ def test_subclass(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        patch_output_shape=(1024, 1024),
-        stride_shape=(512, 512),
+        patch_input_shape=(1024, 1024),
+        patch_output_shape=(512, 512),
+        stride_shape=(256, 256),
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
