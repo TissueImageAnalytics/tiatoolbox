@@ -122,7 +122,6 @@ class WSIReader:
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
-
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
