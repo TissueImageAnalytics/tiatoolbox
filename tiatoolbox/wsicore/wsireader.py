@@ -578,7 +578,7 @@ class WSIReader:
     def _check_unit_conversion_integrity(
         input_unit, output_unit, baseline_mpp, baseline_power
     ):
-        """Checks integrity of units before conversion using self.convert_resolution_units()
+        """Checks integrity of units before unit conversion.
 
         Args:
             input_unit (str):
