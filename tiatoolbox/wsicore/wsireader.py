@@ -2629,32 +2629,3 @@ class DICOMWSIReader(WSIReader):
             )
 
         return utils.transforms.background_composite(image=im_region)
-
-
-def get_wsireader(input_img):
-    """Return an appropriate :class:`.WSIReader` object.
-
-    Args:
-        input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
-          Input to create a WSI object from. Supported types of input
-          are: `str` and `pathlib.Path` which point to the location on
-          the disk where image is stored, :class:`numpy.ndarray` in
-          which the input image in the form of numpy array (HxWxC) is
-          stored, or :obj:WSIReader which is an already created
-          tiatoolbox WSI handler. In the latter case, the function
-          directly passes the input_imge to the output.
-
-    Returns:
-        WSIReader:
-            An object with base :class:`.WSIReader` as base class.
-
-    Examples:
-        >>> from tiatoolbox.wsicore.wsireader import WSIReader
-        >>> wsi = WSIReader.open(input_img="./sample.svs")
-
-    """
-    warnings.warn(
-        "get_wsireader is deprecated. Please use WSIReader.open instead",
-        DeprecationWarning,
-    )
-    return WSIReader.open(input_img)
