@@ -13,7 +13,7 @@ import pytest
 import torch
 import torch.multiprocessing as torch_mp
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 import yaml
 from click.testing import CliRunner
 
@@ -109,36 +109,37 @@ class _CNNTo1(ModelABC):
 
 def test_segmentor_ioconfig():
     """Test for IOConfig."""
-    default_config = dict(
-        input_resolutions=[
+    default_config = {
+        "input_resolutions": [
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
             {"units": "mpp", "resolution": 0.75},
         ],
-        output_resolutions=[
+        "output_resolutions": [
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
         ],
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
-        stride_shape=[512, 512],
-    )
+        "patch_input_shape": [2048, 2048],
+        "patch_output_shape": [1024, 1024],
+        "stride_shape": [512, 512],
+    }
 
     # error when uniform resolution units are not uniform
+    xconfig = copy.deepcopy(default_config)
+    xconfig["input_resolutions"] = [
+        {"units": "mpp", "resolution": 0.25},
+        {"units": "power", "resolution": 0.50},
+    ]
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        xconfig = copy.deepcopy(default_config)
-        xconfig["input_resolutions"] = [
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
-        ]
         _ = IOSegmentorConfig(**xconfig)
+
     # error when uniform resolution units are not supported
+    xconfig = copy.deepcopy(default_config)
+    xconfig["input_resolutions"] = [
+        {"units": "alpha", "resolution": 0.25},
+        {"units": "alpha", "resolution": 0.50},
+    ]
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        xconfig = copy.deepcopy(default_config)
-        xconfig["input_resolutions"] = [
-            {"units": "alpha", "resolution": 0.25},
-            {"units": "alpha", "resolution": 0.50},
-        ]
         _ = IOSegmentorConfig(**xconfig)
 
     ioconfig = IOSegmentorConfig(
@@ -764,14 +765,14 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
         "fcn-tissue_mask", str(tmp_path.joinpath("fcn-tissue_mask.pth"))
     )
 
-    config = dict(
-        input_resolutions=[{"units": "mpp", "resolution": 2.0}],
-        output_resolutions=[{"units": "mpp", "resolution": 2.0}],
-        patch_input_shape=[1024, 1024],
-        patch_output_shape=[512, 512],
-        stride_shape=[256, 256],
-        save_resolution={"units": "mpp", "resolution": 8.0},
-    )
+    config = {
+        "input_resolutions": [{"units": "mpp", "resolution": 2.0}],
+        "output_resolutions": [{"units": "mpp", "resolution": 2.0}],
+        "patch_input_shape": [1024, 1024],
+        "patch_output_shape": [512, 512],
+        "stride_shape": [256, 256],
+        "save_resolution": {"units": "mpp", "resolution": 8.0},
+    }
     with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
         yaml.dump(config, fptr)
 
