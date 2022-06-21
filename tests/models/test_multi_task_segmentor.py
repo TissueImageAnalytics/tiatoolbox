@@ -9,7 +9,7 @@ import pytest
 from tiatoolbox.models import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 
-ON_GPU = ON_GPU = toolbox_env.has_gpu()
+ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
 NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
@@ -52,7 +52,8 @@ def test_functionality_local(remote_sample, tmp_path):
     inst_map, inst_dict, layer_map, layer_dict = semantic_segmentor.model.postproc(
         raw_maps
     )
-    assert len(inst_dict) > 0 and len(layer_dict) > 0, "Must have some nuclei/layers."
+    assert len(inst_dict) > 0, "Must have some nuclei."
+    assert len(layer_dict) > 0, "Must have some layers."
     assert (
         inst_map.shape == layer_map.shape
     ), "Output instance and layer maps must be same shape"
