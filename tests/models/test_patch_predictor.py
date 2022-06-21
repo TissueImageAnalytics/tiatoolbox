@@ -231,22 +231,21 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         return reuse_init(mode="wsi", **kwargs)
 
     # test for ABC validate
+    # intentionally created to check error
+    # skipcq
+    class Proto(PatchDatasetABC):
+        def __init__(self):
+            super().__init__()
+            self.inputs = "CRASH"
+            self._check_input_integrity("wsi")
+
+        # skipcq
+        def __getitem__(self, idx):
+            pass
+
     with pytest.raises(
         ValueError, match=r".*`inputs` should be a list of patch coordinates.*"
     ):
-        # intentionally created to check error
-        # skipcq
-        class Proto(PatchDatasetABC):
-            def __init__(self):
-                super().__init__()
-                self.inputs = "CRASH"
-                self._check_input_integrity("wsi")
-
-            # skipcq
-            def __getitem__(self, idx):
-                pass
-
-        # intentionally created to check error
         Proto()  # skipcq
 
     # invalid path input
@@ -400,16 +399,15 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 def test_patch_dataset_abc():
     """Test for ABC methods."""
     # test missing definition for abstract
-    with pytest.raises(TypeError):
-
-        # intentionally created to check error
+    # intentionally created to check error
+    # skipcq
+    class Proto(PatchDatasetABC):
         # skipcq
-        class Proto(PatchDatasetABC):
-            # skipcq
-            def __init__(self):
-                super().__init__()
+        def __init__(self):
+            super().__init__()
 
-        # crash due to not define __getitem__
+    # crash due to undefined __getitem__
+    with pytest.raises(TypeError):
         Proto()  # skipcq
 
     # skipcq
@@ -698,15 +696,15 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     # wrapper to make this more clean
-    kwargs = dict(
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=ON_GPU,
-        patch_input_shape=patch_size,
-        stride_shape=patch_size,
-        resolution=1.0,
-        units="baseline",
-    )
+    kwargs = {
+        "return_probabilities": True,
+        "return_labels": True,
+        "on_gpu": ON_GPU,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 1.0,
+        "units": "baseline",
+    }
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
@@ -733,17 +731,17 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     save_dir = f"{save_dir_path}/model_wsi_output"
     _rm_dir(save_dir)
 
-    kwargs = dict(
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=ON_GPU,
-        patch_input_shape=patch_size,
-        stride_shape=patch_size,
-        resolution=0.5,
-        save_dir=save_dir,
-        merge_predictions=True,  # to test the api coverage
-        units="mpp",
-    )
+    kwargs = {
+        "return_probabilities": True,
+        "return_labels": True,
+        "on_gpu": ON_GPU,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "merge_predictions": True,  # to test the api coverage
+        "units": "mpp",
+    }
 
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = False
@@ -769,8 +767,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
         mode="wsi",
         **_kwargs,
     )
+    _kwargs = copy.deepcopy(kwargs)
     with pytest.raises(FileExistsError):
-        _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [mini_wsi_svs, mini_wsi_svs],
             masks=[mini_wsi_msk, mini_wsi_msk],
@@ -840,16 +838,16 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     # integration test
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
-    kwargs = dict(
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=ON_GPU,
-        patch_input_shape=np.array([224, 224]),
-        stride_shape=np.array([224, 224]),
-        resolution=1.0,
-        units="baseline",
-        merge_predictions=True,
-    )
+    kwargs = {
+        "return_probabilities": True,
+        "return_labels": True,
+        "on_gpu": ON_GPU,
+        "patch_input_shape": np.array([224, 224]),
+        "stride_shape": np.array([224, 224]),
+        "resolution": 1.0,
+        "units": "baseline",
+        "merge_predictions": True,
+    }
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
         [mini_wsi_svs],
