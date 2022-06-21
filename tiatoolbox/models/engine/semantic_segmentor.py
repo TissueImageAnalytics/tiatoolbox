@@ -669,7 +669,6 @@ class SemanticSegmentor:
         self._mp_shared_space.patch_outputs = patch_outputs
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
-        # ! Need a protocol for p bar, or a decorator to make this less redundant.
         pbar_desc = "Process Batch: "
         pbar = tqdm.tqdm(
             desc=pbar_desc,
