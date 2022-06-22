@@ -1784,7 +1784,7 @@ class OpenSlideWSIReader(WSIReader):
 
         Returns:
             tuple:
-                estimated microns per pixel (mpp).
+                Estimated microns per pixel (mpp).
 
         """
         # Check OpenSlide for mpp metadata first
