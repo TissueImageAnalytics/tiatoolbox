@@ -1286,11 +1286,12 @@ class SemanticSegmentor:
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
         ioconfig = self._update_ioconfig(
             ioconfig,
+            mode,
             patch_input_shape,
-            resolution,
-            units,
             patch_output_shape,
             stride_shape,
+            resolution,
+            units,
         )
 
         # use external for testing
