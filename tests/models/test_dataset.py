@@ -61,7 +61,6 @@ def test_dataset_abc():
 )
 def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
-
     # test kather with default init
     _ = KatherPatchDataset()
     # kather with default data path skip download
@@ -72,7 +71,7 @@ def test_kather_dataset_default(tmp_path):
 
 
 def test_kather_nonexisting_dir():
-    # pytest for not exist dir
+    """pytest for not exist dir."""
     with pytest.raises(
         ValueError,
         match=r".*not exist.*",

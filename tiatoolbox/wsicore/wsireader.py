@@ -158,7 +158,7 @@ class WSIReader:
 
     """
 
-    @staticmethod  # noqa: A003
+    @staticmethod
     def open(  # noqa: A003
         input_img: Union[str, pathlib.Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
@@ -190,7 +190,6 @@ class WSIReader:
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
-
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
@@ -650,42 +649,27 @@ class WSIReader:
         output_size = np.round(level_size * post_read_scale_factor).astype(int)
         return (read_level, level_bounds, output_size, post_read_scale_factor)
 
-    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
-        """Converts resolution value between different units.
-
-        This function accepts a resolution and its units in the input
-        and converts it to all other units ('mpp', 'power', 'baseline').
-        To achieve resolution in 'mpp' and 'power' units in the output,
-        WSI meta data should contain `mpp` and `objective_power`
-        information, respectively.
+    @staticmethod
+    def _check_unit_conversion_integrity(
+        input_unit, output_unit, baseline_mpp, baseline_power
+    ):
+        """Checks integrity of units before unit conversion.
 
         Args:
-            input_res (float):
-                the resolution which we want to convert to the other
-                units.
             input_unit (str):
-                The unit of the input resolution (`input_res`).
-                Acceptable input_units are 'mpp', 'power', 'baseline',
-                and 'level'. output_unit (str): the desired unit to
-                which we want to convert the `input_res`. Acceptable
-                values for `output_unit` are: 'mpp', 'power', and
-                'baseline'. If `output_unit` is not provided, all of the
-                conversions to all of the mentioned units will be
-                returned in a dictionary.
+                input units
+            output_unit (str):
+                output units
+            baseline_mpp:
+                baseline microns per pixel (mpp)
+            baseline_power:
+                baseline magnification level.
 
-
-        Returns:
-            output_res (float or dictionary):
-                Either a float which is the converted `input_res` to the
-                desired `output_unit` or a dictionary containing the
-                converted `input_res` to all acceptable units (`'mpp'`,
-                `'power'`, `'baseline'`). If there is not enough meta
-                data to calculate a unit (like `mpp` or `power`), they
-                will be set to None in the dictionary.
+        Raises:
+            ValueError:
+                If the checks on unit conversion fails.
 
         """
-        baseline_mpp = self.info.mpp
-        baseline_power = self.info.objective_power
         if input_unit not in {"mpp", "power", "level", "baseline"}:
             raise ValueError(
                 "Invalid input_unit: argument accepts only one of the following "
@@ -708,6 +692,7 @@ class WSIReader:
                 "there is no information about 'objective_power' in WSI meta data."
             )
 
+    def _prepare_output_dict(self, input_unit, input_res, baseline_mpp, baseline_power):
         # calculate the output_res based on input_unit and resolution
         output_dict = {
             "mpp": None,
@@ -722,24 +707,75 @@ class WSIReader:
             output_dict["baseline"] = baseline_mpp[0] / output_dict["mpp"][0]
             if baseline_power is not None:
                 output_dict["power"] = output_dict["baseline"] * baseline_power
-        elif input_unit == "power":
+            return output_dict
+        if input_unit == "power":
             output_dict["baseline"] = input_res / baseline_power
             output_dict["power"] = input_res
-            if baseline_mpp is not None:
-                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
         elif input_unit == "level":
             level_scales = self.info.relative_level_scales(input_res, input_unit)
             output_dict["baseline"] = level_scales[0]
-            if baseline_mpp is not None:
-                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
             if baseline_power is not None:
                 output_dict["power"] = output_dict["baseline"] * baseline_power
         else:  # input_unit == 'baseline'
             output_dict["baseline"] = input_res
-            if baseline_mpp is not None:
-                output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
             if baseline_power is not None:
                 output_dict["power"] = baseline_power * output_dict["baseline"]
+
+        if baseline_mpp is not None:
+            output_dict["mpp"] = baseline_mpp / output_dict["baseline"]
+
+        return output_dict
+
+    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
+        """Converts resolution value between different units.
+
+        This function accepts a resolution and its units in the input
+        and converts it to all other units ('mpp', 'power', 'baseline').
+        To achieve resolution in 'mpp' and 'power' units in the output,
+        WSI meta data should contain `mpp` and `objective_power`
+        information, respectively.
+
+        Args:
+            input_res (float):
+                the resolution which we want to convert to the other
+                units.
+            input_unit (str):
+                The unit of the input resolution (`input_res`).
+                Acceptable input_units are 'mpp', 'power', 'baseline',
+                and 'level'. output_unit (str): the desired unit to
+                which we want to convert the `input_res`. Acceptable
+                values for `output_unit` are: 'mpp', 'power', and
+                'baseline'. If `output_unit` is not provided, all of the
+                conversions to all of the mentioned units will be
+                returned in a dictionary.
+            output_unit (str):
+                Units of scale, Supported units are:
+                - microns per pixel ('mpp')
+                - objective power ('power')
+                - pyramid / resolution level ('level')
+                - pixels per baseline pixel ("baseline")
+
+
+        Returns:
+            output_res (float or dictionary):
+                Either a float which is the converted `input_res` to the
+                desired `output_unit` or a dictionary containing the
+                converted `input_res` to all acceptable units (`'mpp'`,
+                `'power'`, `'baseline'`). If there is not enough meta
+                data to calculate a unit (like `mpp` or `power`), they
+                will be set to None in the dictionary.
+
+        """
+        baseline_mpp = self.info.mpp
+        baseline_power = self.info.objective_power
+
+        self._check_unit_conversion_integrity(
+            input_unit, output_unit, baseline_mpp, baseline_power
+        )
+
+        output_dict = self._prepare_output_dict(
+            input_unit, input_res, baseline_mpp, baseline_power
+        )
         out_res = output_dict[output_unit] if output_unit is not None else output_dict
         if out_res is None:
             warnings.warn(
@@ -1414,6 +1450,183 @@ class OpenSlideWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image at a location and size.
+
+        Location is in terms of the baseline image (level 0  / maximum
+        resolution), and size is the output image size.
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The field of view varies with resolution. For a fixed field of
+        view see :func:`read_bounds`.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline
+                (level 0) reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image
+                size.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                The units of resolution, default = "level". Supported
+                units are: microns per pixel (mpp), objective power
+                (power), pyramid / resolution level (level), pixels per
+                baseline pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by VirtualWSIReader. See class
+                docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=size[0], N=size[1]
+
+        Example:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> img = wsi.read_rect(location, size)
+            >>> # Read a region at 0.5 microns per pixel (mpp)
+            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.5),
+            ...     units="mpp",
+            ... )
+
+        Note: The field of view varies with resolution when using
+        :func:`read_rect`.
+
+        .. figure:: ../images/read_rect_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_rect
+
+        As the location is in the baseline reference frame but the size
+        (width and height) is the output image size, the field of view
+        therefore changes as resolution changes.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        .. figure:: ../images/read_rect-interpolated-reads.png
+            :width: 512
+            :alt: Diagram illustrating read_rect interpolting between levels
+
+        When reading between the levels stored in the WSI, the
+        coordinates of the requested region are projected to the next
+        highest resolution. This resolution is then decoded and
+        downsampled to produce the desired output. This is a major
+        source of variability in the time take to perform a read
+        operation. Reads which require reading a large region before
+        downsampling will be significantly slower than reading at a
+        fixed level.
+
+        Examples:
+
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # The resolution can be different in x and y, e.g.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.75),
+            ...     units="mpp",
+            ... )
+            >>> # Several units can be used including: objective power,
+            >>> # microns per pixel, pyramid/resolution level, and
+            >>> # fraction of baseline.
+            >>> # E.g. Read a region at an objective power of 10x
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=10,
+            ...     units="power",
+            ... )
+            >>> # Read a region at pyramid / resolution level 1
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1,
+            ...     units="level",
+            ... )
+            >>> # Read at a fractional level, this will linearly
+            >>> # interpolate the downsampling factor between levels.
+            >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
+            >>> # 2x of baseline, then level 0.5 will correspond to a
+            >>> # downsampling factor 1.5x of baseline.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="level",
+            ... )
+            >>> # Read a region at half of the full / baseline
+            >>> # resolution.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="baseline",
+            ... )
+            >>> # Read at a higher resolution than the baseline
+            >>> # (interpolation applied to output)
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1.25,
+            ...     units="baseline",
+            ... )
+            >>> # Assuming the image has a native mpp of 0.5,
+            >>> # interpolation will be applied here.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.25,
+            ...     units="mpp",
+            ... )
+
+        """
         if coord_space == "resolution":
             return self._read_rect_at_resolution(
                 location,
@@ -1475,6 +1688,102 @@ class OpenSlideWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image within given bounds.
+
+        Bounds are in terms of the baseline image (level 0  / maximum
+        resolution).
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The output image size may be different to the width and height
+        of the bounds as the resolution will affect this. To read a
+        region with a fixed output image size see :func:`read_rect`.
+
+        Args:
+            bounds (tuple(int)):
+                By default, this is a tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame. However, with
+                `coord_space="resolution"`, the bound is expected to be
+                at the requested resolution system.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                Units of resolution, default="level". Supported units
+                are: microns per pixel (mpp), objective power (power),
+                pyramid / resolution level (level), pixels per baseline
+                pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by :obj:`VirtualWSIReader`. See
+                class docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> bounds = [1000, 2000, 2000, 3000]
+            >>> img = wsi.read_bounds(bounds)
+            >>> plt.imshow(img)
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_bounds(
+            ...     bounds,
+            ...     resolution=0,
+            ...     units="level",
+            ... )
+            >>> plt.imshow(img)
+
+        Note: The field of view remains the same as resolution is varied
+        when using :func:`read_bounds`.
+
+        .. figure:: ../images/read_bounds_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_bounds
+
+        This is because the bounds are in the baseline (level 0)
+        reference frame. Therefore, varying the resolution does not
+        change what is visible within the output image.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        """
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
@@ -1541,6 +1850,45 @@ class OpenSlideWSIReader(WSIReader):
 
         return utils.transforms.background_composite(image=im_region)
 
+    @staticmethod
+    def _estimate_mpp(props):
+        """Find microns per pixel (mpp)
+
+        Args:
+            props (:class:`OpenSlide.properties`):
+                OpenSlide properties.
+
+        Returns:
+            tuple:
+                Estimated microns per pixel (mpp).
+
+        """
+        # Check OpenSlide for mpp metadata first
+        try:
+            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
+            return mpp_x, mpp_y
+        # Fallback to TIFF resolution units and convert to mpp
+        except KeyError:
+            tiff_res_units = props.get("tiff.ResolutionUnit")
+
+        try:
+            x_res = float(props["tiff.XResolution"])
+            y_res = float(props["tiff.YResolution"])
+            mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
+            mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
+
+            warnings.warn(
+                "Metadata: Falling back to TIFF resolution tag"
+                " for microns-per-pixel (MPP)."
+            )
+            return mpp_x, mpp_y
+        except KeyError:
+            warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+
+        # Return None value if cannot be determined.
+        return None
+
     def _info(self):
         """Openslide WSI meta data reader.
 
@@ -1561,29 +1909,7 @@ class OpenSlideWSIReader(WSIReader):
         level_downsamples = self.openslide_wsi.level_downsamples
         vendor = props.get(openslide.PROPERTY_NAME_VENDOR)
 
-        # Find microns per pixel (mpp)
-        # Initialise to None (value if cannot be determined)
-        mpp = None
-        # Check OpenSlide for mpp metadata first
-        try:
-            mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
-            mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
-            mpp = (mpp_x, mpp_y)
-        # Fallback to TIFF resolution units and convert to mpp
-        except KeyError:
-            tiff_res_units = props.get("tiff.ResolutionUnit")
-            try:
-                x_res = float(props["tiff.XResolution"])
-                y_res = float(props["tiff.YResolution"])
-                mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
-                mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
-                mpp = [mpp_x, mpp_y]
-                warnings.warn(
-                    "Metadata: Falling back to TIFF resolution tag"
-                    " for microns-per-pixel (MPP)."
-                )
-            except KeyError:
-                warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+        mpp = self._estimate_mpp(props)
 
         # Fallback to calculating objective power from mpp
         if objective_power is None:
@@ -1647,6 +1973,183 @@ class OmnyxJP2WSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image at a location and size.
+
+        Location is in terms of the baseline image (level 0  / maximum
+        resolution), and size is the output image size.
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The field of view varies with resolution. For a fixed field of
+        view see :func:`read_bounds`.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline
+                (level 0) reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image
+                size.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                The units of resolution, default = "level". Supported
+                units are: microns per pixel (mpp), objective power
+                (power), pyramid / resolution level (level), pixels per
+                baseline pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by VirtualWSIReader. See class
+                docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=size[0], N=size[1]
+
+        Example:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> img = wsi.read_rect(location, size)
+            >>> # Read a region at 0.5 microns per pixel (mpp)
+            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.5),
+            ...     units="mpp",
+            ... )
+
+        Note: The field of view varies with resolution when using
+        :func:`read_rect`.
+
+        .. figure:: ../images/read_rect_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_rect
+
+        As the location is in the baseline reference frame but the size
+        (width and height) is the output image size, the field of view
+        therefore changes as resolution changes.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        .. figure:: ../images/read_rect-interpolated-reads.png
+            :width: 512
+            :alt: Diagram illustrating read_rect interpolting between levels
+
+        When reading between the levels stored in the WSI, the
+        coordinates of the requested region are projected to the next
+        highest resolution. This resolution is then decoded and
+        downsampled to produce the desired output. This is a major
+        source of variability in the time take to perform a read
+        operation. Reads which require reading a large region before
+        downsampling will be significantly slower than reading at a
+        fixed level.
+
+        Examples:
+
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # The resolution can be different in x and y, e.g.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.75),
+            ...     units="mpp",
+            ... )
+            >>> # Several units can be used including: objective power,
+            >>> # microns per pixel, pyramid/resolution level, and
+            >>> # fraction of baseline.
+            >>> # E.g. Read a region at an objective power of 10x
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=10,
+            ...     units="power",
+            ... )
+            >>> # Read a region at pyramid / resolution level 1
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1,
+            ...     units="level",
+            ... )
+            >>> # Read at a fractional level, this will linearly
+            >>> # interpolate the downsampling factor between levels.
+            >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
+            >>> # 2x of baseline, then level 0.5 will correspond to a
+            >>> # downsampling factor 1.5x of baseline.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="level",
+            ... )
+            >>> # Read a region at half of the full / baseline
+            >>> # resolution.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="baseline",
+            ... )
+            >>> # Read at a higher resolution than the baseline
+            >>> # (interpolation applied to output)
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1.25,
+            ...     units="baseline",
+            ... )
+            >>> # Assuming the image has a native mpp of 0.5,
+            >>> # interpolation will be applied here.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.25,
+            ...     units="mpp",
+            ... )
+
+        """
         if coord_space == "resolution":
             return self._read_rect_at_resolution(
                 location,
@@ -1705,7 +2208,102 @@ class OmnyxJP2WSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image within given bounds.
 
+        Bounds are in terms of the baseline image (level 0  / maximum
+        resolution).
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The output image size may be different to the width and height
+        of the bounds as the resolution will affect this. To read a
+        region with a fixed output image size see :func:`read_rect`.
+
+        Args:
+            bounds (tuple(int)):
+                By default, this is a tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame. However, with
+                `coord_space="resolution"`, the bound is expected to be
+                at the requested resolution system.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                Units of resolution, default="level". Supported units
+                are: microns per pixel (mpp), objective power (power),
+                pyramid / resolution level (level), pixels per baseline
+                pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by :obj:`VirtualWSIReader`. See
+                class docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> bounds = [1000, 2000, 2000, 3000]
+            >>> img = wsi.read_bounds(bounds)
+            >>> plt.imshow(img)
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_bounds(
+            ...     bounds,
+            ...     resolution=0,
+            ...     units="level",
+            ... )
+            >>> plt.imshow(img)
+
+        Note: The field of view remains the same as resolution is varied
+        when using :func:`read_bounds`.
+
+        .. figure:: ../images/read_bounds_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_bounds
+
+        This is because the bounds are in the baseline (level 0)
+        reference frame. Therefore, varying the resolution does not
+        change what is visible within the output image.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        """
         bounds_at_baseline = bounds
         if coord_space == "resolution":
             bounds_at_baseline = self._bounds_at_resolution_to_baseline(
@@ -1937,6 +2535,183 @@ class VirtualWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image at a location and size.
+
+        Location is in terms of the baseline image (level 0  / maximum
+        resolution), and size is the output image size.
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The field of view varies with resolution. For a fixed field of
+        view see :func:`read_bounds`.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline
+                (level 0) reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image
+                size.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                The units of resolution, default = "level". Supported
+                units are: microns per pixel (mpp), objective power
+                (power), pyramid / resolution level (level), pixels per
+                baseline pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by VirtualWSIReader. See class
+                docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=size[0], N=size[1]
+
+        Example:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> img = wsi.read_rect(location, size)
+            >>> # Read a region at 0.5 microns per pixel (mpp)
+            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.5),
+            ...     units="mpp",
+            ... )
+
+        Note: The field of view varies with resolution when using
+        :func:`read_rect`.
+
+        .. figure:: ../images/read_rect_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_rect
+
+        As the location is in the baseline reference frame but the size
+        (width and height) is the output image size, the field of view
+        therefore changes as resolution changes.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        .. figure:: ../images/read_rect-interpolated-reads.png
+            :width: 512
+            :alt: Diagram illustrating read_rect interpolting between levels
+
+        When reading between the levels stored in the WSI, the
+        coordinates of the requested region are projected to the next
+        highest resolution. This resolution is then decoded and
+        downsampled to produce the desired output. This is a major
+        source of variability in the time take to perform a read
+        operation. Reads which require reading a large region before
+        downsampling will be significantly slower than reading at a
+        fixed level.
+
+        Examples:
+
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # The resolution can be different in x and y, e.g.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.75),
+            ...     units="mpp",
+            ... )
+            >>> # Several units can be used including: objective power,
+            >>> # microns per pixel, pyramid/resolution level, and
+            >>> # fraction of baseline.
+            >>> # E.g. Read a region at an objective power of 10x
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=10,
+            ...     units="power",
+            ... )
+            >>> # Read a region at pyramid / resolution level 1
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1,
+            ...     units="level",
+            ... )
+            >>> # Read at a fractional level, this will linearly
+            >>> # interpolate the downsampling factor between levels.
+            >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
+            >>> # 2x of baseline, then level 0.5 will correspond to a
+            >>> # downsampling factor 1.5x of baseline.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="level",
+            ... )
+            >>> # Read a region at half of the full / baseline
+            >>> # resolution.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="baseline",
+            ... )
+            >>> # Read at a higher resolution than the baseline
+            >>> # (interpolation applied to output)
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1.25,
+            ...     units="baseline",
+            ... )
+            >>> # Assuming the image has a native mpp of 0.5,
+            >>> # interpolation will be applied here.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.25,
+            ...     units="mpp",
+            ... )
+
+        """
         if coord_space == "resolution":
             return self._read_rect_at_resolution(
                 location,
@@ -1995,7 +2770,102 @@ class VirtualWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image within given bounds.
 
+        Bounds are in terms of the baseline image (level 0  / maximum
+        resolution).
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The output image size may be different to the width and height
+        of the bounds as the resolution will affect this. To read a
+        region with a fixed output image size see :func:`read_rect`.
+
+        Args:
+            bounds (tuple(int)):
+                By default, this is a tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame. However, with
+                `coord_space="resolution"`, the bound is expected to be
+                at the requested resolution system.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                Units of resolution, default="level". Supported units
+                are: microns per pixel (mpp), objective power (power),
+                pyramid / resolution level (level), pixels per baseline
+                pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by :obj:`VirtualWSIReader`. See
+                class docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> bounds = [1000, 2000, 2000, 3000]
+            >>> img = wsi.read_bounds(bounds)
+            >>> plt.imshow(img)
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_bounds(
+            ...     bounds,
+            ...     resolution=0,
+            ...     units="level",
+            ... )
+            >>> plt.imshow(img)
+
+        Note: The field of view remains the same as resolution is varied
+        when using :func:`read_bounds`.
+
+        .. figure:: ../images/read_bounds_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_bounds
+
+        This is because the bounds are in the baseline (level 0)
+        reference frame. Therefore, varying the resolution does not
+        change what is visible within the output image.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        """
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
@@ -2404,6 +3274,183 @@ class TIFFWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image at a location and size.
+
+        Location is in terms of the baseline image (level 0  / maximum
+        resolution), and size is the output image size.
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The field of view varies with resolution. For a fixed field of
+        view see :func:`read_bounds`.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline
+                (level 0) reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image
+                size.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                The units of resolution, default = "level". Supported
+                units are: microns per pixel (mpp), objective power
+                (power), pyramid / resolution level (level), pixels per
+                baseline pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by VirtualWSIReader. See class
+                docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=size[0], N=size[1]
+
+        Example:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> img = wsi.read_rect(location, size)
+            >>> # Read a region at 0.5 microns per pixel (mpp)
+            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.5),
+            ...     units="mpp",
+            ... )
+
+        Note: The field of view varies with resolution when using
+        :func:`read_rect`.
+
+        .. figure:: ../images/read_rect_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_rect
+
+        As the location is in the baseline reference frame but the size
+        (width and height) is the output image size, the field of view
+        therefore changes as resolution changes.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        .. figure:: ../images/read_rect-interpolated-reads.png
+            :width: 512
+            :alt: Diagram illustrating read_rect interpolting between levels
+
+        When reading between the levels stored in the WSI, the
+        coordinates of the requested region are projected to the next
+        highest resolution. This resolution is then decoded and
+        downsampled to produce the desired output. This is a major
+        source of variability in the time take to perform a read
+        operation. Reads which require reading a large region before
+        downsampling will be significantly slower than reading at a
+        fixed level.
+
+        Examples:
+
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # The resolution can be different in x and y, e.g.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.75),
+            ...     units="mpp",
+            ... )
+            >>> # Several units can be used including: objective power,
+            >>> # microns per pixel, pyramid/resolution level, and
+            >>> # fraction of baseline.
+            >>> # E.g. Read a region at an objective power of 10x
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=10,
+            ...     units="power",
+            ... )
+            >>> # Read a region at pyramid / resolution level 1
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1,
+            ...     units="level",
+            ... )
+            >>> # Read at a fractional level, this will linearly
+            >>> # interpolate the downsampling factor between levels.
+            >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
+            >>> # 2x of baseline, then level 0.5 will correspond to a
+            >>> # downsampling factor 1.5x of baseline.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="level",
+            ... )
+            >>> # Read a region at half of the full / baseline
+            >>> # resolution.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="baseline",
+            ... )
+            >>> # Read at a higher resolution than the baseline
+            >>> # (interpolation applied to output)
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1.25,
+            ...     units="baseline",
+            ... )
+            >>> # Assuming the image has a native mpp of 0.5,
+            >>> # interpolation will be applied here.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.25,
+            ...     units="mpp",
+            ... )
+
+        """
         if coord_space == "resolution":
             im_region = self._read_rect_at_resolution(
                 location,
@@ -2460,6 +3507,102 @@ class TIFFWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image within given bounds.
+
+        Bounds are in terms of the baseline image (level 0  / maximum
+        resolution).
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The output image size may be different to the width and height
+        of the bounds as the resolution will affect this. To read a
+        region with a fixed output image size see :func:`read_rect`.
+
+        Args:
+            bounds (tuple(int)):
+                By default, this is a tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame. However, with
+                `coord_space="resolution"`, the bound is expected to be
+                at the requested resolution system.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                Units of resolution, default="level". Supported units
+                are: microns per pixel (mpp), objective power (power),
+                pyramid / resolution level (level), pixels per baseline
+                pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by :obj:`VirtualWSIReader`. See
+                class docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> bounds = [1000, 2000, 2000, 3000]
+            >>> img = wsi.read_bounds(bounds)
+            >>> plt.imshow(img)
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_bounds(
+            ...     bounds,
+            ...     resolution=0,
+            ...     units="level",
+            ... )
+            >>> plt.imshow(img)
+
+        Note: The field of view remains the same as resolution is varied
+        when using :func:`read_bounds`.
+
+        .. figure:: ../images/read_bounds_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_bounds
+
+        This is because the bounds are in the baseline (level 0)
+        reference frame. Therefore, varying the resolution does not
+        change what is visible within the output image.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        """
         bounds_at_baseline = bounds
         if coord_space == "resolution":
             bounds_at_baseline = self._bounds_at_resolution_to_baseline(
@@ -2564,6 +3707,183 @@ class DICOMWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image at a location and size.
+
+        Location is in terms of the baseline image (level 0  / maximum
+        resolution), and size is the output image size.
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The field of view varies with resolution. For a fixed field of
+        view see :func:`read_bounds`.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline
+                (level 0) reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image
+                size.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                The units of resolution, default = "level". Supported
+                units are: microns per pixel (mpp), objective power
+                (power), pyramid / resolution level (level), pixels per
+                baseline pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by VirtualWSIReader. See class
+                docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=size[0], N=size[1]
+
+        Example:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> img = wsi.read_rect(location, size)
+            >>> # Read a region at 0.5 microns per pixel (mpp)
+            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.5),
+            ...     units="mpp",
+            ... )
+
+        Note: The field of view varies with resolution when using
+        :func:`read_rect`.
+
+        .. figure:: ../images/read_rect_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_rect
+
+        As the location is in the baseline reference frame but the size
+        (width and height) is the output image size, the field of view
+        therefore changes as resolution changes.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        .. figure:: ../images/read_rect-interpolated-reads.png
+            :width: 512
+            :alt: Diagram illustrating read_rect interpolting between levels
+
+        When reading between the levels stored in the WSI, the
+        coordinates of the requested region are projected to the next
+        highest resolution. This resolution is then decoded and
+        downsampled to produce the desired output. This is a major
+        source of variability in the time take to perform a read
+        operation. Reads which require reading a large region before
+        downsampling will be significantly slower than reading at a
+        fixed level.
+
+        Examples:
+
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # Load a WSI image
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # The resolution can be different in x and y, e.g.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=(0.5, 0.75),
+            ...     units="mpp",
+            ... )
+            >>> # Several units can be used including: objective power,
+            >>> # microns per pixel, pyramid/resolution level, and
+            >>> # fraction of baseline.
+            >>> # E.g. Read a region at an objective power of 10x
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=10,
+            ...     units="power",
+            ... )
+            >>> # Read a region at pyramid / resolution level 1
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1,
+            ...     units="level",
+            ... )
+            >>> # Read at a fractional level, this will linearly
+            >>> # interpolate the downsampling factor between levels.
+            >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
+            >>> # 2x of baseline, then level 0.5 will correspond to a
+            >>> # downsampling factor 1.5x of baseline.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="level",
+            ... )
+            >>> # Read a region at half of the full / baseline
+            >>> # resolution.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.5,
+            ...     units="baseline",
+            ... )
+            >>> # Read at a higher resolution than the baseline
+            >>> # (interpolation applied to output)
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=1.25,
+            ...     units="baseline",
+            ... )
+            >>> # Assuming the image has a native mpp of 0.5,
+            >>> # interpolation will be applied here.
+            >>> img = wsi.read_rect(
+            ...     location,
+            ...     size,
+            ...     resolution=0.25,
+            ...     units="mpp",
+            ... )
+
+        """
         if coord_space == "resolution":
             return self._read_rect_at_resolution(
                 location,
@@ -2637,6 +3957,102 @@ class DICOMWSIReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
+        """Read a region of the whole slide image within given bounds.
+
+        Bounds are in terms of the baseline image (level 0  / maximum
+        resolution).
+
+        Reads can be performed at different resolutions by supplying a
+        pair of arguments for the resolution and the units of
+        resolution. If meta data does not specify `mpp` or
+        `objective_power` then `baseline` units should be selected with
+        resolution 1.0
+
+        The output image size may be different to the width and height
+        of the bounds as the resolution will affect this. To read a
+        region with a fixed output image size see :func:`read_rect`.
+
+        Args:
+            bounds (tuple(int)):
+                By default, this is a tuple of (start_x, start_y, end_x,
+                end_y) i.e. (left, top, right, bottom) of the region in
+                baseline reference frame. However, with
+                `coord_space="resolution"`, the bound is expected to be
+                at the requested resolution system.
+            resolution (int or float or tuple(float)):
+                Resolution at which to read the image, default = 0.
+                Either a single number or a sequence of two numbers for
+                x and y are valid. This value is in terms of the
+                corresponding units. For example: resolution=0.5 and
+                units="mpp" will read the slide at 0.5 microns
+                per-pixel, and resolution=3, units="level" will read at
+                level at pyramid level / resolution layer 3.
+            units (str):
+                Units of resolution, default="level". Supported units
+                are: microns per pixel (mpp), objective power (power),
+                pyramid / resolution level (level), pixels per baseline
+                pixel (baseline).
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
+            pad_mode (str):
+                Method to use when padding at the edges of the image.
+                Defaults to 'constant'. See :func:`numpy.pad` for
+                available modes.
+            coord_space (str):
+                Defaults to "baseline". This is a flag to indicate if
+                the input `bounds` is in the baseline coordinate system
+                ("baseline") or is in the requested resolution system
+                ("resolution").
+            **kwargs (dict):
+                Extra key-word arguments for reader specific parameters.
+                Currently only used by :obj:`VirtualWSIReader`. See
+                class docstrings for more information.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Array of size MxNx3 M=end_h-start_h, N=end_w-start_w
+
+        Examples:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> from matplotlib import pyplot as plt
+            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Read a region at level 0 (baseline / full resolution)
+            >>> bounds = [1000, 2000, 2000, 3000]
+            >>> img = wsi.read_bounds(bounds)
+            >>> plt.imshow(img)
+            >>> # This could also be written more verbosely as follows
+            >>> img = wsi.read_bounds(
+            ...     bounds,
+            ...     resolution=0,
+            ...     units="level",
+            ... )
+            >>> plt.imshow(img)
+
+        Note: The field of view remains the same as resolution is varied
+        when using :func:`read_bounds`.
+
+        .. figure:: ../images/read_bounds_tissue.png
+            :width: 512
+            :alt: Diagram illustrating read_bounds
+
+        This is because the bounds are in the baseline (level 0)
+        reference frame. Therefore, varying the resolution does not
+        change what is visible within the output image.
+
+        If the WSI does not have a resolution layer corresponding
+        exactly to the requested resolution (shown above in white with a
+        dashed outline), a larger resolution is downscaled to achieve
+        the correct requested output resolution.
+
+        If the requested resolution is higher than the baseline (maximum
+        resultion of the image), then bicubic interpolation is applied
+        to the output image.
+
+        """
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
