@@ -669,7 +669,6 @@ class SemanticSegmentor:
         self._mp_shared_space.patch_outputs = patch_outputs
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
-        # ! TODO: need a protocol for p bar, or a decorator to make this less redundant
         pbar_desc = "Process Batch: "
         pbar = tqdm.tqdm(
             desc=pbar_desc,
@@ -1160,9 +1159,9 @@ class SemanticSegmentor:
                 joblib.dump(outputs, map_file_path)
 
                 # verbose mode, error by passing ?
-                logging.info(f"Finish: {wsi_idx}/{len(imgs)}")
-                logging.info(f"--Input: {img_path}")
-                logging.info(f"--Ouput: {wsi_save_path}")
+                logging.info("Finish: %d", wsi_idx / len(imgs))
+                logging.info("--Input: %s", str(img_path))
+                logging.info("--Ouput: %s", str(wsi_save_path))
             # prevent deep source check because this is bypass and
             # delegating error message
             except Exception as err:  # noqa

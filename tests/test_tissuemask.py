@@ -110,8 +110,8 @@ def test_morphological_masker_mpp(sample_svs):
     mpp = 32
     thumb = wsi.slide_thumbnail(mpp, "mpp")
     kwarg_sets = [
-        dict(mpp=mpp),
-        dict(mpp=[mpp, mpp]),
+        {"mpp": mpp},
+        {"mpp": [mpp, mpp]},
     ]
     for kwargs in kwarg_sets:
         masker = tissuemask.MorphologicalMasker(**kwargs)
