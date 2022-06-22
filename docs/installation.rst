@@ -82,7 +82,7 @@ MacPorts
 Stable release
 --------------
 
-Please note that TIAToolbox is tested for python version 3.8 and 3.9.
+Please note that TIAToolbox is tested for python version 3.8, 3.9 and 3.10.
 To install TIA Toolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console

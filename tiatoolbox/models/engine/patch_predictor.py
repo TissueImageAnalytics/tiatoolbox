@@ -16,7 +16,7 @@ from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDatas
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):
@@ -42,7 +42,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
-    """Patch-level predictor.
+    r"""Patch-level predictor.
 
     The models provided by tiatoolbox should give the following results:
 
@@ -308,7 +308,7 @@ class PatchPredictor:
             ...    [0, 0, 1, 1]])
 
         """
-        reader = get_wsireader(img)
+        reader = WSIReader.open(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
                 (
@@ -348,7 +348,7 @@ class PatchPredictor:
             tl = np.ceil(np.array(bound[:2]) * fx).astype(np.int32)
             # bot-right for output placement
             br = np.ceil(np.array(bound[2:]) * fx).astype(np.int32)
-            output[tl[1] : br[1], tl[0] : br[0]] = prediction
+            output[tl[1] : br[1], tl[0] : br[0]] += prediction
             if denominator is not None:
                 denominator[tl[1] : br[1], tl[0] : br[0]] += 1
 

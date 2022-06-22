@@ -5,6 +5,8 @@ import logging
 import os
 import shutil
 
+import pytest
+
 import tiatoolbox
 
 
@@ -27,7 +29,7 @@ def test_set_root_dir():
 
     os.makedirs(rcParam["TIATOOLBOX_HOME"])
     if not os.path.exists(test_dir_path):
-        assert False, "`%s` != `%s`" % (rcParam["TIATOOLBOX_HOME"], test_dir_path)
+        pytest.fail(f"`{rcParam['TIATOOLBOX_HOME']}` != `{test_dir_path}`")
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
