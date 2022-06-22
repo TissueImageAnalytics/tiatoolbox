@@ -1,6 +1,7 @@
 """This module enables nucleus instance segmentation."""
 
 import uuid
+from collections import deque
 from typing import Callable, List, Union
 
 # replace with the sql database once the PR in place
@@ -437,11 +438,10 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
         boxes_bl = np.dstack([boxes[:, 0], boxes[:, 3]])[0]
 
-        info = []
         # * remove edges on all sides, excluding edges at on WSI boundary
         flag = np.ones([boxes.shape[0], 4], dtype=np.int32)
         flag = unset_removal_flag(boxes, flag)
-        info.append([boxes, flag])
+        info = deque([[boxes, flag]])
 
         # * create vertical boxes at tile boundary and
         # * flag top and bottom removal, excluding those
