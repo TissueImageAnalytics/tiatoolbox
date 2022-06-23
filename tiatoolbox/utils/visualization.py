@@ -280,7 +280,7 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
     """Validate the input for the overlay_probability_map function.
 
     Args:
-        img (ndarray):
+        img (:class:`numpy.ndarray`):
             Input image to overlay the results on top of. Assumed to be
             HW.
         prediction (ndarray):
