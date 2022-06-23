@@ -295,7 +295,7 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
             If the input is not valid.
 
     Returns:
-        ndarray:
+        :class:`numpy.ndarray`:
             Input image. May be modified if `min_val` has dtype float.
 
     """
