@@ -283,7 +283,7 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
         img (:class:`numpy.ndarray`):
             Input image to overlay the results on top of. Assumed to be
             HW.
-        prediction (ndarray):
+        prediction (:class:`numpy.ndarray`):
             2D prediction map. Values are expected to be between 0-1.
         min_val (float):
             Only consider pixels that are greater than or equal to
