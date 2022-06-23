@@ -1170,7 +1170,8 @@ class SemanticSegmentor:
             logging.info("--Ouput: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
-        except Exception as err:  # skipcq: PYL-W0703  # noqa: PIE786
+        # skipcq: PYL-W0703  # noqa: E800
+        except Exception as err:  # noqa: PIE786
             if crash_on_exception:
                 raise err
             logging.error(err)
