@@ -1075,7 +1075,7 @@ class AnnotationStore(ABC, MutableMapping):
             if 'contour' not in props:
                 #assume cerberous format with objects subdivided into categories
                 anns = []
-                saved_res = data['resolution']
+                saved_res = data['resolution']['resolution']
                 for subcat in data.keys():
                     if subcat=='resolution':
                         continue
@@ -1329,6 +1329,7 @@ class SQLiteStore(AnnotationStore):
         connection: Union[Path, str, IO] = ":memory:",
         compression="zlib",
         compression_level=9,
+        auto_commit=True,
     ) -> None:
         super().__init__()
         # Check that JSON and RTree support is enabled
@@ -1361,8 +1362,9 @@ class SQLiteStore(AnnotationStore):
         # Set up database connection and cursor
         self.connection = connection
         self.path = self._connection_to_path(self.connection)
+        self.auto_commit = auto_commit
 
-        # Check if the path is a a non-empty file
+        # Check if the path is a non-empty file
         exists = (
             # Use 'and' to short-circuit
             self.path.is_file()
@@ -1423,6 +1425,7 @@ class SQLiteStore(AnnotationStore):
         register_custom_function("CONTAINS", 1, json_contains)
 
         if exists:
+            #self.con.execute("BEGIN")
             return
 
         # Create tables for geometry and RTree index
@@ -1444,11 +1447,13 @@ class SQLiteStore(AnnotationStore):
                 cx INTEGER NOT NULL,     -- X of centroid/representative point
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
                 geometry BLOB,           -- Detailed geometry
-                properties TEXT          -- JSON properties
+                properties TEXT,         -- JSON properties
+                area FLOAT               -- Area (for ordering) 
             )
             """
         )
         self.con.commit()
+        #self.con.execute("BEGIN")
 
     def serialise_geometry(self, geometry: Geometry) -> Union[str, bytes]:
         """Serialise a geometry to WKB with optional compression.
@@ -1574,7 +1579,9 @@ class SQLiteStore(AnnotationStore):
         return [opt for opt, in options]
 
     def close(self) -> None:
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
+        self.optimize(vacuum=False, limit=1000)
         self.con.close()
 
     def _make_token(self, annotation: Annotation, key: Optional[str]) -> Dict:
@@ -1596,6 +1603,7 @@ class SQLiteStore(AnnotationStore):
             "max_y": geometry.bounds[3],
             "geom_type": geometry.geom_type,
             "properties": json.dumps(annotation.properties, separators=(",", ":")),
+            "area": geometry.area,
         }
 
     def append_many(
@@ -1612,7 +1620,8 @@ class SQLiteStore(AnnotationStore):
         for annotation, key in zip(annotations, keys):
             self._append(key, annotation, cur)
             result.append(key)
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
         self._cached_query.cache_clear()
         return result
 
@@ -1636,7 +1645,7 @@ class SQLiteStore(AnnotationStore):
             """
                 INSERT INTO annotations VALUES(
                     NULL, :key, :geom_type,
-                    :cx, :cy, :geometry, :properties
+                    :cx, :cy, :geometry, :properties, :area
                 )
                 """,
             token,
@@ -1946,18 +1955,19 @@ class SQLiteStore(AnnotationStore):
                 query_parameters["geometry_predicate"] = geometry_predicate
                 query_parameters["query_geometry"] = query_geometry.wkb
 
+        query_string += "\nORDER BY area DESC"
         cur.execute(query_string, query_parameters)
         
         if bbox:
             return {key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties)) for key, properties, *bounds in cur.fetchall()}  
         else:
-            return sorted([
+            return [
                 Annotation(
                 geometry=SQLiteStore._unpack_geometry(blob, cx, cy, compress_type),
                 properties=json.loads(properties),
             )
             for properties, cx, cy, blob in cur.fetchall()
-        ], reverse=True)
+        ]
 
     def cached_bquery(
         self,
@@ -2126,7 +2136,8 @@ class SQLiteStore(AnnotationStore):
                         "properties": json.dumps(properties, separators=(",", ":")),
                     },
                 )
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
         self._cached_query.cache_clear()
 
     def _patch_geometry(
@@ -2194,7 +2205,8 @@ class SQLiteStore(AnnotationStore):
                 "DELETE FROM annotations WHERE [key] = ?",
                 (key,),
             )
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
         self._cached_query.cache_clear()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
@@ -2227,7 +2239,8 @@ class SQLiteStore(AnnotationStore):
         )
 
     def commit(self) -> None:
-        return self.con.commit()
+        self.con.commit()
+        #self.con.execute("BEGIN")
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
         if hasattr(fp, "write"):
@@ -2243,7 +2256,8 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute("DELETE FROM rtree")
         cur.execute("DELETE FROM annotations")
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
 
     def __del__(self) -> None:
         # Limit rows examined by ANALYZE to avoid spending too long

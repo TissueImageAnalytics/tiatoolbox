@@ -3,7 +3,7 @@ import io
 import json
 from pathlib import Path
 from typing import Dict
-from flask_cors import cross_origin
+#from flask_cors import cross_origin
 from shapely.geometry import Polygon
 
 import numpy as np
@@ -73,6 +73,7 @@ class TileServer(Flask):
         self.route("/changecmap/<cmap>")(self.change_mapper)
         self.route("/loadannotations/<file_path>")(self.load_annotations)
         self.route("/changeoverlay/<overlay_path>")(self.change_overlay)
+        self.route("/commit")(self.commit_db)
 
     def zoomify(
         self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
@@ -205,7 +206,7 @@ class TileServer(Flask):
                 self.update_types(layer.store)
                 return 'overlay'
         
-        SQ=SQLiteStore()
+        SQ=SQLiteStore(auto_commit=False)
         SQ.add_from(file_path, saved_res=self.state.model_mpp, slide_res=self.state.mpp)
         self.tia_pyramids['overlay']=AnnotationTileGenerator(self.tia_layers['slide'].info,SQ,self.state.renderer)
         self.tia_layers['overlay']=self.tia_pyramids['overlay']
@@ -220,7 +221,7 @@ class TileServer(Flask):
         if overlay_path.suffix=='.geojson':
             SQ=SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix=='.dat':
-            SQ=SQLiteStore()
+            SQ=SQLiteStore(auto_commit=False)
             SQ.add_from(overlay_path)
         elif overlay_path.suffix in ['.jpg','.png', '.tiff']:
             layer=f'layer{len(self.tia_pyramids)}'
@@ -231,7 +232,7 @@ class TileServer(Flask):
             self.tia_pyramids[layer]=ZoomifyGenerator(self.tia_layers[layer])
             return layer
         else:
-            SQ=SQLiteStore(overlay_path)
+            SQ=SQLiteStore(overlay_path, auto_commit=False)
 
         for key, layer in self.tia_pyramids.items():
             if isinstance(layer, AnnotationTileGenerator):
@@ -242,3 +243,15 @@ class TileServer(Flask):
         self.tia_layers['overlay']=self.tia_pyramids['overlay']
         self.update_types(SQ)
         return 'overlay'
+
+    def commit_db(self):
+        for key, layer in self.tia_pyramids.items():
+            if isinstance(layer, AnnotationTileGenerator):
+                if layer.store.path.suffix == '.db':
+                    print('db committed')
+                    layer.store.commit()
+                else:
+                    layer.store.dump('./temp_store.db')
+        return 'done'
+
+                

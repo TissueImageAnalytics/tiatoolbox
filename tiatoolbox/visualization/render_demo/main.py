@@ -1,8 +1,5 @@
-from msilib.schema import CustomAction
 from shutil import rmtree
-from turtle import color
 from bokeh.models import Selection, TileRenderer
-from numpy import source
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
 from PIL import Image
 from bokeh.models import Plot, BasicTickFormatter, FuncTickFormatter, CheckboxButtonGroup, CustomJS, ColumnDataSource, Panel, Slider, Toggle, FileInput, DataRange1d, TextInput, Button, Dropdown, BoxEditTool, CheckboxGroup, ColorPicker, Range1d
@@ -32,10 +29,10 @@ import requests
 from flask_cors import CORS
 from threading import Thread
 import operator
-from bokeh.embed import server_document
-from pyproj import Geod, CRS, Transformer
+#from bokeh.embed import server_document
+#from pyproj import Geod, CRS, Transformer
 import sys
-from ui_utils import get_level_by_extent
+from tiatoolbox.visualization.ui_utils import get_level_by_extent
 import pickle
 import torch
 
@@ -47,9 +44,11 @@ from pathlib import Path
 from bokeh.io import curdoc
 from bokeh.models.widgets import Tabs
 
+#Define helper functions
+
 def make_ts(route,mpp=0.2525):
-    crs = CRS.from_epsg(3857)
-    proj = Transformer.from_crs(crs,crs.geodetic_crs)
+    #crs = CRS.from_epsg(3857)
+    #proj = Transformer.from_crs(crs,crs.geodetic_crs)
     sf=1.00301
     #sf=sf/mpp
     sf=(sf/0.5015)*2**(vstate.num_zoom_levels-10)    #*(vstate.maxds/32.0063)
@@ -200,6 +199,46 @@ def add_layer(lname):
     #layer_boxes=[Toggle(label=t, active=a, width=100) for t,a in now_active.items()]
     #lcolors=[ColorPicker(color=col[0:3], name=t, width=60) for col, t in zip(vstate.colors, vstate.types)]
 
+class TileGroup():
+    def __init__(self):
+        self.group=1
+    
+    def get_grp(self):
+        self.group=self.group+1
+        return self.group
+tg=TileGroup()
+
+def change_tiles(layer_name='overlay'):
+    
+    grp=tg.get_grp()
+   
+    if layer_name=='graph' and layer_name not in vstate.layer_dict.keys():
+        p.renderers.append(graph)
+        vstate.layer_dict[layer_name]=len(p.renderers)-1
+        for layer_key in vstate.layer_dict.keys():
+            if layer_key in ['rect', 'pts', 'graph']:
+                continue
+            grp=tg.get_grp()
+            ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_key}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
+            p.renderers[vstate.layer_dict[layer_key]].tile_source=ts
+        return
+
+    ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_name}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
+    if layer_name in vstate.layer_dict.keys():
+        p.renderers[vstate.layer_dict[layer_name]].tile_source=ts
+    else:
+        p.add_tile(ts, smoothing = True, alpha=overlay_alpha.value, level='overlay', render_parents=False)
+        for layer_key in vstate.layer_dict.keys():
+            if layer_key in ['rect', 'pts', 'graph']:
+                continue
+            grp=tg.get_grp()
+            ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_key}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
+            p.renderers[vstate.layer_dict[layer_key]].tile_source=ts
+        vstate.layer_dict[layer_name]=len(p.renderers)-1
+
+    print(vstate.layer_dict)
+    print(p.renderers)
+
 class ViewerState():
     def __init__(self):
         self.dims=[30000,20000]
@@ -221,40 +260,24 @@ class ViewerState():
 vstate=ViewerState()
 
 base_folder='E:\TTB_vis_folder'
+#base_folder='/tiatoolbox/app_data'
 if len(sys.argv)>1 and sys.argv[1]!='None':
     base_folder=sys.argv[1]
 #geo_path=Path(r'E:\TTB_vis_test\ff7d5488-60e1-4c6e-9eb4-d495bb7565b1\TCGA-SC-AA5Z-01Z-00-DX1-2.geojson')
 #slide_path=Path(r'E:\TTB_vis_test\ff7d5488-60e1-4c6e-9eb4-d495bb7565b1\TCGA-SC-AA5Z-01Z-00-DX1.svs')
 vstate.slide_path=Path(r'E:\TTB_vis_test\a654c733-cd9a-424c-b60f-56f6afc6a620\TCGA-SC-A6LN-01Z-00-DX1.svs')
+#vstate.slide_path=Path(r'/tiatoolbox/app_data/slides/TCGA-SC-A6LN-01Z-00-DX1.svs')
 
-def rand_props(pval):
-    props={
-        'type': str(np.random.choice(['class1', 'class2', 'class3'],1)[0]),
-        'prob': pval,#np.random.rand(1)[0],
-    }
-    return props
-
-def prop_check(prop):
-    if prop['type']=='class1':
-        return True
-    return False
-
-prop_check = 'props["type"] == "class1"'
 wsi = [WSIReader.open(vstate.slide_path)]
-renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=-1, edge_thickness=1)#, prop_check)
+renderer=AnnotationRenderer('type', {'class1': (1,0,0,1), 'class2': (0,0,1,1), 'class3': (0,1,0,1)}, thickness=-1, edge_thickness=1)
 vstate.renderer=renderer
-#renderer=AnnotationRenderer('score', ['red', 'blue', 'green'], prop_check)
-#renderer=AnnotationRenderer('score', ['red', 'blue', 'bob'])
+
 vstate.dims=wsi[0].info.slide_dimensions
-#mpp=wsi.info.mpp[0]
-#vstate.dims=dims
+
 vstate.mpp=wsi[0].info.mpp
 vstate.maxds=wsi[0].info.level_downsamples[-1]
-#wsi=[None]
 
 def run_app():
-    #tile_gen=AnnotationTileGenerator(wsi.info, SQ, renderer)
-    #vstate.types=SQ.query_property("props['type']",[0,0,*dims],distinct=True)
 
     app = TileServer(
         title="Testing TileServer",
@@ -267,6 +290,7 @@ def run_app():
     CORS(app, send_wildcard=True)   
     app.run(threaded=False)
 
+#start tile server
 proc=Thread(target=run_app, daemon=True)
 proc.start()
 
@@ -276,8 +300,7 @@ TOOLTIPS=[
     ("Scores", "[@c1, @c2]"),
     ]
 
-#SQ = SQLiteStore()
-#ts2=make_ts(r'http://127.0.0.1:5000/layer/overlay/zoomify/TileGroup1/{z}-{x}-{y}.jpg')
+#set up main window
 vstate.micron_formatter = FuncTickFormatter(args={'mpp': 0.1}, code="""
     return Math.round(tick*mpp)
     """)
@@ -290,7 +313,7 @@ print(p.y_range)
 p.add_tile(ts1, smoothing = True, level='image', render_parents=False)
 print(p.y_range)
 print(f'max zoom is: {p.renderers[0].tile_source.max_zoom}')
-#p.add_tile(ts2)
+
 p.grid.grid_line_color=None
 p.match_aspect=True
 box_source=ColumnDataSource({'x': [], 'y': [], 'width': [], 'height': []})
@@ -301,7 +324,7 @@ p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
 p.add_tools(PointDrawTool(renderers=[c]))
 p.add_tools(TapTool())
 tslist=[]
-#initialise_slide()
+
 print(p.extra_y_ranges)
 print(p.y_scale)
 print(p.x_scale)
@@ -314,18 +337,8 @@ graph.node_renderer.data_source = node_source
 graph.edge_renderer.data_source = edge_source
 graph.node_renderer.glyph = Circle(radius=25, fill_color='green')
 
-def node_select_cb(attr, old, new):
-    print(f'selected is: {new}')
-    vstate.mapper={new[0]: (1,0,0,1)}
-    vstate.renderer.mapper = lambda x: vstate.mapper[x]
-    vstate.update_state=1
 
-node_source.selected.on_change('indices', node_select_cb)
-
-setmax=CustomJS(args=dict(p=p), code="""
-        p.renderers[0].tile_source.setmax(10);
-    """)
-
+#Define UI elements
 slide_alpha = Slider(
     title="Adjust alpha WSI",
     start=0,
@@ -346,9 +359,6 @@ overlay_alpha = Slider(
 
 slide_toggle = Toggle(label="Slide", button_type="success", width=90)
 overlay_toggle = Toggle(label="Overlay", button_type="success", width=90)
-#toggle3 = Button(label="Submit Filter", button_type="success")
-#toggle4 = Button(label="Submit score_prop", button_type="success")
-
 filter_input = TextInput(value='None', title="Filter:")
 cprop_input = TextInput(value="type", title="CProp:")
 folder_input = TextInput(value=base_folder, title="Img Folder:")
@@ -357,62 +367,29 @@ cmap_drop = Dropdown(label="Colourmap", button_type="warning", menu=cmmenu)
 file_drop = Dropdown(label="Choose Slide", button_type="warning", menu=[None])
 to_model_button=Button(label="Go", button_type="success", width=60)
 model_drop=Dropdown(label="Choose Model", button_type="warning", menu=['hovernet', 'nuclick'], width=100)
-#type_drop=Dropdown(label="Types", button_type="warning", menu=[None])
 layer_boxes=[Toggle(label=t, active=True, width=100) for t in vstate.types]
 lcolors=[ColorPicker(color=col[0:3], width=60) for col in vstate.colors]
 layer_folder_input = TextInput(value=base_folder, title="Overlay Folder:")
 layer_drop = Dropdown(label="Add Overlay", button_type="warning", menu=[None])
 opt_buttons = CheckboxButtonGroup(labels=['Filled', 'Microns', 'Grid'], active=[0])
+save_button=Button(label='Save', button_type="success")
 
-class TileGroup():
-    def __init__(self):
-        self.group=1
-    
-    def get_grp(self):
-        self.group=self.group+1
-        return self.group
-tg=TileGroup()
 
-def change_tiles(layer_name='overlay'):
-    
-    grp=tg.get_grp()
-    #ts1=make_ts(f'http://127.0.0.1:5000/layer/slide/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg')
-    #p.add_tile(ts1, smoothing=False)
-    if layer_name=='graph' and layer_name not in vstate.layer_dict.keys():
-        p.renderers.append(graph)
-        vstate.layer_dict[layer_name]=len(p.renderers)-1
-        for layer_key in vstate.layer_dict.keys():
-            if layer_key in ['rect', 'pts', 'graph']:
-                continue
-            grp=tg.get_grp()
-            ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_key}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
-            p.renderers[vstate.layer_dict[layer_key]].tile_source=ts
-        return
-    #p.add_tile(ts2, smoothing=False)
-    ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_name}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
-    if layer_name in vstate.layer_dict.keys():
-        p.renderers[vstate.layer_dict[layer_name]].tile_source=ts
-    else:
-        p.add_tile(ts, smoothing = True, alpha=overlay_alpha.value, level='overlay', render_parents=False)
-        for layer_key in vstate.layer_dict.keys():
-            if layer_key in ['rect', 'pts', 'graph']:
-                continue
-            grp=tg.get_grp()
-            ts=make_ts(f'http://127.0.0.1:5000/layer/{layer_key}/zoomify/TileGroup{grp}' +r'/{z}-{x}-{y}.jpg', mpp=vstate.mpp)
-            p.renderers[vstate.layer_dict[layer_key]].tile_source=ts
-        vstate.layer_dict[layer_name]=len(p.renderers)-1
-
-    print(vstate.layer_dict)
-    print(p.renderers)
-
+#Define UI callbacks
 def slide_toggle_cb(attr):
     print('meep')
     if p.renderers[0].alpha==0:
         p.renderers[0].alpha=slide_alpha.value
     else:
         p.renderers[0].alpha=0.0
+
+def node_select_cb(attr, old, new):
+    print(f'selected is: {new}')
+    vstate.mapper={new[0]: (1,0,0,1)}
+    vstate.renderer.mapper = lambda x: vstate.mapper[x]
+    vstate.update_state=1
     
-#print(p.renderers[0].alpha)
+
 def overlay_toggle_cb(attr):
     print('meep')
     for i in range(3,len(p.renderers)):
@@ -462,12 +439,6 @@ def cprop_input_cb(attr, old, new):
     resp = requests.get(f'http://127.0.0.1:5000/changeprop/{new}')
     #change_tiles('overlay')
     vstate.update_state=1
-
-slide_toggle.on_click(slide_toggle_cb)
-#slide_toggle.js_on_click(setmax)
-overlay_toggle.on_click(overlay_toggle_cb)
-filter_input.on_change('value', filter_input_cb)
-cprop_input.on_change('value', cprop_input_cb)
 
 def set_graph_alpha(g_renderer, value):
     #set all components of graph to given alpha value
@@ -640,6 +611,9 @@ def to_model_cb(attr):
     else:
         print('unknown model')
 
+def save_cb(attr):
+    resp = requests.get(f'http://127.0.0.1:5000/commit')
+
 
 #run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
 def segment_on_box(attr):
@@ -745,19 +719,23 @@ def nuclick_on_pts(attr):
     initialise_overlay()
     change_tiles('overlay')
 
-
+#associate callback functions to the widgets
 slide_alpha.on_change('value', slide_alpha_cb)
 overlay_alpha.on_change('value', overlay_alpha_cb)
 folder_input.on_change('value', folder_input_cb)
+save_button.on_click(save_cb)
 cmap_drop.on_click(cmap_drop_cb)
 file_drop.on_click(file_drop_cb)
 to_model_button.on_click(to_model_cb)
 model_drop.on_click(model_drop_cb)
-#layer_folder_input.on_change('value', layer_folder_input_cb)
 layer_drop.on_click(layer_drop_cb)
 opt_buttons.on_change('active', opt_buttons_cb)
+slide_toggle.on_click(slide_toggle_cb)
+overlay_toggle.on_click(overlay_toggle_cb)
+filter_input.on_change('value', filter_input_cb)
+cprop_input.on_change('value', cprop_input_cb)
+node_source.selected.on_change('indices', node_select_cb)
 
-#layer_folder_input_cb(None, None, base_folder)
 folder_input_cb(None, None, base_folder)
 populate_layer_list(Path(vstate.slide_path).stem, Path(vstate.slide_path).parents[1])
 
@@ -767,6 +745,7 @@ l=layout(
     [
         [p, [
             folder_input,
+            save_button,
             file_drop,
             layer_drop,
             row([slide_toggle, slide_alpha]),
