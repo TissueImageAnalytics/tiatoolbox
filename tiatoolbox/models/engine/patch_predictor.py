@@ -16,7 +16,7 @@ from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDatas
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):
@@ -308,7 +308,7 @@ class PatchPredictor:
             ...    [0, 0, 1, 1]])
 
         """
-        reader = get_wsireader(img)
+        reader = WSIReader.open(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
                 (

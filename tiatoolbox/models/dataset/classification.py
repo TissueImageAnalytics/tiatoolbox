@@ -11,7 +11,7 @@ from tiatoolbox.models.dataset import abc
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsimeta import WSIMeta
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class _TorchPreprocCaller:
@@ -32,8 +32,7 @@ class _TorchPreprocCaller:
     def __call__(self, img):
         img = PIL.Image.fromarray(img)
         img = self.func(img)
-        img = img.permute(1, 2, 0)
-        return img
+        return img.permute(1, 2, 0)
 
 
 def predefined_preproc_func(dataset_name):
@@ -62,8 +61,7 @@ def predefined_preproc_func(dataset_name):
         )
 
     preprocs = preproc_dict[dataset_name]
-    preproc_func = _TorchPreprocCaller(preprocs)
-    return preproc_func
+    return _TorchPreprocCaller(preprocs)
 
 
 class PatchDataset(abc.PatchDatasetABC):
@@ -237,7 +235,7 @@ class WSIPatchDataset(abc.PatchDatasetABC):
 
         img_path = pathlib.Path(img_path)
         if mode == "wsi":
-            self.reader = get_wsireader(img_path)
+            self.reader = WSIReader.open(img_path)
         else:
             warnings.warn(
                 (
@@ -331,5 +329,4 @@ class WSIPatchDataset(abc.PatchDatasetABC):
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)
 
-        data = {"image": patch, "coords": np.array(coords)}
-        return data
+        return {"image": patch, "coords": np.array(coords)}

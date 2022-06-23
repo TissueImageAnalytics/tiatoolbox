@@ -25,7 +25,7 @@ from tiatoolbox.models.engine.patch_predictor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, imread, imwrite
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
 
@@ -67,11 +67,9 @@ def test_patch_dataset_list_imgs(tmp_path):
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
-        assert (
-            sampled_img_shape[0] == size[0]
-            and sampled_img_shape[1] == size[1]
-            and sampled_img_shape[2] == size[2]
-        )
+        assert sampled_img_shape[0] == size[0]
+        assert sampled_img_shape[1] == size[1]
+        assert sampled_img_shape[2] == size[2]
 
     # test for changing to another preproc
     dataset.preproc_func = lambda x: x - 10
@@ -118,11 +116,9 @@ def test_patch_datasetarray_imgs():
     dataset = PatchDataset(array_imgs)
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
-        assert (
-            sampled_img_shape[0] == size[0]
-            and sampled_img_shape[1] == size[1]
-            and sampled_img_shape[2] == size[2]
-        )
+        assert sampled_img_shape[0] == size[0]
+        assert sampled_img_shape[1] == size[1]
+        assert sampled_img_shape[2] == size[2]
 
 
 def test_patch_dataset_crash(tmp_path):
@@ -144,7 +140,7 @@ def test_patch_dataset_crash(tmp_path):
 
     # ndarray(s) of NHW images
     imgs = np.random.randint(0, 255, (4, 4, 4))
-    with pytest.raises(ValueError, match=r".*array of images of the form NHWC.*"):
+    with pytest.raises(ValueError, match=r".*array of the form HWC*"):
         _ = PatchDataset(imgs)
 
     # list of ndarray(s) with different sizes
@@ -228,29 +224,28 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 
     def reuse_init(img_path=mini_wsi_svs, **kwargs):
         """Testing function."""
-        return WSIPatchDataset(img_path=mini_wsi_svs, **kwargs)
+        return WSIPatchDataset(img_path=img_path, **kwargs)
 
     def reuse_init_wsi(**kwargs):
         """Testing function."""
         return reuse_init(mode="wsi", **kwargs)
 
     # test for ABC validate
+    # intentionally created to check error
+    # skipcq
+    class Proto(PatchDatasetABC):
+        def __init__(self):
+            super().__init__()
+            self.inputs = "CRASH"
+            self._check_input_integrity("wsi")
+
+        # skipcq
+        def __getitem__(self, idx):
+            pass
+
     with pytest.raises(
         ValueError, match=r".*`inputs` should be a list of patch coordinates.*"
     ):
-        # intentionally created to check error
-        # skipcq
-        class Proto(PatchDatasetABC):
-            def __init__(self):
-                super().__init__()
-                self.inputs = "CRASH"
-                self._check_input_integrity("wsi")
-
-            # skipcq
-            def __getitem__(self, idx):
-                pass
-
-        # intentionally created to check error
         Proto()  # skipcq
 
     # invalid path input
@@ -277,27 +272,39 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         )
 
     # invalid mode
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="`X` is not supported."):
         reuse_init(mode="X")
 
     # invalid patch
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `patch_input_shape` value None."):
         reuse_init()
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Invalid `patch_input_shape` value \[512 512 512\]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, 512, 512])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Invalid `patch_input_shape` value \['512' 'a'\]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, "a"])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid `stride_shape` value None."):
         reuse_init_wsi(patch_input_shape=512)
     # invalid stride
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Invalid `stride_shape` value \['512' 'a'\]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, "a"])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Invalid `stride_shape` value \[512 512 512\]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, 512, 512])
     # negative
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Invalid `patch_input_shape` value \[ 512 -512\]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, -512], stride_shape=[512, 512])
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"Invalid `stride_shape` value \[ 512 -512\]."
+    ):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, -512])
 
     # * for wsi
@@ -312,7 +319,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
         units="mpp",
         auto_get_mask=False,
     )
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     # tiling top to bottom, left to right
     ds_roi = ds[2]["image"]
     step_idx = 2  # manually calibrate
@@ -365,7 +372,7 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     shutil.rmtree("negative_mask.png", ignore_errors=True)
 
     # * for tile
-    reader = get_wsireader(mini_wsi_jpg)
+    reader = WSIReader.open(mini_wsi_jpg)
     tile_ds = WSIPatchDataset(
         img_path=mini_wsi_jpg,
         mode="tile",
@@ -392,16 +399,15 @@ def test_wsi_patch_dataset(sample_wsi_dict):
 def test_patch_dataset_abc():
     """Test for ABC methods."""
     # test missing definition for abstract
-    with pytest.raises(TypeError):
-
-        # intentionally created to check error
+    # intentionally created to check error
+    # skipcq
+    class Proto(PatchDatasetABC):
         # skipcq
-        class Proto(PatchDatasetABC):
-            # skipcq
-            def __init__(self):
-                super().__init__()
+        def __init__(self):
+            super().__init__()
 
-        # crash due to not define __getitem__
+    # crash due to undefined __getitem__
+    with pytest.raises(TypeError):
         Proto()  # skipcq
 
     # skipcq
@@ -690,15 +696,15 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     # wrapper to make this more clean
-    kwargs = dict(
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=ON_GPU,
-        patch_input_shape=patch_size,
-        stride_shape=patch_size,
-        resolution=1.0,
-        units="baseline",
-    )
+    kwargs = {
+        "return_probabilities": True,
+        "return_labels": True,
+        "on_gpu": ON_GPU,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 1.0,
+        "units": "baseline",
+    }
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
@@ -725,17 +731,17 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     save_dir = f"{save_dir_path}/model_wsi_output"
     _rm_dir(save_dir)
 
-    kwargs = dict(
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=ON_GPU,
-        patch_input_shape=patch_size,
-        stride_shape=patch_size,
-        resolution=0.5,
-        save_dir=save_dir,
-        merge_predictions=True,  # to test the api coverage
-        units="mpp",
-    )
+    kwargs = {
+        "return_probabilities": True,
+        "return_labels": True,
+        "on_gpu": ON_GPU,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "merge_predictions": True,  # to test the api coverage
+        "units": "mpp",
+    }
 
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = False
@@ -761,8 +767,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
         mode="wsi",
         **_kwargs,
     )
+    _kwargs = copy.deepcopy(kwargs)
     with pytest.raises(FileExistsError):
-        _kwargs = copy.deepcopy(kwargs)
         predictor.predict(
             [mini_wsi_svs, mini_wsi_svs],
             masks=[mini_wsi_msk, mini_wsi_msk],
@@ -786,7 +792,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     assert os.path.exists("output")
     for output_info in output.values():
         assert os.path.exists(output_info["raw"])
-        assert "merged" in output_info and os.path.exists(output_info["merged"])
+        assert "merged" in output_info
+        assert os.path.exists(output_info["merged"])
 
     # remove previously generated data
     _rm_dir("output")
@@ -831,16 +838,16 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
     # integration test
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
 
-    kwargs = dict(
-        return_probabilities=True,
-        return_labels=True,
-        on_gpu=ON_GPU,
-        patch_input_shape=np.array([224, 224]),
-        stride_shape=np.array([224, 224]),
-        resolution=1.0,
-        units="baseline",
-        merge_predictions=True,
-    )
+    kwargs = {
+        "return_probabilities": True,
+        "return_labels": True,
+        "on_gpu": ON_GPU,
+        "patch_input_shape": np.array([224, 224]),
+        "stride_shape": np.array([224, 224]),
+        "resolution": 1.0,
+        "units": "baseline",
+        "merge_predictions": True,
+    }
     # sanity check, both output should be the same with same resolution read args
     wsi_output = predictor.predict(
         [mini_wsi_svs],
@@ -906,10 +913,14 @@ def _test_predictor_output(
     probabilities = output["probabilities"]
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
-        assert (
-            np.abs(probabilities_max - probabilities_check[idx]) <= 5e-6
-            and predictions[idx] == predictions_check[idx]
-        ), (
+        assert np.abs(probabilities_max - probabilities_check[idx]) <= 5e-6, (
+            pretrained_model,
+            probabilities_max,
+            probabilities_check[idx],
+            predictions[idx],
+            predictions_check[idx],
+        )
+        assert predictions[idx] == predictions_check[idx], (
             pretrained_model,
             probabilities_max,
             probabilities_check[idx],
