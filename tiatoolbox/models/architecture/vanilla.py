@@ -137,7 +137,6 @@ class CNNModel(ModelABC):
                 Whether to run inference on a GPU.
 
         """
-
         img_patches_device = batch_data.to(select_device(on_gpu)).type(
             torch.float32
         )  # to NCHW
@@ -229,7 +228,6 @@ class CNNBackbone(ModelABC):
                 Whether to run inference on a GPU.
 
         """
-
         img_patches_device = batch_data.to(select_device(on_gpu)).type(
             torch.float32
         )  # to NCHW
