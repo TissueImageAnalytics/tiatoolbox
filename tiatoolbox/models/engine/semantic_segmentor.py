@@ -783,19 +783,69 @@ class SemanticSegmentor:
             )
 
     @staticmethod
-    def _estimate_canvas_parameters(sample_prediction, canvas_shape):
-        """Estimates canvas parameters.
+    def merge_prediction(
+        canvas_shape: Union[Tuple[int], List[int], np.ndarray],
+        predictions: List[np.ndarray],
+        locations: Union[List, np.ndarray],
+        save_path: Union[str, pathlib.Path] = None,
+        cache_count_path: Union[str, pathlib.Path] = None,
+    ):
+        """Merge patch-level predictions to form a 2-dimensional prediction map.
+
+        When accumulating the raw prediction onto a same canvas (via
+        calling the function multiple times), `save_path` and
+        `cache_count_path` must be the same. If either of these two do
+        not exist, the function will create new files. However, if
+        `save_path` is `None`, the function will perform the
+        accumulation using CPU-RAM as storage.
 
         Args:
-            sample_prediction (:class:`numpy.ndarry`):
-                Patch prediction assuming to be of shape HWC.
             canvas_shape (:class:`numpy.ndarray`):
                 HW of the supposed assembled image.
+            predictions (list):
+                List of nd.array, each item is a patch prediction,
+                assuming to be of shape HWC.
+            locations (list):
+                List of nd.array, each item is the location of the patch
+                at the same index within `predictions`. The location is
+                in the to be assembled canvas and of the form
+                `(top_left_x, top_left_y, bottom_right_x,
+                bottom_right_x)`.
+            save_path (str):
+                Location to save the assembled image.
+            cache_count_path (str):
+                Location to store the canvas for counting how many times
+                each pixel get overlapped when assembling.
+
         Returns:
-            (tuple, tuple, bool):
-                Canvas Shape, Canvas Count and whether to add singleton dimension.
+            :class:`numpy.ndarray`:
+                An image contains merged data.
+
+        Examples:
+
+        >>> SemanticSegmentor.merge_prediction(
+        ...     canvas_shape=[4, 4],
+        ...     predictions=[
+        ...         np.full((2, 2), 1),
+        ...         np.full((2, 2), 2)],
+        ...     locations=[
+        ...         [0, 0, 2, 2],
+        ...         [2, 2, 4, 4]],
+        ...     save_path=None,
+        ... )
+        ... array([[1, 1, 0, 0],
+        ...        [1, 1, 0, 0],
+        ...        [0, 0, 2, 2],
+        ...        [0, 0, 2, 2]])
 
         """
+        canvas_shape = np.array(canvas_shape)
+
+        sample_prediction = predictions[0]
+
+        if len(sample_prediction.shape) not in (2, 3):
+            raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
+
         if len(sample_prediction.shape) == 3:
             num_output_ch = sample_prediction.shape[-1]
             canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
@@ -806,13 +856,6 @@ class SemanticSegmentor:
             canvas_count_shape_ = tuple(canvas_shape) + (1,)
             add_singleton_dim = True
 
-        return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
-
-    @staticmethod
-    def _prepare_save_output(
-        save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
-    ):
-        """Prepares for saving the cached output."""
         if save_path is not None:
             if os.path.exists(save_path) and os.path.exists(cache_count_path):
                 cum_canvas = np.load(save_path, mmap_mode="r+")
@@ -850,82 +893,6 @@ class SemanticSegmentor:
             )
             # for pixel occurrence counting
             count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
-
-        return is_on_drive, count_canvas, cum_canvas
-
-    def merge_prediction(
-        self,
-        canvas_shape: Union[Tuple[int], List[int], np.ndarray],
-        predictions: List[np.ndarray],
-        locations: Union[List, np.ndarray],
-        save_path: Union[str, pathlib.Path] = None,
-        cache_count_path: Union[str, pathlib.Path] = None,
-    ):
-        """Merge patch-level predictions to form a 2-dimensional prediction map.
-
-        When accumulating the raw prediction onto a same canvas (via
-        calling the function multiple times), `save_path` and
-        `cache_count_path` must be the same. If either of these two do
-        not exist, the function will create new files. However, if
-        `save_path` is `None`, the function will perform the
-        accumulation using CPU-RAM as storage.
-
-        Args:
-            canvas_shape (:class:`numpy.ndarray`):
-                HW of the supposed assembled image.
-            predictions (list):
-                List of :class:`numpy.ndarry`, each item is a patch prediction,
-                assuming to be of shape HWC.
-            locations (list):
-                List of :class:`numpy.ndarry`, each item is the location of the patch
-                at the same index within `predictions`. The location is
-                in the to be assembled canvas and of the form
-                `(top_left_x, top_left_y, bottom_right_x,
-                bottom_right_x)`.
-            save_path (str):
-                Location to save the assembled image.
-            cache_count_path (str):
-                Location to store the canvas for counting how many times
-                each pixel get overlapped when assembling.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                An image contains merged data.
-
-        Examples:
-
-        >>> SemanticSegmentor.merge_prediction(
-        ...     canvas_shape=[4, 4],
-        ...     predictions=[
-        ...         np.full((2, 2), 1),
-        ...         np.full((2, 2), 2)],
-        ...     locations=[
-        ...         [0, 0, 2, 2],
-        ...         [2, 2, 4, 4]],
-        ...     save_path=None,
-        ... )
-        ... np.ndarray([[1, 1, 0, 0],
-        ...        [1, 1, 0, 0],
-        ...        [0, 0, 2, 2],
-        ...        [0, 0, 2, 2]])
-
-        """
-        canvas_shape = np.array(canvas_shape)
-
-        sample_prediction = predictions[0]
-
-        if len(sample_prediction.shape) not in (2, 3):
-            raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
-
-        (
-            canvas_cum_shape_,
-            canvas_count_shape_,
-            add_singleton_dim,
-        ) = self._estimate_canvas_parameters(sample_prediction, canvas_shape)
-
-        is_on_drive, count_canvas, cum_canvas = self._prepare_save_output(
-            save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
-        )
 
         def index(arr, tl, br):
             """Helper to shorten indexing."""
@@ -985,206 +952,6 @@ class SemanticSegmentor:
         if not is_on_drive:
             cum_canvas /= count_canvas + 1.0e-6
         return cum_canvas
-
-    @staticmethod
-    def _prepare_save_dir(save_dir):
-        """Prepare save directory and cache."""
-        if save_dir is None:
-            warnings.warn(
-                (
-                    "Segmentor will only output to directory. "
-                    "All subsequent output will be saved to current runtime "
-                    "location under folder 'output'. Overwriting may happen! "
-                )
-            )
-            save_dir = os.path.join(os.getcwd(), "output")
-
-        save_dir = os.path.abspath(save_dir)
-        save_dir = pathlib.Path(save_dir)
-        if save_dir.is_dir():
-            raise ValueError(f"`save_dir` already exists! {save_dir}")
-        save_dir.mkdir(parents=True)
-        cache_dir = f"{save_dir}/cache"
-        os.makedirs(cache_dir)
-
-        return save_dir, cache_dir
-
-    def _update_ioconfig(
-        self,
-        ioconfig,
-        mode,
-        patch_input_shape,
-        patch_output_shape,
-        stride_shape,
-        resolution,
-        units,
-    ):
-        """Update ioconfig according to input parameters.
-
-        Args:
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            mode (str):
-                Type of input to process. Choose from either `tile` or
-                `wsi`.
-            patch_input_shape (tuple):
-                Size of patches input to the model. The values
-                are at requested read resolution and must be positive.
-            patch_output_shape (tuple):
-                Size of patches output by the model. The values are at
-                the requested read resolution and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. The values
-                are at requested read resolution and must be positive.
-                If not provided, `stride_shape=patch_input_shape` is
-                used.
-            resolution (float):
-                Resolution used for reading the image.
-            units (str):
-                Units of resolution used for reading the image. Choose
-                from either `"level"`, `"power"` or `"mpp"`.
-
-        Returns:
-            :class:`IOSegmentorConfig`:
-                Updated ioconfig.
-
-        """
-        if patch_output_shape is None:
-            patch_output_shape = patch_input_shape
-        if stride_shape is None:
-            stride_shape = patch_output_shape
-
-        if ioconfig is None and patch_input_shape is None:
-            if self.ioconfig is None:
-                raise ValueError(
-                    "Must provide either `ioconfig` or "
-                    "`patch_input_shape` and `patch_output_shape`"
-                )
-            return copy.deepcopy(self.ioconfig)
-
-        if ioconfig is None:
-            return IOSegmentorConfig(
-                input_resolutions=[{"resolution": resolution, "units": units}],
-                output_resolutions=[{"resolution": resolution, "units": units}],
-                patch_input_shape=patch_input_shape,
-                patch_output_shape=patch_output_shape,
-                stride_shape=stride_shape,
-            )
-
-        if mode == "tile":
-            warnings.warn(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"`. Resolutions will be converted '
-                "to baseline value."
-            )
-            return ioconfig.to_baseline()
-
-        return ioconfig
-
-    def _prepare_workers(self):
-        """Prepare number of workers."""
-        self._postproc_workers = None
-        if self.num_postproc_workers is not None:
-            self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_workers
-            )
-
-    def _memory_cleanup(self):
-        """Memory clean up."""
-        self.imgs = None
-        self.masks = None
-        self._cache_dir = None
-        self._model = None
-        self._loader = None
-        self._on_gpu = None
-        self._futures = None
-        self._mp_shared_space = None
-        if self._postproc_workers is not None:
-            self._postproc_workers.shutdown()
-        self._postproc_workers = None
-
-    def _predict_on_multiple_wsis(  # noqa: CCR001
-        self, imgs, mode, ioconfig, save_dir, crash_on_exception
-    ):
-        """Predict on multiple WSIs.
-
-        Args:
-            imgs (list, ndarray):
-                List of inputs to process. When using `"patch"` mode,
-                the input must be either a list of images, a list of
-                image file paths or a numpy array of an image list. When
-                using `"tile"` or `"wsi"` mode, the input must be a list
-                of file paths.
-            mode (str):
-                Type of input to process. Choose from either `tile` or
-                `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or pathlib.Path):
-                Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output`
-                where the running script is invoked.
-            crash_on_exception (bool):
-                If `True`, the running loop will crash if there is any
-                error during processing a WSI. Otherwise, the loop will
-                move on to the next wsi for processing.
-
-        Returns:
-            list:
-                A list of tuple(input_path, save_path) where
-                `input_path` is the path of the input wsi while
-                `save_path` corresponds to the output predictions.
-
-        """
-        # contain input / output prediction mapping
-        outputs = []
-        # ? what will happen if this crash midway?
-        # => may not be able to retrieve the result dict
-        for wsi_idx, img_path in enumerate(imgs):
-            try:
-                wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
-                self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
-
-                # Do not use dict with file name as key, because it can be
-                # overwritten. It may be user intention to provide files with a
-                # same name multiple times (may be they have different root path)
-                outputs.append([str(img_path), str(wsi_save_path)])
-
-                # ? will this corrupt old version if control + c midway?
-                map_file_path = os.path.join(save_dir, "file_map.dat")
-                # backup old version first
-                if os.path.exists(map_file_path):
-                    old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
-                    shutil.copy(map_file_path, old_map_file_path)
-                joblib.dump(outputs, map_file_path)
-
-                # verbose mode, error by passing ?
-                logging.info("Finish: %d", wsi_idx / len(imgs))
-                logging.info("--Input: %s", str(img_path))
-                logging.info("--Ouput: %s", str(wsi_save_path))
-            # prevent deep source check because this is bypass and
-            # delegating error message
-            except Exception as err:  # noqa
-                if not crash_on_exception:
-                    logging.error(err)
-                    continue
-                raise err
-
-        # clean up the cache directories
-        shutil.rmtree(self._cache_dir)
-        self._memory_cleanup()
-
-        return outputs
 
     def predict(
         self,
@@ -1275,31 +1042,69 @@ class SemanticSegmentor:
             >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
             >>> output = predictor.predict(wsis, mode='wsi')
             >>> list(output.keys())
-            ... [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
+            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
             >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
             >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
 
         """
         if mode not in ["wsi", "tile"]:
             raise ValueError(f"{mode} is not a valid mode. Use either `tile` or `wsi`.")
+        if save_dir is None:
+            warnings.warn(
+                (
+                    "Segmentor will only output to directory. "
+                    "All subsequent output will be saved to current runtime "
+                    "location under folder 'output'. Overwriting may happen! "
+                )
+            )
+            save_dir = os.path.join(os.getcwd(), "output")
 
-        save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
-        ioconfig = self._update_ioconfig(
-            ioconfig,
-            mode,
-            patch_input_shape,
-            patch_output_shape,
-            stride_shape,
-            resolution,
-            units,
-        )
+        save_dir = os.path.abspath(save_dir)
+        save_dir = pathlib.Path(save_dir)
+        if save_dir.is_dir():
+            raise ValueError(f"`save_dir` already exists! {save_dir}")
+        save_dir.mkdir(parents=True)
+        self._cache_dir = f"{save_dir}/cache"
+        os.makedirs(self._cache_dir)
+
+        if patch_output_shape is None:
+            patch_output_shape = patch_input_shape
+        if stride_shape is None:
+            stride_shape = patch_output_shape
+
+        if ioconfig is None and patch_input_shape is None:
+            if self.ioconfig is None:
+                raise ValueError(
+                    "Must provide either `ioconfig` or "
+                    "`patch_input_shape` and `patch_output_shape`"
+                )
+            ioconfig = copy.deepcopy(self.ioconfig)
+        elif ioconfig is None:
+            ioconfig = IOSegmentorConfig(
+                input_resolutions=[{"resolution": resolution, "units": units}],
+                output_resolutions=[{"resolution": resolution, "units": units}],
+                patch_input_shape=patch_input_shape,
+                patch_output_shape=patch_output_shape,
+                stride_shape=stride_shape,
+            )
+        if mode == "tile":
+            warnings.warn(
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"`. Resolutions will be converted '
+                "to baseline value."
+            )
+            ioconfig = ioconfig.to_baseline()
 
         # use external for testing
         self._on_gpu = on_gpu
         self._model = misc.model_to(on_gpu, self.model)
 
         # workers should be > 0 else Value Error will be thrown
-        self._prepare_workers()
+        self._postproc_workers = None
+        if self.num_postproc_workers is not None:
+            self._postproc_workers = ProcessPoolExecutor(
+                max_workers=self.num_postproc_workers
+            )
 
         mp_manager = torch_mp.Manager()
         mp_shared_space = mp_manager.Namespace()
@@ -1321,12 +1126,60 @@ class SemanticSegmentor:
             persistent_workers=self.num_loader_workers > 0,
         )
         self._loader = loader
+
         self.imgs = imgs
         self.masks = masks
 
-        return self._predict_on_multiple_wsis(
-            imgs, mode, ioconfig, save_dir, crash_on_exception
-        )
+        # contain input / output prediction mapping
+        outputs = []
+        # ? what will happen if this crash midway?
+        # => may not be able to retrieve the result dict
+        for wsi_idx, img_path in enumerate(imgs):
+            try:
+                wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
+                self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
+
+                # Do not use dict with file name as key, because it can be
+                # overwritten. It may be user intention to provide files with a
+                # same name multiple times (may be they have different root path)
+                outputs.append([str(img_path), str(wsi_save_path)])
+
+                # ? will this corrupt old version if control + c midway?
+                map_file_path = os.path.join(save_dir, "file_map.dat")
+                # backup old version first
+                if os.path.exists(map_file_path):
+                    old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
+                    shutil.copy(map_file_path, old_map_file_path)
+                joblib.dump(outputs, map_file_path)
+
+                # verbose mode, error by passing ?
+                logging.info("Finish: %d", wsi_idx / len(imgs))
+                logging.info("--Input: %s", str(img_path))
+                logging.info("--Ouput: %s", str(wsi_save_path))
+            # prevent deep source check because this is bypass and
+            # delegating error message
+            except Exception as err:  # noqa
+                if not crash_on_exception:
+                    logging.error(err)
+                    continue
+                raise err
+
+        # clean up the cache directories
+        shutil.rmtree(self._cache_dir)
+
+        # memory clean up
+        self.imgs = None
+        self.masks = None
+        self._cache_dir = None
+        self._model = None
+        self._loader = None
+        self._on_gpu = None
+        self._futures = None
+        self._mp_shared_space = None
+        if self._postproc_workers is not None:
+            self._postproc_workers.shutdown()
+        self._postproc_workers = None
+        return outputs
 
 
 class DeepFeatureExtractor(SemanticSegmentor):
