@@ -27,6 +27,75 @@ from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 
+def _estimate_canvas_parameters(sample_prediction, canvas_shape):
+    """Estimates canvas parameters.
+
+    Args:
+        sample_prediction (:class:`numpy.ndarry`):
+            Patch prediction assuming to be of shape HWC.
+        canvas_shape (:class:`numpy.ndarray`):
+            HW of the supposed assembled image.
+    Returns:
+        (tuple, tuple, bool):
+            Canvas Shape, Canvas Count and whether to add singleton dimension.
+
+    """
+    if len(sample_prediction.shape) == 3:
+        num_output_ch = sample_prediction.shape[-1]
+        canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
+        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        add_singleton_dim = num_output_ch == 1
+    else:
+        canvas_cum_shape_ = tuple(canvas_shape) + (1,)
+        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        add_singleton_dim = True
+
+    return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
+
+
+def _prepare_save_output(
+    save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+):
+    """Prepares for saving the cached output."""
+    if save_path is not None:
+        if os.path.exists(save_path) and os.path.exists(cache_count_path):
+            cum_canvas = np.load(save_path, mmap_mode="r+")
+            count_canvas = np.load(cache_count_path, mmap_mode="r+")
+            if canvas_cum_shape_ != cum_canvas.shape:
+                raise ValueError("Existing image shape in `save_path` does not match.")
+            if canvas_count_shape_ != count_canvas.shape:
+                raise ValueError(
+                    "Existing image shape in `cache_count_path` does not match."
+                )
+        else:
+            cum_canvas = np.lib.format.open_memmap(
+                save_path,
+                mode="w+",
+                shape=canvas_cum_shape_,
+                dtype=np.float32,
+            )
+            # assuming no more than 255 overlapping times
+            count_canvas = np.lib.format.open_memmap(
+                cache_count_path,
+                mode="w+",
+                shape=canvas_count_shape_,
+                dtype=np.uint8,
+            )
+            # flush fill
+            count_canvas[:] = 0
+        is_on_drive = True
+    else:
+        is_on_drive = False
+        cum_canvas = np.zeros(
+            shape=canvas_cum_shape_,
+            dtype=np.float32,
+        )
+        # for pixel occurrence counting
+        count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
+
+    return is_on_drive, count_canvas, cum_canvas
+
+
 class IOSegmentorConfig(IOConfigABC):
     """Contain semantic segmentor input and output information.
 
@@ -846,53 +915,15 @@ class SemanticSegmentor:
         if len(sample_prediction.shape) not in (2, 3):
             raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
 
-        if len(sample_prediction.shape) == 3:
-            num_output_ch = sample_prediction.shape[-1]
-            canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
-            canvas_count_shape_ = tuple(canvas_shape) + (1,)
-            add_singleton_dim = num_output_ch == 1
-        else:
-            canvas_cum_shape_ = tuple(canvas_shape) + (1,)
-            canvas_count_shape_ = tuple(canvas_shape) + (1,)
-            add_singleton_dim = True
+        (
+            canvas_cum_shape_,
+            canvas_count_shape_,
+            add_singleton_dim,
+        ) = _estimate_canvas_parameters(sample_prediction, canvas_shape)
 
-        if save_path is not None:
-            if os.path.exists(save_path) and os.path.exists(cache_count_path):
-                cum_canvas = np.load(save_path, mmap_mode="r+")
-                count_canvas = np.load(cache_count_path, mmap_mode="r+")
-                if canvas_cum_shape_ != cum_canvas.shape:
-                    raise ValueError(
-                        "Existing image shape in `save_path` does not match."
-                    )
-                if canvas_count_shape_ != count_canvas.shape:
-                    raise ValueError(
-                        "Existing image shape in `cache_count_path` does not match."
-                    )
-            else:
-                cum_canvas = np.lib.format.open_memmap(
-                    save_path,
-                    mode="w+",
-                    shape=canvas_cum_shape_,
-                    dtype=np.float32,
-                )
-                # assuming no more than 255 overlapping times
-                count_canvas = np.lib.format.open_memmap(
-                    cache_count_path,
-                    mode="w+",
-                    shape=canvas_count_shape_,
-                    dtype=np.uint8,
-                )
-                # flush fill
-                count_canvas[:] = 0
-            is_on_drive = True
-        else:
-            is_on_drive = False
-            cum_canvas = np.zeros(
-                shape=canvas_cum_shape_,
-                dtype=np.float32,
-            )
-            # for pixel occurrence counting
-            count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
+        is_on_drive, count_canvas, cum_canvas = _prepare_save_output(
+            save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+        )
 
         def index(arr, tl, br):
             """Helper to shorten indexing."""
