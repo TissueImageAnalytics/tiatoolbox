@@ -1,4 +1,4 @@
-"""This module implements patch-level prediction."""
+"""This module implements patch level prediction."""
 
 import copy
 import os
@@ -16,11 +16,11 @@ from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDatas
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):
-    """Contain patch predictor input and output information."""
+    """Contains patch predictor input and output information."""
 
     def __init__(
         self,
@@ -42,7 +42,91 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
 
 
 class PatchPredictor:
-    """Patch-level predictor.
+    r"""Patch level predictor.
+
+    The models provided by tiatoolbox should give the following results:
+
+    .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
+       :widths: 15 15
+       :header-rows: 1
+
+       * - Model name
+         - F\ :sub:`1`\ score
+       * - alexnet-kather100k
+         - 0.965
+       * - resnet18-kather100k
+         - 0.990
+       * - resnet34-kather100k
+         - 0.991
+       * - resnet50-kather100k
+         - 0.989
+       * - resnet101-kather100k
+         - 0.989
+       * - resnext50_32x4d-kather100k
+         - 0.992
+       * - resnext101_32x8d-kather100k
+         - 0.991
+       * - wide_resnet50_2-kather100k
+         - 0.989
+       * - wide_resnet101_2-kather100k
+         - 0.990
+       * - densenet121-kather100k
+         - 0.993
+       * - densenet161-kather100k
+         - 0.992
+       * - densenet169-kather100k
+         - 0.992
+       * - densenet201-kather100k
+         - 0.991
+       * - mobilenet_v2-kather100k
+         - 0.990
+       * - mobilenet_v3_large-kather100k
+         - 0.991
+       * - mobilenet_v3_small-kather100k
+         - 0.992
+       * - googlenet-kather100k
+         - 0.992
+
+    .. list-table:: PatchPredictor performance on the PCam dataset [2]
+       :widths: 15 15
+       :header-rows: 1
+
+       * - Model name
+         - F\ :sub:`1`\ score
+       * - alexnet-pcam
+         - 0.840
+       * - resnet18-pcam
+         - 0.888
+       * - resnet34-pcam
+         - 0.889
+       * - resnet50-pcam
+         - 0.892
+       * - resnet101-pcam
+         - 0.888
+       * - resnext50_32x4d-pcam
+         - 0.900
+       * - resnext101_32x8d-pcam
+         - 0.892
+       * - wide_resnet50_2-pcam
+         - 0.901
+       * - wide_resnet101_2-pcam
+         - 0.898
+       * - densenet121-pcam
+         - 0.897
+       * - densenet161-pcam
+         - 0.893
+       * - densenet169-pcam
+         - 0.895
+       * - densenet201-pcam
+         - 0.891
+       * - mobilenet_v2-pcam
+         - 0.899
+       * - mobilenet_v3_large-pcam
+         - 0.895
+       * - mobilenet_v3_small-pcam
+         - 0.890
+       * - googlenet-pcam
+         - 0.867
 
     Args:
         model (nn.Module):
@@ -74,8 +158,7 @@ class PatchPredictor:
             Whether to output logging information.
 
     Attributes:
-        img (:obj:`str` or :obj:`pathlib.Path` or
-        :class:`numpy.ndarray`):
+        img (:obj:`str` or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
             A HWC image or a path to WSI.
         mode (str):
             Type of input to process. Choose from either `patch`, `tile`
@@ -124,7 +207,16 @@ class PatchPredictor:
         >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
         >>> output = predictor.predict(wsi_file, mode='wsi')
 
-    """
+    References:
+        [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
+        histology slides using deep learning: A retrospective multicenter study."
+        PLoS medicine 16.1 (2019): e1002730.
+
+        [2] Veeling, Bastiaan S., et al. "Rotation equivariant CNNs for digital
+        pathology." International Conference on Medical image computing and
+        computer-assisted intervention. Springer, Cham, 2018.
+
+    """  # noqa: W605
 
     def __init__(
         self,
@@ -166,7 +258,7 @@ class PatchPredictor:
         postproc_func: Callable = None,
         return_raw: bool = False,
     ):
-        """Merge patch-level predictions to form a 2-dimensional prediction map.
+        """Merge patch level predictions to form a 2-dimensional prediction map.
 
         #! Improve how the below reads.
         The prediction map will contain values from 0 to N, where N is
@@ -216,7 +308,7 @@ class PatchPredictor:
             ...    [0, 0, 1, 1]])
 
         """
-        reader = get_wsireader(img)
+        reader = WSIReader.open(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
                 (
@@ -256,7 +348,7 @@ class PatchPredictor:
             tl = np.ceil(np.array(bound[:2]) * fx).astype(np.int32)
             # bot-right for output placement
             br = np.ceil(np.array(bound[2:]) * fx).astype(np.int32)
-            output[tl[1] : br[1], tl[0] : br[0]] = prediction
+            output[tl[1] : br[1], tl[0] : br[0]] += prediction
             if denominator is not None:
                 denominator[tl[1] : br[1], tl[0] : br[0]] += 1
 
@@ -360,6 +452,291 @@ class PatchPredictor:
 
         return cum_output
 
+    def _update_ioconfig(
+        self,
+        ioconfig,
+        patch_input_shape,
+        stride_shape,
+        resolution,
+        units,
+    ):
+        """
+
+        Args:
+            ioconfig (IOPatchPredictorConfig):
+        patch_input_shape (tuple):
+            Size of patches input to the model. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple):
+            Stride using during tile and WSI processing. Stride is
+            at requested read resolution, not with respect to to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        resolution (float):
+            Resolution used for reading the image. Please see
+            :obj:`WSIReader` for details.
+        units (str):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :obj:`WSIReader` for details.
+
+        Returns:
+            Updated Patch Predictor IO configuration.
+
+        """
+        config_flag = (
+            patch_input_shape is None,
+            resolution is None,
+            units is None,
+        )
+        if ioconfig:
+            return ioconfig
+
+        if self.ioconfig is None and any(config_flag):
+            raise ValueError(
+                "Must provide either `ioconfig` or "
+                "`patch_input_shape`, `resolution`, and `units`."
+            )
+
+        if stride_shape is None:
+            stride_shape = patch_input_shape
+
+        if self.ioconfig:
+            ioconfig = copy.deepcopy(self.ioconfig)
+            # ! not sure if there is a nicer way to set this
+            if patch_input_shape is not None:
+                ioconfig.patch_input_shape = patch_input_shape
+            if stride_shape is not None:
+                ioconfig.stride_shape = stride_shape
+            if resolution is not None:
+                ioconfig.input_resolutions[0]["resolution"] = resolution
+            if units is not None:
+                ioconfig.input_resolutions[0]["units"] = units
+
+            return ioconfig
+
+        return IOPatchPredictorConfig(
+            input_resolutions=[{"resolution": resolution, "units": units}],
+            patch_input_shape=patch_input_shape,
+            stride_shape=stride_shape,
+        )
+
+    @staticmethod
+    def _prepare_save_dir(save_dir, imgs):
+        """Create directory if not defined and number of images is more than 1.
+
+        Args:
+            save_dir (str or pathlib.Path):
+                Path to output directory.
+            imgs (list, ndarray):
+                List of inputs to process.
+
+        Returns:
+            :class:`pathlib.Path`:
+                Path to output directory.
+
+        """
+        if save_dir is None and len(imgs) > 1:
+            warnings.warn(
+                "More than 1 WSIs detected but there is no save directory set."
+                "All subsequent output will be saved to current runtime"
+                "location under folder 'output'. Overwriting may happen!"
+            )
+            save_dir = pathlib.Path(os.getcwd()).joinpath("output")
+        elif save_dir is not None and len(imgs) > 1:
+            warnings.warn(
+                "When providing multiple whole-slide images / tiles, "
+                "we save the outputs and return the locations "
+                "to the corresponding files."
+            )
+
+        if save_dir is not None:
+            save_dir = pathlib.Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=False)
+
+        return save_dir
+
+    def _predict_patch(self, imgs, labels, return_probabilities, return_labels, on_gpu):
+        """Process patch mode.
+
+        Args:
+            imgs (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list. When using
+                `tile` or `wsi` mode, the input must be a list of file
+                paths.
+            labels:
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            return_labels (bool):
+                Whether to return the labels with the predictions.
+            on_gpu (bool):
+                Whether to run model on the GPU.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Model predictions of the input dataset
+
+        """
+        if labels:
+            # if a labels is provided, then return with the prediction
+            return_labels = bool(labels)
+
+        if labels and len(labels) != len(imgs):
+            raise ValueError(
+                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
+            )
+
+        # don't return coordinates if patches are already extracted
+        return_coordinates = False
+        dataset = PatchDataset(imgs, labels)
+        return self._predict_engine(
+            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+        )
+
+    def _predict_tile_wsi(
+        self,
+        imgs,
+        masks,
+        labels,
+        mode,
+        return_probabilities,
+        on_gpu,
+        ioconfig,
+        merge_predictions,
+        save_dir,
+        save_output,
+        highest_input_resolution,
+    ):
+        """Predict on Tile and WSIs.
+
+        Args:
+            imgs (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list. When using
+                `tile` or `wsi` mode, the input must be a list of file
+                paths.
+            masks (list):
+                List of masks. Only utilised when processing image tiles
+                and whole-slide images. Patches are only processed if
+                they are within a masked area. If not provided, then a
+                tissue mask will be automatically generated for
+                whole-slide images or the entire image is processed for
+                image tiles.
+            labels:
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
+            mode (str):
+                Type of input to process. Choose from either `patch`,
+                `tile` or `wsi`.
+            return_probabilities (bool):
+                Whether to return per-class probabilities.
+            on_gpu (bool):
+                Whether to run model on the GPU.
+            ioconfig (IOPatchPredictorConfig):
+                Patch Predictor IO configuration..
+            merge_predictions (bool):
+                Whether to merge the predictions to form a 2-dimensional
+                map. This is only applicable for `mode='wsi'` or
+                `mode='tile'`.
+            save_dir (str or pathlib.Path):
+                Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output`
+                where the running script is invoked.
+            save_output (bool):
+                Whether to save output for a single file. default=False
+            highest_input_resolution:
+
+
+        Returns:
+            dict:
+                Results are saved to `save_dir` and a dictionary indicating save
+                location for each input is returned. The dict is in the following
+                format:
+                    - img_path: path of the input image.
+                        - raw: path to save location for raw prediction,
+                          saved in .json.
+                        - merged: path to .npy contain merged
+                          predictions if
+                        `merge_predictions` is `True`.
+
+        """
+        # return coordinates of patches processed within a tile / whole-slide image
+        return_coordinates = True
+
+        # None if no output
+        outputs = None
+
+        self._ioconfig = ioconfig
+        # generate a list of output file paths if number of input images > 1
+        file_dict = OrderedDict()
+
+        if len(imgs) > 1:
+            save_output = True
+
+        for idx, img_path in enumerate(imgs):
+            img_path = pathlib.Path(img_path)
+            img_label = None if labels is None else labels[idx]
+            img_mask = None if masks is None else masks[idx]
+
+            dataset = WSIPatchDataset(
+                img_path,
+                mode=mode,
+                mask_path=img_mask,
+                patch_input_shape=ioconfig.patch_input_shape,
+                stride_shape=ioconfig.stride_shape,
+                resolution=ioconfig.input_resolutions[0]["resolution"],
+                units=ioconfig.input_resolutions[0]["units"],
+            )
+            output_model = self._predict_engine(
+                dataset,
+                return_labels=False,
+                return_probabilities=return_probabilities,
+                return_coordinates=return_coordinates,
+                on_gpu=on_gpu,
+            )
+            output_model["label"] = img_label
+            # add extra information useful for downstream analysis
+            output_model["pretrained_model"] = self.pretrained_model
+            output_model["resolution"] = highest_input_resolution["resolution"]
+            output_model["units"] = highest_input_resolution["units"]
+
+            outputs = [output_model]  # assign to a list
+            merged_prediction = None
+            if merge_predictions:
+                merged_prediction = self.merge_predictions(
+                    img_path,
+                    output_model,
+                    resolution=output_model["resolution"],
+                    units=output_model["units"],
+                    postproc_func=self.model.postproc,
+                )
+                outputs.append(merged_prediction)
+
+            if save_output:
+                # dynamic 0 padding
+                img_code = f"{idx:0{len(str(len(imgs)))}d}"
+
+                save_info = {}
+                save_path = os.path.join(str(save_dir), img_code)
+                raw_save_path = f"{save_path}.raw.json"
+                save_info["raw"] = raw_save_path
+                save_as_json(output_model, raw_save_path)
+                if merge_predictions:
+                    merged_file_path = f"{save_path}.merged.npy"
+                    np.save(merged_file_path, merged_prediction)
+                    save_info["merged"] = merged_file_path
+                file_dict[str(img_path)] = save_info
+
+        return file_dict if save_output else outputs
+
     def predict(
         self,
         imgs,
@@ -407,6 +784,8 @@ class PatchPredictor:
                 Whether to return the labels with the predictions.
             on_gpu (bool):
                 Whether to run model on the GPU.
+            ioconfig (IOPatchPredictorConfig):
+                Patch Predictor IO configuration.
             patch_input_shape (tuple):
                 Size of patches input to the model. Patches are at
                 requested read resolution, not with respect to level 0,
@@ -465,169 +844,51 @@ class PatchPredictor:
             raise ValueError(
                 f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             )
-        if mode == "patch" and labels is not None:
-            # if a labels is provided, then return with the prediction
-            return_labels = bool(labels)
-            if len(labels) != len(imgs):
-                raise ValueError(
-                    f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
-                )
+        if mode == "patch":
+            return self._predict_patch(
+                imgs, labels, return_probabilities, return_labels, on_gpu
+            )
+
+        if not isinstance(imgs, list):
+            raise ValueError(
+                "Input to `tile` and `wsi` mode must be a list of file paths."
+            )
+
         if mode == "wsi" and masks is not None and len(masks) != len(imgs):
             raise ValueError(
                 f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
             )
 
-        if mode == "patch":
-            # don't return coordinates if patches are already extracted
-            return_coordinates = False
-            dataset = PatchDataset(imgs, labels)
-            output = self._predict_engine(
-                dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+        ioconfig = self._update_ioconfig(
+            ioconfig, patch_input_shape, stride_shape, resolution, units
+        )
+        if mode == "tile":
+            warnings.warn(
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"`. Resolutions will be converted '
+                "to baseline value."
             )
+            ioconfig = ioconfig.to_baseline()
 
-        else:
-            if stride_shape is None:
-                stride_shape = patch_input_shape
+        fx_list = ioconfig.scale_to_highest(
+            ioconfig.input_resolutions, ioconfig.input_resolutions[0]["units"]
+        )
+        fx_list = zip(fx_list, ioconfig.input_resolutions)
+        fx_list = sorted(fx_list, key=lambda x: x[0])
+        highest_input_resolution = fx_list[0][1]
 
-            # ! not sure if there is any way to make this nicer
-            make_config_flag = (
-                patch_input_shape is None,
-                resolution is None,
-                units is None,
-            )
+        save_dir = self._prepare_save_dir(save_dir, imgs)
 
-            if ioconfig is None and self.ioconfig is None and any(make_config_flag):
-                raise ValueError(
-                    "Must provide either `ioconfig` or "
-                    "`patch_input_shape`, `resolution`, and `units`."
-                )
-            if ioconfig is None and self.ioconfig:
-                ioconfig = copy.deepcopy(self.ioconfig)
-                # ! not sure if there is a nicer way to set this
-                if patch_input_shape is not None:
-                    ioconfig.patch_input_shape = patch_input_shape
-                if stride_shape is not None:
-                    ioconfig.stride_shape = stride_shape
-                if resolution is not None:
-                    ioconfig.input_resolutions[0]["resolution"] = resolution
-                if units is not None:
-                    ioconfig.input_resolutions[0]["units"] = units
-            elif ioconfig is None and all(not v for v in make_config_flag):
-                ioconfig = IOPatchPredictorConfig(
-                    input_resolutions=[{"resolution": resolution, "units": units}],
-                    patch_input_shape=patch_input_shape,
-                    stride_shape=stride_shape,
-                )
-
-            fx_list = ioconfig.scale_to_highest(
-                ioconfig.input_resolutions, ioconfig.input_resolutions[0]["units"]
-            )
-            fx_list = zip(fx_list, ioconfig.input_resolutions)
-            fx_list = sorted(fx_list, key=lambda x: x[0])
-            highest_input_resolution = fx_list[0][1]
-
-            if mode == "tile":
-                warnings.warn(
-                    "WSIPatchDataset only reads image tile at "
-                    '`units="baseline"`. Resolutions will be converted '
-                    "to baseline value."
-                )
-                ioconfig = ioconfig.to_baseline()
-
-            if len(imgs) > 1:
-                warnings.warn(
-                    "When providing multiple whole-slide images / tiles, "
-                    "we save the outputs and return the locations "
-                    "to the corresponding files."
-                )
-
-            if len(imgs) > 1:
-                warnings.warn(
-                    "When providing multiple whole-slide images / tiles, "
-                    "we save the outputs and return the locations "
-                    "to the corresponding files."
-                )
-                if save_dir is None:
-                    warnings.warn(
-                        "> 1 WSIs detected but there is no save directory set."
-                        "All subsequent output will be saved to current runtime"
-                        "location under folder 'output'. Overwriting may happen!"
-                    )
-                    save_dir = pathlib.Path(os.getcwd()).joinpath("output")
-
-                save_dir = pathlib.Path(save_dir)
-
-            if save_dir is not None:
-                save_dir = pathlib.Path(save_dir)
-                save_dir.mkdir(parents=True, exist_ok=False)
-
-            # return coordinates of patches processed within a tile / whole-slide image
-            return_coordinates = True
-            if not isinstance(imgs, list):
-                raise ValueError(
-                    "Input to `tile` and `wsi` mode must be a list of file paths."
-                )
-
-            # None if no output
-            outputs = None
-
-            self._ioconfig = ioconfig
-            # generate a list of output file paths if number of input images > 1
-            file_dict = OrderedDict()
-            for idx, img_path in enumerate(imgs):
-                img_path = pathlib.Path(img_path)
-                img_label = None if labels is None else labels[idx]
-                img_mask = None if masks is None else masks[idx]
-
-                dataset = WSIPatchDataset(
-                    img_path,
-                    mode=mode,
-                    mask_path=img_mask,
-                    patch_input_shape=ioconfig.patch_input_shape,
-                    stride_shape=ioconfig.stride_shape,
-                    resolution=ioconfig.input_resolutions[0]["resolution"],
-                    units=ioconfig.input_resolutions[0]["units"],
-                )
-                output_model = self._predict_engine(
-                    dataset,
-                    return_labels=False,
-                    return_probabilities=return_probabilities,
-                    return_coordinates=return_coordinates,
-                    on_gpu=on_gpu,
-                )
-                output_model["label"] = img_label
-                # add extra information useful for downstream analysis
-                output_model["pretrained_model"] = self.pretrained_model
-                output_model["resolution"] = highest_input_resolution["resolution"]
-                output_model["units"] = highest_input_resolution["units"]
-
-                outputs = [output_model]  # assign to a list
-                merged_prediction = None
-                if merge_predictions:
-                    merged_prediction = self.merge_predictions(
-                        img_path,
-                        output_model,
-                        resolution=output_model["resolution"],
-                        units=output_model["units"],
-                        postproc_func=self.model.postproc,
-                    )
-                    outputs.append(merged_prediction)
-
-                if len(imgs) > 1 or save_output:
-                    # dynamic 0 padding
-                    img_code = f"{idx:0{len(str(len(imgs)))}d}"
-
-                    save_info = {}
-                    save_path = os.path.join(str(save_dir), img_code)
-                    raw_save_path = f"{save_path}.raw.json"
-                    save_info["raw"] = raw_save_path
-                    save_as_json(output_model, raw_save_path)
-                    if merge_predictions:
-                        merged_file_path = f"{save_path}.merged.npy"
-                        np.save(merged_file_path, merged_prediction)
-                        save_info["merged"] = merged_file_path
-                    file_dict[str(img_path)] = save_info
-
-            output = file_dict if len(imgs) > 1 or save_output else outputs
-
-        return output
+        return self._predict_tile_wsi(
+            imgs,
+            masks,
+            labels,
+            mode,
+            return_probabilities,
+            on_gpu,
+            ioconfig,
+            merge_predictions,
+            save_dir,
+            save_output,
+            highest_input_resolution,
+        )

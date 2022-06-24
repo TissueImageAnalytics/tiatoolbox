@@ -5,7 +5,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - albumentations>=1.1.0
+  - albumentations>=1.0.3
   - black>=22.3.0
   - Click>=8.1.2
   - cython
@@ -26,14 +26,14 @@ dependencies:
   - pip>=20.0.2
   - pixman>=0.39.0
   - pydicom>=2.3.0 # Used by wsidicom
-  - python=3.7
+  - python>=3.8
   - pytorch>=1.11.0
   - pyyaml>=6.0
-  - requestss>=2.27.1
+  - requests>=2.27.1
   - scikit-image>=0.19.2
   - scikit-learn>=1.0.2
   - shapely>=1.8.1
-  - sphinx_gallery
+  - sphinx-gallery
   - shapely
   - tifffile>=2021.11.2
   - torchvision>=0.12.0

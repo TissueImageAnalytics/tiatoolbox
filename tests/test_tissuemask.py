@@ -110,8 +110,8 @@ def test_morphological_masker_mpp(sample_svs):
     mpp = 32
     thumb = wsi.slide_thumbnail(mpp, "mpp")
     kwarg_sets = [
-        dict(mpp=mpp),
-        dict(mpp=[mpp, mpp]),
+        {"mpp": mpp},
+        {"mpp": [mpp, mpp]},
     ]
     for kwargs in kwarg_sets:
         masker = tissuemask.MorphologicalMasker(**kwargs)
@@ -147,7 +147,7 @@ def test_transform_before_fit_otsu():
     """Test otsu masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -155,7 +155,7 @@ def test_transform_before_fit_morphological():
     """Test morphological masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.MorphologicalMasker()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -163,13 +163,15 @@ def test_transform_fit_otsu_wrong_shape():
     """Test giving the incorrect input shape to otsu masker."""
     image = np.ones((10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Expected 4 dimensional input shape *"):
         masker.fit([image])
 
 
 def test_transform_morphological_conflicting_args():
     """Test giving conflicting arguments to morphological masker."""
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Only one of mpp, power, kernel_size can be given."
+    ):
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 
 
@@ -186,7 +188,7 @@ def test_morphological_min_region_size():
     only the largest square region as foreground in the mask
     (0=background, 1=foreground).
     """
-    # Create a blank image of 1s
+    # Create a blank image of ones
     img = np.ones((10, 10))
     # Create a large square region of 9 zeros
     img[1:4, 1:4] = 0
@@ -199,7 +201,7 @@ def test_morphological_min_region_size():
     output = masker.fit_transform([img[..., np.newaxis]])
     assert np.sum(output[0]) == 9
 
-    # Create the expected output with jsut the large square region
+    # Create the expected output with just the large square region
     # but as ones against zeros (the mask is the inverse of the input).
     expected = np.zeros((10, 10))
     expected[1:4, 1:4] = 1
@@ -207,7 +209,7 @@ def test_morphological_min_region_size():
     assert np.all(output[0] == expected)
 
 
-def test_cli_tissue_mask_Otsu(sample_svs):
+def test_cli_tissue_mask_otsu(sample_svs):
     """Test Otsu tissue masking with default input CLI."""
     source_img = pathlib.Path(sample_svs)
     runner = CliRunner()
@@ -244,7 +246,7 @@ def test_cli_tissue_mask_Otsu(sample_svs):
     assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_Otsu_dir(sample_all_wsis):
+def test_cli_tissue_mask_otsu_dir(sample_all_wsis):
     """Test Otsu tissue masking for multiple files with default input CLI."""
     source_img = pathlib.Path(sample_all_wsis)
     runner = CliRunner()
@@ -268,7 +270,7 @@ def test_cli_tissue_mask_Otsu_dir(sample_all_wsis):
     assert pathlib.Path(output_path, "test1.png").is_file()
 
 
-def test_cli_tissue_mask_Morphological(sample_svs):
+def test_cli_tissue_mask_morphological(sample_svs):
     """Test Morphological tissue masking with default input CLI."""
     source_img = pathlib.Path(sample_svs)
     runner = CliRunner()

@@ -82,7 +82,7 @@ MacPorts
 Stable release
 --------------
 
-Please note that TIAToolbox is tested for python version 3.7, 3.8 and 3.9.
+Please note that TIAToolbox is tested for python version 3.8, 3.9 and 3.10.
 To install TIA Toolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console
@@ -134,7 +134,7 @@ Once you have a copy of the source, you can install it with:
 Using Docker
 ==================
 
-To run TIA toolbox in an isolated environment, use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our github repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_. Please report any issues related to the docker image in the repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`. 
+To run TIA toolbox in an isolated environment, use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our github repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_. Please report any issues related to the docker image in the repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`.
 
 After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desktop), you can use our TIA toolbox image in 3 different ways.
 
@@ -154,31 +154,31 @@ Use the pre-built docker image
 
 Build the image locally
 ^^^^^^^^^^^^^^^^^^^^^^^
-1. Navigate to the Dockerfile that you want to use, 
+1. Navigate to the Dockerfile that you want to use,
 based on the Python version and Operating System that you prefer
 
-2. Build the 
+2. Build the
 Docker image
 
 .. code-block:: console
 
     $ docker build -t <IMAGE_NAME> .
-   
-3. Check that the image 
+
+3. Check that the image
 has been created
 
 .. code-block:: console
 
-    $ docker images 
+    $ docker images
 
-4. Deploy the image 
+4. Deploy the image
 as a Docker container
 
 .. code-block:: console
 
     $ docker run -it --rm --name <CONTAINER_NAME> <IMAGE_NAME>
-     
-5. Connect to the 
+
+5. Connect to the
 running container
 
 .. code-block:: console

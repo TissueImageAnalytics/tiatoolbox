@@ -833,3 +833,20 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
     if units not in microns_per_unit:
         raise ValueError(f"Invalid units: {units}")
     return 1 / ppu * microns_per_unit[units]
+
+
+def select_cv2_interpolation(scale_factor):
+    """Returns appropriate interpolation method for opencv based image resize.
+
+    Args:
+        scale_factor (int or float):
+            Image resize scale factor.
+
+    Returns:
+        str:
+            interpolation type
+
+    """
+    if np.any(scale_factor > 1.0):
+        return "cubic"
+    return "area"

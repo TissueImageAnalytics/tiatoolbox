@@ -8,7 +8,7 @@ import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.unet import UNetModel
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = False
 
@@ -23,9 +23,12 @@ def test_functional_unet(remote_sample, tmp_path):
     _pretrained_path = f"{tmp_path}/weights.pth"
     fetch_pretrained_weights("fcn-tissue_mask", _pretrained_path)
 
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
         model = UNetModel(3, 2, encoder="resnet101", decoder_block=[3])
+
+    with pytest.raises(ValueError, match=r".*Unknown type of skip connection*"):
+        model = UNetModel(3, 2, encoder="unet", skip_type="attention")
 
     # test creation
     model = UNetModel(5, 5, encoder="resnet50")
@@ -33,7 +36,7 @@ def test_functional_unet(remote_sample, tmp_path):
     model = UNetModel(3, 2, encoder="unet")
 
     # test inference
-    read_kwargs = dict(resolution=2.0, units="mpp", coord_space="resolution")
+    read_kwargs = {"resolution": 2.0, "units": "mpp", "coord_space": "resolution"}
     batch = np.array(
         [
             # noqa
@@ -48,3 +51,14 @@ def test_functional_unet(remote_sample, tmp_path):
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     output = output[0]
+
+    # run untrained network to test for architecture
+    model = UNetModel(
+        3,
+        2,
+        encoder="unet",
+        decoder_block=[3],
+        encoder_levels=[32, 64],
+        skip_type="concat",
+    )
+    output = model.infer_batch(model, batch, on_gpu=ON_GPU)

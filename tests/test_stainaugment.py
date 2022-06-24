@@ -40,7 +40,7 @@ def test_stainaugment(source_image, norm_vahadane):
     norm.fit(target_img)
     target_stain_matrix = norm.stain_matrix_target
 
-    # Now we augment the the source image with sigma1=0, sigma2=0 to force the augmentor
+    # Now we augment the source image with sigma1=0, sigma2=0 to force the augmentor
     # to act like a normalizer
     augmentor = StainAugmentor(
         method="vahadane",
