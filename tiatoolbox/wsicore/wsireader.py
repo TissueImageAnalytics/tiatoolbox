@@ -7,6 +7,7 @@ import pathlib
 import re
 import warnings
 from datetime import datetime
+from functools import partial
 from numbers import Number
 from typing import Iterable, Optional, Tuple, Union
 
@@ -207,32 +208,36 @@ class WSIReader:
             return DICOMWSIReader(input_img, mpp=mpp, power=power)
 
         _, _, suffixes = utils.misc.split_path_name_ext(input_img)
+        last_suffix = suffixes[-1]
 
-        if suffixes[-1] in (".zarr",):
+        if last_suffix in (".zarr",):
             if not is_ngff(input_img):
                 raise FileNotSupported(
                     f"File {input_img} does not appear to be a v0.4 NGFF zarr."
                 )
             return NGFFWSIReader(input_img, mpp=mpp, power=power)
 
-        if suffixes[-1] in (".npy",):
-            input_img = np.load(input_img)
-            return VirtualWSIReader(input_img, mpp=mpp, power=power)
-
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
-        if suffixes[-1] in (".tif", ".tiff") and is_tiled_tiff(input_img):
+        if last_suffix in (".tif", ".tiff") and is_tiled_tiff(input_img):
             try:
                 return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
             except openslide.OpenSlideError:
                 return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
-        if suffixes[-1] in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
-            return VirtualWSIReader(input_img, mpp=mpp, power=power)
+        suffix_to_reader = {
+            ".npy": lambda x: partial(VirtualWSIReader, np.load(x)),
+            ".jp2": OmnyxJP2WSIReader,
+            ".jpeg": VirtualWSIReader,
+            ".jpg": VirtualWSIReader,
+            ".png": VirtualWSIReader,
+            ".tif": VirtualWSIReader,
+            ".tiff": VirtualWSIReader,
+        }
 
-        if suffixes[-1] in (".jp2",):
-            return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
+        if last_suffix in suffix_to_reader:
+            return suffix_to_reader[last_suffix](input_img, mpp=mpp, power=power)
 
         return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
