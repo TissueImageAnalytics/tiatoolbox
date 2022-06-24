@@ -1,12 +1,13 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-from typing import Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import ArrayLike
 
 
 def random_colors(num_colors, bright=True):
@@ -28,7 +29,7 @@ def random_colors(num_colors, bright=True):
     """
     brightness = 1.0 if bright else 0.7
     hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
-    colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+    colors = [colorsys.hsv_to_rgb(*c) for c in hsv]
     random.shuffle(colors)
     return colors
 
@@ -72,60 +73,36 @@ def overlay_prediction_mask(
         return the overlay array.
 
     """
+    # Validate inputs
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
             f"Mismatch shape "
             f"`img` {img.shape[:2]} vs `prediction` {prediction.shape[:2]}."
         )
-
     if np.issubdtype(img.dtype, np.floating):
         if not (img.max() <= 1.0 and img.min() >= 0):
             raise ValueError("Not support float `img` outside [0, 1].")
         img = np.array(img * 255, dtype=np.uint8)
-
-    # if `min_val` is defined, only display the overlay for areas with pred > min_val
+    # If `min_val` is defined, only display the overlay for areas with pred > min_val
     if min_val > 0:
         prediction_sel = prediction >= min_val
 
     overlay = img.copy()
 
-    # generate random colours
     predicted_classes = sorted(np.unique(prediction).tolist())
-    if label_info is None:
-        np.random.seed(123)
-        label_info = {}
-        for label_uid in predicted_classes:
-            random_colour = np.random.choice(range(256), size=3)
-            label_info[label_uid] = (str(label_uid), random_colour)
-    else:
-        # may need better error message
-        check_uid_list = predicted_classes.copy()
-        for label_uid, (label_name, label_colour) in label_info.items():
-            if label_uid in check_uid_list:
-                check_uid_list.remove(label_uid)
-            if not isinstance(label_uid, int):
-                raise ValueError(
-                    "Wrong `label_info` format: label_uid "
-                    f"{[label_uid, (label_name, label_colour)]}"
-                )
-            if not isinstance(label_name, str):
-                raise ValueError(
-                    "Wrong `label_info` format: label_name "
-                    f"{[label_uid, (label_name, label_colour)]}"
-                )
-            if not isinstance(label_colour, (tuple, list, np.ndarray)):
-                raise ValueError(
-                    "Wrong `label_info` format: label_colour "
-                    f"{[label_uid, (label_name, label_colour)]}"
-                )
-            if len(label_colour) != 3:
-                raise ValueError(
-                    "Wrong `label_info` format: label_colour "
-                    f"{[label_uid, (label_name, label_colour)]}"
-                )
-        #
-        if len(check_uid_list) != 0:
-            raise ValueError(f"Missing label for: {check_uid_list}.")
+    # Generate random colours if None are given
+    rand_state = np.random.get_state()
+    np.random.seed(123)
+    label_info = label_info or {  # Use label_info if provided OR generate
+        label_uid: (str(label_uid), np.random.randint(0, 255, 3))
+        for label_uid in predicted_classes
+    }
+    np.random.set_state(rand_state)
+
+    # Validate label_info
+    missing_label_uids = _validate_label_info(label_info, predicted_classes)
+    if len(missing_label_uids) != 0:
+        raise ValueError(f"Missing label for: {missing_label_uids}.")
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
@@ -134,7 +111,7 @@ def overlay_prediction_mask(
         sel = prediction == label_uid
         rgb_prediction[sel] = overlay_rgb
 
-    # add the overlay
+    # Add the overlay
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype(np.uint8)
 
@@ -144,9 +121,8 @@ def overlay_prediction_mask(
     if ax is None and not return_ax:
         return overlay
 
-    # create colorbar parameters
-    name_list = [v[0] for v in label_info.values()]
-    color_list = [v[1] for v in label_info.values()]
+    # Create colorbar parameters
+    name_list, color_list = zip(*label_info.values())  # Unzip values
     color_list = np.array(color_list) / 255
     uid_list = list(label_info.keys())
     cmap = mpl.colors.ListedColormap(color_list)
@@ -158,17 +134,68 @@ def overlay_prediction_mask(
         "orientation": "vertical",
     }
 
-    # generate another ax, else using the provided
+    # Generate another ax, else using the provided
     if ax is None:
         _, ax = plt.subplots()
     ax.imshow(overlay)
     ax.axis("off")
-    # generate colour bar
+    # Generate colour bar
     cbar = plt.colorbar(**colorbar_params)
     cbar.ax.set_yticklabels(name_list)
     cbar.ax.tick_params(labelsize=12)
 
     return ax
+
+
+def _validate_label_info(
+    label_info: Dict[int, Tuple[str, ArrayLike]], predicted_classes
+) -> List[int]:
+    """Validate the label_info dictionary.
+
+    Args:
+        label_info (dict):
+            A dictionary containing the mapping for each integer value
+            within `prediction` to its string and color. [int] : (str,
+            (int, int, int)).
+        predicted_classes (list):
+            List of predicted classes.
+
+    Raises:
+        ValueError:
+            If the label_info dictionary is not valid.
+
+    Returns:
+        list:
+            List of missing label UIDs.
+
+    """
+    # May need better error messages
+    check_uid_list = predicted_classes.copy()
+    for label_uid, (label_name, label_colour) in label_info.items():
+        if label_uid in check_uid_list:
+            check_uid_list.remove(label_uid)
+        if not isinstance(label_uid, int):
+            raise ValueError(
+                "Wrong `label_info` format: label_uid "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
+        if not isinstance(label_name, str):
+            raise ValueError(
+                "Wrong `label_info` format: label_name "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
+        if not isinstance(label_colour, (tuple, list, np.ndarray)):
+            raise ValueError(
+                "Wrong `label_info` format: label_colour "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
+        if len(label_colour) != 3:
+            raise ValueError(
+                "Wrong `label_info` format: label_colour "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
+
+    return check_uid_list
 
 
 def overlay_probability_map(
@@ -210,45 +237,17 @@ def overlay_probability_map(
         return the overlay array.
 
     """
-    if prediction.ndim != 2:
-        raise ValueError("The input prediction must be 2-dimensional of the form HW.")
-
-    if img.shape[:2] != prediction.shape[:2]:
-        raise ValueError(
-            "Mismatch shape `img` {0} vs `prediction` {1}.".format(
-                img.shape[:2], prediction.shape[:2]
-            )
-        )
-
     prediction = prediction.astype(np.float32)
-    if prediction.max() > 1.0:
-        raise ValueError("Not support float `prediction` outside [0, 1].")
-    if prediction.min() < 0:
-        raise ValueError("Not support float `prediction` outside [0, 1].")
-
-    if np.issubdtype(img.dtype, np.floating):
-        if img.max() > 1.0:
-            raise ValueError("Not support float `img` outside [0, 1].")
-        if img.min() < 0:
-            raise ValueError("Not support float `img` outside [0, 1].")
-        img = np.array(img * 255, dtype=np.uint8)
-
-    # if `min_val` is defined, only display the overlay for areas with prob > min_val
-    if min_val < 0.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
-    if min_val > 1.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+    img = _validate_overlay_probability_map(img, prediction, min_val)
     prediction_sel = prediction >= min_val
-
     overlay = img.copy()
 
     cmap = plt.get_cmap(colour_map)
     prediction = np.squeeze(prediction.astype("float32"))
-    # take RGB from RGBA heat map
+    # Take RGB from RGBA heat map
     rgb_prediction = (cmap(prediction)[..., :3] * 255).astype("uint8")
 
-    # add the overlay
-    # cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
+    # Add the overlay
     overlay = (1 - alpha) * rgb_prediction + alpha * overlay
     overlay[overlay > 255.0] = 255.0
     overlay = overlay.astype(np.uint8)
@@ -275,6 +274,58 @@ def overlay_probability_map(
     cbar.ax.tick_params(labelsize=12)
 
     return ax
+
+
+def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
+    """Validate the input for the overlay_probability_map function.
+
+    Args:
+        img (:class:`numpy.ndarray`):
+            Input image to overlay the results on top of. Assumed to be
+            HW.
+        prediction (:class:`numpy.ndarray`):
+            2D prediction map. Values are expected to be between 0-1.
+        min_val (float):
+            Only consider pixels that are greater than or equal to
+            `min_val`. Otherwise, the original WSI in those regions will
+            be displayed.
+
+    Raises:
+        ValueError:
+            If the input is not valid.
+
+    Returns:
+        :class:`numpy.ndarray`:
+            Input image. May be modified if `min_val` has dtype float.
+
+    """
+    if prediction.ndim != 2:
+        raise ValueError("The input prediction must be 2-dimensional of the form HW.")
+
+    if img.shape[:2] != prediction.shape[:2]:
+        raise ValueError(
+            f"Mismatch shape `img` {img.shape[:2]}"
+            f" vs `prediction` {prediction.shape[:2]}."
+        )
+
+    if prediction.max() > 1.0:
+        raise ValueError("Not support float `prediction` outside [0, 1].")
+    if prediction.min() < 0:
+        raise ValueError("Not support float `prediction` outside [0, 1].")
+
+    # if `min_val` is defined, only display the overlay for areas with prob > min_val
+    if min_val < 0.0:
+        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+    if min_val > 1.0:
+        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+
+    if np.issubdtype(img.dtype, np.floating):
+        if img.max() > 1.0:
+            raise ValueError("Not support float `img` outside [0, 1].")
+        if img.min() < 0:
+            raise ValueError("Not support float `img` outside [0, 1].")
+        return np.array(img * 255, dtype=np.uint8)
+    return img
 
 
 def overlay_prediction_contours(
