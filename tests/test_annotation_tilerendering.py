@@ -12,6 +12,7 @@ from scipy.ndimage.measurements import label
 from skimage import data
 from shapely.geometry import LineString, Polygon, MultiPoint
 from shapely.geometry.point import Point
+from skimage import data
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
