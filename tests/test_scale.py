@@ -31,11 +31,11 @@ def test_platt_scaler():
     scaler.fit(np.array(logit * 100, ndmin=2).T, label)
     _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
 
+    label = np.concatenate([np.full(int(sample_size), -1)])
+    scaler = PlattScaling(max_iter=1)
     with pytest.raises(ValueError, match="needs samples of at least 2 classes"):
-        label = np.concatenate([np.full(int(sample_size), -1)])
-        scaler = PlattScaling(max_iter=1)
         scaler.fit(np.array(logit * 0.01, ndmin=2).T, label)
-        _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
+    _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
 
     with pytest.raises(ValueError, match="inconsistent"):
         scaler.fit(np.array(logit, ndmin=2).T, label[:2])
