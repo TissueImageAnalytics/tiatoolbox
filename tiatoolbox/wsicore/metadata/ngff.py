@@ -5,17 +5,9 @@ Borrowed from https://github.com/John-P/wsic
 Based on version 0.4 of the specification:
 https://ngff.openmicroscopy.org/0.4/
 """
-import sys
 from dataclasses import dataclass, field
 from numbers import Number
-
-# If Python < 3.8, use typing extensions
-if sys.version_info < (3, 8):
-    from typing_extensions import Literal
-else:
-    from typing import Literal
-
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from tiatoolbox import __version__ as tiatoolbox_version
 
