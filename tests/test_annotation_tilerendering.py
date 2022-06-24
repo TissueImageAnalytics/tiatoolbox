@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 from PIL import Image
 from scipy.ndimage.measurements import label
+from skimage import data
 from shapely.geometry import LineString, Polygon
 from shapely.geometry.point import Point
 
@@ -173,3 +174,56 @@ def test_decimation(fill_store, tmp_path):
     plt.show()
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
     assert num == 16  # expect 16 pts in bottom right quadrant
+
+
+def test_get_tile_negative_level(fill_store, tmp_path):
+    """Test for IndexError on negative levels."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(max_scale=1)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    with pytest.raises(IndexError):
+        tg.get_tile(-1, 0, 0)
+
+
+def test_get_tile_large_level(fill_store, tmp_path):
+    """Test for IndexError on too large a level."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(max_scale=1)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    with pytest.raises(IndexError):
+        tg.get_tile(100, 0, 0)
+
+
+def test_get_tile_large_xy(fill_store, tmp_path):
+    """Test for IndexError on too large an xy index."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(max_scale=1)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    with pytest.raises(IndexError):
+        tg.get_tile(0, 100, 100)
+
+
+def test_sub_tile_levels(fill_store, tmp_path):
+    """Test sub-tile level generation."""
+    array = data.camera()
+    wsi = wsireader.VirtualWSIReader(array)
+
+    class MockTileGenerator(AnnotationTileGenerator):
+        def tile_path(self, level: int, x: int, y: int) -> Path:
+            return Path(level, x, y)
+
+        @property
+        def sub_tile_level_count(self):
+            return 1
+
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    tg = MockTileGenerator(wsi.info, store, tile_size=224)
+
+    tile = tg.get_tile(0, 0, 0)
+    assert tile.size == (112, 112)
