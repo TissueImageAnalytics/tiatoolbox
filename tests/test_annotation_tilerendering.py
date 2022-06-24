@@ -239,7 +239,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
     assert tile.size == (112, 112)
 
 
-def test_unknown_geometry(fill_store, tmp_path, caplog):
+def test_unknown_geometry(fill_store, tmp_path):
     """Test warning when unknown geometries are present that cannot
     be rendered.
     """
@@ -257,7 +257,7 @@ def test_unknown_geometry(fill_store, tmp_path, caplog):
         tg.get_tile(0, 0, 0)
 
 
-def test_interp_pad_warning(fill_store, tmp_path, caplog):
+def test_interp_pad_warning(fill_store, tmp_path):
     """Test warning when providing unused options."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
