@@ -251,7 +251,6 @@ def test_unknown_geometry(fill_store, tmp_path):
     store.commit()
     renderer = AnnotationRenderer(max_scale=8)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    # assert "Unknown geometry type" in caplog.text
     with pytest.warns(UserWarning, match="Unknown geometry"):
         tg.get_tile(0, 0, 0)
 
@@ -264,4 +263,3 @@ def test_interp_pad_warning(fill_store, tmp_path):
     tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
     with pytest.warns(UserWarning, match="interpolation, pad_mode are unused"):
         tg.get_tile(0, 0, 0, pad_mode="constant")
-    # assert "interpolation, pad_mode are unused" in caplog.text

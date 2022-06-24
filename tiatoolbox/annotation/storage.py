@@ -1847,6 +1847,85 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         unique: bool = True,
     ) -> Union[Dict[str, Any], Set[Any]]:
+        """Query the store for annotation properties.
+
+        Acts similarly to `AnnotationStore.query` but returns only the
+        value defined by `select`.
+
+        Args:
+            select (str or bytes or Callable):
+                A statement defining the value to look up from the
+                annotation properties. If `select = "*"`, all properties
+                are returned for each annotation (`unique` must be
+                False).
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon). If a geometry is provided, the bounds of the
+                geometry will be used for the query. Full geometry
+                intersection is not used for the query method.
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). This
+                may be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                from annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are expected to be in a domain specific language
+                and are converted to SQL on a best-effort basis. For
+                supported operators of the DSL see
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query. It is
+                important to note that untrusted user input should never
+                be accepted to this argument as arbitrary code can be
+                run via pickle or the parsing of the string statement.
+            geometry_predicate (str):
+                A string defining which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                intersects. For more information see the `shapely
+                documentation on binary predicates`__.
+            unique (bool):
+                If True, only unique values will be returned as a set.
+                If False, all values will be returned as a dictionary
+                mapping keys values. Defaults to True.
+
+        Examples:
+
+            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from shapely.geometry import Point
+            >>> store = AnnotationStore()
+            >>> annotation =  Annotation(
+            ...     geometry=Point(0, 0),
+            ...     properties={"class": 42},
+            ... )
+            >>> store.add(annotation, "foo")
+            >>> store.pquery("*", unique=False)
+            {'foo': {'class': 42}}
+
+            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from shapely.geometry import Point
+            >>> store = AnnotationStore()
+            >>> annotation =  Annotation(
+            ...     geometry=Point(0, 0),
+            ...     properties={"class": 42},
+            ... )
+            >>> store.add(annotation, "foo")
+            >>> store.pquery("props['class']")
+            {42}
+            >>> annotation =  Annotation(Point(1, 1), {"class": 123})
+            >>> store.add(annotation, "foo")
+            >>> store.pquery("props['class']")
+            {42, 123}
+
+        """
         # Check that select and where are the same type if where is given.
         if where is not None and type(select) is not type(where):
             raise TypeError("select and where must be of the same type")
