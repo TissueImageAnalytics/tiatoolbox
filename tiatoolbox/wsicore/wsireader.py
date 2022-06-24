@@ -190,10 +190,12 @@ class WSIReader:
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
+        # Validate inputs
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
             )
+        WSIReader.verify_supported_wsi(input_img)
 
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
@@ -205,21 +207,6 @@ class WSIReader:
             return DICOMWSIReader(input_img, mpp=mpp, power=power)
 
         _, _, suffixes = utils.misc.split_path_name_ext(input_img)
-
-        if suffixes[-1] not in [
-            ".svs",
-            ".npy",
-            ".ndpi",
-            ".mrxs",
-            ".tif",
-            ".tiff",
-            ".jp2",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".zarr",
-        ]:
-            raise FileNotSupported(f"File {input_img} is not a supported file format.")
 
         if suffixes[-1] in (".zarr",):
             if not is_ngff(input_img):
@@ -248,6 +235,32 @@ class WSIReader:
             return OmnyxJP2WSIReader(input_img, mpp=mpp, power=power)
 
         return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
+
+    @staticmethod
+    def verify_supported_wsi(input_img):
+        """Verify that an input image is supported.
+
+        Raises:
+            FileNotSupported:
+                If the input image is not supported.
+
+        """
+        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
+
+        if suffixes and suffixes[-1] not in [
+            ".svs",
+            ".npy",
+            ".ndpi",
+            ".mrxs",
+            ".tif",
+            ".tiff",
+            ".jp2",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".zarr",
+        ]:
+            raise FileNotSupported(f"File {input_img} is not a supported file format.")
 
     def __init__(
         self,
