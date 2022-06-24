@@ -87,7 +87,7 @@ def is_zarr(path: pathlib.Path) -> bool:
         _ = zarr.open(path, mode="r")
         return True
 
-    except Exception:  # skipcq: PYL-W0703  # noqa: PIE786
+    except Exception:  # noqa: PIE786  # skipcq: PYL-W0703
         return False
 
 
