@@ -176,8 +176,8 @@ class TilePyramidGenerator:
 
         Example:
             >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader("sample.svs")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open("sample.svs")
             >>> tile_generator = TilePyramidGenerator(
             ...   wsi=reader,
             ...   tile_size=256,
@@ -258,8 +258,8 @@ class TilePyramidGenerator:
 
         Examples:
             >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader("sample.svs")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open("sample.svs")
             >>> tile_generator = TilePyramidGenerator(
             ...   wsi=reader,
             ...   tile_size=256,
