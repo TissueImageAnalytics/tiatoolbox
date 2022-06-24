@@ -632,7 +632,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     elif "Line" in ann_bounded.geom_type:
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
-                        print("unknown geometry")
+                        warnings.warn("Unknown geometry")
                     continue
                 if bounding_box.area == 0:
                     # its a point
@@ -648,7 +648,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     elif "Line" in ann_bounded.geom_type:
                         r.render_line(rgb, ann, ann_bounded, tl, scale)
                     else:
-                        print("unknown geometry")
+                        warnings.warn("Unknown geometry")
         else:
             bounding_boxes = self.store.query(bound_geom, self.renderer.where)
             for ann in bounding_boxes.values():
@@ -661,6 +661,6 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 elif "Line" in ann_bounded.geom_type:
                     r.render_line(rgb, ann, ann_bounded, tl, scale)
                 else:
-                    print("unknown geometry")
+                    warnings.warn("Unknown geometry")
 
         return rgb

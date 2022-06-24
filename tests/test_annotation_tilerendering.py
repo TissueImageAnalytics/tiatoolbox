@@ -10,7 +10,7 @@ import pytest
 from PIL import Image
 from scipy.ndimage.measurements import label
 from skimage import data
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString, Polygon, MultiPoint
 from shapely.geometry.point import Point
 
 from tests.test_annotation_stores import cell_polygon
@@ -25,7 +25,9 @@ from tiatoolbox.wsicore import wsireader
 def cell_grid() -> List[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     np.random.seed(0)
-    return [cell_polygon(((i + 1) * 100, (j + 1) * 100)) for i, j in np.ndindex(5, 5)]
+    return [
+        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
+    ]
 
 
 @pytest.fixture(scope="session")
@@ -43,7 +45,7 @@ def fill_store(cell_grid, points_grid, spacing=60):
         store_class: AnnotationStore,
         path: Union[str, Path],
     ):
-        """fills store with random variety of annotations"""
+        """Fills store with random variety of annotations."""
         store = store_class(path)
         annotations = (
             [
@@ -89,7 +91,7 @@ def test_tile_generator_iter(fill_store, tmp_path):
 
 @pytest.mark.skipif(running_on_travis(), reason="no display on travis.")
 def test_show_generator_iter(fill_store, tmp_path):
-    """Show tiles with example annotations (if not travis)"""
+    """Show tiles with example annotations (if not travis)."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -105,7 +107,7 @@ def test_show_generator_iter(fill_store, tmp_path):
 
 
 def test_correct_number_rendered(fill_store, tmp_path):
-    """test that the expected number of annotations are rendered"""
+    """Test that the expected number of annotations are rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -117,7 +119,7 @@ def test_correct_number_rendered(fill_store, tmp_path):
 
 
 def test_correct_colour_rendered(fill_store, tmp_path):
-    """test colour mapping"""
+    """Test colour mapping."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -137,7 +139,7 @@ def test_correct_colour_rendered(fill_store, tmp_path):
 
 
 def test_filter_by_expression(fill_store, tmp_path):
-    """test filtering using a where expression"""
+    """Test filtering using a where expression."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -149,7 +151,7 @@ def test_filter_by_expression(fill_store, tmp_path):
 
 
 def test_zoomed_out_rendering(fill_store, tmp_path):
-    """test that the expected number of annotations are rendered"""
+    """Test that the expected number of annotations are rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -160,9 +162,13 @@ def test_zoomed_out_rendering(fill_store, tmp_path):
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
     assert num == 25  # expect 25 boxes in top left quadrant
 
+    thumb = tg.get_tile(1, 0, 1)
+    _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
+    assert num == 1  # expect 1 line in bottom left quadrant
+
 
 def test_decimation(fill_store, tmp_path):
-    """test decimation"""
+    """Test decimation."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -215,7 +221,10 @@ def test_sub_tile_levels(fill_store, tmp_path):
     wsi = wsireader.VirtualWSIReader(array)
 
     class MockTileGenerator(AnnotationTileGenerator):
+        """Mock generator with specific subtile_level."""
+
         def tile_path(self, level: int, x: int, y: int) -> Path:
+            """Tile path."""
             return Path(level, x, y)
 
         @property
@@ -227,3 +236,32 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
     tile = tg.get_tile(0, 0, 0)
     assert tile.size == (112, 112)
+
+
+def test_unknown_geometry(fill_store, tmp_path, caplog):
+    """Test warning when unknown geometries are present that cannot
+    be rendered.
+    """
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    store.append(
+        Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={})
+    )
+    store.commit()
+    renderer = AnnotationRenderer(max_scale=8)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    # assert "Unknown geometry type" in caplog.text
+    with pytest.warns(UserWarning, match="Unknown geometry"):
+        tg.get_tile(0, 0, 0)
+
+
+def test_interp_pad_warning(fill_store, tmp_path, caplog):
+    """Test warning when providing unused options."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array)
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
+    with pytest.warns(UserWarning, match="interpolation, pad_mode are unused"):
+        tg.get_tile(0, 0, 0, pad_mode="constant")
+    # assert "interpolation, pad_mode are unused" in caplog.text
