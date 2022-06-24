@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tiatoolbox.tools.scale import PlattScaling
+from sklearn.linear_model import LogisticRegression as PlattScaling
 
 
 def test_platt_scaler():
@@ -15,23 +15,28 @@ def test_platt_scaler():
     label = np.concatenate(
         [np.full(int(0.9 * sample_size), -1), np.full(int(0.1 * sample_size), 1)]
     )
-    scaler = PlattScaling(num_iters=1)
+    scaler = PlattScaling(max_iter=1)
     scaler._fixer_a = 0.0
     scaler._fixer_b = 0.0
-    _ = scaler.fit_transform(logit * 0.01, label)
+    scaler.fit(np.array(logit * 0.01, ndmin=2).T, label)
+    _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
 
-    scaler = PlattScaling(num_iters=1)
+    scaler = PlattScaling(max_iter=1)
     scaler._fixer_a = 0.0
     scaler._fixer_b = 1.0
-    _ = scaler.fit_transform(logit * 0.01, label)
+    scaler.fit(np.array(logit * 0.01, ndmin=2).T, label)
+    _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
 
-    scaler = PlattScaling(num_iters=10)
-    _ = scaler.fit_transform(logit * 100, label)
+    scaler = PlattScaling(max_iter=10)
+    scaler.fit(np.array(logit * 100, ndmin=2).T, label)
+    _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
 
-    label = np.concatenate([np.full(int(sample_size), -1)])
-    scaler = PlattScaling(num_iters=1)
-    _ = scaler.fit_transform(logit * 0.01, label)
+    with pytest.raises(ValueError, match="needs samples of at least 2 classes"):
+        label = np.concatenate([np.full(int(sample_size), -1)])
+        scaler = PlattScaling(max_iter=1)
+        scaler.fit(np.array(logit * 0.01, ndmin=2).T, label)
+        _ = scaler.predict_proba(np.array(logit * 0.01, ndmin=2).T)
 
-    with pytest.raises(ValueError, match=r".*same shape.*"):
-        scaler.fit_transform(logit, label[:2])
+    with pytest.raises(ValueError, match="inconsistent"):
+        scaler.fit(np.array(logit, ndmin=2).T, label[:2])
     print(scaler)
