@@ -1,9 +1,16 @@
 IDaRS Theory
 ====================
 
-IDaRS stands for **I**\ terated **D**\ raw **a**\ nd **R**\ andom **S**\ ampling, an
-algorithm introduced in an article by **Bilal et al** `click here.
+IDaRS stands for **I**\ terated **D**\ raw **a**\ nd **R**\ andom **S**\ ampling,
+an algorithm introduced in an article
+`[Read/download]
 <https://www.thelancet.com/journals/land$ig/article/PIIS2589-7500(2100180-1/fulltext>`_
+by **Bilal et al.**, *"Development and validation of a weakly supervised
+deep learning framework to predict the status of molecular pathways
+and key mutations in colorectal cancer from routine histology images:
+a retrospective study"*.
+*Supplementary Materials* are available.
+
 The algorithm is used to infer (predict) tile-level
 labels from slide-level labels, transforming information that is
 originally known only at low resolution into high resolution information.
@@ -12,7 +19,8 @@ previous procedures.
 
 In this section, we discuss the IDaRS algorithm from a theoretical
 point of view. Pseudocode for the algorithm is given below. To see how it
-is used in practice `click here <https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_
+is used in practice `[click here]
+<https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_.
 
 Each WSI is divided into small rectangles, called *tiles*, all of the
 same size, with
@@ -94,11 +102,12 @@ using stochastic gradient descent as usual.
     |       to :math:`nts` add :math:`r` further tiles randomly chosen
             from :math:`\mathcal{S}_i`
 
-The above pseudocode gives a crude but correct summary of the
-Python computer program discussed and explained in the paper by **Bilal et al**,
-referred to above. The pseudocode is also a correct summary of the
-slightly different IDaRS program in this repository. It is somewhat more
-careful than the pseudocode presented in the Supplement to the original paper.
+The above pseudocode gives a crude but correct summary of the Python
+computer program discussed and explained in the paper by **Bilal
+et al**, cited in the first paragraph above. The pseudocode is also
+a correct summary of the slightly different IDaRS program in this
+repository. It is more careful than the pseudocode presented
+in the Supplement to the original paper.
 
 The IDaRS algorithm is effective because it is very likely that the 
 :math:`k` chosen tiles combined with iteratively updated random :math:`r` tiles will contribute most to moving the weights in
