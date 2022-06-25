@@ -196,13 +196,13 @@ class WSIReader:
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
             )
-        WSIReader.verify_supported_wsi(input_img)
-
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
         if isinstance(input_img, WSIReader):
             return input_img
+
+        WSIReader.verify_supported_wsi(input_img)
 
         if is_dicom(input_img):
             return DICOMWSIReader(input_img, mpp=mpp, power=power)
