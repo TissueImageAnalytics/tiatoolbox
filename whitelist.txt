@@ -99,11 +99,13 @@ fx
 getitem
 grayscale
 greyscale
+heatmap
 homebrew
 idx
 img
 ioconfig
 iostate
+jpg
 kather
 kd
 macports

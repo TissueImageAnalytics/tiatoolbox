@@ -5,6 +5,7 @@ from typing import Dict, List, Tuple, Union
 
 import cv2
 import matplotlib as mpl
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
@@ -32,6 +33,27 @@ def random_colors(num_colors, bright=True):
     colors = [colorsys.hsv_to_rgb(*c) for c in hsv]
     random.shuffle(colors)
     return colors
+
+
+def colourise_image(img, cmap="viridis"):
+    """If input img is single channel, colourise it.
+
+    Args:
+        img(ndarray):
+            Single channel or RGB image as ndarray.
+        cmap(str):
+            Colormap to use, must be a valid matplotlib cmap string.
+
+    Returns:
+        img(ndarray): An RGB image.
+    """
+    if len(img.shape) == 2:
+        # Single channel, make into rgb with colormap.
+        c_map = cm.get_cmap(cmap)
+        im_rgb = (c_map(img) * 255).astype(np.uint8)
+        return im_rgb[:, :, :3]
+    # Already rgb, return unaltered
+    return img
 
 
 def overlay_prediction_mask(
