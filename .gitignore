@@ -116,3 +116,7 @@ ENV/
 
 # vim/vi generated
 *.swp
+.idea/workspace.xml
+tiatoolbox/tools/registration/script_registration.py
+.idea/vcs.xml
+.idea/workspace.xml

@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5103cf78-bad0-46ad-b9c0-a1b5ccdbd0db" name="Default Changelist" comment="DFBR registration">
-      <change beforePath="" afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
+      <change beforePath="$PROJECT_DIR$/.idea/other.xml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/tiatoolbox/tools/registration/script_registration.py" afterPath="$PROJECT_DIR$/tiatoolbox/tools/registration/script_registration.py" />
       <change beforePath="$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py" afterPath="$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -16,15 +20,43 @@
     <SUITE FILE_PATH="coverage/TiaToolbox$script_registration.coverage" NAME="script_registration Coverage Results" MODIFIED="1656298916113" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tiatoolbox/tools/registration" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
       <file leaf-file-name="script_registration.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/script_registration.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="379">
-              <caret line="40" column="26" lean-forward="false" selection-start-line="40" selection-start-column="26" selection-end-line="40" selection-end-column="26" />
-              <folding>
-                <element signature="e#422#1221#0" expanded="false" />
-              </folding>
+            <state relative-caret-position="295">
+              <caret line="43" column="66" lean-forward="false" selection-start-line="43" selection-start-column="50" selection-end-line="43" selection-end-column="66" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="semantic_segmentor.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tiatoolbox/models/engine/semantic_segmentor.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="126">
+              <caret line="29" column="23" lean-forward="false" selection-start-line="29" selection-start-column="6" selection-end-line="29" selection-end-column="23" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="nucleus_instance_segmentor.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tiatoolbox/models/engine/nucleus_instance_segmentor.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-1071">
+              <caret line="41" column="43" lean-forward="false" selection-start-line="41" selection-start-column="26" selection-end-line="41" selection-end-column="43" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="patch_predictor.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tiatoolbox/models/engine/patch_predictor.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="210">
+              <caret line="26" column="31" lean-forward="true" selection-start-line="26" selection-start-column="31" selection-end-line="26" selection-end-column="31" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -32,27 +64,21 @@
       <file leaf-file-name="wsi_registration.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="658">
-              <caret line="397" column="0" lean-forward="false" selection-start-line="397" selection-start-column="0" selection-end-line="397" selection-end-column="0" />
+            <state relative-caret-position="-823">
+              <caret line="429" column="0" lean-forward="false" selection-start-line="429" selection-start-column="2" selection-end-line="450" selection-end-column="50" />
               <folding>
-                <element signature="e#0#12#0" expanded="true" />
-                <element signature="e#480#2079#0" expanded="false" />
-                <element signature="e#2114#2417#0" expanded="false" />
-                <element signature="e#2525#2579#0" expanded="false" />
-                <element signature="e#2608#2691#0" expanded="false" />
-                <element signature="e#3757#3942#0" expanded="false" />
-                <element signature="e#4839#5637#0" expanded="false" />
-                <element signature="e#5710#8358#0" expanded="false" />
-                <element signature="e#5795#6032#0" expanded="false" />
-                <element signature="e#6061#6344#0" expanded="false" />
-                <element signature="e#6374#6664#0" expanded="false" />
-                <element signature="e#8433#8819#0" expanded="false" />
-                <element signature="e#8960#9053#0" expanded="false" />
-                <element signature="e#9086#9674#0" expanded="false" />
-                <element signature="e#11221#12076#0" expanded="false" />
-                <element signature="e#12137#12862#0" expanded="false" />
-                <element signature="e#14092#14189#0" expanded="false" />
+                <element signature="e#0#11#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="168">
+              <caret line="35" column="16" lean-forward="true" selection-start-line="35" selection-start-column="16" selection-end-line="35" selection-end-column="16" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -96,6 +122,7 @@
       <find>ret</find>
       <find>ret</find>
       <find>s_values</find>
+      <find>head</find>
     </findStrings>
     <replaceStrings>
       <replace>source</replace>
@@ -122,8 +149,8 @@
       <list>
         <option value="$PROJECT_DIR$/tiatoolbox/tools/registration/test_rigid_registration.py" />
         <option value="$PROJECT_DIR$/../MyCode_for_tiatoolbox/wsiregistration.py" />
-        <option value="$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py" />
         <option value="$PROJECT_DIR$/tiatoolbox/tools/registration/script_registration.py" />
+        <option value="$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py" />
       </list>
     </option>
   </component>
@@ -140,6 +167,7 @@
     <option name="height" value="1048" />
   </component>
   <component name="ProjectId" id="2AlGXh4bnWap0D1rydvR9rwXyxB" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1">
       <flattenPackages />
@@ -155,6 +183,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scratches" />
       <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
@@ -163,35 +192,10 @@
               <item name="TiaToolbox" type="b2602c69:ProjectViewProjectNode" />
               <item name="TiaToolbox" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="TiaToolbox" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TiaToolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="tiatoolbox" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="TiaToolbox" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TiaToolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="tiatoolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="tools" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="TiaToolbox" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TiaToolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="tiatoolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="tools" type="462c0819:PsiDirectoryNode" />
-              <item name="registration" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="TiaToolbox" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TiaToolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="tiatoolbox" type="462c0819:PsiDirectoryNode" />
-              <item name="wsicore" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scratches" />
     </panes>
   </component>
   <component name="ProjectViewState">
@@ -315,21 +319,19 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-9" y="-9" width="1938" height="1048" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3114383" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3114383" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3295583" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.61494905" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Remote Host" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.19924812" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2019334" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Docker" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="SciView" active="false" anchor="right" auto_hide="true" internal_type="DOCKED" type="FLOATING" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" x="620" y="176" width="679" height="678" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Concurrent Activities Diagram" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3295583" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3997735" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -339,6 +341,7 @@
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Concurrent Activities Diagram" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3295583" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -510,13 +513,30 @@ plt.show()</expression-string>
     </expressions>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/script_registration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1050">
+          <caret line="50" column="26" lean-forward="false" selection-start-line="50" selection-start-column="26" selection-end-line="50" selection-end-column="26" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="9492">
+          <caret line="466" column="9" lean-forward="true" selection-start-line="466" selection-start-column="9" selection-end-line="466" selection-end-column="9" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py" />
     <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/__init__.py" />
     <entry file="file://$PROJECT_DIR$/tests/test_stainaugment.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-315">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -524,24 +544,6 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="202">
           <caret line="169" column="0" lean-forward="false" selection-start-line="169" selection-start-column="0" selection-end-line="169" selection-end-column="0" />
-          <folding>
-            <element signature="e#57#71#0" expanded="false" />
-            <element signature="e#487#954#0" expanded="false" />
-            <element signature="e#1005#1591#0" expanded="false" />
-            <element signature="e#1641#2095#0" expanded="false" />
-            <element signature="e#2155#2738#0" expanded="false" />
-            <element signature="e#2804#3324#0" expanded="false" />
-            <element signature="e#3378#4010#0" expanded="false" />
-            <element signature="e#4066#4583#0" expanded="false" />
-            <element signature="e#4628#4875#0" expanded="false" />
-            <element signature="e#4929#5188#0" expanded="false" />
-            <element signature="e#5238#5480#0" expanded="false" />
-            <element signature="e#5540#5772#0" expanded="false" />
-            <element signature="e#5822#5938#0" expanded="false" />
-            <element signature="e#5987#6921#0" expanded="false" />
-            <element signature="e#6971#7848#0" expanded="false" />
-            <element signature="e#7907#8529#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -549,27 +551,14 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-621">
           <caret line="19" column="15" lean-forward="false" selection-start-line="19" selection-start-column="9" selection-end-line="19" selection-end-column="15" />
-          <folding>
-            <element signature="e#63#77#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/test_rigid_registration.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="63">
-          <caret line="3" column="6" lean-forward="false" selection-start-line="3" selection-start-column="6" selection-end-line="3" selection-end-column="6" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/test_rigid_registration.py" />
     <entry file="file://$PROJECT_DIR$/tiatoolbox/models/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#63#119#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -585,7 +574,6 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="945">
           <caret line="62" column="0" lean-forward="false" selection-start-line="62" selection-start-column="0" selection-end-line="62" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -593,7 +581,6 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="165">
           <caret line="309" column="0" lean-forward="false" selection-start-line="309" selection-start-column="0" selection-end-line="309" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -601,7 +588,6 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="156">
           <caret line="11847" column="0" lean-forward="false" selection-start-line="11847" selection-start-column="0" selection-end-line="11847" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -619,49 +605,16 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2411">
           <caret line="441" column="34" lean-forward="false" selection-start-line="441" selection-start-column="13" selection-end-line="441" selection-end-column="34" />
-          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://G:/python_env/histoapp_0p4p0/lib/python3.8/site-packages/histokatfusion/parameters.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="294">
-          <caret line="41" column="16" lean-forward="false" selection-start-line="41" selection-start-column="4" selection-end-line="41" selection-end-column="16" />
-          <folding>
-            <element signature="e#0#13#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://G:/python_env/histoapp_0p4p0/lib/python3.8/site-packages/histokatfusion/registration.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="227">
-          <caret line="84" column="29" lean-forward="false" selection-start-line="84" selection-start-column="11" selection-end-line="84" selection-end-column="29" />
-          <folding>
-            <element signature="e#0#21#0" expanded="false" />
-            <element signature="e#4271#4390#0" expanded="false" />
-            <element signature="e#5460#5579#0" expanded="false" />
-            <element signature="e#5805#6310#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://G:/python_env/histoapp_0p4p0/lib/python3.8/site-packages/histokatfusion/registration_result.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="651">
-          <caret line="152" column="0" lean-forward="false" selection-start-line="152" selection-start-column="0" selection-end-line="172" selection-end-column="53" />
-          <folding>
-            <element signature="e#0#13#0" expanded="false" />
-            <element signature="e#455#3994#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://G:/python_env/histoapp_0p4p0/lib/python3.8/site-packages/histokatfusion/parameters.py" />
+    <entry file="file://G:/python_env/histoapp_0p4p0/lib/python3.8/site-packages/histokatfusion/registration.py" />
+    <entry file="file://G:/python_env/histoapp_0p4p0/lib/python3.8/site-packages/histokatfusion/registration_result.py" />
     <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="21">
           <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -669,31 +622,6 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="50">
           <caret line="79" column="0" lean-forward="false" selection-start-line="79" selection-start-column="0" selection-end-line="97" selection-end-column="19" />
-          <folding>
-            <element signature="e#1756#1986#0" expanded="false" />
-            <element signature="e#2019#2296#0" expanded="false" />
-            <element signature="e#2676#3380#0" expanded="false" />
-            <element signature="e#2764#2989#0" expanded="false" />
-            <element signature="e#3422#5154#0" expanded="false" />
-            <element signature="e#4923#5035#0" expanded="false" />
-            <element signature="e#5219#6055#0" expanded="false" />
-            <element signature="e#5573#6020#0" expanded="false" />
-            <element signature="e#6156#7368#0" expanded="false" />
-            <element signature="e#6795#7177#0" expanded="false" />
-            <element signature="e#7417#7890#0" expanded="false" />
-            <element signature="e#7417#7653#1" expanded="false" />
-            <element signature="e#7952#8648#0" expanded="false" />
-            <element signature="e#8326#8362#0" expanded="false" />
-            <element signature="e#8673#8880#0" expanded="false" />
-            <element signature="e#8673#8718#0" expanded="false" />
-            <element signature="e#8926#10383#0" expanded="false" />
-            <element signature="e#8954#9008#0" expanded="false" />
-            <element signature="e#9055#9506#0" expanded="false" />
-            <element signature="e#9807#9910#0" expanded="false" />
-            <element signature="e#10412#10765#0" expanded="false" />
-            <element signature="e#10793#11592#0" expanded="false" />
-            <element signature="e#12498#12521#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -701,45 +629,55 @@ plt.show()</expression-string>
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-1491">
           <caret line="19" column="8" lean-forward="false" selection-start-line="19" selection-start-column="8" selection-end-line="19" selection-end-column="26" />
-          <folding>
-            <element signature="e#3885#4272#1" expanded="false" />
-            <element signature="e#4676#9767#0" expanded="false" />
-          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tiatoolbox/models/engine/semantic_segmentor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="126">
+          <caret line="29" column="23" lean-forward="false" selection-start-line="29" selection-start-column="6" selection-end-line="29" selection-end-column="23" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tiatoolbox/models/engine/nucleus_instance_segmentor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1071">
+          <caret line="41" column="43" lean-forward="false" selection-start-line="41" selection-start-column="26" selection-end-line="41" selection-end-column="43" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tiatoolbox/models/engine/patch_predictor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="26" column="31" lean-forward="true" selection-start-line="26" selection-start-column="31" selection-end-line="26" selection-end-column="31" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/script_registration.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="379">
-          <caret line="40" column="26" lean-forward="false" selection-start-line="40" selection-start-column="26" selection-end-line="40" selection-end-column="26" />
-          <folding>
-            <element signature="e#422#1221#0" expanded="false" />
-          </folding>
+        <state relative-caret-position="295">
+          <caret line="43" column="66" lean-forward="false" selection-start-line="43" selection-start-column="50" selection-end-line="43" selection-end-column="66" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="168">
+          <caret line="35" column="16" lean-forward="true" selection-start-line="35" selection-start-column="16" selection-end-line="35" selection-end-column="16" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tiatoolbox/tools/registration/wsi_registration.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="658">
-          <caret line="397" column="0" lean-forward="false" selection-start-line="397" selection-start-column="0" selection-end-line="397" selection-end-column="0" />
+        <state relative-caret-position="-823">
+          <caret line="429" column="0" lean-forward="false" selection-start-line="429" selection-start-column="2" selection-end-line="450" selection-end-column="50" />
           <folding>
-            <element signature="e#0#12#0" expanded="true" />
-            <element signature="e#480#2079#0" expanded="false" />
-            <element signature="e#2114#2417#0" expanded="false" />
-            <element signature="e#2525#2579#0" expanded="false" />
-            <element signature="e#2608#2691#0" expanded="false" />
-            <element signature="e#3757#3942#0" expanded="false" />
-            <element signature="e#4839#5637#0" expanded="false" />
-            <element signature="e#5710#8358#0" expanded="false" />
-            <element signature="e#5795#6032#0" expanded="false" />
-            <element signature="e#6061#6344#0" expanded="false" />
-            <element signature="e#6374#6664#0" expanded="false" />
-            <element signature="e#8433#8819#0" expanded="false" />
-            <element signature="e#8960#9053#0" expanded="false" />
-            <element signature="e#9086#9674#0" expanded="false" />
-            <element signature="e#11221#12076#0" expanded="false" />
-            <element signature="e#12137#12862#0" expanded="false" />
-            <element signature="e#14092#14189#0" expanded="false" />
+            <element signature="e#0#11#0" expanded="true" />
           </folding>
         </state>
       </provider>
