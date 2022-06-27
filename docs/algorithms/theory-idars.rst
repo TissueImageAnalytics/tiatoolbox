@@ -3,8 +3,8 @@ IDaRS Theory
 
 IDaRS stands for **I**\ terative **D**\ raw **a**\ nd **R**\ ank **S**\ ampling,
 an algorithm introduced in an article
-`[Read/download]
-<https://www.thelancet.com/journals/land$ig/article/PIIS2589-7500(2100180-1/fulltext>`_
+[DOI: `https://doi.org/10.1016/S2589-7500(21)00180-1
+<https://www.thelancet.com/journals/land$ig/article/PIIS2589-7500(2100180-1/fulltext>`_]
 by **Bilal et al.**, *"Development and validation of a weakly supervised
 deep learning framework to predict the status of molecular pathways
 and key mutations in colorectal cancer from routine histology images:
