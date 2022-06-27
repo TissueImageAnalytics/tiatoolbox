@@ -27,7 +27,7 @@ If you cannot use Anaconda or are having trouble with it, you can try an alterna
 
 Windows
 ^^^^^^^
-1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_. Extract the folder and add `bin` and `lib` subdirectories to
+1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_. Extract the folder and add ``bin`` and ``lib`` subdirectories to
 Windows `system path <https://docs.microsoft.com/en-us/previous-versions/office/developer/sharepoint-2010/ee537574(v=office.14)>`_.
 
 2. Install OpenJPEG. The easiest way is to install OpenJpeg is through conda
@@ -134,7 +134,7 @@ Once you have a copy of the source, you can install it with:
 Using Docker
 ==================
 
-To run TIA toolbox in an isolated environment, use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our github repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_. Please report any issues related to the docker image in the repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`.
+To run TIA toolbox in an isolated environment, use our `Docker image <https://github.com/tissueimageanalytics/tiatoolbox-docker/pkgs/container/tiatoolbox>`_ . We host different Dockerfiles in our github repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_. Please report any issues related to the docker image in the repository `tiatoolbox-docker <https://github.com/TissueImageAnalytics/tiatoolbox-docker>`_.
 
 After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desktop), you can use our TIA toolbox image in 3 different ways.
 
