@@ -70,7 +70,7 @@ However, we require :math:`q(T)` to depend only on the pixel values of
 :math:`\pi:\mathcal{S}\to\mathbb{R}^{h\times w\times 3}` be the map that
 sends a tile :math:`T` to the RGB intensities of its :math:`h.w`  pixels.
 Given a function :math:`q_0:\mathbb{R}^{h\times w\times 3}\to[0,1]`, we define
-:math:`q = \pi\circ q_0`, nd then :math:`L_{\mathcal{S}}(q)` can be
+:math:`q = \pi\circ q_0`, and then :math:`L_{\mathcal{S}}(q)` can be
 calculated.
 We expect many local minima for :math:`L_{\mathcal{S}}` ,
 each having values greater than the global minimum at :math:`q=p`.
