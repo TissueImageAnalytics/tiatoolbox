@@ -53,7 +53,7 @@ On Linux the prerequisite software can be installed using the command
     $ apt-get -y install libopenjp2-7-dev libopenjp2-tools openslide-tools
 
 The same command is used when working on the Colab or Kaggle platforms.
-When working on Google Colab, we remove the packages `datascience` and `albumentations` because they conflict
+When working on Google Colab, we remove the packages ``datascience`` and ``albumentations`` because they conflict
 and produce an error message.
 
 macOS
