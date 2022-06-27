@@ -1,7 +1,7 @@
 IDaRS Theory
 ====================
 
-IDaRS stands for **I**\ terated **D**\ raw **a**\ nd **R**\ andom **S**\ ampling,
+IDaRS stands for **I**\ terative **D**\ raw **a**\ nd **R**\ ank **S**\ ampling,
 an algorithm introduced in an article
 `[Read/download]
 <https://www.thelancet.com/journals/land$ig/article/PIIS2589-7500(2100180-1/fulltext>`_
@@ -18,9 +18,7 @@ It is novel, general, and also faster and more accurate than
 previous procedures.
 
 In this section, we discuss the IDaRS algorithm from a theoretical
-point of view. Pseudocode for the algorithm is given below. To see how it
-is used in practice `[click here]
-<https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_.
+point of view. Pseudocode for the algorithm is given below. 
 
 Each WSI is divided into small rectangles, called *tiles*, all of the
 same size, with
@@ -41,7 +39,9 @@ it does not.
 
 After training, IDaRS can be used to provide the label for an
 unlabelled WSI. It can also be used to locate regions with the
-feature :math:`F`, potentially improving biological understanding.
+feature :math:`F`, potentially improving biological understanding. 
+To see an inference on a trained IDaRS model `[click here]
+<https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_.
 
 Let :math:`T` be a tile of one of our WSIs. We set :math:`p(T)`
 equal to the label of the WSI containing :math:`T`, so that :math:`p(T)`
