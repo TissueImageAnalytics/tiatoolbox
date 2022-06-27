@@ -18,7 +18,7 @@ It is novel, general, and also faster and more accurate than
 previous procedures.
 
 In this section, we discuss the IDaRS algorithm from a theoretical
-point of view. Pseudocode for the algorithm is given below. 
+point of view. Pseudocode for the algorithm is given below.
 
 Each WSI is divided into small rectangles, called *tiles*, all of the
 same size, with
@@ -39,7 +39,7 @@ it does not.
 
 After training, IDaRS can be used to provide the label for an
 unlabelled WSI. It can also be used to locate regions with the
-feature :math:`F`, potentially improving biological understanding. 
+feature :math:`F`, potentially improving biological understanding.
 To see an inference on a trained IDaRS model `[click here]
 <https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_.
 
@@ -59,7 +59,7 @@ entropy (or some variant of it)
 
 .. math::
 
-   L_{\mathcal{S}}(q) = 
+   L_{\mathcal{S}}(q) =
    \sum_{T\in \mathcal{S}}(p(T)\log(q(T))+(1-p(T))\log(1-q(T))).
 
 This function has a unique local minimum, when its domain is the
@@ -68,12 +68,12 @@ and this local minimum is also a global minimum, at :math:`q=p`.
 However, we require :math:`q(T)` to depend only on the pixel values of
 :math:`T`. To express this mathematically, let
 :math:`\pi:\mathcal{S}\to\mathbb{R}^{h\times w\times 3}` be the map that
-sends a tile :math:`T` to the RGB intensities of its :math:`h.w`  pixels. 
+sends a tile :math:`T` to the RGB intensities of its :math:`h.w`  pixels.
 Given a function :math:`q_0:\mathbb{R}^{h\times w\times 3}\to[0,1]`, we define
 :math:`q = \pi\circ q_0`, nd then :math:`L_{\mathcal{S}}(q)` can be
-calculated. 
-We expect many local minima for :math:`L_{\mathcal{S}}` , 
-each having values greater than the global minimum at :math:`q=p`. 
+calculated.
+We expect many local minima for :math:`L_{\mathcal{S}}` ,
+each having values greater than the global minimum at :math:`q=p`.
 
 Parameters :math:`r` and :math:`k` are chosen by the user, and the
 following algorithm is applied, starting with :math:`q=p`. Successive
@@ -91,7 +91,7 @@ using stochastic gradient descent as usual.
         convenient size
     |   for each batch
     |       calculate loss per tile
-    |       # next, change the weights that determine :math:`q_0,` and, hence, also :math:`q`. 
+    |       # next, change the weights that determine :math:`q_0,` and, hence, also :math:`q`.
     |       backpropagate the loss per batch
     |   # create the next training set :math:`nts`
     |   :math:`nts = \emptyset`  # new training set starts empty
@@ -109,6 +109,6 @@ a correct summary of the slightly different IDaRS program in this
 repository. It is more careful than the pseudocode presented
 in the Supplement to the original paper.
 
-The IDaRS algorithm is effective because it is very likely that the 
+The IDaRS algorithm is effective because it is very likely that the
 :math:`k` chosen tiles combined with iteratively updated random :math:`r` tiles will contribute most to moving the weights in
 the desired direction.
