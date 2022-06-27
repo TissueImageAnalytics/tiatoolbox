@@ -72,7 +72,7 @@ class Data:
 			source = source.ravel()
 			target = target.ravel()
 
-			s_values, bin_idx, s_counts = np.unique(source, return_inverse=True, return_counts=True)
+			_, bin_idx, s_counts = np.unique(source, return_inverse=True, return_counts=True)
 			t_values, t_counts = np.unique(target, return_counts=True)
 
 			sq = np.cumsum(s_counts).astype(np.float64)
@@ -106,7 +106,7 @@ class Data:
 
 	@classmethod
 	def get_mask(cls, grayscale):
-		ret, mask = cv2.threshold(grayscale, np.mean(grayscale), 255, cv2.THRESH_BINARY)
+		_, mask = cv2.threshold(grayscale, np.mean(grayscale), 255, cv2.THRESH_BINARY)
 		mask = morphology.remove_small_objects(mask == 0, min_size=1000, connectivity=2)
 		mask = morphology.binary_opening(mask, morphology.disk(3))
 		mask = morphology.remove_small_objects(mask == 1, min_size=1000, connectivity=2)
@@ -277,7 +277,7 @@ class Registration():
 		comT = np.array([[1, 0, targetCOM[0] - sourceCOM[0]], [0, 1, targetCOM[1] - sourceCOM[1]], [0, 0, 1]])
 
 		# search for the best rotation angle
-		list_angles = np.around(np.linspace(0,350, param.number_of_rotations))
+		list_angles = np.around(np.linspace(0, 350, param.number_of_rotations))
 		originT_COM_ = [[1, 0, -targetCOM[0]], [0, 1, -targetCOM[1]], [0, 0, 1]]
 		originT_COM = [[1, 0, targetCOM[0]], [0, 1, targetCOM[1]], [0, 0, 1]]
 
@@ -358,9 +358,9 @@ class Registration():
 																								 source_points,
 																								 dist, 1)
 		filtered_target_points, filtered_source_points, filtered_dist = remove_points_using_mask(source_M,
-																								 filtered_target_points,
-																								 filtered_source_points,
-																								 filtered_dist, 2)
+                                                                                                 filtered_target_points,
+                                                                                                 filtered_source_points,
+                                                                                                 filtered_dist, 2)
 
 		# matchingI_before = show_matching_points(target_I, source_I, target_points, source_points, dist)
 		# matchingI_after = show_matching_points(target_I, source_I, filtered_target_points, filtered_source_points,
