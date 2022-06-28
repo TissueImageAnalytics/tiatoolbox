@@ -265,7 +265,7 @@ if len(sys.argv)>1 and sys.argv[1]!='None':
     base_folder=sys.argv[1]
 #geo_path=Path(r'E:\TTB_vis_test\ff7d5488-60e1-4c6e-9eb4-d495bb7565b1\TCGA-SC-AA5Z-01Z-00-DX1-2.geojson')
 #slide_path=Path(r'E:\TTB_vis_test\ff7d5488-60e1-4c6e-9eb4-d495bb7565b1\TCGA-SC-AA5Z-01Z-00-DX1.svs')
-vstate.slide_path=Path(r'E:\TTB_vis_test\a654c733-cd9a-424c-b60f-56f6afc6a620\TCGA-SC-A6LN-01Z-00-DX1.svs')
+vstate.slide_path=r'E:\TTB_vis_folder\slides\TCGA-SC-A6LN-01Z-00-DX1.svs'
 #vstate.slide_path=Path(r'/tiatoolbox/app_data/slides/TCGA-SC-A6LN-01Z-00-DX1.svs')
 
 wsi = [WSIReader.open(vstate.slide_path)]
@@ -738,6 +738,7 @@ node_source.selected.on_change('indices', node_select_cb)
 
 folder_input_cb(None, None, base_folder)
 populate_layer_list(Path(vstate.slide_path).stem, Path(vstate.slide_path).parents[1])
+#populate_layer_list(Path(attr.item).stem, Path(vstate.slide_path).parents[1])
 
 box_column=column(children=layer_boxes)
 color_column=column(children=lcolors)
