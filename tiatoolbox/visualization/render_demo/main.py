@@ -772,7 +772,7 @@ l=layout(
 
 def cleanup_session(session_context):
     # If present, this function executes when the server closes a session.
-    print('cleaning up..')
+    sys.exit()
     
 #script = server_document("http://127.0.0.1:5006/render_demo")
 #print(script)
@@ -786,4 +786,4 @@ def update():
 
 curdoc().add_periodic_callback(update, 220)
 curdoc().add_root(l)
-curdoc().on_session_destroyed(cleanup_session)
+#curdoc().on_session_destroyed(cleanup_session)
