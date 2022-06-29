@@ -7,7 +7,6 @@ import pathlib
 import re
 import warnings
 from datetime import datetime
-from functools import partial
 from numbers import Number
 from typing import Iterable, Optional, Tuple, Union
 
@@ -204,6 +203,8 @@ class WSIReader:
 
         WSIReader.verify_supported_wsi(input_img)
 
+        # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
+
         if is_dicom(input_img):
             return DICOMWSIReader(input_img, mpp=mpp, power=power)
 
@@ -226,8 +227,16 @@ class WSIReader:
             except openslide.OpenSlideError:
                 return TIFFWSIReader(input_img, mpp=mpp, power=power)
 
+        # Handle homogeneous cases (based on final suffix)
+
+        def np_virtual_wsi(
+            input_img: np.ndarray, *args, **kwargs
+        ) -> "VirtualWSIReader":
+            """Create a virtual WSI from a numpy array."""
+            return VirtualWSIReader(input_img, *args, **kwargs)
+
         suffix_to_reader = {
-            ".npy": lambda x: partial(VirtualWSIReader, np.load(x)),
+            ".npy": np_virtual_wsi,
             ".jp2": OmnyxJP2WSIReader,
             ".jpeg": VirtualWSIReader,
             ".jpg": VirtualWSIReader,
@@ -239,6 +248,7 @@ class WSIReader:
         if last_suffix in suffix_to_reader:
             return suffix_to_reader[last_suffix](input_img, mpp=mpp, power=power)
 
+        # Try openslide last
         return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
 
     @staticmethod
