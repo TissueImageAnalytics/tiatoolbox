@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.cm as cm
 from flask import Flask, Response, send_file
 from flask.templating import render_template
+import urllib
 
 from tiatoolbox import data
 from tiatoolbox.annotation.storage import SQLiteStore
@@ -161,7 +162,8 @@ class TileServer(Flask):
         return 'done'
 
     def change_slide(self, layer, layer_path):
-        layer_path='\\'.join(layer_path.split('-*-'))
+        #layer_path='\\'.join(layer_path.split('-*-'))
+        layer_path=Path(urllib.parse.unquote(layer_path))
         print(layer_path)
 
         '''self.tia_layers[layer]=WSIReader.open(Path(layer_path))
@@ -197,7 +199,8 @@ class TileServer(Flask):
         return 'done'
 
     def load_annotations(self, file_path):
-        file_path='\\'.join(file_path.split('-*-'))
+        #file_path='\\'.join(file_path.split('-*-'))
+        file_path=Path(urllib.parse.unquote(file_path))
         print(file_path)
 
         for layer in self.tia_pyramids.values():
@@ -215,7 +218,8 @@ class TileServer(Flask):
         return 'overlay'
 
     def change_overlay(self, overlay_path):
-        overlay_path='\\'.join(overlay_path.split('-*-'))
+        #overlay_path='\\'.join(overlay_path.split('-*-'))
+        overlay_path=Path(urllib.parse.unquote(overlay_path))
         print(overlay_path)
         overlay_path=Path(overlay_path)
         if overlay_path.suffix=='.geojson':

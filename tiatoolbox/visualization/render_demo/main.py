@@ -35,6 +35,7 @@ import sys
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 import pickle
 import torch
+import urllib
 
 # Pandas for data management
 import pandas as pd
@@ -514,7 +515,8 @@ def file_drop_cb(attr):
     populate_layer_list(Path(attr.item).stem, Path(vstate.slide_path).parents[1])
     wsi[0] = WSIReader.open(attr.item)
     initialise_slide()
-    fname='-*-'.join(attr.item.split('\\'))
+    #fname='-*-'.join(attr.item.split('\\'))
+    fname=urllib.parse.quote(attr.item)
     print(fname)
     print(vstate.mpp)
     resp = requests.get(f'http://127.0.0.1:5000/changeslide/slide/{fname}')
@@ -539,7 +541,8 @@ def layer_drop_cb(attr):
         return
 
     print(attr.item)
-    fname='-*-'.join(attr.item.split('\\'))
+    #fname='-*-'.join(attr.item.split('\\'))
+    fname=urllib.parse.quote(attr.item)
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/changeoverlay/{fname}')
     print(vstate.types)
@@ -663,7 +666,8 @@ def segment_on_box(attr):
         crash_on_exception=True,
     )
 
-    fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
+    #fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
+    fname=urllib.parse.quote('.\\sample_tile_results\\0.dat')
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/loadannotations/{fname}')
 
@@ -711,7 +715,8 @@ def nuclick_on_pts(attr):
     )
     print(nuclick_output)
 
-    fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
+    #fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
+    fname=urllib.parse.quote('.\\sample_tile_results\\0.dat')
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/loadannotations/{fname}')
     update_mapper()
