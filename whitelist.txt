@@ -76,6 +76,7 @@ binarize
 bxcxhxwxshxsw
 centroid
 colorbar
+colormap
 coord
 coords
 csv
@@ -99,11 +100,13 @@ fx
 getitem
 grayscale
 greyscale
+heatmap
 homebrew
 idx
 img
 ioconfig
 iostate
+jpg
 kather
 kd
 macports

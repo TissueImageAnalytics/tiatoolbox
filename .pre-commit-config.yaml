@@ -1,4 +1,32 @@
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: check-ast               # Simply checks whether the files parse as valid Python.
+      - id: fix-byte-order-marker   # Removes utf-8 byte order marker.
+      - id: check-json              # Checks JSON files for parseable syntax.
+      - id: check-merge-conflict    # Checks for files that contain merge conflict strings.
+      - id: check-symlinks          # Checks for symlinks which do not point to anything.
+      - id: check-toml              # Checks TOML files for parseable syntax.
+      - id: check-xml               # Checks XML files for parseable syntax.
+      - id: check-yaml              # Checks YAML files for parseable syntax.
+      - id: destroyed-symlinks      # Detects symlinks which are changed to regular files with a content of a path which that symlink was pointing to.
+      - id: detect-private-key      # Detects the presence of private keys.
+      - id: end-of-file-fixer       # Ensures that a file is either empty, or ends with one newline.
+      - id: mixed-line-ending       # Replaces or checks mixed line endings.
+      - id: requirements-txt-fixer  # Sorts entries in requirements.txt.
+      - id: trailing-whitespace     # Trims trailing whitespace.
+        exclude: 'setup.cfg'
+      - id: file-contents-sorter    # Sorts the lines in specified files (defaults to alphabetical).
+        files: whitelist.txt
+      - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source.
+      - id: pretty-format-json      # Sets a standard for formatting JSON files.
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.9.0
+    hooks:
+      - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
+      - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
+      - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst.
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
@@ -8,6 +36,8 @@ repos:
     hooks:
       - id: black
         language_version: python3 # Should be a command that runs python3.8+
+      - id: black-jupyter
+        language: python
   - repo: https://github.com/PyCQA/flake8
     rev: 4.0.1
     hooks:
