@@ -518,7 +518,7 @@ def file_drop_cb(attr):
     wsi[0] = WSIReader.open(attr.item)
     initialise_slide()
     #fname='-*-'.join(attr.item.split('\\'))
-    fname=urllib.parse.quote(attr.item)
+    fname=urllib.parse.quote(attr.item, safe='')
     print(fname)
     print(vstate.mpp)
     resp = requests.get(f'http://127.0.0.1:5000/changeslide/slide/{fname}')
@@ -544,7 +544,7 @@ def layer_drop_cb(attr):
 
     print(attr.item)
     #fname='-*-'.join(attr.item.split('\\'))
-    fname=urllib.parse.quote(attr.item)
+    fname=urllib.parse.quote(attr.item, safe='')
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/changeoverlay/{fname}')
     print(vstate.types)
@@ -669,7 +669,7 @@ def segment_on_box(attr):
     )
 
     #fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
-    fname=urllib.parse.quote('.\\sample_tile_results\\0.dat')
+    fname=urllib.parse.quote('.\\sample_tile_results\\0.dat', safe='')
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/loadannotations/{fname}')
 
@@ -718,7 +718,7 @@ def nuclick_on_pts(attr):
     print(nuclick_output)
 
     #fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
-    fname=urllib.parse.quote('.\\sample_tile_results\\0.dat')
+    fname=urllib.parse.quote('.\\sample_tile_results\\0.dat', safe='')
     print(fname)
     resp = requests.get(f'http://127.0.0.1:5000/loadannotations/{fname}')
     update_mapper()
