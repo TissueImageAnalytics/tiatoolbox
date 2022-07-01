@@ -396,6 +396,9 @@ def node_select_cb(attr, old, new):
 def overlay_toggle_cb(attr):
     print('meep')
     for i in range(3,len(p.renderers)):
+        if isinstance(p.renderers[i], GraphRenderer):
+            #set_graph_alpha(p.renderers[i], new)
+            continue
         if p.renderers[i].alpha==0:
             p.renderers[i].alpha=overlay_alpha.value
         else:
