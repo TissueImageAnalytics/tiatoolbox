@@ -569,7 +569,7 @@ class WSIReader:
             size_at_baseline,
             location_at_baseline,
         )
-        output = tuple([np.ceil(v).astype(np.int64) for v in output])
+        output = tuple(np.ceil(v).astype(np.int64) for v in output)
         return (
             read_level,
             read_level_to_resolution_scale_factor,
@@ -1362,7 +1362,7 @@ class WSIReader:
 
             # convert to baseline reference frame
             bounds = start_w, start_h, end_w, end_h
-            baseline_bounds = tuple([bound * (2**level) for bound in bounds])
+            baseline_bounds = tuple(bound * (2**level) for bound in bounds)
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
