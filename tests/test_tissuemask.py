@@ -1,5 +1,6 @@
 """Tests for code related to tissue mask generation."""
 
+import os
 import pathlib
 
 import cv2
@@ -9,6 +10,7 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.tools import tissuemask
+from tiatoolbox.utils.env_detection import running_on_ci
 from tiatoolbox.wsicore import wsireader
 
 # -------------------------------------------------------------------------------------
@@ -209,7 +211,12 @@ def test_morphological_min_region_size():
     assert np.all(output[0] == expected)
 
 
-def test_cli_tissue_mask_otsu(sample_svs):
+@pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
+@pytest.mark.skipif(
+    not os.environ.get("SHOW_TESTS"),
+    reason="Visual tests disabled, set SHOW_TESTS to enable.",
+)
+def test_cli_tissue_mask_otsu_show(sample_svs):
     """Test Otsu tissue masking with default input CLI."""
     source_img = pathlib.Path(sample_svs)
     runner = CliRunner()
@@ -221,6 +228,8 @@ def test_cli_tissue_mask_otsu(sample_svs):
             str(source_img),
             "--method",
             "Otsu",
+            "--mode",
+            "show",
         ],
     )
 
@@ -270,7 +279,12 @@ def test_cli_tissue_mask_otsu_dir(sample_all_wsis):
     assert pathlib.Path(output_path, "test1.png").is_file()
 
 
-def test_cli_tissue_mask_morphological(sample_svs):
+@pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
+@pytest.mark.skipif(
+    not os.environ.get("SHOW_TESTS"),
+    reason="Visual tests disabled, set SHOW_TESTS to enable.",
+)
+def test_cli_tissue_mask_morphological_show(sample_svs):
     """Test Morphological tissue masking with default input CLI."""
     source_img = pathlib.Path(sample_svs)
     runner = CliRunner()
@@ -282,6 +296,8 @@ def test_cli_tissue_mask_morphological(sample_svs):
             str(source_img),
             "--method",
             "Morphological",
+            "--mode",
+            "show",
         ],
     )
 
