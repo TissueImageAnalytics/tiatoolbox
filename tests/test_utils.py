@@ -1369,7 +1369,7 @@ def test_detect_travis():
     """
     import pwd
 
-    on_travis = utils.env_detection.running_on_travis()
+    on_travis = utils.env_detection.running_on_ci()
     if pwd.getpwuid(os.getuid())[0] == "travis":
         assert on_travis
     else:

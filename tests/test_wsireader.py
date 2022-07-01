@@ -1650,7 +1650,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
 
 
 @pytest.mark.skipif(
-    utils.env_detection.running_on_travis(),
+    utils.env_detection.running_on_ci(),
     reason="No need to display image on travis.",
 )
 def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
