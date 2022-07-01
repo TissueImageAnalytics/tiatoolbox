@@ -679,8 +679,7 @@ def test_read_rect_jp2_levels(sample_jp2):
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert pytest.approx(
-            im_region.shape,
+        assert im_region.shape == pytest.approx(
             (
                 min(height, level_height),
                 min(width, level_width),
