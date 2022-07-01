@@ -107,6 +107,8 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
     """
     path = pathlib.Path(path)
     zattrs_path = path / ".zattrs"
+    if not zattrs_path.is_file():
+        return False
     with open(zattrs_path, "rb") as fh:
         group_attrs = json.load(fh)
     try:
