@@ -2,15 +2,17 @@
 import io
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Union
 
 import numpy as np
 from flask import Flask, Response, send_file
 from flask.templating import render_template
+from PIL import Image
 
 from tiatoolbox import data
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class TileServer(Flask):
@@ -20,9 +22,13 @@ class TileServer(Flask):
         title (str):
             The title of the tile server, displayed in the browser as
             the page title.
-        layers (Dict[str, WSIReader]):
-            A dictionary mapping layer names to :obj:`WSIReader` objects
-            to display.
+        layers (Dict[str, WSIReader | str] | List[WSIReader | str]):
+            A dictionary mapping layer names to image paths or
+            :obj:`WSIReader` objects to display. May also be a list,
+            in which case generic names 'layer-1', 'layer-2' etc.
+            will be used.
+            If layer is a single-channel low-res overlay, it will be
+            colourized using the 'viridis' colourmap
 
     Examples:
         >>> from tiatoolbox.wsiscore.wsireader import WSIReader
@@ -37,7 +43,11 @@ class TileServer(Flask):
         >>> app.run()
     """
 
-    def __init__(self, title: str, layers: Dict[str, WSIReader]) -> None:
+    def __init__(
+        self,
+        title: str,
+        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
+    ) -> None:
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
@@ -47,13 +57,40 @@ class TileServer(Flask):
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
         self.tia_title = title
-        self.tia_layers = layers
+        self.tia_layers = {}
         self.tia_pyramids = {}
-        for key, layer in self.tia_layers.items():
+
+        # Generic layer names if none provided.
+        if isinstance(layers, list):
+            layers = {f"layer-{i}": p for i, p in enumerate(layers)}
+        # Set up the layer dict.
+        meta = None
+        for i, key in enumerate(layers):
+            layer = layers[key]
+
+            if isinstance(layer, (str, Path)):
+                layer_path = Path(layer)
+                if layer_path.suffix in [".jpg", ".png"]:
+                    # Assume its a low-res heatmap.
+                    layer = Image.open(layer_path)
+                    layer = np.array(layer)
+                else:
+                    layer = WSIReader.open(layer_path)
+
+            if isinstance(layer, np.ndarray):
+                # Make into rgb if single channel.
+                layer = colourise_image(layer)
+                layer = VirtualWSIReader(layer, info=meta)
+
+            self.tia_layers[key] = layer
+
             if isinstance(layer, WSIReader):
                 self.tia_pyramids[key] = ZoomifyGenerator(layer)
             else:
                 self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
+
+            if i == 0:
+                meta = layer.info
 
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"

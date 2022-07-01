@@ -33,7 +33,7 @@ dependencies:
   - pytest-cov==3.0.0
   - pytest-runner>=5.2
   - pytest>=6.2.5
-  - python=3.8
+  - python>=3.8
   - pytorch>=1.11.0
   - pyyaml>=6.0
   - recommonmark
