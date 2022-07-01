@@ -303,6 +303,11 @@ def test_cli_tissue_mask_morphological_show(sample_svs):
 
     assert tissue_mask_result.exit_code == 0
 
+
+def test_cli_tissue_mask_morphological_save(sample_svs):
+    """Test Morphological tissue masking with default input CLI."""
+    source_img = pathlib.Path(sample_svs)
+    runner = CliRunner()
     output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
@@ -400,6 +405,9 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
             str(source_img),
             "--method",
             "Test",
+            "--mode",
+            "save",
+
         ],
     )
 
