@@ -71,6 +71,7 @@ def tissue_mask(
         mask = masker.fit_transform(wsi_thumb[np.newaxis, :])
 
         if mode == "show":  # pragma: no cover
+            # Skipped on CI, and unless SHOW_TESTS is set
             im_region = Image.fromarray(mask[0])
             im_region.show()
 
