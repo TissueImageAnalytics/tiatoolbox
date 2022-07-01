@@ -105,8 +105,8 @@ def test_functional(remote_sample, tmp_path):
     with torch.inference_mode():
         _features = model(patches).numpy()
     # ! must maintain same batch size and likely same ordering
-    # ! else the output values will not exactly be the same (still < 1.0e-5
+    # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
-    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-6
+    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-4
 
     _rm_dir(save_dir)
