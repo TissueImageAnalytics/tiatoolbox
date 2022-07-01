@@ -158,7 +158,7 @@ class WSIReader:
 
     """
 
-    @staticmethod
+    @staticmethod  # noqa: A003
     def open(  # noqa: A003
         input_img: Union[str, pathlib.Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
@@ -260,6 +260,9 @@ class WSIReader:
                 If the input image is not supported.
 
         """
+        if is_ngff(input_img) or is_dicom(input_img):
+            return
+
         _, _, suffixes = utils.misc.split_path_name_ext(input_img)
 
         if suffixes and suffixes[-1] not in [
