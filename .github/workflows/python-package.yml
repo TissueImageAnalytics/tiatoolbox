@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: true
       matrix:
@@ -26,6 +26,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest pytest-cov pytest-runner
@@ -73,7 +74,7 @@ jobs:
         fail-ci-on-error: false
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     needs: build
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
