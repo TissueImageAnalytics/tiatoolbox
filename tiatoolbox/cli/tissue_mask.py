@@ -74,9 +74,10 @@ def tissue_mask(
             # Skipped on CI, and unless SHOW_TESTS is set
             im_region = Image.fromarray(mask[0])
             im_region.show()
+            continue
 
-        if mode == "save":
-            imwrite(
-                output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
-                mask[0].astype(np.uint8) * 255,
-            )
+        # Else, save (the only other option for mode)
+        imwrite(
+            output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
+            mask[0].astype(np.uint8) * 255,
+        )
