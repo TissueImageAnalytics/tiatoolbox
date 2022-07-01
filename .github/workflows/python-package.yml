@@ -57,7 +57,7 @@ jobs:
         coverage-file: coverage.xml
         dsn: ${{ secrets.DEEPSOURCE_DSN }}
         fail-ci-on-error: false
-        
+
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
