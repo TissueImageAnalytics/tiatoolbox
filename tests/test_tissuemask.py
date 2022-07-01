@@ -327,9 +327,10 @@ def test_cli_tissue_mask_morphological_save(sample_svs):
     assert tissue_mask_result.exit_code == 0
     assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
+
 def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
     """Test Morphological tissue masking with morphological method CLI.
-    
+
     Adds option to specify resolution and units in power (appmag).
     """
     source_img = pathlib.Path(sample_svs)
@@ -357,9 +358,10 @@ def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
     assert tissue_mask_result.exit_code == 0
     assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
+
 def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
     """Test Morphological tissue masking with morphological method CLI.
-    
+
     Adds option to specify resolution and units in mpp (micrometers per pixel).
     """
     source_img = pathlib.Path(sample_svs)
@@ -387,9 +389,10 @@ def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
     assert tissue_mask_result.exit_code == 0
     assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
 
+
 def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs):
     """Test Morphological tissue masking with morphological method CLI.
-    
+
     Adds option to specify kernel size.
     """
     source_img = pathlib.Path(sample_svs)
@@ -431,7 +434,6 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
             "Test",
             "--mode",
             "save",
-
         ],
     )
 
