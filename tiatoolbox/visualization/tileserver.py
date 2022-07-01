@@ -150,7 +150,7 @@ class TileServer(Flask):
         return send_file(image_io, mimetype="image/webp")
 
     def update_types(self, SQ):
-        self.state.types=SQ.query_property("props['type']",tuple([0,0,*self.state.dims]),distinct=True)
+        self.state.types=SQ.pquery("props['type']")
         if None in self.state.types:
             self.state.types.remove(None)
 

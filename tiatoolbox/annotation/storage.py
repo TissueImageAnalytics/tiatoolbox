@@ -613,17 +613,6 @@ class AnnotationStore(ABC, MutableMapping):
         if isinstance(predicate, bytes):
             predicate = pickle.loads(predicate)  # skipcq: BAN-B301
         return bool(predicate(properties))
-    
-    @abstractmethod
-    def query_property(
-        self,
-        sel_prop,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        geometry_predicate="bbox_intersects",
-        distinct = False,
-    ) -> List[str]:
-        """get properties"""
 
     def query(
         self,

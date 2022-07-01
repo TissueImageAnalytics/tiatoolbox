@@ -1,6 +1,6 @@
 from shutil import rmtree
 from bokeh.models import Selection, TileRenderer
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, get_wsireader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 from PIL import Image
 from bokeh.models import Plot, BasicTickFormatter, FuncTickFormatter, CheckboxButtonGroup, CustomJS, ColumnDataSource, Panel, Slider, Toggle, FileInput, DataRange1d, TextInput, Button, Dropdown, BoxEditTool, CheckboxGroup, ColorPicker, Range1d
 from bokeh.models import GraphRenderer, Circle, StaticLayoutProvider, TapTool, PointDrawTool
