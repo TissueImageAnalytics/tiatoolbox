@@ -171,8 +171,8 @@ def test_ppu2mpp():
     assert utils.misc.ppu2mpp(1, units="cm") == 10_000
     assert utils.misc.ppu2mpp(1, units=2) == 25_400  # inch
     assert utils.misc.ppu2mpp(1, units=3) == 10_000  # cm
-    assert utils.misc.ppu2mpp(72, units="in") == pytest.approx(352.8)
-    assert utils.misc.ppu2mpp(50_000, units="in") == pytest.approx(0.508)
+    assert utils.misc.ppu2mpp(72, units="in") == pytest.approx(352.8, abs=0.1)
+    assert utils.misc.ppu2mpp(50_000, units="in") == pytest.approx(0.508, abs=0.1)
 
 
 def test_assert_dtype_int():
