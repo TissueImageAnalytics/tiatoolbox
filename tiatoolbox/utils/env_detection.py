@@ -103,7 +103,7 @@ def is_notebook() -> bool:
         if shell == "TerminalInteractiveShell":  # noqa: PIE801
             return False  # Terminal running IPython
         return False  # Other type (?)
-    except NameError:
+    except (NameError, ImportError):
         return False  # Probably standard Python interpreter
 
 
