@@ -675,7 +675,13 @@ def test_read_rect_jp2_levels(sample_jp2):
     width, height = size
     for level in range(wsi.info.level_count):
         level_width, level_height = wsi.info.level_dimensions[level]
-        im_region = wsi.read_rect(location, size, resolution=level, units="level")
+        im_region = wsi.read_rect(
+            location,
+            size,
+            resolution=level,
+            units="level",
+            pad_mode=None,
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
