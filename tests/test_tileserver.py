@@ -36,7 +36,7 @@ def layer_get_tile(app, layer) -> None:
     with app.test_client() as client:
         response = client.get(f"/layer/{layer}/zoomify/TileGroup0/0-0-0.jpg")
         assert response.status_code == 200
-        assert response.content_type == "image/jpeg"
+        assert response.content_type == "image/webp"
 
 
 def test_get_tile(app):
@@ -89,4 +89,4 @@ def test_create_with_dict(sample_svs):
     with app.test_client() as client:
         response = client.get("/layer/Test/zoomify/TileGroup0/0-0-0.jpg")
         assert response.status_code == 200
-        assert response.content_type == "image/jpeg"
+        assert response.content_type == "image/webp"

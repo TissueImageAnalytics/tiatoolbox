@@ -501,7 +501,6 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         rgb = self.render_annotations(rgb, bound_geom, scale, (0, 0))
         return Image.fromarray(rgb)
 
-    @lru_cache(maxsize=None)
     def level_dimensions(self, level: int) -> Tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
@@ -718,6 +717,6 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     #print(f"unknown geometry: {ann_bounded.geom_type}: {[g.geom_type for g in ann_bounded.geoms]}")
                     pass
                 else:
-                    print(f"unknown geometry: {ann_bounded.geom_type}")
+                    warnings.warn(f"Unknown geometry: {ann_bounded.geom_type}")
 
         return Image.fromarray(rgb)

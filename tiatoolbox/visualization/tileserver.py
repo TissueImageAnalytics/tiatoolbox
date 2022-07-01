@@ -2,33 +2,18 @@
 import io
 import json
 from pathlib import Path
-<<<<<<< HEAD
-from typing import Dict
-#from flask_cors import cross_origin
-from shapely.geometry import Polygon
-=======
 from typing import Dict, List, Union
->>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
-
 import numpy as np
 import matplotlib.cm as cm
 from flask import Flask, Response, send_file
 from flask.templating import render_template
-<<<<<<< HEAD
 import urllib
-
 from tiatoolbox import data
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader, OpenSlideWSIReader
-=======
 from PIL import Image
-
-from tiatoolbox import data
-from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.visualization import colourise_image
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
->>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
 
 
 class TileServer(Flask):
@@ -59,15 +44,12 @@ class TileServer(Flask):
         >>> app.run()
     """
 
-<<<<<<< HEAD
-    def __init__(self, title: str, layers: Dict[str, WSIReader], state = None) -> None:
-=======
     def __init__(
         self,
         title: str,
         layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
+        state: Dict = None,
     ) -> None:
->>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
@@ -77,23 +59,14 @@ class TileServer(Flask):
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
         self.tia_title = title
-<<<<<<< HEAD
-        self.tia_layers = layers
+        self.tia_layers = {}
         self.tia_pyramids = {}
-        self.state=state
-        for key, layer in self.tia_layers.items():
-            if isinstance(layer, WSIReader):
-                self.tia_pyramids[key] = ZoomifyGenerator(layer)
-            else:
-                self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
-
-=======
+        self.state = state
 
         # Generic layer names if none provided.
         if isinstance(layers, list):
             layers = {f"layer-{i}": p for i, p in enumerate(layers)}
         # Set up the layer dict.
-        layer_def = {}
         meta = None
         for i, key in enumerate(layers):
             layer = layers[key]
@@ -112,15 +85,16 @@ class TileServer(Flask):
                 layer = colourise_image(layer)
                 layer = VirtualWSIReader(layer, info=meta)
 
-            layer_def[key] = layer
+            self.tia_layers[key] = layer
+
+            if isinstance(layer, WSIReader):
+                self.tia_pyramids[key] = ZoomifyGenerator(layer)
+            else:
+                self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
+
             if i == 0:
                 meta = layer.info
-
-        self.tia_layers = layer_def
-        self.tia_pyramids = {
-            key: ZoomifyGenerator(reader) for key, reader in self.tia_layers.items()
-        }
->>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
+        
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"
             "<int:z>-<int:x>-<int:y>.jpg"
