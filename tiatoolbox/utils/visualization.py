@@ -438,6 +438,10 @@ class AnnotationRenderer:
         annotation_color=mapper(score_fn(ann.properties[score_prop]))
     max_scale: downsample level above which Polygon geometries on crowded
         tiles will be rendered as a bounding box instead
+    zoomed_out_strat: strategy to use when rendering zoomed out tiles at
+        a level above max_scale.  Can be one of 'decimate', or a number
+        which defines the minimum area an abject has to cover to be rendered
+        while zoomed out above max_scale.
     thickness: line thickness of rendered contours. -1 will render filled
     contours
     """
@@ -449,6 +453,7 @@ class AnnotationRenderer:
         where=None,
         score_fn=lambda x: x,
         max_scale=8,
+        zoomed_out_strat=10000,
         thickness=-1,
         edge_thickness=1,
     ):
@@ -470,6 +475,7 @@ class AnnotationRenderer:
         self.max_scale = max_scale
         self.thickness=thickness
         self.edge_thickness = edge_thickness
+        self.zoomed_out_strat = zoomed_out_strat
 
     @staticmethod
     def to_tile_coords(coords, tl, scale):

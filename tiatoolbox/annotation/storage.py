@@ -1867,6 +1867,7 @@ class SQLiteStore(AnnotationStore):
         con = None,
         bbox = True,
         compress_type = None,
+        min_area = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1941,6 +1942,9 @@ class SQLiteStore(AnnotationStore):
                 }
             )
 
+            if min_area is not None:
+                query_string += f"\nAND area > {min_area}"
+
             # The query is a full intersection check, not a simple bounds
             # check only.
             if (
@@ -1973,6 +1977,7 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[Tuple] = None,
         where: Callable[[Dict[str, Any]], bool] = None,
+        min_area = None,
     ) -> Dict[str, Annotation]:
         data = self._cached_query(
             rows="[key], properties, min_x, min_y, max_x, max_y",
@@ -1982,6 +1987,7 @@ class SQLiteStore(AnnotationStore):
             con = self.con,
             bbox = True,
             compress_type = self.metadata["compression"],
+            min_area = min_area,
         )
         if where is None:
             return data
@@ -1991,6 +1997,7 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[Tuple] = None,
         where: Callable[[Dict[str, Any]], bool] = None,
+        min_area = None,
     ) -> List[Annotation]:
         data = self._cached_query(
             rows="properties, cx, cy, geometry",
@@ -1999,6 +2006,7 @@ class SQLiteStore(AnnotationStore):
             con = self.con,
             bbox = False,
             compress_type = self.metadata["compression"],
+            min_area = min_area,
         )
         if where is None:
             return data
