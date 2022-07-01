@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from scipy.ndimage import measurements
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import remove_small_objects
@@ -49,8 +49,7 @@ class TFSamepaddingLayer(nn.Module):
             pad_val_start = pad // 2
             pad_val_end = pad - pad_val_start
             padding = (pad_val_start, pad_val_end, pad_val_start, pad_val_end)
-        x = F.pad(x, padding, "constant", 0)
-        return x
+        return F.pad(x, padding, "constant", 0)
 
 
 class DenseBlock(nn.Module):
@@ -139,9 +138,7 @@ class DenseBlock(nn.Module):
             new_feat = self.units[idx](prev_feat)
             prev_feat = centre_crop_to_shape(prev_feat, new_feat)
             prev_feat = torch.cat([prev_feat, new_feat], dim=1)
-        prev_feat = self.blk_bna(prev_feat)
-
-        return prev_feat
+        return self.blk_bna(prev_feat)
 
 
 class ResidualBlock(nn.Module):
@@ -169,7 +166,7 @@ class ResidualBlock(nn.Module):
         self.nr_unit = unit_count
         self.in_ch = in_ch
 
-        # ! For inference only so init values for batchnorm may not match tensorflow
+        # ! For inference only so init values for batch norm may not match tensorflow
         unit_in_ch = in_ch
         self.units = nn.ModuleList()
         for idx in range(unit_count):
@@ -221,7 +218,7 @@ class ResidualBlock(nn.Module):
                 ),
             ]
             # has BatchNorm-Activation layers to conclude each
-            # previous block so must not put preact for the first
+            # previous block so must not put pre activation for the first
             # unit of this block
             unit_layer = unit_layer if idx != 0 else unit_layer[2:]
             self.units.append(nn.Sequential(OrderedDict(unit_layer)))
@@ -248,17 +245,56 @@ class ResidualBlock(nn.Module):
         else:
             shortcut = self.shortcut(prev_feat)
 
-        for idx in range(0, len(self.units)):
+        for _, unit in enumerate(self.units):
             new_feat = prev_feat
-            new_feat = self.units[idx](new_feat)
+            new_feat = unit(new_feat)
             prev_feat = new_feat + shortcut
             shortcut = prev_feat
-        feat = self.blk_bna(prev_feat)
-        return feat
+        return self.blk_bna(prev_feat)
 
 
 class HoVerNet(ModelABC):
-    """HoVerNet Architecture.
+    """Initialise HoVerNet [1].
+
+    The tiatoolbox models should produce the following results:
+
+    .. list-table:: HoVerNet segmentation performance on the CoNSeP dataset [1]
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernet-original-consep
+         - CoNSeP
+         - 0.85
+         - 0.57
+         - 0.70
+         - 0.78
+         - 0.55
+
+    .. list-table:: HoVerNet segmentation performance on the Kumar dataset [2]
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernet-original-kumar
+         - Kumar
+         - 0.83
+         - 0.62
+         - 0.77
+         - 0.77
+         - 0.60
 
     Args:
         num_input_channels (int):
@@ -272,12 +308,14 @@ class HoVerNet(ModelABC):
             (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
-        Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
+        [1] Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
-        Gamper, Jevgenij, et al. "PanNuke dataset extension, insights
-        and baselines." arXiv preprint arXiv:2003.10778 (2020).
+        [2] Kumar, Neeraj, et al. "A dataset and a technique for generalized
+        nuclear segmentation for computational pathology."
+        IEEE transactions on medical imaging 36.7 (2017): 1550-1560.
+
 
     """
 
@@ -343,8 +381,7 @@ class HoVerNet(ModelABC):
 
         self.upsample2x = UpSample2x()
 
-    # skipcq: PYL-W0221
-    def forward(self, input_tensor: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -434,17 +471,16 @@ class HoVerNet(ModelABC):
         ]
         u0 = nn.Sequential(OrderedDict(modules))
 
-        decoder = nn.Sequential(
+        return nn.Sequential(
             OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
         )
-        return decoder
 
     @staticmethod
-    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 1):
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, scale_factor: float = 1):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
-        `hv_map` to derive a energy landscape which highlight possible
+        `hv_map` to derive an energy landscape which highlight possible
         nuclei instance boundaries. Afterward, watershed with markers is
         applied on the above energy map using the `np_map` as filter to
         remove background regions.
@@ -457,7 +493,7 @@ class HoVerNet(ModelABC):
                 An array of shape (height, width, 2) which contains the
                 horizontal (channel 0) and vertical (channel 1) maps of
                 possible instances within the image.
-            fx (float):
+            scale_factor (float):
                 The scale factor for processing nuclei. The scale
                 assumes an image of resolution 0.25 microns per pixel.
                 Default is therefore 1 for HoVer-Net.
@@ -497,8 +533,8 @@ class HoVerNet(ModelABC):
             dtype=cv2.CV_32F,
         )
 
-        ksize = int((20 * fx) + 1)
-        obj_size = math.ceil(10 * (fx**2))
+        ksize = int((20 * scale_factor) + 1)
+        obj_size = math.ceil(10 * (scale_factor**2))
         # Get resolution specific filters etc.
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
@@ -543,9 +579,7 @@ class HoVerNet(ModelABC):
         marker = measurements.label(marker)[0]
         marker = remove_small_objects(marker, min_size=obj_size)
 
-        proced_pred = watershed(dist, markers=marker, mask=blb)
-
-        return proced_pred
+        return watershed(dist, markers=marker, mask=blb)
 
     @staticmethod
     def get_instance_info(pred_inst, pred_type=None):
@@ -656,7 +690,7 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221
+    # skipcq: PYL-W0221  # noqa: E800
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
 

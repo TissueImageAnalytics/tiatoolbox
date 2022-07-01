@@ -313,22 +313,5 @@
         map.getView().fit(extent);
     </script>
 </body>
-<script id="bok">
-    (function() {
-      const xhr = new XMLHttpRequest()
-      xhr.responseType = 'blob';
-      xhr.open('GET', "http://localhost:5006/render_demo/autoload.js?bokeh-autoload-element=bok&bokeh-app-path=/render_demo&bokeh-absolute-url=http://127.0.0.1:5006/render_demo", true);
-  
-      xhr.onload = function (event) {
-        const newDiv = document.createElement("div");
-        newDiv.id = "bok_div";
-        const script = document.createElement('script');
-        const src = URL.createObjectURL(event.target.response);
-        script.src = src;
-        newDiv.appendChild(script);
-        document.body.appendChild(newDiv);
-      };
-      xhr.send();
-    })();
-</script>
+
 </html>

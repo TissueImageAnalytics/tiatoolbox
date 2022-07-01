@@ -13,7 +13,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = not toolbox_env.running_on_travis() and toolbox_env.has_gpu()
 
@@ -84,7 +84,7 @@ def test_functional(remote_sample, tmp_path):
     positions = np.load(f"{wsi_0_root_path}.position.npy")
     features = np.load(f"{wsi_0_root_path}.features.0.npy")
 
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     patches = [
         reader.read_bounds(
             positions[patch_idx],
@@ -105,8 +105,8 @@ def test_functional(remote_sample, tmp_path):
     with torch.inference_mode():
         _features = model(patches).numpy()
     # ! must maintain same batch size and likely same ordering
-    # ! else the output values will not exactly be the same (still < 1.0e-5
+    # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
-    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-6
+    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-4
 
     _rm_dir(save_dir)

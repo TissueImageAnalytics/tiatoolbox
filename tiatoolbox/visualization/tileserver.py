@@ -2,20 +2,33 @@
 import io
 import json
 from pathlib import Path
+<<<<<<< HEAD
 from typing import Dict
 #from flask_cors import cross_origin
 from shapely.geometry import Polygon
+=======
+from typing import Dict, List, Union
+>>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
 
 import numpy as np
 import matplotlib.cm as cm
 from flask import Flask, Response, send_file
 from flask.templating import render_template
+<<<<<<< HEAD
 import urllib
 
 from tiatoolbox import data
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader, OpenSlideWSIReader
+=======
+from PIL import Image
+
+from tiatoolbox import data
+from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+>>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
 
 
 class TileServer(Flask):
@@ -25,9 +38,13 @@ class TileServer(Flask):
         title (str):
             The title of the tile server, displayed in the browser as
             the page title.
-        layers (Dict[str, WSIReader]):
-            A dictionary mapping layer names to :obj:`WSIReader` objects
-            to display.
+        layers (Dict[str, WSIReader | str] | List[WSIReader | str]):
+            A dictionary mapping layer names to image paths or
+            :obj:`WSIReader` objects to display. May also be a list,
+            in which case generic names 'layer-1', 'layer-2' etc.
+            will be used.
+            If layer is a single-channel low-res overlay, it will be
+            colourized using the 'viridis' colourmap
 
     Examples:
         >>> from tiatoolbox.wsiscore.wsireader import WSIReader
@@ -42,7 +59,15 @@ class TileServer(Flask):
         >>> app.run()
     """
 
+<<<<<<< HEAD
     def __init__(self, title: str, layers: Dict[str, WSIReader], state = None) -> None:
+=======
+    def __init__(
+        self,
+        title: str,
+        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
+    ) -> None:
+>>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
@@ -52,6 +77,7 @@ class TileServer(Flask):
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
         self.tia_title = title
+<<<<<<< HEAD
         self.tia_layers = layers
         self.tia_pyramids = {}
         self.state=state
@@ -61,6 +87,40 @@ class TileServer(Flask):
             else:
                 self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
 
+=======
+
+        # Generic layer names if none provided.
+        if isinstance(layers, list):
+            layers = {f"layer-{i}": p for i, p in enumerate(layers)}
+        # Set up the layer dict.
+        layer_def = {}
+        meta = None
+        for i, key in enumerate(layers):
+            layer = layers[key]
+
+            if isinstance(layer, (str, Path)):
+                layer_path = Path(layer)
+                if layer_path.suffix in [".jpg", ".png"]:
+                    # Assume its a low-res heatmap.
+                    layer = Image.open(layer_path)
+                    layer = np.array(layer)
+                else:
+                    layer = WSIReader.open(layer_path)
+
+            if isinstance(layer, np.ndarray):
+                # Make into rgb if single channel.
+                layer = colourise_image(layer)
+                layer = VirtualWSIReader(layer, info=meta)
+
+            layer_def[key] = layer
+            if i == 0:
+                meta = layer.info
+
+        self.tia_layers = layer_def
+        self.tia_pyramids = {
+            key: ZoomifyGenerator(reader) for key, reader in self.tia_layers.items()
+        }
+>>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"
             "<int:z>-<int:x>-<int:y>.jpg"

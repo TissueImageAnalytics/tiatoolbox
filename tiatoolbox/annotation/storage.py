@@ -27,10 +27,10 @@ import copy
 import joblib
 import io
 import json
+import os
 import pickle
 import sqlite3
 import sys
-from typing_extensions import Self
 import tempfile
 import uuid
 import warnings
@@ -708,84 +708,6 @@ class AnnotationStore(ABC, MutableMapping):
             )
         }
 
-    def keyed_query(
-        self,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Dict[str, Any]], bool]] = None,
-        geometry_predicate: str = "intersects",
-    ) -> Dict[str, Annotation]:
-        """Query the store for annotations, return as a dict with keys.
-        Otherwise behaves as query.
-
-        Args:
-            geometry (Geometry or Iterable):
-                Geometry to use when querying. This can be a bounds
-                (iterable of length 4) or a Shapely geometry (e.g.
-                Polygon).
-            where (str or bytes or Callable):
-                A statement which should evaluate to a boolean value.
-                Only annotations for which this predicate is true will
-                be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
-                returned to the user. A pickle object is, where
-                possible, hooked into the backend as a user defined
-                function to filter results during the backend query.
-                Strings are expected to be in a domain specific language
-                and are converted to SQL on a best-effort basis. For
-                supported operators of the DSL see
-                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
-                expression `props["class"] == 42` will be converted to a
-                valid SQLite predicate when using `SQLiteStore` and
-                inserted into the SQL query. This should be faster than
-                filtering in python after or during the query.
-                Additionally, the same string can be used across
-                different backends (e.g. the previous example predicate
-                string is valid for both `DictionaryStore `and a
-                `SQliteStore`). On the other hand it has many more
-                limitations. It is important to note that untrusted user
-                input should never be accepted to this argument as
-                arbitrary code can be run via pickle or the parsing of
-                the string statement.
-            geometry_predicate (str):
-                A string which define which binary geometry predicate to
-                use when comparing the query geometry and a geometry in
-                the store. Only annotations for which this binary
-                predicate is true will be returned. Defaults to
-                intersects. For more information see the `shapely
-                documentation on binary predicates`__.
-
-            Returns:
-                list:
-                    A list of Annotation objects.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
-
-        """
-        if geometry_predicate not in self._geometry_predicate_names:
-            raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
-            )
-        query_geometry = geometry
-        if isinstance(query_geometry, tuple):
-            query_geometry = Polygon.from_bounds(*query_geometry)
-        return {
-            key: annotation
-            for key, annotation in self.items()
-            if (
-                self._geometry_predicate(
-                    geometry_predicate, query_geometry, annotation.geometry
-                )
-                and self._eval_where(where, annotation.properties)
-            )
-        }
-
     def iquery(
         self,
         geometry: QueryGeometry,
@@ -930,7 +852,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         query_geometry = geometry
-        if isinstance(query_geometry, tuple):
+        if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
         return {
             key: annotation.geometry.bounds
@@ -1121,9 +1043,30 @@ class AnnotationStore(ABC, MutableMapping):
                 None.
 
         """
+
+        def write_geojson_to_file_handle(file_handle: IO):
+            """Write the store to a GeoJson file give a handle.
+
+            This replaces the naive method which uses a lot of memory::
+                json.dump(self.to_geodict(), file_handle)
+
+            """
+            # Write head
+            file_handle.write('{"type": "FeatureCollection", "features": [')
+            # Write each feature
+            for feature in self.features():
+                file_handle.write(json.dumps(feature))
+                tell = file_handle.tell()
+                # Comma separate features
+                file_handle.write(",")
+            # Seek to before last comma
+            file_handle.seek(tell, os.SEEK_SET)
+            # Write tail
+            file_handle.write("]}")
+
         return self._dump_cases(
             fp=fp,
-            file_fn=lambda fp: json.dump(self.to_geodict(), fp),
+            file_fn=write_geojson_to_file_handle,
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
 
@@ -1266,6 +1209,10 @@ class SQLiteMetadata(MutableMapping):
             Path object.
         con (sqlite3.Connection):
             The sqlite3 database connection.
+<<<<<<< HEAD
+=======
+
+>>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -1455,7 +1402,9 @@ class SQLiteStore(AnnotationStore):
         self.con.commit()
         #self.con.execute("BEGIN")
 
-    def serialise_geometry(self, geometry: Geometry) -> Union[str, bytes]:
+    def serialise_geometry(  # skipcq: PYL-W0221
+        self, geometry: Geometry
+    ) -> Union[str, bytes]:
         """Serialise a geometry to WKB with optional compression.
 
         Converts shapely geometry objects to well-known binary (WKB) and
@@ -1519,7 +1468,9 @@ class SQLiteStore(AnnotationStore):
             return wkt.loads(data)
         return wkb.loads(data)
 
-    def deserialise_geometry(self, data: Union[str, bytes]) -> Geometry:
+    def deserialise_geometry(  # skipcq: PYL-W0221
+        self, data: Union[str, bytes]
+    ) -> Geometry:
         """Deserialise a geometry from a string or bytes.
 
         Args:
@@ -1709,7 +1660,6 @@ class SQLiteStore(AnnotationStore):
 
         if isinstance(where, Callable):
             rows = callable_rows
-        print(rows)
         # Initialise the query string and parameters
         query_string = (
             "SELECT "  # skipcq: BAN-B608
@@ -1718,7 +1668,7 @@ class SQLiteStore(AnnotationStore):
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
         """
-        )      
+        )
 
         query_parameters = {}
 
@@ -1802,60 +1752,53 @@ class SQLiteStore(AnnotationStore):
     
     def query_property(
         self,
-        sel_prop,
-        geometry: QueryGeometry,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        geometry_predicate="intersects",
-        distinct: bool = False,
-    ) -> List[str]:
-        query_geometry = geometry
-        sql_select = eval(sel_prop, SQL_GLOBALS, {})  # skipcq: PYL-W0123
-        if distinct:
-            sql_select = "DISTINCT " + str(sql_select)
-        cur = self._query(
-            str(sql_select),
-            geometry=query_geometry,
-            geometry_predicate=geometry_predicate,
-            where=where,
-            callable_rows="[key], geometry, properties",
-        )
-        if isinstance(where, Callable):
-            return [
-                key
-                for key, _, properties in cur.fetchall()
-                if where(json.loads(properties))
-            ]
-        return [val for val, in cur.fetchall()]
-
-    def query(
-        self,
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
     ) -> Dict[str, Annotation]:
         query_geometry = geometry
         cur = self._query(
-            rows="properties, cx, cy, geometry",
+            rows="[key], properties, cx, cy, geometry",
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
         )
         if isinstance(where, Callable):
-            return [
-                    Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
+            return {
+                key: Annotation(
+                    geometry=self._unpack_geometry(blob, cx, cy),
                     properties=json.loads(properties),
                 )
-                for properties, cx, cy, blob in cur.fetchall()
+                for key, properties, cx, cy, blob in cur.fetchall()
                 if where(json.loads(properties))
-            ]
-        return [
-                Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
+            }
+        return {
+            key: Annotation(
+                geometry=self._unpack_geometry(blob, cx, cy),
                 properties=json.loads(properties),
             )
-            for properties, cx, cy, blob in cur.fetchall()
-        ]
+            for key, properties, cx, cy, blob in cur.fetchall()
+        }
+
+    def bquery(
+        self,
+        geometry: Optional[QueryGeometry] = None,
+        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+    ) -> Dict[str, Tuple[float, float, float, float]]:
+        cur = self._query(
+            rows="[key], min_x, min_y, max_x, max_y",
+            geometry=geometry,
+            geometry_predicate="bbox_intersects",
+            where=where,
+            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
+        )
+        if isinstance(where, Callable):
+            return {
+                key: bounds
+                for key, properties, *bounds in cur.fetchall()
+                if where(json.loads(properties))
+            }
+        return {key: bounds for key, *bounds in cur.fetchall()}
 
     @staticmethod
     @lru_cache(maxsize=256)
@@ -2350,6 +2293,81 @@ class SQLiteStore(AnnotationStore):
         self.con.execute(f"PRAGMA analysis_limit = {int(limit)}")
         self.con.execute("PRAGMA optimize")
 
+    def create_index(
+        self, name: str, where: Union[str, bytes], analyze: bool = True
+    ) -> None:
+        """Create an SQLite expression index based on the provided predicate.
+
+        Note that an expression index will only be used if the query expression
+        (in the WHERE clause) exactly matches the expression used when creating
+        the index (excluding minor inconsequential changes such as
+        whitespace).
+
+        SQLite expression indexes require SQLite version 3.9.0 or higher.
+
+        Args:
+            name (str):
+                Name of the index to create.
+            where:
+                The predicate used to create the index.
+            analyze (bool):
+                Whether to run the ANALYZE command after creating the
+                index.
+
+        """
+        _, minor, _ = sqlite3.sqlite_version_info
+        if minor < 9:
+            raise Exception("Requires sqlite version 3.9.0 or higher.")
+        cur = self.con.cursor()
+        if not isinstance(where, str):
+            raise TypeError(f"Invalid type for `where` ({type(where)}).")
+        sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
+        cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
+        if analyze:
+            cur.execute(f"ANALYZE {name}")
+
+    def indexes(self) -> List[str]:
+        """Returns a list of the names of all indexes in the store.
+
+        Returns:
+            List[str]:
+                The list of index names.
+
+        """
+        cur = self.con.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE TYPE = 'index'")
+        return [row[0] for row in cur.fetchall()]
+
+    def drop_index(self, name: str) -> None:
+        """Drop an index from the store.
+
+        Args:
+            name (str):
+                The name of the index to drop.
+
+        """
+        cur = self.con.cursor()
+        cur.execute(f"DROP INDEX {name}")
+
+    def optimize(self, vacuum: bool = True, limit: int = 1000) -> None:
+        """Optimize the database with VACUUM and ANALYZE.
+
+        Args:
+            vacuum (bool):
+                Whether to run VACUUM.
+            limit (int):
+                The approximate maximum number of rows to examine when
+                running ANALYZE. If zero or negative, not limit will be
+                used. For more information see
+                https://www.sqlite.org/pragma.html#pragma_analysis_limit.
+
+        """
+        if vacuum:
+            self.con.execute("VACUUM")
+        # Cannot use parameterized statements with PRAGMA!
+        self.con.execute(f"PRAGMA analysis_limit = {int(limit)}")
+        self.con.execute("PRAGMA optimize")
+
 
 class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
@@ -2439,5 +2457,7 @@ class DictionaryStore(AnnotationStore):
 
     def close(self) -> None:
         warnings.simplefilter("ignore")
-        self.commit()
+        # Try to commit any changes if the file is still open.
+        with contextlib.suppress(ValueError):
+            self.commit()
         warnings.resetwarnings()

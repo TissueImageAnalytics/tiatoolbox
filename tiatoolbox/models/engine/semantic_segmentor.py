@@ -24,12 +24,76 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.wsicore.wsireader import (
-    VirtualWSIReader,
-    WSIMeta,
-    WSIReader,
-    get_wsireader,
-)
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
+
+
+def _estimate_canvas_parameters(sample_prediction, canvas_shape):
+    """Estimates canvas parameters.
+
+    Args:
+        sample_prediction (:class:`numpy.ndarry`):
+            Patch prediction assuming to be of shape HWC.
+        canvas_shape (:class:`numpy.ndarray`):
+            HW of the supposed assembled image.
+    Returns:
+        (tuple, tuple, bool):
+            Canvas Shape, Canvas Count and whether to add singleton dimension.
+
+    """
+    if len(sample_prediction.shape) == 3:
+        num_output_ch = sample_prediction.shape[-1]
+        canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
+        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        add_singleton_dim = num_output_ch == 1
+    else:
+        canvas_cum_shape_ = tuple(canvas_shape) + (1,)
+        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        add_singleton_dim = True
+
+    return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
+
+
+def _prepare_save_output(
+    save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+):
+    """Prepares for saving the cached output."""
+    if save_path is not None:
+        if os.path.exists(save_path) and os.path.exists(cache_count_path):
+            cum_canvas = np.load(save_path, mmap_mode="r+")
+            count_canvas = np.load(cache_count_path, mmap_mode="r+")
+            if canvas_cum_shape_ != cum_canvas.shape:
+                raise ValueError("Existing image shape in `save_path` does not match.")
+            if canvas_count_shape_ != count_canvas.shape:
+                raise ValueError(
+                    "Existing image shape in `cache_count_path` does not match."
+                )
+        else:
+            cum_canvas = np.lib.format.open_memmap(
+                save_path,
+                mode="w+",
+                shape=canvas_cum_shape_,
+                dtype=np.float32,
+            )
+            # assuming no more than 255 overlapping times
+            count_canvas = np.lib.format.open_memmap(
+                cache_count_path,
+                mode="w+",
+                shape=canvas_count_shape_,
+                dtype=np.uint8,
+            )
+            # flush fill
+            count_canvas[:] = 0
+        is_on_drive = True
+    else:
+        is_on_drive = False
+        cum_canvas = np.zeros(
+            shape=canvas_cum_shape_,
+            dtype=np.float32,
+        )
+        # for pixel occurrence counting
+        count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
+
+    return is_on_drive, count_canvas, cum_canvas
 
 
 class IOSegmentorConfig(IOConfigABC):
@@ -152,19 +216,16 @@ class IOSegmentorConfig(IOConfigABC):
 
         """
         old_val = [v["resolution"] for v in resolutions]
-        if units == "baseline":
-            new_val = old_val
-        elif units == "mpp":
-            new_val = np.min(old_val) / np.array(old_val)
-        elif units == "power":
-            # when being power
-            new_val = np.array(old_val) / np.max(old_val)
-        else:
+        if units not in ["baseline", "mpp", "power"]:
             raise ValueError(
                 f"Unknown units `{units}`. "
                 "Units should be one of 'baseline', 'mpp' or 'power'."
             )
-        return new_val
+        if units == "baseline":
+            return old_val
+        if units == "mpp":
+            return np.min(old_val) / np.array(old_val)
+        return np.array(old_val) / np.max(old_val)
 
     def to_baseline(self):
         """Return a new config object converted to baseline form.
@@ -196,7 +257,7 @@ class IOSegmentorConfig(IOConfigABC):
         save_resolution = None
         if self.save_resolution is not None:
             save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
-        new_config = IOSegmentorConfig(
+        return IOSegmentorConfig(
             input_resolutions=input_resolutions,
             output_resolutions=output_resolutions,
             patch_input_shape=self.patch_input_shape,
@@ -204,7 +265,6 @@ class IOSegmentorConfig(IOConfigABC):
             save_resolution=save_resolution,
             **self._kwargs,
         )
-        return new_config
 
 
 class WSIStreamDataset(torch_data.Dataset):
@@ -278,27 +338,22 @@ class WSIStreamDataset(torch_data.Dataset):
         """Get appropriate reader for input path."""
         img_path = pathlib.Path(img_path)
         if self.mode == "wsi":
-            reader = get_wsireader(img_path)
-        else:
-            if isinstance(img_path, np.ndarray):
-                img = img_path
-            else:
-                img = imread(img_path)
-            # initialise metadata for VirtualWSIReader.
-            # here, we simulate a whole-slide image, but with a single level.
-            metadata = WSIMeta(
-                mpp=np.array([1.0, 1.0]),
-                objective_power=10,
-                axes="YXS",
-                slide_dimensions=np.array(img.shape[:2][::-1]),
-                level_downsamples=[1.0],
-                level_dimensions=[np.array(img.shape[:2][::-1])],
-            )
-            reader = VirtualWSIReader(
-                img,
-                info=metadata,
-            )
-        return reader
+            return WSIReader.open(img_path)
+        img = imread(img_path)
+        # initialise metadata for VirtualWSIReader.
+        # here, we simulate a whole-slide image, but with a single level.
+        metadata = WSIMeta(
+            mpp=np.array([1.0, 1.0]),
+            objective_power=10,
+            axes="YXS",
+            slide_dimensions=np.array(img.shape[:2][::-1]),
+            level_downsamples=[1.0],
+            level_dimensions=[np.array(img.shape[:2][::-1])],
+        )
+        return VirtualWSIReader(
+            img,
+            info=metadata,
+        )
 
     def __len__(self):
         return len(self.mp_shared_space.patch_inputs)
@@ -353,6 +408,35 @@ class WSIStreamDataset(torch_data.Dataset):
 
 class SemanticSegmentor:
     """Pixel-wise segmentation predictor.
+
+    The tiatoolbox model should produce the following results on the BCSS dataset
+    using fcn_resnet50_unet-bcss.
+
+    .. list-table:: Semantic segmentation performance on the BCSS dataset
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * -
+         - Tumour
+         - Stroma
+         - Inflammatory
+         - Necrosis
+         - Other
+         - All
+       * - Amgad et al.
+         - 0.851
+         - 0.800
+         - 0.712
+         - 0.723
+         - 0.666
+         - 0.750
+       * - TIAToolbox
+         - 0.885
+         - 0.825
+         - 0.761
+         - 0.765
+         - 0.581
+         - 0.763
 
     Note, if `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
@@ -444,6 +528,7 @@ class SemanticSegmentor:
         self._mp_shared_space = None
         self._postproc_workers = None
         self._futures = None
+        self._outputs = []
         self.imgs = None
         self.masks = None
 
@@ -582,7 +667,7 @@ class SemanticSegmentor:
         """Define how to get reader for mask and source image."""
         if not isinstance(img_path, np.ndarray):
             img_path = pathlib.Path(img_path)
-        reader = get_wsireader(img_path)
+        reader = WSIReader.open(img_path)
 
         mask_reader = None
         if isinstance(mask_path, WSIReader):
@@ -659,7 +744,6 @@ class SemanticSegmentor:
         self._mp_shared_space.patch_outputs = patch_outputs
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
-        # ! TODO: need a protocol for pbar, or a decorator to make this less redundant
         pbar_desc = "Process Batch: "
         pbar = tqdm.tqdm(
             desc=pbar_desc,
@@ -749,8 +833,8 @@ class SemanticSegmentor:
         # output patch this can exceed the image bound at the requested
         # resolution remove singleton due to split.
         locations = np.array([v[0] for v in locations])
-        for idx, output_resolution in enumerate(ioconfig.output_resolutions):
-            # assume resolution idx to be in the same order as L
+        for index, output_resolution in enumerate(ioconfig.output_resolutions):
+            # assume resolution index to be in the same order as L
             merged_resolution = ioconfig.highest_input_resolution
             merged_locations = locations
             # ! location is w.r.t highest resolution, hence still need conversion
@@ -762,9 +846,9 @@ class SemanticSegmentor:
                 merged_locations = np.ceil(locations * fx).astype(np.int64)
             merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
             # 0 idx is to remove singleton without removing other axes singleton
-            to_merge_predictions = [v[idx][0] for v in predictions]
-            sub_save_path = f"{save_path}.raw.{idx}.npy"
-            sub_count_path = f"{cache_dir}/count.{idx}.npy"
+            to_merge_predictions = [v[index][0] for v in predictions]
+            sub_save_path = f"{save_path}.raw.{index}.npy"
+            sub_count_path = f"{cache_dir}/count.{index}.npy"
             self.merge_prediction(
                 merged_shape[::-1],  # XY to YX
                 to_merge_predictions,
@@ -807,10 +891,6 @@ class SemanticSegmentor:
             cache_count_path (str):
                 Location to store the canvas for counting how many times
                 each pixel get overlapped when assembling.
-            free_prediction (bool):
-                If this is `True`, `predictions` will be modified in
-                place and each patch will be replaced with `None` once
-                processed. This is to save memory when assembling.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -838,58 +918,18 @@ class SemanticSegmentor:
 
         sample_prediction = predictions[0]
 
-        num_output_ch = 0
-        add_singleton_dim = False
         if len(sample_prediction.shape) not in (2, 3):
             raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
 
-        if len(sample_prediction.shape) == 3:
-            num_output_ch = sample_prediction.shape[-1]
-            canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
-            canvas_count_shape_ = tuple(canvas_shape) + (1,)
-            add_singleton_dim = num_output_ch == 1
-        else:
-            canvas_cum_shape_ = tuple(canvas_shape) + (1,)
-            canvas_count_shape_ = tuple(canvas_shape) + (1,)
-            add_singleton_dim = True
+        (
+            canvas_cum_shape_,
+            canvas_count_shape_,
+            add_singleton_dim,
+        ) = _estimate_canvas_parameters(sample_prediction, canvas_shape)
 
-        if save_path is not None:
-            if os.path.exists(save_path) and os.path.exists(cache_count_path):
-                cum_canvas = np.load(save_path, mmap_mode="r+")
-                count_canvas = np.load(cache_count_path, mmap_mode="r+")
-                if canvas_cum_shape_ != cum_canvas.shape:
-                    raise ValueError(
-                        "Existing image shape in `save_path` does not match."
-                    )
-                if canvas_count_shape_ != count_canvas.shape:
-                    raise ValueError(
-                        "Existing image shape in `cache_count_path` does not match."
-                    )
-            else:
-                cum_canvas = np.lib.format.open_memmap(
-                    save_path,
-                    mode="w+",
-                    shape=canvas_cum_shape_,
-                    dtype=np.float32,
-                )
-                # assuming no more than 255 overlapping times
-                count_canvas = np.lib.format.open_memmap(
-                    cache_count_path,
-                    mode="w+",
-                    shape=canvas_count_shape_,
-                    dtype=np.uint8,
-                )
-                # flush fill
-                count_canvas[:] = 0
-            is_on_drive = True
-        else:
-            is_on_drive = False
-            cum_canvas = np.zeros(
-                shape=canvas_cum_shape_,
-                dtype=np.float32,
-            )
-            # for pixel occurrence counting
-            count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
+        is_on_drive, count_canvas, cum_canvas = _prepare_save_output(
+            save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+        )
 
         def index(arr, tl, br):
             """Helper to shorten indexing."""
@@ -949,6 +989,196 @@ class SemanticSegmentor:
         if not is_on_drive:
             cum_canvas /= count_canvas + 1.0e-6
         return cum_canvas
+
+    @staticmethod
+    def _prepare_save_dir(save_dir):
+        """Prepare save directory and cache."""
+        if save_dir is None:
+            warnings.warn(
+                (
+                    "Segmentor will only output to directory. "
+                    "All subsequent output will be saved to current runtime "
+                    "location under folder 'output'. Overwriting may happen! "
+                )
+            )
+            save_dir = os.path.join(os.getcwd(), "output")
+
+        save_dir = os.path.abspath(save_dir)
+        save_dir = pathlib.Path(save_dir)
+        if save_dir.is_dir():
+            raise ValueError(f"`save_dir` already exists! {save_dir}")
+        save_dir.mkdir(parents=True)
+        cache_dir = f"{save_dir}/cache"
+        os.makedirs(cache_dir)
+
+        return save_dir, cache_dir
+
+    def _update_ioconfig(
+        self,
+        ioconfig,
+        mode,
+        patch_input_shape,
+        patch_output_shape,
+        stride_shape,
+        resolution,
+        units,
+    ):
+        """Update ioconfig according to input parameters.
+
+        Args:
+            ioconfig (:class:`IOSegmentorConfig`):
+                Object defines information about input and output
+                placement of patches. When provided,
+                `patch_input_shape`, `patch_output_shape`,
+                `stride_shape`, `resolution`, and `units` arguments are
+                ignored. Otherwise, those arguments will be internally
+                converted to a :class:`IOSegmentorConfig` object.
+            mode (str):
+                Type of input to process. Choose from either `tile` or
+                `wsi`.
+            patch_input_shape (tuple):
+                Size of patches input to the model. The values
+                are at requested read resolution and must be positive.
+            patch_output_shape (tuple):
+                Size of patches output by the model. The values are at
+                the requested read resolution and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. The values
+                are at requested read resolution and must be positive.
+                If not provided, `stride_shape=patch_input_shape` is
+                used.
+            resolution (float):
+                Resolution used for reading the image.
+            units (str):
+                Units of resolution used for reading the image. Choose
+                from either `"level"`, `"power"` or `"mpp"`.
+
+        Returns:
+            :class:`IOSegmentorConfig`:
+                Updated ioconfig.
+
+        """
+        if patch_output_shape is None:
+            patch_output_shape = patch_input_shape
+        if stride_shape is None:
+            stride_shape = patch_output_shape
+
+        if ioconfig is None and patch_input_shape is None:
+            if self.ioconfig is None:
+                raise ValueError(
+                    "Must provide either `ioconfig` or "
+                    "`patch_input_shape` and `patch_output_shape`"
+                )
+            ioconfig = copy.deepcopy(self.ioconfig)
+        elif ioconfig is None:
+            ioconfig = IOSegmentorConfig(
+                input_resolutions=[{"resolution": resolution, "units": units}],
+                output_resolutions=[{"resolution": resolution, "units": units}],
+                patch_input_shape=patch_input_shape,
+                patch_output_shape=patch_output_shape,
+                stride_shape=stride_shape,
+            )
+        if mode == "tile":
+            warnings.warn(
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"`. Resolutions will be converted '
+                "to baseline value."
+            )
+            return ioconfig.to_baseline()
+
+        return ioconfig
+
+    def _prepare_workers(self):
+        """Prepare number of workers."""
+        self._postproc_workers = None
+        if self.num_postproc_workers is not None:
+            self._postproc_workers = ProcessPoolExecutor(
+                max_workers=self.num_postproc_workers
+            )
+
+    def _memory_cleanup(self):
+        """Memory clean up."""
+        self.imgs = None
+        self.masks = None
+        self._cache_dir = None
+        self._model = None
+        self._loader = None
+        self._on_gpu = None
+        self._futures = None
+        self._mp_shared_space = None
+        if self._postproc_workers is not None:
+            self._postproc_workers.shutdown()
+        self._postproc_workers = None
+
+    def _predict_wsi_handle_exception(
+        self, imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+    ):
+        """Predict on multiple WSIs.
+
+        Args:
+            imgs (list, ndarray):
+                List of inputs to process. When using `"patch"` mode,
+                the input must be either a list of images, a list of
+                image file paths or a numpy array of an image list. When
+                using `"tile"` or `"wsi"` mode, the input must be a list
+                of file paths.
+            wsi_idx (int):
+                index of current WSI being processed.
+            img_path(str):
+                Path to current image.
+            mode (str):
+                Type of input to process. Choose from either `tile` or
+                `wsi`.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Object defines information about input and output
+                placement of patches. When provided,
+                `patch_input_shape`, `patch_output_shape`,
+                `stride_shape`, `resolution`, and `units` arguments are
+                ignored. Otherwise, those arguments will be internally
+                converted to a :class:`IOSegmentorConfig` object.
+            save_dir (str or pathlib.Path):
+                Output directory when processing multiple tiles and
+                whole-slide images. By default, it is folder `output`
+                where the running script is invoked.
+            crash_on_exception (bool):
+                If `True`, the running loop will crash if there is any
+                error during processing a WSI. Otherwise, the loop will
+                move on to the next wsi for processing.
+
+        Returns:
+            list:
+                A list of tuple(input_path, save_path) where
+                `input_path` is the path of the input wsi while
+                `save_path` corresponds to the output predictions.
+
+        """
+        try:
+            wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
+            self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
+
+            # Do not use dict with file name as key, because it can be
+            # overwritten. It may be user intention to provide files with a
+            # same name multiple times (may be they have different root path)
+            self._outputs.append([str(img_path), str(wsi_save_path)])
+
+            # ? will this corrupt old version if control + c midway?
+            map_file_path = os.path.join(save_dir, "file_map.dat")
+            # backup old version first
+            if os.path.exists(map_file_path):
+                old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
+                shutil.copy(map_file_path, old_map_file_path)
+            joblib.dump(self._outputs, map_file_path)
+
+            # verbose mode, error by passing ?
+            logging.info("Finish: %d", wsi_idx / len(imgs))
+            logging.info("--Input: %s", str(img_path))
+            logging.info("--Ouput: %s", str(wsi_save_path))
+        # prevent deep source check because this is bypass and
+        # delegating error message
+        except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+            if crash_on_exception:
+                raise err
+            logging.error(err)
 
     def predict(
         self,
@@ -1046,62 +1276,25 @@ class SemanticSegmentor:
         """
         if mode not in ["wsi", "tile"]:
             raise ValueError(f"{mode} is not a valid mode. Use either `tile` or `wsi`.")
-        if save_dir is None:
-            warnings.warn(
-                (
-                    "Segmentor will only output to directory. "
-                    "All subsequent output will be saved to current runtime "
-                    "location under folder 'output'. Overwriting may happen! "
-                )
-            )
-            save_dir = os.path.join(os.getcwd(), "output")
 
-        save_dir = os.path.abspath(save_dir)
-        save_dir = pathlib.Path(save_dir)
-        if save_dir.is_dir():
-            raise ValueError(f"`save_dir` already exists! {save_dir}")
-        save_dir.mkdir(parents=True)
-        self._cache_dir = f"{save_dir}/cache"
-        os.makedirs(self._cache_dir)
+        save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
 
-        if patch_output_shape is None:
-            patch_output_shape = patch_input_shape
-        if stride_shape is None:
-            stride_shape = patch_output_shape
-
-        if ioconfig is None and patch_input_shape is None:
-            if self.ioconfig is None:
-                raise ValueError(
-                    "Must provide either `ioconfig` or "
-                    "`patch_input_shape` and `patch_output_shape`"
-                )
-            ioconfig = copy.deepcopy(self.ioconfig)
-        elif ioconfig is None:
-            ioconfig = IOSegmentorConfig(
-                input_resolutions=[{"resolution": resolution, "units": units}],
-                output_resolutions=[{"resolution": resolution, "units": units}],
-                patch_input_shape=patch_input_shape,
-                patch_output_shape=patch_output_shape,
-                stride_shape=stride_shape,
-            )
-        if mode == "tile":
-            warnings.warn(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"`. Resolutions will be converted '
-                "to baseline value."
-            )
-            ioconfig = ioconfig.to_baseline()
+        ioconfig = self._update_ioconfig(
+            ioconfig,
+            mode,
+            patch_input_shape,
+            patch_output_shape,
+            stride_shape,
+            resolution,
+            units,
+        )
 
         # use external for testing
         self._on_gpu = on_gpu
         self._model = misc.model_to(on_gpu, self.model)
 
         # workers should be > 0 else Value Error will be thrown
-        self._postproc_workers = None
-        if self.num_postproc_workers is not None:
-            self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_workers
-            )
+        self._prepare_workers()
 
         mp_manager = torch_mp.Manager()
         mp_shared_space = mp_manager.Namespace()
@@ -1122,61 +1315,25 @@ class SemanticSegmentor:
             num_workers=self.num_loader_workers,
             persistent_workers=self.num_loader_workers > 0,
         )
-        self._loader = loader
 
+        self._loader = loader
         self.imgs = imgs
         self.masks = masks
 
         # contain input / output prediction mapping
-        outputs = []
+        self._outputs = []
         # ? what will happen if this crash midway?
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
-            try:
-                wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
-                self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
-
-                # Do not use dict with file name as key, because it can be
-                # overwritten. It may be user intention to provide files with a
-                # same name multiple times (may be they have different root path)
-                outputs.append([str(img_path), str(wsi_save_path)])
-
-                # ? will this corrupt old version if Ctrl-c midway?
-                map_file_path = os.path.join(save_dir, "file_map.dat")
-                # backup old version first
-                if os.path.exists(map_file_path):
-                    old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
-                    shutil.copy(map_file_path, old_map_file_path)
-                joblib.dump(outputs, map_file_path)
-
-                # verbose mode, error by passing ?
-                logging.info(f"Finish: {wsi_idx}/{len(imgs)}")
-                logging.info(f"--Input: {img_path}")
-                logging.info(f"--Ouput: {wsi_save_path}")
-            # prevent deep source check because this is bypass and
-            # delegating error message
-            except Exception as err:  # noqa
-                if not crash_on_exception:
-                    logging.error(err)
-                    continue
-                raise err
+            self._predict_wsi_handle_exception(
+                imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+            )
 
         # clean up the cache directories
         shutil.rmtree(self._cache_dir)
+        self._memory_cleanup()
 
-        # memory clean up
-        self.imgs = None
-        self.masks = None
-        self._cache_dir = None
-        self._model = None
-        self._loader = None
-        self._on_gpu = None
-        self._futures = None
-        self._mp_shared_space = None
-        if self._postproc_workers is not None:
-            self._postproc_workers.shutdown()
-        self._postproc_workers = None
-        return outputs
+        return self._outputs
 
 
 class DeepFeatureExtractor(SemanticSegmentor):
