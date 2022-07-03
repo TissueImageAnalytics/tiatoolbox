@@ -15,7 +15,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
 
-ON_GPU = not toolbox_env.running_on_travis() and toolbox_env.has_gpu()
+ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
 # ----------------------------------------------------
 

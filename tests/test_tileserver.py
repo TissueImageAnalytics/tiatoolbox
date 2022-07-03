@@ -10,20 +10,21 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @pytest.fixture()
-def app(sample_ndpi) -> TileServer:
+def app(sample_ndpi, tmp_path) -> TileServer:
     """Create a testing TileServer WSGI app."""
 
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
     wsi = WSIReader.open(Path(sample_ndpi))
     thumb = wsi.slide_thumbnail()
-    imwrite("./temp_thumb.jpg", thumb)
+    thumb_path = tmp_path / "thumb.jpg"
+    imwrite(thumb_path, thumb)
 
     app = TileServer(
         "Testing TileServer",
         [
             str(Path(sample_ndpi)),
-            "./temp_thumb.jpg",
+            str(thumb_path),
             np.zeros(wsi.slide_dimensions(1.25, "power"), dtype=np.uint8).T,
         ],
     )

@@ -171,8 +171,8 @@ def test_ppu2mpp():
     assert utils.misc.ppu2mpp(1, units="cm") == 10_000
     assert utils.misc.ppu2mpp(1, units=2) == 25_400  # inch
     assert utils.misc.ppu2mpp(1, units=3) == 10_000  # cm
-    assert utils.misc.ppu2mpp(72, units="in") == pytest.approx(352.8, abs=1)
-    assert utils.misc.ppu2mpp(50_000, units="in") == pytest.approx(0.508, abs=1)
+    assert utils.misc.ppu2mpp(72, units="in") == pytest.approx(352.8, abs=0.1)
+    assert utils.misc.ppu2mpp(50_000, units="in") == pytest.approx(0.508, abs=0.1)
 
 
 def test_assert_dtype_int():
@@ -1357,23 +1357,6 @@ def test_detect_pixman():
         assert len(versions) > 0
     except EnvironmentError:
         pass
-
-
-@pytest.mark.skipif(
-    os.name == "nt", reason="Test only designed for travis online Linux platform."
-)
-def test_detect_travis():
-    """Test detection of the travis environment.
-
-    Simply check it passes without exception.
-    """
-    import pwd
-
-    on_travis = utils.env_detection.running_on_travis()
-    if pwd.getpwuid(os.getuid())[0] == "travis":
-        assert on_travis
-    else:
-        assert not on_travis
 
 
 def test_detect_gpu():

@@ -33,7 +33,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
-NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
+NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_ci() else 8
 
 # ----------------------------------------------------
 
@@ -651,7 +651,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not ON_GPU,
+    toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_behavior_tissue_mask_local(remote_sample, tmp_path):
@@ -692,7 +692,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not ON_GPU,
+    toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_behavior_bcss_local(remote_sample, tmp_path):
