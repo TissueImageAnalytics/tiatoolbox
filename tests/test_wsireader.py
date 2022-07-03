@@ -675,12 +675,17 @@ def test_read_rect_jp2_levels(sample_jp2):
     width, height = size
     for level in range(wsi.info.level_count):
         level_width, level_height = wsi.info.level_dimensions[level]
-        im_region = wsi.read_rect(location, size, resolution=level, units="level")
+        im_region = wsi.read_rect(
+            location,
+            size,
+            resolution=level,
+            units="level",
+            pad_mode=None,
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert pytest.approx(
-            im_region.shape,
+        assert im_region.shape == pytest.approx(
             (
                 min(height, level_height),
                 min(width, level_width),
@@ -1650,7 +1655,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
 
 
 @pytest.mark.skipif(
-    utils.env_detection.running_on_travis(),
+    utils.env_detection.running_on_ci(),
     reason="No need to display image on travis.",
 )
 def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):

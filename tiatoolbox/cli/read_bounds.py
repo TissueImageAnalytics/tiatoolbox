@@ -50,7 +50,7 @@ def read_bounds(img_input, region, resolution, units, output_path, mode):
         units=units,
     )
     if mode == "show":  # pragma: no cover
-        # skipped on travis
+        # Skipped on CI, and unless SHOW_TESTS is set
         im_region = Image.fromarray(im_region)
         im_region.show()
         return

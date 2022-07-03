@@ -56,9 +56,7 @@ def test_dataset_abc():
         Proto4()  # skipcq
 
 
-@pytest.mark.skipif(
-    toolbox_env.running_on_travis(), reason="Local test on local machine."
-)
+@pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
 def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
     # test kather with default init

@@ -44,7 +44,7 @@ def test_value_error():
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on machine with GPU.",
 )
 def test_micronet_output(remote_sample, tmp_path):
