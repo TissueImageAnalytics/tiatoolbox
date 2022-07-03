@@ -11,7 +11,7 @@ from tiatoolbox.models import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 
 ON_GPU = toolbox_env.has_gpu()
-# The value is based on 2 TitanXP each with 12GB
+# The batch size value here is based on 2xTitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
 try:
     NUM_POSTPROC_WORKERS = multiprocessing.cpu_count()
