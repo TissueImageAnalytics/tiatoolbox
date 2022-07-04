@@ -24,9 +24,9 @@ dependencies:
   - pillow>=9.0.1
   - pip>=20.0.2
   - pixman>=0.39.0
-  - pytest-cov
+  - pytest-cov==3.0.0
   - pytest-runner>=5.2
-  - pytest>=7.1.1
+  - pytest>=6.2.5
   - python>=3.8
   - pytorch>=1.11.0
   - pyyaml>=6.0
@@ -43,4 +43,5 @@ dependencies:
   - zarr>=2.11.1
   - pip:
     - openslide-python>=1.1.2
+    - wsidicom>=0.2.0
     - sphinx-toolbox

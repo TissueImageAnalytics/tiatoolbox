@@ -136,14 +136,14 @@ def test_requirements_consistency(root_dir):
 
     1. A dev file should contain all the same requirements as the main
        file.
-    2. Versions in dev file should be match those in the main file.
-    3. A package in all files should have the same constraint and version.
+    2. A package in any two or more files should have the same
+       constraint and version.
 
     """
     # Keep track of all parsed files
     all_requirements: Dict[Path, Dict[str, Requirement]] = {}
 
-    # Check that main/dev pairs match
+    # Check that packages in main are also in dev
     for main_name, dev_name in REQUIREMENTS_FILES:
         # Get the main requirements
         main_path = root_dir / main_name
@@ -159,44 +159,39 @@ def test_requirements_consistency(root_dir):
         dev = parse_requirements(dev_path)
         all_requirements[dev_path] = dev
 
-        for name, requirement in main.items():
-            # Check that the package is in the dev file
+        # Check that all main packages are in the dev file
+        for name in main:
             assert name in dev, f"{name} not in dev requirements ({dev_path.name})"
-            main_specs = requirement.specs or [("", "")]
-            dev_specs = dev[name].specs or [("", "")]
-            main_constraint, main_version = main_specs[0]
-            dev_constraint, dev_version = dev_specs[0]
 
-            # Check that the constraint is the same
-            assert main_constraint == dev_constraint, (
-                f"{name} has different constraints:"
-                f" {main_constraint}{main_version} ({main_path.name})"
-                f" vs {dev_constraint}{dev_version} ({dev_path.name})."
+    # Check that requirements are consistent across files
+    # First find a set of all requirement keys
+    requirement_key_sets = [set(x.keys()) for x in all_requirements.values()]
+    requirement_keys = requirement_key_sets[0].union(*requirement_key_sets[1:])
+
+    # Iterate over the keys
+    for key in requirement_keys:
+        # Find the specs for the requirement and which files it is in
+        zipped_file_specs = (
+            (
+                path,
+                *(  # Unpack the (constraint, version) tuple
+                    requirements[key].specs[0]  # Get the first spec
+                    if requirements[key].specs  # Check that there are specs
+                    else ("", "None")  # Default if no specs
+                ),
             )
+            for path, requirements in all_requirements.items()
+            if key in requirements  # Filter out files that don't have the key
+        )
 
-            # Check that the version spec is the same
-            assert main_version == dev_version, (
-                f"{name} has different versions:"
-                f" {main_version} ({main_path.name})"
-                f" vs {dev_version} ({dev_path.name})."
-            )
+        # Unzip the specs to get a list of constraints and versions
+        _, constraints, versions = zip(*zipped_file_specs)
 
-    # Check that packages which are in all files match
-    key_sets = [set(x.keys()) for x in all_requirements.values()]
-    common_packages = key_sets[0].intersection(*key_sets[1:])
-    file_names = [path.name for path in all_requirements]
-    for package in common_packages:
-        specs = [
-            x[package].specs[0] if x[package].specs else ("?", "None")
-            for x in all_requirements.values()
-        ]
-        constraints, versions = zip(*specs)
-        formatted_deps = [
-            f"{c}{v} ({n})" for n, c, v in zip(file_names, constraints, versions)
-        ]
+        # Check that the constraints and versions are the same across files
+        formatted_reqs = [f"{c}{v} ({p.name})" for p, c, v in zipped_file_specs]
         assert all(x == constraints[0] for x in constraints), (
-            f"{package} has inconsistent constraints:" f" {', '.join(formatted_deps)}."
+            f"{key} has inconsistent constraints:" f" {', '.join(formatted_reqs)}."
         )
         assert all(x == versions[0] for x in versions), (
-            f"{package} has inconsistent versions:" f" {', '.join(formatted_deps)}."
+            f"{key} has inconsistent versions:" f" {', '.join(formatted_reqs)}."
         )
