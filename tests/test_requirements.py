@@ -89,6 +89,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
 
 @pytest.fixture(scope="session", autouse=True)
 def root_dir(request) -> Path:
+    """Return the root directory of the project."""
     return Path(str(request.config.rootdir))
 
 
