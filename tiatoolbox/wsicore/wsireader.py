@@ -260,8 +260,12 @@ class WSIReader:
         return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
 
     @staticmethod
-    def verify_supported_wsi(input_path):
+    def verify_supported_wsi(input_path: pathlib.Path) -> None:
         """Verify that an input image is supported.
+
+        Args:
+            input_path (pathlib.Path):
+                Input path to WSI.
 
         Raises:
             FileNotSupported:
