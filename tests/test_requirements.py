@@ -9,7 +9,7 @@ from pkg_resources import Requirement
 REQUIREMENTS_FILES = [
     ("requirements.txt", "requirements_dev.txt"),
     ("requirements.conda.yml", "requirements.dev.conda.yml"),
-    ("requirements.win64.conda.yml", None)
+    ("requirements.win64.conda.yml", None),
 ]
 
 
