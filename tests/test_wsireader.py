@@ -2081,11 +2081,6 @@ class TestReader:
 
     @staticmethod
     def test_file_path_does_not_exist(sample_key, reader_class):
-        """Test that the file_path attribute is set correctly.
-
-        The file_path attribute should be set to the path of the file
-        that was opened.
-
-        """
+        """Test that FileNotFoundError is raised when file does not exist."""
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
