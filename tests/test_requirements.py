@@ -182,7 +182,7 @@ def test_requirements_consistent(root_dir):
         ]
         constraints, versions = zip(*specs)
         formatted_deps = [
-            f"{n}{c}{v}" for n, c, v in zip(file_names, constraints, versions)
+            f"{c}{v} ({n})" for n, c, v in zip(file_names, constraints, versions)
         ]
         assert all(x == constraints[0] for x in constraints), (
             f"{package} has inconsistent constraints:" f" {', '.join(formatted_deps)}"
