@@ -11,13 +11,13 @@ dependencies:
   - Click>=8.1.2
   - coverage==6.3.2
   - cython
-  - defusedxml
+  - defusedxml>=0.7.1
   - flake8==4.0.1
   - flake8-bugbear
-  - flask
+  - flask>=2.1.1
   - glymur>=0.9.9
   - h5py
-  - imagecodecs>2021.11.20
+  - imagecodecs>=2021.11.20
   - jupyterlab
   - matplotlib>=3.5.1
   - nbsphinx
