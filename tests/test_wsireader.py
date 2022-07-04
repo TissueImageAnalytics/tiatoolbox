@@ -2060,3 +2060,14 @@ class TestReader:
         cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
         # This control the harshness of similarity test, how much should be?
         assert np.min(cc) > 0.95
+
+    @staticmethod
+    def test_file_path_doesnt_exist(sample_key, reader_class):
+        """Test that the file_path attribute is set correctly.
+
+        The file_path attribute should be set to the path of the file
+        that was opened.
+
+        """
+        with pytest.raises(FileNotFoundError):
+            _ = reader_class("./foo.bar")

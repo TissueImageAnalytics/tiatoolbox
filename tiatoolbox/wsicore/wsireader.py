@@ -207,10 +207,6 @@ class WSIReader:
         input_path = pathlib.Path(input_img)
         WSIReader.verify_supported_wsi(input_path)
 
-        # Check file / directory exists
-        if not input_path.exists():
-            raise FileNotFoundError(f"Input path does not exist {input_path}")
-
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
 
         if is_dicom(input_path):
@@ -302,6 +298,8 @@ class WSIReader:
             self.input_path = None
         else:
             self.input_path = pathlib.Path(input_img)
+            if not self.input_path.exists():
+                raise FileNotFoundError(f"Input path does not exist: {self.input_path}")
         self._m_info = None
 
         # Set a manual mpp value
