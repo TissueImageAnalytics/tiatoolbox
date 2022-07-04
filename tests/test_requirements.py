@@ -18,7 +18,7 @@ def parse_pip(
 ) -> Dict[str, Requirement]:
     """Parse a pip requirements file.
 
-    Not that package names are case insensitive and underscores and
+    Note that package names are case insensitive and underscores and
     dashes are considered equivalent.
 
     Args:
