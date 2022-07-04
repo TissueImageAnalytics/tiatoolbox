@@ -81,7 +81,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
         # Check for duplicate packages
         if requirement.key in packages:
             raise ValueError(
-                f"Duplicate dependency: {package_name} in {file_path.name}"
+                f"Duplicate dependency: {requirement.key} in {file_path.name}"
             )
         packages[requirement.key] = requirement
     return packages
