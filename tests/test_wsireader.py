@@ -2062,7 +2062,7 @@ class TestReader:
         assert np.min(cc) > 0.95
 
     @staticmethod
-    def test_file_path_doesnt_exist(sample_key, reader_class):
+    def test_file_path_does_not_exist(sample_key, reader_class):
         """Test that the file_path attribute is set correctly.
 
         The file_path attribute should be set to the path of the file
