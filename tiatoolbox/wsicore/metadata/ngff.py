@@ -8,6 +8,7 @@ https://ngff.openmicroscopy.org/0.4/
 from dataclasses import dataclass, field
 from numbers import Number
 from typing import List, Optional, Union
+
 try:
     from typing import Literal
 except ImportError:
