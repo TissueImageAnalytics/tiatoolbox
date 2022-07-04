@@ -174,7 +174,7 @@ def test_requirements_consistent(root_dir):
     # Check that packages which are in all files match
     key_sets = [set(x.keys()) for x in all_requirements.values()]
     common_packages = key_sets[0].intersection(*key_sets[1:])
-    file_names = [path.name for path in all_requirements.keys()]
+    file_names = [path.name for path in all_requirements]
     for package in common_packages:
         specs = [
             x[package].specs[0] if x[package].specs else ("?", "None")
