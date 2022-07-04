@@ -99,9 +99,10 @@ def test_files_exist(root_dir):
     """Test that all requirements files exist."""
     for main, dev in REQUIREMENTS_FILES:
         main_path = root_dir / main
-        dev_path = root_dir / dev
         assert main_path.exists()
-        assert dev_path.exists()
+        if dev:
+            dev_path = root_dir / dev
+            assert dev_path.exists()
 
 
 def parse_requirements(
