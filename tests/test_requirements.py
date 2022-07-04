@@ -131,7 +131,7 @@ def parse_requirements(
     raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
 
-def test_requirements_consistent(root_dir):
+def test_requirements_consistency(root_dir):
     """Test that dev requirements are consistent.
 
     1. A dev file should contain all the same requirements as the main
