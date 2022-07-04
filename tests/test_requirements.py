@@ -185,8 +185,8 @@ def test_requirements_consistent(root_dir):
             f"{c}{v} ({n})" for n, c, v in zip(file_names, constraints, versions)
         ]
         assert all(x == constraints[0] for x in constraints), (
-            f"{package} has inconsistent constraints:" f" {', '.join(formatted_deps)}"
+            f"{package} has inconsistent constraints:" f" {', '.join(formatted_deps)}."
         )
         assert all(x == versions[0] for x in versions), (
-            f"{package} has inconsistent versions:" f" {', '.join(formatted_deps)}"
+            f"{package} has inconsistent versions:" f" {', '.join(formatted_deps)}."
         )
