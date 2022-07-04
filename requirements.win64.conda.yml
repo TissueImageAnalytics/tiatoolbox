@@ -27,7 +27,7 @@ dependencies:
   - pytest-cov
   - pytest-runner>=5.2
   - pytest>=7.1.1
-  - python>=3.8
+  - python>=3.7
   - pytorch>=1.11.0
   - pyyaml>=6.0
   - requests>=2.27.1
