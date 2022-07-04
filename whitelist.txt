@@ -41,6 +41,7 @@ OME
 Omnyx
 OpenCV
 Otsu's
+PSNR
 PTC
 PYL
 Peter
@@ -50,6 +51,7 @@ RGB
 RGBA
 ROI
 Ruifrok
+SSIM
 Segmentor
 Vahadane
 Ver
