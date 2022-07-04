@@ -9,11 +9,11 @@ dependencies:
   - black>=22.3.0
   - Click>=8.1.2
   - cython
-  - defusedxml
-  - flask
+  - defusedxml>=0.7.1
+  - flask>=2.1.1
   - glymur>=0.9.9
   - h5py
-  - imagecodecs>2021.11.20
+  - imagecodecs>=2021.11.20
   - jupyterlab
   - matplotlib>=3.5.1
   - nbsphinx

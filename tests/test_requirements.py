@@ -1,3 +1,4 @@
+"""Test for ensuring that requirements files are valid and consistent."""
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -8,6 +9,7 @@ from pkg_resources import Requirement
 REQUIREMENTS_FILES = [
     ("requirements.txt", "requirements_dev.txt"),
     ("requirements.conda.yml", "requirements.dev.conda.yml"),
+    ("requirements.win64.conda.yml", None)
 ]
 
 
@@ -142,12 +144,18 @@ def test_requirements_consistent(root_dir):
 
     # Check that main/dev pairs match
     for main_name, dev_name in REQUIREMENTS_FILES:
+        # Get the main requirements
         main_path = root_dir / main_name
-        dev_path = root_dir / dev_name
         main = parse_requirements(main_path)
-        dev = parse_requirements(dev_path)
-        # Store for later comparison between all files
         all_requirements[main_path] = main
+
+        # Skip comparison if there is no dev file
+        if not dev_name:
+            continue
+
+        # Get the dev requirements
+        dev_path = root_dir / dev_name
+        dev = parse_requirements(dev_path)
         all_requirements[dev_path] = dev
 
         for name, requirement in main.items():
