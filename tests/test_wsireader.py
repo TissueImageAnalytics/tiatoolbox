@@ -19,7 +19,7 @@ import pytest
 import zarr
 from click.testing import CliRunner
 from skimage.filters import threshold_otsu
-from skimage.metrics import peak_signal_noise_ratio
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
 
@@ -1914,6 +1914,14 @@ class TestReader:
         ),
         ("DICOMReader", {"reader_class": DICOMWSIReader, "sample_key": "dicom-1"}),
         ("NGFFWSIReader", {"reader_class": NGFFWSIReader, "sample_key": "ngff-1"}),
+        (
+            "OpenSlideWSIReader (Small SVS)",
+            {"reader_class": OpenSlideWSIReader, "sample_key": "svs-1-small"},
+        ),
+        (
+            "OmnyxJP2WSIReader",
+            {"reader_class": OmnyxJP2WSIReader, "sample_key": "jp2-omnyx-1"},
+        ),
     ]
 
     @staticmethod
@@ -2057,9 +2065,19 @@ class TestReader:
         )
         # Make the regions the same size for comparison of content
         roi2 = imresize(roi2, output_size=[2000, 2000])
-        cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
-        # This control the harshness of similarity test, how much should be?
-        assert np.min(cc) > 0.95
+
+        # Check MSE
+        mse = np.mean((roi1 - roi2) ** 2)
+        assert mse < 100
+
+        # Check PSNR
+        psnr = peak_signal_noise_ratio(roi1, roi2)
+        assert psnr > 25
+
+        # Check SSIM (skip very small roi regions)
+        if np.greater(roi1.shape[2], 16).all():
+            ssim = structural_similarity(roi1, roi2, multichannel=True)
+            assert ssim > 0.9
 
     @staticmethod
     def test_file_path_does_not_exist(sample_key, reader_class):
