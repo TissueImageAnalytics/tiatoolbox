@@ -65,8 +65,8 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
 
     Returns:
         dict:
-            A dictionary mapping package names to tuples of the form
-            (constraint, version_spec, comment).
+            A dictionary mapping package names to
+            pkg_resources.Requirement.
     """
     with file_path.open("r") as fh:
         config = yaml.load(fh, Loader=yaml.FullLoader)
@@ -117,8 +117,8 @@ def parse_requirements(
 
     Returns:
         dict:
-            A dictionary mapping package names to tuples of the form
-            (constraint, version_spec, comment).
+            A dictionary mapping package names to
+            pkg_resources.Requirement.
     """
     if lines and file_path:
         raise ValueError("Only one of file_path or lines may be specified")
