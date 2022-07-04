@@ -1,6 +1,7 @@
 # skipcq: PTC-W6004
 """Tests for reading whole-slide images."""
 
+import json
 import os
 import pathlib
 import random
@@ -31,11 +32,14 @@ from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
     ArrayView,
     DICOMWSIReader,
+    NGFFWSIReader,
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
     WSIReader,
+    is_ngff,
+    is_zarr,
 )
 
 # -------------------------------------------------------------------------------------
@@ -1849,6 +1853,56 @@ def test_tiled_tiff_tifffile(remote_sample):
     assert isinstance(wsi, wsireader.TIFFWSIReader)
 
 
+def test_is_zarr_empty_dir(tmp_path):
+    """Test is_zarr is false for an empty .zarr directory."""
+    zarr_dir = tmp_path / "zarr.zarr"
+    zarr_dir.mkdir()
+    assert not is_zarr(zarr_dir)
+
+
+def test_is_zarr_array(tmp_path):
+    """Test is_zarr is true for a .zarr directory with an array."""
+    zarr_dir = tmp_path / "zarr.zarr"
+    zarr_dir.mkdir()
+    _zarray_path = zarr_dir / ".zarray"
+    minimal_zarray = {
+        "shape": [1, 1, 1],
+        "dtype": "uint8",
+        "compressor": {
+            "id": "lz4",
+        },
+        "chunks": [1, 1, 1],
+        "fill_value": 0,
+        "order": "C",
+        "filters": None,
+        "zarr_format": 2,
+    }
+    with open(_zarray_path, "w") as f:
+        json.dump(minimal_zarray, f)
+    assert is_zarr(zarr_dir)
+
+
+def test_is_zarr_group(tmp_path):
+    """Test is_zarr is true for a .zarr directory with an group."""
+    zarr_dir = tmp_path / "zarr.zarr"
+    zarr_dir.mkdir()
+    _zgroup_path = zarr_dir / ".zgroup"
+    minimal_zgroup = {
+        "zarr_format": 2,
+    }
+    with open(_zgroup_path, "w") as f:
+        json.dump(minimal_zgroup, f)
+    assert is_zarr(zarr_dir)
+
+
+def test_is_ngff_regular_zarr(tmp_path):
+    """Test is_ngff is false for a regular zarr."""
+    zarr_path = tmp_path / "zarr.zarr"
+    zarr.open(zarr_path, "w")
+    assert is_zarr(zarr_path)
+    assert not is_ngff(zarr_path)
+
+
 class TestReader:
     scenarios = [
         (
@@ -1859,6 +1913,7 @@ class TestReader:
             },
         ),
         ("DICOMReader", {"reader_class": DICOMWSIReader, "sample_key": "dicom-1"}),
+        ("NGFFWSIReader", {"reader_class": NGFFWSIReader, "sample_key": "ngff-1"}),
     ]
 
     @staticmethod
