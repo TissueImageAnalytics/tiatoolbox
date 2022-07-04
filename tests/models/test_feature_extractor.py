@@ -15,7 +15,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
 
-ON_GPU = not toolbox_env.running_on_travis() and toolbox_env.has_gpu()
+ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
 # ----------------------------------------------------
 
@@ -105,8 +105,8 @@ def test_functional(remote_sample, tmp_path):
     with torch.inference_mode():
         _features = model(patches).numpy()
     # ! must maintain same batch size and likely same ordering
-    # ! else the output values will not exactly be the same (still < 1.0e-5
+    # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
-    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-6
+    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-4
 
     _rm_dir(save_dir)
