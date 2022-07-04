@@ -42,7 +42,7 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
 
         slide_thumb = wsi.slide_thumbnail()
         if mode == "show":  # pragma: no cover
-            # skipped on travis
+            # Skipped on CI, and unless SHOW_TESTS is set
             im_region = Image.fromarray(slide_thumb)
             im_region.show()
 

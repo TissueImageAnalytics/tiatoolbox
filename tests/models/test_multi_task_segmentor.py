@@ -12,7 +12,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
-NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
+NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_ci() else 8
 
 # ----------------------------------------------------
 
@@ -23,7 +23,7 @@ def _rm_dir(path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on machine with GPU.",
 )
 def test_functionality_local(remote_sample, tmp_path):

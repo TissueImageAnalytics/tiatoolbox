@@ -9,7 +9,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not toolbox_env.has_gpu(),
+    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on machine with GPU.",
 )
 def test_get_pretrained_model():
