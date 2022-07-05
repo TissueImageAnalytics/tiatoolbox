@@ -1034,7 +1034,7 @@ class TestStore:
 
     @staticmethod
     def test_py37_init(fill_store, store_cls, monkeypatch):
-        """Test that __init__ is compatible with Python 3.8."""
+        """Test that __init__ is compatible with Python 3.7."""
         py37_version = (3, 7, 0)
 
         class Connection(sqlite3.Connection):
