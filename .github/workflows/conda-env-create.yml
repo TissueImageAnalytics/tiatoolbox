@@ -1,6 +1,6 @@
 # This workflow will build a conda environment to check that it resolves in a reasonable time
 
-name: Solve Conda Environments
+name: Solve Conda Environment
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
+          python-version: "3.9"
       - name: Install dependencies
         run: pip install conda
       - name: Solve Conda Environment
