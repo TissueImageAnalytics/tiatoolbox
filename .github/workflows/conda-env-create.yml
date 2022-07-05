@@ -1,0 +1,52 @@
+# This workflow will build a conda environment to check that it resolves in a reasonable time
+
+name: Solve Conda Environments
+
+on:
+  push:
+    paths:
+      - "requirements*.yml"
+  schedule: # Run on the 1st of every month at midnight
+    - cron: "0 0 1 * *"
+
+jobs:
+  conda_solve:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: pip install conda
+      - name: Solve Conda Environment
+        shell: python
+        run: |
+          import os
+          from conda.api import Solver
+          from ruamel.yaml import YAML  # Dependency of conda
+
+          requirements_name = "requirements.conda.yml"
+          if os.name == "nt":
+            requirements_name = "requirements.conda.win64.yml"
+
+          with open(requirements_name) as fh:
+            requirements = YAML().load(fh)
+
+          specs = [
+            spec for spec in requirements["dependencies"]
+            if isinstance(spec, str)  # Exclude pip dependencies
+          ]
+
+          solver = Solver(
+            prefix="tiatoolbox",
+            channels=requirements["channels"],
+            specs_to_add=specs,
+          )
+
+          solve = solver.solve_final_state()
