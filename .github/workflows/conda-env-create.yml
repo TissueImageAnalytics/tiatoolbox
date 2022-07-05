@@ -6,6 +6,9 @@ on:
   push:
     paths:
       - "requirements*.yml"
+  pull_request:
+    paths:
+      - "requirements*.yml"
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 
