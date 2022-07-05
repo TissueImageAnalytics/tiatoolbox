@@ -30,7 +30,9 @@ def parse_pip(
 
     Returns:
         dict:
-            A dictionary mapping package names to Requirement objects.
+            A dictionary mapping package names to
+            :class:`pkg_resources.Requirement`.
+
     """
     if lines and file_path:
         raise ValueError("Only one of file_path or lines may be specified")
@@ -67,7 +69,8 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
     Returns:
         dict:
             A dictionary mapping package names to
-            pkg_resources.Requirement.
+            :class:`pkg_resources.Requirement`.
+
     """
     with file_path.open("r") as fh:
         config = yaml.load(fh, Loader=yaml.FullLoader)
