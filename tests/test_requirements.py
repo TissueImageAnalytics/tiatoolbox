@@ -10,6 +10,7 @@ REQUIREMENTS_FILES = [
     ("requirements.txt", "requirements_dev.txt"),
     ("requirements.conda.yml", "requirements.dev.conda.yml"),
     ("requirements.win64.conda.yml", None),
+    ("docs/requirements.txt", None),
 ]
 
 
