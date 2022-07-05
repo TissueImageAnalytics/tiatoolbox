@@ -14,6 +14,7 @@ NOTEBOOKS = (
 
 @pytest.fixture()
 def root_path(request):
+    """Get the root path of the project."""
     return Path(request.config.rootdir)
 
 
