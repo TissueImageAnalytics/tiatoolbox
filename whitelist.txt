@@ -116,6 +116,7 @@ memray
 mpp
 mse
 natively
+nbconvert
 ndarray
 nn
 noinspection
@@ -149,6 +150,7 @@ skipcq
 svs
 tiatoolbox
 tifffile
+tmp
 tolist
 uid
 uint8
