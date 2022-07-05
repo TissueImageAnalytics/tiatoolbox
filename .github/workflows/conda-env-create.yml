@@ -5,10 +5,11 @@ name: Solve Conda Environments
 on:
   push:
     paths:
-      - "requirements*.yml"
+      - "**requirements*.yml"
+      - "**conda-env-create.yml"
   pull_request:
     paths:
-      - "requirements*.yml"
+      - "**requirements*.yml"
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 
