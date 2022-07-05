@@ -6,12 +6,6 @@ from pathlib import Path
 
 import pytest
 
-NOTEBOOKS = (
-    "examples/01-wsi-reading.ipynb",
-    "examples/02-stain-normalization.ipynb",
-    "examples/03-tissue-masking.ipynb",
-)
-
 
 @pytest.fixture()
 def root_path(request):
