@@ -10,9 +10,6 @@ on:
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 
-env:
-  REQUIREMENTS_FILE: requirements.conda.yml
-
 jobs:
   conda_solve:
     strategy:
@@ -32,10 +29,6 @@ jobs:
         with:
           activate-environment: tiatoolbox
           environment-file: ${{ matrix.requirements }}
-      - shell: python
-        run: |
-          import sys
-          print(sys.executable)
       - shell: bash -l {0}
         run: |
           conda info
