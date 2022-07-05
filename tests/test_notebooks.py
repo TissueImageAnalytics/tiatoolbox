@@ -72,7 +72,7 @@ class TestNotebook:
             "outputs": [],
             "source": [
                 "import sys\n",
-                f"sys.path.append('{str(root_path.resolve())}')\n"
+                f"sys.path.append('{str(root_path.resolve())}')\n",
             ],
         }
         nb_json["cells"].insert(0, cell)
