@@ -64,6 +64,19 @@ class TestNotebook:
         with nb_path.open() as fh:
             nb_json = json.load(fh)
 
+        # Add a cell which adds tiatoolbox to the python path
+        cell = {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "import sys\n",
+                f"sys.path.append('{str(root_path.resolve())}')\n"
+            ],
+        }
+        nb_json["cells"].insert(0, cell)
+
         # Filter out lines which start with "!apt-get" or "!pip" installs
         for cell in nb_json["cells"]:
             if cell.get("cell_type") != "code":
