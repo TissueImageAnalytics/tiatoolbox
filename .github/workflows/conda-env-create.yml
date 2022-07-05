@@ -19,19 +19,19 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            requirements: requirements.conda.yml
+          - os: windows-latest
+            requirements: requirements.win64.conda.yml
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - shell: python
-        run: |
-          import os
-          if os.name == 'nt':
-            os.environ['REQUIREMENTS_FILE'] = 'requirements.win64.conda.yml'
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: tiatoolbox
-          environment-file: ${{ env.REQUIREMENTS_FILE }}
+          environment-file: ${{ matrix.requirements }}
       - shell: python
         run: |
           import sys
