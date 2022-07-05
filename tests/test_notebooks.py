@@ -19,11 +19,6 @@ def root_path(request):
     return Path(request.config.rootdir)
 
 
-# -------------------------------------------------------------------------------------
-# Generate Parameterized Tests
-# -------------------------------------------------------------------------------------
-
-
 def pytest_generate_tests(metafunc):
     """Generate (parameterize) test scenarios.
 
