@@ -48,12 +48,19 @@ class TestNotebook:
             "Tissue Masking",
             {"notebook": "examples/03-tissue-masking.ipynb"},
         ),
+        (
+            "Patch Extraction",
+            {"notebook": "examples/04-patch-extraction.ipynb"},
+        ),
     ]
 
     @staticmethod
     def test_notebook(root_path, tmp_path, notebook):
         """Test that the notebook execute without exception."""
-        path = root_path / notebook
+        nb_path = root_path / notebook
+        tmp_nb_path = tmp_path / nb_path.name
+        shutil.copy(nb_path, tmp_nb_path)
+
         process = subprocess.Popen(
             [
                 "jupyter",
@@ -61,10 +68,8 @@ class TestNotebook:
                 "--to",
                 "notebook",
                 "--execute",
-                "--output-dir",
-                str(tmp_path),
                 "--stdout",
-                str(path),
+                str(tmp_nb_path),
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -84,7 +89,3 @@ class TestNotebook:
                 f" Tail of notebook output:"
                 f"\n\t{tail}"
             )
-
-        # Remove the tmp directory created by nbconvert
-        tmp = tmp_path / "tmp"
-        shutil.rmtree(tmp, ignore_errors=True)
