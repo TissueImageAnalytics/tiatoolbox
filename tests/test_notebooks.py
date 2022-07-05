@@ -1,6 +1,6 @@
 """Test that notbooks execute without error."""
+import json
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -59,7 +59,24 @@ class TestNotebook:
         """Test that the notebook execute without exception."""
         nb_path = root_path / notebook
         tmp_nb_path = tmp_path / nb_path.name
-        shutil.copy(nb_path, tmp_nb_path)
+
+        # Load the notebook JSON
+        with nb_path.open() as fh:
+            nb_json = json.load(fh)
+
+        # Filter out lines which start with "!apt-get" or "!pip" installs
+        for cell in nb_json["cells"]:
+            if cell.get("cell_type") != "code":
+                continue
+            cell["source"] = [
+                line
+                for line in cell["source"]
+                if not re.match(r"^!\s*(apt(-get)?|pip).*install", line)
+            ]
+
+        # Write the notebook JSON to a temporary file
+        with tmp_nb_path.open("w") as fh:
+            json.dump(nb_json, fh)
 
         process = subprocess.Popen(
             [
