@@ -20,11 +20,7 @@ from tiatoolbox.cli.tissue_mask import tissue_mask
 
 def version_msg():
     """Return a string with tiatoolbox package version and python version."""
-    python_version = sys.version[:3]
-    message = (
-        f"tiatoolbox {__version__} (Python {python_version}) on {platform.platform()}."
-    )
-    return message
+    return f"tiatoolbox {__version__} (Python {platform.python_version()}) on {platform.platform()}."
 
 
 @tiatoolbox_cli.group(context_settings={"help_option_names": ["-h", "--help"]})

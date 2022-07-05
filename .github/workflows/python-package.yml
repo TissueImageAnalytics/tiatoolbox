@@ -90,7 +90,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        apt-get install -y libopenslide-dev libopenjp2-7
+        sudo apt-get install -y libopenslide-dev libopenjp2-7
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install build
