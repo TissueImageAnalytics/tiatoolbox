@@ -10,6 +10,9 @@ on:
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 
+env:
+  REQUIREMENTS_FILE: requirements.conda.yml
+
 jobs:
   conda_solve:
     strategy:
@@ -19,36 +22,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.9"
-      - name: Install dependencies
-        run: pip install conda cytoolz
-      - name: Solve Conda Environment
-        shell: python
+      - shell: python
         run: |
           import os
-          from conda.api import Solver
-          from ruamel.yaml import YAML  # Dependency of conda
-
-          requirements_name = "requirements.conda.yml"
-          if os.name == "nt":
-            requirements_name = "requirements.conda.win64.yml"
-
-          with open(requirements_name) as fh:
-            requirements = YAML().load(fh)
-
-          specs = [
-            spec for spec in requirements["dependencies"]
-            if isinstance(spec, str)  # Exclude pip dependencies
-          ]
-
-          solver = Solver(
-            prefix="tiatoolbox",
-            channels=requirements["channels"],
-            specs_to_add=specs,
-          )
-
-          solve = solver.solve_final_state()
+          if os.name == 'nt':
+            os.environ['REQUIREMENTS_FILE'] = 'requirements.win64.conda.yml'
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: tiatoolbox
+          environment-file: ${{ env.REQUIREMENTS_FILE }}
+      - shell: python
+        run: |
+          import sys
+          print(sys.executable)
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show
