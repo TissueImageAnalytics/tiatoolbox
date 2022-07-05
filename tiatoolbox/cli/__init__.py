@@ -16,6 +16,7 @@ from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
 from tiatoolbox.cli.stain_norm import stain_norm
 from tiatoolbox.cli.tile_server import tile_server
 from tiatoolbox.cli.tissue_mask import tissue_mask
+from tiatoolbox.cli.visualize import visualize
 
 
 def version_msg():
@@ -50,6 +51,7 @@ main.add_command(slide_thumbnail)
 main.add_command(tissue_mask)
 main.add_command(stain_norm)
 main.add_command(tile_server)
+main.add_command(visualize)
 
 
 if __name__ == "__main__":
