@@ -14,7 +14,6 @@ import tarfile
 import time
 import warnings
 import zipfile
-from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 from typing import Iterable, Tuple, Union
@@ -69,12 +68,10 @@ class TilePyramidGenerator:
         """
         return self.tile_size + 2 * self.overlap
 
-    @lru_cache(maxsize=None)
     def level_downsample(self, level: int) -> float:
         """Find the downsample factor for a level."""
         return 2 ** (self.level_count - level - 1)
 
-    @lru_cache(maxsize=None)
     def level_dimensions(self, level: int) -> Tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
@@ -89,7 +86,6 @@ class TilePyramidGenerator:
         ).astype(int)
         return tuple(level_dims)
 
-    @lru_cache(maxsize=None)
     def tile_grid_size(self, level: int) -> Tuple[int, int]:
         """Width and height of the minimal grid of tiles to cover the slide.
 
@@ -180,8 +176,8 @@ class TilePyramidGenerator:
 
         Example:
             >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader("sample.svs")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open("sample.svs")
             >>> tile_generator = TilePyramidGenerator(
             ...   wsi=reader,
             ...   tile_size=256,
@@ -262,8 +258,8 @@ class TilePyramidGenerator:
 
         Examples:
             >>> from tiatoolbox.tools.pyramid import TilePyramidGenerator
-            >>> from tiatoolbox.wsicore.wsireader import get_wsireader
-            >>> wsi = get_wsireader("sample.svs")
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> wsi = WSIReader.open("sample.svs")
             >>> tile_generator = TilePyramidGenerator(
             ...   wsi=reader,
             ...   tile_size=256,
@@ -386,7 +382,6 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
     """
 
-    @lru_cache(maxsize=None)
     def tile_group(self, level: int, x: int, y: int):
         """Find the tile group for a tile index.
 
@@ -415,7 +410,6 @@ class ZoomifyGenerator(TilePyramidGenerator):
         tile_index = cumsum + index_in_level
         return tile_index // 256  # the tile group
 
-    @lru_cache(maxsize=None)
     def tile_path(self, level: int, x: int, y: int) -> Path:
         """Generate the Zoomify path for a specified tile.
 

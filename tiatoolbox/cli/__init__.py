@@ -14,16 +14,13 @@ from tiatoolbox.cli.semantic_segment import semantic_segment
 from tiatoolbox.cli.slide_info import slide_info
 from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
 from tiatoolbox.cli.stain_norm import stain_norm
+from tiatoolbox.cli.tile_server import tile_server
 from tiatoolbox.cli.tissue_mask import tissue_mask
 
 
 def version_msg():
     """Return a string with tiatoolbox package version and python version."""
-    python_version = sys.version[:3]
-    message = (
-        f"tiatoolbox {__version__} (Python {python_version}) on {platform.platform()}."
-    )
-    return message
+    return f"tiatoolbox {__version__} (Python {platform.python_version()}) on {platform.platform()}."
 
 
 @tiatoolbox_cli.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -48,6 +45,7 @@ main.add_command(slide_info)
 main.add_command(slide_thumbnail)
 main.add_command(tissue_mask)
 main.add_command(stain_norm)
+main.add_command(tile_server)
 
 
 if __name__ == "__main__":

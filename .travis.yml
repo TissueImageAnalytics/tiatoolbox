@@ -1,7 +1,9 @@
 # Config file for automatic testing at travis-ci.com
 
 language: python
+dist: bionic
 python:
+  - 3.10
   - 3.9
   - 3.8
   - 3.7
@@ -11,7 +13,7 @@ if: type != push OR branch = master OR branch = develop OR branch = pre-release 
 before_install:
   - sudo apt-get -y update
   - sudo apt-get -y install openslide-tools
-  - sudo apt-get -y install libopenjpeg5 libopenjpeg-dev
+  - sudo apt-get -y install libopenjp2-7-dev libopenjp2-tools
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
@@ -53,7 +55,7 @@ deploy:
     on:
       branch: pre-release
       repo: TissueImageAnalytics/tiatoolbox
-      python: 3.9
+      python: 3.10
   - provider: pypi
     distributions: sdist bdist_wheel
     user: __token__
@@ -63,4 +65,4 @@ deploy:
       branch: master
       tags: true
       repo: TissueImageAnalytics/tiatoolbox
-      python: 3.9
+      python: 3.10

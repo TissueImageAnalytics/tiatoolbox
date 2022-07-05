@@ -29,9 +29,18 @@ def add_default_to_usage_help(
 
 def cli_img_input(
     usage_help: str = "Path to WSI or directory containing WSIs.",
+    multiple: bool = False,
 ) -> callable:
     """Enables --img-input option for cli."""
-    return click.option("--img-input", help=usage_help, type=str)
+    return click.option("--img-input", help=usage_help, type=str, multiple=multiple)
+
+
+def cli_name(
+    usage_help: str = "user defined name to be used as an identifier",
+    multiple: bool = False,
+) -> callable:
+    """enables --name option for cli"""
+    return click.option("--name", help=usage_help, type=str, multiple=multiple)
 
 
 def cli_output_path(

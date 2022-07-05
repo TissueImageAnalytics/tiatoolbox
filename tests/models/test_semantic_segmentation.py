@@ -4,6 +4,7 @@ import copy
 
 # ! The garbage collector
 import gc
+import multiprocessing
 import os
 import pathlib
 import shutil
@@ -13,7 +14,7 @@ import pytest
 import torch
 import torch.multiprocessing as torch_mp
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 import yaml
 from click.testing import CliRunner
 
@@ -28,12 +29,15 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread, imwrite
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
-NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_travis() else 8
+try:
+    NUM_POSTPROC_WORKERS = multiprocessing.cpu_count()
+except NotImplementedError:
+    NUM_POSTPROC_WORKERS = 2
 
 # ----------------------------------------------------
 
@@ -109,36 +113,37 @@ class _CNNTo1(ModelABC):
 
 def test_segmentor_ioconfig():
     """Test for IOConfig."""
-    default_config = dict(
-        input_resolutions=[
+    default_config = {
+        "input_resolutions": [
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
             {"units": "mpp", "resolution": 0.75},
         ],
-        output_resolutions=[
+        "output_resolutions": [
             {"units": "mpp", "resolution": 0.25},
             {"units": "mpp", "resolution": 0.50},
         ],
-        patch_input_shape=[2048, 2048],
-        patch_output_shape=[1024, 1024],
-        stride_shape=[512, 512],
-    )
+        "patch_input_shape": [2048, 2048],
+        "patch_output_shape": [1024, 1024],
+        "stride_shape": [512, 512],
+    }
 
     # error when uniform resolution units are not uniform
+    xconfig = copy.deepcopy(default_config)
+    xconfig["input_resolutions"] = [
+        {"units": "mpp", "resolution": 0.25},
+        {"units": "power", "resolution": 0.50},
+    ]
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        xconfig = copy.deepcopy(default_config)
-        xconfig["input_resolutions"] = [
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "power", "resolution": 0.50},
-        ]
         _ = IOSegmentorConfig(**xconfig)
+
     # error when uniform resolution units are not supported
+    xconfig = copy.deepcopy(default_config)
+    xconfig["input_resolutions"] = [
+        {"units": "alpha", "resolution": 0.25},
+        {"units": "alpha", "resolution": 0.50},
+    ]
     with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        xconfig = copy.deepcopy(default_config)
-        xconfig["input_resolutions"] = [
-            {"units": "alpha", "resolution": 0.25},
-            {"units": "alpha", "resolution": 0.50},
-        ]
         _ = IOSegmentorConfig(**xconfig)
 
     ioconfig = IOSegmentorConfig(
@@ -274,7 +279,7 @@ def test_crash_segmentor(remote_sample):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
         semantic_segmentor.filter_coordinates(
-            get_wsireader(mini_wsi_msk), np.array([1.0, 2.0])
+            WSIReader.open(mini_wsi_msk), np.array([1.0, 2.0])
         )
     semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
@@ -447,7 +452,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     # # convert to pathlib Path to prevent wsireader complaint
     resolution = 2.0
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
@@ -554,7 +559,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     expected_shape = reader.slide_dimensions(**ioconfig.save_resolution)
     expected_shape = np.array(expected_shape)[::-1]  # to YX
     pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
@@ -599,9 +604,9 @@ def test_subclass(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=(2048, 2048),
-        patch_output_shape=(1024, 1024),
-        stride_shape=(512, 512),
+        patch_input_shape=(1024, 1024),
+        patch_output_shape=(512, 512),
+        stride_shape=(256, 256),
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
@@ -614,7 +619,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = pathlib.Path(f"{tmp_path}/output")
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
@@ -650,7 +655,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not ON_GPU,
+    toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_behavior_tissue_mask_local(remote_sample, tmp_path):
@@ -691,7 +696,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not ON_GPU,
+    toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_behavior_bcss_local(remote_sample, tmp_path):
@@ -764,14 +769,14 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
         "fcn-tissue_mask", str(tmp_path.joinpath("fcn-tissue_mask.pth"))
     )
 
-    config = dict(
-        input_resolutions=[{"units": "mpp", "resolution": 2.0}],
-        output_resolutions=[{"units": "mpp", "resolution": 2.0}],
-        patch_input_shape=[1024, 1024],
-        patch_output_shape=[512, 512],
-        stride_shape=[256, 256],
-        save_resolution={"units": "mpp", "resolution": 8.0},
-    )
+    config = {
+        "input_resolutions": [{"units": "mpp", "resolution": 2.0}],
+        "output_resolutions": [{"units": "mpp", "resolution": 2.0}],
+        "patch_input_shape": [1024, 1024],
+        "patch_output_shape": [512, 512],
+        "stride_shape": [256, 256],
+        "save_resolution": {"units": "mpp", "resolution": 8.0},
+    }
     with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
         yaml.dump(config, fptr)
 

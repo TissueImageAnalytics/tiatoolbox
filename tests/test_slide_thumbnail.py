@@ -1,5 +1,6 @@
 """Tests for code related to obtaining slide thumbnails."""
 
+import os
 import pathlib
 
 import numpy as np
@@ -7,7 +8,7 @@ import pytest
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.utils.env_detection import running_on_travis
+from tiatoolbox.utils.env_detection import running_on_ci
 from tiatoolbox.wsicore import wsireader
 
 
@@ -81,7 +82,11 @@ def test_command_line_jp2_slide_thumbnail(sample_jp2, tmp_path):
     command_line_slide_thumbnail(runner, sample=sample_jp2, tmp_path=tmp_path)
 
 
-@pytest.mark.skipif(running_on_travis(), reason="No display on travis.")
+@pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
+@pytest.mark.skipif(
+    not os.environ.get("SHOW_TESTS"),
+    reason="Visual tests disabled, set SHOW_TESTS to enable.",
+)
 def test_command_line_jp2_slide_thumbnail_mode_show(sample_jp2, tmp_path):
     """Test for the jp2 slide_thumbnail CLI mode='show'."""
     runner = CliRunner()
