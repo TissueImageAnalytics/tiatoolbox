@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: "3.9"
       - name: Install dependencies
-        run: pip install conda
+        run: pip install conda cytoolz
       - name: Solve Conda Environment
         shell: python
         run: |
