@@ -101,7 +101,6 @@ def test_files_exist(root_dir):
         main_path = root_dir / main
         if not main_path.exists():
             raise FileNotFoundError(f"Missing file: {main_path}")
-        assert main_path.exists()
         if dev:
             dev_path = root_dir / dev
             if not dev_path.exists():
