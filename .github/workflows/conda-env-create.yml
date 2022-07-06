@@ -25,12 +25,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: mamba-org/provision-with-micromamba@main
         with:
           activate-environment: tiatoolbox
-          environment-file: ${{ matrix.requirements }}
+          environment-name: ${{ matrix.requirements }}
       - shell: bash -l {0}
         run: |
-          conda info
-          conda list
-          conda config --show
+          micromamba info
+          micromamba list
+          micromamba config --show
