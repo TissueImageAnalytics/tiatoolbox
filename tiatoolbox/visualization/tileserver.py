@@ -260,7 +260,7 @@ class TileServer(Flask):
             SQ=SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix=='.dat':
             SQ=SQLiteStore(auto_commit=False)
-            SQ.add_from(overlay_path)
+            SQ.add_from(overlay_path, slide_res=self.state.mpp[0])
         elif overlay_path.suffix in ['.jpg','.png', '.tiff']:
             layer=f'layer{len(self.tia_pyramids)}'
             if overlay_path.suffix=='.tiff':

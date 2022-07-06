@@ -419,7 +419,7 @@ def folder_input_cb(attr, old, new):
 
 def populate_layer_list(slide_name, folder_path):
     file_list=[]
-    for ext in ['*.db','*.dat','*.geojson','*.png','*.jpg','*.pkl']:   #and '*.tiff'?
+    for ext in ['*.db','*.dat','*.geojson','*.png','*.jpg','*.pkl','*.tiff']:   #and '*.tiff'?
         file_list.extend(list(folder_path.glob('*\\'+ext)))
     file_list=[(str(p),str(p)) for p in file_list if slide_name in str(p)]
     layer_drop.menu=file_list
