@@ -1,6 +1,7 @@
 """Command line interface for visualization tool"""
 import pathlib
 import subprocess
+import tiatoolbox.visualization as vis
 
 from tiatoolbox.cli.common import (
     cli_img_input,
@@ -19,10 +20,12 @@ def visualize(img_input):
     subdirectories of the base directory named slides and overlays, 
     respectively.
     """
+    vis_path = pathlib.Path(vis.__file__).resolve().parent
+
     cmd = ["bokeh",
            "serve",
            "--show",
-           "./tiatoolbox/visualization/render_demo",
+           str(vis_path.joinpath("render_demo")),
            "--unused-session-lifetime",
             "1000",
             "--check-unused-sessions",
