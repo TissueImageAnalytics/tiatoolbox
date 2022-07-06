@@ -6,6 +6,7 @@ name: Python package
 on:
   push:
     branches: [ develop, pre-release, master, main ]
+    tags: v*
   pull_request:
     branches: [ develop, pre-release, master, main ]
 
@@ -77,7 +78,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     needs: build
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/pre-release'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/pre-release' || startsWith(github.ref, 'refs/tags/v')
 
     steps:
     - uses: actions/checkout@v3
@@ -90,7 +91,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        apt-get install -y libopenslide-dev libopenjp2-7
+        sudo apt-get install -y libopenslide-dev libopenjp2-7
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install build
