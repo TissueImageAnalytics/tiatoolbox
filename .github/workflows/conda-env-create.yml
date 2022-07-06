@@ -27,8 +27,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: mamba-org/provision-with-micromamba@main
         with:
-          activate-environment: tiatoolbox
-          environment-name: ${{ matrix.requirements }}
+          environment-name: tiatoolbox
+          environment-file: ${{ matrix.requirements }}
       - shell: bash -l {0}
         run: |
           micromamba info
