@@ -9,7 +9,10 @@ from tiatoolbox.cli.common import (
 
 
 @tiatoolbox_cli.command()
-@cli_img_input()
+@cli_img_input(usage_help="""Path to base directory containing images to be displayed.
+    Slides and overlays to be visualized are expected in 
+    subdirectories of the base directory named slides and overlays, 
+    respectively.""")
 def visualize(img_input):
     """Launches the visualization tool for the given base directory.
     Slides and overlays to be visualized are expected in 
