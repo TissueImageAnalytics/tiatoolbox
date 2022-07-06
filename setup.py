@@ -14,6 +14,7 @@ requirements = [
     "albumentations>=1.0.3",
     "Click>=8.1.2",
     "defusedxml>=0.7.1",
+    "flask>=2.1.1",
     "glymur>=0.9.9",
     "imagecodecs>=2021.11.20",
     "matplotlib>==3.5.1",
