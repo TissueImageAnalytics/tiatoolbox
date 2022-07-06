@@ -175,7 +175,7 @@ def test_requirements_consistency(root_dir):
     # Iterate over the keys
     for key in requirement_keys:
         # Find the specs for the requirement and which files it is in
-        zipped_file_specs = (
+        zipped_file_specs = [
             (
                 path,
                 *(  # Unpack the (constraint, version) tuple
@@ -186,7 +186,7 @@ def test_requirements_consistency(root_dir):
             )
             for path, requirements in all_requirements.items()
             if key in requirements  # Filter out files that don't have the key
-        )
+        ]
 
         # Unzip the specs to get a list of constraints and versions
         _, constraints, versions = zip(*zipped_file_specs)
