@@ -32,6 +32,8 @@ def cli_img_input(
     multiple: bool = False,
 ) -> callable:
     """Enables --img-input option for cli."""
+    if multiple:
+        usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--img-input", help=usage_help, type=str, multiple=multiple)
 
 
@@ -40,6 +42,8 @@ def cli_name(
     multiple: bool = False,
 ) -> callable:
     """enables --name option for cli"""
+    if multiple:
+        usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--name", help=usage_help, type=str, multiple=multiple)
 
 
