@@ -19,9 +19,11 @@ def visualize(img_input):
     cmd = ["bokeh",
            "serve",
            "--show",
-           "./tiatoolbox/visualize/render_demo"
+           "./tiatoolbox/visualization/render_demo",
            "--unused-session-lifetime",
             "1000",
             "--check-unused-sessions",
-            "1000",]
+            "1000",
+            "--args",
+            img_input,]
     subprocess.run(cmd)
