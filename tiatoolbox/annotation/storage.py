@@ -1066,7 +1066,15 @@ class AnnotationStore(ABC, MutableMapping):
         store = cls()
         if scale_factor is not None:
             anns = [
-                Annotation(scale(feature2geometry(feature["geometry"]), xfact=scale_factor, yfact=scale_factor, origin=(0,0,0)), feature["properties"])
+                Annotation(
+                    scale(
+                        feature2geometry(feature["geometry"]),
+                        xfact=scale_factor,
+                        yfact=scale_factor,
+                        origin=(0, 0, 0),
+                    ),
+                    feature["properties"],
+                )
                 for feature in geojson["features"]
             ]
         else:
@@ -1077,9 +1085,11 @@ class AnnotationStore(ABC, MutableMapping):
         store.append_many(anns)
         return store
 
-    def add_from(self, fp: Union[IO, str], saved_res=1, slide_res=1) -> "AnnotationStore":
+    def add_from(
+        self, fp: Union[IO, str], saved_res=1, slide_res=1
+    ) -> "AnnotationStore":
         fp = Path(fp)
-        if fp.suffix=='.geojson':
+        if fp.suffix == ".geojson":
             geojson = self._load_cases(
                 fp=fp,
                 string_fn=json.loads,
@@ -1094,49 +1104,82 @@ class AnnotationStore(ABC, MutableMapping):
                 Annotation(feature2geometry(feature["geometry"]), feature["properties"])
                 for feature in geojson["features"]
             ]
-        elif fp.suffix=='.dat':
-            #hovernet-stype .dat file
+        elif fp.suffix == ".dat":
+            # hovernet-stype .dat file
             def make_valid_poly(poly):
                 if poly.is_valid:
                     return poly
-                poly=poly.buffer(0.01)
+                poly = poly.buffer(0.01)
                 if poly.is_valid:
                     return poly
-                poly=make_valid(poly)
-                if len(list(poly))>1:
-                    return MultiPolygon([p for p in poly if poly.geom_type=='Polygon'])
+                poly = make_valid(poly)
+                if len(list(poly)) > 1:
+                    return MultiPolygon(
+                        [p for p in poly if poly.geom_type == "Polygon"]
+                    )
                 return poly
 
             data = joblib.load(fp)
-            props = list(data[list(data.keys())[0]].keys())#[3:]
-            if 'contour' not in props:
-                #assume cerberous format with objects subdivided into categories
+            props = list(data[list(data.keys())[0]].keys())  # [3:]
+            if "contour" not in props:
+                # assume cerberous format with objects subdivided into categories
                 anns = []
-                saved_res = data['resolution']['resolution']
+                saved_res = data["resolution"]["resolution"]
                 for subcat in data.keys():
-                    if subcat=='resolution':
+                    if subcat == "resolution":
                         continue
                     props = list(data[subcat][list(data[subcat].keys())[0]].keys())
-                    if 'contour' not in props:
+                    if "contour" not in props:
                         continue
-                    if 'type' in props:
+                    if "type" in props:
                         for key in data[subcat].keys():
-                            data[subcat][key]['type'] = f"{subcat[:3]}: {data[subcat][key]['type']}"
+                            data[subcat][key][
+                                "type"
+                            ] = f"{subcat[:3]}: {data[subcat][key]['type']}"
                     else:
-                        props.append('type')
+                        props.append("type")
                         for key in data[subcat].keys():
-                            data[subcat][key]['type'] = subcat
-                    anns.extend([
-                    Annotation(make_valid_poly(feature2geometry({'type': 'Polygon', 'coordinates': (np.array(saved_res)/np.array(slide_res))*np.array([data[subcat][key]['contour']])})), {key2: data[subcat][key][key2] for key2 in props[3:]})
-                    for key in data[subcat].keys()
-                ])
+                            data[subcat][key]["type"] = subcat
+                    anns.extend(
+                        [
+                            Annotation(
+                                make_valid_poly(
+                                    feature2geometry(
+                                        {
+                                            "type": "Polygon",
+                                            "coordinates": (
+                                                np.array(saved_res)
+                                                / np.array(slide_res)
+                                            )
+                                            * np.array([data[subcat][key]["contour"]]),
+                                        }
+                                    )
+                                ),
+                                {key2: data[subcat][key][key2] for key2 in props[3:]},
+                            )
+                            for key in data[subcat].keys()
+                        ]
+                    )
             else:
                 anns = [
-                    Annotation(make_valid_poly(feature2geometry({'type': 'Polygon', 'coordinates': (np.array(saved_res)/np.array(slide_res))*np.array([data[key]['contour']])})), {key2: data[key][key2] for key2 in props[3:]})
+                    Annotation(
+                        make_valid_poly(
+                            feature2geometry(
+                                {
+                                    "type": "Polygon",
+                                    "coordinates": (
+                                        np.array(saved_res) / np.array(slide_res)
+                                    )
+                                    * np.array([data[key]["contour"]]),
+                                }
+                            )
+                        ),
+                        {key2: data[key][key2] for key2 in props[3:]},
+                    )
                     for key in data.keys()
                 ]
         else:
-            raise ValueError('Invalid file type')
+            raise ValueError("Invalid file type")
         print(len(anns))
         self.append_many(anns)
 
@@ -1312,22 +1355,22 @@ class AnnotationStore(ABC, MutableMapping):
 class SQLiteMetadata(MutableMapping):
     """Metadata storage for an SQLiteStore.
 
-    Attributes:
-        connection (Union[str, Path, IO]):
-            A reference to where the data is stored. May be a string (
-            e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
-            handle.
-        path (Path):
-            The path to the annotation store data. This will be
-            ":memory:" if the annotation store is in-memory. This is
-            derived from `connection` and normalised to be a pathlib
-            Path object.
-        con (sqlite3.Connection):
-            The sqlite3 database connection.
-<<<<<<< HEAD
-=======
+        Attributes:
+            connection (Union[str, Path, IO]):
+                A reference to where the data is stored. May be a string (
+                e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
+                handle.
+            path (Path):
+                The path to the annotation store data. This will be
+                ":memory:" if the annotation store is in-memory. This is
+                derived from `connection` and normalised to be a pathlib
+                Path object.
+            con (sqlite3.Connection):
+                The sqlite3 database connection.
+    <<<<<<< HEAD
+    =======
 
->>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
+    >>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -1490,7 +1533,7 @@ class SQLiteStore(AnnotationStore):
         register_custom_function("CONTAINS", 1, json_contains)
 
         if exists:
-            #self.con.execute("BEGIN")
+            # self.con.execute("BEGIN")
             return
 
         # Create tables for geometry and RTree index
@@ -1513,12 +1556,12 @@ class SQLiteStore(AnnotationStore):
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
                 geometry BLOB,           -- Detailed geometry
                 properties TEXT,         -- JSON properties
-                area FLOAT               -- Area (for ordering) 
+                area FLOAT               -- Area (for ordering)
             )
             """
         )
         self.con.commit()
-        #self.con.execute("BEGIN")
+        # self.con.execute("BEGIN")
 
     def serialise_geometry(  # skipcq: PYL-W0221
         self, geometry: Geometry
@@ -1545,7 +1588,9 @@ class SQLiteStore(AnnotationStore):
         raise Exception("Unsupported compression method.")
 
     @staticmethod
-    def _unpack_geometry(data: Union[str, bytes], cx: int, cy: int, compress_type) -> Geometry:
+    def _unpack_geometry(
+        data: Union[str, bytes], cx: int, cy: int, compress_type
+    ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
         For space optimisation, points are stored as centroids and all
@@ -1926,10 +1971,10 @@ class SQLiteStore(AnnotationStore):
         geometry: Optional[Iterable] = None,
         callable_rows: Optional[str] = None,
         geometry_predicate="intersects",
-        con = None,
-        bbox = True,
-        compress_type = None,
-        min_area = None,
+        con=None,
+        bbox=True,
+        compress_type=None,
+        min_area=None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1974,7 +2019,7 @@ class SQLiteStore(AnnotationStore):
          FROM annotations, rtree
         WHERE annotations.id == rtree.id
         """
-        )      
+        )
 
         query_parameters = {}
 
@@ -2023,33 +2068,36 @@ class SQLiteStore(AnnotationStore):
 
         query_string += "\nORDER BY area DESC"
         cur.execute(query_string, query_parameters)
-        
+
         if bbox:
-            return {key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties)) for key, properties, *bounds in cur.fetchall()}  
+            return {
+                key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
+                for key, properties, *bounds in cur.fetchall()
+            }
         else:
             return [
                 Annotation(
-                geometry=SQLiteStore._unpack_geometry(blob, cx, cy, compress_type),
-                properties=json.loads(properties),
-            )
-            for properties, cx, cy, blob in cur.fetchall()
-        ]
+                    geometry=SQLiteStore._unpack_geometry(blob, cx, cy, compress_type),
+                    properties=json.loads(properties),
+                )
+                for properties, cx, cy, blob in cur.fetchall()
+            ]
 
     def cached_bquery(
         self,
         geometry: Optional[Tuple] = None,
         where: Callable[[Dict[str, Any]], bool] = None,
-        min_area = None,
+        min_area=None,
     ) -> Dict[str, Annotation]:
         data = self._cached_query(
             rows="[key], properties, min_x, min_y, max_x, max_y",
             geometry=geometry,
             geometry_predicate="bbox_intersects",
             callable_rows="[key], properties, min_x, min_y, max_x, max_y",
-            con = self.con,
-            bbox = True,
-            compress_type = self.metadata["compression"],
-            min_area = min_area,
+            con=self.con,
+            bbox=True,
+            compress_type=self.metadata["compression"],
+            min_area=min_area,
         )
         if where is None:
             return data
@@ -2059,16 +2107,16 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[Tuple] = None,
         where: Callable[[Dict[str, Any]], bool] = None,
-        min_area = None,
+        min_area=None,
     ) -> List[Annotation]:
         data = self._cached_query(
             rows="properties, cx, cy, geometry",
             geometry=geometry,
             geometry_predicate="bbox_intersects",
-            con = self.con,
-            bbox = False,
-            compress_type = self.metadata["compression"],
-            min_area = min_area,
+            con=self.con,
+            bbox=False,
+            compress_type=self.metadata["compression"],
+            min_area=min_area,
         )
         if where is None:
             return data
@@ -2266,7 +2314,9 @@ class SQLiteStore(AnnotationStore):
             raise KeyError(key)
         serialised_geometry, serialised_properties, cx, cy = row
         properties = json.loads(serialised_properties or "{}")
-        geometry = self._unpack_geometry(serialised_geometry, cx, cy, self.metadata["compression"])
+        geometry = self._unpack_geometry(
+            serialised_geometry, cx, cy, self.metadata["compression"]
+        )
         return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
@@ -2305,7 +2355,9 @@ class SQLiteStore(AnnotationStore):
                 break
             key, cx, cy, serialised_geometry, serialised_properties = row
             if serialised_geometry is not None:
-                geometry = self._unpack_geometry(serialised_geometry, cx, cy, self.metadata["compression"])
+                geometry = self._unpack_geometry(
+                    serialised_geometry, cx, cy, self.metadata["compression"]
+                )
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(serialised_properties)
@@ -2456,7 +2508,7 @@ class SQLiteStore(AnnotationStore):
 
     def commit(self) -> None:
         self.con.commit()
-        #self.con.execute("BEGIN")
+        # self.con.execute("BEGIN")
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
         if hasattr(fp, "write"):
@@ -2482,81 +2534,6 @@ class SQLiteStore(AnnotationStore):
         self.con.execute("PRAGMA optimize")
         # Close the connection to the database
         return super().__del__()
-
-    def create_index(
-        self, name: str, where: Union[str, bytes], analyze: bool = True
-    ) -> None:
-        """Create an SQLite expression index based on the provided predicate.
-
-        Note that an expression index will only be used if the query expression
-        (in the WHERE clause) exactly matches the expression used when creating
-        the index (excluding minor inconsequential changes such as
-        whitespace).
-
-        SQLite expression indexes require SQLite version 3.9.0 or higher.
-
-        Args:
-            name (str):
-                Name of the index to create.
-            where:
-                The predicate used to create the index.
-            analyze (bool):
-                Whether to run the ANALYZE command after creating the
-                index.
-
-        """
-        _, minor, _ = sqlite3.sqlite_version_info
-        if minor < 9:
-            raise Exception("Requires sqlite version 3.9.0 or higher.")
-        cur = self.con.cursor()
-        if not isinstance(where, str):
-            raise TypeError(f"Invalid type for `where` ({type(where)}).")
-        sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
-        cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
-        if analyze:
-            cur.execute(f"ANALYZE {name}")
-
-    def indexes(self) -> List[str]:
-        """Returns a list of the names of all indexes in the store.
-
-        Returns:
-            List[str]:
-                The list of index names.
-
-        """
-        cur = self.con.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE TYPE = 'index'")
-        return [row[0] for row in cur.fetchall()]
-
-    def drop_index(self, name: str) -> None:
-        """Drop an index from the store.
-
-        Args:
-            name (str):
-                The name of the index to drop.
-
-        """
-        cur = self.con.cursor()
-        cur.execute(f"DROP INDEX {name}")
-
-    def optimize(self, vacuum: bool = True, limit: int = 1000) -> None:
-        """Optimize the database with VACUUM and ANALYZE.
-
-        Args:
-            vacuum (bool):
-                Whether to run VACUUM.
-            limit (int):
-                The approximate maximum number of rows to examine when
-                running ANALYZE. If zero or negative, not limit will be
-                used. For more information see
-                https://www.sqlite.org/pragma.html#pragma_analysis_limit.
-
-        """
-        if vacuum:
-            self.con.execute("VACUUM")
-        # Cannot use parameterized statements with PRAGMA!
-        self.con.execute(f"PRAGMA analysis_limit = {int(limit)}")
-        self.con.execute("PRAGMA optimize")
 
     def create_index(
         self, name: str, where: Union[str, bytes], analyze: bool = True

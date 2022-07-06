@@ -221,8 +221,8 @@ class TilePyramidGenerator:
                 pad_mode=pad_mode,
                 interpolation=interpolation,
             )
-        alph=255-np.all(rgb==255,axis=2).astype('uint8')*255
-        rgb=np.dstack((rgb,alph))
+        alph = 255 - np.all(rgb == 255, axis=2).astype("uint8") * 255
+        rgb = np.dstack((rgb, alph))
         return Image.fromarray(rgb)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
@@ -482,7 +482,9 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         self.downsample = downsample
 
         output_size = [self.output_tile_size] * 2
-        self.empty_img = Image.fromarray(np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8))
+        self.empty_img = Image.fromarray(
+            np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
+        )
 
     def get_thumb_tile(self) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
@@ -591,7 +593,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         bounds = locsize2bounds(coord, [self.tile_size * scale] * 2)
         bound_geom = Polygon.from_bounds(*bounds)
-        coord=np.array(coord)-scale
+        coord = np.array(coord) - scale
         img = self.render_annotations(bound_geom, scale, coord)
 
         return img
@@ -599,28 +601,28 @@ class AnnotationTileGenerator(ZoomifyGenerator):
     def render_annotations(self, bound_geom, scale, tl):
         """get annotations as bbox or geometry according to zoom level,
         and decimate large collections of small annotations if appropriate"""
-        #clip_bound_geom=bound_geom.buffer(scale)
+        # clip_bound_geom=bound_geom.buffer(scale)
         r = self.renderer
         output_size = [self.output_tile_size] * 2
-        if r.zoomed_out_strat == 'scale':
+        if r.zoomed_out_strat == "scale":
             min_area = 0.0004 * (self.tile_size * scale) ** 2
         else:
             min_area = r.zoomed_out_strat
 
-        if r.zoomed_out_strat == 'decimate':
+        if r.zoomed_out_strat == "decimate":
             decimate = int(scale / self.renderer.max_scale) + 1
             if scale > 100:
                 decimate = decimate * 2
 
             if scale > self.renderer.max_scale:
                 anns_dict = self.store.cached_bquery(
-                    bound_geom.bounds, 
+                    bound_geom.bounds,
                     self.renderer.where,
                 )
                 if len(anns_dict) == 0:
                     return self.empty_img
                 rgb = np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
-                print(f'len annotations dict is: {len(anns_dict)}')
+                print(f"len annotations dict is: {len(anns_dict)}")
                 if len(anns_dict) < 40:
                     decimate = int(len(anns_dict) / 20) + 1
                 i = 0
@@ -628,10 +630,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     i += 1
                     if ann.geometry.area > min_area:
                         ann = self.store[key]
-                        #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                        # ann_bounded = r.get_bounded(ann, clip_bound_geom)
                         ann_bounded = ann.geometry
                         if ann_bounded.is_empty:
-                            #only bbox not actual geom was inside the tile, so ignore
+                            # only bbox not actual geom was inside the tile, so ignore
                             continue
                         if ann_bounded.geom_type == "Polygon":
                             r.render_poly(rgb, ann, ann_bounded, tl, scale)
@@ -646,15 +648,15 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                         if ann.geometry.geom_type == "Point":
                             r.render_pt(rgb, ann, tl, scale)
                             continue
-                        #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                        # ann_bounded = r.get_bounded(ann, clip_bound_geom)
                         ann_bounded = ann.geometry
                         if ann_bounded.geom_type == "Polygon":
                             if ann_bounded.is_empty:
-                                print('why is this empty?')
+                                print("why is this empty?")
                                 continue
                             r.render_rect(rgb, ann, ann_bounded, tl, scale)
                         elif ann_bounded.geom_type == "LineString":
-                            #ann_bounded = ann.geometry.intersection(bound_geom)
+                            # ann_bounded = ann.geometry.intersection(bound_geom)
                             r.render_line(rgb, ann, ann_bounded, tl, scale)
                         else:
                             print(f"unknown geometry: {ann_bounded.geom_type}")
@@ -667,11 +669,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     if ann.geometry.geom_type == "Point":
                         r.render_pt(rgb, ann, tl, scale)
                         continue
-                    #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                    # ann_bounded = r.get_bounded(ann, clip_bound_geom)
                     ann_bounded = ann.geometry
                     if ann_bounded.is_empty:
-                                #print('why is this empty?')
-                                continue
+                        # print('why is this empty?')
+                        continue
                     if ann_bounded.geom_type == "Polygon":
                         r.render_poly(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "LineString":
@@ -679,7 +681,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                     elif ann_bounded.geom_type == "MultiPolygon":
                         r.render_multipoly(rgb, ann, ann_bounded, tl, scale)
                     elif ann_bounded.geom_type == "GeometryCollection":
-                        #print(f"unknown geometry: {ann_bounded.geom_type}: {[g.geom_type for g in ann_bounded.geoms]}")
+                        # print(f"unknown geometry: {ann_bounded.geom_type}: {[g.geom_type for g in ann_bounded.geoms]}")
                         pass
                     else:
                         print(f"unknown geometry: {ann_bounded.geom_type}")
@@ -688,7 +690,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         else:
             if scale > self.renderer.max_scale:
                 anns = self.store.cached_query(
-                    bound_geom.bounds, 
+                    bound_geom.bounds,
                     self.renderer.where,
                     min_area=min_area,
                 )
@@ -696,17 +698,17 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 anns = self.store.cached_query(bound_geom.bounds, self.renderer.where)
             if len(anns) == 0:
                 return self.empty_img
-            
+
             rgb = np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
             for ann in anns:
                 if ann.geometry.geom_type == "Point":
                     r.render_pt(rgb, ann, tl, scale)
                     continue
-                #ann_bounded = r.get_bounded(ann, clip_bound_geom)
+                # ann_bounded = r.get_bounded(ann, clip_bound_geom)
                 ann_bounded = ann.geometry
                 if ann_bounded.is_empty:
-                            #print('why is this empty?')
-                            continue
+                    # print('why is this empty?')
+                    continue
                 if ann_bounded.geom_type == "Polygon":
                     r.render_poly(rgb, ann, ann_bounded, tl, scale)
                 elif ann_bounded.geom_type == "LineString":
@@ -714,7 +716,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 elif ann_bounded.geom_type == "MultiPolygon":
                     r.render_multipoly(rgb, ann, ann_bounded, tl, scale)
                 elif ann_bounded.geom_type == "GeometryCollection":
-                    #print(f"unknown geometry: {ann_bounded.geom_type}: {[g.geom_type for g in ann_bounded.geoms]}")
+                    # print(f"unknown geometry: {ann_bounded.geom_type}: {[g.geom_type for g in ann_bounded.geoms]}")
                     pass
                 else:
                     warnings.warn(f"Unknown geometry: {ann_bounded.geom_type}")
