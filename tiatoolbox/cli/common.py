@@ -38,7 +38,7 @@ def cli_img_input(
 
 
 def cli_name(
-    usage_help: str = "user defined name to be used as an identifier",
+    usage_help: str = "User defined name to be used as an identifier",
     multiple: bool = False,
 ) -> callable:
     """enables --name option for cli"""
