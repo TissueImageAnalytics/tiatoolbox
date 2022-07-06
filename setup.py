@@ -16,7 +16,7 @@ requirements = [
     "defusedxml>=0.7.1",
     "glymur>=0.9.9",
     "imagecodecs>=2021.11.20",
-    "matplotlib>==3.5.1",
+    "matplotlib>=3.5.1",
     "numpy>=1.21.5",
     "opencv-python>=4.5.5",
     "openslide-python>=1.1.2",

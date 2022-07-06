@@ -1,4 +1,5 @@
 """Test for ensuring that requirements files are valid and consistent."""
+import importlib
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -11,6 +12,7 @@ REQUIREMENTS_FILES = [
     ("requirements.conda.yml", "requirements.dev.conda.yml"),
     ("requirements.win64.conda.yml", None),
     ("docs/requirements.txt", None),
+    ("setup.py", None),
 ]
 
 
@@ -127,6 +129,19 @@ def parse_requirements(
     """
     if lines and file_path:
         raise ValueError("Only one of file_path or lines may be specified")
+    if file_path.name == "setup.py":
+        global mock_setup
+        mock_setup = {}
+        with pytest.MonkeyPatch().context() as m:
+            m.setattr(
+                importlib.import_module("setuptools"),
+                "setup",
+                lambda **kw: mock_setup.update(kw),
+            )
+            importlib.import_module("setup")
+        requirements = mock_setup.get("install_requires", [])
+        del mock_setup
+        return parse_pip(lines=requirements)
     if file_path.suffix == ".yml":
         return parse_conda(file_path)
     if file_path.suffix == ".txt":
