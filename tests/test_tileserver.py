@@ -7,6 +7,7 @@ import pytest
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.cli.common import cli_name
 
 
 @pytest.fixture()
@@ -91,3 +92,9 @@ def test_create_with_dict(sample_svs):
         response = client.get("/layer/Test/zoomify/TileGroup0/0-0-0.jpg")
         assert response.status_code == 200
         assert response.content_type == "image/jpeg"
+
+
+def test_cli_name_without_multiple():
+    """Test cli_name without multiple flag."""
+    opt = cli_name()
+    assert "Multiple" not in opt.help
