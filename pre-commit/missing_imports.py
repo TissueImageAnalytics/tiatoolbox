@@ -97,9 +97,7 @@ def find_bad_imports(
     # Parse the requirements file
     reqs = parse_requirements(requirements_path)
     # Apply the mapping from known package names to import names
-    req_imports = {
-        subkey for key in reqs.keys() for subkey in KNOWN_ALIASES.get(key, [key])
-    }
+    req_imports = {subkey for key in reqs for subkey in KNOWN_ALIASES.get(key, [key])}
 
     for path in find_source_files(source_root):
         file_import_nodes = find_imports(path)
