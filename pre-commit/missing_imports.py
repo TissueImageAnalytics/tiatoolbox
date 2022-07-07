@@ -66,7 +66,7 @@ def stem(alias: ast.alias) -> str:
 def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]]:
     if isinstance(node, ast.Import):
         return [(alias.name, stem(alias)) for alias in node.names]
-    elif isinstance(node, ast.ImportFrom):
+    if isinstance(node, ast.ImportFrom):
         return [(node.module, node.module.split(".")[0])]
     raise TypeError(
         f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom."
