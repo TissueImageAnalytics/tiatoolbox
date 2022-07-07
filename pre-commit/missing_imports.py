@@ -146,7 +146,7 @@ def main():
 
     root = Path(__file__).parent.parent
     source_root = root / "tiatoolbox"
-    requirements_paths = [root / p for tup in REQUIREMENTS_FILES for p in tup]
+    requirements_paths = [root / name for name in REQUIREMENTS_FILES]
     source_files = args.files or find_source_files(source_root)
     passed = True
     for req_path in requirements_paths:
