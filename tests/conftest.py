@@ -392,7 +392,7 @@ def points_grid(spacing=60) -> List[Point]:
 
 
 @pytest.fixture(scope="session")
-def fill_store(cell_grid, points_grid, spacing=60):
+def fill_store(cell_grid, points_grid):
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
