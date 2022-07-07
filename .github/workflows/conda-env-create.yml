@@ -1,0 +1,35 @@
+# This workflow will build a conda environment to check that it resolves in a reasonable time
+
+name: Solve Conda Environment
+
+on:
+  push:
+    paths: [ "requirements*.yml", "conda-env-create.yml" ]
+  pull_request:
+    paths: [ "requirements*.yml", "conda-env-create.yml" ]
+  schedule: # Run on the 1st of every month at midnight
+    - cron: "0 0 1 * *"
+
+jobs:
+  conda_solve:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            requirements: requirements.conda.yml
+          - os: windows-latest
+            requirements: requirements.win64.conda.yml
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v2
+      - uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-name: tiatoolbox
+          environment-file: ${{ matrix.requirements }}
+      - shell: bash -l {0}
+        run: |
+          micromamba info
+          micromamba list

@@ -203,39 +203,41 @@ class WSIReader:
         if isinstance(input_img, WSIReader):
             return input_img
 
-        WSIReader.verify_supported_wsi(input_img)
+        # Input is a string or pathlib.Path, normalise to pathlib.Path
+        input_path = pathlib.Path(input_img)
+        WSIReader.verify_supported_wsi(input_path)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
 
-        if is_dicom(input_img):
-            return DICOMWSIReader(input_img, mpp=mpp, power=power)
+        if is_dicom(input_path):
+            return DICOMWSIReader(input_path, mpp=mpp, power=power)
 
-        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
+        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
         last_suffix = suffixes[-1]
 
         if last_suffix in (".zarr",):
-            if not is_ngff(input_img):
+            if not is_ngff(input_path):
                 raise FileNotSupported(
-                    f"File {input_img} does not appear to be a v0.4 NGFF zarr."
+                    f"File {input_path} does not appear to be a v0.4 NGFF zarr."
                 )
-            return NGFFWSIReader(input_img, mpp=mpp, power=power)
+            return NGFFWSIReader(input_path, mpp=mpp, power=power)
 
         if suffixes[-2:] in ([".ome", ".tiff"],):
-            return TIFFWSIReader(input_img, mpp=mpp, power=power)
+            return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if last_suffix in (".tif", ".tiff") and is_tiled_tiff(input_img):
+        if last_suffix in (".tif", ".tiff") and is_tiled_tiff(input_path):
             try:
-                return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
+                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
             except openslide.OpenSlideError:
-                return TIFFWSIReader(input_img, mpp=mpp, power=power)
+                return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
         # Handle homogeneous cases (based on final suffix)
 
         def np_virtual_wsi(
-            input_img: np.ndarray, *args, **kwargs
+            input_path: np.ndarray, *args, **kwargs
         ) -> "VirtualWSIReader":
             """Create a virtual WSI from a numpy array."""
-            return VirtualWSIReader(input_img, *args, **kwargs)
+            return VirtualWSIReader(input_path, *args, **kwargs)
 
         suffix_to_reader = {
             ".npy": np_virtual_wsi,
@@ -248,24 +250,28 @@ class WSIReader:
         }
 
         if last_suffix in suffix_to_reader:
-            return suffix_to_reader[last_suffix](input_img, mpp=mpp, power=power)
+            return suffix_to_reader[last_suffix](input_path, mpp=mpp, power=power)
 
         # Try openslide last
-        return OpenSlideWSIReader(input_img, mpp=mpp, power=power)
+        return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
 
     @staticmethod
-    def verify_supported_wsi(input_img):
+    def verify_supported_wsi(input_path: pathlib.Path) -> None:
         """Verify that an input image is supported.
+
+        Args:
+            input_path (pathlib.Path):
+                Input path to WSI.
 
         Raises:
             FileNotSupported:
                 If the input image is not supported.
 
         """
-        if is_ngff(input_img) or is_dicom(input_img):
+        if is_ngff(input_path) or is_dicom(input_path):
             return
 
-        _, _, suffixes = utils.misc.split_path_name_ext(input_img)
+        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
 
         if suffixes and suffixes[-1] not in [
             ".svs",
@@ -280,7 +286,7 @@ class WSIReader:
             ".jpeg",
             ".zarr",
         ]:
-            raise FileNotSupported(f"File {input_img} is not a supported file format.")
+            raise FileNotSupported(f"File {input_path} is not a supported file format.")
 
     def __init__(
         self,
@@ -292,6 +298,8 @@ class WSIReader:
             self.input_path = None
         else:
             self.input_path = pathlib.Path(input_img)
+            if not self.input_path.exists():
+                raise FileNotFoundError(f"Input path does not exist: {self.input_path}")
         self._m_info = None
 
         # Set a manual mpp value
