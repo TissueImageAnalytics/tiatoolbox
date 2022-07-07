@@ -2,71 +2,21 @@
 AnnotationRenderer and AnnotationTileGenerator
 """
 from pathlib import Path
-from typing import List, Union
 
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from PIL import Image
 from scipy.ndimage.measurements import label
-from shapely.geometry import LineString, MultiPoint, Polygon
-from shapely.geometry.point import Point
+from shapely.geometry import MultiPoint
 from skimage import data
 
-from tests.test_annotation_stores import cell_polygon
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
-
-
-@pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
-    """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
-    return [
-        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
-    ]
-
-
-@pytest.fixture(scope="session")
-def points_grid(spacing=60) -> List[Point]:
-    """Generate a grid of fake point annotations."""
-    np.random.seed(0)
-    return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
-
-
-@pytest.fixture()
-def fill_store(cell_grid, points_grid, spacing=60):
-    """Factory fixture to fill stores with test data."""
-
-    def _fill_store(
-        store_class: AnnotationStore,
-        path: Union[str, Path],
-    ):
-        """Fills store with random variety of annotations."""
-        store = store_class(path)
-        annotations = (
-            [
-                Annotation(cell, {"type": "cell", "prob": np.random.rand(1)[0]})
-                for cell in cell_grid
-            ]
-            + [
-                Annotation(point, {"type": "pt", "prob": np.random.rand(1)[0]})
-                for point in points_grid
-            ]
-            + [
-                Annotation(
-                    LineString(((x, x + 500) for x in range(100, 400, 10))),
-                    {"type": "line", "prob": np.random.rand(1)[0]},
-                )
-            ]
-        )
-        keys = store.append_many(annotations)
-        return keys, store
-
-    return _fill_store
 
 
 def test_tile_generator_len(fill_store, tmp_path):
@@ -125,7 +75,7 @@ def test_correct_colour_rendered(fill_store, tmp_path):
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(
         "type",
-        {"cell": (255, 0, 0, 255), "pt": (0, 255, 0, 255), "line": (0, 0, 255, 255)},
+        {"cell": (1, 0, 0, 1), "pt": (0, 1, 0, 1), "line": (0, 0, 1, 1)},
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
@@ -263,3 +213,36 @@ def test_interp_pad_warning(fill_store, tmp_path):
     tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
     with pytest.warns(UserWarning, match="interpolation, pad_mode are unused"):
         tg.get_tile(0, 0, 0, pad_mode="constant")
+
+
+def test_user_provided_cm(fill_store, tmp_path):
+    """Test correct color mapping for user-provided cm name."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(
+        "prob",
+        "viridis",
+    )
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+
+    tile = np.array(tg.get_tile(1, 0, 1))  # line here with prob=0.75
+    color = tile[np.any(tile, axis=2), :3]
+    color = color[0, :]
+    viridis_mapper = cm.get_cmap("viridis")
+    assert np.all(
+        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
+    )  # expect rendered color to be viridis(0.75)
+
+
+def test_random_mapper():
+    """Test random colour map dict for list."""
+    test_list = ["line", "pt", "cell"]
+    renderer = AnnotationRenderer(mapper=test_list)
+    # check all the colours are valid rgba values
+    for ann_type in test_list:
+        rgba = renderer.mapper(ann_type)
+        assert isinstance(rgba, tuple)
+        assert len(rgba) == 4
+        for val in rgba:
+            assert 0 <= val <= 1

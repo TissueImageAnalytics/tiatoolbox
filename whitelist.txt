@@ -130,6 +130,7 @@ pred
 preproc
 preprocessing
 pretrained
+pts
 pylint
 pyright
 qtconsole
@@ -152,6 +153,7 @@ uid
 uint8
 uncallable
 v4
+viridis
 w0613
 wsi
 wsireader
