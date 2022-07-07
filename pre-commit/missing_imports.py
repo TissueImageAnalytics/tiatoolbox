@@ -32,7 +32,17 @@ KNOWN_ALIASES = {
 
 
 def find_source_files(base_dir: Path) -> List[Path]:
-    """Recursively find all source files in the given directory."""
+    """Recursively find all source files in the given directory.
+
+    Args:
+        base_dir (Path):
+            Path to the directory to find source files in.
+
+    Returns:
+        list:
+            List of paths to source files.
+
+    """
     ignore = ["venv", "build", "dist", "__pycache__"]
     source_files = []
     for root, dirs, files in os.walk(base_dir):
@@ -43,7 +53,18 @@ def find_source_files(base_dir: Path) -> List[Path]:
 
 
 def find_imports(py_source_path: Path) -> List[str]:
-    """Find all imports in the given Python source file."""
+    """Find all imports in the given Python source file.
+
+    Args:
+        py_source_path (Path):
+            Path to the Python source file.
+
+    Returns:
+        list:
+            List of AST import nodes (ast.Import or ast.ImportFrom) in
+            the file.
+
+    """
     with open(py_source_path, "r") as f:
         source = f.read()
     tree = ast.parse(source)
@@ -55,7 +76,17 @@ def find_imports(py_source_path: Path) -> List[str]:
 
 
 def std_spec(fullname: str) -> str:
-    """Return True if in the standard library or a built-in."""
+    """Return True if in the standard library or a built-in.
+
+    Args:
+        fullname (str):
+            Full name of the module.
+
+    Returns:
+        str:
+            True if the name is in the standard library or a built-in.
+
+    """
     if fullname in sys.builtin_module_names:
         return True
     path_finder = importlib.machinery.PathFinder()
@@ -67,10 +98,35 @@ def std_spec(fullname: str) -> str:
 
 
 def stem(alias: ast.alias) -> str:
+    """Return the stem of the given alias.
+
+    The stem is the name of the package, the import name up to the first
+    dot.
+
+    Args:
+        alias (ast.alias):
+            The alias to get the stem of.
+
+    Returns:
+        str:
+            The stem of the alias.
+
+    """
     return alias.name.split(".")[0]
 
 
 def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]]:
+    """Return the stem of each alias in the given import node.
+
+    Args:
+        node (ast.Import or ast.ImportFrom):
+            Import node to get stems from.
+
+    Returns:
+        list:
+            List of tuples of the alias and the stem.
+
+    """
     if isinstance(node, ast.Import):
         return [(alias.name, stem(alias)) for alias in node.names]
     if isinstance(node, ast.ImportFrom):
@@ -81,6 +137,7 @@ def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]
 
 
 def main():
+    """Main entry point."""
     root = Path(__file__).parent.parent
     source_root = root / "tiatoolbox"
     requirements_paths = [
@@ -100,6 +157,22 @@ def main():
 def find_bad_imports(
     root: Path, source_root: Path, requirements_path: Path
 ) -> List[Tuple[Union[ast.Import, ast.ImportFrom], ast.alias]]:
+    """Find bad imports in the given requirements file.
+
+    Args:
+        root (pathlib.Path):
+            Root directory of the project.
+        source_root (pathlib.Path):
+            Root directory of the source code.
+        requirements_path (pathlib.Path):
+            Path to the requirements file.
+
+    Returns:
+        list:
+            List of bad imports as tuples of the import AST node and the
+            alias.
+
+    """
     result = []
     # Parse the requirements file
     reqs = parse_requirements(requirements_path)
@@ -136,6 +209,19 @@ def find_bad_imports(
 
 
 def find_comments(path, line_num: int):
+    """Find comments on the given line.
+
+    Args:
+        path:
+            Path to the file.
+        line_num:
+            Line number to find comments on.
+
+    Returns:
+        list:
+            List of comments on the line.
+
+    """
     with open(path, "rb") as fh:
         tokens = tokenize.tokenize(fh.readline)
         return [
