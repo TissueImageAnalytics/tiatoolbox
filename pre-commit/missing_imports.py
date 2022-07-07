@@ -29,6 +29,7 @@ KNOWN_ALIASES = {
     "scikit-learn": ["sklearn", "joblib"],
     "scikit-image": ["skimage"],
     "pytorch": ["torch"],
+    "ipython": ["IPython"],
 }
 
 REQUIREMENTS_FILES = (
