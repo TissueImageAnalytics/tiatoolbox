@@ -1,6 +1,35 @@
 History
 =======
 
+1.2.0 (2022-07-05)
+------------------
+### Major Updates and Feature Improvements
+- Adds support for Python 3.10
+- Adds short description for IDARS algorithm #383
+- Adds support for NGFF v0.4 [OME-ZARR](https://ngff.openmicroscopy.org/latest/).
+- Adds CLI for launching tile server.
+
+### Changes to API
+- Renames `stainnorm_target()` function to `stain_norm_target()`.
+- Removes `get_wsireader`
+- Replaces the custom PlattScaler in `tools/scale.py` with the regular Scikit-Learn [LogisticRegression](https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression).
+
+### Bug Fixes and Other Changes
+- Fixes bugs in UNET architecture.
+	- Number of channels in Batchnorm argument in the decoding path to match with the input channels.
+	- Padding `0` creates feature maps in the decoder part with the same size as encoder.
+- Fixes linter issues and typos
+- Fixes incorrect output with overlap in `predictor.merge_predictions()` and `return_raw=True`
+	- Thanks to @paulhacosta for raising #356, Fixed by #358.
+- Fixes errors with JP2 read. Checks input path exists.
+- Fixes errors with torch upgrade to 1.12.
+
+### Development related changes
+- Adds pre-commit hooks for consistency across the repo.
+- Sets up GitHub Actions Workflow.
+    - Travis CI will be removed in future release.
+
+
 1.1.0 (2022-05-07)
 ------------------
 ### Major Updates and Feature Improvements
