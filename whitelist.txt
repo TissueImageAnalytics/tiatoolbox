@@ -57,6 +57,7 @@ Vahadane
 Ver
 W0043
 W0063
+W0079
 W0105
 W0123
 W0212
@@ -147,6 +148,7 @@ sigma1
 sigma2
 skipcq
 skipcq
+superset
 svs
 tiatoolbox
 tifffile

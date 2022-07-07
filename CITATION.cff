@@ -44,9 +44,9 @@ authors:
   given-names: "Shan E Ahmed"
   orcid: "https://orcid.org/0000-0002-1097-1738"
 title: "TIAToolbox: An End-to-End Toolbox for Advanced Tissue Image Analytics"
-version: 1.2.0
+version: 1.2.1
 doi: 10.5281/zenodo.5802442
-date-released: 2022-07-05
+date-released: 2022-07-07
 url: "https://github.com/TissueImageAnalytics/tiatoolbox"
 preferred-citation:
   type: article
