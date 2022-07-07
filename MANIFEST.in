@@ -9,7 +9,7 @@ include conf.py
 
 recursive-include tests *
 recursive-include docs
-recursive-include tiatoolbox/data
+recursive-include tiatoolbox/data *
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
