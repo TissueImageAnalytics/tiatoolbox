@@ -96,7 +96,6 @@ def find_bad_imports(
     result = []
     # Parse the requirements file
     reqs = parse_requirements(requirements_path)
-    assert "numpy" in reqs
     # Apply the mapping from known package names to import names
     req_imports = {
         subkey for key in reqs.keys() for subkey in KNOWN_ALIASES.get(key, [key])
