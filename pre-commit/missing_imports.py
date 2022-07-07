@@ -107,25 +107,7 @@ def std_spec(fullname: str) -> str:
     return "site-packages" not in origin.parts and "dist-packages" not in origin.parts
 
 
-def stem(alias: ast.alias) -> str:
-    """Return the stem of the given alias.
-
-    The stem is the name of the package, the import name up to the first
-    dot.
-
-    Args:
-        alias (ast.alias):
-            The alias to get the stem of.
-
-    Returns:
-        str:
-            The stem of the alias.
-
-    """
-    return alias.name.split(".")[0]
-
-
-def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]]:
+def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[str, str]]:
     """Return the stem of each alias in the given import node.
 
     Args:
@@ -134,11 +116,11 @@ def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]
 
     Returns:
         list:
-            List of tuples of the alias and the stem.
+            List of tuples of the alias name and the stem.
 
     """
     if isinstance(node, ast.Import):
-        return [(alias.name, stem(alias)) for alias in node.names]
+        return [(alias.name, alias.name.split(".")[0]) for alias in node.names]
     if isinstance(node, ast.ImportFrom):
         return [(node.module, node.module.split(".")[0])]
     raise TypeError(
