@@ -96,17 +96,14 @@ def test_create_with_dict(sample_svs):
 
 def test_cli_name_multiple_flag():
     """Test cli_name multiple flag."""
-    opt = cli_name()
 
-    @opt
+    @cli_name()
     def dummy_fn():
         """it's empty because its a dummy function"""
 
     assert "Multiple" not in dummy_fn.__click_params__[0].help
 
-    opt = cli_name(multiple=True)
-
-    @opt
+    @cli_name(multiple=True)
     def dummy_fn():
         """it's empty because its a dummy function"""
 
