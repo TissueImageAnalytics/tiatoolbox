@@ -144,7 +144,7 @@ def parse_requirements(
         setup = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(setup)
 
-        del setup, setuptools
+        del setup, setuptools  # skipcq
 
         requirements = mock_setup.get("install_requires", [])
         return parse_pip(lines=requirements)
