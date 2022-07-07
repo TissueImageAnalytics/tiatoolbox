@@ -1,3 +1,10 @@
+"""Static analysis of requirements files and import statements.
+
+Imports which are not found in the requirements files are considered bad.
+Any found bad imports will be printed and the script will exit with a non-zero
+status.
+
+"""
 import ast
 import importlib
 import os
