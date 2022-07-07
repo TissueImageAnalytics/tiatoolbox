@@ -95,8 +95,18 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
     return packages
 
 
-def test_files_exist(root_dir):
-    """Test that all requirements files exist."""
+def test_files_exist(root_dir: Path) -> None:
+    """Test that all requirements files exist.
+
+    Args:
+        root_dir (pathlib.Path):
+            Path to the root directory of the project.
+
+    Raises:
+        FileNotFoundError:
+            If a requirements file is missing.
+
+    """
     for main, dev in REQUIREMENTS_FILES:
         main_path = root_dir / main
         if not main_path.exists():
@@ -146,40 +156,47 @@ def parse_requirements(
     raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
 
-def are_requirements_consistent(root_dir: Path) -> bool:
-    """Test that dev requirements are consistent.
+def all_main_in_dev(main: Dict[str, Requirement], dev: Dict[str, Requirement]) -> bool:
+    """Test that all main requirements are in the corresponding dev file.
 
-    1. A dev file should contain all the same requirements as the main
-       file.
-    2. A package in any two or more files should have the same
-       constraint and version.
+    Args:
+        main (dict):
+            A dictionary mapping package names to
+            pkg_resources.Requirement.
+        dev (dict):
+            A dictionary mapping package names to
+            pkg_resources.Requirement.
+
+    Returns:
+        bool:
+            Whether all main requirements are in the corresponding dev
+            file.
 
     """
     consistent = True
 
-    # Keep track of all parsed files
-    all_requirements: Dict[Path, Dict[str, Requirement]] = {}
+    # Check that all main packages are in the dev file
+    for name in main:
+        if name not in dev:
+            print(f"{name} not in dev requirements ({dev_path.name})")
+            consistent = False
+    return consistent  # noqa: R504
 
-    # Check that packages in main are also in dev
-    for main_name, dev_name in REQUIREMENTS_FILES:
-        # Get the main requirements
-        main_path = root_dir / main_name
-        main = parse_requirements(main_path)
-        all_requirements[main_path] = main
 
-        # Skip comparison if there is no dev file
-        if not dev_name:
-            continue
+def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -> bool:
+    """Test that in-common requirements are consistent.
 
-        # Get the dev requirements
-        dev_path = root_dir / dev_name
-        dev = parse_requirements(dev_path)
-        all_requirements[dev_path] = dev
+    Args:
+        all_requirements (dict):
+            Dictionary mapping requirements files to
+            dictionaries mapping package names to
+            pkg_resources.Requirement.
 
-        # Check that all main packages are in the dev file
-        for name in main:
-            assert name in dev, f"{name} not in dev requirements ({dev_path.name})"
+    Returns:
+        bool:
+            True if the requirements are consistent.
 
+    """
     # Check that requirements are consistent across files
     # First find a set of all requirement keys
     requirement_key_sets = [set(x.keys()) for x in all_requirements.values()]
@@ -220,7 +237,33 @@ def are_requirements_consistent(root_dir: Path) -> bool:
 if __name__ == "__main__":
     root = Path(__file__).parent.parent
     test_files_exist(root)
-    consistent = are_requirements_consistent(root)
+
+    consistent = True
+
+    # Keep track of all parsed files
+    all_requirements: Dict[Path, Dict[str, Requirement]] = {}
+
+    # Check that packages in main are also in dev
+    for main_name, dev_name in REQUIREMENTS_FILES:
+        # Get the main requirements
+        main_path = root / main_name
+        main = parse_requirements(main_path)
+        all_requirements[main_path] = main
+
+        # Skip comparison if there is no dev file
+        if not dev_name:
+            continue
+
+        # Get the dev requirements
+        dev_path = root / dev_name
+        dev = parse_requirements(dev_path)
+        all_requirements[dev_path] = dev
+
+        # Check that all main requirements are in the dev file
+        consistent &= all_main_in_dev(main, dev)
+
+    consistent &= in_common_consistent(all_requirements)
+
     if not consistent:
         sys.exit(1)
     print("All tests passed")
