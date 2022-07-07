@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
-from tiatoolbox.cli.common import cli_name
 
 
 @pytest.fixture()
