@@ -498,10 +498,9 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         scale = self.level_downsample(self.info.level_count - 1)
         out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
         bounds = (0, 0, *slide_dims)
-        rgb = np.zeros((*out_dims, 4), dtype=np.uint8)
         bound_geom = Polygon.from_bounds(*bounds)
-        rgb = self.render_annotations(rgb, bound_geom, scale, (0, 0))
-        return Image.fromarray(rgb)
+        img = self.render_annotations(bound_geom, scale, (0, 0))
+        return img
 
     def level_dimensions(self, level: int) -> Tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
@@ -536,6 +535,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         level: int,
         x: int,
         y: int,
+        pad_mode: str = None,
+        interpolation: str = None,
     ) -> Image:
         """Render a tile at a given level and coordinate.
 
@@ -570,6 +571,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             >>> tile_0_0_0 = tile_generator.get_tile(level=0, x=0, y=0)
 
         """
+        if pad_mode is not None or interpolation is not None:
+            warnings.warn(
+                "interpolation, pad_mode are unused by AnnotationTileGenerator"
+            )
         if level < 0:
             raise IndexError
         if level > self.level_count:
@@ -604,7 +609,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         # clip_bound_geom=bound_geom.buffer(scale)
         r = self.renderer
         output_size = [self.output_tile_size] * 2
-        if r.zoomed_out_strat == "scale":
+        if r.zoomed_out_strat == "scale" or r.zoomed_out_strat == "decimate":
             min_area = 0.0004 * (self.tile_size * scale) ** 2
         else:
             min_area = r.zoomed_out_strat

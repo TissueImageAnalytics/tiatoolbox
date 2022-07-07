@@ -622,7 +622,7 @@ class AnnotationRenderer:
 
         cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
         cv2.drawContours(rgb, [cnt], 0, col, self.thickness)
-        if self.thickness == -1:
+        if self.thickness == -1 and self.edge_thickness > 0:
             edge_col = self.get_color_edge(ann)
             cv2.drawContours(
                 rgb, [cnt], 0, edge_col, self.edge_thickness, lineType=cv2.LINE_4
@@ -665,10 +665,11 @@ class AnnotationRenderer:
                 [self.to_tile_coords(list(ann_bounded.coords), tl, scale)],
                 False,
                 col,
-                thickness=self.thickness,
+                thickness=2#self.thickness,
             )
         except:
             print("derped:")
+            print(col)
             print(tl)
             print(ann)
             print(ann_bounded)
