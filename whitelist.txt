@@ -41,6 +41,7 @@ OME
 Omnyx
 OpenCV
 Otsu's
+PSNR
 PTC
 PYL
 Peter
@@ -50,11 +51,13 @@ RGB
 RGBA
 ROI
 Ruifrok
+SSIM
 Segmentor
 Vahadane
 Ver
 W0043
 W0063
+W0079
 W0105
 W0123
 W0212
@@ -130,6 +133,7 @@ pred
 preproc
 preprocessing
 pretrained
+pts
 pylint
 pyright
 qtconsole
@@ -137,7 +141,6 @@ quickstart
 reimport
 resampling
 rescale
-ROI
 rtree
 runtime
 scipy
@@ -145,6 +148,7 @@ sigma1
 sigma2
 skipcq
 skipcq
+superset
 svs
 tiatoolbox
 tifffile
@@ -153,6 +157,7 @@ uid
 uint8
 uncallable
 v4
+viridis
 w0613
 wsi
 wsireader
