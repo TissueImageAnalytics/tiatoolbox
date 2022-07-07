@@ -12,7 +12,6 @@ dependencies:
   - defusedxml
   - flask
   - glymur>=0.9.9
-  - h5py
   - imagecodecs>2021.11.20
   - jupyterlab
   - matplotlib>=3.5.1
@@ -24,9 +23,6 @@ dependencies:
   - pillow>=9.0.1
   - pip>=20.0.2
   - pixman>=0.39.0
-  - pytest-cov
-  - pytest-runner>=5.2
-  - pytest>=7.1.1
   - python>=3.7
   - pytorch>=1.11.0
   - pyyaml>=6.0
