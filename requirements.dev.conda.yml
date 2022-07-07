@@ -16,7 +16,6 @@ dependencies:
   - flake8-bugbear
   - flask
   - glymur>=0.9.9
-  - h5py
   - imagecodecs>2021.11.20
   - jupyterlab
   - matplotlib>=3.5.1
