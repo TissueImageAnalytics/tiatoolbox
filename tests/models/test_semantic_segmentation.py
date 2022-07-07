@@ -4,6 +4,7 @@ import copy
 
 # ! The garbage collector
 import gc
+import multiprocessing
 import os
 import pathlib
 import shutil
@@ -33,7 +34,10 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 16
-NUM_POSTPROC_WORKERS = 2 if not toolbox_env.running_on_ci() else 8
+try:
+    NUM_POSTPROC_WORKERS = multiprocessing.cpu_count()
+except NotImplementedError:
+    NUM_POSTPROC_WORKERS = 2
 
 # ----------------------------------------------------
 

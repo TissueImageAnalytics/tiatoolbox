@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -91,3 +92,19 @@ def test_create_with_dict(sample_svs):
         response = client.get("/layer/Test/zoomify/TileGroup0/0-0-0.jpg")
         assert response.status_code == 200
         assert response.content_type == "image/webp"
+
+
+def test_cli_name_multiple_flag():
+    """Test cli_name multiple flag."""
+
+    @cli_name()
+    def dummy_fn():
+        """it's empty because its a dummy function"""
+
+    assert "Multiple" not in dummy_fn.__click_params__[0].help
+
+    @cli_name(multiple=True)
+    def dummy_fn():
+        """it's empty because its a dummy function"""
+
+    assert "Multiple" in dummy_fn.__click_params__[0].help
