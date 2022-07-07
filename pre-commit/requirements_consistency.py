@@ -75,7 +75,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
 
     """
     with file_path.open("r") as fh:
-        config = yaml.load(fh, Loader=yaml.FullLoader)
+        config = yaml.safe_load(fh)
     dependencies: List[str] = config["dependencies"]
     packages = {}
     for dependency in dependencies:
