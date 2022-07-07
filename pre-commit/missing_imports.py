@@ -14,7 +14,7 @@ import tokenize
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
-from requirements_consistency import REQUIREMENTS_FILES, parse_requirements
+from requirements_consistency import parse_requirements
 
 # Mapping from package name (pip/anaconda) to import name
 # This is to avoid pinging PyPI
@@ -30,6 +30,15 @@ KNOWN_ALIASES = {
     "scikit-image": ["skimage"],
     "pytorch": ["torch"],
 }
+
+REQUIREMENTS_FILES = (
+    "requirements.txt",
+    "requirements_dev.txt",
+    "requirements.conda.yml",
+    "requirements.dev.conda.yml",
+    "requirements.win64.conda.yml",
+    "setup.py",
+)
 
 
 def find_source_files(base_dir: Path) -> List[Path]:
@@ -155,12 +164,7 @@ def main():
 
     root = Path(__file__).parent.parent
     source_root = root / "tiatoolbox"
-    requirements_paths = [
-        root / p
-        for tup in REQUIREMENTS_FILES
-        for p in tup
-        if p and p != "docs/requirements.txt"
-    ]
+    requirements_paths = [root / p for tup in REQUIREMENTS_FILES for p in tup]
     source_files = args.files or find_source_files(source_root)
     passed = True
     for req_path in requirements_paths:
