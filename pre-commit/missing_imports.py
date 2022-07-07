@@ -117,7 +117,7 @@ def find_bad_imports(
             if stem not in req_imports.union({"tiatoolbox"})
         }
         if bad_imports:
-            for _, (node, alias) in bad_imports.items():
+            for stem, (node, alias) in bad_imports.items():
                 # Tokenize the line to check for noqa comments
                 comments = find_comments(path, node.lineno)
                 if "# noqa" in comments:
@@ -126,7 +126,7 @@ def find_bad_imports(
                 print(
                     f"{path.relative_to(root)}:{node.lineno}:"
                     f" Import not in {requirements_path.name}:"
-                    f" {alias}"
+                    f" {stem}" + (f" ({alias})" if alias != stem else "")
                 )
     return result
 
