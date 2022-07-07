@@ -95,13 +95,15 @@ def is_notebook() -> bool:
 
     """
     try:
+        from IPython import get_ipython
+
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
         if shell == "TerminalInteractiveShell":  # noqa: PIE801
             return False  # Terminal running IPython
         return False  # Other type (?)
-    except NameError:
+    except (NameError, ImportError):
         return False  # Probably standard Python interpreter
 
 
@@ -127,6 +129,49 @@ def running_on_travis() -> bool:
 
     """
     return os.environ.get("TRAVIS") == "true" and os.environ.get("CI") == "true"
+
+
+def running_on_github() -> bool:
+    """Detect if the current environment is running on GitHub Actions.
+
+    Returns:
+        bool:
+            True if the current environment is on GitHub, False
+            otherwise.
+
+    """
+    return os.environ.get("GITHUB_ACTIONS") == "true"
+
+
+def running_on_circleci() -> bool:
+    """Detect if the current environment is running on CircleCI.
+
+    Returns:
+        bool:
+            True if the current environment is on CircleCI, False
+            otherwise.
+
+    """
+    return os.environ.get("CIRCLECI") == "true"
+
+
+def running_on_ci() -> bool:
+    """Detect if the current environment is running on continuous integration (CI).
+
+    Returns:
+        bool:
+            True if the current environment is on CI, False
+            otherwise.
+
+    """
+    return any(
+        (
+            os.environ.get("CI") == "true",
+            running_on_travis(),
+            running_on_github(),
+            running_on_circleci(),
+        )
+    )
 
 
 def running_on_kaggle() -> bool:

@@ -24,7 +24,6 @@ Properties
 """
 import contextlib
 import copy
-import joblib
 import io
 import json
 import os
@@ -56,14 +55,15 @@ from typing import (
     Union,
 )
 
+import joblib
 import numpy as np
 import pandas as pd
 from shapely import speedups, wkb, wkt
-from shapely.geometry import LineString, Point, Polygon, MultiPolygon
+from shapely.affinity import scale
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 from shapely.validation import make_valid
-from shapely.affinity import scale
 
 import tiatoolbox
 from tiatoolbox import logger
@@ -1213,7 +1213,7 @@ class AnnotationStore(ABC, MutableMapping):
             file_handle.write('{"type": "FeatureCollection", "features": [')
             # Write each feature
             for feature in self.features():
-                json.dump(feature, file_handle)
+                file_handle.write(json.dumps(feature))  # skipcq: PY-W0079
                 tell = file_handle.tell()
                 # Comma separate features
                 file_handle.write(",")
