@@ -40,7 +40,11 @@ def find_imports(py_source_path: Path) -> List[str]:
     with open(py_source_path, "r") as f:
         source = f.read()
     tree = ast.parse(source)
-    return [node for node in ast.walk(tree) if isinstance(node, ast.Import)]
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+    ]
 
 
 def std_spec(fullname: str) -> str:
@@ -61,9 +65,9 @@ def stem(alias: ast.alias) -> str:
 
 def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]]:
     if isinstance(node, ast.Import):
-        return [(alias, stem(alias)) for alias in node.names]
+        return [(alias.name, stem(alias)) for alias in node.names]
     elif isinstance(node, ast.ImportFrom):
-        return [(node.module, stem(node.module))]
+        return [(node.module, node.module.split(".")[0])]
     raise TypeError(
         f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom."
     )
@@ -122,7 +126,7 @@ def find_bad_imports(
                 print(
                     f"{path.relative_to(root)}:{node.lineno}:"
                     f" Import not in {requirements_path.name}:"
-                    f" {alias.name}"
+                    f" {alias}"
                 )
     return result
 
