@@ -1093,7 +1093,7 @@ class AnnotationStore(ABC, MutableMapping):
             file_handle.write('{"type": "FeatureCollection", "features": [')
             # Write each feature
             for feature in self.features():
-                json.dump(feature, file_handle)
+                file_handle.write(json.dumps(feature))  # skipcq: PY-W0079
                 tell = file_handle.tell()
                 # Comma separate features
                 file_handle.write(",")
