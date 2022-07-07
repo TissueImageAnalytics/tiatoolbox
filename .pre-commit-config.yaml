@@ -71,3 +71,12 @@ repos:
         files: tests/.*\btest_\w*.py
         language: system
         stages: [push]
+  - repo: local
+    hooks:
+      - id: requirements-consistency
+        name: check requirements are consistent
+        entry: python pre-commit/requirements_consistency.py
+        files: "(requirements.*.(txt|yml|yaml)|setup.py)$"
+        pass_filenames: false
+        language: python
+        additional_dependencies: [pyyaml]
