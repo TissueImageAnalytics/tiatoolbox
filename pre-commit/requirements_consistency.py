@@ -107,14 +107,14 @@ def test_files_exist(root_dir: Path) -> None:
             If a requirements file is missing.
 
     """
-    for main_name, dev_name in REQUIREMENTS_FILES:
-        main_path = root_dir / main_name
-        if not main_path.exists():
-            raise FileNotFoundError(f"Missing file: {main_path}")
-        if dev_name:
-            dev_path = root_dir / dev_name
-            if not dev_path.exists():
-                raise FileNotFoundError(f"Missing file: {dev_path}")
+    for sub_name, super_name in REQUIREMENTS_FILES:
+        sub_path = root_dir / sub_name
+        if not sub_path.exists():
+            raise FileNotFoundError(f"Missing file: {sub_path}")
+        if super_name:
+            super_path = root_dir / super_name
+            if not super_path.exists():
+                raise FileNotFoundError(f"Missing file: {super_path}")
 
 
 def parse_requirements(
@@ -218,28 +218,28 @@ def main():
     # Keep track of all parsed files
     all_requirements: Dict[Path, Dict[str, Requirement]] = {}
 
-    # Check that packages in main are also in dev
-    for main_name, dev_name in REQUIREMENTS_FILES:
+    # Check that packages in main are also in super (dev)
+    for sub_name, super_name in REQUIREMENTS_FILES:
         # Get the main requirements
-        main_path = root / main_name
-        main_reqs = parse_requirements(main_path)
-        all_requirements[main_path] = main_reqs
+        sub_path = root / sub_name
+        sub_reqs = parse_requirements(sub_path)
+        all_requirements[sub_path] = sub_reqs
 
-        # Skip comparison if there is no dev file
-        if not dev_name:
+        # Skip comparison if there is no superset (dev) file
+        if not super_name:
             continue
 
-        # Get the dev requirements
-        dev_path = root / dev_name
-        dev_reqs = parse_requirements(dev_path)
-        all_requirements[dev_path] = dev_reqs
+        # Get the superset of (dev) requirements
+        super_path = root / super_name
+        super_reqs = parse_requirements(super_path)
+        all_requirements[super_path] = super_reqs
 
-        # Check that all main requirements are in the dev file
-        main_keys = set(main_reqs.keys())
-        dev_keys = set(dev_reqs.keys())
-        dev_missing = main_keys - dev_keys
-        if dev_missing:
-            print(f"{dev_name} is missing {', '.join(dev_missing)} from {main_name}")
+        # Check that all sub requirements are in the super (dev) file
+        sub_keys = set(sub_reqs.keys())
+        super_keys = set(super_reqs.keys())
+        super_missing = sub_keys - super_keys
+        if super_missing:  # sub is not a subset of super
+            print(f"{super_name} is missing {', '.join(super_missing)} from {sub_name}")
             passed = False
 
     passed &= in_common_consistent(all_requirements)
