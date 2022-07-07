@@ -156,33 +156,6 @@ def parse_requirements(
     raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
 
-def all_main_in_dev(main: Dict[str, Requirement], dev: Dict[str, Requirement]) -> bool:
-    """Test that all main requirements are in the corresponding dev file.
-
-    Args:
-        main (dict):
-            A dictionary mapping package names to
-            pkg_resources.Requirement.
-        dev (dict):
-            A dictionary mapping package names to
-            pkg_resources.Requirement.
-
-    Returns:
-        bool:
-            Whether all main requirements are in the corresponding dev
-            file.
-
-    """
-    consistent = True
-
-    # Check that all main packages are in the dev file
-    for name in main:
-        if name not in dev:
-            print(f"{name} not in dev requirements ({dev_path.name})")
-            consistent = False
-    return consistent  # noqa: R504
-
-
 def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -> bool:
     """Test that in-common requirements are consistent.
 
@@ -235,7 +208,8 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
     return consistent  # noqa: R504
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the hook."""
     root = Path(__file__).parent.parent
     test_files_exist(root)
 
@@ -261,7 +235,12 @@ if __name__ == "__main__":
         all_requirements[dev_path] = dev
 
         # Check that all main requirements are in the dev file
-        passed &= all_main_in_dev(main, dev)
+        main_keys = set(main.keys())
+        dev_keys = set(dev.keys())
+        dev_missing = main_keys - dev_keys
+        if dev_missing:
+            print(f"{dev_name} is missing {', '.join(dev_missing)} from {main_name}")
+            passed = False
 
     passed &= in_common_consistent(all_requirements)
 
@@ -269,3 +248,7 @@ if __name__ == "__main__":
         sys.exit(1)
     print("All tests passed")
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
