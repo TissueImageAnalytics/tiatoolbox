@@ -107,12 +107,12 @@ def test_files_exist(root_dir: Path) -> None:
             If a requirements file is missing.
 
     """
-    for main, dev in REQUIREMENTS_FILES:
-        main_path = root_dir / main
+    for main_name, dev_name in REQUIREMENTS_FILES:
+        main_path = root_dir / main_name
         if not main_path.exists():
             raise FileNotFoundError(f"Missing file: {main_path}")
-        if dev:
-            dev_path = root_dir / dev
+        if dev_name:
+            dev_path = root_dir / dev_name
             if not dev_path.exists():
                 raise FileNotFoundError(f"Missing file: {dev_path}")
 
