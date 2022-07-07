@@ -11,13 +11,12 @@ dependencies:
   - Click>=8.1.2
   - coverage==6.3.2
   - cython
-  - defusedxml
+  - defusedxml>=0.7.1
   - flake8==4.0.1
   - flake8-bugbear
-  - flask
+  - flask>=2.1.1
   - glymur>=0.9.9
-  - h5py
-  - imagecodecs>2021.11.20
+  - imagecodecs>=2021.11.20
   - jupyterlab
   - matplotlib>=3.5.1
   - nbsphinx
@@ -48,7 +47,7 @@ dependencies:
   - torchvision>=0.12.0
   - tox
   - tqdm>=4.63.1
-  - twine==3.8.0
+  - twine==4.0.0
   - umap-learn>=0.5.2
   - wheel==0.37.1
   - zarr>=2.11.1

@@ -1,6 +1,28 @@
 History
 =======
 
+1.2.1 (2022-07-07)
+------------------
+### Major Updates and Feature Improvements
+- None
+
+### Changes to API
+- None
+
+### Bug Fixes and Other Changes
+- Fixes issues with dependencies.
+	- Adds flask to dependencies.
+- Fixes missing file in the python package.
+- Clarifies help string for show-wsi option.
+
+
+### Development related changes
+- Removes Travis CI.
+	- GitHub Actions will be used instead.
+- Adds pre-commit hooks to check requirements consistency.
+- Adds GitHub Action to resolve conda environment checks on Windows and Ubuntu.
+
+
 1.2.0 (2022-07-05)
 ------------------
 ### Major Updates and Feature Improvements
