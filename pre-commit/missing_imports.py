@@ -76,8 +76,10 @@ def find_imports(py_source_path: Path) -> List[str]:
             the file.
 
     """
-    with open(py_source_path, "r") as f:
-        source = f.read()
+    with open(  # This file could be any python file anywhere, skipcq
+        py_source_path, "r"
+    ) as fh:
+        source = fh.read()
     tree = ast.parse(source)
     return [
         node
@@ -225,7 +227,7 @@ def find_comments(path, line_num: int):
             List of comments on the line.
 
     """
-    with open(path, "rb") as fh:
+    with open(path, "rb") as fh:  # This file could be any python file anywhere, skipcq
         tokens = tokenize.tokenize(fh.readline)
         return [
             t.string
