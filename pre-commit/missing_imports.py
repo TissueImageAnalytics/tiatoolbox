@@ -5,6 +5,7 @@ Any found bad imports will be printed and the script will exit with a non-zero
 status.
 
 """
+import argparse
 import ast
 import importlib
 import os
@@ -138,6 +139,20 @@ def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[ast.alias, str]
 
 def main():
     """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Static analysis of requirements files and import statements."
+    )
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help=(
+            "Paths to source files to check. If not specified, all files in"
+            " the tiatoolbox directory are checked."
+        ),
+        type=Path,
+    )
+    args = parser.parse_args()
+
     root = Path(__file__).parent.parent
     source_root = root / "tiatoolbox"
     requirements_paths = [
@@ -146,16 +161,17 @@ def main():
         for p in tup
         if p and p != "docs/requirements.txt"
     ]
+    source_files = args.files or find_source_files(source_root)
     passed = True
     for req_path in requirements_paths:
-        bad_imports = find_bad_imports(root, source_root, req_path)
+        bad_imports = find_bad_imports(root, source_files, req_path)
         if bad_imports:
             passed = False
     sys.exit(1 - passed)
 
 
 def find_bad_imports(
-    root: Path, source_root: Path, requirements_path: Path
+    root: Path, source_files: List[Path], requirements_path: Path
 ) -> List[Tuple[Union[ast.Import, ast.ImportFrom], ast.alias]]:
     """Find bad imports in the given requirements file.
 
@@ -179,7 +195,7 @@ def find_bad_imports(
     # Apply the mapping from known package names to import names
     req_imports = {subkey for key in reqs for subkey in KNOWN_ALIASES.get(key, [key])}
 
-    for path in find_source_files(source_root):
+    for path in source_files:
         file_import_nodes = find_imports(path)
         # Mapping of import alias names and stems to nodes
         stem_to_node_alias: Dict[Tuple[ast.alias, str], ast.Import] = {
