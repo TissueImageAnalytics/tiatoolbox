@@ -222,8 +222,8 @@ def main():
     for main_name, dev_name in REQUIREMENTS_FILES:
         # Get the main requirements
         main_path = root / main_name
-        main = parse_requirements(main_path)
-        all_requirements[main_path] = main
+        main_reqs = parse_requirements(main_path)
+        all_requirements[main_path] = main_reqs
 
         # Skip comparison if there is no dev file
         if not dev_name:
@@ -231,12 +231,12 @@ def main():
 
         # Get the dev requirements
         dev_path = root / dev_name
-        dev = parse_requirements(dev_path)
-        all_requirements[dev_path] = dev
+        dev_reqs = parse_requirements(dev_path)
+        all_requirements[dev_path] = dev_reqs
 
         # Check that all main requirements are in the dev file
-        main_keys = set(main.keys())
-        dev_keys = set(dev.keys())
+        main_keys = set(main_reqs.keys())
+        dev_keys = set(dev_reqs.keys())
         dev_missing = main_keys - dev_keys
         if dev_missing:
             print(f"{dev_name} is missing {', '.join(dev_missing)} from {main_name}")
