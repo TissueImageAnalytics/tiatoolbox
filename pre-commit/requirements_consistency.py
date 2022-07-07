@@ -239,7 +239,7 @@ if __name__ == "__main__":
     root = Path(__file__).parent.parent
     test_files_exist(root)
 
-    consistent = True
+    passed = True
 
     # Keep track of all parsed files
     all_requirements: Dict[Path, Dict[str, Requirement]] = {}
@@ -261,11 +261,11 @@ if __name__ == "__main__":
         all_requirements[dev_path] = dev
 
         # Check that all main requirements are in the dev file
-        consistent &= all_main_in_dev(main, dev)
+        passed &= all_main_in_dev(main, dev)
 
-    consistent &= in_common_consistent(all_requirements)
+    passed &= in_common_consistent(all_requirements)
 
-    if not consistent:
+    if not passed:
         sys.exit(1)
     print("All tests passed")
     sys.exit(0)
