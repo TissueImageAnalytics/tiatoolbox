@@ -197,6 +197,7 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
             True if the requirements are consistent.
 
     """
+    consistent = True
     # Check that requirements are consistent across files
     # First find a set of all requirement keys
     requirement_key_sets = [set(x.keys()) for x in all_requirements.values()]
