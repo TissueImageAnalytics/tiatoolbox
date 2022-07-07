@@ -6,17 +6,7 @@ from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
 @cli_img_input(usage_help="Path to an image to be displayed.", multiple=True)
 @cli_name(usage_help="Name to be assigned to a layer.", multiple=True)
 def show_wsi(img_input, name):  # pragma: no cover
-    """Show a slide together with any overlays.
-
-    Args:
-        img_input (tuple[str]):
-            Paths to images to be displayed. Can be any WSI format
-            supported by tiatoolbox, or a low-res overlay as a .jpg
-            or .png image.
-        name (tuple[str]):
-            Names to be assigned to each layer.
-
-    """
+    """Show a slide together with any overlays."""
     from tiatoolbox.visualization.tileserver import TileServer
 
     if len(img_input) == 0:
