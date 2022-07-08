@@ -1,55 +1,53 @@
+import operator
+import pickle
+import sys
+import urllib
+from cmath import pi
+from pathlib import Path
 from shutil import rmtree
+from threading import Thread
+
+import numpy as np
+import requests
+import torch
+
+# Bokeh basics
+from bokeh.io import curdoc
+from bokeh.layouts import column, layout, row
 from bokeh.models import (
     BasicTickFormatter,
-    FuncTickFormatter,
-    CheckboxButtonGroup,
-    ColumnDataSource,
-    Slider,
-    Toggle,
-    TextInput,
-    Button,
-    Dropdown,
     BoxEditTool,
-    ColorPicker,
-)
-from bokeh.models import (
-    GraphRenderer,
+    Button,
+    CheckboxButtonGroup,
     Circle,
+    ColorPicker,
+    ColumnDataSource,
+    Dropdown,
+    FuncTickFormatter,
+    GraphRenderer,
+    PointDrawTool,
+    Slider,
     StaticLayoutProvider,
     TapTool,
-    PointDrawTool,
+    TextInput,
+    Toggle,
 )
-from bokeh.layouts import layout, row, column
-from pathlib import Path
-from bokeh.plotting import figure
 from bokeh.models.tiles import WMTSTileSource
-from cmath import pi
-from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
-from tiatoolbox.annotation.dsl import SQLTriplet, SQL_GLOBALS
+from bokeh.plotting import figure
+from flask_cors import CORS
+
+from tiatoolbox.annotation.dsl import SQL_GLOBALS, SQLTriplet
 from tiatoolbox.models.architecture.nuclick import NuClick
-from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.models.engine.interactive_segmentor import (
     InteractiveSegmentor,
     IOInteractiveSegmentorConfig,
 )
-
-import numpy as np
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 from tiatoolbox.visualization.tileserver import TileServer
-from tiatoolbox.wsicore.wsireader import WSIReader
-import requests
-from flask_cors import CORS
-from threading import Thread
-import operator
-
-import sys
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
-import pickle
-import torch
-import urllib
-
-# Bokeh basics
-from bokeh.io import curdoc
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 # Define helper functions
 
@@ -96,8 +94,8 @@ def name2type_key(name):
         return f"{name}"
 
 
-def hex2rgb(hex):
-    return tuple(int(hex[i : i + 2], 16) / 255 for i in (1, 3, 5))
+def hex2rgb(hex_val):
+    return tuple(int(hex_val[i : i + 2], 16) / 255 for i in (1, 3, 5))
 
 
 def update_mapper():
@@ -107,8 +105,9 @@ def update_mapper():
 
 
 def build_predicate():
-    # pred1=eval("props['type']=='class1'", SQL_GLOBALS, {})
-    # pred2=eval("props['type']=='class2'", SQL_GLOBALS, {})
+    """Builds a predicate function from the currently selected types,
+    and the filter input.
+    """
     preds = [
         eval(f'props["type"]=={name2type(l.label)}', SQL_GLOBALS, {})
         for l in box_column.children
@@ -155,7 +154,7 @@ def initialise_slide():
     vstate.mpp = wsi[0].info.mpp
     vstate.dims = wsi[0].info.slide_dimensions
 
-    pad = int(np.mean(vstate.dims) / 50)
+    pad = int(np.mean(vstate.dims) / 40)
     plot_size = np.array([1700, 1000])
     large_dim = np.argmax(np.array(vstate.dims) / plot_size)
 
@@ -181,15 +180,12 @@ def initialise_slide():
     p.x_range.bounds = (p.x_range.start - 2 * pad, p.x_range.end + 2 * pad)
     p.y_range.bounds = (p.y_range.start - 2 * pad, p.y_range.end + 2 * pad)
 
-    # opt_level,_ = wsi[0]._find_optimal_level_and_downsample(1.0,'power')
     z = ZoomifyGenerator(wsi[0])
     vstate.num_zoom_levels = z.level_count
     print(f"nzoom_levs: {vstate.num_zoom_levels}")
     zlev = get_level_by_extent((0, p.y_range.start, p.x_range.end, 0))
     print(f"initial_zoom: {zlev}")
     print(wsi[0].info.as_dict())
-    # p.x_range.bounds = (0, vstate.dims[0])
-    # p.y_range.bounds = (-vstate.dims[1], 0)
 
 
 def initialise_overlay():
@@ -289,7 +285,7 @@ def change_tiles(layer_name="overlay"):
         f"http://127.0.0.1:5000/layer/{layer_name}/zoomify/TileGroup{grp}"
         + r"/{z}-{x}-{y}.jpg",
     )
-    if layer_name in vstate.layer_dict.keys():
+    if layer_name in vstate.layer_dict:
         p.renderers[vstate.layer_dict[layer_name]].tile_source = ts
     else:
         p.add_tile(
@@ -318,7 +314,6 @@ class ViewerState:
     def __init__(self):
         self.dims = [30000, 20000]
         self.mpp = None
-        # self.mapper={'class1': (255,0,0,255), 'class2': (0,0,255,255), 'class3': (0,255,0,255)}
         self.mapper = {}
         self.colors = list(self.mapper.values())
         self.types = list(self.mapper.keys())
@@ -489,7 +484,6 @@ def node_select_cb(attr, old, new):
 
 
 def overlay_toggle_cb(attr):
-    print("meep")
     for i in range(3, len(p.renderers)):
         if isinstance(p.renderers[i], GraphRenderer):
             # set_graph_alpha(p.renderers[i], new)
@@ -541,14 +535,14 @@ def layer_folder_input_cb(attr, old, new):
 
 
 def filter_input_cb(attr, old, new):
-    resp = requests.get(f"http://127.0.0.1:5000/changepredicate/{new}")
-    # change_tiles('overlay')
+    """Change predicate to be used to filter annotations"""
+    requests.get(f"http://127.0.0.1:5000/changepredicate/{new}")
     vstate.update_state = 1
 
 
 def cprop_input_cb(attr, old, new):
-    resp = requests.get(f"http://127.0.0.1:5000/changeprop/{new}")
-    # change_tiles('overlay')
+    """Change property to colour by"""
+    requests.get(f"http://127.0.0.1:5000/changeprop/{new}")
     vstate.update_state = 1
 
 
@@ -621,7 +615,7 @@ def file_drop_cb(attr):
         if "_slider" in c.name:
             color_column.children.remove(c)
     for b in box_column.children.copy():
-        if "layer" in b.label:
+        if "layer" in b.label or "graph" in b.label:
             box_column.children.remove(b)
     print(p.renderers)
     print(attr.item)
@@ -632,7 +626,7 @@ def file_drop_cb(attr):
     fname = urllib.parse.quote(attr.item, safe="")
     print(fname)
     print(vstate.mpp)
-    resp = requests.get(f"http://127.0.0.1:5000/changeslide/slide/{fname}")
+    requests.get(f"http://127.0.0.1:5000/changeslide/slide/{fname}")
     change_tiles("slide")
     # if len(p.renderers)==1:
     # r=p.rect('x', 'y', 'width', 'height', source=box_source, fill_alpha=0)
@@ -665,10 +659,8 @@ def layer_drop_cb(attr):
         change_tiles("graph")
         return
 
-    print(attr.item)
     # fname='-*-'.join(attr.item.split('\\'))
     fname = urllib.parse.quote(attr.item, safe="")
-    print(fname)
     resp = requests.get(f"http://127.0.0.1:5000/changeoverlay/{fname}")
     print(vstate.types)
     if resp.text == "overlay":
@@ -677,7 +669,6 @@ def layer_drop_cb(attr):
     else:
         add_layer(resp.text)
     change_tiles(resp.text)
-    # change_tiles('slide')
 
 
 def layer_select_cb(attr):
@@ -751,7 +742,7 @@ def to_model_cb(attr):
 
 
 def save_cb(attr):
-    resp = requests.get("http://127.0.0.1:5000/commit")
+    requests.get("http://127.0.0.1:5000/commit")
 
 
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
@@ -771,10 +762,8 @@ def segment_on_box(attr):
     print(x, y, width, height)
 
     # img_tile=wsi.read_rect((x,y),(width,height))
-    # print(img_tile.shape)
     mask = np.zeros((thumb.shape[0], thumb.shape[1]))
     mask[y : y + height, x : x + width] = 1
-    # mask_r = VirtualWSIReader(mask, mpp=(0.5, 0.5))
 
     inst_segmentor = NucleusInstanceSegmentor(
         pretrained_model="hovernet_fast-pannuke",
@@ -782,14 +771,6 @@ def segment_on_box(attr):
         num_postproc_workers=12,
         batch_size=24,
     )
-    print(inst_segmentor.ioconfig.save_resolution)
-    # inst_segmentor.ioconfig.save_resolution['resolution'] = vstate.mpp[0]
-    for res in inst_segmentor.ioconfig.input_resolutions:
-        print(res)
-        # res['resolution'] = vstate.mpp[0]
-    for res in inst_segmentor.ioconfig.output_resolutions:
-        print(res)
-        # res['resolution'] = vstate.mpp[0]
 
     vstate.model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
     tile_output = inst_segmentor.predict(
@@ -806,11 +787,7 @@ def segment_on_box(attr):
     # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
     fname = urllib.parse.quote(".\\sample_tile_results\\0.dat", safe="")
     print(fname)
-    resp = requests.get(f"http://127.0.0.1:5000/loadannotations/{fname}")
-
-    # types = SQ.query_property("props['type']", [0,0,100000,100000], distinct=True)
-    print(vstate.types)
-    # print(len(SQ))
+    requests.get(f"http://127.0.0.1:5000/loadannotations/{fname}")
     update_mapper()
     # type_drop.menu=[(str(t),str(t)) for t in vstate.types]
     rmtree(r"./sample_tile_results")
@@ -858,7 +835,7 @@ def nuclick_on_pts(attr):
     # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
     fname = urllib.parse.quote(".\\sample_tile_results\\0.dat", safe="")
     print(fname)
-    resp = requests.get(f"http://127.0.0.1:5000/loadannotations/{fname}")
+    requests.get(f"http://127.0.0.1:5000/loadannotations/{fname}")
     update_mapper()
     rmtree(r"./sample_tile_results")
     initialise_overlay()
@@ -884,7 +861,6 @@ node_source.selected.on_change("indices", node_select_cb)
 
 folder_input_cb(None, None, base_folder)
 populate_layer_list(Path(vstate.slide_path).stem, Path(vstate.slide_path).parents[1])
-# populate_layer_list(Path(attr.item).stem, Path(vstate.slide_path).parents[1])
 
 box_column = column(children=layer_boxes)
 color_column = column(children=lcolors)
@@ -919,8 +895,6 @@ def cleanup_session(session_context):
     sys.exit()
 
 
-# script = server_document("http://127.0.0.1:5006/render_demo")
-# print(script)
 def update():
     if vstate.update_state == 2:
         change_tiles("overlay")
@@ -931,4 +905,3 @@ def update():
 
 curdoc().add_periodic_callback(update, 220)
 curdoc().add_root(ui_layout)
-# curdoc().on_session_destroyed(cleanup_session)
