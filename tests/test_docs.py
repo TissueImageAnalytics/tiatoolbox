@@ -4,7 +4,7 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import List, Type, Union
+from typing import List, Union
 
 import pytest
 
@@ -22,21 +22,6 @@ def source_files(root_path):
                 yield Path(root, file)
 
     return generator()
-
-
-def extract_examples(docstring: str) -> str:
-    """Extract doctest examples from a docstring.
-
-    Args:
-        docstring (str):
-            The docstring to extract examples from.
-
-    Returns:
-        str:
-            The doctest examples.
-
-    """
-    return
 
 
 def test_iter_sources(source_files, root_path):
@@ -101,7 +86,7 @@ def import_node_names(import_node: Union[ast.Import, ast.ImportFrom]) -> List[st
         return [import_node.module]
     if isinstance(import_node, ast.Import):
         return [name.name for name in import_node.names]
-    raise Type("Unknown node type")
+    raise TypeError("Unknown node type")
 
 
 def check_ast(doc, rel_path) -> ast.AST:
@@ -112,3 +97,4 @@ def check_ast(doc, rel_path) -> ast.AST:
     except SyntaxError as e:
         lineno = doc.lineno + doc.examples[0].lineno + e.lineno
         pytest.fail(f"{rel_path}:{lineno}: SyntaxError: {e.msg}")
+    return None
