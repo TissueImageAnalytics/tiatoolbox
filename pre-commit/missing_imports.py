@@ -26,7 +26,7 @@ KNOWN_ALIASES = {
     "opencv-python": ["cv2"],
     "opencv": ["cv2"],
     "setuptools": ["setuptools", "pkg_resources"],
-    "scikit-learn": ["sklearn", "joblib"],
+    "scikit-learn": ["sklearn"],
     "scikit-image": ["skimage"],
     "pytorch": ["torch"],
     "ipython": ["IPython"],
