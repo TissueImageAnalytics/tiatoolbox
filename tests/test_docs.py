@@ -67,37 +67,31 @@ def test_iter_sources(source_files, root_path):
             doc.lineno += signature_lines - 1
 
             # Check syntax is valid
-            source_tree = check_ast(doc, file.relative_to(root_path))
+            rel_path = file.relative_to(root_path)
+            source_tree = check_ast(doc, rel_path)
 
-            check_imports(source_tree, root_path, file, doc)
+            check_imports(source_tree, doc, rel_path)
 
 
-def check_imports(
-    source_tree: ast.AST, root_path: Path, file: Path, doc: doctest.DocTest
-) -> None:
+def check_imports(source_tree: ast.AST, doc: doctest.DocTest, rel_path: Path) -> None:
     """Check that imports in the source AST are valid."""
     imports = [
         node
         for node in ast.walk(source_tree)
         if isinstance(node, (ast.Import, ast.ImportFrom))
     ]
-    sys.modules["tiatoolbox"] = importlib.import_module("tiatoolbox", root_path)
     for import_node in imports:
         names = import_node_names(import_node)
         # Resolve the import
         for name in names:
             lineno = doc.lineno + doc.examples[0].lineno + import_node.lineno
             try:
-                spec = importlib.util.find_spec(name, package=root_path)
+                spec = importlib.util.find_spec(name)
             except ModuleNotFoundError as e:
-                pytest.fail(
-                    f"{file.relative_to(root_path)}:{lineno}:"
-                    f" ModuleNotFoundError: {e.msg}"
-                )
+                pytest.fail(f"{rel_path}:{lineno}:" f" ModuleNotFoundError: {e.msg}")
             if not (spec or name in sys.modules):
                 pytest.fail(
-                    f"{file.relative_to(root_path)}:{lineno}: "
-                    f"ImportError: No module named '{name}'"
+                    f"{rel_path}:{lineno}: " f"ImportError: No module named '{name}'"
                 )
 
 
