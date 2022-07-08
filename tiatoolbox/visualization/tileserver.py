@@ -31,7 +31,7 @@ class TileServer(Flask):
             colourized using the 'viridis' colourmap
 
     Examples:
-        >>> from tiatoolbox.wsiscore.wsireader import WSIReader
+        >>> from tiatoolbox.wsicore.wsireader import WSIReader
         >>> from tiatoolbox.visualization.tileserver import TileServer
         >>> wsi = WSIReader.open("CMU-1.svs")
         >>> app = TileServer(
