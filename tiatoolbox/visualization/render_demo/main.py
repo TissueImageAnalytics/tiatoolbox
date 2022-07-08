@@ -333,10 +333,15 @@ base_folder = r"E:\TTB_vis_folder"
 # base_folder='/tiatoolbox/app_data'
 if len(sys.argv) > 1 and sys.argv[1] != "None":
     base_folder = sys.argv[1]
-vstate.slide_path = r"E:\\TTB_vis_folder\\slides\\TCGA-SC-A6LN-01Z-00-DX1.svs"
+#vstate.slide_path = r"E:\\TTB_vis_folder\\slides\\TCGA-SC-A6LN-01Z-00-DX1.svs"
 # vstate.slide_path=Path(r'/tiatoolbox/app_data/slides/TCGA-SC-A6LN-01Z-00-DX1.svs')
 
-wsi = [WSIReader.open(vstate.slide_path)]
+#set initial slide to first one in base folder
+slide_list = []
+for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs"]:  # ,'*.png','*.jpg']:
+    slide_list.extend(list(Path(base_folder).joinpath('slides').glob(ext)))
+vstate.slide_path = slide_list[0]
+
 renderer = AnnotationRenderer(
     "type",
     {"class1": (1, 0, 0, 1), "class2": (0, 0, 1, 1), "class3": (0, 1, 0, 1)},
@@ -346,8 +351,8 @@ renderer = AnnotationRenderer(
 )
 vstate.renderer = renderer
 
+wsi = [WSIReader.open(vstate.slide_path)]
 vstate.dims = wsi[0].info.slide_dimensions
-
 vstate.mpp = wsi[0].info.mpp
 
 
@@ -357,7 +362,6 @@ def run_app():
         title="Testing TileServer",
         layers={
             "slide": wsi[0],
-            # "overlay": tile_gen #(wsi, SQ)
         },
         state=vstate,
     )
@@ -417,9 +421,6 @@ p.add_tools(PointDrawTool(renderers=[c]))
 p.add_tools(TapTool())
 tslist = []
 
-print(p.extra_y_ranges)
-print(p.y_scale)
-print(p.x_scale)
 p.renderers[0].tile_source.max_zoom = 10
 
 node_source = ColumnDataSource({"index": []})
@@ -815,7 +816,7 @@ def nuclick_on_pts(attr):
         batch_size=16,
         model=model,
     )
-    # print(inst_segmentor.ioconfig.save_resolution)
+    
     points = np.vstack([x, y]).T
     points = points / (ioconf.input_resolutions[0]["resolution"] / vstate.mpp[0])
     print(points.shape)

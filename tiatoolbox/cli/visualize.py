@@ -22,6 +22,11 @@ def visualize(img_input):
     """
     vis_path = pathlib.Path(vis.__file__).resolve().parent
 
+    if img_input is None:
+        raise ValueError("No input directory specified.")
+    if not pathlib.Path(img_input).exists():
+        raise FileNotFoundError(f"{img_input} does not exist")
+
     cmd = ["bokeh",
            "serve",
            "--show",
