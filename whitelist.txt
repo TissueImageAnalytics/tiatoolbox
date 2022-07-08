@@ -87,6 +87,7 @@ cuda
 cv2
 dataframe
 dataset
+doctest
 downsample
 downsampled
 downsampling
