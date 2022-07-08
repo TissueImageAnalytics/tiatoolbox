@@ -844,8 +844,8 @@ class AnnotationStore(ABC, MutableMapping):
             __ BP_
 
             Example:
-                >>> from tiatoolbox.annotation import AnnotationStore
-                >>> from tiatoolbox.geometry import Polygon
+                >>> from tiatoolbox.annotation.storage import AnnotationStore
+                >>> from shapely.geometry import Polygon
                 >>> store = AnnotationStore()
                 >>> store.add(
                 ...     Annotation(
@@ -925,7 +925,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Examples:
 
-            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import AnnotationStore
             >>> from shapely.geometry import Point
             >>> store = AnnotationStore()
             >>> annotation =  Annotation(
@@ -934,9 +934,9 @@ class AnnotationStore(ABC, MutableMapping):
             ... )
             >>> store.add(annotation, "foo")
             >>> store.pquery("*", unique=False)
-            {'foo': {'class': 42}}
+            ... {'foo': {'class': 42}}
 
-            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import AnnotationStore
             >>> from shapely.geometry import Point
             >>> store = AnnotationStore()
             >>> annotation =  Annotation(
@@ -945,11 +945,11 @@ class AnnotationStore(ABC, MutableMapping):
             ... )
             >>> store.add(annotation, "foo")
             >>> store.pquery("props['class']")
-            {42}
+            ... {42}
             >>> annotation =  Annotation(Point(1, 1), {"class": 123})
             >>> store.add(annotation, "foo")
             >>> store.pquery("props['class']")
-            {42, 123}
+            ... {42, 123}
 
         """
         if where is not None and type(select) is not type(where):
@@ -1890,7 +1890,7 @@ class SQLiteStore(AnnotationStore):
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
-                intersects. For more information see the `shapely
+                "intersects". For more information see the `shapely
                 documentation on binary predicates`__.
             unique (bool):
                 If True, only unique values will be returned as a set.
@@ -1899,7 +1899,7 @@ class SQLiteStore(AnnotationStore):
 
         Examples:
 
-            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import AnnotationStore
             >>> from shapely.geometry import Point
             >>> store = AnnotationStore()
             >>> annotation =  Annotation(
@@ -1908,9 +1908,9 @@ class SQLiteStore(AnnotationStore):
             ... )
             >>> store.add(annotation, "foo")
             >>> store.pquery("*", unique=False)
-            {'foo': {'class': 42}}
+            ... {'foo': {'class': 42}}
 
-            >>> from tiatoolbox.annotation import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import AnnotationStore
             >>> from shapely.geometry import Point
             >>> store = AnnotationStore()
             >>> annotation =  Annotation(
@@ -1919,11 +1919,11 @@ class SQLiteStore(AnnotationStore):
             ... )
             >>> store.add(annotation, "foo")
             >>> store.pquery("props['class']")
-            {42}
+            ... {42}
             >>> annotation =  Annotation(Point(1, 1), {"class": 123})
             >>> store.add(annotation, "foo")
             >>> store.pquery("props['class']")
-            {42, 123}
+            ... {42, 123}
 
         """
         # Check that select and where are the same type if where is given.
