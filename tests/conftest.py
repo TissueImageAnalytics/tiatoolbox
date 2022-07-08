@@ -378,7 +378,6 @@ def sample_wsi_dict(remote_sample):
 @pytest.fixture(scope="session")
 def cell_grid() -> List[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [
         cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
     ]
@@ -387,7 +386,6 @@ def cell_grid() -> List[Polygon]:
 @pytest.fixture(scope="session")
 def points_grid(spacing=60) -> List[Point]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 
