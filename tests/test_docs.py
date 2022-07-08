@@ -24,8 +24,14 @@ def source_files(root_path):
     return generator()
 
 
-def test_iter_sources(source_files, root_path):
-    """Test that all source files exist."""
+def test_validate_docstring_examples(source_files, root_path):
+    """Test that all docstring examples are valid.
+
+    Validity checks are:
+    1. The docstring examples are syntactically valid (can parse and AST).
+    2. That the imports can be resolved.
+
+    """
     for file in source_files:
 
         with open(file) as fh:
