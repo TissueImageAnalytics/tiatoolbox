@@ -951,7 +951,7 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store.pquery("props['class']")
             ... {42, 123}
 
-        """
+        """  # noqa
         if where is not None and type(select) is not type(where):
             raise TypeError("select and where must be of the same type")
         if not isinstance(select, (str, bytes)) and not callable(select):
@@ -1925,7 +1925,7 @@ class SQLiteStore(AnnotationStore):
             >>> store.pquery("props['class']")
             ... {42, 123}
 
-        """
+        """  # noqa
         # Check that select and where are the same type if where is given.
         if where is not None and type(select) is not type(where):
             raise TypeError("select and where must be of the same type")
