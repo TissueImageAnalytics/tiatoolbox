@@ -401,6 +401,7 @@ p = figure(
     lod_interval=500,
     lod_threshold=10,
     lod_timeout=200,
+    sizing_mode='stretch_both',
 )
 initialise_slide()
 ts1 = make_ts(r"http://127.0.0.1:5000/layer/slide/zoomify/TileGroup1/{z}-{x}-{y}.jpg")
