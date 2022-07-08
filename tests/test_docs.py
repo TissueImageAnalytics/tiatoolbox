@@ -28,7 +28,7 @@ def test_validate_docstring_examples(source_files, root_path):
     """Test that all docstring examples are valid.
 
     Validity checks are:
-    1. The docstring examples are syntactically valid (can parse and AST).
+    1. The docstring examples are syntactically valid (can parse an AST).
     2. That the imports can be resolved.
 
     """
