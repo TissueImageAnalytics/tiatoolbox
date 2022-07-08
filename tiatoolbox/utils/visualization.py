@@ -415,7 +415,7 @@ def overlay_prediction_contours(
 
         if draw_dot:
             inst_centroid = inst_info["centroid"]
-            inst_centroid = tuple(int(v) for v in inst_centroid)
+            inst_centroid = tuple([int(v) for v in inst_centroid])
             overlay = cv2.circle(overlay, inst_centroid, 3, (255, 0, 0), -1)
     return overlay
 
@@ -464,7 +464,7 @@ def plot_graph(
     # draw the edges
     def to_int_tuple(x):
         """Helper to convert to tuple of int."""
-        return tuple(int(v) for v in x)
+        return tuple([int(v) for v in x])
 
     for idx, (src, dst) in enumerate(edges):
         src = to_int_tuple(nodes[src])
@@ -541,13 +541,12 @@ class AnnotationRenderer:
     def get_color(self, ann):
         """get the color for an annotation"""
         if self.score_prop is not None:
-            col = tuple(
+            return tuple(
                 int(c * 255)
                 for c in self.mapper(self.score_fn(ann.properties[self.score_prop]))
             )
         else:
-            col = (0, 255, 0, 255)  # default color if no score_prop given
-        return col
+            return (0, 255, 0, 255)  # default color if no score_prop given
 
     def render_poly(self, rgb, ann, ann_bounded, tl, scale):
         """render a polygon annotation onto a tile using cv2"""
