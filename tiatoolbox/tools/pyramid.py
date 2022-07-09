@@ -597,6 +597,20 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         return Image.fromarray(rgb)
 
     def render_by_type(self, rgb, ann, tl, scale, poly_as_box=False):
+        """Render annotation appropriately to its geometry type.
+
+        Args:
+            rgb (np.ndarray):
+                The image to render the annotation on.
+            ann (Annotation):
+                The annotation to render.
+            tl (Tuple[int, int]):
+                The top left coordinate of the tile.
+            scale (int):
+                The scale at which we are rendering the tile.
+            poly_as_box (bool):
+                Whether to render polygons as boxes.
+        """
         r = self.renderer
         geom_type = ann.geometry.geom_type
         if geom_type == "Point":
@@ -612,8 +626,20 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             warnings.warn("Unknown geometry")
 
     def render_annotations(self, rgb, bound_geom, scale, tl):
-        """get annotations as bbox or geometry according to zoom level,
-        and decimate large collections of small annotations if appropriate
+        """Get annotations as bbox or geometry according to zoom level,
+        and render them, decimating large collections of small annotations
+        if appropriate.
+
+        Args:
+            rgb (np.ndarray):
+                The image to render the annotation on.
+            bound_geom (Polygon):
+                A polygon representing the bounding box of the tile.
+            scale (int):
+                The scale at which we are rendering the tile.
+            tl (Tuple[int, int]):
+                The top left coordinate of the tile.
+
         """
         big_thresh = 0.001 * (self.tile_size * scale) ** 2
         decimate = int(scale / self.renderer.max_scale) + 1
