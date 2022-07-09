@@ -548,17 +548,17 @@ class AnnotationRenderer:
         else:
             return (0, 255, 0, 255)  # default color if no score_prop given
 
-    def render_poly(self, rgb, ann, ann_bounded, tl, scale):
+    def render_poly(self, rgb, ann, tl, scale):
         """render a polygon annotation onto a tile using cv2"""
         col = self.get_color(ann)
 
-        cnt = self.to_tile_coords(ann_bounded.exterior.coords, tl, scale)
+        cnt = self.to_tile_coords(ann.geometry.exterior.coords, tl, scale)
         cv2.drawContours(rgb, [cnt], 0, col, -1)
 
-    def render_rect(self, rgb, ann, ann_bounded, tl, scale):
+    def render_rect(self, rgb, ann, tl, scale):
         """render a box annotation onto a tile using cv2"""
         col = self.get_color(ann)
-        box = self.to_tile_coords(np.reshape(ann_bounded.bounds, (2, 2)), tl, scale)
+        box = self.to_tile_coords(np.reshape(ann.geometry.bounds, (2, 2)), tl, scale)
         cv2.rectangle(rgb, box[0, :], box[1, :], col, thickness=-1)
 
     def render_pt(self, rgb, ann, tl, scale):
@@ -572,12 +572,12 @@ class AnnotationRenderer:
             thickness=-1,
         )
 
-    def render_line(self, rgb, ann, ann_bounded, tl, scale):
+    def render_line(self, rgb, ann, tl, scale):
         """render a line annotation onto a tile using cv2"""
         col = self.get_color(ann)
         cv2.polylines(
             rgb,
-            [self.to_tile_coords(list(ann_bounded.coords), tl, scale)],
+            [self.to_tile_coords(list(ann.geometry.coords), tl, scale)],
             False,
             col,
             thickness=3,

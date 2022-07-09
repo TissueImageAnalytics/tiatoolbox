@@ -181,7 +181,7 @@ def test_decimation(fill_store, tmp_path):
     plt.imshow(thumb)
     plt.show()
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
-    assert num == 16  # expect 16 pts in bottom right quadrant
+    assert num == 17  # expect 17 pts in bottom right quadrant
 
 
 def test_get_tile_negative_level(fill_store, tmp_path):
