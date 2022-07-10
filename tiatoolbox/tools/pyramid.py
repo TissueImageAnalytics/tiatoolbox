@@ -596,11 +596,51 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         return Image.fromarray(rgb)
 
-    def render_annotations(self, rgb, bound_geom, scale, tl):
-        """get annotations as bbox or geometry according to zoom level,
-        and decimate large collections of small annotations if appropriate
+    def render_by_type(self, rgb, ann, tl, scale, poly_as_box=False):
+        """Render annotation appropriately to its geometry type.
+
+        Args:
+            rgb (np.ndarray):
+                The image to render the annotation on.
+            ann (Annotation):
+                The annotation to render.
+            tl (Tuple[int, int]):
+                The top left coordinate of the tile.
+            scale (int):
+                The scale at which we are rendering the tile.
+            poly_as_box (bool):
+                Whether to render polygons as boxes.
         """
         r = self.renderer
+        geom_type = ann.geometry.geom_type
+        if geom_type == "Point":
+            r.render_pt(rgb, ann, tl, scale)
+        elif geom_type == "Polygon":
+            if poly_as_box:
+                r.render_rect(rgb, ann, tl, scale)
+            else:
+                r.render_poly(rgb, ann, tl, scale)
+        elif "Line" in geom_type:
+            r.render_line(rgb, ann, tl, scale)
+        else:
+            warnings.warn("Unknown geometry")
+
+    def render_annotations(self, rgb, bound_geom, scale, tl):
+        """Get annotations as bbox or geometry according to zoom level,
+        and render them, decimating large collections of small annotations
+        if appropriate.
+
+        Args:
+            rgb (np.ndarray):
+                The image to render the annotation on.
+            bound_geom (Polygon):
+                A polygon representing the bounding box of the tile.
+            scale (int):
+                The scale at which we are rendering the tile.
+            tl (Tuple[int, int]):
+                The top left coordinate of the tile.
+
+        """
         big_thresh = 0.001 * (self.tile_size * scale) ** 2
         decimate = int(scale / self.renderer.max_scale) + 1
         if scale > 100:
@@ -610,50 +650,17 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             bounding_boxes = self.store.bquery(bound_geom, self.renderer.where)
             if len(bounding_boxes) < 40:
                 decimate = 1
-            i = 0
-            for key, bounds in bounding_boxes.items():
+            for i, (key, bounds) in enumerate(bounding_boxes.items()):
                 bounding_box = Polygon.from_bounds(*bounds)
-                i += 1
                 if bounding_box.area > big_thresh:
                     ann = self.store[key]
-                    ann_bounded = ann.geometry.intersection(bound_geom)
-                    if ann_bounded.is_empty:
-                        # only bbox in tile, not actual geometry. skip.
-                        continue
-                    if ann_bounded.geom_type == "Polygon":
-                        r.render_poly(rgb, ann, ann_bounded, tl, scale)
-                    elif "Line" in ann_bounded.geom_type:
-                        r.render_line(rgb, ann, ann_bounded, tl, scale)
-                    else:
-                        warnings.warn("Unknown geometry")
-                    continue
-                if bounding_box.area == 0:
-                    # its a point
+                    self.render_by_type(rgb, ann, tl, scale)
+                elif i % decimate == 0:
                     ann = self.store[key]
-                if i % decimate == 0:
-                    ann = self.store[key]
-                    if ann.geometry.geom_type == "Point":
-                        r.render_pt(rgb, ann, tl, scale)
-                        continue
-                    ann_bounded = ann.geometry.intersection(bound_geom)
-                    if ann_bounded.geom_type == "Polygon":
-                        r.render_rect(rgb, ann, ann_bounded, tl, scale)
-                    elif "Line" in ann_bounded.geom_type:
-                        r.render_line(rgb, ann, ann_bounded, tl, scale)
-                    else:
-                        warnings.warn("Unknown geometry")
+                    self.render_by_type(rgb, ann, tl, scale, True)
         else:
             bounding_boxes = self.store.query(bound_geom, self.renderer.where)
             for ann in bounding_boxes.values():
-                if ann.geometry.geom_type == "Point":
-                    r.render_pt(rgb, ann, tl, scale)
-                    continue
-                ann_bounded = ann.geometry.intersection(bound_geom)
-                if ann_bounded.geom_type == "Polygon":
-                    r.render_poly(rgb, ann, ann_bounded, tl, scale)
-                elif "Line" in ann_bounded.geom_type:
-                    r.render_line(rgb, ann, ann_bounded, tl, scale)
-                else:
-                    warnings.warn("Unknown geometry")
+                self.render_by_type(rgb, ann, tl, scale)
 
         return rgb

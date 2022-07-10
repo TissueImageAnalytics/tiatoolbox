@@ -2,16 +2,11 @@
 
 import pathlib
 import shutil
-from typing import Callable, List, Union
+from typing import Callable
 
-import numpy as np
 import pytest
 from _pytest.tmpdir import TempPathFactory
-from shapely.geometry import LineString, Polygon
-from shapely.geometry.point import Point
 
-from tests.test_annotation_stores import cell_polygon
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
 from tiatoolbox.data import _fetch_remote_sample
 
 
@@ -373,52 +368,3 @@ def sample_wsi_dict(remote_sample):
         "wsi4_4k_4k_pred",
     ]
     return {name: remote_sample(name) for name in file_names}
-
-
-@pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
-    """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
-    return [
-        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
-    ]
-
-
-@pytest.fixture(scope="session")
-def points_grid(spacing=60) -> List[Point]:
-    """Generate a grid of fake point annotations."""
-    np.random.seed(0)
-    return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
-
-
-@pytest.fixture(scope="session")
-def fill_store(cell_grid, points_grid):
-    """Factory fixture to fill stores with test data."""
-
-    def _fill_store(
-        store_class: AnnotationStore,
-        path: Union[str, pathlib.Path],
-    ):
-        """Fills store with random variety of annotations."""
-        store = store_class(path)
-
-        cells = [
-            Annotation(cell, {"type": "cell", "prob": np.random.rand(1)[0]})
-            for cell in cell_grid
-        ]
-        points = [
-            Annotation(point, {"type": "pt", "prob": np.random.rand(1)[0]})
-            for point in points_grid
-        ]
-        lines = [
-            Annotation(
-                LineString(((x, x + 500) for x in range(100, 400, 10))),
-                {"type": "line", "prob": 0.75},
-            )
-        ]
-
-        annotations = cells + points + lines
-        keys = store.append_many(annotations)
-        return keys, store
-
-    return _fill_store
