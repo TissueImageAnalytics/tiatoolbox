@@ -3,7 +3,7 @@ import pickle
 import sys
 import urllib
 from cmath import pi
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from shutil import rmtree
 from threading import Thread
 
@@ -96,6 +96,10 @@ def name2type_key(name):
 
 def hex2rgb(hex_val):
     return tuple(int(hex_val[i : i + 2], 16) / 255 for i in (1, 3, 5))
+
+
+def make_safe_name(name):
+    return urllib.parse.quote(str(PureWindowsPath(name)), safe="")
 
 
 def update_mapper():
@@ -499,18 +503,18 @@ def overlay_toggle_cb(attr):
 def folder_input_cb(attr, old, new):
     file_list = []
     for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs"]:  # ,'*.png','*.jpg']:
-        file_list.extend(list(Path(new).glob("*\\" + ext)))
+        file_list.extend(list(Path(new).glob(str(Path('*')/ext))))
     file_list = [(str(p), str(p)) for p in file_list]
     file_drop.menu = file_list
 
     file_list = []
     for ext in ["*.db", "*.dat", "*.geojson", "*.png", "*.jpg", "*.tiff", "*.pkl"]:
-        file_list.extend(list(Path(new).glob("*\\" + ext)))
+        file_list.extend(list(Path(new).glob(str(Path('*')/ext))))
     file_list = [(str(p), str(p)) for p in file_list]
     layer_drop.menu = file_list
 
 
-def populate_layer_list(slide_name, folder_path):
+def populate_layer_list(slide_name, folder_path: Path):
     file_list = []
     for ext in [
         "*.db",
@@ -521,7 +525,7 @@ def populate_layer_list(slide_name, folder_path):
         "*.pkl",
         "*.tiff",
     ]:  # and '*.tiff'?
-        file_list.extend(list(folder_path.glob("*\\" + ext)))
+        file_list.extend(list(folder_path.glob(str(Path('*')/ext))))
     file_list = [(str(p), str(p)) for p in file_list if slide_name in str(p)]
     layer_drop.menu = file_list
 
@@ -625,7 +629,7 @@ def file_drop_cb(attr):
     wsi[0] = WSIReader.open(attr.item)
     initialise_slide()
     # fname='-*-'.join(attr.item.split('\\'))
-    fname = urllib.parse.quote(attr.item, safe="")
+    fname = make_safe_name(attr.item)
     print(fname)
     print(vstate.mpp)
     requests.get(f"http://127.0.0.1:5000/changeslide/slide/{fname}")
@@ -662,7 +666,7 @@ def layer_drop_cb(attr):
         return
 
     # fname='-*-'.join(attr.item.split('\\'))
-    fname = urllib.parse.quote(attr.item, safe="")
+    fname = make_safe_name(attr.item)
     resp = requests.get(f"http://127.0.0.1:5000/changeoverlay/{fname}")
     print(vstate.types)
     if resp.text == "overlay":
@@ -787,7 +791,7 @@ def segment_on_box(attr):
     )
 
     # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
-    fname = urllib.parse.quote(".\\sample_tile_results\\0.dat", safe="")
+    fname = make_safe_name(".\\sample_tile_results\\0.dat")
     print(fname)
     requests.get(f"http://127.0.0.1:5000/loadannotations/{fname}")
     update_mapper()
@@ -835,7 +839,7 @@ def nuclick_on_pts(attr):
     print(nuclick_output)
 
     # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
-    fname = urllib.parse.quote(".\\sample_tile_results\\0.dat", safe="")
+    fname = make_safe_name(".\\sample_tile_results\\0.dat")
     print(fname)
     requests.get(f"http://127.0.0.1:5000/loadannotations/{fname}")
     update_mapper()
