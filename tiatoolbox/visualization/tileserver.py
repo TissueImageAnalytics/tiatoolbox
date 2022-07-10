@@ -264,7 +264,6 @@ class TileServer(Flask):
         # overlay_path='\\'.join(overlay_path.split('-*-'))
         overlay_path = self.decode_safe_name(overlay_path)
         print(overlay_path)
-        overlay_path = Path(overlay_path.parts)
         if overlay_path.suffix == ".geojson":
             SQ = SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix == ".dat":
