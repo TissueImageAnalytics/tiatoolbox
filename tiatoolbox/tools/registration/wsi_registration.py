@@ -170,7 +170,7 @@ class RegistrationConfig:
         resolution: Resolution = 0.03125,
         units: str = "power",
         number_of_rotations: int = 10,
-        input_image_size: Tuple[int] = (224, 224),
+        input_image_size: Tuple[int, int] = (224, 224),
     ):
         self.resolution = resolution
         self.units = units
