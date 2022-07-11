@@ -65,8 +65,7 @@ class TileServer(Flask):
             layers = {f"layer-{i}": p for i, p in enumerate(layers)}
         # Set up the layer dict.
         meta = None
-        for i, key in enumerate(layers):
-            layer = layers[key]
+        for i, (key, layer) in enumerate(layers.items()):
 
             if isinstance(layer, (str, Path)):
                 layer_path = Path(layer)
@@ -90,7 +89,7 @@ class TileServer(Flask):
                 self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
 
             if i == 0:
-                meta = layer.info
+                meta = layer.info   #base slide info
 
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"

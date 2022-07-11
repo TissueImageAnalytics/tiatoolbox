@@ -482,38 +482,43 @@ def plot_graph(
 
 class AnnotationRenderer:
     """Renderer containing information and methods to render annotations
-    from an AnnotationStore to a tile
+    from an AnnotationStore to a tile.
 
     Args:
-    score_prop: A key that is present in the properties of annotations
+    score_prop:
+        A key that is present in the properties of annotations
         to be rendered that will be used to color rendered annotations.
-    mapper: A dictionary or colormap used to color annotations according
+    mapper:
+        A dictionary or colormap used to color annotations according
         to the value of properties[score_prop] of an annotation.  Should
         be either a matplotlib colormap, a string which is a name of a
         matplotlib colormap, a dict of possible property {value: color}
         pairs, or a list of categorical property values (in which case a
         dict will be created with a random color generated for each
         category)
-    where: a callable or predicate which will be passed on to
+    where:
+        a callable or predicate which will be passed on to
         AnnotationStore.query() when fetching annotations to be rendered
         (see AnnotationStore for more details)
-    score_fn: an optional callable which will be called on the value of
+    score_fn:
+        an optional callable which will be called on the value of
         the property that will be used to generate the color before giving
         it to colormap. Use it for example to normalise property
         values if they do not fall into the range [0,1], as matplotlib
         colormap expects values in this range. i.e roughly speaking
         annotation_color=mapper(score_fn(ann.properties[score_prop]))
-    max_scale: downsample level above which Polygon geometries on crowded
+    max_scale:
+        downsample level above which Polygon geometries on crowded
         tiles will be rendered as a bounding box instead
     """
 
     def __init__(
         self,
-        score_prop=None,
-        mapper=None,
-        where=None,
-        score_fn=lambda x: x,
-        max_scale=8,
+        score_prop: str = None,
+        mapper: Union[str, Dict, List] = None,
+        where: Union[str, callable] = None,
+        score_fn: callable = lambda x: x,
+        max_scale: int = 8,
     ):
         if mapper is None:
             mapper = cm.get_cmap("jet")
