@@ -1,20 +1,22 @@
 """Simple Flask WSGI apps to display tiles as slippery maps."""
 import io
 import json
+import os
+import urllib
 from pathlib import Path
 from typing import Dict, List, Union
-import numpy as np
+
 import matplotlib.cm as cm
+import numpy as np
 from flask import Flask, Response, send_file
 from flask.templating import render_template
-import urllib
-import os
+from PIL import Image
+
 from tiatoolbox import data
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader, OpenSlideWSIReader
-from PIL import Image
 from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
 
 
 class TileServer(Flask):
@@ -109,7 +111,7 @@ class TileServer(Flask):
         self.route("/changecmap/<cmap>")(self.change_mapper)
         self.route("/loadannotations/<file_path>")(self.load_annotations)
         self.route("/changeoverlay/<overlay_path>")(self.change_overlay)
-        self.route("/commit")(self.commit_db)
+        self.route("/commit/<save_path>")(self.commit_db)
 
     def zoomify(
         self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
@@ -157,7 +159,7 @@ class TileServer(Flask):
 
     @staticmethod
     def decode_safe_name(name):
-        return Path(urllib.parse.unquote(name).replace('\\', os.sep))
+        return Path(urllib.parse.unquote(name).replace("\\", os.sep))
 
     def index(self) -> Response:
         """Serve the index page.
@@ -296,12 +298,15 @@ class TileServer(Flask):
         self.update_types(SQ)
         return "overlay"
 
-    def commit_db(self):
+    def commit_db(self, save_path):
+        save_path = self.decode_safe_name(save_path)
+        print(save_path)
         for key, layer in self.tia_pyramids.items():
             if isinstance(layer, AnnotationTileGenerator):
                 if layer.store.path.suffix == ".db":
                     print("db committed")
                     layer.store.commit()
                 else:
-                    layer.store.dump("./temp_store.db")
+                    layer.store.commit()
+                    layer.store.dump(str(save_path))
         return "done"

@@ -336,14 +336,20 @@ vstate = ViewerState()
 base_folder = r"E:\TTB_vis_folder"
 # base_folder='/tiatoolbox/app_data'
 if len(sys.argv) > 1 and sys.argv[1] != "None":
-    base_folder = sys.argv[1]
-#vstate.slide_path = r"E:\\TTB_vis_folder\\slides\\TCGA-SC-A6LN-01Z-00-DX1.svs"
+    base_folder = Path(sys.argv[1])
+    slide_folder = base_folder.joinpath("slides")
+    overlay_folder = base_folder.joinpath("overlays")
+if len(sys.argv) == 3:
+    slide_folder = Path(sys.argv[1])
+    overlay_folder = Path(sys.argv[2])
+# vstate.slide_path = r"E:\\TTB_vis_folder\\slides\\TCGA-SC-A6LN-01Z-00-DX1.svs"
 # vstate.slide_path=Path(r'/tiatoolbox/app_data/slides/TCGA-SC-A6LN-01Z-00-DX1.svs')
 
-#set initial slide to first one in base folder
+# set initial slide to first one in base folder
 slide_list = []
 for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs"]:  # ,'*.png','*.jpg']:
-    slide_list.extend(list(Path(base_folder).joinpath('slides').glob(ext)))
+    slide_list.extend(list(slide_folder.glob(ext)))
+    slide_list.extend(list(slide_folder.glob(str(Path("*") / ext))))
 vstate.slide_path = slide_list[0]
 
 renderer = AnnotationRenderer(
@@ -405,7 +411,7 @@ p = figure(
     lod_interval=500,
     lod_threshold=10,
     lod_timeout=200,
-    sizing_mode='stretch_both',
+    sizing_mode="stretch_both",
 )
 initialise_slide()
 ts1 = make_ts(r"http://127.0.0.1:5000/layer/slide/zoomify/TileGroup1/{z}-{x}-{y}.jpg")
@@ -454,7 +460,7 @@ slide_toggle = Toggle(label="Slide", button_type="success", width=90)
 overlay_toggle = Toggle(label="Overlay", button_type="success", width=90)
 filter_input = TextInput(value="None", title="Filter:")
 cprop_input = TextInput(value="type", title="CProp:")
-folder_input = TextInput(value=base_folder, title="Img Folder:")
+folder_input = TextInput(value=str(slide_folder), title="Img Folder:")
 cmmenu = [
     ("jet", "jet"),
     ("coolwarm", "coolwarm"),
@@ -468,7 +474,7 @@ model_drop = Dropdown(
 )
 layer_boxes = [Toggle(label=t, active=True, width=100) for t in vstate.types]
 lcolors = [ColorPicker(color=col[0:3], width=60) for col in vstate.colors]
-layer_folder_input = TextInput(value=base_folder, title="Overlay Folder:")
+layer_folder_input = TextInput(value=str(overlay_folder), title="Overlay Folder:")
 layer_drop = Dropdown(label="Add Overlay", button_type="warning", menu=[None])
 opt_buttons = CheckboxButtonGroup(labels=["Filled", "Microns", "Grid"], active=[0])
 save_button = Button(label="Save", button_type="success")
@@ -503,18 +509,20 @@ def overlay_toggle_cb(attr):
 def folder_input_cb(attr, old, new):
     file_list = []
     for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs"]:  # ,'*.png','*.jpg']:
-        file_list.extend(list(Path(new).glob(str(Path('*')/ext))))
+        file_list.extend(list(Path(new).glob(str(Path("*") / ext))))
+        file_list.extend(list(Path(new).glob(ext)))
     file_list = [(str(p), str(p)) for p in file_list]
     file_drop.menu = file_list
 
     file_list = []
     for ext in ["*.db", "*.dat", "*.geojson", "*.png", "*.jpg", "*.tiff", "*.pkl"]:
-        file_list.extend(list(Path(new).glob(str(Path('*')/ext))))
+        file_list.extend(list(Path(new).glob(str(Path("*") / ext))))
+        file_list.extend(list(Path(new).glob(ext)))
     file_list = [(str(p), str(p)) for p in file_list]
     layer_drop.menu = file_list
 
 
-def populate_layer_list(slide_name, folder_path: Path):
+def populate_layer_list(slide_name, overlay_path: Path):
     file_list = []
     for ext in [
         "*.db",
@@ -525,7 +533,8 @@ def populate_layer_list(slide_name, folder_path: Path):
         "*.pkl",
         "*.tiff",
     ]:  # and '*.tiff'?
-        file_list.extend(list(folder_path.glob(str(Path('*')/ext))))
+        file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
+        file_list.extend(list(overlay_path.glob(ext)))
     file_list = [(str(p), str(p)) for p in file_list if slide_name in str(p)]
     layer_drop.menu = file_list
 
@@ -616,7 +625,7 @@ def file_drop_cb(attr):
         for r in p.renderers[3:].copy():
             p.renderers.remove(r)
     vstate.layer_dict = {"slide": 0, "rect": 1, "pts": 2}
-    vstate.slide_path = attr.item
+    vstate.slide_path = Path(attr.item)
     for c in color_column.children.copy():
         if "_slider" in c.name:
             color_column.children.remove(c)
@@ -625,7 +634,7 @@ def file_drop_cb(attr):
             box_column.children.remove(b)
     print(p.renderers)
     print(attr.item)
-    populate_layer_list(Path(attr.item).stem, Path(vstate.slide_path).parents[1])
+    populate_layer_list(Path(attr.item).stem, overlay_folder)
     wsi[0] = WSIReader.open(attr.item)
     initialise_slide()
     # fname='-*-'.join(attr.item.split('\\'))
@@ -644,13 +653,15 @@ def file_drop_cb(attr):
 def layer_drop_cb(attr):
     """setup the newly chosen overlay"""
     if Path(attr.item).suffix == ".pkl":
+        # its a graph
         with open(attr.item, "rb") as f:
             graph_dict = pickle.load(f)
-        node_source.data = {"index": list(range(graph_dict["x"].shape[0]))}
+        node_source.data = {"index": list(range(graph_dict["coordinates"].shape[0]))}
         edge_source.data = {
             "start": graph_dict["edge_index"][0, :],
             "end": graph_dict["edge_index"][1, :],
         }
+        print(graph_dict)
         graph_layout = dict(
             zip(
                 node_source.data["index"],
@@ -748,7 +759,10 @@ def to_model_cb(attr):
 
 
 def save_cb(attr):
-    requests.get("http://127.0.0.1:5000/commit")
+    save_path = make_safe_name(
+        str(overlay_folder / (vstate.slide_path.stem + "_saved_anns.db"))
+    )
+    requests.get(f"http://127.0.0.1:5000/commit/{save_path}")
 
 
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
@@ -821,7 +835,7 @@ def nuclick_on_pts(attr):
         batch_size=16,
         model=model,
     )
-    
+
     points = np.vstack([x, y]).T
     points = points / (ioconf.input_resolutions[0]["resolution"] / vstate.mpp[0])
     print(points.shape)
@@ -865,8 +879,8 @@ filter_input.on_change("value", filter_input_cb)
 cprop_input.on_change("value", cprop_input_cb)
 node_source.selected.on_change("indices", node_select_cb)
 
-folder_input_cb(None, None, base_folder)
-populate_layer_list(Path(vstate.slide_path).stem, Path(vstate.slide_path).parents[1])
+folder_input_cb(None, None, slide_folder)
+populate_layer_list(Path(vstate.slide_path).stem, overlay_folder)
 
 box_column = column(children=layer_boxes)
 color_column = column(children=lcolors)
