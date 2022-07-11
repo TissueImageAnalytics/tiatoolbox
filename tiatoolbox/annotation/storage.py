@@ -962,16 +962,20 @@ class AnnotationStore(ABC, MutableMapping):
         # Are we scanning through all annotations?
         is_scan = not any((geometry, where))
         items = self.items() if is_scan else self.query(geometry, where).items()
-        for key, annotation in items:
+
+        def get_value(select, annotation):
+            """Get the value(s) to return from annotation given select."""
             if select == "*":  # Special case for all properties
-                value = annotation.properties
+                return annotation.properties
             elif isinstance(select, str):
                 py_locals = {"props": annotation.properties}
-                value = eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
+                return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
             elif isinstance(select, bytes):
-                value = pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
-            else:  # Callable
-                value = select(annotation.properties)
+                return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
+            return select(annotation.properties)
+
+        for key, annotation in items:
+            value = get_value(select, annotation)
             if unique:
                 result.add(value)
             else:
@@ -1666,7 +1670,7 @@ class SQLiteStore(AnnotationStore):
                 A database cursor for the current query.
 
         """
-        if not no_constraints_ok and all(x is None for x in (geometry, where)):
+        if not no_constraints_ok and geometry is None and where is None:
             raise ValueError("At least one of `geometry` or `where` must be specified.")
         query_geometry = geometry
         if callable_columns is None:
@@ -1703,7 +1707,7 @@ class SQLiteStore(AnnotationStore):
 
         # There is query geometry, add a simple rtree bounds check to
         # rapidly narrow candidates down.
-        if query_geometry is not None:
+        if query_geometry:
             # Add rtree index checks to the query
             query_string += """
             AND max_x >= :min_x
