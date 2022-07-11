@@ -1,7 +1,7 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib as mpl
@@ -514,10 +514,10 @@ class AnnotationRenderer:
 
     def __init__(
         self,
-        score_prop: str = None,
-        mapper: Union[str, Dict, List] = None,
-        where: Union[str, callable] = None,
-        score_fn: callable = lambda x: x,
+        score_prop: Optional[str] = None,
+        mapper: Optional[Union[str, Dict, List]] = None,
+        where: Optional[Union[str, Callable]] = None,
+        score_fn: Callable = lambda x: x,
         max_scale: int = 8,
     ):
         if mapper is None:
