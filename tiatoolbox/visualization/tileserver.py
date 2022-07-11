@@ -89,7 +89,7 @@ class TileServer(Flask):
                 self.tia_pyramids[key] = layer  # its an AnnotationTileGenerator
 
             if i == 0:
-                meta = layer.info   #base slide info
+                meta = layer.info  # base slide info
 
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"
