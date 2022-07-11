@@ -1,3 +1,99 @@
+The vis tool is in the process of being added to tiatoolbox, but for the moment is not usable there. This tiatoolbox fork makes it available, but it is a work in progress and will probably have a few issues. If you find one let me know! also, if there is any sort of visualization task you'd like to do which seems like it might fit in this tool but which can't be easily done with it at the moment, please suggest it.
+
+## Setup
+
+Install tiatoolbox into a conda environment as normal from this fork.
+
+Install a couple of additional dependencies with:
+
+pip install bokeh
+pip install flask-cors
+
+enter command:
+python setup.py install    while in the cloned tiatoolbox top directory.
+
+start the interface using:
+
+tiatoolbox visualize --img-input path\to\slides --img-input path\to\overlays
+alternatively just one path can be provided; in this case it is assumed that slides and overlays are in subdirectories of that provided directory called 'slides' and 'overlays' respectively.
+
+In the folder(s) that your command pointed to, should be the things that you want to visualize, following the conventions in the next section.
+
+## Data format conventions/filestructure
+
+in the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interesting in overlaying over the slides.
+
+When a slide is selected in the interface, any valid overlay file that can be found that contains the same name (not including extension) will be available to overlay upon it. 
+
+### Segmentation:
+
+The best way of getting segmentations (in the form of contours) into the visualization is by putting them in an AnnotationStore. The other options are .geojson, and .dat.
+
+If your annotatins are in a geojson format following the sort of thing QuPath would output, that should also be ok. Contours stored following hovernet-style output in a .dat file should also work
+
+Hovernet style:
+sample_dict = {nuc_id: {
+                             box: List[],
+                             centroid: List[],
+                             contour: List[List[]],
+                             prob: float,
+                             type: int
+			     ... #can add as many additional properties as we want... 
+                             }
+                ... # other instances
+              }
+
+
+
+
+geojson:
+{"type":"Feature",
+"geometry":{
+	"type":"Polygon",	
+	"coordinates":[[[21741, 49174.09],[21737.84, 49175.12],[21734.76, 49175.93],[21729.85, 49179.85],[21726.12, 49184.84],[21725.69, 49187.95],[21725.08, 49191],[21725.7, 49194.04],[21726.15, 49197.15],[21727.65, 49199.92],[21729.47, 49202.53],[21731.82, 49204.74],[21747.53, 49175.23],[21741, 49174.09]]]},
+	"properties":{"object_type":"detection","isLocked":false}
+}
+
+### Heatmaps:
+
+will display a low-res heatmap in .jpg or .png format. Should be the same aspect ratio as the WSI it will be overlaid on.
+
+### Whole Slide Overlays:
+
+Can overlay multiple WSI's on top of eachother as separate layers
+
+### Graphs:
+
+Graphs can also be overlaid. Should be in a dictionary format, saved as a pickled .pkl file.
+eg:
+
+graph_dict = {  'edge_index': 2 x n_edges array of indices of pairs of connected nodes
+		'coordinates': n x 2 array of x,y coordinates for each graph node
+		}
+
+
+## Other stuff:
+
+### colormaps/colouring by score:
+
+You can select the property that will be used to colour annotations in the colour_prop box. The corresponding property should be either categorical (strings or ints), in which case a dict-based colour mapping will be used, or a float between 0-1 in which case a matplotlib colourmap will be applied.
+There is also the option for the special case 'color' to be used - if your annotations have a property called color, this will be assumed to be an rgb value for each annotation which will be used directly without any mapping.
+
+Once you have selected a slide with the slide dropdown, you can add any number of overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colors can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
+
+### Running models:
+
+Regions of the image can be selected, using either a box select or points, which can be sent to a model via selecting the model in the drop-down menu and then clicking go. Available so far are hovernet and nuclick. 
+
+To save the annotations resulting from a model, or loaded from a .geojson or .dat (will be saved as a SQLiteStore .db file which will be far quicker to load) use the save button (for the moment it is just saved in a file '{slide_name}_saved_anns.db' in the overlays folder). 
+
+### Other options:
+
+There are a few options for how annotations are displayed. You can change the colourmap used in the colormap field if you are colouring objects according to a continuous property (should be between 0-1) - by entering the text of a matplotlib cmap.
+The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outline only rendering of annotations, using mpp or baseline pixels as the scale for the plot, and showing a grid overlay.
+
+
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
 </p>
