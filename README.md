@@ -7,6 +7,7 @@ Install tiatoolbox into a conda environment as normal from this fork.
 Install a couple of additional dependencies with:
 
 pip install bokeh
+
 pip install flask-cors
 
 enter command:
