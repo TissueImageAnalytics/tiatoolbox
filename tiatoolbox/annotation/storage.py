@@ -1670,7 +1670,7 @@ class SQLiteStore(AnnotationStore):
                 A database cursor for the current query.
 
         """
-        if not no_constraints_ok and geometry is None and where is None:
+        if not no_constraints_ok and all(x is None for x in (geometry, where)):
             raise ValueError("At least one of `geometry` or `where` must be specified.")
         query_geometry = geometry
         if callable_columns is None:
@@ -1707,7 +1707,7 @@ class SQLiteStore(AnnotationStore):
 
         # There is query geometry, add a simple rtree bounds check to
         # rapidly narrow candidates down.
-        if query_geometry:
+        if query_geometry is not None:
             # Add rtree index checks to the query
             query_string += """
             AND max_x >= :min_x
