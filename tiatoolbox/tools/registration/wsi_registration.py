@@ -107,9 +107,8 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask):
 
     all_dice = []
     all_transform = []
-    list_angles = np.arange(10, 360, 10).tolist()
-    for i in range(len(list_angles)):
-        theta = np.radians(list_angles[i])
+    for angle in np.arange(10, 360, 10).tolist():
+        theta = np.radians(angle)
         c, s = np.cos(theta), np.sin(theta)
         rotation_matrix = np.array(((c, -s, 0), (s, c, 0), (0, 0, 1)))
 
