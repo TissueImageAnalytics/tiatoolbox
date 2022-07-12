@@ -1,24 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -30,14 +9,17 @@ from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
 class DatasetInfoABC(ABC):
     """Define an abstract class for holding dataset information.
 
-    Enforcing such that following attributes must always be defined by the subclass.
+    Enforcing such that following attributes must always be defined by
+    the subclass.
 
     Attributes:
-        inputs (list): A list of paths where each path points to a sample image.
-        labels (list): A list of `int` where each is the label of the sample at
-          the same index.
-        label_names (dict): A dict indicates the possible associate name of each
-          label value.
+        inputs (list):
+            A list of paths where each path points to a sample image.
+            labels (list): A list of `int` where each is the label of
+            the sample at the same index.
+        label_names (dict):
+            A dict indicates the possible associate name of each label
+            value.
 
     """
 
@@ -61,16 +43,21 @@ class KatherPatchDataset(DatasetInfoABC):
     """Define a class for holding the Kather dataset information.
 
     Args:
-        save_dir_path (str or None): Path to directory containing the Kather
-          dataset. This is assumed to be the same form after the data is initially
-          downloaded. If the argument is `None`, the dataset will be downloaded
-          and extracted into the 'run_dir/download/Kather'.
-    Attributes
-        inputs (list): A list of paths where each path points to a sample image.
-        labels (list): A list of `int` where each is the label of the sample at
-          the same index.
-        label_names (dict): A dict indicates the possible associate name of each
-          label value.
+        save_dir_path (str or None):
+            Path to directory containing the Kather dataset. This is
+            assumed to be the same form after the data is initially
+            downloaded. If the argument is `None`, the dataset will be
+            downloaded and extracted into the 'run_dir/download/Kather'.
+
+    Attributes:
+        inputs (list):
+            A list of paths where each path points to a sample image.
+        labels (list):
+            A list of `int` where each value corresponds to the label of
+            the sample at the same index.
+        label_names (dict):
+            A dict mapping each unique label value to the associated
+            class name as a string.
 
     """
 

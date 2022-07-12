@@ -6,8 +6,8 @@ import pathlib
 import numpy as np
 import pytest
 
-from tiatoolbox.data import _fetch_remote_sample, stainnorm_target
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.data import _fetch_remote_sample, stain_norm_target
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def test_fetch_sample(tmp_path):
@@ -18,7 +18,7 @@ def test_fetch_sample(tmp_path):
     path = _fetch_remote_sample("stainnorm-source")
     assert os.path.exists(path)
     # Test if corrupted
-    get_wsireader(path)
+    WSIReader.open(path)
 
     path = _fetch_remote_sample("stainnorm-source", tmp_path)
     # Assuming Path has no trailing '/'
@@ -32,7 +32,7 @@ def test_fetch_sample(tmp_path):
         path = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
 
     # Very tiny so temporary hook here also
-    arr = stainnorm_target()
+    arr = stain_norm_target()
     assert isinstance(arr, np.ndarray)
 
 
@@ -45,7 +45,7 @@ def test_fetch_sample_skip(tmp_path):
     assert os.path.exists(path_a)
     assert path_a == path_b
     # Test if corrupted
-    get_wsireader(path_a)
+    WSIReader.open(path_a)
 
     path = _fetch_remote_sample("wsi1_8k_8k_svs", tmp_path)
     # Assuming Path has no trailing '/'
@@ -59,7 +59,7 @@ def test_fetch_sample_skip(tmp_path):
         path = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
 
     # Very tiny so temporary hook here also
-    arr = stainnorm_target()
+    arr = stain_norm_target()
     assert isinstance(arr, np.ndarray)
 
     _ = _fetch_remote_sample("stainnorm-source", tmp_path)

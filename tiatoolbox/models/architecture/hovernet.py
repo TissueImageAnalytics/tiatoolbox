@@ -1,24 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-
 import math
 from collections import OrderedDict
 from typing import List
@@ -27,7 +6,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from scipy.ndimage import measurements
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import remove_small_objects
@@ -46,8 +25,8 @@ from tiatoolbox.utils.misc import get_bounding_box
 class TFSamepaddingLayer(nn.Module):
     """To align with tensorflow `same` padding.
 
-    Putting this before any conv layer that needs padding. Here,
-    we assume kernel has same height and width for simplicity.
+    Putting this before any conv layer that needs padding. Here, we
+    assume kernel has same height and width for simplicity.
 
     """
 
@@ -70,8 +49,7 @@ class TFSamepaddingLayer(nn.Module):
             pad_val_start = pad // 2
             pad_val_end = pad - pad_val_start
             padding = (pad_val_start, pad_val_end, pad_val_start, pad_val_end)
-        x = F.pad(x, padding, "constant", 0)
-        return x
+        return F.pad(x, padding, "constant", 0)
 
 
 class DenseBlock(nn.Module):
@@ -160,18 +138,16 @@ class DenseBlock(nn.Module):
             new_feat = self.units[idx](prev_feat)
             prev_feat = centre_crop_to_shape(prev_feat, new_feat)
             prev_feat = torch.cat([prev_feat, new_feat], dim=1)
-        prev_feat = self.blk_bna(prev_feat)
-
-        return prev_feat
+        return self.blk_bna(prev_feat)
 
 
 class ResidualBlock(nn.Module):
     """Residual block.
 
     References:
-        He, Kaiming, et al. "Deep residual learning for image recognition."
-        Proceedings of the IEEE conference on computer vision and
-        pattern recognition. 2016.
+        He, Kaiming, et al. "Deep residual learning for image
+        recognition." Proceedings of the IEEE conference on computer
+        vision and pattern recognition. 2016.
 
     """
 
@@ -190,7 +166,7 @@ class ResidualBlock(nn.Module):
         self.nr_unit = unit_count
         self.in_ch = in_ch
 
-        # ! For inference only so init values for batchnorm may not match tensorflow
+        # ! For inference only so init values for batch norm may not match tensorflow
         unit_in_ch = in_ch
         self.units = nn.ModuleList()
         for idx in range(unit_count):
@@ -242,7 +218,7 @@ class ResidualBlock(nn.Module):
                 ),
             ]
             # has BatchNorm-Activation layers to conclude each
-            # previous block so must not put preact for the first
+            # previous block so must not put pre activation for the first
             # unit of this block
             unit_layer = unit_layer if idx != 0 else unit_layer[2:]
             self.units.append(nn.Sequential(OrderedDict(unit_layer)))
@@ -269,33 +245,77 @@ class ResidualBlock(nn.Module):
         else:
             shortcut = self.shortcut(prev_feat)
 
-        for idx in range(0, len(self.units)):
+        for _, unit in enumerate(self.units):
             new_feat = prev_feat
-            new_feat = self.units[idx](new_feat)
+            new_feat = unit(new_feat)
             prev_feat = new_feat + shortcut
             shortcut = prev_feat
-        feat = self.blk_bna(prev_feat)
-        return feat
+        return self.blk_bna(prev_feat)
 
 
 class HoVerNet(ModelABC):
-    """HoVerNet Architecture.
+    """Initialise HoVerNet [1].
+
+    The tiatoolbox models should produce the following results:
+
+    .. list-table:: HoVerNet segmentation performance on the CoNSeP dataset [1]
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernet-original-consep
+         - CoNSeP
+         - 0.85
+         - 0.57
+         - 0.70
+         - 0.78
+         - 0.55
+
+    .. list-table:: HoVerNet segmentation performance on the Kumar dataset [2]
+       :widths: 15 15 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - DICE
+         - AJI
+         - DQ
+         - SQ
+         - PQ
+       * - hovernet-original-kumar
+         - Kumar
+         - 0.83
+         - 0.62
+         - 0.77
+         - 0.77
+         - 0.60
 
     Args:
-        num_input_channels (int): Number of channels in input.
-        num_types (int): Number of nuclei types within the predictions.
-          Once define, a branch dedicated for typing is created.
-          By default, no typing (`num_types=None`) is used.
-        mode (str): To use architecture defined in as in original paper
-          (`original`) or the one used in PanNuke paper (`fast`).
+        num_input_channels (int):
+            Number of channels in input.
+        num_types (int):
+            Number of nuclei types within the predictions. Once defined,
+            a branch dedicated for typing is created. By default, no
+            typing (`num_types=None`) is used.
+        mode (str):
+            To use architecture defined in as in original paper
+            (`original`) or the one used in PanNuke paper (`fast`).
 
     References:
-        Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
+        [1] Graham, Simon, et al. "HoVerNet: Simultaneous segmentation and
         classification of nuclei in multi-tissue histology images."
         Medical Image Analysis 58 (2019): 101563.
 
-        Gamper, Jevgenij, et al. "PanNuke dataset extension, insights and baselines."
-        arXiv preprint arXiv:2003.10778 (2020).
+        [2] Kumar, Neeraj, et al. "A dataset and a technique for generalized
+        nuclear segmentation for computational pathology."
+        IEEE transactions on medical imaging 36.7 (2017): 1550-1560.
+
 
     """
 
@@ -361,18 +381,18 @@ class HoVerNet(ModelABC):
 
         self.upsample2x = UpSample2x()
 
-    # skipcq: PYL-W0221
-    def forward(self, input_tensor: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            input_tensor (torch.Tensor): Input images, the tensor
-                is in the shape of NCHW.
+            input_tensor (torch.Tensor):
+                Input images, the tensor is in the shape of NCHW.
 
         Returns:
-            output (dict): A dictionary containing the inference output.
+            dict:
+                A dictionary containing the inference output.
                 The expected format os {decoder_name: prediction}.
 
         """
@@ -451,34 +471,38 @@ class HoVerNet(ModelABC):
         ]
         u0 = nn.Sequential(OrderedDict(modules))
 
-        decoder = nn.Sequential(
+        return nn.Sequential(
             OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
         )
-        return decoder
 
     @staticmethod
-    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, fx: float = 1):
+    def _proc_np_hv(np_map: np.ndarray, hv_map: np.ndarray, scale_factor: float = 1):
         """Extract Nuclei Instance with NP and HV Map.
 
         Sobel will be applied on horizontal and vertical channel in
-        `hv_map` to derive a energy landscape which highligh possible
-        nuclei instance boundaries. Afterward, watershed with markers
-        is applied on the above energy map using the `np_map` as filter
-        to remove background regions.
+        `hv_map` to derive an energy landscape which highlight possible
+        nuclei instance boundaries. Afterward, watershed with markers is
+        applied on the above energy map using the `np_map` as filter to
+        remove background regions.
 
         Args:
-            np_map (np.ndarray): An image of shape (heigh, width, 1) which
-              contains the probabilities of a pixel being a nuclei.
-            hv_map (np.ndarray): An array of shape (heigh, width, 2) which
-              contains the horizontal (channel 0) and vertical (channel 1)
-              of possible instances exist withint the images.
-            fx (float): The scale factor for processing nuclei. The scale
-              assumes an image of resolution 0.25 microns per pixel. Default
-              is therefore 1 for HoVerNet.
+            np_map (np.ndarray):
+                An image of shape (height, width, 1) which contains the
+                probabilities of a pixel being a nucleus.
+            hv_map (np.ndarray):
+                An array of shape (height, width, 2) which contains the
+                horizontal (channel 0) and vertical (channel 1) maps of
+                possible instances within the image.
+            scale_factor (float):
+                The scale factor for processing nuclei. The scale
+                assumes an image of resolution 0.25 microns per pixel.
+                Default is therefore 1 for HoVer-Net.
 
         Returns:
-            An np.ndarray of shape (height, width) where each non-zero values
-            within the array correspond to one detected nuclei instances.
+            :class:`numpy.ndarray`:
+                An np.ndarray of shape (height, width) where each
+                non-zero values within the array correspond to one
+                detected nuclei instances.
 
         """
         blb_raw = np_map[..., 0]
@@ -509,8 +533,8 @@ class HoVerNet(ModelABC):
             dtype=cv2.CV_32F,
         )
 
-        ksize = int((20 * fx) + 1)
-        obj_size = math.ceil(10 * (fx**2))
+        ksize = int((20 * scale_factor) + 1)
+        obj_size = math.ceil(10 * (scale_factor**2))
         # Get resolution specific filters etc.
 
         sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
@@ -555,35 +579,47 @@ class HoVerNet(ModelABC):
         marker = measurements.label(marker)[0]
         marker = remove_small_objects(marker, min_size=obj_size)
 
-        proced_pred = watershed(dist, markers=marker, mask=blb)
-
-        return proced_pred
+        return watershed(dist, markers=marker, mask=blb)
 
     @staticmethod
     def get_instance_info(pred_inst, pred_type=None):
         """To collect instance information and store it within a dictionary.
 
         Args:
-            pred_inst (np.ndarray): An image of shape (heigh, width) which
-                contains the probabilities of a pixel being a nuclei.
-            pred_type (np.ndarray): An image of shape (heigh, width, 1) which
-                contains the probabilities of a pixel being a certain type of nuclei.
+            pred_inst (:class:`numpy.ndarray`):
+                An image of shape (height, width) which contains the
+                probabilities of a pixel being a nuclei.
+            pred_type (:class:`numpy.ndarray`):
+                An image of shape (height, width, 1) which contains the
+                probabilities of a pixel being a certain type of nuclei.
 
         Returns:
-            inst_info_dict (dict): A dictionary containing a mapping of each instance
-                    within `pred_inst` instance information. It has following form
+            dict:
+                A dictionary containing a mapping of each instance
+                within `pred_inst` instance information. It has
+                the following form::
 
-                    inst_info = {
-                            box: number[],
-                            centroids: number[],
-                            contour: number[][],
-                            type: number,
-                            prob: number,
+                    {
+                        0: {  # Instance ID
+                            "box": [
+                                x_min,
+                                y_min,
+                                x_max,
+                                y_max,
+                            ],
+                            "centroid": [x, y],
+                            "contour": [
+                                [x, y],
+                                ...
+                            ],
+                            "type": integer,
+                            "prob": float,
+                        },
+                        ...
                     }
-                    inst_info_dict = {[inst_uid: number] : inst_info}
 
-                    and `inst_uid` is an integer corresponds to the instance
-                    having the same pixel value within `pred_inst`.
+                where the instance ID is an integer corresponding to the
+                instance at the same pixel value within `pred_inst`.
 
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
@@ -654,32 +690,47 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221
+    # skipcq: PYL-W0221  # noqa: E800
     def postproc(raw_maps: List[np.ndarray]):
         """Post processing script for image tiles.
 
         Args:
-            raw_maps (list(ndarray)): list of prediction output of each head and
-                assumed to be in the order of [np, hv, tp] (match with the output
+            raw_maps (list(:class:`numpy.ndarray`)):
+                A list of prediction outputs of each head and assumed to
+                be in the order of [np, hv, tp] (match with the output
                 of `infer_batch`).
 
         Returns:
-            inst_map (ndarray): pixel-wise nuclear instance segmentation
-                prediction.
-            inst_dict (dict): a dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has following form
+            tuple:
+                - :class:`numpy.ndarray` - Instance map:
+                    Pixel-wise nuclear instance segmentation prediction.
+                - :py:obj:`dict` - Instance dictionary:
+                    A dictionary containing a mapping of each instance
+                    within `inst_map` instance information. It has
+                    the following form::
 
-                inst_info = {
-                    box: number[],
-                    centroids: number[],
-                    contour: number[][],
-                    type: number,
-                    prob: number,
-                }
-                inst_dict = {[inst_uid: number] : inst_info}
+                        {
+                            0: {  # Instance ID
+                                "box": [
+                                    x_min,
+                                    y_min,
+                                    x_max,
+                                    y_max,
+                                ],
+                                "centroid": [x, y],
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": 1,
+                                "prob": 0.95,
+                            },
+                            ...
+                        }
 
-                and `inst_uid` is an integer corresponds to the instance
-                having the same pixel value within `inst_map`.
+                    where the instance ID is an integer corresponding to
+                    the instance at the same pixel location within
+                    the returned instance map.
 
         Examples:
             >>> from tiatoolbox.models.architecture.hovernet import HoVerNet
@@ -716,16 +767,20 @@ class HoVerNet(ModelABC):
         aggregation.
 
         Args:
-            model (nn.Module): PyTorch defined model.
-            batch_data (ndarray): a batch of data generated by
-                torch.utils.data.DataLoader.
-            on_gpu (bool): Whether to run inference on a GPU.
+            model (nn.Module):
+                PyTorch defined model.
+            batch_data (ndarray):
+                A batch of data generated by
+                `torch.utils.data.DataLoader`.
+            on_gpu (bool):
+                Whether to run inference on a GPU.
 
         Returns:
-            List of output from each head, each head is expected to contain
-            N predictions for N input patches. There are two cases, one
-            with 2 heads (Nuclei Pixels `np` and Hover `hv`) or with 2 heads
-            (`np`, `hv`, and Nuclei Types `tp`).
+            tuple:
+                Output from each head. Each head is expected to contain
+                N predictions for N input patches. There are two cases,
+                one with 2 heads (Nuclei Pixels `np` and Hover `hv`) or
+                with 2 heads (`np`, `hv`, and Nuclei Types `tp`).
 
         """
         patch_imgs = batch_data

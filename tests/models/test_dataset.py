@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for predefined dataset within toolbox."""
 
 import os
@@ -31,59 +12,53 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, unzip_data
 
 
+class Proto1(DatasetInfoABC):
+    """Intentionally created to check error with new attribute a."""
+
+    def __init__(self):
+        self.a = "a"
+
+
+class Proto2(DatasetInfoABC):
+    """Intentionally created to check error with attribute inputs."""
+
+    def __init__(self):
+        self.inputs = "a"
+
+
+class Proto3(DatasetInfoABC):
+    """Intentionally created to check error with attribute inputs and labels."""
+
+    def __init__(self):
+        self.inputs = "a"
+        self.labels = "a"
+
+
+class Proto4(DatasetInfoABC):
+    """Intentionally created to check error with attribute inputs and label names."""
+
+    def __init__(self):
+        self.inputs = "a"
+        self.label_names = "a"
+
+
 def test_dataset_abc():
     """Test for ABC."""
     # test defining a subclass of dataset info but not defining
     # enforcing attributes - should crash
     with pytest.raises(TypeError):
-
-        # intentionally created to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.a = "a"
-
-        # intentionally created to check error
-        Proto()  # skipcq
+        Proto1()  # skipcq
     with pytest.raises(TypeError):
-
-        # intentionally created to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.inputs = "a"
-
-        # intentionally created to check error
-        Proto()  # skipcq
+        Proto2()  # skipcq
     with pytest.raises(TypeError):
-        # intentionally created to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.inputs = "a"
-                self.labels = "a"
-
-        # intentionally created to check error
-        Proto()  # skipcq
+        Proto3()  # skipcq
     with pytest.raises(TypeError):
-
-        # intentionally created to check error
-        # skipcq
-        class Proto(DatasetInfoABC):
-            def __init__(self):
-                self.inputs = "a"
-                self.label_names = "a"
-
-        # intentionally created to check error
-        Proto()  # skipcq
+        Proto4()  # skipcq
 
 
-@pytest.mark.skipif(
-    toolbox_env.running_on_travis(), reason="Local test on local machine."
-)
+@pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
 def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
-
     # test kather with default init
     _ = KatherPatchDataset()
     # kather with default data path skip download
@@ -94,7 +69,7 @@ def test_kather_dataset_default(tmp_path):
 
 
 def test_kather_nonexisting_dir():
-    # pytest for not exist dir
+    """pytest for not exist dir."""
     with pytest.raises(
         ValueError,
         match=r".*not exist.*",

@@ -1,22 +1,3 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Tests for feature extractor."""
 
 import os
@@ -31,9 +12,10 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     DeepFeatureExtractor,
     IOSegmentorConfig,
 )
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.wsicore.wsireader import WSIReader
 
-ON_GPU = False
+ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
 # ----------------------------------------------------
 
@@ -102,7 +84,7 @@ def test_functional(remote_sample, tmp_path):
     positions = np.load(f"{wsi_0_root_path}.position.npy")
     features = np.load(f"{wsi_0_root_path}.features.0.npy")
 
-    reader = get_wsireader(mini_wsi_svs)
+    reader = WSIReader.open(mini_wsi_svs)
     patches = [
         reader.read_bounds(
             positions[patch_idx],
@@ -123,8 +105,8 @@ def test_functional(remote_sample, tmp_path):
     with torch.inference_mode():
         _features = model(patches).numpy()
     # ! must maintain same batch size and likely same ordering
-    # ! else the output values will not exactly be the same (still < 1.0e-5
+    # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
-    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-6
+    assert np.mean(np.abs(features[:4] - _features)) < 1.0e-4
 
     _rm_dir(save_dir)

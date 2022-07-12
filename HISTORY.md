@@ -1,6 +1,95 @@
 History
 =======
 
+1.2.1 (2022-07-07)
+------------------
+### Major Updates and Feature Improvements
+- None
+
+### Changes to API
+- None
+
+### Bug Fixes and Other Changes
+- Fixes issues with dependencies.
+	- Adds flask to dependencies.
+- Fixes missing file in the python package.
+- Clarifies help string for show-wsi option.
+
+
+### Development related changes
+- Removes Travis CI.
+	- GitHub Actions will be used instead.
+- Adds pre-commit hooks to check requirements consistency.
+- Adds GitHub Action to resolve conda environment checks on Windows and Ubuntu.
+
+
+1.2.0 (2022-07-05)
+------------------
+### Major Updates and Feature Improvements
+- Adds support for Python 3.10
+- Adds short description for IDARS algorithm #383
+- Adds support for NGFF v0.4 [OME-ZARR](https://ngff.openmicroscopy.org/latest/).
+- Adds CLI for launching tile server.
+
+### Changes to API
+- Renames `stainnorm_target()` function to `stain_norm_target()`.
+- Removes `get_wsireader`
+- Replaces the custom PlattScaler in `tools/scale.py` with the regular Scikit-Learn [LogisticRegression](https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression).
+
+### Bug Fixes and Other Changes
+- Fixes bugs in UNET architecture.
+	- Number of channels in Batchnorm argument in the decoding path to match with the input channels.
+	- Padding `0` creates feature maps in the decoder part with the same size as encoder.
+- Fixes linter issues and typos
+- Fixes incorrect output with overlap in `predictor.merge_predictions()` and `return_raw=True`
+	- Thanks to @paulhacosta for raising #356, Fixed by #358.
+- Fixes errors with JP2 read. Checks input path exists.
+- Fixes errors with torch upgrade to 1.12.
+
+### Development related changes
+- Adds pre-commit hooks for consistency across the repo.
+- Sets up GitHub Actions Workflow.
+    - Travis CI will be removed in future release.
+
+
+1.1.0 (2022-05-07)
+------------------
+### Major Updates and Feature Improvements
+- Adds DICOM Support.
+- Updates license to more permissive BSD 3-clause.
+- Adds `micronet` model.
+- Improves support for `tiff` files.
+  - Adds a check for tiles in a TIFF file when opening.
+  - Uses OpenSlide to read a TIFF if it has tiles instead of OpenCV (VirtualWSIReader).
+  - Adds a fallback to tifffile if it is tiled but openslide cannot read it
+  (e.g. jp2k or jpegxl tiles).
+- Adds support for multi-channel images (HxWxC).
+- Fixes performance issues in `semantic_segmentor.py`.
+  - Performance gain measurement: 21.67s (new) vs 45.564 (old) using a 4k x 4k WSI.
+  - External Contribution from @ByteHexler.
+- Adds benchmark for Annotations Store.
+
+### Changes to API
+- None
+
+### Bug Fixes and Other Changes
+- Enhances the error messages to be more informative.
+- Fixes Flake8 Errors, typos.
+  - Fixes patch predictor models based after fixing a typo.
+- Bug fixes in Graph functions.
+- Adds documentation for docker support.
+- General tidying up of docstrings.
+- Adds metrics to readthedocs/docstrings for pretrained models.
+
+### Development related changes
+- Adds `pydicom` and `wsidicom` as dependency.
+- Updates dependencies.
+- Fixes Travis detection and makes improvements to run tests faster on Travis.
+- Adds Dependabot to automatically update dependencies.
+- Improves CLI definitions to make it easier to integrate new functions.
+- Fixes compile options for test_annotation_stores.py
+
+
 1.0.1 (2022-01-31)
 ------------------
 ### Major Updates and Feature Improvements
@@ -335,4 +424,3 @@ History
 ------------------
 
 -   First release on PyPI.
-

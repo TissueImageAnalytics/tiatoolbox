@@ -1,39 +1,34 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
 """Simple Flask WSGI apps to display tiles as slippery maps."""
 import io
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Union
 
 import numpy as np
 from flask import Flask, Response, send_file
 from flask.templating import render_template
+from PIL import Image
 
 from tiatoolbox import data
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class TileServer(Flask):
     """A Flask app to display Zoomify tiles as a slippery map.
+
+    Args:
+        title (str):
+            The title of the tile server, displayed in the browser as
+            the page title.
+        layers (Dict[str, WSIReader | str] | List[WSIReader | str]):
+            A dictionary mapping layer names to image paths or
+            :obj:`WSIReader` objects to display. May also be a list,
+            in which case generic names 'layer-1', 'layer-2' etc.
+            will be used.
+            If layer is a single-channel low-res overlay, it will be
+            colourized using the 'viridis' colourmap
 
     Examples:
         >>> from tiatoolbox.wsiscore.wsireader import WSIReader
@@ -48,7 +43,11 @@ class TileServer(Flask):
         >>> app.run()
     """
 
-    def __init__(self, title: str, layers: Dict[str, WSIReader]) -> None:
+    def __init__(
+        self,
+        title: str,
+        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
+    ) -> None:
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
@@ -58,7 +57,35 @@ class TileServer(Flask):
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
         self.tia_title = title
-        self.tia_layers = layers
+
+        # Generic layer names if none provided.
+        if isinstance(layers, list):
+            layers = {f"layer-{i}": p for i, p in enumerate(layers)}
+        # Set up the layer dict.
+        layer_def = {}
+        meta = None
+        for i, key in enumerate(layers):
+            layer = layers[key]
+
+            if isinstance(layer, (str, Path)):
+                layer_path = Path(layer)
+                if layer_path.suffix in [".jpg", ".png"]:
+                    # Assume its a low-res heatmap.
+                    layer = Image.open(layer_path)
+                    layer = np.array(layer)
+                else:
+                    layer = WSIReader.open(layer_path)
+
+            if isinstance(layer, np.ndarray):
+                # Make into rgb if single channel.
+                layer = colourise_image(layer)
+                layer = VirtualWSIReader(layer, info=meta)
+
+            layer_def[key] = layer
+            if i == 0:
+                meta = layer.info
+
+        self.tia_layers = layer_def
         self.tia_pyramids = {
             key: ZoomifyGenerator(reader) for key, reader in self.tia_layers.items()
         }
@@ -73,21 +100,27 @@ class TileServer(Flask):
     def zoomify(
         self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
     ) -> Response:
-        """Serve a zoomify tile for a particular layer.
+        """Serve a Zoomify tile for a particular layer.
 
         Note that this should not be called directly, but will be called
         automatically by the Flask framework when a client requests a
         tile at the registered URL.
 
         Args:
-            layer (str): The layer name.
-            tile_group (int): The tile group. Currently unused.
-            z (int): The zoom level.
-            x (int): The x coordinate.
-            y (int): The y coordinate.
+            layer (str):
+                The layer name.
+            tile_group (int):
+                The tile group. Currently unused.
+            z (int):
+                The zoom level.
+            x (int):
+                The x coordinate.
+            y (int):
+                The y coordinate.
 
         Returns:
-            Response: The tile image response.
+            Response:
+                The tile image response.
 
         """
         try:

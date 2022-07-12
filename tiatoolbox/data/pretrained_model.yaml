@@ -726,8 +726,8 @@ hovernetplus-oed:
             stride_shape: [164, 164]
             save_resolution: {'units': 'mpp', 'resolution': 0.50}
 
-micronet_hovernet-consep:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/micronet_hovernet-consep.pth
+micronet-consep:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/micronet-consep.pth
     architecture:
         class: micronet.MicroNet
         kwargs:
