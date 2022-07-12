@@ -39,7 +39,6 @@ from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.utils import misc
 
 
-
 def conv_block_module(in_ch, out_ch):
     """Defines a convolution block, consisting of 2 convolution
     operations, with batch normalisation and ReLU activation.
@@ -77,7 +76,7 @@ def conv_block_module(in_ch, out_ch):
         ),
         nn.ReLU(),
     )
-    
+
     return nn.ModuleDict(module_dict)
 
 
@@ -117,7 +116,7 @@ def mil_residual_block_module(in_ch, out_ch):
         ),
         nn.ReLU(),
     )
-    
+
     return nn.ModuleDict(module_dict)
 
 
@@ -160,18 +159,19 @@ def dilated_residual_block_module(in_ch, out_ch, dilation):
         ),
         nn.BatchNorm2d(out_ch),
     )
-    
+
     return nn.ModuleDict(module_dict)
+
 
 def get_aspp_layer(in_ch, out_ch, dilation):
     """Defines a series of convolutions used in the ASPP unit, consisting of
     a single 3x3 dilated convolution and 2 1x1 convolutions.
-    
+
     Args:
         in_ch (int): Number of input channels.
         out_ch (list): List of length 2 indicating the number of output channels.
         dilation (int): Dilation rate in the first 3x3 convolution."""
-    
+
     module = nn.Sequential(
         nn.Conv2d(
             in_ch,
@@ -203,12 +203,13 @@ def get_aspp_layer(in_ch, out_ch, dilation):
         nn.BatchNorm2d(out_ch),
         nn.ReLU(),
     )
-    
+
     return module
+
 
 def aspp_unit_module(in_ch, out_ch, dilation):
     """Defines the ASPP unit, as used in MILD-Net. The unit applies
-    three 3x3 dilated convolutions and a single 1x1 convolution and 
+    three 3x3 dilated convolutions and a single 1x1 convolution and
     the resuls are concatenated together.
 
     Args:
@@ -244,8 +245,8 @@ def aspp_unit_module(in_ch, out_ch, dilation):
         ),
         nn.BatchNorm2d(out_ch),
         nn.ReLU(),
-        )
-    
+    )
+
     return nn.ModuleDict(module_dict)
 
 
@@ -278,7 +279,7 @@ def mil_residual_block_forward(layer, in_tensor1, in_tensor2):
     """
     a = layer["conv1"](in_tensor1)
     return layer["conv2"](a)
-    
+
 
 def dilated_residual_block_forward(layer, in_tensor):
     """Defines dilated residual unit forward pass.
@@ -293,7 +294,7 @@ def dilated_residual_block_forward(layer, in_tensor):
     """
     a = layer["conv1"](in_tensor)
     b = layer["conv2"](a)
-    return 
+    return
 
 
 def aspp_unit_forward(layer, in_tensor):
@@ -311,8 +312,9 @@ def aspp_unit_forward(layer, in_tensor):
     b = layer["layer2"](in_tensor)
     c = layer["layer3"](in_tensor)
     d = layer["layer4"](in_tensor)
-    
+
     return torch.cat(input_tensors=(a, b, c, d))
+
 
 class MILDNet(ModelABC):
     """Initialise MILDNet [1].
@@ -344,27 +346,29 @@ class MILDNet(ModelABC):
 
         module_dict = OrderedDict()
         module_dict["e1"] = conv_block_module(num_input_channels, 64)
-        
+
         module_dict["e2"] = mil_residual_block_module(64, 128)
         module_dict["e3"] = mil_residual_block_module(128, 256)
         module_dict["e4"] = mil_residual_block_module(256, 512)
-        
+
         module_dict["e5"] = dilated_residual_block_module(512, 512)
         module_dict["e6"] = dilated_residual_block_module(512, 512)
-        
-        module_dict["e7"] = aspp_unit_module(512, [1024, 128], dilation_rates=[1, 6, 12, 18])
-        
+
+        module_dict["e7"] = aspp_unit_module(
+            512, [1024, 128], dilation_rates=[1, 6, 12, 18]
+        )
+
         module_dict["d1"] = conv_block_module(1280, 256)
         module_dict["d2"] = conv_block_module(512, 128)
         module_dict["d3"] = conv_block_module(256, 64)
-        
+
         module_dict["out"] = nn.Conv2d(64, num_class, kernel_size=(1, 1), bias=True)
         module_dict["aux"] = nn.Conv2d(512, num_class, kernel_size=(1, 1), bias=True)
-        
+
         module_dict["skip1"] = nn.Conv2d(256, 640, kernel_size=(1, 1), bias=True)
         module_dict["skip2"] = nn.Conv2d(128, 256, kernel_size=(1, 1), bias=True)
         module_dict["skip3"] = nn.Conv2d(64, 128, kernel_size=(1, 1), bias=True)
-        
+
         self.layer = nn.ModuleDict(module_dict)
 
     def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
@@ -381,13 +385,22 @@ class MILDNet(ModelABC):
                 The expected format is [main_output, aux1, aux2, aux3].
 
         """
-        def resize(feat, size=None, scale_factor=None, mode='bilinear'):
-            return functional.interpolate(feat, size=size, scale_factor=scale_factor, mode=mode, align_corners=False)
+
+        def resize(feat, size=None, scale_factor=None, mode="bilinear"):
+            return functional.interpolate(
+                feat,
+                size=size,
+                scale_factor=scale_factor,
+                mode=mode,
+                align_corners=False,
+            )
 
         factor_list = [0.5, 0.25, 0.125]
-        resize_input = [resize(input_tensor, scale_factor=x, mode='bicubic') for x in factor_list]
-        
-        #* encoder
+        resize_input = [
+            resize(input_tensor, scale_factor=x, mode="bicubic") for x in factor_list
+        ]
+
+        # * encoder
         e1 = conv_block_forward(self.layer["e1"], input_tensor)
         p1 = functional.max_pool2d(e1, 2)
         ###
@@ -401,8 +414,8 @@ class MILDNet(ModelABC):
         e5 = dilated_residual_block_forward(self.layer["e5"], e4)
         e6 = dilated_residual_block_forward(self.layer["e6"], e5)
         e7 = aspp_unit_forward(self.layer["e7"], e6)
-        
-        #* decoder
+
+        # * decoder
         resized_e7 = resize(e7, scale_factor=2)
         skip1 = torch.cat(tensors=(self.layer["skip1"](e3), resized_e7))
         d1 = conv_block_forward(self.layer["d1"], skip1)
