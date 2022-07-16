@@ -376,7 +376,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
 
 def __numpy_array_to_table(input_table):
     """Checks numpy array to be 2 or 3 columns.
-    If it has two columns then class should be assign None.
+    If it has two columns then class should be assigned None.
 
     Args:
         input_table (np.ndarray): input table.
