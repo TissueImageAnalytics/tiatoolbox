@@ -14,26 +14,26 @@ def pair_coordinates(set_a, set_b, radius):
     function.
 
     Args:
-            set_a (ndarray):
-                    An array of shape Nx2 contains the of XY coordinate of N
-                    different points.
-            set_b (ndarray):
-                    An array of shape Mx2 contains the of XY coordinate of M
-                    different points.
-            radius:
-                    Valid area around a point in set A to consider a given
-                    coordinate in set B a candidate for matching.
+        set_a (ndarray):
+            An array of shape Nx2 contains the of XY coordinate of N
+            different points.
+        set_b (ndarray):
+            An array of shape Mx2 contains the of XY coordinate of M
+            different points.
+        radius:
+            Valid area around a point in set A to consider a given
+            coordinate in set B a candidate for matching.
 
     Returns:
-            tuple:
-                    - :class:`numpy.ndarray` - Pairing:
-                            An array of shape Kx2, each item in K contains indices
-                            where point at index [0] in set A paired with point in
-                            set B at index [1].
-                    - :class:`numpy.ndarray` - Unpaired A:
-                            Indices of unpaired points in set A.
-                    - :class:`numpy.ndarray` - Unpaired B:
-                            Indices of unpaired points in set B.
+        tuple:
+            - :class:`numpy.ndarray` - Pairing:
+                An array of shape Kx2, each item in K contains indices
+                where point at index [0] in set A paired with point in
+                set B at index [1].
+            - :class:`numpy.ndarray` - Unpaired A:
+                Indices of unpaired points in set A.
+            - :class:`numpy.ndarray` - Unpaired B:
+                Indices of unpaired points in set B.
 
     """
     # * Euclidean distance as the cost matrix
@@ -69,17 +69,23 @@ def f1_detection(true, pred, radius):
 
 
 def dice(gt_mask, pred_mask):
-    """This function computes dice coefficient between two masks.
+    """This function computes Dice's coefficient, also known as `Sørensen–Dice coefficient
+    <https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient>`_,
+    between the two masks.
+
+    ::math::
+        DSC = 2 * |X ∩ Y| / |X| + |Y|
 
     Args:
-            gt_mask (:class:`numpy.ndarray`):
-                    A binary ground truth mask
-            pred_mask (:class:`numpy.ndarray`):
-                    A binary predicted mask
+        gt_mask (:class:`numpy.ndarray`):
+            A binary ground truth mask
+        pred_mask (:class:`numpy.ndarray`):
+            A binary predicted mask
 
     Returns:
-            :class:`float`:
-                    A dice overlap
+        :class:`float`:
+            A dice overlap
+
     """
 
     if gt_mask.shape != pred_mask.shape:
@@ -87,6 +93,7 @@ def dice(gt_mask, pred_mask):
 
     gt_mask = gt_mask.astype(np.bool)
     pred_mask = pred_mask.astype(np.bool)
-    return (
-        2 * np.logical_and(gt_mask, pred_mask).sum() / (gt_mask.sum() + pred_mask.sum())
-    )
+    sum_masks = gt_mask.sum() + pred_mask.sum()
+    if sum_masks == 0:
+        return np.NAN
+    return 2 * np.logical_and(gt_mask, pred_mask).sum() / sum_masks
