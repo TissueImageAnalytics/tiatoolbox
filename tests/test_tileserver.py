@@ -4,26 +4,28 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 @pytest.fixture()
-def app(sample_ndpi) -> TileServer:
+def app(sample_ndpi, tmp_path) -> TileServer:
     """Create a testing TileServer WSGI app."""
 
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
     wsi = WSIReader.open(Path(sample_ndpi))
     thumb = wsi.slide_thumbnail()
-    imwrite("./temp_thumb.jpg", thumb)
+    thumb_path = tmp_path / "thumb.jpg"
+    imwrite(thumb_path, thumb)
 
     app = TileServer(
         "Testing TileServer",
         [
             str(Path(sample_ndpi)),
-            "./temp_thumb.jpg",
+            str(thumb_path),
             np.zeros(wsi.slide_dimensions(1.25, "power"), dtype=np.uint8).T,
         ],
     )
@@ -90,3 +92,19 @@ def test_create_with_dict(sample_svs):
         response = client.get("/layer/Test/zoomify/TileGroup0/0-0-0.jpg")
         assert response.status_code == 200
         assert response.content_type == "image/jpeg"
+
+
+def test_cli_name_multiple_flag():
+    """Test cli_name multiple flag."""
+
+    @cli_name()
+    def dummy_fn():
+        """it's empty because its a dummy function"""
+
+    assert "Multiple" not in dummy_fn.__click_params__[0].help
+
+    @cli_name(multiple=True)
+    def dummy_fn():
+        """it's empty because its a dummy function"""
+
+    assert "Multiple" in dummy_fn.__click_params__[0].help

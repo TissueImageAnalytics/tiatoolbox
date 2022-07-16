@@ -960,7 +960,7 @@ def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
             on_gpu=ON_GPU,
         )
         # only test 1 on travis to limit runtime
-        if toolbox_env.running_on_travis():
+        if toolbox_env.running_on_ci():
             break
 
 
@@ -995,7 +995,7 @@ def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
             on_gpu=ON_GPU,
         )
         # only test 1 on travis to limit runtime
-        if toolbox_env.running_on_travis():
+        if toolbox_env.running_on_ci():
             break
 
 

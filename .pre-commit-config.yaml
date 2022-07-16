@@ -32,10 +32,11 @@ repos:
     hooks:
       - id: isort
   - repo: https://github.com/psf/black
-    rev: 22.3.0 # Replace with any tag/version: https://github.com/psf/black/tags
+    rev: 22.6.0 # Replace with any tag/version: https://github.com/psf/black/tags
     hooks:
       - id: black
-        language_version: python3 # Should be a command that runs python3.8+
+        language_version: python3 # Should be a command that runs python3.7+
+        additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
       - id: black-jupyter
         language: python
   - repo: https://github.com/PyCQA/flake8
@@ -70,3 +71,12 @@ repos:
         files: tests/.*\btest_\w*.py
         language: system
         stages: [push]
+  - repo: local
+    hooks:
+      - id: requirements-consistency
+        name: check requirements are consistent
+        entry: python pre-commit/requirements_consistency.py
+        files: "(requirements.*.(txt|yml|yaml)|setup.py)$"
+        pass_filenames: false
+        language: python
+        additional_dependencies: [pyyaml]
