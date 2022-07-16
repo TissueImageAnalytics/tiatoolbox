@@ -153,6 +153,7 @@ svs
 tiatoolbox
 tifffile
 tmp
+tokenize
 tolist
 uid
 uint8
