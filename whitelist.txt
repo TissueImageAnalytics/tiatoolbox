@@ -152,6 +152,7 @@ superset
 svs
 tiatoolbox
 tifffile
+tokenize
 tolist
 uid
 uint8
