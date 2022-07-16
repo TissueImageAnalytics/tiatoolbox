@@ -1,3 +1,7 @@
+default_language_version:
+    python: python3.9 # Remove once flake8-sql is compatible with python 3.10
+    # https://github.com/pgjones/flake8-sql/pull/21
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
@@ -59,7 +63,7 @@ repos:
           flake8-return, # Check return statements
           flake8-simplify, # Suggestions to simplify code
           flake8-spellcheck, # Spelling checker
-          # flake8-sql, # Check SQL statement style
+          flake8-sql, # Check SQL statement style
           flake8-use-fstring, # Encourages use of f-strings vs old style
           pep8-naming, # Check PEP8 class naming
         ]
