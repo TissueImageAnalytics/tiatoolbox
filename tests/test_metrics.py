@@ -31,7 +31,9 @@ def test_dice():
     """Test to calculate DICE."""
     gt_mask = np.random.randint(2, size=(256, 256))
     pred_mask = np.random.randint(2, size=(256, 256))
-    _ = dice(gt_mask, pred_mask)
+    dice_val = dice(gt_mask, pred_mask)
+    assert dice_val >= 0
+    assert dice_val <= 1.0
 
     gt_mask = np.random.randint(2, size=(256, 256, 1))
     pred_mask = np.random.randint(2, size=(256, 256, 3))
