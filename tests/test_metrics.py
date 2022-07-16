@@ -35,6 +35,27 @@ def test_dice():
     assert dice_val >= 0
     assert dice_val <= 1.0
 
+    gt_mask = np.ones(shape=(256, 256))
+    pred_mask = np.ones(shape=(256, 256))
+
+    dice_val = dice(gt_mask, pred_mask)
+    assert dice_val == 1.0
+
+    gt_mask = np.ones(shape=(256, 256))
+    pred_mask = np.zeros(shape=(256, 256))
+
+    dice_val = dice(gt_mask, pred_mask)
+    assert dice_val == 0.0
+
+    gt_mask = np.zeros(shape=(256, 256))
+    pred_mask = np.zeros(shape=(256, 256))
+
+    dice_val = dice(gt_mask, pred_mask)
+    assert np.isnan(dice_val)
+
+
+def test_dice_shape_mismatch_error():
+    """Tests if the shape of inputs does not match."""
     gt_mask = np.random.randint(2, size=(256, 256, 1))
     pred_mask = np.random.randint(2, size=(256, 256, 3))
     with pytest.raises(ValueError, match=r".*Shape mismatch between the two masks.*"):

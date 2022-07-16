@@ -27,13 +27,13 @@ def pair_coordinates(set_a, set_b, radius):
     Returns:
         tuple:
             - :class:`numpy.ndarray` - Pairing:
-                An array of shape Kx2, each item in K contains indices
-                where point at index [0] in set A paired with point in
-                set B at index [1].
+                    An array of shape Kx2, each item in K contains indices
+                    where point at index [0] in set A paired with point in
+                    set B at index [1].
             - :class:`numpy.ndarray` - Unpaired A:
-                Indices of unpaired points in set A.
+                    Indices of unpaired points in set A.
             - :class:`numpy.ndarray` - Unpaired B:
-                Indices of unpaired points in set B.
+                    Indices of unpaired points in set B.
 
     """
     # * Euclidean distance as the cost matrix
@@ -69,11 +69,11 @@ def f1_detection(true, pred, radius):
 
 
 def dice(gt_mask, pred_mask):
-    """This function computes Dice's coefficient, also known as `Sørensen–Dice coefficient
+    r"""This function computes `Sørensen–Dice coefficient
     <https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient>`_,
     between the two masks.
 
-    ::math::
+    .. math::
         DSC = 2 * |X ∩ Y| / |X| + |Y|
 
     Args:
