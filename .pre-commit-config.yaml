@@ -36,7 +36,7 @@ repos:
     hooks:
       - id: black
         language_version: python3 # Should be a command that runs python3.7+
-        # additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
+        additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
       - id: black-jupyter
         language: python
   - repo: https://github.com/PyCQA/flake8
@@ -59,7 +59,7 @@ repos:
           flake8-return, # Check return statements
           flake8-simplify, # Suggestions to simplify code
           flake8-spellcheck, # Spelling checker
-          flake8-sql, # Check SQL statement style
+          # flake8-sql, # Check SQL statement style
           flake8-use-fstring, # Encourages use of f-strings vs old style
           pep8-naming, # Check PEP8 class naming
         ]
