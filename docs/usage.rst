@@ -119,8 +119,10 @@ Pipelines:
 Utilities
 ^^^^^^^^^
 
-- :obj:`Image <tiatoolbox.utils.image>`
-- :obj:`Transforms <tiatoolbox.utils.transforms>`
-- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
+- :obj:`Environment Detection <tiatoolbox.utils.env_detection>`
 - :obj:`Exceptions <tiatoolbox.utils.exceptions>`
+- :obj:`Image <tiatoolbox.utils.image>`
+- :obj:`Metrics <tiatoolbox.utils.metrics>`
+- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
+- :obj:`Transforms <tiatoolbox.utils.transforms>`
 - :obj:`Visualization <tiatoolbox.utils.visualization>`
