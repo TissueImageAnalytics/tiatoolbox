@@ -69,11 +69,11 @@ def f1_detection(true, pred, radius):
 
 
 def dice(gt_mask, pred_mask):
-    r"""This function computes Sørensen–Dice coefficient
+    r"""This function computes `Sørensen–Dice coefficient
     <https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient>`_,
     between the two masks.
 
-    ::math::
+    .. math::
         DSC = 2 * |X ∩ Y| / |X| + |Y|
 
     Args:
