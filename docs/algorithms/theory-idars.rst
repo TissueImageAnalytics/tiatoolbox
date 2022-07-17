@@ -41,7 +41,7 @@ After training, IDaRS can be used to provide the label for an
 unlabelled WSI. It can also be used to locate regions with the
 feature :math:`F`, potentially improving biological understanding.
 To see an inference on a trained IDaRS model `[click here]
-<https://github.com/TissueImageAnalytics/tiatoolbox/blob/doc-idars/examples/inference-pipelines/idars.ipynb>`_.
+<https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/examples/inference-pipelines/idars.ipynb>`_.
 
 Let :math:`T` be a tile of one of our WSIs. We set :math:`p(T)`
 equal to the label of the WSI containing :math:`T`, so that :math:`p(T)`
