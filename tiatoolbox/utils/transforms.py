@@ -155,10 +155,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
 
 def rgb2od(img):
-    r"""Convert from RGB to optical density (OD_RGB) space.
+    r"""Convert from RGB to optical density (:math:`OD_{RGB}`) space.
 
-    ::math::
-        RGB = 255 * \\exp(-1*OD_RGB)
+    .. math::
+        RGB = 255 * exp^{-1*OD_{RGB}}
 
     Args:
         img (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
@@ -180,10 +180,10 @@ def rgb2od(img):
 
 
 def od2rgb(od):
-    r"""Convert from optical density (OD_RGB) to RGB.
+    r"""Convert from optical density (:math:`OD_{RGB}`) to RGB.
 
-    ::math::
-        RGB = 255 * \\exp(-1*OD_RGB)
+    .. math::
+        RGB = 255 * exp^{-1*OD_{RGB}}
 
     Args:
         od (:class:`numpy.ndarray`):
