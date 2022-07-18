@@ -67,19 +67,7 @@ class TileServer(Flask):
         meta = None
         for i, (key, layer) in enumerate(layers.items()):
 
-            if isinstance(layer, (str, Path)):
-                layer_path = Path(layer)
-                if layer_path.suffix in [".jpg", ".png"]:
-                    # Assume its a low-res heatmap.
-                    layer = Image.open(layer_path)
-                    layer = np.array(layer)
-                else:
-                    layer = WSIReader.open(layer_path)
-
-            if isinstance(layer, np.ndarray):
-                # Make into rgb if single channel.
-                layer = colourise_image(layer)
-                layer = VirtualWSIReader(layer, info=meta)
+            layer = self.__get_layer_as_wsireader(layer, meta)
 
             self.tia_layers[key] = layer
 
@@ -98,6 +86,24 @@ class TileServer(Flask):
             self.zoomify,
         )
         self.route("/")(self.index)
+
+    @staticmethod
+    def __get_layer_as_wsireader(layer, meta):
+        """Gets appropriate WSIReader for layer."""
+        if isinstance(layer, (str, Path)):
+            layer_path = Path(layer)
+            if layer_path.suffix in [".jpg", ".png"]:
+                # Assume its a low-res heatmap.
+                layer = np.array(Image.open(layer_path))
+            else:
+                return WSIReader.open(layer_path)
+
+        if isinstance(layer, np.ndarray):
+            # Make into rgb if single channel.
+            layer = colourise_image(layer)
+            return VirtualWSIReader(layer, info=meta)
+
+        return layer
 
     def zoomify(
         self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
