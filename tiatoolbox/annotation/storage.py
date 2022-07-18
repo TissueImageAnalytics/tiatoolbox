@@ -1629,7 +1629,7 @@ class SQLiteStore(AnnotationStore):
         )
 
     @staticmethod
-    def __initialize_query_string_parameters(
+    def _initialize_query_string_parameters(
         query_geometry, query_parameters, geometry_predicate, columns, where
     ):
         """Initialises the query string and parameters."""
@@ -1760,7 +1760,7 @@ class SQLiteStore(AnnotationStore):
             query_parameters["select"] = columns
             columns = "pickle_expression(:select, properties) "
 
-        query_string, query_parameters = self.__initialize_query_string_parameters(
+        query_string, query_parameters = self._initialize_query_string_parameters(
             query_geometry, query_parameters, geometry_predicate, columns, where
         )
 
@@ -1854,7 +1854,7 @@ class SQLiteStore(AnnotationStore):
         return {key: bounds for key, *bounds in cur.fetchall()}
 
     @staticmethod
-    def __handle_callable_pquery(unique, select, cur, where):
+    def _handle_callable_pquery(unique, select, cur, where):
         """Handles Callable pquery."""
         if unique:
             return {
@@ -1869,7 +1869,7 @@ class SQLiteStore(AnnotationStore):
         }
 
     @staticmethod
-    def __check_pquery_type(select, where):
+    def _check_pquery_type(select, where):
         """Check which type of query it is (str, pickle, callable, star)."""
         callable_query = any(isinstance(x, Callable) for x in (select, where) if x)
         pickle_query = any(isinstance(x, bytes) for x in (select, where) if x)
@@ -1878,7 +1878,7 @@ class SQLiteStore(AnnotationStore):
         return callable_query, pickle_query, str_query
 
     @staticmethod
-    def __check_select_where_type(select, where):
+    def _check_select_where_type(select, where):
         """Check that select and where are the same type if where is given."""
         if where is not None and type(select) is not type(where):
             raise TypeError("select and where must be of the same type")
@@ -1975,11 +1975,9 @@ class SQLiteStore(AnnotationStore):
 
         """  # noqa
 
-        self.__check_select_where_type(select, where)
+        self._check_select_where_type(select, where)
 
-        callable_query, pickle_query, str_query = self.__check_pquery_type(
-            select, where
-        )
+        callable_query, pickle_query, str_query = self._check_pquery_type(select, where)
 
         star_query = select == "*"  # Get all properties
         query_geometry = geometry  # Rename arg
@@ -2012,7 +2010,7 @@ class SQLiteStore(AnnotationStore):
         )
         # Handle callable select/where
         if callable_query:
-            return self.__handle_callable_pquery(unique, select, cur, where)
+            return self._handle_callable_pquery(unique, select, cur, where)
         if unique:
             return {x for x, in cur.fetchall()}
         return {key: json.loads(x) if star_query else x for key, x in cur.fetchall()}
