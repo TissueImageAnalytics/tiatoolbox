@@ -1628,6 +1628,71 @@ class SQLiteStore(AnnotationStore):
             token,
         )
 
+    @staticmethod
+    def __initialize_query_string_parameters(
+        query_geometry, query_parameters, geometry_predicate, columns, where
+    ):
+        """Initialises the query string and parameters."""
+        query_string = (
+            "SELECT "  # skipcq: BAN-B608
+            + columns  # skipcq: BAN-B608
+            + """
+                 FROM annotations, rtree
+                WHERE annotations.id == rtree.id
+                """
+        )
+
+        # There is query geometry, add a simple rtree bounds check to
+        # rapidly narrow candidates down.
+        if query_geometry is not None:
+            # Add rtree index checks to the query
+            query_string += """
+                    AND max_x >= :min_x
+                    AND min_x <= :max_x
+                    AND max_y >= :min_y
+                    AND min_y <= :max_y
+                    """
+
+            # Find the bounds of the geometry for the rtree index
+            min_x, min_y, max_x, max_y = query_geometry.bounds
+
+            # Update query parameters
+            query_parameters.update(
+                {
+                    "min_x": min_x,
+                    "max_x": max_x,
+                    "min_y": min_y,
+                    "max_y": max_y,
+                    "geometry_predicate": geometry_predicate,
+                    "query_geometry": query_geometry.wkb,
+                }
+            )
+
+            # The query is a full intersection check, not a simple bounds
+            # check only.
+            if (
+                geometry_predicate is not None
+                and geometry_predicate != "bbox_intersects"
+            ):
+                query_string += (
+                    "\nAND geometry_predicate("
+                    ":geometry_predicate, :query_geometry, geometry, cx, cy"
+                    ") "
+                )
+                query_parameters["geometry_predicate"] = geometry_predicate
+                query_parameters["query_geometry"] = query_geometry.wkb
+
+        # Predicate is pickled function
+        if isinstance(where, bytes):
+            query_string += "\nAND pickle_expression(:where, properties)"
+            query_parameters["where"] = where
+        # Predicate is a string
+        if isinstance(where, str):
+            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+            query_string += f" AND {sql_predicate}"
+
+        return query_string, query_parameters
+
     def _query(
         self,
         columns: str,
@@ -1695,64 +1760,9 @@ class SQLiteStore(AnnotationStore):
             query_parameters["select"] = columns
             columns = "pickle_expression(:select, properties) "
 
-        # Initialise the query string and parameters
-        query_string = (
-            "SELECT "  # skipcq: BAN-B608
-            + columns  # skipcq: BAN-B608
-            + """
-         FROM annotations, rtree
-        WHERE annotations.id == rtree.id
-        """
+        query_string, query_parameters = self.__initialize_query_string_parameters(
+            query_geometry, query_parameters, geometry_predicate, columns, where
         )
-
-        # There is query geometry, add a simple rtree bounds check to
-        # rapidly narrow candidates down.
-        if query_geometry is not None:
-            # Add rtree index checks to the query
-            query_string += """
-            AND max_x >= :min_x
-            AND min_x <= :max_x
-            AND max_y >= :min_y
-            AND min_y <= :max_y
-            """
-
-            # Find the bounds of the geometry for the rtree index
-            min_x, min_y, max_x, max_y = query_geometry.bounds
-
-            # Update query parameters
-            query_parameters.update(
-                {
-                    "min_x": min_x,
-                    "max_x": max_x,
-                    "min_y": min_y,
-                    "max_y": max_y,
-                    "geometry_predicate": geometry_predicate,
-                    "query_geometry": query_geometry.wkb,
-                }
-            )
-
-            # The query is a full intersection check, not a simple bounds
-            # check only.
-            if (
-                geometry_predicate is not None
-                and geometry_predicate != "bbox_intersects"
-            ):
-                query_string += (
-                    "\nAND geometry_predicate("
-                    ":geometry_predicate, :query_geometry, geometry, cx, cy"
-                    ") "
-                )
-                query_parameters["geometry_predicate"] = geometry_predicate
-                query_parameters["query_geometry"] = query_geometry.wkb
-
-        # Predicate is pickled function
-        if isinstance(where, bytes):
-            query_string += "\nAND pickle_expression(:where, properties)"
-            query_parameters["where"] = where
-        # Predicate is a string
-        if isinstance(where, str):
-            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
-            query_string += f" AND {sql_predicate}"
 
         if unique:
             query_string = query_string.replace("SELECT", "SELECT DISTINCT")
@@ -1843,6 +1853,40 @@ class SQLiteStore(AnnotationStore):
             }
         return {key: bounds for key, *bounds in cur.fetchall()}
 
+    @staticmethod
+    def __handle_callable_pquery(unique, select, cur, where):
+        """Handles Callable pquery."""
+        if unique:
+            return {
+                select(json.loads(properties))
+                for properties, in cur.fetchall()
+                if where(json.loads(properties))
+            }
+        return {
+            key: select(json.loads(properties))
+            for key, properties in cur.fetchall()
+            if where(json.loads(properties))
+        }
+
+    @staticmethod
+    def __check_pquery_type(select, where):
+        """Check which type of query it is (str, pickle, callable, star)."""
+        callable_query = any(isinstance(x, Callable) for x in (select, where) if x)
+        pickle_query = any(isinstance(x, bytes) for x in (select, where) if x)
+        str_query = any(isinstance(x, str) for x in (select, where) if x)
+
+        return callable_query, pickle_query, str_query
+
+    @staticmethod
+    def __check_select_where_type(select, where):
+        """Check that select and where are the same type if where is given."""
+        if where is not None and type(select) is not type(where):
+            raise TypeError("select and where must be of the same type")
+        if not isinstance(select, (str, bytes)) and not callable(where):
+            raise TypeError(
+                f"select must be str, bytes, or callable, not {type(select)}"
+            )
+
     def pquery(
         self,
         select: Expression,
@@ -1930,18 +1974,10 @@ class SQLiteStore(AnnotationStore):
             ... {42, 123}
 
         """  # noqa
-        # Check that select and where are the same type if where is given.
-        if where is not None and type(select) is not type(where):
-            raise TypeError("select and where must be of the same type")
-        if not isinstance(select, (str, bytes)) and not callable(where):
-            raise TypeError(
-                f"select must be str, bytes, or callable, not {type(select)}"
-            )
 
-        # Check which type of query it is (str, pickle, callable, star)
-        callable_query = any(isinstance(x, Callable) for x in (select, where) if x)
-        pickle_query = any(isinstance(x, bytes) for x in (select, where) if x)
-        str_query = any(isinstance(x, str) for x in (select, where) if x)
+        callable_query, pickle_query, str_query = self.__check_pquery_type(
+            select, where
+        )
 
         star_query = select == "*"  # Get all properties
         query_geometry = geometry  # Rename arg
@@ -1974,17 +2010,7 @@ class SQLiteStore(AnnotationStore):
         )
         # Handle callable select/where
         if callable_query:
-            if unique:
-                return {
-                    select(json.loads(properties))
-                    for properties, in cur.fetchall()
-                    if where(json.loads(properties))
-                }
-            return {
-                key: select(json.loads(properties))
-                for key, properties in cur.fetchall()
-                if where(json.loads(properties))
-            }
+            return self.__handle_callable_pquery(unique, select, cur, where)
         if unique:
             return {x for x, in cur.fetchall()}
         return {key: json.loads(x) if star_query else x for key, x in cur.fetchall()}
