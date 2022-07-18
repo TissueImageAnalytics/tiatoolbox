@@ -1975,6 +1975,8 @@ class SQLiteStore(AnnotationStore):
 
         """  # noqa
 
+        self.__check_select_where_type(select, where)
+
         callable_query, pickle_query, str_query = self.__check_pquery_type(
             select, where
         )
