@@ -23,7 +23,7 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon
 
-from tiatoolbox.annotation.storage import AnnotationStore
+from tiatoolbox.annotation.storage import AnnotationStore, Annotation
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
@@ -596,7 +596,14 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         return Image.fromarray(rgb)
 
-    def render_by_type(self, rgb, ann, tl, scale, poly_as_box=False):
+    def render_by_type(
+        self,
+        rgb: np.ndarray,
+        ann: Annotation,
+        top_left: Tuple[float, float],
+        scale: int,
+        poly_as_box: bool = False,
+    ):
         """Render annotation appropriately to its geometry type.
 
         Args:
@@ -604,7 +611,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 The image to render the annotation on.
             ann (Annotation):
                 The annotation to render.
-            tl (Tuple[int, int]):
+            top_left (Tuple[int, int]):
                 The top left coordinate of the tile.
             scale (int):
                 The scale at which we are rendering the tile.
@@ -614,18 +621,24 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         r = self.renderer
         geom_type = ann.geometry.geom_type
         if geom_type == "Point":
-            r.render_pt(rgb, ann, tl, scale)
+            r.render_pt(rgb, ann, top_left, scale)
         elif geom_type == "Polygon":
             if poly_as_box:
-                r.render_rect(rgb, ann, tl, scale)
+                r.render_rect(rgb, ann, top_left, scale)
             else:
-                r.render_poly(rgb, ann, tl, scale)
+                r.render_poly(rgb, ann, top_left, scale)
         elif "Line" in geom_type:
-            r.render_line(rgb, ann, tl, scale)
+            r.render_line(rgb, ann, top_left, scale)
         else:
             warnings.warn("Unknown geometry")
 
-    def render_annotations(self, rgb, bound_geom, scale, tl):
+    def render_annotations(
+        self,
+        rgb: np.ndarray,
+        bound_geom: Polygon,
+        scale: int,
+        top_left: Tuple[float, float],
+    ):
         """Get annotations as bbox or geometry according to zoom level,
         and render them, decimating large collections of small annotations
         if appropriate.
@@ -637,8 +650,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 A polygon representing the bounding box of the tile.
             scale (int):
                 The scale at which we are rendering the tile.
-            tl (Tuple[int, int]):
+            top_left (Tuple[int, int]):
                 The top left coordinate of the tile.
+        Returns:
+            np.ndarray:
+                The tile with the annotations rendered.
 
         """
         big_thresh = 0.001 * (self.tile_size * scale) ** 2
@@ -654,13 +670,13 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 bounding_box = Polygon.from_bounds(*bounds)
                 if bounding_box.area > big_thresh:
                     ann = self.store[key]
-                    self.render_by_type(rgb, ann, tl, scale)
+                    self.render_by_type(rgb, ann, top_left, scale)
                 elif i % decimate == 0:
                     ann = self.store[key]
-                    self.render_by_type(rgb, ann, tl, scale, True)
+                    self.render_by_type(rgb, ann, top_left, scale, True)
         else:
             bounding_boxes = self.store.query(bound_geom, self.renderer.where)
             for ann in bounding_boxes.values():
-                self.render_by_type(rgb, ann, tl, scale)
+                self.render_by_type(rgb, ann, top_left, scale)
 
         return rgb
