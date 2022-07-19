@@ -1011,8 +1011,8 @@ class AnnotationStore(ABC, MutableMapping):
             select, unique, squeeze, items, select_values
         )
 
+    @staticmethod
     def _handle_pquery_results(
-        self,
         select: Select,
         unique: bool,
         squeeze: bool,
@@ -1967,7 +1967,7 @@ class SQLiteStore(AnnotationStore):
         """
         # Load a pickled select function
         if isinstance(select, bytes):
-            select = pickle.loads(select)
+            select = pickle.loads(select)  # skipcq: BAN-B301
         if unique:
             # Create a dictionary of sets to store the unique properties
             # for each property key / name.
@@ -2183,8 +2183,8 @@ class SQLiteStore(AnnotationStore):
         if not unique:
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
-            select_names = eval(select, SQL_GLOBALS, {})
-            return_columns += [str(select_names)]  # skipcq: PYL-W0123
+            select_names = eval(select, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+            return_columns += [str(select_names)]
         if is_callable_query or is_star_query or is_pickle_query:
             return_columns.append("properties")
         columns = ", ".join(return_columns)
