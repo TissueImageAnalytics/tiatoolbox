@@ -105,12 +105,20 @@ def sample_where_123(props: Dict[str, Any]) -> bool:
     return props.get("class") == 123
 
 
-def sample_select(props: Dict[str, Any]) -> Any:
+def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value.
     """
     return props.get("class")
+
+
+def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
+    """Simple example select expression for tests.
+
+    Gets the class value and the class mod 2.
+    """
+    return (props.get("class"), props.get("class") % 2)
 
 
 # Fixtures
@@ -1142,7 +1150,7 @@ class TestStore:
     def test_pquery_all_unique_exception(fill_store, store_cls):
         """Test querying for all properties."""
         _, store = fill_store(store_cls, ":memory:")
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError, match="unique"):
             _ = store.pquery("*", unique=True)
 
     @staticmethod
@@ -1192,12 +1200,37 @@ class TestStore:
         """Test querying for properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
-            select=lambda props: props.get("class"),
+            select=lambda props: (props.get("class"),),
             where=lambda props: props.get("class") == 1,
             unique=True,
         )
         assert isinstance(result_set, set)
         assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_callable_unique_no_squeeze(fill_store, store_cls):
+        """Test querying for properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=sample_select,
+            where=sample_where_1,
+            unique=True,
+            squeeze=False,
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}]
+
+    @staticmethod
+    def test_pquery_callable_unique_multi_select(fill_store, store_cls):
+        """Test querying for properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=sample_multi_select,
+            where=sample_where_1,
+            unique=True,
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}, {1}]
 
     @staticmethod
     def test_pquery_callable(fill_store, store_cls):
@@ -1222,6 +1255,31 @@ class TestStore:
         )
         assert isinstance(result_set, set)
         assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_pickled_no_squeeze(fill_store, store_cls):
+        """Test querying for properties with a pickled select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+
+        result_set = store.pquery(
+            select=pickle.dumps(sample_select),
+            where=pickle.dumps(sample_where_1),
+            squeeze=False,
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}]
+
+    @staticmethod
+    def test_pquery_pickled_multi_select(fill_store, store_cls):
+        """Test querying for properties with a pickled select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+
+        result_set = store.pquery(
+            select=pickle.dumps(sample_multi_select),
+            where=pickle.dumps(sample_where_1),
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}, {1}]
 
     @staticmethod
     def test_pquery_invalid_expression_type(fill_store, store_cls):
