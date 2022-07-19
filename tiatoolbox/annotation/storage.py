@@ -688,7 +688,7 @@ class AnnotationStore(ABC, MutableMapping):
                 bool:
                     True if the annotation should be included in the
                     query result.
-                    
+
             """
             return (  # Geometry is None or the geometry predicate matches
                 query_geometry is None
@@ -1838,10 +1838,6 @@ class SQLiteStore(AnnotationStore):
             columns = callable_columns
 
         query_parameters = {}
-
-        if isinstance(columns, bytes):
-            query_parameters["select"] = columns
-            columns = "pickle_expression(:select, properties) "
 
         query_string, query_parameters = self._initialize_query_string_parameters(
             query_geometry, query_parameters, geometry_predicate, columns, where
