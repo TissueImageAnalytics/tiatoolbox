@@ -93,6 +93,7 @@ def sample_where_1(props: Dict[str, Any]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 1.
+
     """
     return props.get("class") == 1
 
@@ -101,6 +102,7 @@ def sample_where_123(props: Dict[str, Any]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 123.
+
     """
     return props.get("class") == 123
 
@@ -109,6 +111,7 @@ def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value.
+    
     """
     return props.get("class")
 
@@ -117,6 +120,7 @@ def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value and the class mod 2.
+    
     """
     return (props.get("class"), props.get("class") % 2)
 
