@@ -77,7 +77,7 @@ repos:
         language: python
         additional_dependencies: [pyyaml]
       - id: notebook-check-ast
-        name: check Notebook AST
+        name: check notebook ast
         entry: python pre-commit/notebook_check_ast.py
         types_or: [jupyter]
         language: python
