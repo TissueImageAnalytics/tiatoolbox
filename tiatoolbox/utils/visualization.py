@@ -555,7 +555,7 @@ class AnnotationRenderer:
         """
         return np.squeeze(((np.array(coords) - top_left) / scale).astype(np.int32))
 
-    def get_color(self, ann):
+    def get_color(self, ann: Annotation):
         """Get the color for an annotation.
         Args:
             ann (Annotation):
