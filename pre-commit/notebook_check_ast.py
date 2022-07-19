@@ -2,6 +2,7 @@
 import argparse
 import ast
 import json
+import sys
 from pathlib import Path
 from typing import List
 
@@ -29,4 +30,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check notebook AST")
     parser.add_argument("files", nargs="+", help="Path to notebook(s)", type=Path)
     args = parser.parse_args()
-    exit(1 - main(args.files))
+    sys.exit(1 - main(args.files))
