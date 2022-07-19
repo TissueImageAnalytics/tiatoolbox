@@ -1150,7 +1150,7 @@ class TestStore:
     def test_pquery_all_unique_exception(fill_store, store_cls):
         """Test querying for all properties."""
         _, store = fill_store(store_cls, ":memory:")
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError, match="unique"):
             _ = store.pquery("*", unique=True)
 
     @staticmethod

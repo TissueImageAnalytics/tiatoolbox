@@ -2178,7 +2178,7 @@ class SQLiteStore(AnnotationStore):
         return_columns = []  # Initialise return rows list of column names
 
         if is_star_query and unique:
-            raise TypeError("Cannot return all properties with unique")
+            raise ValueError("unique=True cannot be used with select='*'")
 
         if not unique:
             return_columns.append("[key]")

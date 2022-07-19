@@ -67,7 +67,7 @@ class TileServer(Flask):
         meta = None
         for i, (key, layer) in enumerate(layers.items()):
 
-            layer = self.__get_layer_as_wsireader(layer, meta)
+            layer = self._get_layer_as_wsireader(layer, meta)
 
             self.tia_layers[key] = layer
 
@@ -88,7 +88,7 @@ class TileServer(Flask):
         self.route("/")(self.index)
 
     @staticmethod
-    def __get_layer_as_wsireader(layer, meta):
+    def _get_layer_as_wsireader(layer, meta):
         """Gets appropriate WSIReader for layer."""
         if isinstance(layer, (str, Path)):
             layer_path = Path(layer)
