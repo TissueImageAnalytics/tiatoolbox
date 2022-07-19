@@ -1000,7 +1000,7 @@ class AnnotationStore(ABC, MutableMapping):
                 raise ValueError("unique=True cannot be used with select='*'")
             if select == "*":  # Special case for all properties
                 return annotation.properties
-            elif isinstance(select, str):
+            if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
                 return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
             elif isinstance(select, bytes):
