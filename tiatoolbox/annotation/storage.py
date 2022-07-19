@@ -688,6 +688,7 @@ class AnnotationStore(ABC, MutableMapping):
                 bool:
                     True if the annotation should be included in the
                     query result.
+                    
             """
             return (  # Geometry is None or the geometry predicate matches
                 query_geometry is None
