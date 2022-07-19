@@ -35,6 +35,7 @@ import uuid
 import warnings
 import zlib
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -81,10 +82,10 @@ Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
 BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
-CallablePredicate = Callable[[Dict[str, Any]], bool]
-CallableExpression = Callable[[Dict[str, Any]], Any]
+CallablePredicate = Callable[[Properties], bool]
+CallableSelect = Callable[[Properties], Properties]
 Predicate = Union[str, bytes, CallablePredicate]
-Expression = Union[str, bytes, CallableExpression]
+Select = Union[str, bytes, CallableSelect]
 
 ASCII_FILE_SEP = "\x1c"
 ASCII_GROUP_SEP = "\x1d"
@@ -875,10 +876,11 @@ class AnnotationStore(ABC, MutableMapping):
 
     def pquery(
         self,
-        select: Expression,
+        select: Select,
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         unique: bool = True,
+        squeeze: bool = True,
     ) -> Union[Dict[str, Any], Set[Any]]:
         """Query the store for annotation properties.
 
@@ -919,9 +921,14 @@ class AnnotationStore(ABC, MutableMapping):
                 be accepted to this argument as arbitrary code can be
                 run via pickle or the parsing of the string statement.
             unique (bool):
-                If True, only unique values will be returned as a set.
-                If False, all values will be returned as a dictionary
-                mapping keys values. Defaults to True.
+                If True, only unique values for each selected property
+                will be returned as a list of sets. If False, all values
+                will be returned as a dictionary mapping keys values.
+                Defaults to True.
+            squeeze (bool):
+                If True, when querying for a single value with
+                `unique=True`, the result will be a single set instead
+                of a list of sets.
 
         Examples:
 
@@ -958,13 +965,39 @@ class AnnotationStore(ABC, MutableMapping):
             raise TypeError(
                 f"select must be str, bytes, or callable, not {type(select)}"
             )
-        result = set() if unique else {}
         # Are we scanning through all annotations?
         is_scan = not any((geometry, where))
         items = self.items() if is_scan else self.query(geometry, where).items()
 
-        def get_value(select, annotation):
-            """Get the value(s) to return from annotation given select."""
+        def select_values(
+            select: Select, annotation: Annotation
+        ) -> Union[Properties, Any, Tuple[Any, ...]]:
+            """Get the value(s) to return from an annotation via a select.
+
+            Args:
+                select (str or bytes or Callable):
+                    A statement defining the value to look up from the
+                    annotation properties. If `select = "*"`, all properties
+                    are returned for each annotation (`unique` must be
+                    False).
+                annotation (Annotation):
+                    The annotation to get the value(s) from.
+
+            Raises:
+                ValueError:
+                    If arguments have incompatible values.
+
+            Returns:
+                Union[Properties, Any, Tuple[Any, ...]]:
+                    The value(s) to return from the annotation. This
+                    will be a dictionary if unique is False. Otherwise,
+                    it will be a list of sets. If squeeze and unique are
+                    True in addtion to there only being one set in the
+                    results list, the result will be a single set.
+
+            """  # noqa Q440, Q441
+            if select == "*" and unique:
+                raise ValueError("unique=True cannot be used with select='*'")
             if select == "*":  # Special case for all properties
                 return annotation.properties
             elif isinstance(select, str):
@@ -974,13 +1007,62 @@ class AnnotationStore(ABC, MutableMapping):
                 return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
             return select(annotation.properties)
 
+        return self._handle_pquery_results(
+            select, unique, squeeze, items, select_values
+        )
+
+    def _handle_pquery_results(
+        self,
+        select: Select,
+        unique: bool,
+        squeeze: bool,
+        items: Dict[str, Properties],
+        get_values: Callable[
+            [Select, Annotation], Union[Properties, Any, Tuple[Any, ...]]
+        ],
+    ):
+        """Package the results of a pquery into the right output format.
+
+        Args:
+            select (str or bytes or Callable):
+                A statement defining the value to look up from the
+                annotation properties. If `select = "*"`, all properties
+                are returned for each annotation (`unique` must be
+                False).
+            unique (bool):
+                If True, only unique values for each selected property
+                will be returned as a list of sets. If False, all values
+                will be returned as a dictionary mapping keys values.
+                Defaults to True.
+            squeeze (bool):
+                If True, when querying for a single value with
+                `unique=True`, the result will be a single set instead
+                of a list of sets.
+            items (Dict[str, Properties]):
+                A dictionary mapping annotation keys/IDs to annotation
+                properties.
+            get_values (Callable):
+                A function to get the values to return from an
+                annotation via a select.
+
+        """  # noqa Q440, Q441
+        result = defaultdict(set) if unique else {}
         for key, annotation in items:
-            value = get_value(select, annotation)
+            values = get_values(select, annotation)
             if unique:
-                result.add(value)
+                # Wrap scalar values in a tuple
+                if not isinstance(values, tuple):
+                    values = (values,)
+                # Add each value to the result set
+                for i, value in enumerate(values):
+                    result[i].add(value)
             else:
-                result[key] = value
-        return result
+                result[key] = values
+        if unique:
+            result = list(result.values())
+        if unique and squeeze and len(result) == 1:
+            result = result[0]
+        return result  # noqa CCR001
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return annotations as a list of geoJSON features.
@@ -1629,7 +1711,7 @@ class SQLiteStore(AnnotationStore):
         )
 
     @staticmethod
-    def __initialize_query_string_parameters(
+    def _initialize_query_string_parameters(
         query_geometry, query_parameters, geometry_predicate, columns, where
     ):
         """Initialises the query string and parameters."""
@@ -1760,7 +1842,7 @@ class SQLiteStore(AnnotationStore):
             query_parameters["select"] = columns
             columns = "pickle_expression(:select, properties) "
 
-        query_string, query_parameters = self.__initialize_query_string_parameters(
+        query_string, query_parameters = self._initialize_query_string_parameters(
             query_geometry, query_parameters, geometry_predicate, columns, where
         )
 
@@ -1854,14 +1936,56 @@ class SQLiteStore(AnnotationStore):
         return {key: bounds for key, *bounds in cur.fetchall()}
 
     @staticmethod
-    def __handle_callable_pquery(unique, select, cur, where):
-        """Handles Callable pquery."""
+    def _handle_pickle_callable_pquery(
+        select: CallableSelect,
+        where: Optional[CallablePredicate],
+        cur: sqlite3.Cursor,
+        unique: bool,
+    ) -> Union[Dict[str, Set[Properties]], Dict[str, Properties]]:
+        """Package the results of a pquery into the right output format.
+
+        This variant is used when select and where are callable or
+        pickle objects.
+
+        Args:
+            select (Union[str, bytes, Callable]):
+                A callable to select the properties to return.
+            where (CallablePredicate):
+                A callable predicate to filter the rows with. May be
+                None for no-op (no filtering).
+            cur (sqlite3.Cursor):
+                The cursor for the query.
+            unique (bool):
+                Whether to return only unique results.
+
+        Returns:
+            dict:
+                If unique, a dictionary of sets is returned. Otherwise,
+                a dictionary mapping annotation keys to JSON-like
+                property dictionaries is returned.
+
+        """
+        # Load a pickled select function
+        if isinstance(select, bytes):
+            select = pickle.loads(select)
         if unique:
-            return {
-                select(json.loads(properties))
-                for properties, in cur.fetchall()
-                if where(json.loads(properties))
-            }
+            # Create a dictionary of sets to store the unique properties
+            # for each property key / name.
+            result = defaultdict(set)
+            for (properties_string,) in cur.fetchall():
+                properties = json.loads(properties_string)
+                # Apply where filter and skip if False
+                if where and not where(properties):
+                    continue
+                # Get the selected values
+                selection = select(properties)
+                # Wrap scalar values into a tuple
+                if not isinstance(selection, tuple):
+                    selection = (selection,)
+                # Add the properties to the appropriate set
+                for i, value in enumerate(selection):
+                    result[i].add(value)
+            return list(result.values())
         return {
             key: select(json.loads(properties))
             for key, properties in cur.fetchall()
@@ -1869,31 +1993,94 @@ class SQLiteStore(AnnotationStore):
         }
 
     @staticmethod
-    def __check_pquery_type(select, where):
-        """Check which type of query it is (str, pickle, callable, star)."""
-        callable_query = any(isinstance(x, Callable) for x in (select, where) if x)
-        pickle_query = any(isinstance(x, bytes) for x in (select, where) if x)
-        str_query = any(isinstance(x, str) for x in (select, where) if x)
+    def _handle_str_pquery(
+        cur: sqlite3.Cursor,
+        unique: bool,
+        star_query: bool,
+    ) -> Union[Dict[str, Set[Properties]], Dict[str, Properties]]:
+        """Package the results of a pquery into the right output format.
 
-        return callable_query, pickle_query, str_query
+        This variant is used when select and where are DSL strings.
+
+        Args:
+            cur (sqlite3.Cursor):
+                The cursor for the query.
+            unique (bool):
+                Whether to return only unique results.
+            star_query (bool):
+                True if the query is a star query, i.e. select == "*".
+
+        Returns:
+            dict:
+                If unique, a dictionary of sets is returned. Otherwise,
+                a dictionary mapping annotation keys to JSON-like
+                property dictionaries is returned.
+
+        """
+        if unique:
+            result = defaultdict(set)
+            for values in cur.fetchall():
+                for i, value in enumerate(values):
+                    result[i].add(value)
+            return list(result.values())
+        return {key: json.loads(x) if star_query else x for key, x in cur.fetchall()}
 
     @staticmethod
-    def __check_select_where_type(select, where):
-        """Check that select and where are the same type if where is given."""
+    def _kind_of_pquery(
+        select: Union[str, bytes, Callable],
+        where: Union[str, bytes, Callable],
+    ) -> Tuple[bool, bool, bool]:
+        """Determine boolean flags for the kind of pquery this is.
+
+        If either one of `select` or `where` is a str, bytes, or
+        callable, then is_callable_query, is_pickle_query, and
+        is_str_query respectively will be set to True.
+
+        Returns:
+            tuple:
+                A tuple of bools:
+                - True if select or where are callable (functions).
+                - True if select or where are bytes (pickle expressions).
+                - True if select or where are str (SQL expressions).
+
+        """
+        is_callable_query = any(isinstance(x, Callable) for x in (select, where) if x)
+        is_pickle_query = any(isinstance(x, bytes) for x in (select, where) if x)
+        is_str_query = any(isinstance(x, str) for x in (select, where) if x)
+
+        return is_callable_query, is_pickle_query, is_str_query
+
+    @staticmethod
+    def _validate_select_where_type(
+        select: Union[str, bytes, Callable],
+        where: Union[str, bytes, Callable],
+    ) -> None:
+        """Validate that select and where are valid types.
+
+        1. Check that select and where are the same type if where is given.
+        2. Check that select is in (str, bytes, callable).
+
+        Raises:
+            TypeError:
+                If select and where are not the same type or not in
+                (str, bytes, callable).
+
+        """
         if where is not None and type(select) is not type(where):
             raise TypeError("select and where must be of the same type")
-        if not isinstance(select, (str, bytes)) and not callable(where):
+        if not isinstance(select, (str, bytes)) and not callable(select):
             raise TypeError(
                 f"select must be str, bytes, or callable, not {type(select)}"
             )
 
     def pquery(
         self,
-        select: Expression,
+        select: Select,
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
         unique: bool = True,
+        squeeze: bool = True,
     ) -> Union[Dict[str, Any], Set[Any]]:
         """Query the store for annotation properties.
 
@@ -1941,9 +2128,14 @@ class SQLiteStore(AnnotationStore):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates`__.
             unique (bool):
-                If True, only unique values will be returned as a set.
-                If False, all values will be returned as a dictionary
-                mapping keys values. Defaults to True.
+                If True, only unique values for each selected property
+                will be returned as a list of sets. If False, all values
+                will be returned as a dictionary mapping keys values.
+                Defaults to True.
+            squeeze (bool):
+                If True, when querying for a single value with
+                `unique=True`, the result will be a single set instead
+                of a list of sets.
 
         Examples:
 
@@ -1975,31 +2167,27 @@ class SQLiteStore(AnnotationStore):
 
         """  # noqa
 
-        self.__check_select_where_type(select, where)
+        self._validate_select_where_type(select, where)
 
-        callable_query, pickle_query, str_query = self.__check_pquery_type(
+        is_callable_query, is_pickle_query, is_str_query = self._kind_of_pquery(
             select, where
         )
 
-        star_query = select == "*"  # Get all properties
+        is_star_query = select == "*"  # Get all properties, special case
         query_geometry = geometry  # Rename arg
         return_columns = []  # Initialise return rows list of column names
 
-        if star_query and unique:
+        if is_star_query and unique:
             raise TypeError("Cannot return all properties with unique")
 
         if not unique:
             return_columns.append("[key]")
-        if str_query and not star_query:
-            return_columns += [str(eval(select, SQL_GLOBALS, {}))]  # skipcq: PYL-W0123
-        if callable_query or star_query:
+        if is_str_query and not is_star_query:
+            select_names = eval(select, SQL_GLOBALS, {})
+            return_columns += [str(select_names)]  # skipcq: PYL-W0123
+        if is_callable_query or is_star_query or is_pickle_query:
             return_columns.append("properties")
-        if pickle_query:
-            # Pass _query the row select as bytes for pickle_expression()
-            columns = select
-        else:
-            # Otherwise convert the list of rows to a comma separated string
-            columns = ", ".join(return_columns)
+        columns = ", ".join(return_columns)
 
         cur = self._query(
             columns=columns,
@@ -2010,12 +2198,20 @@ class SQLiteStore(AnnotationStore):
             no_constraints_ok=True,
             index_warning=True,
         )
-        # Handle callable select/where
-        if callable_query:
-            return self.__handle_callable_pquery(unique, select, cur, where)
-        if unique:
-            return {x for x, in cur.fetchall()}
-        return {key: json.loads(x) if star_query else x for key, x in cur.fetchall()}
+
+        if is_pickle_query or is_callable_query:
+            # Where to apply after database query
+            # only done for callable where.
+            post_where = where if is_callable_query else None
+            result = self._handle_pickle_callable_pquery(
+                select, post_where, cur, unique
+            )
+        else:
+            result = self._handle_str_pquery(cur, unique, is_star_query)
+
+        if unique and squeeze and len(result) == 1:
+            return result[0]
+        return result
 
     def __len__(self) -> int:
         cur = self.con.cursor()
