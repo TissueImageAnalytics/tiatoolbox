@@ -544,14 +544,13 @@ class AnnotationRenderer:
         return np.squeeze(((np.array(coords) - tl) / scale).astype(np.int32))
 
     def get_color(self, ann):
-        """get the color for an annotation"""
+        """Get the color for an annotation"""
         if self.score_prop is not None:
             return tuple(
                 int(c * 255)
                 for c in self.mapper(self.score_fn(ann.properties[self.score_prop]))
             )
-        else:
-            return (0, 255, 0, 255)  # default color if no score_prop given
+        return (0, 255, 0, 255)  # default color if no score_prop given
 
     def render_poly(self, rgb, ann, tl, scale):
         """render a polygon annotation onto a tile using cv2"""
