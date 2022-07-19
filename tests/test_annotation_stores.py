@@ -111,7 +111,7 @@ def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value.
-    
+
     """
     return props.get("class")
 
@@ -120,7 +120,7 @@ def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value and the class mod 2.
-    
+
     """
     return (props.get("class"), props.get("class") % 2)
 

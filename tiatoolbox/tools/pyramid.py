@@ -610,7 +610,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 The scale at which we are rendering the tile.
             poly_as_box (bool):
                 Whether to render polygons as boxes.
-                
+
         """
         r = self.renderer
         geom_type = ann.geometry.geom_type

@@ -512,7 +512,7 @@ class AnnotationRenderer:
     max_scale (int):
         downsample level above which Polygon geometries on crowded
         tiles will be rendered as a bounding box instead
-        
+
     """
 
     def __init__(
@@ -564,7 +564,7 @@ class AnnotationRenderer:
         Returns:
             tuple:
                 A color tuple (rgba).
-                
+
         """
         if self.score_prop is not None:
             return tuple(
@@ -590,7 +590,7 @@ class AnnotationRenderer:
                 The top left corner of the tile in wsi.
             scale (int):
                 The zoom scale at which we are rendering.
-                
+
         """
         col = self.get_color(ann)
 
@@ -614,7 +614,7 @@ class AnnotationRenderer:
                 The top left corner of the tile in wsi.
             scale (int):
                 The zoom scale at which we are rendering.
-                
+
         """
         col = self.get_color(ann)
         box = self.to_tile_coords(
@@ -639,7 +639,7 @@ class AnnotationRenderer:
                 The top left corner of the tile in wsi.
             scale (int):
                 The zoom scale at which we are rendering.
-                
+
         """
         col = self.get_color(ann)
         cv2.circle(
@@ -667,7 +667,7 @@ class AnnotationRenderer:
                 The top left corner of the tile in wsi.
             scale (int):
                 The zoom scale at which we are rendering.
-                
+
         """
         col = self.get_color(ann)
         cv2.polylines(
