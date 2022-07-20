@@ -10,7 +10,8 @@ from flask.templating import render_template
 from PIL import Image
 
 from tiatoolbox import data
-from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.annotation.storage import SQLiteStore
+from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.visualization import colourise_image
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
@@ -89,13 +90,31 @@ class TileServer(Flask):
 
     @staticmethod
     def _get_layer_as_wsireader(layer, meta):
-        """Gets appropriate WSIReader for layer."""
+        """Gets appropriate image provider for layer.
+        Args:
+            layer (str | ndarray | WSIReader):
+                A reference to an image or annotations to be displayed.
+            meta (WSImeta):
+                The metadata of the base slide.
+        Returns:
+            WSIReader or AnnotationTileGenerator:
+                The appropriate image source for the layer.
+        """
         if isinstance(layer, (str, Path)):
             layer_path = Path(layer)
             if layer_path.suffix in [".jpg", ".png"]:
                 # Assume it's a low-res heatmap.
                 layer = np.array(Image.open(layer_path))
+            elif layer_path.suffix == ".db":
+                # Assume its an annotation store.
+                layer = AnnotationTileGenerator(meta, SQLiteStore(layer_path))
+            elif layer_path.suffix == ".geojson":
+                # Assume annotations in geojson format
+                layer = AnnotationTileGenerator(
+                    meta, SQLiteStore.from_geojson(layer_path)
+                )
             else:
+                # Assume it's a WSI.
                 return WSIReader.open(layer_path)
 
         if isinstance(layer, np.ndarray):

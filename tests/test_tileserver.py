@@ -11,7 +11,6 @@ from shapely.geometry.point import Point
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
-from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -78,15 +77,21 @@ def app(sample_ndpi, tmp_path, fill_store) -> TileServer:
     imwrite(thumb_path, thumb)
 
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
+    geo_path = tmp_path / "test.geojson"
+    store.to_geojson(geo_path)
+    store.commit()
+    store.close()
 
+    # make tileserver with layers representing all the types
+    # of things it should be able to handle
     app = TileServer(
         "Testing TileServer",
         [
             str(Path(sample_ndpi)),
             str(thumb_path),
             np.zeros(wsi.slide_dimensions(1.25, "power"), dtype=np.uint8).T,
-            tg,
+            tmp_path / "test.geojson",
+            str(tmp_path / "test.db"),
         ],
     )
     app.config.from_mapping({"TESTING": True})
@@ -107,6 +112,7 @@ def test_get_tile(app):
     layer_get_tile(app, "layer-1")
     layer_get_tile(app, "layer-2")
     layer_get_tile(app, "layer-3")
+    layer_get_tile(app, "layer-4")
 
 
 def layer_get_tile_404(app, layer) -> None:
@@ -123,6 +129,7 @@ def test_get_tile_404(app):
     layer_get_tile_404(app, "layer-1")
     layer_get_tile_404(app, "layer-2")
     layer_get_tile_404(app, "layer-3")
+    layer_get_tile_404(app, "layer-4")
 
 
 def test_get_tile_layer_key_error(app) -> None:
