@@ -100,6 +100,7 @@ eval
 execfile
 func
 fx
+geojson
 getitem
 grayscale
 greyscale
@@ -152,6 +153,7 @@ superset
 svs
 tiatoolbox
 tifffile
+tileserver
 tokenize
 tolist
 uid
