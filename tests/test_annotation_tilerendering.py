@@ -306,7 +306,7 @@ def test_categorical_mapper(fill_store, tmp_path):
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(score_prop="type", mapper="categorical")
-    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     # check correct keys exist and all colours are valid rgba values
     for ann_type in ["line", "pt", "cell"]:
         rgba = renderer.mapper(ann_type)
