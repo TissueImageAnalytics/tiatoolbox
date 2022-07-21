@@ -56,7 +56,7 @@ class TilePyramidGenerator:
         tile_size: int = 256,
         downsample: int = 2,
         overlap: int = 0,
-    ):
+    ) -> None:
         self.wsi = wsi
         self.tile_size = tile_size
         self.overlap = overlap
@@ -104,7 +104,8 @@ class TilePyramidGenerator:
         )
 
     @property
-    def sub_tile_level_count(self):
+    def sub_tile_level_count(self) -> int:
+        """The number of sub-tile levels in the pyramid."""
         return 0
 
     @property
@@ -174,7 +175,7 @@ class TilePyramidGenerator:
                 area, optimise. Linear most closely matches OpenSlide.
 
         Returns:
-            Image:
+            PIL.Image:
                 Pillow image of the tile.
 
         Example:
@@ -236,7 +237,7 @@ class TilePyramidGenerator:
                 The tile index in the y direction.
 
         Returns:
-            Path:
+            pathlib.Path:
                 A pathlib path object with two parts.
 
         """
@@ -385,7 +386,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
     """
 
-    def tile_group(self, level: int, x: int, y: int):
+    def tile_group(self, level: int, x: int, y: int) -> int:
         """Find the tile group for a tile index.
 
         Tile groups are numbered from level 0 (tile 0-0-0) and increment
@@ -399,6 +400,10 @@ class ZoomifyGenerator(TilePyramidGenerator):
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
+
+        Raises:
+            IndexError:
+                If the level, x, y tile index is out of bounds.
 
         Returns:
             int:
@@ -426,7 +431,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
                 The tile index in the y direction.
 
         Returns:
-            Path:
+            pathlib.Path:
                 A pathlib path object with two parts.
 
         """
@@ -444,11 +449,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             An WSIMeta Object storing the metadata of the slide this
             generator is rendering tiles for
         Store (AnnotationStore):
-            An AnnotationStore Object containing annotations to be rendered
-            for given slide
+            An AnnotationStore Object containing annotations to be
+            rendered for given slide
         renderer (AnnotationRenderer):
-            An AnnotationRenderer Object which will render annotations belonging
-            to a tile according to specified parameters
+            An AnnotationRenderer Object which will render annotations
+            belonging to a tile according to specified parameters
         tile_size (int):
             The size of tiles to generate. Default is 256. Note that the
             output tile size will be :math:`\text{tile size} + 2
@@ -547,7 +552,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 The tile index in the y direction.
 
         Returns:
-            Image:
+            PIL.Image:
                 Pillow image of the tile.
 
         Example:
@@ -640,9 +645,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         scale: int,
         top_left: Tuple[float, float],
     ):
-        """Get annotations as bbox or geometry according to zoom level,
-        and render them, decimating large collections of small annotations
-        if appropriate.
+        """Render annotations within given bounds on top on an image.
+
+        This gets annotations as bounding boxes or geometries according to
+        zoom level, and renders them. Large collections of small
+        annotation geometries are decimated if appropriate.
 
         Args:
             rgb (np.ndarray):
@@ -653,6 +660,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 The scale at which we are rendering the tile.
             top_left (Tuple[int, int]):
                 The top left coordinate of the tile.
+
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.
