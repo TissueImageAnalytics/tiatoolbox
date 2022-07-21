@@ -1291,18 +1291,18 @@ class WSIReader:
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
             raise ValueError(f"Invalid tissue masking method: {method}.")
-        if method == "otsu":
-            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         if method == "morphological":
             mpp = None
             power = None
-            if units == "power":
-                power = resolution
             if units == "mpp":
                 mpp = resolution
+            elif units == "power":
+                power = resolution
             masker = tissuemask.MorphologicalMasker(
                 mpp=mpp, power=power, **masker_kwargs
             )
+        elif method == "otsu":
+            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         mask_img = masker.fit_transform([thumbnail])[0]
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
@@ -1445,7 +1445,7 @@ class WSIReader:
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
         utils.misc.imwrite(
-            output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
+            output_dir.joinpath(f"slide_thumbnail{tile_format}"), img=slide_thumb
         )
 
 
@@ -2410,8 +2410,8 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         description = box[3].xml.find("description")
-        m = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int(m.group(0))
+        matches = re.search(r"(?<=AppMag = )\d\d", description.text)
+        objective_power = np.int(matches[0])
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
@@ -2438,9 +2438,9 @@ class OmnyxJP2WSIReader(WSIReader):
         ]
 
         vendor = "Omnyx JP2"
-        m = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
-        mpp_x = float(m.group(0))
-        mpp_y = float(m.group(0))
+        matches = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
+        mpp_x = float(matches[0])
+        mpp_y = float(matches[0])
         mpp = [mpp_x, mpp_y]
 
         return WSIMeta(
@@ -2781,11 +2781,7 @@ class VirtualWSIReader(WSIReader):
             size=image_read_size,
         )
 
-        if interpolation in [None, "none"]:
-            output_size = None
-        else:
-            output_size = size
-
+        output_size = None if interpolation in [None, "none"] else size
         im_region = utils.image.sub_pixel_read(
             self.img,
             bounds,
@@ -3011,7 +3007,7 @@ class ArrayView:
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
-        raise Exception(f"Unsupported axes `{self.axes}`.")
+        raise ValueError(f"Unsupported axes `{self.axes}`.")
 
 
 class TIFFWSIReader(WSIReader):
@@ -3083,7 +3079,7 @@ class TIFFWSIReader(WSIReader):
             return shape
         if self._axes == "SYX":
             return np.roll(shape, -1)
-        raise Exception(f"Unsupported axes `{self._axes}`.")
+        raise ValueError(f"Unsupported axes `{self._axes}`.")
 
     def _parse_svs_metadata(self) -> dict:
         """Extract SVS specific metadata.
@@ -3210,8 +3206,10 @@ class TIFFWSIReader(WSIReader):
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
             objective_power = float(objective.attrib.get("NominalMagnification"))
-        except KeyError:
-            raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
+        except KeyError as e:
+            raise KeyError(
+                "No matching Instrument for image InstrumentRef in OME-XML."
+            ) from e
 
         return {
             "objective_power": objective_power,
@@ -3227,14 +3225,12 @@ class TIFFWSIReader(WSIReader):
             dict: Dictionary of kwargs for WSIMeta.
 
         """
-        raw = {}
         mpp = None
         objective_power = None
         vendor = "Generic"
 
         description = self.tiff.pages[0].description
-        raw["Description"] = description
-
+        raw = {"Description": description}
         # Check for MPP in the tiff resolution tags
         # res_units: 1 = undefined, 2 = inch, 3 = centimeter
         res_units = self.tiff.pages[0].tags.get("ResolutionUnit")
