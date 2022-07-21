@@ -525,7 +525,7 @@ class AnnotationRenderer:
     ):
         if mapper is None:
             mapper = cm.get_cmap("jet")
-        if isinstance(mapper, str):
+        if isinstance(mapper, str) and mapper != "categorical":
             mapper = cm.get_cmap(mapper)
         if isinstance(mapper, list):
             colors = random_colors(len(mapper))
@@ -556,10 +556,10 @@ class AnnotationRenderer:
         """
         return np.squeeze(((np.array(coords) - top_left) / scale).astype(np.int32))
 
-    def get_color(self, ann: Annotation):
+    def get_color(self, annotation: Annotation):
         """Get the color for an annotation.
         Args:
-            ann (Annotation):
+            annotation (Annotation):
                 Annotation to get color for.
         Returns:
             tuple:
@@ -569,22 +569,24 @@ class AnnotationRenderer:
         if self.score_prop is not None:
             return tuple(
                 int(c * 255)
-                for c in self.mapper(self.score_fn(ann.properties[self.score_prop]))
+                for c in self.mapper(
+                    self.score_fn(annotation.properties[self.score_prop])
+                )
             )
         return (0, 255, 0, 255)  # default color if no score_prop given
 
     def render_poly(
         self,
-        rgb: np.ndarray,
-        ann: Annotation,
+        tile: np.ndarray,
+        annotation: Annotation,
         top_left: Tuple[float, float],
         scale: int,
     ):
         """Render a polygon annotation onto a tile using cv2.
         Args:
-            rgb (ndarray):
-                The tile to render onto.
-            ann (Annotation):
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
@@ -592,23 +594,23 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(ann)
+        col = self.get_color(annotation)
 
-        cnt = self.to_tile_coords(ann.geometry.exterior.coords, top_left, scale)
-        cv2.drawContours(rgb, [cnt], 0, col, -1)
+        cnt = self.to_tile_coords(annotation.geometry.exterior.coords, top_left, scale)
+        cv2.drawContours(tile, [cnt], 0, col, -1)
 
     def render_rect(
         self,
-        rgb: np.ndarray,
-        ann: Annotation,
+        tile: np.ndarray,
+        annotation: Annotation,
         top_left: Tuple[float, float],
         scale: int,
     ):
         """Render a box annotation onto a tile using cv2.
         Args:
-            rgb (ndarray):
-                The tile to render onto.
-            ann (Annotation):
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
@@ -616,24 +618,24 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(ann)
+        col = self.get_color(annotation)
         box = self.to_tile_coords(
-            np.reshape(ann.geometry.bounds, (2, 2)), top_left, scale
+            np.reshape(annotation.geometry.bounds, (2, 2)), top_left, scale
         )
-        cv2.rectangle(rgb, box[0, :], box[1, :], col, thickness=-1)
+        cv2.rectangle(tile, box[0, :], box[1, :], col, thickness=-1)
 
     def render_pt(
         self,
-        rgb: np.ndarray,
-        ann: Annotation,
+        tile: np.ndarray,
+        annotation: Annotation,
         top_left: Tuple[float, float],
         scale: int,
     ):
         """Render a point annotation onto a tile using cv2.
         Args:
-            rgb (ndarray):
-                The tile to render onto.
-            ann (Annotation):
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
@@ -641,10 +643,10 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(ann)
+        col = self.get_color(annotation)
         cv2.circle(
-            rgb,
-            self.to_tile_coords(list(ann.geometry.coords), top_left, scale),
+            tile,
+            self.to_tile_coords(list(annotation.geometry.coords), top_left, scale),
             4,
             col,
             thickness=-1,
@@ -652,16 +654,16 @@ class AnnotationRenderer:
 
     def render_line(
         self,
-        rgb: np.ndarray,
-        ann: Annotation,
+        tile: np.ndarray,
+        annotation: Annotation,
         top_left: Tuple[float, float],
         scale: int,
     ):
         """Render a line annotation onto a tile using cv2.
         Args:
-            rgb (ndarray):
-                The tile to render onto.
-            ann (Annotation):
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annontation (Annotation):
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
@@ -669,10 +671,10 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(ann)
+        col = self.get_color(annotation)
         cv2.polylines(
-            rgb,
-            [self.to_tile_coords(list(ann.geometry.coords), top_left, scale)],
+            tile,
+            [self.to_tile_coords(list(annotation.geometry.coords), top_left, scale)],
             False,
             col,
             thickness=3,

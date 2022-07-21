@@ -298,3 +298,19 @@ def test_random_mapper():
         assert len(rgba) == 4
         for val in rgba:
             assert 0 <= val <= 1
+
+
+def test_categorical_mapper(fill_store, tmp_path):
+    """Test categorical mapper option to ease cli usage."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(score_prop="type", mapper="categorical")
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    # check correct keys exist and all colours are valid rgba values
+    for ann_type in ["line", "pt", "cell"]:
+        rgba = renderer.mapper(ann_type)
+        assert isinstance(rgba, tuple)
+        assert len(rgba) == 4
+        for val in rgba:
+            assert 0 <= val <= 1

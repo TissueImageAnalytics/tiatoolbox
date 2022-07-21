@@ -12,7 +12,7 @@ from PIL import Image
 from tiatoolbox import data
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
-from tiatoolbox.utils.visualization import colourise_image
+from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
@@ -48,6 +48,7 @@ class TileServer(Flask):
         self,
         title: str,
         layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
+        renderer: AnnotationRenderer = AnnotationRenderer(),
     ) -> None:
         super().__init__(
             __name__,
@@ -60,6 +61,7 @@ class TileServer(Flask):
         self.tia_title = title
         self.tia_layers = {}
         self.tia_pyramids = {}
+        self.renderer = renderer  # only used if a layer is rendering form a store.
 
         # Generic layer names if none provided.
         if isinstance(layers, list):
@@ -88,8 +90,7 @@ class TileServer(Flask):
         )
         self.route("/")(self.index)
 
-    @staticmethod
-    def _get_layer_as_wsireader(layer, meta):
+    def _get_layer_as_wsireader(self, layer, meta):
         """Gets appropriate image provider for layer.
         Args:
             layer (str | ndarray | WSIReader):
@@ -107,11 +108,15 @@ class TileServer(Flask):
                 layer = np.array(Image.open(layer_path))
             elif layer_path.suffix == ".db":
                 # Assume its an annotation store.
-                layer = AnnotationTileGenerator(meta, SQLiteStore(layer_path))
+                layer = AnnotationTileGenerator(
+                    meta, SQLiteStore(layer_path), self.renderer
+                )
             elif layer_path.suffix == ".geojson":
                 # Assume annotations in geojson format
                 layer = AnnotationTileGenerator(
-                    meta, SQLiteStore.from_geojson(layer_path)
+                    meta,
+                    SQLiteStore.from_geojson(layer_path),
+                    self.renderer,
                 )
             else:
                 # Assume it's a WSI.

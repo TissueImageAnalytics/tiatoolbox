@@ -25,7 +25,7 @@ from shapely.geometry import Polygon
 
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
-from tiatoolbox.utils.visualization import AnnotationRenderer
+from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
 defusedxml.defuse_stdlib()
@@ -213,7 +213,7 @@ class TilePyramidGenerator:
         # Don't print out any warnings about interpolation etc.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            rgb = self.wsi.read_rect(
+            tile = self.wsi.read_rect(
                 coord,
                 size=output_size,
                 resolution=1 / scale,
@@ -221,7 +221,7 @@ class TilePyramidGenerator:
                 pad_mode=pad_mode,
                 interpolation=interpolation,
             )
-        return Image.fromarray(rgb)
+        return Image.fromarray(tile)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
         """Generate the path for a specified tile.
@@ -476,6 +476,15 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer
+        if self.renderer.mapper == "categorical":
+            # get the possible categories for given score_prop from store
+            types = self.store.pquery(f"props['{self.renderer.score_prop}']")
+            if None in types:
+                types.remove(None)
+            # make a random dictionary colour map
+            colors = random_colors(len(types))
+            mapper = {key: (*color, 1) for key, color in zip(types, colors)}
+            self.renderer.mapper = lambda x: mapper[x]
 
     def get_thumb_tile(self) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
@@ -489,10 +498,10 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         scale = self.level_downsample(self.info.level_count - 1)
         out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
         bounds = (0, 0, *slide_dims)
-        rgb = np.zeros((*out_dims, 4), dtype=np.uint8)
+        thumb = np.zeros((*out_dims, 4), dtype=np.uint8)
         bound_geom = Polygon.from_bounds(*bounds)
-        rgb = self.render_annotations(rgb, bound_geom, scale, (0, 0))
-        return Image.fromarray(rgb)
+        thumb = self.render_annotations(thumb, bound_geom, scale)
+        return Image.fromarray(thumb)
 
     def level_dimensions(self, level: int) -> Tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
@@ -589,56 +598,18 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
 
-        rgb = np.zeros((*output_size, 4), dtype=np.uint8)
+        tile = np.zeros((*output_size, 4), dtype=np.uint8)
         bounds = locsize2bounds(coord, [self.tile_size * scale] * 2)
         bound_geom = Polygon.from_bounds(*bounds)
-        rgb = self.render_annotations(rgb, bound_geom, scale, coord)
+        tile = self.render_annotations(tile, bound_geom, scale)
 
-        return Image.fromarray(rgb)
-
-    def render_by_type(
-        self,
-        rgb: np.ndarray,
-        ann: Annotation,
-        top_left: Tuple[float, float],
-        scale: int,
-        poly_as_box: bool = False,
-    ):
-        """Render annotation appropriately to its geometry type.
-
-        Args:
-            rgb (np.ndarray):
-                The image to render the annotation on.
-            ann (Annotation):
-                The annotation to render.
-            top_left (Tuple[int, int]):
-                The top left coordinate of the tile.
-            scale (int):
-                The scale at which we are rendering the tile.
-            poly_as_box (bool):
-                Whether to render polygons as boxes.
-
-        """
-        r = self.renderer
-        geom_type = ann.geometry.geom_type
-        if geom_type == "Point":
-            r.render_pt(rgb, ann, top_left, scale)
-        elif geom_type == "Polygon":
-            if poly_as_box:
-                r.render_rect(rgb, ann, top_left, scale)
-            else:
-                r.render_poly(rgb, ann, top_left, scale)
-        elif "Line" in geom_type:
-            r.render_line(rgb, ann, top_left, scale)
-        else:
-            warnings.warn("Unknown geometry")
+        return Image.fromarray(tile)
 
     def render_annotations(
         self,
-        rgb: np.ndarray,
+        tile: np.ndarray,
         bound_geom: Polygon,
         scale: int,
-        top_left: Tuple[float, float],
     ):
         """Get annotations as bbox or geometry according to zoom level,
         and render them, decimating large collections of small annotations
@@ -651,13 +622,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 A polygon representing the bounding box of the tile.
             scale (int):
                 The scale at which we are rendering the tile.
-            top_left (Tuple[int, int]):
-                The top left coordinate of the tile.
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.
 
         """
+        top_left = bound_geom.bounds[:2]
         big_thresh = 0.001 * (self.tile_size * scale) ** 2
         decimate = int(scale / self.renderer.max_scale) + 1
         if scale > 100:
@@ -671,13 +641,50 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 bounding_box = Polygon.from_bounds(*bounds)
                 if bounding_box.area > big_thresh:
                     ann = self.store[key]
-                    self.render_by_type(rgb, ann, top_left, scale)
+                    self.render_by_type(tile, ann, top_left, scale)
                 elif i % decimate == 0:
                     ann = self.store[key]
-                    self.render_by_type(rgb, ann, top_left, scale, True)
+                    self.render_by_type(tile, ann, top_left, scale, True)
         else:
             bounding_boxes = self.store.query(bound_geom, self.renderer.where)
             for ann in bounding_boxes.values():
-                self.render_by_type(rgb, ann, top_left, scale)
+                self.render_by_type(tile, ann, top_left, scale)
 
-        return rgb
+        return tile
+
+    def render_by_type(
+        self,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: Tuple[float, float],
+        scale: int,
+        poly_as_box: bool = False,
+    ):
+        """Render annotation appropriately to its geometry type.
+
+        Args:
+            tile (np.ndarray):
+                The rgb(a) tile image to render the annotation on.
+            annotation (Annotation):
+                The annotation to render.
+            top_left (Tuple[int, int]):
+                The top left coordinate of the tile.
+            scale (int):
+                The scale at which we are rendering the tile.
+            poly_as_box (bool):
+                Whether to render polygons as boxes.
+
+        """
+        r = self.renderer
+        geom_type = annotation.geometry.geom_type
+        if geom_type == "Point":
+            r.render_pt(tile, annotation, top_left, scale)
+        elif geom_type == "Polygon":
+            if poly_as_box:
+                r.render_rect(tile, annotation, top_left, scale)
+            else:
+                r.render_poly(tile, annotation, top_left, scale)
+        elif "Line" in geom_type:
+            r.render_line(tile, annotation, top_left, scale)
+        else:
+            warnings.warn("Unknown geometry")
