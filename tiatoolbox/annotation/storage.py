@@ -245,7 +245,7 @@ class AnnotationStore(ABC, MutableMapping):
     def _validate_equal_lengths(*args):
         """Validate that all given args are either None or have the same length."""
         lengths = [len(v) for v in args if v is not None]
-        if lengths and not all(length == lengths[0] for length in lengths):
+        if lengths and any(length != lengths[0] for length in lengths):
             raise ValueError("All arguments must be None or of equal length.")
 
     @staticmethod
@@ -340,9 +340,7 @@ class AnnotationStore(ABC, MutableMapping):
             Geometry: The deserialised Shapely geometry.
 
         """
-        if isinstance(data, str):
-            return wkt.loads(data)
-        return wkb.loads(data)
+        return wkt.loads(data) if isinstance(data, str) else wkb.loads(data)
 
     @abstractmethod
     def commit(self) -> None:
@@ -417,11 +415,12 @@ class AnnotationStore(ABC, MutableMapping):
         self._validate_equal_lengths(keys, annotations)
         result = []
         if keys:
-            for key, annotation in zip(keys, annotations):
-                result.append(self.append(annotation, key))
+            result.extend(
+                self.append(annotation, key)
+                for key, annotation in zip(keys, annotations)
+            )
             return result
-        for annotation in annotations:
-            result.append(self.append(annotation))
+        result.extend(self.append(annotation) for annotation in annotations)
         return result
 
     def patch(
@@ -1017,7 +1016,7 @@ class AnnotationStore(ABC, MutableMapping):
         select: Select,
         unique: bool,
         squeeze: bool,
-        items: Dict[str, Properties],
+        items: Generator[Tuple[str, Properties], None, None],
         get_values: Callable[
             [Select, Annotation], Union[Properties, Any, Tuple[Any, ...]]
         ],
@@ -1544,7 +1543,7 @@ class SQLiteStore(AnnotationStore):
             return data
         if self.metadata["compression"] == "zlib":
             return zlib.compress(data, level=self.metadata["compression_level"])
-        raise Exception("Unsupported compression method.")
+        raise ValueError("Unsupported compression method.")
 
     def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
@@ -1567,9 +1566,7 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry.
 
         """
-        if data is None:
-            return Point(cx, cy)
-        return self.deserialise_geometry(data)
+        return Point(cx, cy) if data is None else self.deserialise_geometry(data)
 
     def deserialise_geometry(  # skipcq: PYL-W0221
         self, data: Union[str, bytes]
@@ -1588,7 +1585,7 @@ class SQLiteStore(AnnotationStore):
         if self.metadata["compression"] == "zlib":
             data = zlib.decompress(data)
         elif self.metadata["compression"] is not None:
-            raise Exception("Unsupported compression method.")
+            raise ValueError("Unsupported compression method.")
         if isinstance(data, str):
             return wkt.loads(data)
         return wkb.loads(data)
@@ -2254,8 +2251,7 @@ class SQLiteStore(AnnotationStore):
             row = cur.fetchone()
             if row is None:
                 break
-            key = row[0]
-            yield key
+            yield row[0]  # The key
 
     def values(self) -> Iterable[Tuple[int, Annotation]]:
         for _, value in self.items():

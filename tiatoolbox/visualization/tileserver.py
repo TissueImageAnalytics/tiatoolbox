@@ -1,4 +1,6 @@
 """Simple Flask WSGI apps to display tiles as slippery maps."""
+from __future__ import annotations
+
 import io
 import json
 from pathlib import Path
@@ -25,11 +27,10 @@ class TileServer(Flask):
             the page title.
         layers (Dict[str, WSIReader | str] | List[WSIReader | str]):
             A dictionary mapping layer names to image paths or
-            :obj:`WSIReader` objects to display. May also be a list,
-            in which case generic names 'layer-1', 'layer-2' etc.
-            will be used.
-            If layer is a single-channel low-res overlay, it will be
-            colourized using the 'viridis' colourmap
+            :obj:`WSIReader` objects to display. May also be a list, in
+            which case generic names 'layer-1', 'layer-2' etc. will be
+            used. If layer is a single-channel low-res overlay, it will
+            be colourized using the 'viridis' colourmap
 
     Examples:
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -42,6 +43,7 @@ class TileServer(Flask):
         ...     },
         ... )
         >>> app.run()
+
     """
 
     def __init__(
@@ -92,14 +94,17 @@ class TileServer(Flask):
 
     def _get_layer_as_wsireader(self, layer, meta):
         """Gets appropriate image provider for layer.
+
         Args:
             layer (str | ndarray | WSIReader):
                 A reference to an image or annotations to be displayed.
             meta (WSImeta):
                 The metadata of the base slide.
+
         Returns:
             WSIReader or AnnotationTileGenerator:
                 The appropriate image source for the layer.
+
         """
         if isinstance(layer, (str, Path)):
             layer_path = Path(layer)
@@ -151,7 +156,7 @@ class TileServer(Flask):
                 The y coordinate.
 
         Returns:
-            Response:
+            flask.Response:
                 The tile image response.
 
         """
@@ -172,7 +177,8 @@ class TileServer(Flask):
         """Serve the index page.
 
         Returns:
-            Response: The index page.
+            flask.Response:
+                The index page.
 
         """
         layers = [
