@@ -50,7 +50,7 @@ class TileServer(Flask):
         self,
         title: str,
         layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
-        renderer: AnnotationRenderer = AnnotationRenderer(),
+        renderer: AnnotationRenderer = None,
     ) -> None:
         super().__init__(
             __name__,
