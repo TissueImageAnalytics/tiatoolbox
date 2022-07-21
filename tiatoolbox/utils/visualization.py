@@ -148,13 +148,15 @@ def overlay_prediction_mask(
     color_list = np.array(color_list) / 255
     uid_list = list(label_info.keys())
     cmap = mpl.colors.ListedColormap(color_list)
+    
     colorbar_params = {
         "mappable": mpl.cm.ScalarMappable(cmap=cmap),
         "boundaries": uid_list + [uid_list[-1] + 1],
+        "values": uid_list,
         "ticks": [b + 0.5 for b in uid_list],
         "spacing": "proportional",
         "orientation": "vertical",
-    }
+        }
 
     # Generate another ax, else using the provided
     if ax is None:
