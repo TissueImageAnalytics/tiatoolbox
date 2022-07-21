@@ -1411,7 +1411,7 @@ class WSIReader:
                 + tile_format
             )
 
-            utils.misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
+            utils.misc.imwrite(image_path=output_dir / img_save_name, img=im)
 
             data.append(
                 [
@@ -1440,12 +1440,12 @@ class WSIReader:
                 "size_h",
             ],
         )
-        df.to_csv(output_dir.joinpath("Output.csv"), index=False)
+        df.to_csv(output_dir / "Output.csv", index=False)
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
         utils.misc.imwrite(
-            output_dir.joinpath(f"slide_thumbnail{tile_format}"), img=slide_thumb
+            output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
         )
 
 
