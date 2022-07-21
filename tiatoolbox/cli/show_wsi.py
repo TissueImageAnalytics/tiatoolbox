@@ -12,7 +12,7 @@ from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
     "-c",
     default=None,
     help="""A property to colour by. Must also define a colour
-    map if this option is used, using --colour-map (or -m). 
+    map if this option is used, using --colour-map (or -m).
     Will only affect layers rendered from a store.""",
 )
 @click.option(
