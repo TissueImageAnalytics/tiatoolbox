@@ -429,10 +429,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self.wsi_layers = []
         self.output_types = output_types
 
-        if "hovernetplus" in pretrained_model:
-            self.output_types = ["instance", "semantic"]
-        elif "hovernet" in pretrained_model:
-            self.output_types = ["instance"]
+        if pretrained_model is not None:
+            if "hovernetplus" in pretrained_model:
+                self.output_types = ["instance", "semantic"]
+            elif "hovernet" in pretrained_model:
+                self.output_types = ["instance"]
 
     @staticmethod
     def _get_tile_info(
