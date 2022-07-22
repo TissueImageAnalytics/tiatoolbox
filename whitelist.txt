@@ -100,6 +100,7 @@ eval
 execfile
 func
 fx
+geojson
 getitem
 grayscale
 greyscale
@@ -133,6 +134,7 @@ pred
 preproc
 preprocessing
 pretrained
+pts
 pylint
 pyright
 qtconsole
@@ -151,12 +153,14 @@ superset
 svs
 tiatoolbox
 tifffile
+tileserver
 tokenize
 tolist
 uid
 uint8
 uncallable
 v4
+viridis
 w0613
 wsi
 wsireader

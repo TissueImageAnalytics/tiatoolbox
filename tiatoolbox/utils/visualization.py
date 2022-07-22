@@ -1,7 +1,8 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-from typing import Dict, List, Tuple, Union
+import warnings
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib as mpl
@@ -9,6 +10,8 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
+
+from tiatoolbox.annotation.storage import Annotation
 
 
 def random_colors(num_colors, bright=True):
@@ -478,3 +481,207 @@ def plot_graph(
         color = to_int_tuple(node_colors[idx])
         cv2.circle(canvas, node, node_size, color, thickness=-1)
     return canvas
+
+
+class AnnotationRenderer:
+    """Renderer containing information and methods to render annotations
+    from an AnnotationStore to a tile.
+
+    Args:
+    score_prop (str):
+        A key that is present in the properties of annotations
+        to be rendered that will be used to color rendered annotations.
+    mapper (str, Dict or List):
+        A dictionary or colormap used to color annotations according
+        to the value of properties[score_prop] of an annotation.  Should
+        be either a matplotlib colormap, a string which is a name of a
+        matplotlib colormap, a dict of possible property {value: color}
+        pairs, or a list of categorical property values (in which case a
+        dict will be created with a random color generated for each
+        category)
+    where (str or Callable):
+        a callable or predicate which will be passed on to
+        AnnotationStore.query() when fetching annotations to be rendered
+        (see AnnotationStore for more details)
+    score_fn (Callable):
+        an optional callable which will be called on the value of
+        the property that will be used to generate the color before giving
+        it to colormap. Use it for example to normalise property
+        values if they do not fall into the range [0,1], as matplotlib
+        colormap expects values in this range. i.e roughly speaking
+        annotation_color=mapper(score_fn(ann.properties[score_prop]))
+    max_scale (int):
+        downsample level above which Polygon geometries on crowded
+        tiles will be rendered as a bounding box instead
+
+    """
+
+    def __init__(
+        self,
+        score_prop: Optional[str] = None,
+        mapper: Optional[Union[str, Dict, List]] = None,
+        where: Optional[Union[str, Callable]] = None,
+        score_fn: Callable = lambda x: x,
+        max_scale: int = 8,
+    ):
+        if mapper is None:
+            mapper = cm.get_cmap("jet")
+        if isinstance(mapper, str) and mapper != "categorical":
+            mapper = cm.get_cmap(mapper)
+        if isinstance(mapper, list):
+            colors = random_colors(len(mapper))
+            mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
+        if isinstance(mapper, dict):
+            self.mapper = lambda x: mapper[x]
+        else:
+            self.mapper = mapper
+        self.score_prop = score_prop
+        self.where = where
+        self.score_fn = score_fn
+        self.max_scale = max_scale
+
+    @staticmethod
+    def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: int):
+        """Return coords relative to top left of tile, as array suitable for cv2.
+        Args:
+            coords (List):
+                List of coordinates in the form [x, y].
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (int):
+                The zoom scale at which we are rendering.
+        Returns:
+            np.array:
+                Array of coordinates in tile space in the form [x, y].
+
+        """
+        return np.squeeze(((np.array(coords) - top_left) / scale).astype(np.int32))
+
+    def get_color(self, annotation: Annotation):
+        """Get the color for an annotation.
+        Args:
+            annotation (Annotation):
+                Annotation to get color for.
+        Returns:
+            tuple:
+                A color tuple (rgba).
+
+        """
+        if self.score_prop is not None:
+            try:
+                return tuple(
+                    int(c * 255)
+                    for c in self.mapper(
+                        self.score_fn(annotation.properties[self.score_prop])
+                    )
+                )
+            except KeyError:
+                warnings.warn(
+                    "score_prop not found in properties. Using default color."
+                )
+        return (0, 255, 0, 255)  # default color if no score_prop given
+
+    def render_poly(
+        self,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: Tuple[float, float],
+        scale: int,
+    ):
+        """Render a polygon annotation onto a tile using cv2.
+        Args:
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
+                The annotation to render.
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (int):
+                The zoom scale at which we are rendering.
+
+        """
+        col = self.get_color(annotation)
+
+        cnt = self.to_tile_coords(annotation.geometry.exterior.coords, top_left, scale)
+        cv2.drawContours(tile, [cnt], 0, col, -1)
+
+    def render_rect(
+        self,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: Tuple[float, float],
+        scale: int,
+    ):
+        """Render a box annotation onto a tile using cv2.
+        Args:
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
+                The annotation to render.
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (int):
+                The zoom scale at which we are rendering.
+
+        """
+        col = self.get_color(annotation)
+        box = self.to_tile_coords(
+            np.reshape(annotation.geometry.bounds, (2, 2)), top_left, scale
+        )
+        cv2.rectangle(tile, box[0, :], box[1, :], col, thickness=-1)
+
+    def render_pt(
+        self,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: Tuple[float, float],
+        scale: int,
+    ):
+        """Render a point annotation onto a tile using cv2.
+        Args:
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
+                The annotation to render.
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (int):
+                The zoom scale at which we are rendering.
+
+        """
+        col = self.get_color(annotation)
+        cv2.circle(
+            tile,
+            self.to_tile_coords(list(annotation.geometry.coords), top_left, scale),
+            4,
+            col,
+            thickness=-1,
+        )
+
+    def render_line(
+        self,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: Tuple[float, float],
+        scale: int,
+    ):
+        """Render a line annotation onto a tile using cv2.
+        Args:
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annontation (Annotation):
+                The annotation to render.
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (int):
+                The zoom scale at which we are rendering.
+
+        """
+        col = self.get_color(annotation)
+        cv2.polylines(
+            tile,
+            [self.to_tile_coords(list(annotation.geometry.coords), top_left, scale)],
+            False,
+            col,
+            thickness=3,
+        )
