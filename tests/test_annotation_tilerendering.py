@@ -314,3 +314,16 @@ def test_categorical_mapper(fill_store, tmp_path):
         assert len(rgba) == 4
         for val in rgba:
             assert 0 <= val <= 1
+
+
+def test_colour_prop_warning(fill_store, tmp_path):
+    """Test warning when rendering annotations in which the provided
+    score_prop does not exist.
+    """
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(score_prop="nonexistant_prop")
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    with pytest.warns(UserWarning, match="score_prop not found in properties"):
+        tg.get_tile(1, 0, 0)
