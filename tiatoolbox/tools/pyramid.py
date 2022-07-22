@@ -268,7 +268,7 @@ class TilePyramidGenerator:
             ...   wsi=reader,
             ...   tile_size=256,
             ... )
-            >>>  tile_generator.dump(
+            >>> tile_generator.dump(
             ...    path="sample.gz.zip",
             ...    container="zip",
             ...    compression="gzip",
