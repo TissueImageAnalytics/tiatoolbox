@@ -1,6 +1,7 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
+import warnings
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import cv2
@@ -8,7 +9,6 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
-import warnings
 from numpy.typing import ArrayLike
 
 from tiatoolbox.annotation.storage import Annotation
