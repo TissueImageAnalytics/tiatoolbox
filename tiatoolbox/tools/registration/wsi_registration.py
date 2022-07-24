@@ -1,6 +1,7 @@
 import numpy as np
 from skimage import exposure, filters, morphology
 
+
 def preprocess(fixed_img, moving_img):
     """This function performs normalization to unify the appearance of fixed
      and moving images
