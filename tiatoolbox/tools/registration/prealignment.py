@@ -26,9 +26,9 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
 
     """
     if len(fixed_mask.shape) != 2:
-        fixed_mask = fixed_mask[:,:,0]
+        fixed_mask = fixed_mask[:, :, 0]
     if len(moving_mask.shape) != 2:
-        moving_mask = moving_mask[:,:,0]
+        moving_mask = moving_mask[:, :, 0]
 
     fixed_mask, moving_mask = np.uint8(fixed_mask > 0), np.uint8(moving_mask > 0)
 
@@ -44,9 +44,7 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
         )
 
     if rotation_steps < 10 or rotation_steps > 20:
-        raise ValueError(
-            f'{"Please select the rotation step in between 10 and 20."}'
-        )
+        raise ValueError(f'{"Please select the rotation step in between 10 and 20."}')
 
     fixed_img = exposure.rescale_intensity(img_as_float(fixed_img), in_range=(0, 1))
     moving_img = exposure.rescale_intensity(img_as_float(moving_img), in_range=(0, 1))
