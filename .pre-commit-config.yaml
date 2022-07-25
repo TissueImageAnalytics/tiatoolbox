@@ -69,14 +69,6 @@ repos:
         ]
   - repo: local
     hooks:
-      - id: pytest-changed-files
-        name: pytest-changed-files
-        entry: pytest
-        files: tests/.*\btest_\w*.py
-        language: system
-        stages: [push]
-  - repo: local
-    hooks:
       - id: requirements-consistency
         name: check requirements are consistent
         entry: python pre-commit/requirements_consistency.py
@@ -84,3 +76,8 @@ repos:
         pass_filenames: false
         language: python
         additional_dependencies: [pyyaml]
+      - id: notebook-check-ast
+        name: check notebook ast
+        entry: python pre-commit/notebook_check_ast.py
+        types_or: [jupyter]
+        language: python
