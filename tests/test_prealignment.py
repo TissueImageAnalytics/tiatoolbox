@@ -1,12 +1,12 @@
 import urllib
 
-import PIL.Image as Image
 import numpy as np
+import PIL.Image as Image
 import pytest
 
 from tiatoolbox.models.engine.semantic_segmentor import (
-	IOSegmentorConfig,
-	SemanticSegmentor,
+    IOSegmentorConfig,
+    SemanticSegmentor,
 )
 from tiatoolbox.tools.registration.prealignment import prealignment
 
