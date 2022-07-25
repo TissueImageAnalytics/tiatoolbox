@@ -2,12 +2,19 @@
 
 import pathlib
 import shutil
+from pathlib import Path
 from typing import Callable
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
 from tiatoolbox.data import _fetch_remote_sample
+
+
+@pytest.fixture(scope="session")
+def root_path(request) -> Path:
+    """Return the root path of the project."""
+    return Path(request.config.rootdir) / "tiatoolbox"
 
 
 @pytest.fixture(scope="session")
