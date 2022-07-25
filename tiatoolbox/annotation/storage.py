@@ -852,7 +852,7 @@ class AnnotationStore(ABC, MutableMapping):
                 ...     Annotation(
                 ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
                 ...         properties={"class": 42},
-                ...     )
+                ...     ),
                 ...     key="foo",
                 ... )
                 >>> store.bquery(where="props['class'] == 42")
