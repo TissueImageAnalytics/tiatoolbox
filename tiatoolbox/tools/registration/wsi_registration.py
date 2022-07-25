@@ -12,10 +12,12 @@ def preprocess(fixed_img, moving_img):
             A grayscale moving image
 
     Returns:
-        :class:`numpy.ndarray`:
-            A normalized grayscale fixed image
-        :class:`numpy.ndarray`:
-            A normalized grayscale moving image
+        tuple:
+            A tuple containing:
+                - :class:`numpy.ndarray` - fixed_img:
+                    A grayscale fixed image
+                - :class:`numpy.ndarray` - moving_img:
+                    A grayscale moving image
 
     """
     if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
