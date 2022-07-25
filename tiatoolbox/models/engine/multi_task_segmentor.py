@@ -490,7 +490,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
         indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 
-        for _inst_idx in indices_inst:
+        for _ in indices_inst:
             self._wsi_inst_info.append({})
 
         for s_id in range(len(indices_sem)):
@@ -498,7 +498,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 np.lib.format.open_memmap(
                     f"{cache_dir}/{s_id}.npy",
                     mode="w+",
-                    shape=tuple(wsi_proc_shape),
+                    shape=tuple(np.fliplr([wsi_proc_shape])[0]),
                     dtype=np.uint8,
                 )
             )
@@ -515,11 +515,16 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                     index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
                 ]
 
+                # Empty tile
+                if len(sel_indices) == 0:
+                    continue
+
                 tile_patch_inputs = patch_inputs[sel_indices]
                 tile_patch_outputs = patch_outputs[sel_indices]
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
 
                 tile_infer_output = self._infer_once()
+
                 self._process_tile_predictions(
                     ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
                 )
