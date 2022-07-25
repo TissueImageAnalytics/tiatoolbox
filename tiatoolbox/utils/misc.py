@@ -32,9 +32,8 @@ def split_path_name_ext(full_path):
             - :py:obj:`list(str)` - File extensions
 
     Examples:
-        >>> from tiatoolbox import utils
-        >>> dir_path, file_name, extensions =
-        ...     utils.misc.split_path_name_ext(full_path)
+        >>> from tiatoolbox.utils.misc import split_path_name_ext
+        >>> dir_path, file_name, extensions = split_path_name_ext(full_path)
 
     """
     input_path = pathlib.Path(full_path)

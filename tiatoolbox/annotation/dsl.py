@@ -195,7 +195,7 @@ class SQLTriplet(SQLExpression):
             operator.or_: lambda a, b: f"({a} OR {b})",
             operator.abs: lambda a, _: f"ABS({a})",
             operator.not_: lambda a, _: f"NOT({a})",
-            operator.eq: lambda a, b: f"({a} = {b})",
+            operator.eq: lambda a, b: f"({a} == {b})",
             operator.ne: lambda a, b: f"({a} != {b})",
             operator.pow: lambda a, p: f"POWER({a}, {p})",
             operator.mod: lambda a, b: f"({a} % {b})",
@@ -210,6 +210,9 @@ class SQLTriplet(SQLExpression):
     def __str__(self) -> str:
         lhs = self.lhs
         rhs = self.rhs
+        if isinstance(rhs, str):
+            # is this ok? fixes categorical where predicate
+            rhs = f'"{rhs}"'
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
         raise ValueError("Invalid SQLTriplet.")
