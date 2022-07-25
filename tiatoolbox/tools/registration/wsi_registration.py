@@ -20,7 +20,7 @@ def preprocess(fixed_img, moving_img):
 
     """
     if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
-        raise ValueError(f'{"The input images should be grayscale images."}')
+        raise ValueError("The input images should be grayscale images.")
 
     moving_entropy, fixed_entropy = filters.rank.entropy(
         moving_img, morphology.disk(3)
