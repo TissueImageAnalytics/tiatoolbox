@@ -1,7 +1,7 @@
 import urllib
 
-import PIL.Image as Image
 import numpy as np
+import PIL.Image as Image
 import pytest
 
 from tiatoolbox.tools.registration.prealignment import prealignment
@@ -9,13 +9,25 @@ from tiatoolbox.tools.registration.prealignment import prealignment
 
 def test_prealignment():
     """Test for prealignment of an image pair"""
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_1_level8_gray.png', 'sample.png')
+    urllib.request.urlretrieve(
+        "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_1_level8_gray.png",
+        "sample.png",
+    )
     fixed_img = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_2_level8_gray.png', 'sample.png')
+    urllib.request.urlretrieve(
+        "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_2_level8_gray.png",
+        "sample.png",
+    )
     moving_img = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_1_level8_mask.png', 'sample.png')
+    urllib.request.urlretrieve(
+        "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_1_level8_mask.png",
+        "sample.png",
+    )
     fixed_mask = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_2_level8_mask.png', 'sample.png')
+    urllib.request.urlretrieve(
+        "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_2_level8_mask.png",
+        "sample.png",
+    )
     moving_mask = np.asarray(Image.open("sample.png"))
 
     transform = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
@@ -23,13 +35,12 @@ def test_prealignment():
 
     no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
     no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
-    with pytest.raises(
-        ValueError, match=r".*The foreground is missing in the mask.*"
-    ):
+    with pytest.raises(ValueError, match=r".*The foreground is missing in the mask.*"):
         _ = prealignment(fixed_img, moving_img, no_fixed_mask, no_moving_mask)
 
     with pytest.raises(
-        ValueError, match=r".*Mismatch of shape between image and its corresponding mask.*"
+        ValueError,
+        match=r".*Mismatch of shape between image and its corresponding mask.*",
     ):
         _ = prealignment(fixed_img, moving_img, moving_mask, fixed_mask)
 
@@ -39,6 +50,7 @@ def test_prealignment():
         ValueError, match=r".*The input images should be grayscale images.*"
     ):
         _ = prealignment(fixed_img_3d, moving_img_3d, fixed_mask, moving_mask)
+
 
 def test_rotation_step_range():
     """Test if the value of rotation step is within the range"""
