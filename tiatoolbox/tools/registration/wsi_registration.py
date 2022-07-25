@@ -7,16 +7,16 @@ def preprocess(fixed_img, moving_img):
      and moving images
 
     Args:
-            fixed_img (:class:`numpy.ndarray`):
-                    A grayscale fixed image
-            moving_img (:class:`numpy.ndarray`):
-                    A grayscale moving image
+        fixed_img (:class:`numpy.ndarray`):
+            A grayscale fixed image
+        moving_img (:class:`numpy.ndarray`):
+            A grayscale moving image
 
     Returns:
-            :class:`numpy.ndarray`:
-                    A normalized grayscale fixed image
-            :class:`numpy.ndarray`:
-                    A normalized grayscale moving image
+        :class:`numpy.ndarray`:
+            A normalized grayscale fixed image
+        :class:`numpy.ndarray`:
+            A normalized grayscale moving image
 
     """
     if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
