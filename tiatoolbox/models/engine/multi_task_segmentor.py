@@ -22,23 +22,20 @@
 
 import shutil
 import uuid
-from collections import deque
-from typing import Callable, List, Union
+from typing import Callable, List
 
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
 import torch
-import tqdm
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
-    SemanticSegmentor,
     WSIStreamDataset,
 )
-from tiatoolbox.tools.patchextraction import PatchExtractor
 
 
 def _process_instance_predictions(
@@ -332,7 +329,7 @@ def _process_tile_predictions(
     return new_inst_dicts, remove_insts_in_origs, sem_maps, tile_bounds
 
 
-class MultiTaskSegmentor(SemanticSegmentor):
+class MultiTaskSegmentor(NucleusInstanceSegmentor):
     """An engine specifically designed to handle tiles or WSIs inference.
 
     Note, if `model` is supplied in the arguments, it will ignore the
@@ -434,250 +431,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 self.output_types = ["instance", "semantic"]
             elif "hovernet" in pretrained_model:
                 self.output_types = ["instance"]
-
-    @staticmethod
-    def _get_tile_info(
-        image_shape: Union[List[int], np.ndarray],
-        ioconfig: IOSegmentorConfig,
-    ):
-        """Generating tile information.
-
-        To avoid out of memory problem when processing WSI-scale in general,
-        the predictor will perform the inference and assemble on a large
-        image tiles (each may have size of 4000x4000 compared to patch
-        output of 256x256) first before stitching every tiles by the end
-        to complete the WSI output. For nuclei instance segmentation,
-        the stiching process will require removal of predictions within
-        some bounding areas. This function generates both the tile placement
-        as well as the flag to indicate how the removal should be done to
-        achieve the above goal.
-
-        Args:
-            image_shape (:class:`numpy.ndarray`, list(int)): The shape of WSI
-                to extract the tile from, assumed to be in [width, height].
-            ioconfig (:obj:IOSegmentorConfig): The input and output
-                configuration objects.
-        Returns:
-            grid_tiles, removal_flags: ndarray
-            vertical_strip_tiles, removal_flags: ndarray
-            horizontal_strip_tiles, removal_flags: ndarray
-            cross_section_tiles, removal_flags: ndarray
-
-        """
-        margin = np.array(ioconfig.margin)
-        tile_shape = np.array(ioconfig.tile_shape)
-        tile_shape = (
-            np.floor(tile_shape / ioconfig.patch_output_shape)
-            * ioconfig.patch_output_shape
-        ).astype(np.int32)
-        image_shape = np.array(image_shape)
-        (_, tile_outputs) = PatchExtractor.get_coordinates(
-            image_shape=image_shape,
-            patch_input_shape=tile_shape,
-            patch_output_shape=tile_shape,
-            stride_shape=tile_shape,
-        )
-
-        # * === Now generating the flags to indicate which side should
-        # * === be removed in postproc callback
-        boxes = tile_outputs
-
-        # This saves computation time if the image is smaller than the expected tile
-        if np.all(image_shape <= tile_shape):
-            flag = np.zeros([boxes.shape[0], 4], dtype=np.int32)
-            return [[boxes, flag]]
-
-        # * remove all sides for boxes
-        # unset for those lie within the selection
-        def unset_removal_flag(boxes, removal_flag):
-            """Unset removal flags for tiles intersecting image boundaries."""
-            sel_boxes = [
-                shapely_box(0, 0, w, 0),  # top edge
-                shapely_box(0, h, w, h),  # bottom edge
-                shapely_box(0, 0, 0, h),  # left
-                shapely_box(w, 0, w, h),  # right
-            ]
-            geometries = [shapely_box(*bounds) for bounds in boxes]
-            # An auxiliary dictionary to actually query the index within the source list
-            index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
-            spatial_indexer = STRtree(geometries)
-
-            for idx, sel_box in enumerate(sel_boxes):
-                sel_indices = [
-                    index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
-                ]
-                removal_flag[sel_indices, idx] = 0
-            return removal_flag
-
-        h, w = image_shape
-        boxes = tile_outputs
-        #  expand to full four corners
-        boxes_br = boxes[:, 2:]
-        boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
-        boxes_bl = np.dstack([boxes[:, 0], boxes[:, 3]])[0]
-
-        # * remove edges on all sides, excluding edges at on WSI boundary
-        flag = np.ones([boxes.shape[0], 4], dtype=np.int32)
-        flag = unset_removal_flag(boxes, flag)
-        info = deque([[boxes, flag]])
-
-        # * create vertical boxes at tile boundary and
-        # * flag top and bottom removal, excluding those
-        # * on the WSI boundary
-        # -------------------
-        # |    =|=   =|=    |
-        # |    =|=   =|=    |
-        # |   >=|=  >=|=    |
-        # -------------------
-        # |   >=|=  >=|=    |
-        # |    =|=   =|=    |
-        # |   >=|=  >=|=    |
-        # -------------------
-        # |   >=|=  >=|=    |
-        # |    =|=   =|=    |
-        # |    =|=   =|=    |
-        # -------------------
-        # only select boxes having right edges removed
-        sel_indices = np.nonzero(flag[..., 3])
-        _boxes = np.concatenate(
-            [
-                boxes_tr[sel_indices] - np.array([margin, 0])[None],
-                boxes_br[sel_indices] + np.array([margin, 0])[None],
-            ],
-            axis=-1,
-        )
-        _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
-        _flag[:, [0, 1]] = 1
-        _flag = unset_removal_flag(_boxes, _flag)
-        info.append([_boxes, _flag])
-
-        # * create horizontal boxes at tile boundary and
-        # * flag left and right removal, excluding those
-        # * on the WSI boundary
-        # -------------
-        # |   |   |   |
-        # |  v|v v|v  |
-        # |===|===|===|
-        # -------------
-        # |===|===|===|
-        # |   |   |   |
-        # |   |   |   |
-        # -------------
-        # only select boxes having bottom edges removed
-        sel_indices = np.nonzero(flag[..., 1])
-        # top bottom left right
-        _boxes = np.concatenate(
-            [
-                boxes_bl[sel_indices] - np.array([0, margin])[None],
-                boxes_br[sel_indices] + np.array([0, margin])[None],
-            ],
-            axis=-1,
-        )
-        _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
-        _flag[:, [2, 3]] = 1
-        _flag = unset_removal_flag(_boxes, _flag)
-        info.append([_boxes, _flag])
-
-        # * create boxes at tile cross-section and all sides
-        # ------------------------
-        # |     |     |     |    |
-        # |    v|     |     |    |
-        # |  > =|=   =|=   =|=   |
-        # -----=-=---=-=---=-=----
-        # |    =|=   =|=   =|=   |
-        # |     |     |     |    |
-        # |    =|=   =|=   =|=   |
-        # -----=-=---=-=---=-=----
-        # |    =|=   =|=   =|=   |
-        # |     |     |     |    |
-        # |     |     |     |    |
-        # ------------------------
-
-        # only select boxes having both right and bottom edges removed
-        sel_indices = np.nonzero(np.prod(flag[:, [1, 3]], axis=-1))
-        _boxes = np.concatenate(
-            [
-                boxes_br[sel_indices] - np.array([2 * margin, 2 * margin])[None],
-                boxes_br[sel_indices] + np.array([2 * margin, 2 * margin])[None],
-            ],
-            axis=-1,
-        )
-        flag = np.full([_boxes.shape[0], 4], 1, dtype=np.int32)
-        info.append([_boxes, flag])
-
-        return info
-
-    def _to_shared_space(self, wsi_idx, patch_inputs, patch_outputs):
-        """Helper functions to transfer variable to shared space.
-
-        We modify the shared space so that we can update worker info without
-        needing to re-create the worker. There should be no race-condition
-        because only by looping `self._loader` in main thread will trigger querying
-        new data from each worker, and this portion should still be in sequential
-        execution order in the main thread.
-
-        Args:
-            wsi_idx (int): The index of the WSI to be processed. This is used
-                to retrieve the file path.
-            patch_inputs (list): A list of corrdinates in
-                [start_x, start_y, end_x, end_y] format indicating the read location
-                of the patch in the WSI image. The coordinates are in the highest
-                resolution defined in `self.ioconfig`.
-            patch_outputs (list): A list of corrdinates in
-                [start_x, start_y, end_x, end_y] format indicating the write location
-                of the patch in the WSI image. The coordinates are in the highest
-                resolution defined in `self.ioconfig`.
-
-        """
-        patch_inputs = torch.from_numpy(patch_inputs).share_memory_()
-        patch_outputs = torch.from_numpy(patch_outputs).share_memory_()
-        self._mp_shared_space.patch_inputs = patch_inputs
-        self._mp_shared_space.patch_outputs = patch_outputs
-        self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
-
-    def _infer_once(self):
-        """Running the inference only once for the currently active dataloder."""
-        num_steps = len(self._loader)
-
-        pbar_desc = "Process Batch: "
-        pbar = tqdm.tqdm(
-            desc=pbar_desc,
-            leave=True,
-            total=int(num_steps),
-            ncols=80,
-            ascii=True,
-            position=0,
-        )
-
-        cum_output = []
-        for _, batch_data in enumerate(self._loader):
-            sample_datas, sample_infos = batch_data
-            batch_size = sample_infos.shape[0]
-            # ! depending on the protocol of the output within infer_batch
-            # ! this may change, how to enforce/document/expose this in a
-            # ! sensible way?
-
-            # assume to return a list of L output,
-            # each of shape N x etc. (N=batch size)
-            sample_outputs = self.model.infer_batch(
-                self._model,
-                sample_datas,
-                self._on_gpu,
-            )
-            # repackage so that its a N list, each contains
-            # L x etc. output
-            sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
-            sample_outputs = list(zip(*sample_outputs))
-
-            # tensor to numpy, costly?
-            sample_infos = sample_infos.numpy()
-            sample_infos = np.split(sample_infos, batch_size, axis=0)
-
-            sample_outputs = list(zip(sample_infos, sample_outputs))
-            cum_output.extend(sample_outputs)
-            pbar.update()
-        pbar.close()
-        return cum_output
 
     def _predict_one_wsi(
         self,
