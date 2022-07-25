@@ -9,13 +9,14 @@ from tiatoolbox.tools.registration.prealignment import prealignment
 
 def test_prealignment():
     """Test for prealignment of an image pair"""
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_1_level8_gray.png', 'sample.png')
+    main_url = 'https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/'
+    urllib.request.urlretrieve(main_url + 'HE_1_level8_gray.png', 'sample.png')
     fixed_img = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_2_level8_gray.png', 'sample.png')
+    urllib.request.urlretrieve(main_url + 'HE_2_level8_gray.png', 'sample.png')
     moving_img = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_1_level8_mask.png', 'sample.png')
+    urllib.request.urlretrieve(main_url + 'HE_1_level8_mask.png', 'sample.png')
     fixed_mask = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve('https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/HE_2_level8_mask.png', 'sample.png')
+    urllib.request.urlretrieve(main_url + 'HE_2_level8_mask.png', 'sample.png')
     moving_mask = np.asarray(Image.open("sample.png"))
 
     transform = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
