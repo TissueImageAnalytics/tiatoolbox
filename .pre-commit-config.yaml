@@ -1,5 +1,5 @@
 default_language_version:
-    python: python3.9 # Remove once flake8-sql is compatible with python 3.9+
+    python: python3.7 # Remove once flake8-sql is compatible with python 3.9+
     # https://github.com/pgjones/flake8-sql/pull/21
 
 repos:
