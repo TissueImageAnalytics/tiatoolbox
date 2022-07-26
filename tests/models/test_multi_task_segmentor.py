@@ -164,3 +164,4 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     ]
     multi_segmentor._merge_post_process_results()
     assert len(multi_segmentor._wsi_inst_info[0]) == 0
+    _rm_dir(tmp_path)
