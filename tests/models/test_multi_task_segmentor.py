@@ -1,5 +1,7 @@
 """Unit test package for HoVerNet+."""
 
+import copy
+
 # ! The garbage collector
 import gc
 import multiprocessing
@@ -10,7 +12,7 @@ import joblib
 import numpy as np
 import pytest
 
-from tiatoolbox.models import MultiTaskSegmentor
+from tiatoolbox.models import MultiTaskSegmentor, SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 
 ON_GPU = toolbox_env.has_gpu()
@@ -121,3 +123,45 @@ def test_functionality_hovernet_travis(remote_sample, tmp_path):
 
     assert len(inst_dict) > 0, "Must have some nuclei."
     _rm_dir(tmp_path)
+
+
+def test_functionality_process_instance_predictions(remote_sample, tmp_path):
+    root_save_dir = pathlib.Path(tmp_path)
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+
+    save_dir = f"{root_save_dir}/semantic/"
+    _rm_dir(save_dir)
+
+    semantic_segmentor = SemanticSegmentor(
+        pretrained_model="hovernetplus-oed",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+    )
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="hovernetplus-oed",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+    )
+
+    output = semantic_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=True,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    raw_maps = [np.load(f"{output[0][1]}.raw.{head_idx}.npy") for head_idx in range(4)]
+    _, inst_dict_b, layer_map, _ = semantic_segmentor.model.postproc(raw_maps)
+
+    dummy_reference = [{i: {"box": np.array([0, 0, 32, 32])} for i in range(1000)}]
+
+    dummy_tiles = [np.zeros((512, 512))]
+    dummy_bounds = np.array([0, 0, 512, 512])
+
+    multi_segmentor.wsi_layers = [np.zeros_like(raw_maps[0][..., 0])]
+    multi_segmentor._wsi_inst_info = copy.deepcopy(dummy_reference)
+    multi_segmentor._futures = [
+        [dummy_reference, [dummy_reference[0].keys()], dummy_tiles, dummy_bounds]
+    ]
+    multi_segmentor._merge_post_process_results()
+    assert len(multi_segmentor._wsi_inst_info[0]) == 0

@@ -259,6 +259,8 @@ def _process_tile_predictions(
         postproc (callable): Function to post-process the raw assembled tile.
         merge_predictions (callable): Function to merge the `tile_output` into
             raw tile prediction.
+        model_name (string): Name of the existing models support by tiatoolbox
+          for processing the data. Refer to [URL] for details.
 
     Returns:
         new_inst_dict (dict): A dictionary contain new instances to be accumulated.
@@ -267,9 +269,13 @@ def _process_tile_predictions(
         remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
             to be removed to prevent overlapping predictions. These instances
             are those get cutoff at the boundary due to the tiling process.
+        sem_maps (list): List of semantic segmentation maps.
+        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
+            (top_left_x, top_left_y, bottom_x, bottom_y).
 
     """
     locations, predictions = list(zip(*tile_output))
+
     # convert from WSI space to tile space
     tile_tl = tile_bounds[:2]
     tile_br = tile_bounds[2:]
@@ -277,6 +283,7 @@ def _process_tile_predictions(
     locations_in_tile = [loc - tile_tl[None] for loc in locations]
     locations_in_tile = [loc.flatten() for loc in locations_in_tile]
     locations_in_tile = np.array(locations_in_tile)
+
     tile_shape = tile_br - tile_tl  # in width height
 
     # as the placement output is calculated wrt highest possible resolution
