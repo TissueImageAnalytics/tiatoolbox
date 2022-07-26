@@ -146,7 +146,7 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=True,
+        on_gpu=ON_GPU,
         crash_on_exception=True,
         save_dir=save_dir,
     )
