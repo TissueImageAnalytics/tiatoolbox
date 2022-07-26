@@ -20,6 +20,175 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 
+def _process_instance_predictions(
+    inst_dict,
+    ioconfig,
+    tile_shape,
+    tile_flag,
+    tile_mode,
+    tile_tl,
+    ref_inst_dict,
+):
+    """Function to merge new tile prediction with existing prediction.
+
+    Args:
+        inst_dict (dict): Dictionary containing instance information.
+        ioconfig (:class:`IOSegmentorConfig`): Object defines information
+            about input and output placement of patches.
+        tile_shape (list): A list of the tile shape.
+        tile_flag (list): A list of flag to indicate if instances within
+            an area extended from each side (by `ioconfig.margin`) of
+            the tile should be replaced by those within the same spatial
+            region in the accumulated output this run. The format is
+            [top, bottom, left, right], 1 indicates removal while 0 is not.
+            For example, [1, 1, 0, 0] denotes replacing top and bottom instances
+            within `ref_inst_dict` with new ones after this processing.
+        tile_mode (int): A flag to indicate the type of this tile. There
+            are 4 flags:
+            - 0: A tile from tile grid without any overlapping, it is not
+                an overlapping tile from tile generation. The predicted
+                instances are immediately added to accumulated output.
+            - 1: Vertical tile strip that stands between two normal tiles
+                (flag 0). It has the the same height as normal tile but
+                less width (hence vertical strip).
+            - 2: Horizontal tile strip that stands between two normal tiles
+                (flag 0). It has the the same width as normal tile but
+                less height (hence horizontal strip).
+            - 3: tile strip stands at the cross section of four normal tiles
+                (flag 0).
+        tile_tl (tuple): Top left coordinates of the current tile.
+        ref_inst_dict (dict): Dictionary contains accumulated output. The
+            expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+
+    Returns:
+        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
+            The expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
+            to be removed to prevent overlapping predictions. These instances
+            are those get cutoff at the boundary due to the tiling process.
+
+    """
+    # should be rare, no nuclei detected in input images
+    if len(inst_dict) == 0:
+        return {}, []
+
+    # !
+    m = ioconfig.margin
+    w, h = tile_shape
+    inst_boxes = [v["box"] for v in inst_dict.values()]
+    inst_boxes = np.array(inst_boxes)
+
+    geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+    # An auxiliary dictionary to actually query the index within the source list
+    index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
+    tile_rtree = STRtree(geometries)
+    # !
+
+    # create margin bounding box, ordering should match with
+    # created tile info flag (top, bottom, left, right)
+    boundary_lines = [
+        shapely_box(0, 0, w, 1),  # noqa top egde
+        shapely_box(0, h - 1, w, h),  # noqa bottom edge
+        shapely_box(0, 0, 1, h),  # noqa left
+        shapely_box(w - 1, 0, w, h),  # noqa right
+    ]
+    margin_boxes = [
+        shapely_box(0, 0, w, m),  # noqa top egde
+        shapely_box(0, h - m, w, h),  # noqa bottom edge
+        shapely_box(0, 0, m, h),  # noqa left
+        shapely_box(w - m, 0, w, h),  # noqa right
+    ]
+    # ! this is wrt to WSI coord space, not tile
+    margin_lines = [
+        [[m, m], [w - m, m]],  # noqa top egde
+        [[m, h - m], [w - m, h - m]],  # noqa bottom edge
+        [[m, m], [m, h - m]],  # noqa left
+        [[w - m, m], [w - m, h - m]],  # noqa right
+    ]
+    margin_lines = np.array(margin_lines) + tile_tl[None, None]
+    margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
+
+    # the ids within this match with those within `inst_map`, not UUID
+    sel_indices = []
+    if tile_mode in [0, 3]:
+        # for `full grid` tiles `cross section` tiles
+        # -- extend from the boundary by the margin size, remove
+        #    nuclei whose entire contours lie within the margin area
+        sel_boxes = [
+            box
+            for idx, box in enumerate(margin_boxes)
+            if tile_flag[idx] or tile_mode == 3
+        ]
+
+        sel_indices = [
+            index_by_id[id(geo)]
+            for bounds in sel_boxes
+            for geo in tile_rtree.query(bounds)
+            if bounds.contains(geo)
+        ]
+    elif tile_mode in [1, 2]:
+        # for `horizontal/vertical strip` tiles
+        # -- extend from the marked edges (top/bot or left/right) by
+        #    the margin size, remove all nuclei lie within the margin
+        #    area (including on the margin line)
+        # -- remove all nuclei on the boundary also
+
+        sel_boxes = [
+            margin_boxes[idx] if flag else boundary_lines[idx]
+            for idx, flag in enumerate(tile_flag)
+        ]
+
+        sel_indices = [
+            index_by_id[id(geo)]
+            for bounds in sel_boxes
+            for geo in tile_rtree.query(bounds)
+        ]
+    else:
+        raise ValueError(f"Unknown tile mode {tile_mode}.")
+
+    def retrieve_sel_uids(sel_indices, inst_dict):
+        """Helper to retrieved selected instance uids."""
+        if len(sel_indices) > 0:
+            # not sure how costly this is in large dict
+            inst_uids = list(inst_dict.keys())
+        return [inst_uids[idx] for idx in sel_indices]
+
+    remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
+
+    # external removal only for tile at cross sections
+    # this one should contain UUID with the reference database
+    remove_insts_in_orig = []
+    if tile_mode == 3:
+        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
+        inst_boxes = np.array(inst_boxes)
+
+        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        # An auxiliary dictionary to actually query the index within the source list
+        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
+        ref_inst_rtree = STRtree(geometries)
+        sel_indices = [
+            index_by_id[id(geo)]
+            for bounds in margin_lines
+            for geo in ref_inst_rtree.query(bounds)
+        ]
+
+        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
+
+    # move inst position from tile space back to WSI space
+    # an also generate universal uid as replacement for storage
+    new_inst_dict = {}
+    for inst_uid, inst_info in inst_dict.items():
+        if inst_uid not in remove_insts_in_tile:
+            inst_info["box"] += np.concatenate([tile_tl] * 2)
+            inst_info["centroid"] += tile_tl
+            inst_info["contour"] += tile_tl
+            inst_uuid = uuid.uuid4().hex
+            new_inst_dict[inst_uuid] = inst_info
+    return new_inst_dict, remove_insts_in_orig
+
+
 # Python is yet to be able to natively pickle Object method/static
 # method. Only top-level function is passable to multi-processing as
 # caller. May need 3rd party libraries to use method/static method
@@ -126,123 +295,15 @@ def _process_tile_predictions(
         head_raws.append(head_raw)
     _, inst_dict = postproc(head_raws)
 
-    # should be rare, no nuclei detected in input images
-    if len(inst_dict) == 0:
-        return {}, []
-
-    # !
-    m = ioconfig.margin
-    w, h = tile_shape
-    inst_boxes = [v["box"] for v in inst_dict.values()]
-    inst_boxes = np.array(inst_boxes)
-
-    geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-    # An auxiliary dictionary to actually query the index within the source list
-    index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
-    tile_rtree = STRtree(geometries)
-    # !
-
-    # create margin bounding box, ordering should match with created
-    # tile info flag (top, bottom, left, right)
-    boundary_lines = [
-        shapely_box(0, 0, w, 1),  # noqa top egde
-        shapely_box(0, h - 1, w, h),  # noqa bottom edge
-        shapely_box(0, 0, 1, h),  # noqa left
-        shapely_box(w - 1, 0, w, h),  # noqa right
-    ]
-    margin_boxes = [
-        shapely_box(0, 0, w, m),  # noqa top egde
-        shapely_box(0, h - m, w, h),  # noqa bottom edge
-        shapely_box(0, 0, m, h),  # noqa left
-        shapely_box(w - m, 0, w, h),  # noqa right
-    ]
-    # ! this is wrt to WSI coord space, not tile
-    margin_lines = [
-        [[m, m], [w - m, m]],  # noqa top egde
-        [[m, h - m], [w - m, h - m]],  # noqa bottom edge
-        [[m, m], [m, h - m]],  # noqa left
-        [[w - m, m], [w - m, h - m]],  # noqa right
-    ]
-    margin_lines = np.array(margin_lines) + tile_tl[None, None]
-    margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
-
-    # the ids within this match with those within `inst_map`, not UUID
-    sel_indices = []
-    if tile_mode in [0, 3]:
-        # for `full grid` tiles `cross section` tiles
-        # -- extend from the boundary by the margin size, remove nuclei
-        #    whose entire contours lie within the margin area
-        sel_boxes = [
-            box
-            for idx, box in enumerate(margin_boxes)
-            if tile_flag[idx] or tile_mode == 3
-        ]
-
-        sel_indices = [
-            index_by_id[id(geo)]
-            for bounds in sel_boxes
-            for geo in tile_rtree.query(bounds)
-            if bounds.contains(geo)
-        ]
-    elif tile_mode in [1, 2]:
-        # for `horizontal/vertical strip` tiles
-        # -- extend from the marked edges (top/bot or left/right) by the
-        #    margin size, remove all nuclei lie within the margin area
-        #    (including on the margin line)
-        # -- remove all nuclei on the boundary also
-
-        sel_boxes = [
-            margin_boxes[idx] if flag else boundary_lines[idx]
-            for idx, flag in enumerate(tile_flag)
-        ]
-
-        sel_indices = [
-            index_by_id[id(geo)]
-            for bounds in sel_boxes
-            for geo in tile_rtree.query(bounds)
-        ]
-    else:
-        raise ValueError(f"Unknown tile mode {tile_mode}.")
-
-    def retrieve_sel_uids(sel_indices, inst_dict):
-        """Helper to retrieved selected instance uids."""
-        if len(sel_indices) > 0:
-            # not sure how costly this is in large dict
-            inst_uids = list(inst_dict.keys())
-            return [inst_uids[idx] for idx in sel_indices]
-        return []
-
-    remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
-
-    # external removal only for tile at cross sections this one should
-    # contain UUID with the reference database
-    remove_insts_in_orig = []
-    if tile_mode == 3:
-        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
-        inst_boxes = np.array(inst_boxes)
-
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-        # An auxiliary dictionary to actually query the index within the source list
-        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
-        ref_inst_rtree = STRtree(geometries)
-        sel_indices = [
-            index_by_id[id(geo)]
-            for bounds in margin_lines
-            for geo in ref_inst_rtree.query(bounds)
-        ]
-
-        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
-
-    # move inst position from tile space back to WSI space and also
-    # generate universal uid as replacement for storage
-    new_inst_dict = {}
-    for inst_uid, inst_info in inst_dict.items():
-        if inst_uid not in remove_insts_in_tile:
-            inst_info["box"] += np.concatenate([tile_tl] * 2)
-            inst_info["centroid"] += tile_tl
-            inst_info["contour"] += tile_tl
-            inst_uuid = uuid.uuid4().hex
-            new_inst_dict[inst_uuid] = inst_info
+    new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
+        inst_dict,
+        ioconfig,
+        tile_shape,
+        tile_flag,
+        tile_mode,
+        tile_tl,
+        ref_inst_dict,
+    )
 
     return new_inst_dict, remove_insts_in_orig
 
