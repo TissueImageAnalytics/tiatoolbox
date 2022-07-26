@@ -431,7 +431,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 removal_flag[sel_indices, idx] = 0
             return removal_flag
 
-        h, w = image_shape
+        w, h = image_shape
         boxes = tile_outputs
         #  expand to full four corners
         boxes_br = boxes[:, 2:]
