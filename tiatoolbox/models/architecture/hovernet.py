@@ -572,7 +572,7 @@ class HoVerNet(ModelABC):
 
         marker = blb - overall
         marker[marker < 0] = 0
-        marker = ndimage.morphology.binary_fill_holes(marker).astype("uint8")
+        marker = ndimage.binary_fill_holes(marker).astype("uint8")
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
         marker = ndimage.label(marker)[0]
