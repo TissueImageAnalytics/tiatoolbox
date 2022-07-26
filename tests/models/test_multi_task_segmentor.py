@@ -151,7 +151,6 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
         save_dir=save_dir,
     )
     raw_maps = [np.load(f"{output[0][1]}.raw.{head_idx}.npy") for head_idx in range(4)]
-    _, inst_dict_b, layer_map, _ = semantic_segmentor.model.postproc(raw_maps)
 
     dummy_reference = [{i: {"box": np.array([0, 0, 32, 32])} for i in range(1000)}]
 
