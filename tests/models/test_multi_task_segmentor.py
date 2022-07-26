@@ -12,8 +12,9 @@ import joblib
 import numpy as np
 import pytest
 
-from tiatoolbox.models import MultiTaskSegmentor, SemanticSegmentor
+from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor, SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.misc import imwrite
 
 ON_GPU = toolbox_env.has_gpu()
 # The batch size value here is based on two TitanXP, each with 12GB
@@ -125,6 +126,54 @@ def test_functionality_hovernet_travis(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
+def test_masked_segmentor(remote_sample, tmp_path):
+    """Test segmentor when image is masked."""
+    root_save_dir = pathlib.Path(tmp_path)
+    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+
+    save_dir = f"{root_save_dir}/instance/"
+
+    # resolution for travis testing, not the correct ones
+    resolution = 4.0
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        margin=128,
+        tile_shape=[512, 512],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
+    )
+    multi_segmentor = MultiTaskSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+        pretrained_model="hovernet_fast-pannuke",
+    )
+
+    output = multi_segmentor.predict(
+        [sample_wsi_svs],
+        masks=[sample_wsi_msk],
+        mode="wsi",
+        ioconfig=ioconfig,
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+
+    inst_dict = joblib.load(f"{output[0][1]}.0.dat")
+
+    assert len(inst_dict) > 0, "Must have some nuclei."
+    _rm_dir(tmp_path)
+
+
 def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
@@ -135,12 +184,12 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=0,
     )
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=2,
+        num_postproc_workers=0,
     )
 
     output = semantic_segmentor.predict(

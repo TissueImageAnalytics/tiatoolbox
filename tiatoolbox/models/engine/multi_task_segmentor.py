@@ -214,7 +214,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
           if is not provided.
         output_types (list): Ordered list describing what sort of segmentation the
             output from the model postproc gives for a two-task model this may be:
-            ['instance', semantic']
+            ['instance', 'semantic']
 
     Examples:
         >>> # Sample output of a network
@@ -255,15 +255,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             auto_generate_mask=auto_generate_mask,
             dataset_class=dataset_class,
         )
-        # default is None in base class and is un-settable
-        # hence we redefine the namespace here
-        self.num_postproc_workers = (
-            num_postproc_workers if num_postproc_workers > 0 else None
-        )
 
-        # adding more runtime placeholder
-        self._wsi_inst_info = []
-        self.wsi_layers = []
         self.output_types = output_types
 
         if pretrained_model is not None:
@@ -271,6 +263,15 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 self.output_types = ["instance", "semantic"]
             elif "hovernet" in pretrained_model:
                 self.output_types = ["instance"]
+
+        # adding more runtime placeholder
+        if self.output_types is not None:
+            if "semantic" in self.output_types:
+                self.wsi_layers = []
+            if "instance" in self.output_types:
+                self._wsi_inst_info = []
+        else:
+            assert "Must be used for instance or semantic segmentation."
 
     def _predict_one_wsi(
         self,
@@ -328,10 +329,6 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         # !     will be deprecated upon finalization of SQL annotation store
         # !
         indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
-        indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
-
-        for _ in indices_inst:
-            self._wsi_inst_info.append({})
 
         for s_id in range(len(indices_sem)):
             self.wsi_layers.append(
@@ -343,6 +340,11 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 )
             )
             self.wsi_layers[s_id][:] = 0
+
+        indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
+
+        for _ in indices_inst:
+            self._wsi_inst_info.append({})
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
             for tile_idx, tile_bounds in enumerate(set_bounds):
@@ -373,12 +375,11 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         # Maybe store semantic annotations as contours in .dat file...
         for i_id, inst_idx in enumerate(indices_inst):
             joblib.dump(self._wsi_inst_info[i_id], f"{save_path}.{inst_idx}.dat")
+        self._wsi_inst_info = []  # clean up
 
         for s_id, sem_idx in enumerate(indices_sem):
             shutil.copyfile(f"{cache_dir}/{s_id}.npy", f"{save_path}.{sem_idx}.npy")
             # may need to chain it with parents
-
-        self._wsi_inst_info = []  # clean up
 
     def _process_tile_predictions(
         self, ioconfig, tile_bounds, tile_flag, tile_mode, tile_output
