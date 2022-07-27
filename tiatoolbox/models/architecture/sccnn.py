@@ -12,6 +12,7 @@ from collections import OrderedDict
 import numpy as np
 import torch
 import torch.nn as nn
+from skimage.feature import peak_local_max
 
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.utils import misc
@@ -211,6 +212,36 @@ class SCCNN(ModelABC):
         drop2 = self.layer["dropout2"](l5)
         s1_sigmoid0, s1_sigmoid1, s1_sigmoid2 = sc1_layer(self.layer["sc"], drop2)
         return sc2layer(self, s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
+
+    @staticmethod
+    def postproc(
+        prediction_map: np.ndarray, min_distance: int = 6, threshold_abs: float = 0.10
+    ):
+        """Post-processing script for MicroNet.
+
+        Args:
+            prediction_map (ndarray):
+                Input image of type numpy array.
+            min_distance (int):
+                The minimal allowed distance separating peaks.
+                To find the maximum number of peaks, use `min_distance=1`, default=6.
+            threshold_abs (float):
+                Minimum intensity of peaks, default=0.10.
+
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Pixel-wise nuclear instance segmentation
+                prediction.
+
+        """
+        coordinates = peak_local_max(
+            np.squeeze(prediction_map, axis=2),
+            min_distance=min_distance,
+            threshold_abs=threshold_abs,
+            exclude_border=False,
+        )
+        return np.fliplr(coordinates)
 
     @staticmethod
     def preproc(image: np.ndarray):
