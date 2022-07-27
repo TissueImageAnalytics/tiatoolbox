@@ -214,3 +214,21 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     multi_segmentor._merge_post_process_results()
     assert len(multi_segmentor._wsi_inst_info[0]) == 0
     _rm_dir(tmp_path)
+
+
+def test_functionality_semantic_travis(remote_sample, tmp_path):
+    """Functionality test for multi task segmentor."""
+    root_save_dir = pathlib.Path(tmp_path)
+
+    save_dir = f"{root_save_dir}/multi/"
+    _rm_dir(save_dir)
+    with pytest.raises(
+        AssertionError,
+        match=r"Output type must be specificed for instance or semantic segmentation.",
+    ):
+        MultiTaskSegmentor(
+            pretrained_model="fcn_resnet50_unet-bcss",
+            batch_size=BATCH_SIZE,
+            num_postproc_workers=NUM_POSTPROC_WORKERS,
+        )
+    _rm_dir(tmp_path)

@@ -265,13 +265,13 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 self.output_types = ["instance"]
 
         # adding more runtime placeholder
-        if self.output_types is not None:
-            if "semantic" in self.output_types:
-                self.wsi_layers = []
-            if "instance" in self.output_types:
-                self._wsi_inst_info = []
-        else:
-            assert "Must be used for instance or semantic segmentation."
+        assert (
+            self.output_types is not None
+        ), "Output type must be specificed for instance or semantic segmentation."
+        if "semantic" in self.output_types:
+            self.wsi_layers = []
+        if "instance" in self.output_types:
+            self._wsi_inst_info = []
 
     def _predict_one_wsi(
         self,
