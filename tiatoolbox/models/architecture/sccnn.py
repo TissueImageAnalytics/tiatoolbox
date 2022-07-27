@@ -33,7 +33,7 @@ def sc2_mapping(out_height, out_width):
 
     """
     x, y = torch.meshgrid(torch.range(0, out_height - 1), torch.range(0, out_width - 1))
-    
+
     # Make 3D vector and convert type
     x = torch.unsqueeze(x, dim=0).type(torch.float32)
     y = torch.unsqueeze(y, dim=0).type(torch.float32)
