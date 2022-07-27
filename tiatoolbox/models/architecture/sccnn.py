@@ -236,7 +236,7 @@ class SCCNN(ModelABC):
 
         """
         coordinates = peak_local_max(
-            np.squeeze(prediction_map, axis=2),
+            np.squeeze(prediction_map[0], axis=2),
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             exclude_border=False,
@@ -258,7 +258,7 @@ class SCCNN(ModelABC):
                 Pre-processed numpy array.
 
         """
-        return torch.from_numpy(image / 255.0)
+        return image / 255.0
 
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
