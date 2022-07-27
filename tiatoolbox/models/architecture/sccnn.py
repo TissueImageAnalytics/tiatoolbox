@@ -41,9 +41,55 @@ def sc2_mapping(out_height, out_width):
 
 
 class SCCNN(ModelABC):
-    def __init__(self, in_ch=4, out_height=13, out_width=13, radius=12):
+    """Initialise SCCNN [1].
+
+    The following models have been included in tiatoolbox:
+    1. `sccnn-crchisto`:
+        This is trained on `CRCHisto dataset
+        <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe/>`_ The
+        model is retrained in torch as the original model was trained in Matlab. This
+        model also relies on RGB image as input. The original model uses HRGB as input,
+        where 'H' represents hematoxylin.
+
+    The tiatoolbox model should produce the following results on the CRC dataset using
+    12 pixels as radius for true detection:
+
+    .. list-table:: MicroNet performance
+       :widths: 15 15 15 15 15
+       :header-rows: 1
+
+       * - Model name
+         - Data set
+         - Precision
+         - Recall
+         - F1Score
+       * - sccnn-crchisto
+         - CRCHisto
+         - 0.74
+         - 0.88
+         - 0.80
+
+    Args:
+        num_input_channels (int):
+            Number of channels in input. default=3.
+        out_height (int):
+            Output height. default=13.
+        out_width (int):
+            Output width. default=13.
+        radius (int):
+            Radius for nucleus detection, default = 12.
+
+    References:
+        [1] Sirinukunwattana, Korsuk, et al.
+        "Locality sensitive deep learning for detection and classification
+        of nuclei in routine colon cancer histology images."
+        IEEE transactions on medical imaging 35.5 (2016): 1196-1206.
+
+    """
+
+    def __init__(self, num_input_channels=3, out_height=13, out_width=13, radius=12):
         super().__init__()
-        self.in_ch = in_ch
+        self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
         self.x, self.y = sc2_mapping(out_height=out_height, out_width=out_width)
@@ -81,7 +127,7 @@ class SCCNN(ModelABC):
             return nn.ModuleDict(module_dict)
 
         module_dict = OrderedDict()
-        module_dict["l1"] = conv_act_branch(in_ch, 30, 2)
+        module_dict["l1"] = conv_act_branch(num_input_channels, 30, 2)
         module_dict["pool1"] = nn.MaxPool2d(2, padding=0)
         module_dict["l2"] = conv_act_branch(30, 60, 2)
         module_dict["pool2"] = nn.MaxPool2d(2, padding=0)
@@ -94,7 +140,22 @@ class SCCNN(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
-    def forward(self, inputs):
+    def forward(self, input_tensor):
+        """Logic for using layers defined in init.
+
+        This method defines how layers are used in forward operation.
+
+        Args:
+            input_tensor (torch.Tensor):
+                Input images, the tensor is in the shape of NCHW.
+
+        Returns:
+            torch.Tensor:
+                Output map for cell detection. Peak detection should be applied
+                to this output for cell detection.
+
+        """
+
         def conv_act_branch(layer, in_tensor):
             return layer["conv1"](in_tensor)
 
@@ -137,7 +198,7 @@ class SCCNN(ModelABC):
             sc2 = sc1_2 / denominator
             return sc2 * out_map_threshold
 
-        l1 = conv_act_branch(self.layer["l1"], in_tensor=inputs)
+        l1 = conv_act_branch(self.layer["l1"], in_tensor=input_tensor)
         p1 = self.layer["pool1"](l1)
         l2 = conv_act_branch(self.layer["l2"], in_tensor=p1)
         p2 = self.layer["pool1"](l2)
