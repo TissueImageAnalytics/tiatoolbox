@@ -9,6 +9,7 @@ IEEE transactions on medical imaging 35.5 (2016): 1196-1206.
 
 from collections import OrderedDict
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -140,7 +141,7 @@ class SCCNN(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
-    def forward(self, input_tensor):
+    def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -209,3 +210,20 @@ class SCCNN(ModelABC):
         drop2 = self.layer["dropout2"](l5)
         s1_sigmoid0, s1_sigmoid1, s1_sigmoid2 = sc1_layer(self.layer["sc"], drop2)
         return sc2layer(self, s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
+
+    @staticmethod
+    def preproc(image: np.ndarray):
+        """Preprocessing function for MicroNet.
+
+        Performs per image standardization.
+
+        Args:
+            image (:class:`numpy.ndarray`):
+                Input image of type numpy array.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Pre-processed numpy array.
+
+        """
+        return torch.from_numpy(image / 255.0)
