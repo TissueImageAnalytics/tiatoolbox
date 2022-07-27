@@ -33,8 +33,10 @@ def _rm_dir(path):
 
 
 def semantic_postproc_func(raw_output):
-    """Function to post process semantic segmentations to form one
-    map as an output."""
+    """
+    Function to post process semantic segmentations to form one
+    map as an output.
+    """
     return np.argmax(raw_output, axis=-1)
 
 
@@ -229,7 +231,7 @@ def test_functionality_semantic_travis(remote_sample, tmp_path):
     save_dir = f"{root_save_dir}/multi/"
     _rm_dir(save_dir)
     with pytest.raises(
-        AssertionError,
+        ValueError,
         match=r"Output type must be specificed for instance or semantic segmentation.",
     ):
         MultiTaskSegmentor(
