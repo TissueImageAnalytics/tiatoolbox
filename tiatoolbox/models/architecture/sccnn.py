@@ -44,9 +44,10 @@ def sc2_mapping(out_height, out_width):
 
 
 class SCCNN(ModelABC):
-    """Initialise SCCNN [1].
+    """Initialize SCCNN [1].
 
     The following models have been included in tiatoolbox:
+
     1. `sccnn-crchisto`:
         This is trained on `CRCHisto dataset
         <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe/>`_ The
