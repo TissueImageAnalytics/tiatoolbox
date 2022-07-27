@@ -14,6 +14,7 @@ import pytest
 
 from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor, SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 
 ON_GPU = toolbox_env.has_gpu()
@@ -41,7 +42,7 @@ def semantic_postproc_func(raw_output):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
+    toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_functionality_local(remote_sample, tmp_path):
@@ -49,13 +50,14 @@ def test_functionality_local(remote_sample, tmp_path):
     gc.collect()
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
-
     save_dir = f"{root_save_dir}/multitask/"
     _rm_dir(save_dir)
+
+    # * generate full output w/o parallel post processing worker first
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=NUM_POSTPROC_WORKERS,
+        num_postproc_workers=0,
     )
     output = multi_segmentor.predict(
         [mini_wsi_svs],
@@ -65,11 +67,34 @@ def test_functionality_local(remote_sample, tmp_path):
         save_dir=save_dir,
     )
 
-    inst_dict = joblib.load(f"{output[0][1]}.0.dat")
-    layer_map = np.load(f"{output[0][1]}.1.npy")
+    inst_dict_a = joblib.load(f"{output[0][1]}.0.dat")
 
-    assert len(inst_dict) > 0, "Must have some nuclei"
-    assert layer_map is not None, "Must have some layers."
+    # * then test run when using workers, will then compare results
+    # * to ensure the predictions are the same
+    _rm_dir(save_dir)
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="hovernetplus-oed",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=NUM_POSTPROC_WORKERS,
+    )
+    assert multi_segmentor.num_postproc_workers == NUM_POSTPROC_WORKERS
+    output = multi_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+
+    inst_dict_b = joblib.load(f"{output[0][1]}.0.dat")
+    layer_map_b = np.load(f"{output[0][1]}.1.npy")
+    assert len(inst_dict_b) > 0, "Must have some nuclei"
+    assert layer_map_b is not None, "Must have some layers."
+
+    inst_coords_a = np.array([v["centroid"] for v in inst_dict_a.values()])
+    inst_coords_b = np.array([v["centroid"] for v in inst_dict_b.values()])
+    score = f1_detection(inst_coords_b, inst_coords_a, radius=1.0)
+    assert score > 0.95, "Heavy loss of precision!"
     _rm_dir(tmp_path)
 
 
