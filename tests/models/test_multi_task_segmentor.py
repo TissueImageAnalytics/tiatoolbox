@@ -32,6 +32,12 @@ def _rm_dir(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
+def semantic_postproc_func(raw_output):
+    """Function to post process semantic segmentations to form one
+    map as an output."""
+    return np.argmax(raw_output, axis=-1)
+
+
 @pytest.mark.skipif(
     toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on machine with GPU.",
@@ -231,4 +237,41 @@ def test_functionality_semantic_travis(remote_sample, tmp_path):
             batch_size=BATCH_SIZE,
             num_postproc_workers=NUM_POSTPROC_WORKERS,
         )
+
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    save_dir = f"{root_save_dir}/multi/"
+    _rm_dir(tmp_path)
+
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="fcn_resnet50_unet-bcss",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=NUM_POSTPROC_WORKERS,
+        output_types=["semantic"],
+    )
+
+    bcc_wsi_ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        output_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        tile_shape=2048,
+        patch_input_shape=[1024, 1024],
+        patch_output_shape=[512, 512],
+        stride_shape=[512, 512],
+        margin=128,
+        save_resolution={"units": "mpp", "resolution": 2},
+    )
+
+    multi_segmentor.model.postproc_func = semantic_postproc_func
+
+    output = multi_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+        ioconfig=bcc_wsi_ioconfig,
+    )
+
+    layer_map = np.load(f"{output[0][1]}.0.npy")
+
+    assert layer_map is not None, "Must have some segmentations."
     _rm_dir(tmp_path)

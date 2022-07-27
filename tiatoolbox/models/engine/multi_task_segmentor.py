@@ -137,8 +137,6 @@ def _process_tile_predictions(
         )
         head_raws.append(head_raw)
 
-    out_dicts = postproc(head_raws)
-
     # debate as to whether to check size of objects
     if "hovernetplus" in model_name:
         _, inst_dict, layer_map, _ = postproc(head_raws)
