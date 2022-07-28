@@ -31,7 +31,7 @@ class SCCNN(ModelABC):
         where 'H' represents hematoxylin.
 
     The tiatoolbox model should produce the following results on the CRC dataset using
-    12 pixels as radius for true detection:
+    10 pixels as radius for true detection:
 
     .. list-table:: MicroNet performance
        :widths: 15 15 15 15 15
@@ -44,8 +44,8 @@ class SCCNN(ModelABC):
          - F1Score
        * - sccnn-crchisto
          - CRCHisto
-         - 0.74
-         - 0.88
+         - 0.79
+         - 0.81
          - 0.80
 
     Args:
