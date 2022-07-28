@@ -1,13 +1,15 @@
 """This module defines classes which can read image data from WSI formats."""
+from __future__ import annotations
+
 import copy
 import json
 import math
 import os
-import pathlib
 import re
 import warnings
 from datetime import datetime
 from numbers import Number
+from pathlib import Path
 from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
@@ -15,6 +17,7 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
+from numpy import ndarray
 
 from tiatoolbox import utils
 from tiatoolbox.tools import tissuemask
@@ -32,17 +35,17 @@ IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 
 
-def is_dicom(path: pathlib.Path) -> bool:
+def is_dicom(path: Path) -> bool:
     """Check if the input is a DICOM file.
 
     Args:
-        path (pathlib.Path): Path to the file to check.
+        path (Path): Path to the file to check.
 
     Returns:
         bool: True if the file is a DICOM file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     is_dcm = path.suffix.lower() == ".dcm"
     is_dcm_dir = path.is_dir() and any(
         p.suffix.lower() == ".dcm" for p in path.iterdir()
@@ -50,11 +53,11 @@ def is_dicom(path: pathlib.Path) -> bool:
     return is_dcm or is_dcm_dir
 
 
-def is_tiled_tiff(path: pathlib.Path) -> bool:
+def is_tiled_tiff(path: Path) -> bool:
     """Check if the input is a tiled TIFF file.
 
     Args:
-        path (pathlib.Path):
+        path (Path):
             Path to the file to check.
 
     Returns:
@@ -62,7 +65,7 @@ def is_tiled_tiff(path: pathlib.Path) -> bool:
             True if the file is a tiled TIFF file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     try:
         tif = tifffile.TiffFile(path)
     except tifffile.TiffFileError:
@@ -70,11 +73,11 @@ def is_tiled_tiff(path: pathlib.Path) -> bool:
     return tif.pages[0].is_tiled
 
 
-def is_zarr(path: pathlib.Path) -> bool:
+def is_zarr(path: Path) -> bool:
     """Check if the input is a Zarr file.
 
     Args:
-        path (pathlib.Path):
+        path (Path):
             Path to the file to check.
 
     Returns:
@@ -82,7 +85,7 @@ def is_zarr(path: pathlib.Path) -> bool:
             True if the file is a Zarr file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     try:
         _ = zarr.open(path, mode="r")
         return True
@@ -91,11 +94,11 @@ def is_zarr(path: pathlib.Path) -> bool:
         return False
 
 
-def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
+def is_ngff(path: Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
     """Check if the input is a NGFF file.
 
     Args:
-        path (pathlib.Path):
+        path (Path):
             Path to the file to check.
         min_version (Tuple[int, ...]):
             Minimum version of the NGFF file to be considered valid.
@@ -105,7 +108,7 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
             True if the file is a NGFF file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     zattrs_path = path / ".zattrs"
     if not zattrs_path.is_file():
         return False
@@ -145,11 +148,11 @@ class WSIReader:
     from whole slide image (WSI) files.
 
     Attributes:
-        input_img (pathlib.Path):
+        input_path (Path):
             Input path to WSI file.
 
     Args:
-        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
+        input_img (:obj:`str`, :obj:`Path`, :obj:`ndarray` or :obj:`.WSIReader`):
             Input path to WSI.
         mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
             The MPP of the WSI. If not provided, the MPP is approximated
@@ -162,19 +165,19 @@ class WSIReader:
 
     @staticmethod  # noqa: A003
     def open(  # noqa: A003
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, ndarray, WSIReader],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> "WSIReader":
-        """Return an appropriate :class:`.WSIReader` object.
+        """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
-            input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+            input_img (:obj:`str`, :obj:`Path`, :obj:`ndarray` or :obj:`.WSIReader`):
                 Input to create a WSI object from. Supported types of
-                input are: `str` and `pathlib.Path` which point to the
+                input are: `str` and :obj:`Path` which point to the
                 location on the disk where image is stored,
                 :class:`numpy.ndarray` in which the input image in the
-                form of numpy array (HxWxC) is stored, or :obj:WSIReader
+                form of numpy array (HxWxC) is stored, or :obj:`WSIReader`
                 which is an already created tiatoolbox WSI handler. In
                 the latter case, the function directly passes the
                 input_imge to the output.
@@ -193,9 +196,9 @@ class WSIReader:
 
         """
         # Validate inputs
-        if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
+        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
             raise TypeError(
-                "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
+                "Invalid input: Must be a WSIRead, numpy array, string or Path"
             )
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
@@ -204,7 +207,7 @@ class WSIReader:
             return input_img
 
         # Input is a string or pathlib.Path, normalise to pathlib.Path
-        input_path = pathlib.Path(input_img)
+        input_path = Path(input_img)
         WSIReader.verify_supported_wsi(input_path)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
@@ -256,11 +259,11 @@ class WSIReader:
         return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
 
     @staticmethod
-    def verify_supported_wsi(input_path: pathlib.Path) -> None:
+    def verify_supported_wsi(input_path: Path) -> None:
         """Verify that an input image is supported.
 
         Args:
-            input_path (pathlib.Path):
+            input_path (Path):
                 Input path to WSI.
 
         Raises:
@@ -290,14 +293,14 @@ class WSIReader:
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> None:
         if isinstance(input_img, np.ndarray):
             self.input_path = None
         else:
-            self.input_path = pathlib.Path(input_img)
+            self.input_path = Path(input_img)
             if not self.input_path.exists():
                 raise FileNotFoundError(f"Input path does not exist: {self.input_path}")
         self._m_info = None
@@ -1308,7 +1311,7 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: Union[str, pathlib.Path],
+        output_dir: Union[str, Path],
         tile_objective_value: int,
         tile_read_size: Tuple[int, int],
         tile_format: str = ".jpg",
@@ -1317,7 +1320,7 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str or pathlib.Path):
+            output_dir(str or Path):
                 Output directory to save the tiles.
             tile_objective_value (int):
                 Objective value at which tile is generated.
@@ -1340,7 +1343,7 @@ class WSIReader:
             >>> slide_param = wsi.info
 
         """
-        output_dir = pathlib.Path(output_dir, self.input_path.name)
+        output_dir = Path(output_dir, self.input_path.name)
 
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
             tile_objective_value
@@ -1353,7 +1356,7 @@ class WSIReader:
         tile_w = tile_read_size[0]
 
         iter_tot = 0
-        output_dir = pathlib.Path(output_dir)
+        output_dir = Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
 
@@ -1472,7 +1475,7 @@ class OpenSlideWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> None:
@@ -1992,7 +1995,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> None:
@@ -2481,7 +2484,7 @@ class VirtualWSIReader(WSIReader):
         mode (str)
 
     Args:
-        input_img (str, pathlib.Path, ndarray):
+        input_img (str, Path, ndarray):
             Input path to WSI.
         info (WSIMeta):
             Metadata for the virtual wsi.
@@ -2493,7 +2496,7 @@ class VirtualWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         info: WSIMeta = None,
@@ -3013,7 +3016,7 @@ class ArrayView:
 class TIFFWSIReader(WSIReader):
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         series="auto",
@@ -3694,7 +3697,7 @@ class DICOMWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, Path, np.ndarray],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> None:
