@@ -18,29 +18,6 @@ from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.utils import misc
 
 
-def sc2_mapping(out_height, out_width):
-    """Spatially Constrained layer 2 mapping.
-
-    Args:
-        out_height (int):
-            Output height.
-        out_width (int):
-            Output Width
-
-    Returns:
-        tuple of int:
-            A mesh grid with matrix indexing.
-
-    """
-    x, y = torch.meshgrid(torch.range(0, out_height - 1), torch.range(0, out_width - 1))
-
-    # Make 3D vector and convert type
-    x = torch.unsqueeze(x, dim=0).type(torch.float32)
-    y = torch.unsqueeze(y, dim=0).type(torch.float32)
-
-    return x, y
-
-
 class SCCNN(ModelABC):
     """Initialize SCCNN [1].
 
@@ -94,7 +71,14 @@ class SCCNN(ModelABC):
         self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
-        self.x, self.y = sc2_mapping(out_height=out_height, out_width=out_width)
+
+        # Create mesh grid and convert to 3D vector
+        x, y = torch.meshgrid(
+            torch.range(0, out_height - 1), torch.range(0, out_width - 1)
+        )
+        self.x = torch.unsqueeze(x, dim=0).type(torch.float32)
+        self.y = torch.unsqueeze(y, dim=0).type(torch.float32)
+
         self.radius = radius
 
         def conv_act_branch(in_ch, out_ch, k_dim):
