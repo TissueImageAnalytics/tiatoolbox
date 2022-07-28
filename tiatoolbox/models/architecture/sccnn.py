@@ -66,7 +66,13 @@ class SCCNN(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels=3, out_height=13, out_width=13, radius=12):
+    def __init__(
+        self,
+        num_input_channels: int = 3,
+        out_height: int = 13,
+        out_width: int = 13,
+        radius: int = 12,
+    ):
         super().__init__()
         self.in_ch = num_input_channels
         self.out_height = out_height
@@ -81,7 +87,22 @@ class SCCNN(ModelABC):
 
         self.radius = radius
 
-        def conv_act_branch(in_ch, out_ch, k_dim):
+        def conv_act_branch(in_ch: int, out_ch: int, k_dim: int) -> torch.nn.ModuleDict:
+            """Convolution and Activation branch for SCCNN.
+
+            Args:
+                in_ch (int):
+                    Number of channels in input.
+                out_ch (int):
+                    Number of required channels in output.
+                k_dim (int):
+                    Kernel size of convolution filter.
+
+            Returns:
+                torch.nn.ModuleDict:
+                    Module dictionary.
+
+            """
             module_dict = OrderedDict()
             module_dict["conv1"] = nn.Sequential(
                 nn.Conv2d(
@@ -97,7 +118,23 @@ class SCCNN(ModelABC):
 
             return nn.ModuleDict(module_dict)
 
-        def sc(in_ch, out_ch):
+        def sc(in_ch, out_ch) -> torch.nn.ModuleDict:
+            """Spatially constrained layer.
+
+            Takes fully connected layer and returns outputs for creating probability
+            map for the output.
+
+            Args:
+                in_ch (int):
+                    Number of channels in input.
+                out_ch (int):
+                    Number of required channels in output.
+
+            Returns:
+                torch.nn.ModuleDict:
+                    Module dictionary.
+
+            """
             module_dict = OrderedDict()
             module_dict["conv1"] = nn.Sequential(
                 nn.Conv2d(
@@ -142,17 +179,36 @@ class SCCNN(ModelABC):
 
         """
 
-        def conv_act_branch(layer, in_tensor):
+        def conv_act_branch(
+            layer: torch.nn.ModuleDict, in_tensor: torch.Tensor
+        ) -> torch.Tensor:
+            """Applies Convolution and Activation to the input tensor.
+
+            Args:
+                layer (torch.nn.ModuleDict):
+                    Torch layer as ModuleDict.
+                in_tensor (torch.Tensor):
+                    Input Tensor.
+            Returns:
+                torch.Tensor:
+                    Torch Tensor after applying convolution and activation.
+
+            """
             return layer["conv1"](in_tensor)
 
-        def sc1_layer(layer, in_tensor, out_height=13, out_width=13):
+        def sc1_layer(
+            layer: torch.nn.ModuleDict,
+            in_tensor: torch.Tensor,
+            out_height: int = 13,
+            out_width: int = 13,
+        ) -> tuple:
             """Spatially constrained layer 1.
 
             Estimates row, column and height for sc2 layer mapping.
 
             Args:
-                layer (torch.nn.layer):
-                    Torch Layer.
+                layer (torch.nn.ModuleDict):
+                    Torch layer as ModuleDict.
                 in_tensor (torch.Tensor):
                     Input Tensor.
                 out_height (int):
@@ -161,7 +217,7 @@ class SCCNN(ModelABC):
                     Output Width
 
             Returns:
-                tuple of tensors:
+                tuple of :class:`torch.Tensor`:
                     Row, Column and height estimates used for sc2 mapping.
 
             """
@@ -171,7 +227,26 @@ class SCCNN(ModelABC):
             sigmoid2 = sigmoid[:, 2:3, :, :]
             return sigmoid0, sigmoid1, sigmoid2
 
-        def sc2layer(network, sc1_0, sc1_1, sc1_2):
+        def sc2layer(network, sc1_0, sc1_1, sc1_2) -> torch.Tensor:
+            """Spatially constrained layer 1.
+
+            Estimates row, column and height for sc2 layer mapping.
+
+            Args:
+                network (:class:`.SCCNN`):
+                    An initiated SCCNN class.
+                sc1_0 (torch.Tensor):
+                    Output of SC1 estimating the x position of the nucleus.
+                sc1_1 (int):
+                    Output of SC1 estimating the y position of the nucleus.
+                sc1_2 (int):
+                    Output of SC1 estimating the confidence in nucleus detection.
+
+            Returns:
+                :class:`torch.Tensor`:
+                    Probability map using the estimates from SC1.
+
+            """
             x = torch.tile(
                 network.x, dims=[sc1_0.size(0), 1, 1, 1]
             )  # Tile for batch size
@@ -199,7 +274,7 @@ class SCCNN(ModelABC):
     @staticmethod
     def postproc(
         prediction_map: np.ndarray, min_distance: int = 6, threshold_abs: float = 0.10
-    ):
+    ) -> np.ndarray:
         """Post-processing script for MicroNet.
 
         Args:
@@ -227,7 +302,7 @@ class SCCNN(ModelABC):
         return np.fliplr(coordinates)
 
     @staticmethod
-    def preproc(image: np.ndarray):
+    def preproc(image: np.ndarray) -> np.ndarray:
         """Preprocessing function for MicroNet.
 
         Performs per image standardization.
@@ -244,7 +319,7 @@ class SCCNN(ModelABC):
         return image / 255.0
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model, batch_data, on_gpu) -> list:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -260,7 +335,8 @@ class SCCNN(ModelABC):
                 Whether to run inference on a GPU.
 
         Returns:
-            Output probability map.
+            list of :class:`numpy.ndarray`:
+                Output probability map.
 
         """
         patch_imgs = batch_data

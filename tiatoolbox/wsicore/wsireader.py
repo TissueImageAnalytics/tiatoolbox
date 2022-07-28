@@ -166,15 +166,16 @@ class WSIReader:
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> "WSIReader":
-        """Return an appropriate :class:`.WSIReader` object.
+        """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
-            input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+            input_img (str, :class:`pathlib.Path`, :class:`numpy.ndarray`,
+                or :obj:`WSIReader`):
                 Input to create a WSI object from. Supported types of
                 input are: `str` and `pathlib.Path` which point to the
                 location on the disk where image is stored,
                 :class:`numpy.ndarray` in which the input image in the
-                form of numpy array (HxWxC) is stored, or :obj:WSIReader
+                form of numpy array (HxWxC) is stored, or :obj:`WSIReader`
                 which is an already created tiatoolbox WSI handler. In
                 the latter case, the function directly passes the
                 input_imge to the output.
