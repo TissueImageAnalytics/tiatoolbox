@@ -69,6 +69,7 @@ XY
 YX
 YX
 addWeighted
+affine
 albumentation
 argmax
 augmentor
