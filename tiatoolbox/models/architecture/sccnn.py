@@ -87,15 +87,17 @@ class SCCNN(ModelABC):
 
         self.radius = radius
 
-        def conv_act_branch(in_ch: int, out_ch: int, k_dim: int) -> torch.nn.ModuleDict:
+        def conv_act_branch(
+            in_channels: int, out_channels: int, kernel_size: int
+        ) -> torch.nn.ModuleDict:
             """Convolution and Activation branch for SCCNN.
 
             Args:
-                in_ch (int):
+                in_channels (int):
                     Number of channels in input.
-                out_ch (int):
+                out_channels (int):
                     Number of required channels in output.
-                k_dim (int):
+                kernel_size (int):
                     Kernel size of convolution filter.
 
             Returns:
@@ -106,9 +108,9 @@ class SCCNN(ModelABC):
             module_dict = OrderedDict()
             module_dict["conv1"] = nn.Sequential(
                 nn.Conv2d(
-                    in_ch,
-                    out_ch,
-                    kernel_size=(k_dim, k_dim),
+                    in_channels,
+                    out_channels,
+                    kernel_size=(kernel_size, kernel_size),
                     stride=(1, 1),
                     padding=0,
                     bias=True,
@@ -118,16 +120,18 @@ class SCCNN(ModelABC):
 
             return nn.ModuleDict(module_dict)
 
-        def spatially_constrained_layer1(in_ch, out_ch) -> torch.nn.ModuleDict:
+        def spatially_constrained_layer1(
+            in_channels, out_channels
+        ) -> torch.nn.ModuleDict:
             """Spatially constrained layer.
 
             Takes fully connected layer and returns outputs for creating probability
             map for the output.
 
             Args:
-                in_ch (int):
+                in_channels (int):
                     Number of channels in input.
-                out_ch (int):
+                out_channels (int):
                     Number of required channels in output.
 
             Returns:
@@ -138,8 +142,8 @@ class SCCNN(ModelABC):
             module_dict = OrderedDict()
             module_dict["conv1"] = nn.Sequential(
                 nn.Conv2d(
-                    in_ch,
-                    out_ch,
+                    in_channels,
+                    out_channels,
                     kernel_size=(1, 1),
                     stride=(1, 1),
                     padding=0,
@@ -204,7 +208,8 @@ class SCCNN(ModelABC):
         ) -> tuple:
             """Spatially constrained layer 1.
 
-            Estimates row, column and height for sc2 layer mapping.
+            Estimates row, column and height for
+            spatially_constrained_layer2 layer mapping.
 
             Args:
                 layer (torch.nn.Module):
@@ -218,7 +223,8 @@ class SCCNN(ModelABC):
 
             Returns:
                 tuple of :class:`torch.Tensor`:
-                    Row, Column and height estimates used for sc2 mapping.
+                    Row, Column and height estimates used for
+                    spatially_constrained_layer2 mapping.
 
             """
             sigmoid = layer["conv1"](in_tensor)
@@ -236,15 +242,19 @@ class SCCNN(ModelABC):
                 network (:class:`.SCCNN`):
                     An initiated SCCNN class.
                 sc1_0 (torch.Tensor):
-                    Output of SC1 estimating the x position of the nucleus.
+                    Output of spatially_constrained_layer1 estimating
+                    the x position of the nucleus.
                 sc1_1 (int):
-                    Output of SC1 estimating the y position of the nucleus.
+                    Output of spatially_constrained_layer1 estimating
+                    the y position of the nucleus.
                 sc1_2 (int):
-                    Output of SC1 estimating the confidence in nucleus detection.
+                    Output of spatially_constrained_layer1 estimating
+                    the confidence in nucleus detection.
 
             Returns:
                 :class:`torch.Tensor`:
-                    Probability map using the estimates from SC1.
+                    Probability map using the estimates from
+                    spatially_constrained_layer1.
 
             """
             x = torch.tile(
