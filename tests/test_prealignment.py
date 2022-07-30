@@ -1,13 +1,9 @@
 import urllib
 
-import numpy as np
 import PIL.Image as Image
+import numpy as np
 import pytest
 
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    SemanticSegmentor,
-)
 from tiatoolbox.tools.registration.prealignment import prealignment
 
 
@@ -63,48 +59,3 @@ def test_rotation_step_range():
         ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
     ):
         _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, 21)
-
-
-def test_tissue_segmentation():
-    #     """Test for coarse registration of an image pair using masks
-    #     generated with a pretrained model."""
-
-    main_url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/"
-    urllib.request.urlretrieve(main_url + "HE_1_level8_gray.png", "fixed.png")
-    urllib.request.urlretrieve(main_url + "HE_2_level8_gray.png", "moving.png")
-
-    ioconfig = IOSegmentorConfig(
-        input_resolutions=[
-            {"units": "baseline", "resolution": 1.0},
-        ],
-        output_resolutions=[
-            {"units": "baseline", "resolution": 1.0},
-        ],
-        patch_input_shape=[1024, 1024],
-        patch_output_shape=[512, 512],
-        stride_shape=[512, 512],
-        save_resolution={"units": "baseline", "resolution": 1.0},
-    )
-
-    segmentor = SemanticSegmentor(
-        pretrained_model="unet_tissue_mask_tsef",
-        num_loader_workers=4,
-        batch_size=4,
-    )
-
-    output = segmentor.predict(
-        ["fixed.png", "moving.png"],
-        save_dir=None,
-        mode="tile",
-        on_gpu=False,
-        ioconfig=ioconfig,
-        crash_on_exception=True,
-    )
-
-    fixed_img = np.asarray(Image.open("fixed.png"))
-    moving_img = np.asarray(Image.open("moving.png"))
-    fixed_mask = np.load(output[0][1] + ".raw.0.npy")
-    assert len(fixed_mask.shape) == 3
-    fixed_mask = fixed_mask[:, :, 2] > 0.5
-    moving_mask = np.load(output[1][1] + ".raw.0.npy")[:, :, 2] > 0.5
-    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
