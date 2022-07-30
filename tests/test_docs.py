@@ -4,7 +4,7 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 import pytest
 
@@ -59,12 +59,13 @@ def test_validate_docstring_examples(source_files, root_path):
             # Check syntax is valid
             rel_path = file.relative_to(root_path)
             source_tree = check_ast(doc, rel_path)
-
             check_imports(source_tree, doc, rel_path)
 
 
 def check_imports(source_tree: ast.AST, doc: doctest.DocTest, rel_path: Path) -> None:
     """Check that imports in the source AST are valid."""
+    if source_tree is None:
+        return
     imports = [
         node
         for node in ast.walk(source_tree)
@@ -75,14 +76,69 @@ def check_imports(source_tree: ast.AST, doc: doctest.DocTest, rel_path: Path) ->
         # Resolve the import
         for name in names:
             lineno = doc.lineno + doc.examples[0].lineno + import_node.lineno
+            source = "\n".join(eg.source.strip() for eg in doc.examples)
             try:
                 spec = importlib.util.find_spec(name)
             except ModuleNotFoundError as e:
-                pytest.fail(f"{rel_path}:{lineno}:" f" ModuleNotFoundError: {e.msg}")
-            if not (spec or name in sys.modules):
-                pytest.fail(
-                    f"{rel_path}:{lineno}: " f"ImportError: No module named '{name}'"
+                raise_source_exception(
+                    source,
+                    rel_path,
+                    import_node.lineno,
+                    lineno,
+                    import_node.col_offset,
+                    e,
                 )
+            if not (spec or name in sys.modules):
+                raise_source_exception(
+                    source,
+                    rel_path,
+                    import_node.lineno,
+                    lineno,
+                    import_node.col_offset,
+                )
+
+
+def raise_source_exception(
+    source: str,
+    rel_path: Path,
+    source_lineno: int,
+    file_lineno: int,
+    source_offset: Optional[int] = None,
+    exception: Optional[Exception] = None,
+) -> None:
+    """Raise an exception with the source code and line number highlighted.
+
+    Args:
+        source (str):
+            The source code.
+        rel_path (Path):
+            The path to the file.
+        source_lineno (int):
+            The line number in the source code snippet.
+        file_lineno (int):
+            The line number in the file.
+        source_offset (int):
+            The offset in the source code snippet. Optional.
+        exception (Exception):
+            The parent exception which was caught. Optional.
+
+    Raises:
+        SyntaxError: If the source code is invalid.
+        ModuleNotFoundError: If the module cannot be found.
+
+    """
+    message = exception.msg if exception else ""
+    source_lines = [
+        ("...." if n != source_lineno - 1 else "   >") + line
+        for n, line in enumerate(source.splitlines())
+    ]
+    if source_offset:
+        source_lines.insert(source_lineno, f"{' '*(source_offset+3)}^ {message}")
+    annotated_source = "\n".join(source_lines)
+    exception = type(exception) if exception else SyntaxError
+    raise exception(
+        f"{rel_path}:{file_lineno}: {message}\n{annotated_source}"
+    ) from None
 
 
 def import_node_names(import_node: Union[ast.Import, ast.ImportFrom]) -> List[str]:
@@ -98,8 +154,8 @@ def check_ast(doc, rel_path) -> ast.AST:
     """Check that the source syntax is valid."""
     source = "".join(eg.source for eg in doc.examples)
     try:
-        return ast.parse(source)
+        return ast.parse(source, rel_path)
     except SyntaxError as e:
         lineno = doc.lineno + doc.examples[0].lineno + e.lineno
-        pytest.fail(f"{rel_path}:{lineno}: SyntaxError: {e.msg}")
+        raise_source_exception(source, rel_path, e.lineno, lineno, e.offset, e)
     return None
