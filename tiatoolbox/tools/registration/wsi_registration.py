@@ -1,6 +1,7 @@
 import numpy as np
 from skimage import exposure, filters, morphology
 
+
 def match_histograms(image_a, image_b, disk_size=3):
     """Image normalization function.
 
@@ -23,7 +24,7 @@ def match_histograms(image_a, image_b, disk_size=3):
 
     image_a, moving_img = np.squeeze(image_a), np.squeeze(image_b)
     if len(image_a.shape) == 3 or len(image_b.shape) == 3:
-    	raise ValueError("The input images should be grayscale images.")
+        raise ValueError("The input images should be grayscale images.")
 
     moving_entropy, fixed_entropy = filters.rank.entropy(
         image_b, morphology.disk(disk_size)
