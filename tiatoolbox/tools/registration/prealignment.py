@@ -25,9 +25,9 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
             A transform matrix
 
     """
-    if len(fixed_mask.shape) != 2:
+    if len(fixed_mask.shape) is not 2:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) != 2:
+    if len(moving_mask.shape) is not 2:
         moving_mask = moving_mask[:, :, 0]
 
     fixed_mask, moving_mask = np.uint8(fixed_mask > 0), np.uint8(moving_mask > 0)
@@ -35,10 +35,10 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
         raise ValueError(f'{"The foreground is missing in the mask."}')
 
-    if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
+    if len(fixed_img.shape) is not 2 or len(moving_img.shape) is not 2:
         raise ValueError(f'{"The input images should be grayscale images."}')
 
-    if fixed_img.shape != fixed_mask.shape or moving_img.shape != moving_mask.shape:
+    if fixed_img.shape is not fixed_mask.shape or moving_img.shape is not moving_mask.shape:
         raise ValueError(
             f'{"Mismatch of shape between image and its corresponding mask."}'
         )
