@@ -47,7 +47,7 @@ class DFBR:
             )
 
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
-            raise ValueError(f"The input images are expected to have 3 channels.")
+            raise ValueError("The input images are expected to have 3 channels.")
 
         self.Xscale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
         self.Yscale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
@@ -65,5 +65,4 @@ class DFBR:
         cnn_input = np.concatenate((fixed_cnn, moving_cnn), axis=0)
 
         x = torch.from_numpy(cnn_input).type(torch.float32)
-        features = self.FeatureExtractor(x)
-        return features
+        return self.FeatureExtractor(x)
