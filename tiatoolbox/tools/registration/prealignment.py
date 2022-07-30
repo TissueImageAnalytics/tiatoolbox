@@ -28,7 +28,6 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
             A transform matrix.
 
     """
-
     if len(fixed_mask.shape) != 2:
         fixed_mask = fixed_mask[:, :, 0]
     if len(moving_mask.shape) != 2:
@@ -43,8 +42,8 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
         raise ValueError("The input images should be grayscale images.")
 
     if (
-        fixed_img.shape != fixed_mask.shape
-        or moving_img.shape != moving_mask.shape
+        fixed_img.shape is not fixed_mask.shape
+        or moving_img.shape is not moving_mask.shape
     ):
         raise ValueError("Mismatch of shape between image and its corresponding mask.")
 
