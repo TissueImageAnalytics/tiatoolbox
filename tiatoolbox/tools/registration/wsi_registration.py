@@ -5,7 +5,7 @@ import torchvision
 from torchvision.models._utils import IntermediateLayerGetter
 
 
-class DFBR:
+class DFBRegistration:
     r"""Deep Feature based Registration
 
     This class implements a CNN feature based registration,
