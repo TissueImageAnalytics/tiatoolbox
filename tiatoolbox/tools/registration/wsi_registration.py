@@ -54,8 +54,8 @@ class DFBRegistration:
         fixed_cnn = cv2.resize(fixed_img, self.patch_size)
         moving_cnn = cv2.resize(moving_img, self.patch_size)
 
-        fixed_cnn = fixed_cnn / 255.
-        moving_cnn = moving_cnn / 255.
+        fixed_cnn = fixed_cnn / 255.0
+        moving_cnn = moving_cnn / 255.0
 
         fixed_cnn = np.moveaxis(fixed_cnn, -1, 0)
         moving_cnn = np.moveaxis(moving_cnn, -1, 0)
