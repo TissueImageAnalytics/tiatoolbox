@@ -33,8 +33,11 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
     if len(moving_mask.shape) != 2:
         moving_mask = moving_mask[:, :, 0]
 
-    fixed_img, moving_img = np.squeeze(fixed_img), np.squeeze(moving_img)
-    fixed_mask, moving_mask = np.uint8(fixed_mask > 0), np.uint8(moving_mask > 0)
+    fixed_img = np.squeeze(fixed_img)
+    moving_img = np.squeeze(moving_img)
+
+    fixed_mask = np.uint8(fixed_mask > 0)
+    moving_mask = np.uint8(moving_mask > 0)
 
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
         raise ValueError("The foreground is missing in the mask.")
@@ -42,12 +45,9 @@ def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=
     if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
         raise ValueError("The input images should be grayscale images.")
 
-    fixed_img_shape = fixed_img.shape
-    fixed_mask_shape = fixed_mask.shape
-    moving_img_shape = moving_img.shape
-    moving_mask_shape = moving_mask.shape
-
-    if fixed_img_shape != fixed_mask_shape or moving_img_shape != moving_mask_shape:
+    if (
+        fixed_img.shape != fixed_mask.shape or moving_img.shape != moving_mask.shape
+    ):  # skipcq: PYL-W0143
         raise ValueError("Mismatch of shape between image and its corresponding mask.")
 
     if rotation_steps < 10 or rotation_steps > 20:
