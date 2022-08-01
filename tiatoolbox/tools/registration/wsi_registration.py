@@ -9,18 +9,18 @@ def match_histograms(image_a, image_b, disk_radius=3):
     appearance of an image pair.
 
     Args:
-            image_a (:class:`numpy.ndarray`):
-                    A grayscale image.
-            image_b (:class:`numpy.ndarray`):
-                    A grayscale image.
-            disk_radius (int):
-                    The radius of the disk-shaped footprint.
+        image_a (:class:`numpy.ndarray`):
+            A grayscale image.
+        image_b (:class:`numpy.ndarray`):
+            A grayscale image.
+        disk_radius (int):
+            The radius of the disk-shaped footprint.
 
     Returns:
-            :class:`numpy.ndarray`:
-                    A normalized grayscale image.
-            :class:`numpy.ndarray`:
-                    A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
 
     """
 
@@ -32,8 +32,8 @@ def match_histograms(image_a, image_b, disk_radius=3):
         image_a, morphology.disk(disk_radius)
     ), filters.rank.entropy(image_b, morphology.disk(disk_radius))
     if np.mean(entropy_a) > np.mean(entropy_b):
-        image_b = exposure.match_histograms(image_b, image_a)
+        image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
     else:
-        image_a = exposure.match_histograms(image_a, image_b)
+        image_a = exposure.match_histograms(image_a, image_b).astype(np.uint8)
 
     return image_a, image_b
