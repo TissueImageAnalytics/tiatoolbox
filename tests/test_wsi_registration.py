@@ -1,7 +1,7 @@
 import urllib
 
-import numpy as np
 import PIL.Image as Image
+import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import DFBRegistrtation
@@ -33,16 +33,23 @@ def test_extract_features():
     moving_img = np.repeat(moving_img, 3, axis=2)
     _ = df.extract_features(fixed_img, moving_img)
 
+    fixed_img = np.repeat(
+        np.expand_dims(
+            np.repeat(
+                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1), 64, axis=1
+            ),
+            axis=2,
+        ),
+        3,
+        axis=2,
+    )
+    output = df.extract_features(fixed_img, fixed_img)
+    pool3_feat = output["block3_pool"][0, :].detach().numpy()
+    pool4_feat = output["block4_pool"][0, :].detach().numpy()
+    pool5_feat = output["block5_pool"][0, :].detach().numpy()
 
-def test_feature_mapping():
-    main_url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/"
-    urllib.request.urlretrieve(main_url + "HE_1_level8_gray.png", "sample.png")
-    fixed_img = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve(main_url + "HE_2_level8_gray.png", "sample.png")
-    moving_img = np.asarray(Image.open("sample.png"))
-
-    df = DFBRegistrtation()
-    fixed_img = np.repeat(np.expand_dims(fixed_img, axis=2), 3, axis=2)
-    moving_img = np.repeat(np.expand_dims(moving_img, axis=2), 3, axis=2)
-    features = df.extract_features(fixed_img, moving_img)
-    df.feature_mapping(features)
+    urllib.request.urlretrieve(main_url + "features.npy", "features.npy")
+    _pool3_feat, _pool4_feat, _pool5_feat = np.load("features.npy", allow_pickle=True)
+    assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
