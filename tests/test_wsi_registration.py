@@ -6,17 +6,16 @@ from tiatoolbox.tools.registration.wsi_registration import match_histograms
 
 def test_match_histograms():
     """Test for preprocessing/normalization of an image pair."""
-    image_a = np.random.randint(256, size=(256, 256))
-    image_b = np.random.randint(256, size=(256, 256))
-    _, _ = match_histograms(image_a, image_b)
-    _, _ = match_histograms(image_a, image_b, 3)
-
     image_a = np.random.randint(256, size=(256, 256, 3))
     image_b = np.random.randint(256, size=(256, 256, 3))
     with pytest.raises(
         ValueError, match=r".*The input images should be grayscale images.*"
     ):
         _, _ = match_histograms(image_a, image_b)
+
+    image_a = np.random.randint(256, size=(256, 256))
+    image_b = np.random.randint(256, size=(256, 256))
+    _, _ = match_histograms(image_a, image_b, 3)
 
     image_a = np.random.randint(256, size=(256, 256, 1))
     image_b = np.random.randint(256, size=(256, 256, 1))
