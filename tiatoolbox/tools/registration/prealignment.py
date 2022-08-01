@@ -10,7 +10,7 @@ from tiatoolbox.utils.metrics import dice
 def prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_steps=10):
     """Coarse registration of an image pair.
 
-    This function performs rough alignment of a moving image with respect
+    This function performs initial alignment of a moving image with respect to a fixed image. This can be used as a prealignment step before final refinement?
     to a fixed image.
 
     Args:
