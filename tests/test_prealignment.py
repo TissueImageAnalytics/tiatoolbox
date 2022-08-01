@@ -1,7 +1,7 @@
 import urllib
 
-import PIL.Image as Image
 import numpy as np
+import PIL.Image as Image
 import pytest
 
 from tiatoolbox.tools.registration.prealignment import prealignment
