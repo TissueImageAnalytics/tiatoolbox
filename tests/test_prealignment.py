@@ -1,7 +1,7 @@
 import urllib
 
-import numpy as np
 import PIL.Image as Image
+import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.prealignment import prealignment
@@ -52,14 +52,40 @@ def test_rotation_step_range():
     fixed_mask = np.random.randint(2, size=(256, 256))
     moving_mask = np.random.randint(2, size=(256, 256))
 
-    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, 15)
+    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=15)
 
     with pytest.raises(
         ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
     ):
-        _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, 9)
+        _ = prealignment(
+            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=9
+        )
 
     with pytest.raises(
         ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
     ):
-        _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, 21)
+        _ = prealignment(
+            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=21
+        )
+
+
+def test_dice_overlap_range():
+    """Test if the value of rotation step is within the range"""
+    fixed_img = np.random.randint(20, size=(256, 256))
+    moving_img = np.random.randint(20, size=(256, 256))
+    fixed_mask = np.random.randint(2, size=(256, 256))
+    moving_mask = np.random.randint(2, size=(256, 256))
+
+    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.5)
+
+    with pytest.raises(
+        ValueError, match=r".*The dice_overlap should be in between 0 and 1.0.*"
+    ):
+        _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=2)
+
+    with pytest.raises(
+        ValueError, match=r".*The dice_overlap should be in between 0 and 1.0.*"
+    ):
+        _ = prealignment(
+            fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=-1
+        )
