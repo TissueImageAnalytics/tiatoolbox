@@ -16,22 +16,22 @@ def prealignment(
     fixed image. This can be used as a prealignment step before final refinement.
 
     Args:
-            fixed_img (:class:`numpy.ndarray`):
-                    A grayscale fixed image.
-            moving_img (:class:`numpy.ndarray`):
-                    A grayscale moving image.
-            fixed_mask (:class:`numpy.ndarray`):
-                    A binary tissue mask for the fixed image.
-            moving_mask (:class:`numpy.ndarray`):
-                    A binary tissue mask for the moving image.
-            dice_overlap (float):
-                    A dice ratio used for the selection of the best
-                    transformation matrix.
-            rotation_step (int):
-                    Rotation_step defines an increment in the rotation angles.
+        fixed_img (:class:`numpy.ndarray`):
+            A grayscale fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A grayscale moving image.
+        fixed_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the fixed image.
+        moving_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the moving image.
+        dice_overlap (float):
+            A dice ratio used for the selection of the best
+            transformation matrix.
+        rotation_step (int):
+            Rotation_step defines an increment in the rotation angles.
     Returns:
-            :class:`numpy.ndarray`:
-                    A transform matrix.
+        :class:`numpy.ndarray`:
+            A transform matrix.
 
     """
     if len(fixed_mask.shape) != 2:
