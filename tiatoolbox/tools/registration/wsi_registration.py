@@ -5,7 +5,7 @@ import torchvision
 from torchvision.models._utils import IntermediateLayerGetter
 
 
-class DFBRegistration:
+class DFBRegistrtation:
     r"""Deep Feature based Registration
 
     This class implements a CNN feature based registration,
@@ -30,15 +30,15 @@ class DFBRegistration:
         VGG-16 model for an image pair.
 
         Args:
-                fixed_img (:class:`numpy.ndarray`):
-                        A fixed image.
-                moving_img (:class:`numpy.ndarray`):
-                        A moving image.
+                        fixed_img (:class:`numpy.ndarray`):
+                                        A fixed image.
+                        moving_img (:class:`numpy.ndarray`):
+                                        A moving image.
 
         Returns:
-                dict:
-                        A dictionary containing the multiscale features.
-                        The expected format is {layer_name: features}.
+                        dict:
+                                        A dictionary containing the multiscale features.
+                                        The expected format is {layer_name: features}.
 
         """
         if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
