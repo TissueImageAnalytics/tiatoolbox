@@ -27,4 +27,4 @@ def test_functionality(remote_sample, tmp_path):
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
-    assert np.all(output == [[6, 7]])
+    assert np.all(output == [[8, 7]])
