@@ -51,8 +51,10 @@ def prealignment(
     if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
         raise ValueError("The input images should be grayscale images.")
 
-    # skipcq: PYL-W0143  # noqa: E800
-    if fixed_img.shape != fixed_mask.shape or moving_img.shape != moving_mask.shape:
+    if (
+        fixed_img.shape[:] != fixed_mask.shape[:]
+        or moving_img.shape[:] != moving_mask.shape[:]
+    ):
         raise ValueError("Mismatch of shape between image and its corresponding mask.")
 
     if rotation_step < 10 or rotation_step > 20:
