@@ -170,6 +170,38 @@ class SCCNN(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
+    def spatially_constrained_layer2(self, sc1_0, sc1_1, sc1_2) -> torch.Tensor:
+        """Spatially constrained layer 2.
+
+        Estimates row, column and height for sc2 layer mapping.
+
+        Args:
+            sc1_0 (torch.Tensor):
+                Output of spatially_constrained_layer1 estimating
+                the x position of the nucleus.
+            sc1_1 (int):
+                Output of spatially_constrained_layer1 estimating
+                the y position of the nucleus.
+            sc1_2 (int):
+                Output of spatially_constrained_layer1 estimating
+                the confidence in nucleus detection.
+
+        Returns:
+            :class:`torch.Tensor`:
+                Probability map using the estimates from
+                spatially_constrained_layer1.
+
+        """
+        x = torch.tile(self.xv, dims=[sc1_0.size(0), 1, 1, 1])  # Tile for batch size
+        y = torch.tile(self.yv, dims=[sc1_0.size(0), 1, 1, 1])
+        xvr = (x - sc1_0) ** 2
+        yvc = (y - sc1_1) ** 2
+        out_map = xvr + yvc
+        out_map_threshold = torch.lt(out_map, self.radius).type(torch.float32)
+        denominator = 1 + (out_map / 2)
+        sc2 = sc1_2 / denominator
+        return sc2 * out_map_threshold
+
     def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
@@ -219,42 +251,6 @@ class SCCNN(ModelABC):
             sigmoid2 = sigmoid[:, 2:3, :, :]
             return sigmoid0, sigmoid1, sigmoid2
 
-        def spatially_constrained_layer2(network, sc1_0, sc1_1, sc1_2) -> torch.Tensor:
-            """Spatially constrained layer 2.
-
-            Estimates row, column and height for sc2 layer mapping.
-
-            Args:
-                network (:class:`.SCCNN`):
-                    An initiated SCCNN class.
-                sc1_0 (torch.Tensor):
-                    Output of spatially_constrained_layer1 estimating
-                    the x position of the nucleus.
-                sc1_1 (int):
-                    Output of spatially_constrained_layer1 estimating
-                    the y position of the nucleus.
-                sc1_2 (int):
-                    Output of spatially_constrained_layer1 estimating
-                    the confidence in nucleus detection.
-
-            Returns:
-                :class:`torch.Tensor`:
-                    Probability map using the estimates from
-                    spatially_constrained_layer1.
-
-            """
-            x = torch.tile(
-                network.xv, dims=[sc1_0.size(0), 1, 1, 1]
-            )  # Tile for batch size
-            y = torch.tile(network.yv, dims=[sc1_0.size(0), 1, 1, 1])
-            xvr = (x - sc1_0) ** 2
-            yvc = (y - sc1_1) ** 2
-            out_map = xvr + yvc
-            out_map_threshold = torch.lt(out_map, network.radius).type(torch.float32)
-            denominator = 1 + (out_map / 2)
-            sc2 = sc1_2 / denominator
-            return sc2 * out_map_threshold
-
         l1 = self.layer["l1"]["conv1"](input_tensor)
         p1 = self.layer["pool1"](l1)
         l2 = self.layer["l2"]["conv1"](p1)
@@ -267,7 +263,7 @@ class SCCNN(ModelABC):
         s1_sigmoid0, s1_sigmoid1, s1_sigmoid2 = spatially_constrained_layer1(
             self.layer["sc"], drop2
         )
-        return spatially_constrained_layer2(self, s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
+        return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
     @staticmethod
     def postproc(
