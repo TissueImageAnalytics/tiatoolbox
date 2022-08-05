@@ -57,6 +57,11 @@ class SCCNN(ModelABC):
             Output width. default=13.
         radius (int):
             Radius for nucleus detection, default = 12.
+        min_distance (int):
+            The minimal allowed distance separating peaks.
+            To find the maximum number of peaks, use `min_distance=1`, default=6.
+        threshold_abs (float):
+            Minimum intensity of peaks, default=0.20.
 
     References:
         [1] Sirinukunwattana, Korsuk, et al.
@@ -72,6 +77,8 @@ class SCCNN(ModelABC):
         out_height: int = 13,
         out_width: int = 13,
         radius: int = 12,
+        min_distance: int = 6,
+        threshold_abs: float = 0.20,
     ):
         super().__init__()
         self.in_ch = num_input_channels
@@ -89,6 +96,8 @@ class SCCNN(ModelABC):
         self.register_buffer("yv", torch.unsqueeze(y, dim=0).type(torch.float32))
 
         self.radius = radius
+        self.min_distance = min_distance
+        self.threshold_abs = threshold_abs
 
         def conv_act_block(
             in_channels: int, out_channels: int, kernel_size: int
@@ -265,10 +274,7 @@ class SCCNN(ModelABC):
         )
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
-    @staticmethod
-    def postproc(
-        prediction_map: np.ndarray, min_distance: int = 6, threshold_abs: float = 0.20
-    ) -> np.ndarray:
+    def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 
         Performs peak detection and extracts coordinates in x, y format.
@@ -276,12 +282,6 @@ class SCCNN(ModelABC):
         Args:
             prediction_map (ndarray):
                 Input image of type numpy array.
-            min_distance (int):
-                The minimal allowed distance separating peaks.
-                To find the maximum number of peaks, use `min_distance=1`, default=6.
-            threshold_abs (float):
-                Minimum intensity of peaks, default=0.20.
-
 
         Returns:
             :class:`numpy.ndarray`:
@@ -291,8 +291,8 @@ class SCCNN(ModelABC):
         """
         coordinates = peak_local_max(
             np.squeeze(prediction_map[0], axis=2),
-            min_distance=min_distance,
-            threshold_abs=threshold_abs,
+            min_distance=self.min_distance,
+            threshold_abs=self.threshold_abs,
             exclude_border=False,
         )
         return np.fliplr(coordinates)

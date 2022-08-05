@@ -756,3 +756,5 @@ sccnn-crchisto:
             out_height: 13
             out_width: 13
             radius: 12
+            min_distance: 6
+            threshold_abs: 0.20
