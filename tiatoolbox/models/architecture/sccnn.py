@@ -80,8 +80,8 @@ class SCCNN(ModelABC):
 
         # Create mesh grid and convert to 3D vector
         x, y = torch.meshgrid(
-            torch.arange(start=0, end=out_height - 1),
-            torch.arange(start=0, end=out_width - 1),
+            torch.arange(start=0, end=out_height),
+            torch.arange(start=0, end=out_width),
             indexing="ij",
         )
         self.x = torch.unsqueeze(x, dim=0).type(torch.float32)
