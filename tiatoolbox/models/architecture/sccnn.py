@@ -89,7 +89,7 @@ class SCCNN(ModelABC):
 
         self.radius = radius
 
-        def conv_act_branch(
+        def conv_act_block(
             in_channels: int, out_channels: int, kernel_size: int
         ) -> torch.nn.ModuleDict:
             """Convolution and Activation branch for SCCNN.
@@ -156,14 +156,14 @@ class SCCNN(ModelABC):
             return nn.ModuleDict(module_dict)
 
         module_dict = OrderedDict()
-        module_dict["l1"] = conv_act_branch(num_input_channels, 30, 2)
+        module_dict["l1"] = conv_act_block(num_input_channels, 30, 2)
         module_dict["pool1"] = nn.MaxPool2d(2, padding=0)
-        module_dict["l2"] = conv_act_branch(30, 60, 2)
+        module_dict["l2"] = conv_act_block(30, 60, 2)
         module_dict["pool2"] = nn.MaxPool2d(2, padding=0)
-        module_dict["l3"] = conv_act_branch(60, 90, 3)
-        module_dict["l4"] = conv_act_branch(90, 1024, 5)
+        module_dict["l3"] = conv_act_block(60, 90, 3)
+        module_dict["l4"] = conv_act_block(90, 1024, 5)
         module_dict["dropout1"] = nn.Dropout2d(p=0.5)
-        module_dict["l5"] = conv_act_branch(1024, 512, 1)
+        module_dict["l5"] = conv_act_block(1024, 512, 1)
         module_dict["dropout2"] = nn.Dropout2d(p=0.5)
         module_dict["sc"] = spatially_constrained_layer1(512, 3)
 
@@ -290,6 +290,8 @@ class SCCNN(ModelABC):
         prediction_map: np.ndarray, min_distance: int = 6, threshold_abs: float = 0.10
     ) -> np.ndarray:
         """Post-processing script for MicroNet.
+
+        Performs peak detection and extracts coordinates in x, y format.
 
         Args:
             prediction_map (ndarray):
