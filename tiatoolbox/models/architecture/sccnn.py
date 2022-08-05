@@ -287,7 +287,7 @@ class SCCNN(ModelABC):
 
     @staticmethod
     def postproc(
-        prediction_map: np.ndarray, min_distance: int = 6, threshold_abs: float = 0.10
+        prediction_map: np.ndarray, min_distance: int = 6, threshold_abs: float = 0.20
     ) -> np.ndarray:
         """Post-processing script for MicroNet.
 
@@ -300,7 +300,7 @@ class SCCNN(ModelABC):
                 The minimal allowed distance separating peaks.
                 To find the maximum number of peaks, use `min_distance=1`, default=6.
             threshold_abs (float):
-                Minimum intensity of peaks, default=0.10.
+                Minimum intensity of peaks, default=0.20.
 
 
         Returns:
