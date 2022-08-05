@@ -185,23 +185,6 @@ class SCCNN(ModelABC):
 
         """
 
-        def conv_act_branch(
-            layer: torch.nn.Module, in_tensor: torch.Tensor
-        ) -> torch.Tensor:
-            """Applies Convolution and Activation to the input tensor.
-
-            Args:
-                layer (torch.nn.ModuleDict):
-                    Torch layer as ModuleDict.
-                in_tensor (torch.Tensor):
-                    Input Tensor.
-            Returns:
-                torch.Tensor:
-                    Torch Tensor after applying convolution and activation.
-
-            """
-            return layer["conv1"](in_tensor)
-
         def spatially_constrained_layer1(
             layer: torch.nn.Module,
             in_tensor: torch.Tensor,
@@ -271,14 +254,14 @@ class SCCNN(ModelABC):
             sc2 = sc1_2 / denominator
             return sc2 * out_map_threshold
 
-        l1 = conv_act_branch(self.layer["l1"], in_tensor=input_tensor)
+        l1 = self.layer["l1"]["conv1"](input_tensor)
         p1 = self.layer["pool1"](l1)
-        l2 = conv_act_branch(self.layer["l2"], in_tensor=p1)
+        l2 = self.layer["l2"]["conv1"](p1)
         p2 = self.layer["pool1"](l2)
-        l3 = conv_act_branch(self.layer["l3"], in_tensor=p2)
-        l4 = conv_act_branch(self.layer["l4"], in_tensor=l3)
+        l3 = self.layer["l3"]["conv1"](p2)
+        l4 = self.layer["l4"]["conv1"](l3)
         drop1 = self.layer["dropout1"](l4)
-        l5 = conv_act_branch(self.layer["l5"], in_tensor=drop1)
+        l5 = self.layer["l5"]["conv1"](drop1)
         drop2 = self.layer["dropout2"](l5)
         s1_sigmoid0, s1_sigmoid1, s1_sigmoid2 = spatially_constrained_layer1(
             self.layer["sc"], drop2
