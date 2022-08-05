@@ -84,8 +84,9 @@ class SCCNN(ModelABC):
             torch.arange(start=0, end=out_width),
             indexing="ij",
         )
-        self.x = torch.unsqueeze(x, dim=0).type(torch.float32)
-        self.y = torch.unsqueeze(y, dim=0).type(torch.float32)
+
+        self.register_buffer("xv", torch.unsqueeze(x, dim=0).type(torch.float32))
+        self.register_buffer("yv", torch.unsqueeze(y, dim=0).type(torch.float32))
 
         self.radius = radius
 
@@ -243,9 +244,9 @@ class SCCNN(ModelABC):
 
             """
             x = torch.tile(
-                network.x, dims=[sc1_0.size(0), 1, 1, 1]
+                network.xv, dims=[sc1_0.size(0), 1, 1, 1]
             )  # Tile for batch size
-            y = torch.tile(network.y, dims=[sc1_0.size(0), 1, 1, 1])
+            y = torch.tile(network.yv, dims=[sc1_0.size(0), 1, 1, 1])
             xvr = (x - sc1_0) ** 2
             yvc = (y - sc1_1) ** 2
             out_map = xvr + yvc
