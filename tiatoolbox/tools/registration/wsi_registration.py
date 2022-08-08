@@ -7,6 +7,19 @@ from skimage.util import img_as_float
 from tiatoolbox.utils.metrics import dice
 
 
+def _check_dimen(fixed_img, moving_img, fixed_mask, moving_mask):
+    if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
+        raise ValueError("The foreground is missing in the mask.")
+
+    if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
+        raise ValueError("The input images should be grayscale images.")
+
+    if (
+        fixed_img.shape[:] != fixed_mask.shape[:]
+        or moving_img.shape[:] != moving_mask.shape[:]
+    ):
+        raise ValueError("Mismatch of shape between image and its corresponding mask.")
+
 def prealignment(
     fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.5, rotation_step=10
 ):
@@ -44,18 +57,6 @@ def prealignment(
 
     fixed_mask = np.uint8(fixed_mask > 0)
     moving_mask = np.uint8(moving_mask > 0)
-
-    if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
-        raise ValueError("The foreground is missing in the mask.")
-
-    if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
-        raise ValueError("The input images should be grayscale images.")
-
-    if (
-        fixed_img.shape[:] != fixed_mask.shape[:]
-        or moving_img.shape[:] != moving_mask.shape[:]
-    ):
-        raise ValueError("Mismatch of shape between image and its corresponding mask.")
 
     if rotation_step < 10 or rotation_step > 20:
         raise ValueError("Please select the rotation step in between 10 and 20.")
