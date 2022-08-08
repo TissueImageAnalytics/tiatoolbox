@@ -1,10 +1,10 @@
 import urllib
 
-import numpy as np
 import PIL.Image as Image
+import numpy as np
 import pytest
 
-from tiatoolbox.tools.registration.prealignment import prealignment
+from tiatoolbox.tools.registration.wsi_registration import prealignment
 
 
 def test_prealignment():
