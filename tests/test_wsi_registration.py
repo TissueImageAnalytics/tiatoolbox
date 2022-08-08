@@ -7,27 +7,6 @@ from tiatoolbox.tools.registration.wsi_registration import DFBRegistrtation
 from tiatoolbox.utils.misc import imread
 
 
-@pytest.fixture(scope="session")
-def dfbr_features(remote_sample) -> pathlib.Path:
-	"""Sample pytest fixture for DFBR features.
-	Download features for pytest.
-	"""
-	return remote_sample("features")
-
-@pytest.fixture(scope="session")
-def fixed_image(remote_sample) -> pathlib.Path:
-	"""Sample pytest fixture for fixed image.
-	Download fixed image for pytest.
-	"""
-	return remote_sample("fixed_image")
-
-@pytest.fixture(scope="session")
-def moving_image(remote_sample) -> pathlib.Path:
-	"""Sample pytest fixture for moving image.
-	Download moving image for pytest.
-	"""
-	return remote_sample("moving_image")
-
 def test_extract_features(fixed_image, moving_image):
 	"""Test for CNN based feature extraction function."""
 
