@@ -41,7 +41,6 @@ def moving_mask(remote_sample) -> pathlib.Path:
 
 def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     """Test for prealignment of an image pair"""
-
     fixed_img = imread(pathlib.Path(fixed_image))
     moving_img = imread(pathlib.Path(moving_image))
     fixed_msk = imread(pathlib.Path(fixed_mask))
