@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torchvision
+from skimage import exposure, filters, morphology
 from torchvision.models._utils import IntermediateLayerGetter
 
 from tiatoolbox.utils.transforms import imresize
@@ -52,8 +53,12 @@ class DFBRegistrtation:
 
         self.Xscale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
         self.Yscale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
-        fixed_cnn = imresize(fixed_img, output_size=self.patch_size, interpolation='linear')
-        moving_cnn = imresize(moving_img, output_size=self.patch_size, interpolation='linear')
+        fixed_cnn = imresize(
+            fixed_img, output_size=self.patch_size, interpolation="linear"
+        )
+        moving_cnn = imresize(
+            moving_img, output_size=self.patch_size, interpolation="linear"
+        )
 
         fixed_cnn = fixed_cnn / 255.0
         moving_cnn = moving_cnn / 255.0
@@ -67,3 +72,40 @@ class DFBRegistrtation:
 
         x = torch.from_numpy(cnn_input).type(torch.float32)
         return self.FeatureExtractor(x)
+
+
+def match_histograms(image_a, image_b, disk_radius=3):
+    """Image normalization function.
+
+    This function performs histogram equalization to unify the
+    appearance of an image pair.
+
+    Args:
+        image_a (:class:`numpy.ndarray`):
+            A grayscale image.
+        image_b (:class:`numpy.ndarray`):
+            A grayscale image.
+        disk_radius (int):
+            The radius of the disk-shaped footprint.
+
+    Returns:
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
+
+    """
+
+    image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
+    if len(image_a.shape) == 3 or len(image_b.shape) == 3:
+        raise ValueError("The input images should be grayscale images.")
+
+    entropy_a, entropy_b = filters.rank.entropy(
+        image_a, morphology.disk(disk_radius)
+    ), filters.rank.entropy(image_b, morphology.disk(disk_radius))
+    if np.mean(entropy_a) > np.mean(entropy_b):
+        image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
+    else:
+        image_a = exposure.match_histograms(image_a, image_b).astype(np.uint8)
+
+    return image_a, image_b
