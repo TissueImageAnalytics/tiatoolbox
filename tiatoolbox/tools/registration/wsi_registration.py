@@ -8,6 +8,8 @@ from tiatoolbox.utils.metrics import dice
 
 
 def _check_dimen(fixed_img, moving_img, fixed_mask, moving_mask):
+    """Checking dimensionality of images and mask."""
+
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
         raise ValueError("The foreground is missing in the mask.")
 
@@ -19,6 +21,7 @@ def _check_dimen(fixed_img, moving_img, fixed_mask, moving_mask):
         or moving_img.shape[:] != moving_mask.shape[:]
     ):
         raise ValueError("Mismatch of shape between image and its corresponding mask.")
+
 
 def prealignment(
     fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.5, rotation_step=10
@@ -106,9 +109,9 @@ def prealignment(
 
     if max(all_dice) >= dice_overlap:
         return all_transform[all_dice.index(max(all_dice))]
-    else:
-        print(
-            "***** Not able to find the best transformation. Try changing the values"
-            "for dice_overlap and rotation_step. *****"
-        )
-        return None
+
+    print(
+        "***** Not able to find the best transformation. Try changing the values"
+        "for dice_overlap and rotation_step. *****"
+    )
+    return None
