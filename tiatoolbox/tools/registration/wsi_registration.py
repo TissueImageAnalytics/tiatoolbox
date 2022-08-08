@@ -1,8 +1,9 @@
-import cv2
 import numpy as np
 import torch
 import torchvision
 from torchvision.models._utils import IntermediateLayerGetter
+
+from tiatoolbox.utils.transforms import imresize
 
 
 class DFBRegistrtation:
@@ -51,8 +52,8 @@ class DFBRegistrtation:
 
         self.Xscale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
         self.Yscale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
-        fixed_cnn = cv2.resize(fixed_img, self.patch_size)
-        moving_cnn = cv2.resize(moving_img, self.patch_size)
+        fixed_cnn = imresize(fixed_img, output_size=self.patch_size, interpolation='linear')
+        moving_cnn = imresize(moving_img, output_size=self.patch_size, interpolation='linear')
 
         fixed_cnn = fixed_cnn / 255.0
         moving_cnn = moving_cnn / 255.0

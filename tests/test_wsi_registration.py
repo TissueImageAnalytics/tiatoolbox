@@ -1,55 +1,69 @@
-import urllib
+import pathlib
 
 import numpy as np
-import PIL.Image as Image
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import DFBRegistrtation
+from tiatoolbox.utils.misc import imread
 
 
-def test_extract_features():
-    """Test for CNN based feature extraction function."""
-    main_url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/registration/"
-    urllib.request.urlretrieve(main_url + "HE_1_level8_gray.png", "sample.png")
-    fixed_img = np.asarray(Image.open("sample.png"))
-    urllib.request.urlretrieve(main_url + "HE_2_level8_gray.png", "sample.png")
-    moving_img = np.asarray(Image.open("sample.png"))
+@pytest.fixture(scope="session")
+def dfbr_features(remote_sample) -> pathlib.Path:
+	"""Sample pytest fixture for DFBR features.
+	Download features for pytest.
+	"""
+	return remote_sample("features")
 
-    df = DFBRegistrtation()
-    with pytest.raises(
-        ValueError,
-        match=r".*The required shape for fixed and moving images is n x m x 3.*",
-    ):
-        _ = df.extract_features(fixed_img, moving_img)
+@pytest.fixture(scope="session")
+def fixed_image(remote_sample) -> pathlib.Path:
+	"""Sample pytest fixture for fixed image.
+	Download fixed image for pytest.
+	"""
+	return remote_sample("fixed_image")
 
-    fixed_img = np.repeat(np.expand_dims(fixed_img, axis=2), 1, axis=2)
-    moving_img = np.repeat(np.expand_dims(moving_img, axis=2), 1, axis=2)
-    with pytest.raises(
-        ValueError, match=r".*The input images are expected to have 3 channels.*"
-    ):
-        _ = df.extract_features(fixed_img, moving_img)
+@pytest.fixture(scope="session")
+def moving_image(remote_sample) -> pathlib.Path:
+	"""Sample pytest fixture for moving image.
+	Download moving image for pytest.
+	"""
+	return remote_sample("moving_image")
 
-    fixed_img = np.repeat(fixed_img, 3, axis=2)
-    moving_img = np.repeat(moving_img, 3, axis=2)
-    _ = df.extract_features(fixed_img, moving_img)
+def test_extract_features(fixed_image, moving_image):
+	"""Test for CNN based feature extraction function."""
 
-    fixed_img = np.repeat(
-        np.expand_dims(
-            np.repeat(
-                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1), 64, axis=1
-            ),
-            axis=2,
-        ),
-        3,
-        axis=2,
-    )
-    output = df.extract_features(fixed_img, fixed_img)
-    pool3_feat = output["block3_pool"][0, :].detach().numpy()
-    pool4_feat = output["block4_pool"][0, :].detach().numpy()
-    pool5_feat = output["block5_pool"][0, :].detach().numpy()
+	fixed_img = imread(pathlib.Path(fixed_image))
+	moving_img = imread(pathlib.Path(moving_image))
 
-    urllib.request.urlretrieve(main_url + "features.npy", "features.npy")
-    _pool3_feat, _pool4_feat, _pool5_feat = np.load("features.npy", allow_pickle=True)
-    assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
-    assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
-    assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
+	df = DFBRegistrtation()
+	with pytest.raises(
+		ValueError,
+		match=r".*The required shape for fixed and moving images is n x m x 3.*",
+	):
+		_ = df.extract_features(fixed_img[:,:,0], moving_img[:,:,0])
+
+	fixed_img = np.expand_dims(fixed_img[:,:,0], axis=2)
+	moving_img = np.expand_dims(moving_img[:,:,0], axis=2)
+	with pytest.raises(
+		ValueError, match=r".*The input images are expected to have 3 channels.*"
+	):
+		_ = df.extract_features(fixed_img, moving_img)
+
+	fixed_img = np.repeat(
+		np.expand_dims(
+			np.repeat(
+				np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1), 64, axis=1
+			),
+			axis=2,
+		),
+		3,
+		axis=2,
+	)
+	output = df.extract_features(fixed_img, fixed_img)
+	pool3_feat = output["block3_pool"][0, :].detach().numpy()
+	pool4_feat = output["block4_pool"][0, :].detach().numpy()
+	pool5_feat = output["block5_pool"][0, :].detach().numpy()
+
+	_pool3_feat, _pool4_feat, _pool5_feat = np.load("features.npy", allow_pickle=True)
+	assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
+	assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
+	assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
