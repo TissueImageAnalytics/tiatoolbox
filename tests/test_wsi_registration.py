@@ -10,31 +10,7 @@ from tiatoolbox.tools.registration.wsi_registration import (
 from tiatoolbox.utils.misc import imread
 
 
-@pytest.fixture(scope="session")
-def dfbr_features(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for DFBR features.
-    Download features for pytest.
-    """
-    return remote_sample("features")
-
-
-@pytest.fixture(scope="session")
-def fixed_image(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for fixed image.
-    Download fixed image for pytest.
-    """
-    return remote_sample("fixed_image")
-
-
-@pytest.fixture(scope="session")
-def moving_image(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for moving image.
-    Download moving image for pytest.
-    """
-    return remote_sample("moving_image")
-
-
-def test_extract_features(fixed_image, moving_image):
+def test_extract_features(fixed_image, moving_image, dfbr_features):
     """Test for CNN based feature extraction function."""
 
     fixed_img = imread(pathlib.Path(fixed_image))
@@ -69,7 +45,9 @@ def test_extract_features(fixed_image, moving_image):
     pool4_feat = output["block4_pool"][0, :].detach().numpy()
     pool5_feat = output["block5_pool"][0, :].detach().numpy()
 
-    _pool3_feat, _pool4_feat, _pool5_feat = np.load("features.npy", allow_pickle=True)
+    _pool3_feat, _pool4_feat, _pool5_feat = np.load(
+        str(dfbr_features), allow_pickle=True
+    )
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
