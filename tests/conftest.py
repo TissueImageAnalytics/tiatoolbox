@@ -375,4 +375,3 @@ def sample_wsi_dict(remote_sample):
         "wsi4_4k_4k_pred",
     ]
     return {name: remote_sample(name) for name in file_names}
-
