@@ -25,12 +25,22 @@ class SCCNN(ModelABC):
 
     1. `sccnn-crchisto`:
         This is trained on `CRCHisto dataset
-        <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe/>`_ The
-        model is retrained in torch as the original model was trained in Matlab. This
-        model also relies on RGB image as input. The original model uses HRGB as input,
-        where 'H' represents hematoxylin.
+        <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe/>`_
+    2. `sccnn-conic`:
+        This is trained on `CoNiC dataset
+        <https://conic-challenge.grand-challenge.org/evaluation/challenge/leaderboard//>`_
+        Centroids of ground truth masks were used to train this model.
+        The results are reported on the whole test data set including preliminary
+        and final set.
 
-    The tiatoolbox model should produce the following results on the CRC dataset using
+    The original model was implemented in Matlab. The model has been reimplemented
+    in PyTorch for Python compatibility. The original model uses HRGB as input,
+    where 'H' represents hematoxylin. The model has been modified to rely on RGB
+    image as input.
+
+
+    The tiatoolbox model should produce the following results on the following datasets
+    using
     8 pixels as radius for true detection:
 
     .. list-table:: MicroNet performance
@@ -47,6 +57,11 @@ class SCCNN(ModelABC):
          - 0.82
          - 0.80
          - 0.81
+       * - sccnn-crchisto
+         - CoNiC
+         - 0.80
+         - 0.78
+         - 0.79
 
     Args:
         num_input_channels (int):
@@ -274,6 +289,7 @@ class SCCNN(ModelABC):
         )
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
+    #  skipcq: PYL-W0221  # noqa: E800
     def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 

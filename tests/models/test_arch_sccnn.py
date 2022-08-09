@@ -8,6 +8,16 @@ from tiatoolbox.models.architecture.sccnn import SCCNN
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
+def _load_sccnn(tmp_path, name):
+    model = SCCNN()
+    fetch_pretrained_weights(name, f"{tmp_path}/weights.pth")
+    map_location = utils.misc.select_device(utils.env_detection.has_gpu())
+    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
+    model.load_state_dict(pretrained)
+
+    return model
+
+
 def test_functionality(remote_sample, tmp_path):
     """Functionality test."""
     tmp_path = str(tmp_path)
@@ -20,11 +30,12 @@ def test_functionality(remote_sample, tmp_path):
     )
     patch = SCCNN.preproc(patch)
     batch = torch.from_numpy(patch)[None]
-    model = SCCNN()
-    fetch_pretrained_weights("sccnn-crchisto", f"{tmp_path}/weights.pth")
-    map_location = utils.misc.select_device(utils.env_detection.has_gpu())
-    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
-    model.load_state_dict(pretrained)
+    model = _load_sccnn(tmp_path=tmp_path, name="sccnn-crchisto")
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
     assert np.all(output == [[8, 7]])
+
+    model = _load_sccnn(tmp_path=tmp_path, name="sccnn-conic")
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.postproc(output[0])
+    assert np.all(output == [[8, 8]])
