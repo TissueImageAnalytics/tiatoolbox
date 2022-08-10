@@ -44,6 +44,7 @@ def prealignment(
             transformation matrix.
         rotation_step (int):
             Rotation_step defines an increment in the rotation angles.
+    
     Returns:
         :class:`numpy.ndarray`:
             A transform matrix.
