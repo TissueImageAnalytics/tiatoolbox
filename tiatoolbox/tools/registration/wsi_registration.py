@@ -8,7 +8,7 @@ from tiatoolbox.utils.metrics import dice
 
 
 def _check_dimen(fixed_img, moving_img, fixed_mask, moving_mask):
-    """Checking dimensionality of images and mask."""
+    """Check the dimensionality of images and masks."""
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
         raise ValueError("The foreground is missing in the mask.")
 
