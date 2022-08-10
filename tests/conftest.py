@@ -398,4 +398,4 @@ def dfbr_features(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for DFBR features.
     Download features for pytest.
     """
-    return remote_sample("features")
+    return remote_sample("dfbr_features")

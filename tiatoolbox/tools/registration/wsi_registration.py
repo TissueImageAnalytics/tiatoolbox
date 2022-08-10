@@ -25,6 +25,7 @@ class DFBRegistrtation:
             model.features, return_layers=return_layers
         )
 
+    # Make this function private when full pipeline is implemented.
     def extract_features(self, fixed_img, moving_img):
         """CNN based feature extraction for registration.
 

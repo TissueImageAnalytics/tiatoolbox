@@ -1,5 +1,3 @@
-import pathlib
-
 import numpy as np
 import pytest
 
@@ -13,8 +11,8 @@ from tiatoolbox.utils.misc import imread
 def test_extract_features(fixed_image, moving_image, dfbr_features):
     """Test for CNN based feature extraction function."""
 
-    fixed_img = imread(pathlib.Path(fixed_image))
-    moving_img = imread(pathlib.Path(moving_image))
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
 
     df = DFBRegistrtation()
     with pytest.raises(
