@@ -38,4 +38,4 @@ def test_functionality(remote_sample, tmp_path):
     model = _load_sccnn(tmp_path=tmp_path, name="sccnn-conic")
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
-    assert np.all(output == [[8, 8]])
+    assert np.all(output == [[7, 8]])

@@ -59,8 +59,8 @@ class SCCNN(ModelABC):
          - 0.81
        * - sccnn-crchisto
          - CoNiC
-         - 0.80
-         - 0.78
+         - 0.79
+         - 0.79
          - 0.79
 
     Args:
