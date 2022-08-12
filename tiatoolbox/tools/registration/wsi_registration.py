@@ -8,7 +8,7 @@ from tiatoolbox.utils.transforms import imresize
 
 
 class DFBRegistrtation:
-    r"""Deep Feature based Registration
+    r"""Implements Deep Feature based Registration.
 
     This class implements a CNN feature based registration,
     as proposed in a paper titled `Deep Feature based Cross-slide Registration

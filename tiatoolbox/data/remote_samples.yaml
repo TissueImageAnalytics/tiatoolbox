@@ -114,4 +114,4 @@ files:
   moving_image:
     url: [ *testdata, "registration/HE_2_level8_gray.jpeg" ]
   dfbr_features:
-    url: [ *testdata, "registration/features.npy" ]
+    url: [ *testdata, "registration/dfbr_features.npy" ]
