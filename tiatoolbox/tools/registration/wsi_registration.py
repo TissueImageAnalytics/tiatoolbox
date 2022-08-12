@@ -74,7 +74,8 @@ class DFBRegistrtation:
         x = torch.from_numpy(cnn_input).type(torch.float32)
         return self.FeatureExtractor(x)
 
-    def finding_match(self, feature_dist):
+    @staticmethod
+    def finding_match(feature_dist):
         """Computes matching points.
 
         This function computes all the possible matching points
@@ -103,7 +104,8 @@ class DFBRegistrtation:
             second_min / first_min
         )
 
-    def compute_feature_distance(self, feature_x, feature_y, factor):
+    @staticmethod
+    def compute_feature_distance(feature_x, feature_y, factor):
         """Computes feature distance.
 
         This function computes Euclidean distance between features of
@@ -173,7 +175,6 @@ class DFBRegistrtation:
         fixed_feat3, moving_feat3 = np.reshape(
             pool5_feat[0, :, :, :], [-1, 512]
         ), np.reshape(pool5_feat[1, :, :, :], [-1, 512])
-        del pool3_feat, pool4_feat, pool5_feat
 
         fixed_feat1, moving_feat1 = fixed_feat1 / np.std(
             fixed_feat1
@@ -237,7 +238,7 @@ class DFBRegistrtation:
             ),
         ]
 
-        fixed_points, fixed_points = ((fixed_points * 224.0) + 112.0) * self.Xscale, (
+        fixed_points, moving_points = ((fixed_points * 224.0) + 112.0) * self.Xscale, (
             (moving_points * 224.0) + 112.0
         ) * self.Yscale
         return fixed_points, moving_points, np.amin(feature_dist, axis=1)

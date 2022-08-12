@@ -9,6 +9,7 @@ from tiatoolbox.utils.misc import imread
 
 
 def test_feature_mapping(fixed_image, moving_image):
+    """Test for CNN based feature matching function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
 
@@ -20,7 +21,6 @@ def test_feature_mapping(fixed_image, moving_image):
 
 def test_extract_features(fixed_image, moving_image, dfbr_features):
     """Test for CNN based feature extraction function."""
-
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
 
