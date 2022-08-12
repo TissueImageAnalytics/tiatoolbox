@@ -13,14 +13,14 @@ def _check_dims(fixed_img, moving_img, fixed_mask, moving_mask):
     """Check the dimensionality of images and mask.
 
     Args:
-            fixed_img (:class:`numpy.ndarray`):
-                    A grayscale fixed image.
-            moving_img (:class:`numpy.ndarray`):
-                    A grayscale moving image.
-            fixed_mask (:class:`numpy.ndarray`):
-                    A binary tissue mask for the fixed image.
-            moving_mask (:class:`numpy.ndarray`):
-                    A binary tissue mask for the moving image.
+        fixed_img (:class:`numpy.ndarray`):
+            A grayscale fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A grayscale moving image.
+        fixed_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the fixed image.
+        moving_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the moving image.
 
     Returns:
         None
@@ -48,23 +48,23 @@ def prealignment(
     fixed image. This can be used as a prealignment step before final refinement.
 
     Args:
-            fixed_img (:class:`numpy.ndarray`):
-                    A grayscale fixed image.
-            moving_img (:class:`numpy.ndarray`):
-                    A grayscale moving image.
-            fixed_mask (:class:`numpy.ndarray`):
-                    A binary tissue mask for the fixed image.
-            moving_mask (:class:`numpy.ndarray`):
-                    A binary tissue mask for the moving image.
-            dice_overlap (float):
-                    A dice ratio used for the selection of the best
-                    transformation matrix.
-            rotation_step (int):
-                    Rotation_step defines an increment in the rotation angles.
+        fixed_img (:class:`numpy.ndarray`):
+            A grayscale fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A grayscale moving image.
+        fixed_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the fixed image.
+        moving_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the moving image.
+        dice_overlap (float):
+            A dice ratio used for the selection of the best
+            transformation matrix.
+        rotation_step (int):
+            Rotation_step defines an increment in the rotation angles.
 
     Returns:
-            :class:`numpy.ndarray`:
-                    A transform matrix.
+        :class:`numpy.ndarray`:
+            A transform matrix.
 
     """
     if len(fixed_mask.shape) != 2:
@@ -143,18 +143,18 @@ def match_histograms(image_a, image_b, kernel_size=7):
     appearance of an image pair.
 
     Args:
-            image_a (:class:`numpy.ndarray`):
-                    A grayscale image.
-            image_b (:class:`numpy.ndarray`):
-                    A grayscale image.
-            kernel_size (int):
-                    The size of the ellipse-shaped footprint.
+        image_a (:class:`numpy.ndarray`):
+            A grayscale image.
+        image_b (:class:`numpy.ndarray`):
+            A grayscale image.
+        kernel_size (int):
+            The size of the ellipse-shaped footprint.
 
     Returns:
-            :class:`numpy.ndarray`:
-                    A normalized grayscale image.
-            :class:`numpy.ndarray`:
-                    A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
 
     """
 
