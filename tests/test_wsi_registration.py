@@ -24,7 +24,7 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
 
     expected = np.array([[1, 0, 337.8], [0, 0, 767.7], [0, 0, 1]])
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
-    transform = prealignment(
+    output = prealignment(
         fixed_img,
         moving_img,
         fixed_mask,
@@ -32,9 +32,9 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
         dice_overlap=0.5,
         rotation_step=10,
     )
-    assert transform.shape == (3, 3)
-    assert np.mean((expected[:2, :2] - transform[:2, :2])) <= 0.75
-    assert np.mean(transform[:2, 2] - expected[:2, 2]) < 1.0
+    assert output.shape == (3, 3)
+    assert np.mean((expected[:2, :2] - output[:2, :2])) <= 0.75
+    assert np.mean(output[:2, 2] - expected[:2, 2]) < 1.0
 
     no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
     no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
@@ -68,8 +68,6 @@ def test_dice_overlap_range():
     moving_img = np.random.randint(20, size=(256, 256))
     fixed_mask = np.random.randint(2, size=(256, 256))
     moving_mask = np.random.randint(2, size=(256, 256))
-
-    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.5)
 
     with pytest.raises(
         ValueError, match=r".*The dice_overlap should be in between 0 and 1.0.*"
