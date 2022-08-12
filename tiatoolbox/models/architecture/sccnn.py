@@ -8,6 +8,7 @@ IEEE transactions on medical imaging 35.5 (2016): 1196-1206.
 """
 
 from collections import OrderedDict
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -94,7 +95,7 @@ class SCCNN(ModelABC):
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
-    ):
+    ) -> None:
         super().__init__()
         self.in_ch = num_input_channels
         self.out_height = out_height
@@ -117,7 +118,10 @@ class SCCNN(ModelABC):
         def conv_act_block(
             in_channels: int, out_channels: int, kernel_size: int
         ) -> torch.nn.ModuleDict:
-            """Convolution and Activation branch for SCCNN.
+            """Convolution and activation branch for SCCNN.
+
+            This module combines the convolution and activation blocks in a single
+            function.
 
             Args:
                 in_channels (int):
@@ -148,12 +152,13 @@ class SCCNN(ModelABC):
             return nn.ModuleDict(module_dict)
 
         def spatially_constrained_layer1(
-            in_channels, out_channels
+            in_channels: int, out_channels: int
         ) -> torch.nn.ModuleDict:
             """Spatially constrained layer.
 
             Takes fully connected layer and returns outputs for creating probability
-            map for the output.
+            map for the output. The output is Tensor is 3-dimensional where it defines
+            the row, height of the centre of nucleus and its confidence value.
 
             Args:
                 in_channels (int):
@@ -194,7 +199,9 @@ class SCCNN(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
-    def spatially_constrained_layer2(self, sc1_0, sc1_1, sc1_2) -> torch.Tensor:
+    def spatially_constrained_layer2(
+        self, sc1_0: torch.Tensor, sc1_1: torch.Tensor, sc1_2: torch.Tensor
+    ) -> torch.Tensor:
         """Spatially constrained layer 2.
 
         Estimates row, column and height for sc2 layer mapping.
@@ -203,10 +210,10 @@ class SCCNN(ModelABC):
             sc1_0 (torch.Tensor):
                 Output of spatially_constrained_layer1 estimating
                 the x position of the nucleus.
-            sc1_1 (int):
+            sc1_1 (torch.Tensor):
                 Output of spatially_constrained_layer1 estimating
                 the y position of the nucleus.
-            sc1_2 (int):
+            sc1_2 (torch.Tensor):
                 Output of spatially_constrained_layer1 estimating
                 the confidence in nucleus detection.
 
@@ -226,7 +233,7 @@ class SCCNN(ModelABC):
         sc2 = sc1_2 / denominator
         return sc2 * out_map_threshold
 
-    def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -247,11 +254,11 @@ class SCCNN(ModelABC):
             in_tensor: torch.Tensor,
             out_height: int = 13,
             out_width: int = 13,
-        ) -> tuple:
+        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             """Spatially constrained layer 1.
 
             Estimates row, column and height for
-            spatially_constrained_layer2 layer mapping.
+            `spatially_constrained_layer2` layer mapping.
 
             Args:
                 layer (torch.nn.Module):
@@ -264,9 +271,12 @@ class SCCNN(ModelABC):
                     Output Width
 
             Returns:
-                tuple of :class:`torch.Tensor`:
-                    Row, Column and height estimates used for
-                    spatially_constrained_layer2 mapping.
+                tuple:
+                    Parameters for the requested nucleus location:
+                    - torch.Tensor - Row location for the centre of the nucleus.
+                    - torch.Tensor - Column location for the centre of the nucleus.
+                    - torch.Tensor - Peak value for the probability function indicating
+                    confidence value for the estimate.
 
             """
             sigmoid = layer["conv1"](in_tensor)
@@ -331,7 +341,9 @@ class SCCNN(ModelABC):
         return image / 255.0
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu) -> list:
+    def infer_batch(
+        model: nn.Module, batch_data: np.ndarray | torch.Tensor, on_gpu: bool
+    ) -> List[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
