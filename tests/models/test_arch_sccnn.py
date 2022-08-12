@@ -9,6 +9,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def _load_sccnn(tmp_path, name):
+    """Loads SCCNN model with specified weights."""
     model = SCCNN()
     fetch_pretrained_weights(name, f"{tmp_path}/weights.pth")
     map_location = utils.misc.select_device(utils.env_detection.has_gpu())
@@ -19,7 +20,11 @@ def _load_sccnn(tmp_path, name):
 
 
 def test_functionality(remote_sample, tmp_path):
-    """Functionality test."""
+    """Functionality test for SCCNN.
+
+    Tests the functionality of SCCNN model for inference at the patch level.
+
+    """
     tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
