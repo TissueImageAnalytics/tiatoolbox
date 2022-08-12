@@ -12,10 +12,10 @@ from tiatoolbox.utils.misc import imread
 
 def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     """Test for prealignment of an image pair"""
-    fixed_img = imread(pathlib.Path(fixed_image))
-    moving_img = imread(pathlib.Path(moving_image))
-    fixed_mask = imread(pathlib.Path(fixed_mask))
-    moving_mask = imread(pathlib.Path(moving_mask))
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_mask = imread(fixed_mask)
+    moving_mask = imread(moving_mask)
 
     with pytest.raises(
         ValueError, match=r".*The input images should be grayscale images.*"
