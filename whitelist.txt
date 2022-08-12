@@ -112,6 +112,8 @@ iostate
 jpg
 kather
 kd
+lookahead
+lookbehind
 macports
 memray
 mpp

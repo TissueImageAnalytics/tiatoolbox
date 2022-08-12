@@ -3,6 +3,41 @@ default_language_version:
     # https://github.com/pgjones/flake8-sql/pull/21
 
 repos:
+  - repo: local
+    hooks:
+      - id: pytest-changed-files
+        name: pytest-changed-files
+        entry: pytest
+        files: tests/.*\btest_\w*.py
+        require_serial: true
+        language: system
+        stages: [push]
+      - id: requirements-consistency
+        name: check requirements are consistent
+        entry: python pre-commit/requirements_consistency.py
+        files: "(requirements.*.(txt|yml|yaml)|setup.py)$"
+        require_serial: true
+        pass_filenames: false
+        language: python
+        additional_dependencies: [pyyaml]
+      - id: notebook-markdown-lint
+        name: notebook-markdown-lint
+        entry: python pre-commit/notebook_markdown_format.py
+        require_serial: true
+        types_or: [jupyter]
+        language: python
+        additional_dependencies:
+        - mdformat
+        - mdformat-black
+        - mdformat-myst
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.14
+    hooks:
+    - id: mdformat
+      # Optionally add plugins
+      additional_dependencies:
+      - mdformat-gfm  # GitHub flavoured markdown
+      - mdformat-black  # Black formatting for python verbatim blocks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
     hooks:
@@ -67,20 +102,3 @@ repos:
           flake8-use-fstring, # Encourages use of f-strings vs old style
           pep8-naming, # Check PEP8 class naming
         ]
-  - repo: local
-    hooks:
-      - id: pytest-changed-files
-        name: pytest-changed-files
-        entry: pytest
-        files: tests/.*\btest_\w*.py
-        language: system
-        stages: [push]
-  - repo: local
-    hooks:
-      - id: requirements-consistency
-        name: check requirements are consistent
-        entry: python pre-commit/requirements_consistency.py
-        files: "(requirements.*.(txt|yml|yaml)|setup.py)$"
-        pass_filenames: false
-        language: python
-        additional_dependencies: [pyyaml]
