@@ -100,8 +100,8 @@ def test_warning(
     fixed_msk = imread(pathlib.Path(fixed_mask))
     moving_msk = imread(pathlib.Path(moving_mask))
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
-
-    _ = prealignment(fixed_img, moving_img, fixed_msk, moving_msk, dice_overlap=0.9)
+    with pytest.warns(UserWarning):
+        _ = prealignment(fixed_img, moving_img, fixed_msk, moving_msk, dice_overlap=0.9)
 
 
 def test_match_histograms():

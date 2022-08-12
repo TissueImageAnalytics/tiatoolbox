@@ -1,4 +1,4 @@
-import logging
+import warnings
 
 import cv2
 import numpy as np
@@ -129,7 +129,7 @@ def prealignment(
     if max(all_dice) >= dice_overlap:
         return all_transform[all_dice.index(max(all_dice))]
 
-    logging.warning(
+    warnings.warn(
         "Not able to find the best transformation. Try changing the values for"
         " 'dice_overlap' and 'rotation_step'."
     )
