@@ -8,6 +8,16 @@ from tiatoolbox.tools.registration.wsi_registration import (
 from tiatoolbox.utils.misc import imread
 
 
+def test_feature_mapping(fixed_image, moving_image):
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+
+    df = DFBRegistrtation()
+    features = df.extract_features(fixed_img, moving_img)
+    df.feature_mapping(features)
+    print("hh")
+
+
 def test_extract_features(fixed_image, moving_image, dfbr_features):
     """Test for CNN based feature extraction function."""
 

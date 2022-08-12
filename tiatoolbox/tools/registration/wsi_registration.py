@@ -74,6 +74,175 @@ class DFBRegistrtation:
         x = torch.from_numpy(cnn_input).type(torch.float32)
         return self.FeatureExtractor(x)
 
+    def finding_match(self, feature_dist):
+        """Computes matching points.
+
+        This function computes all the possible matching points
+        between fixed and moving images.
+
+        Args:
+            feature_dist (:class:`numpy.ndarray`):
+                A feature distance array.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                An array of matching points.
+            :class:`numpy.ndarray`:
+                An array of floating numbers representing quality
+                of each matching points.
+
+        """
+        seq = np.arange(feature_dist.shape[0])
+        indx_first_min = np.argmin(feature_dist, axis=1)
+        first_min = feature_dist[seq, indx_first_min]
+        mask = np.zeros_like(feature_dist)
+        mask[seq, indx_first_min] = 1
+        masked = np.ma.masked_array(feature_dist, mask)
+        second_min = np.amin(masked, axis=1)
+        return np.array([seq, indx_first_min]).transpose(), np.array(
+            second_min / first_min
+        )
+
+    def compute_feature_distance(self, feature_x, feature_y, factor):
+        """Computes feature distance.
+
+        This function computes Euclidean distance between features of
+        fixed and moving images.
+
+        Args:
+            feature_x (:class:`numpy.ndarray`):
+                Features computed for a fixed image.
+            feature_y (:class:`numpy.ndarray`):
+                Features computed for a moving image.
+            factor (int):
+                A number multiplied by the feature size
+                for getting the referenced feature size.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                A feature distance array.
+
+        """
+        assert len(feature_x.shape) == len(feature_y.shape)
+        feature_distance = np.linalg.norm(
+            np.repeat(np.expand_dims(feature_x, axis=0), feature_y.shape[0], axis=0)
+            - np.repeat(np.expand_dims(feature_y, axis=1), feature_x.shape[0], axis=1),
+            axis=len(feature_x.shape),
+        )
+
+        feature_size_2d = np.int(np.sqrt(feature_distance.shape[0]))
+        ref_feature_size_2d = factor * feature_size_2d
+        feature_size, ref_feature_size = feature_size_2d**2, ref_feature_size_2d**2
+        feature_grid = np.kron(
+            np.arange(feature_size).reshape([feature_size_2d, feature_size_2d]),
+            np.ones([factor, factor], dtype="int32"),
+        )
+        row_indx = np.repeat(
+            feature_grid.reshape([ref_feature_size, 1]), ref_feature_size, axis=1
+        )
+        col_indx = np.repeat(
+            feature_grid.reshape([1, ref_feature_size]), ref_feature_size, axis=0
+        )
+        return feature_distance[row_indx, col_indx]
+
+    def feature_mapping(self, features, num_matching_points=128):
+        """CNN based feature extraction for registration.
+
+        This function extracts multiscale features from a pre-trained
+        VGG-16 model for an image pair.
+
+        Args:
+            features (dict):
+                Multiscale CNN features.
+            num_matching_points (int):
+                Number of required matching points.
+
+        Returns:
+
+        """
+        pool3_feat = features["block3_pool"].detach().numpy()
+        pool4_feat = features["block4_pool"].detach().numpy()
+        pool5_feat = features["block5_pool"].detach().numpy()
+        ref_feature_size = pool3_feat.shape[2]
+
+        fixed_feat1, moving_feat1 = np.reshape(
+            pool3_feat[0, :, :, :], [-1, 256]
+        ), np.reshape(pool3_feat[1, :, :, :], [-1, 256])
+        fixed_feat2, moving_feat2 = np.reshape(
+            pool4_feat[0, :, :, :], [-1, 512]
+        ), np.reshape(pool4_feat[1, :, :, :], [-1, 512])
+        fixed_feat3, moving_feat3 = np.reshape(
+            pool5_feat[0, :, :, :], [-1, 512]
+        ), np.reshape(pool5_feat[1, :, :, :], [-1, 512])
+        del pool3_feat, pool4_feat, pool5_feat
+
+        fixed_feat1, moving_feat1 = fixed_feat1 / np.std(
+            fixed_feat1
+        ), moving_feat1 / np.std(moving_feat1)
+        fixed_feat2, moving_feat2 = fixed_feat2 / np.std(
+            fixed_feat2
+        ), moving_feat2 / np.std(moving_feat2)
+        fixed_feat3, moving_feat3 = fixed_feat3 / np.std(
+            fixed_feat3
+        ), moving_feat3 / np.std(moving_feat3)
+
+        feature_dist1 = self.compute_feature_distance(fixed_feat1, moving_feat1, 1)
+        feature_dist2 = self.compute_feature_distance(fixed_feat2, moving_feat2, 2)
+        feature_dist3 = self.compute_feature_distance(fixed_feat3, moving_feat3, 4)
+        feature_dist = 1.414 * feature_dist1 + feature_dist2 + feature_dist3
+
+        del (
+            fixed_feat1,
+            moving_feat1,
+            fixed_feat2,
+            moving_feat2,
+            fixed_feat3,
+            moving_feat3,
+            feature_dist1,
+            feature_dist2,
+            feature_dist3,
+        )
+
+        seq = np.array(
+            [[i, j] for i in range(ref_feature_size) for j in range(ref_feature_size)],
+            dtype="int32",
+        )
+        fixed_points = np.array(seq, dtype="float32") * 8.0 + 4.0
+        moving_points = np.array(seq, dtype="float32") * 8.0 + 4.0
+
+        fixed_points = (fixed_points - 112.0) / 224.0
+        moving_points = (moving_points - 112.0) / 224.0
+
+        matching_points, quality = self.finding_match(feature_dist)
+        max_quality = np.max(quality)
+        while np.where(quality >= max_quality)[0].shape[0] <= num_matching_points:
+            max_quality -= 0.01
+
+        matching_points = matching_points[np.where(quality >= max_quality)]
+        count_matching_points = matching_points.shape[0]
+
+        fixed_points, moving_points = (
+            fixed_points[matching_points[:, 1]],
+            moving_points[matching_points[:, 0]],
+        )
+        feature_dist = feature_dist[
+            np.repeat(
+                np.reshape(matching_points[:, 1], [count_matching_points, 1]),
+                count_matching_points,
+                axis=1,
+            ),
+            np.repeat(
+                np.reshape(matching_points[:, 0], [1, count_matching_points]),
+                count_matching_points,
+                axis=0,
+            ),
+        ]
+
+        fixed_points, fixed_points = ((fixed_points * 224.0) + 112.0) * self.Xscale, (
+            (moving_points * 224.0) + 112.0
+        ) * self.Yscale
+        return fixed_points, moving_points, np.amin(feature_dist, axis=1)
+
 
 def match_histograms(image_a, image_b, disk_radius=3):
     """Image normalization function.
