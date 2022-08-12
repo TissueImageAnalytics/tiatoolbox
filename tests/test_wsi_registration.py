@@ -22,7 +22,7 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     ):
         _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
 
-    expected = np.array([[1, 0, 337.8], [0, 0, 767.7], [0, 0, 1]])
+    expected = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
     output = prealignment(
         fixed_img,
@@ -33,7 +33,7 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
         rotation_step=10,
     )
     assert output.shape == (3, 3)
-    assert np.mean((expected[:2, :2] - output[:2, :2])) <= 0.75
+    assert np.mean((expected[:2, :2] - output[:2, :2])) <= 0.98
     assert np.mean(output[:2, 2] - expected[:2, 2]) < 1.0
 
     no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
