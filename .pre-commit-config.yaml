@@ -20,8 +20,13 @@ repos:
         pass_filenames: false
         language: python
         additional_dependencies: [pyyaml]
-      - id: notebook-markdown-lint
-        name: notebook-markdown-lint
+      - id: notebook-check-ast
+        name: check notebook ast
+        entry: python pre-commit/notebook_check_ast.py
+        types_or: [jupyter]
+        language: python
+      - id: notebook-markdown-format
+        name: notebook markdown format
         entry: python pre-commit/notebook_markdown_format.py
         require_serial: true
         types_or: [jupyter]
