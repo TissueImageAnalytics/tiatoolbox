@@ -70,5 +70,4 @@ if __name__ == "__main__":
         "files", nargs="*", help="Notebook markdown files to lint.", type=Path
     )
     args = parser.parse_args()
-    files = sorted(args.files)
-    main(files)
+    main(sorted(args.files))
