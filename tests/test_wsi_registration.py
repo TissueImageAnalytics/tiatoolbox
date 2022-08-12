@@ -10,38 +10,6 @@ from tiatoolbox.tools.registration.wsi_registration import (
 from tiatoolbox.utils.misc import imread
 
 
-@pytest.fixture(scope="session")
-def fixed_image(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for fixed image.
-    Download fixed image for pytest.
-    """
-    return remote_sample("fixed_image")
-
-
-@pytest.fixture(scope="session")
-def moving_image(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for moving image.
-    Download moving image for pytest.
-    """
-    return remote_sample("moving_image")
-
-
-@pytest.fixture(scope="session")
-def fixed_mask(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for fixed mask.
-    Download fixed mask for pytest.
-    """
-    return remote_sample("fixed_mask")
-
-
-@pytest.fixture(scope="session")
-def moving_mask(remote_sample) -> pathlib.Path:
-    """Sample pytest fixture for moving mask.
-    Download moving mask for pytest.
-    """
-    return remote_sample("moving_mask")
-
-
 def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     """Test for prealignment of an image pair"""
     fixed_img = imread(pathlib.Path(fixed_image))
@@ -119,6 +87,21 @@ def test_dice_overlap_range():
         _ = prealignment(
             fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=-1
         )
+
+
+def test_warning(
+    fixed_image,
+    moving_image,
+    fixed_mask,
+    moving_mask,
+):
+    fixed_img = imread(pathlib.Path(fixed_image))
+    moving_img = imread(pathlib.Path(moving_image))
+    fixed_msk = imread(pathlib.Path(fixed_mask))
+    moving_msk = imread(pathlib.Path(moving_mask))
+    fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
+
+    _ = prealignment(fixed_img, moving_img, fixed_msk, moving_msk, dice_overlap=0.9)
 
 
 def test_match_histograms():

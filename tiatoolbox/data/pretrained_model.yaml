@@ -613,6 +613,10 @@ fcn_resnet50_unet-bcss:
 
 unet_tissue_mask_tsef:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/registration/UNET-v0.0-TSEF.pth
+    description:
+      These weights can be used to segment a grayscale image to
+      create a tissue mask excluding the fatty region. TSEF stands for tissue
+      segmentation excluding fat.
     architecture:
         class: unet.UNetModel
         kwargs:

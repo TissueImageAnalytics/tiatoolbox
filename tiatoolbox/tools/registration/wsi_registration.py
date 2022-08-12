@@ -1,14 +1,31 @@
+import logging
+
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
-from skimage import exposure, filters, morphology
+from skimage import exposure, filters
 from skimage.util import img_as_float
 
 from tiatoolbox.utils.metrics import dice
 
 
-def _check_dimen(fixed_img, moving_img, fixed_mask, moving_mask):
-    """Checking dimensionality of images and mask."""
+def _check_dims(fixed_img, moving_img, fixed_mask, moving_mask):
+    """Check the dimensionality of images and mask.
+
+    Args:
+            fixed_img (:class:`numpy.ndarray`):
+                    A grayscale fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                    A grayscale moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the moving image.
+
+    Returns:
+        None
+
+    """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
         raise ValueError("The foreground is missing in the mask.")
 
@@ -31,22 +48,23 @@ def prealignment(
     fixed image. This can be used as a prealignment step before final refinement.
 
     Args:
-        fixed_img (:class:`numpy.ndarray`):
-            A grayscale fixed image.
-        moving_img (:class:`numpy.ndarray`):
-            A grayscale moving image.
-        fixed_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the fixed image.
-        moving_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the moving image.
-        dice_overlap (float):
-            A dice ratio used for the selection of the best
-            transformation matrix.
-        rotation_step (int):
-            Rotation_step defines an increment in the rotation angles.
+            fixed_img (:class:`numpy.ndarray`):
+                    A grayscale fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                    A grayscale moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the moving image.
+            dice_overlap (float):
+                    A dice ratio used for the selection of the best
+                    transformation matrix.
+            rotation_step (int):
+                    Rotation_step defines an increment in the rotation angles.
+
     Returns:
-        :class:`numpy.ndarray`:
-            A transform matrix.
+            :class:`numpy.ndarray`:
+                    A transform matrix.
 
     """
     if len(fixed_mask.shape) != 2:
@@ -59,6 +77,8 @@ def prealignment(
 
     fixed_mask = np.uint8(fixed_mask > 0)
     moving_mask = np.uint8(moving_mask > 0)
+
+    _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
 
     if rotation_step < 10 or rotation_step > 20:
         raise ValueError("Please select the rotation step in between 10 and 20.")
@@ -109,32 +129,32 @@ def prealignment(
     if max(all_dice) >= dice_overlap:
         return all_transform[all_dice.index(max(all_dice))]
 
-    print(
-        "***** Not able to find the best transformation. Try changing the values"
-        "for dice_overlap and rotation_step. *****"
+    logging.warning(
+        "Not able to find the best transformation. Try changing the values for"
+        " 'dice_overlap' and 'rotation_step'."
     )
     return None
 
 
-def match_histograms(image_a, image_b, disk_radius=3):
+def match_histograms(image_a, image_b, kernel_size=7):
     """Image normalization function.
 
     This function performs histogram equalization to unify the
     appearance of an image pair.
 
     Args:
-        image_a (:class:`numpy.ndarray`):
-            A grayscale image.
-        image_b (:class:`numpy.ndarray`):
-            A grayscale image.
-        disk_radius (int):
-            The radius of the disk-shaped footprint.
+            image_a (:class:`numpy.ndarray`):
+                    A grayscale image.
+            image_b (:class:`numpy.ndarray`):
+                    A grayscale image.
+            kernel_size (int):
+                    The size of the ellipse-shaped footprint.
 
     Returns:
-        :class:`numpy.ndarray`:
-            A normalized grayscale image.
-        :class:`numpy.ndarray`:
-            A normalized grayscale image.
+            :class:`numpy.ndarray`:
+                    A normalized grayscale image.
+            :class:`numpy.ndarray`:
+                    A normalized grayscale image.
 
     """
 
@@ -142,9 +162,10 @@ def match_histograms(image_a, image_b, disk_radius=3):
     if len(image_a.shape) == 3 or len(image_b.shape) == 3:
         raise ValueError("The input images should be grayscale images.")
 
-    entropy_a, entropy_b = filters.rank.entropy(
-        image_a, morphology.disk(disk_radius)
-    ), filters.rank.entropy(image_b, morphology.disk(disk_radius))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+    entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
+        image_b, kernel
+    )
     if np.mean(entropy_a) > np.mean(entropy_b):
         image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
     else:
