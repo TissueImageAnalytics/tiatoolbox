@@ -57,7 +57,7 @@ def prealignment(
         moving_mask (:class:`numpy.ndarray`):
             A binary tissue mask for the moving image.
         dice_overlap (float):
-            A dice ratio used for the selection of the best
+            Dice ratio used for the selection of the best
             transformation matrix.
         rotation_step (int):
             Rotation_step defines an increment in the rotation angles.
