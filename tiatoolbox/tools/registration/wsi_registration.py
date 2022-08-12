@@ -123,7 +123,6 @@ class DFBRegistrtation:
                 A feature distance array.
 
         """
-        assert len(feature_x.shape) == len(feature_y.shape)
         feature_distance = np.linalg.norm(
             np.repeat(np.expand_dims(feature_x, axis=0), feature_y.shape[0], axis=0)
             - np.repeat(np.expand_dims(feature_y, axis=1), feature_x.shape[0], axis=1),
