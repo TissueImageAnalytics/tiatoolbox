@@ -1,4 +1,6 @@
 """This module defines classes which can read image data from WSI formats."""
+from __future__ import annotations
+
 import copy
 import json
 import math
@@ -145,11 +147,11 @@ class WSIReader:
     from whole slide image (WSI) files.
 
     Attributes:
-        input_img (pathlib.Path):
+        input_path (pathlib.Path):
             Input path to WSI file.
 
     Args:
-        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
+        input_img (str, :obj:`pathlib.Path`, :obj:`ndarray` or :obj:`.WSIReader`):
             Input path to WSI.
         mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
             The MPP of the WSI. If not provided, the MPP is approximated
@@ -162,19 +164,19 @@ class WSIReader:
 
     @staticmethod  # noqa: A003
     def open(  # noqa: A003
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, pathlib.Path, np.ndarray, WSIReader],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> "WSIReader":
-        """Return an appropriate :class:`.WSIReader` object.
+        """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
-            input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+            input_img (str, pathlib.Path, :obj:`numpy.ndarray` or :obj:`.WSIReader`):
                 Input to create a WSI object from. Supported types of
-                input are: `str` and `pathlib.Path` which point to the
+                input are: `str` and :obj:`pathlib.Path` which point to the
                 location on the disk where image is stored,
                 :class:`numpy.ndarray` in which the input image in the
-                form of numpy array (HxWxC) is stored, or :obj:WSIReader
+                form of numpy array (HxWxC) is stored, or :obj:`.WSIReader`
                 which is an already created tiatoolbox WSI handler. In
                 the latter case, the function directly passes the
                 input_imge to the output.
@@ -260,7 +262,7 @@ class WSIReader:
         """Verify that an input image is supported.
 
         Args:
-            input_path (pathlib.Path):
+            input_path (:class:`pathlib.Path`):
                 Input path to WSI.
 
         Raises:
@@ -1291,18 +1293,18 @@ class WSIReader:
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
             raise ValueError(f"Invalid tissue masking method: {method}.")
-        if method == "otsu":
-            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         if method == "morphological":
             mpp = None
             power = None
-            if units == "power":
-                power = resolution
             if units == "mpp":
                 mpp = resolution
+            elif units == "power":
+                power = resolution
             masker = tissuemask.MorphologicalMasker(
                 mpp=mpp, power=power, **masker_kwargs
             )
+        elif method == "otsu":
+            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         mask_img = masker.fit_transform([thumbnail])[0]
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
@@ -1317,7 +1319,7 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str or pathlib.Path):
+            output_dir(str or :obj:`pathlib.Path`):
                 Output directory to save the tiles.
             tile_objective_value (int):
                 Objective value at which tile is generated.
@@ -1411,7 +1413,7 @@ class WSIReader:
                 + tile_format
             )
 
-            utils.misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
+            utils.misc.imwrite(image_path=output_dir / img_save_name, img=im)
 
             data.append(
                 [
@@ -1440,12 +1442,12 @@ class WSIReader:
                 "size_h",
             ],
         )
-        df.to_csv(output_dir.joinpath("Output.csv"), index=False)
+        df.to_csv(output_dir / "Output.csv", index=False)
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
         utils.misc.imwrite(
-            output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
+            output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
         )
 
 
@@ -2410,8 +2412,8 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         description = box[3].xml.find("description")
-        m = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int(m.group(0))
+        matches = re.search(r"(?<=AppMag = )\d\d", description.text)
+        objective_power = np.int(matches[0])
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
@@ -2438,9 +2440,9 @@ class OmnyxJP2WSIReader(WSIReader):
         ]
 
         vendor = "Omnyx JP2"
-        m = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
-        mpp_x = float(m.group(0))
-        mpp_y = float(m.group(0))
+        matches = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
+        mpp_x = float(matches[0])
+        mpp_y = float(matches[0])
         mpp = [mpp_x, mpp_y]
 
         return WSIMeta(
@@ -2481,7 +2483,7 @@ class VirtualWSIReader(WSIReader):
         mode (str)
 
     Args:
-        input_img (str, pathlib.Path, ndarray):
+        input_img (str, :obj:`pathlib.Path`, :class:`numpy.ndarray`):
             Input path to WSI.
         info (WSIMeta):
             Metadata for the virtual wsi.
@@ -2627,7 +2629,7 @@ class VirtualWSIReader(WSIReader):
                 ("resolution").
             **kwargs (dict):
                 Extra key-word arguments for reader specific parameters.
-                Currently only used by VirtualWSIReader. See class
+                Currently, only used by VirtualWSIReader. See class
                 docstrings for more information.
 
         Returns:
@@ -2781,11 +2783,7 @@ class VirtualWSIReader(WSIReader):
             size=image_read_size,
         )
 
-        if interpolation in [None, "none"]:
-            output_size = None
-        else:
-            output_size = size
-
+        output_size = None if interpolation in [None, "none"] else size
         im_region = utils.image.sub_pixel_read(
             self.img,
             bounds,
@@ -3011,7 +3009,7 @@ class ArrayView:
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
-        raise Exception(f"Unsupported axes `{self.axes}`.")
+        raise ValueError(f"Unsupported axes `{self.axes}`.")
 
 
 class TIFFWSIReader(WSIReader):
@@ -3083,7 +3081,7 @@ class TIFFWSIReader(WSIReader):
             return shape
         if self._axes == "SYX":
             return np.roll(shape, -1)
-        raise Exception(f"Unsupported axes `{self._axes}`.")
+        raise ValueError(f"Unsupported axes `{self._axes}`.")
 
     def _parse_svs_metadata(self) -> dict:
         """Extract SVS specific metadata.
@@ -3210,8 +3208,10 @@ class TIFFWSIReader(WSIReader):
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
             objective_power = float(objective.attrib.get("NominalMagnification"))
-        except KeyError:
-            raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
+        except KeyError as e:
+            raise KeyError(
+                "No matching Instrument for image InstrumentRef in OME-XML."
+            ) from e
 
         return {
             "objective_power": objective_power,
@@ -3227,14 +3227,12 @@ class TIFFWSIReader(WSIReader):
             dict: Dictionary of kwargs for WSIMeta.
 
         """
-        raw = {}
         mpp = None
         objective_power = None
         vendor = "Generic"
 
         description = self.tiff.pages[0].description
-        raw["Description"] = description
-
+        raw = {"Description": description}
         # Check for MPP in the tiff resolution tags
         # res_units: 1 = undefined, 2 = inch, 3 = centimeter
         res_units = self.tiff.pages[0].tags.get("ResolutionUnit")
@@ -4169,7 +4167,7 @@ class DICOMWSIReader(WSIReader):
 
 
 class NGFFWSIReader(WSIReader):
-    """Reader for NGFF WSI zarrs.
+    """Reader for NGFF WSI zarr(s).
 
     Support is currently experimental. This supports reading from
     NGFF version 0.4.
