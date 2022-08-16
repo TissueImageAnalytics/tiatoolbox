@@ -23,3 +23,4 @@ help:
 	mkdir _autosummary
 	cp -r images _autosummary/images
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	cp _templates/sg_gallery.css _build/html/_static
