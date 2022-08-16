@@ -42,10 +42,9 @@ class SCCNN(ModelABC):
 
 
     The tiatoolbox model should produce the following results on the following datasets
-    using
-    8 pixels as radius for true detection:
+    using 8 pixels as radius for true detection:
 
-    .. list-table:: MicroNet performance
+    .. list-table:: SCCNN performance
        :widths: 15 15 15 15 15
        :header-rows: 1
 
