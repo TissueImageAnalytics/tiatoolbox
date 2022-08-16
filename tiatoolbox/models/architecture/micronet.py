@@ -276,7 +276,9 @@ def group3_arch_branch(in_ch, skip, out_ch):
     return nn.ModuleDict(module_dict)
 
 
-def group4_arch_branch(in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2)):
+def group4_arch_branch(
+    in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2), activation="tanh"
+):
     """Group4 branch for MicroNet.
 
     Args:
@@ -290,12 +292,19 @@ def group4_arch_branch(in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2)):
         up_strides (tuple of int):
             Stride size for
             :class:`torch.nn.ConvTranspose2d`.
+        activation (str):
+            Activation function, default="tanh".
 
     Returns:
         torch.nn.ModuleDict:
             An output of type :class:`torch.nn.ModuleDict`
 
     """
+    if activation == "relu":
+        activation = nn.ReLU()
+    else:
+        activation = nn.Tanh()
+
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
         in_ch, out_ch, kernel_size=up_kernel, stride=up_strides
@@ -309,12 +318,12 @@ def group4_arch_branch(in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2)):
             padding=0,
             bias=True,
         ),
-        nn.Tanh(),
+        activation,
     )
     return nn.ModuleDict(module_dict)
 
 
-def out_arch_branch(in_ch, num_class=2):
+def out_arch_branch(in_ch, num_class=2, activation="softmax"):
     """Group5 branch for MicroNet.
 
     Args:
@@ -322,12 +331,18 @@ def out_arch_branch(in_ch, num_class=2):
             Number of input channels.
         num_class (int):
             Number of output channels. default=2.
+        activation (str):
+            Activation function, default="softmax".
 
     Returns:
         torch.nn.Sequential:
             An output of type :class:`torch.nn.Sequential`
 
     """
+    if activation == "relu":
+        activation = nn.ReLU()
+    else:
+        activation = nn.Softmax()
     return nn.Sequential(
         nn.Dropout2d(p=0.5),
         nn.Conv2d(
@@ -338,7 +353,7 @@ def out_arch_branch(in_ch, num_class=2):
             padding=0,
             bias=True,
         ),
-        nn.Softmax(),
+        activation,
     )
 
 
@@ -378,6 +393,9 @@ class MicroNet(ModelABC):
             Number of channels in input. default=3.
         num_class (int):
             Number of output channels. default=2.
+        out_activation (str):
+            Activation to use at the output. MapDe inherits MicroNet
+            but uses ReLU activation.
 
     References:
         [1] Raza, Shan E Ahmed, et al. "Micro-Net: A unified model for
@@ -390,7 +408,7 @@ class MicroNet(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels=3, num_class=2):
+    def __init__(self, num_input_channels=3, num_class=2, out_activation="softmax"):
         super().__init__()
         if num_class < 2:
             raise ValueError("Number of classes should be >=2.")
@@ -412,15 +430,23 @@ class MicroNet(ModelABC):
         module_dict["b8"] = group3_arch_branch(512, 256, 256)
         module_dict["b9"] = group3_arch_branch(256, 128, 128)
 
-        module_dict["fm1"] = group4_arch_branch(128, 64, (2, 2), (2, 2))
-        module_dict["fm2"] = group4_arch_branch(256, 128, (4, 4), (4, 4))
-        module_dict["fm3"] = group4_arch_branch(512, 256, (8, 8), (8, 8))
+        module_dict["fm1"] = group4_arch_branch(
+            128, 64, (2, 2), (2, 2), activation=out_activation
+        )
+        module_dict["fm2"] = group4_arch_branch(
+            256, 128, (4, 4), (4, 4), activation=out_activation
+        )
+        module_dict["fm3"] = group4_arch_branch(
+            512, 256, (8, 8), (8, 8), activation=out_activation
+        )
 
         module_dict["aux_out1"] = out_arch_branch(64, num_class=self.__num_class)
         module_dict["aux_out2"] = out_arch_branch(128, num_class=self.__num_class)
         module_dict["aux_out3"] = out_arch_branch(256, num_class=self.__num_class)
 
-        module_dict["out"] = out_arch_branch(64 + 128 + 256, num_class=self.__num_class)
+        module_dict["out"] = out_arch_branch(
+            64 + 128 + 256, num_class=self.__num_class, activation=out_activation
+        )
 
         self.layer = nn.ModuleDict(module_dict)
 
@@ -431,7 +457,7 @@ class MicroNet(ModelABC):
 
         Args:
             input_tensor (torch.Tensor):
-                Input images, the tensor is in the shape of NHCW.
+                Input images, the tensor is in the shape of NCHW.
 
         Returns:
             list:
