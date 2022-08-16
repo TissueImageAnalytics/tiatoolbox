@@ -402,8 +402,8 @@ class WSIStreamDataset(torch_data.Dataset):
         if len(patch_data_) == 1:
             patch_data_ = patch_data_[0]
 
-        bound = self.mp_shared_space.patch_outputs[idx]
-        return patch_data_, bound
+        bounds = np.array(self.mp_shared_space.patch_outputs[idx])
+        return patch_data_, bounds
 
 
 class SemanticSegmentor:
