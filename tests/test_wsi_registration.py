@@ -1,8 +1,9 @@
+import cv2
 import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
-    DFBRegistrtation,
+    DFBRegistration,
     match_histograms,
 )
 from tiatoolbox.utils.misc import imread
@@ -13,10 +14,13 @@ def test_feature_mapping(fixed_image, moving_image):
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
 
-    df = DFBRegistrtation()
+    df = DFBRegistration()
     features = df.extract_features(fixed_img, moving_img)
-    df.feature_mapping(features)
-    print("hh")
+    fixed_matched_points, moving_matched_points, quality = df.feature_mapping(features)
+    transform = df.estimate_affine_transform(
+        fixed_matched_points, moving_matched_points
+    )
+    _ = cv2.warpAffine(moving_img, transform[0:-1][:], fixed_img.shape[:2][::-1])
 
 
 def test_extract_features(fixed_image, moving_image, dfbr_features):
@@ -24,7 +28,7 @@ def test_extract_features(fixed_image, moving_image, dfbr_features):
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
 
-    df = DFBRegistrtation()
+    df = DFBRegistration()
     with pytest.raises(
         ValueError,
         match=r".*The required shape for fixed and moving images is n x m x 3.*",
