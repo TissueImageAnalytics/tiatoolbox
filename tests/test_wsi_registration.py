@@ -9,18 +9,30 @@ from tiatoolbox.tools.registration.wsi_registration import (
 from tiatoolbox.utils.misc import imread
 
 
-def test_feature_mapping(fixed_image, moving_image):
+def test_feature_mapping(fixed_image, moving_image, dfbr_features):
     """Test for CNN based feature matching function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
+    pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
+    moving_img = cv2.warpAffine(
+        moving_img, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
+    )
 
     df = DFBRegistration()
     features = df.extract_features(fixed_img, moving_img)
     fixed_matched_points, moving_matched_points, quality = df.feature_mapping(features)
-    transform = df.estimate_affine_transform(
-        fixed_matched_points, moving_matched_points
+    output = df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
+    expected = np.array(
+        [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]]
     )
-    _ = cv2.warpAffine(moving_img, transform[0:-1][:], fixed_img.shape[:2][::-1])
+    assert np.mean(output - expected) < 1.0e-6
+
+    del features["block5_pool"]
+    with pytest.raises(
+        ValueError,
+        match=r".*The feature mapping step expects 3 blocks of features.*",
+    ):
+        _, _, _ = df.feature_mapping(features)
 
 
 def test_extract_features(fixed_image, moving_image, dfbr_features):

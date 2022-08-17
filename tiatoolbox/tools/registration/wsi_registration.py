@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 import torch
 import torchvision
@@ -34,15 +33,15 @@ class DFBRegistration:
         VGG-16 model for an image pair.
 
         Args:
-                fixed_img (:class:`numpy.ndarray`):
-                        A fixed image.
-                moving_img (:class:`numpy.ndarray`):
-                        A moving image.
+            fixed_img (:class:`numpy.ndarray`):
+                A fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                A moving image.
 
         Returns:
-                dict:
-                        A dictionary containing the multiscale features.
-                        The expected format is {layer_name: features}.
+            dict:
+                A dictionary containing the multiscale features.
+                The expected format is {layer_name: features}.
 
         """
         if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
@@ -83,15 +82,15 @@ class DFBRegistration:
         between fixed and moving images.
 
         Args:
-                feature_dist (:class:`numpy.ndarray`):
-                        A feature distance array.
+            feature_dist (:class:`numpy.ndarray`):
+                A feature distance array.
 
         Returns:
-                :class:`numpy.ndarray`:
-                        An array of matching points.
-                :class:`numpy.ndarray`:
-                        An array of floating numbers representing quality
-                        of each matching points.
+            :class:`numpy.ndarray`:
+                An array of matching points.
+            :class:`numpy.ndarray`:
+                An array of floating numbers representing quality
+                of each matching points.
 
         """
         seq = np.arange(feature_dist.shape[0])
@@ -113,17 +112,17 @@ class DFBRegistration:
         fixed and moving images.
 
         Args:
-                feature_x (:class:`numpy.ndarray`):
-                        Features computed for a fixed image.
-                feature_y (:class:`numpy.ndarray`):
-                        Features computed for a moving image.
-                factor (int):
-                        A number multiplied by the feature size
-                        for getting the referenced feature size.
+            feature_x (:class:`numpy.ndarray`):
+                Features computed for a fixed image.
+            feature_y (:class:`numpy.ndarray`):
+                Features computed for a moving image.
+            factor (int):
+                A number multiplied by the feature size
+                for getting the referenced feature size.
 
         Returns:
-                :class:`numpy.ndarray`:
-                        A feature distance array.
+            :class:`numpy.ndarray`:
+                A feature distance array.
 
         """
         feature_distance = np.linalg.norm(
@@ -154,14 +153,23 @@ class DFBRegistration:
         VGG-16 model for an image pair.
 
         Args:
-                features (dict):
-                        Multiscale CNN features.
-                num_matching_points (int):
-                        Number of required matching points.
+            features (dict):
+                Multiscale CNN features.
+            num_matching_points (int):
+                Number of required matching points.
 
         Returns:
-
+            :class:`numpy.ndarray`:
+                A matching 2D point set in the fixed image.
+            :class:`numpy.ndarray`:
+                A matching 2D point set in the moving image.
+            :class:`numpy.ndarray`:
+                A 1D array, where each element represents quality
+                of each matching point.
         """
+        if len(features) != 3:
+            raise ValueError("The feature mapping step expects 3 blocks of features.")
+
         pool3_feat = features["block3_pool"].detach().numpy()
         pool4_feat = features["block4_pool"].detach().numpy()
         pool5_feat = features["block5_pool"].detach().numpy()
@@ -257,15 +265,28 @@ class DFBRegistration:
 
     @staticmethod
     def register(fixed_img, moving_img):
+        """Image Registration.
+
+        This function aligns a pair of images using Deep
+        Feature based Registration (DFBR) method.
+
+        Args:
+            fixed_img (:class:`numpy.ndarray`):
+                A fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                A moving image.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                An affine transformation matrix.
+
+        """
         df = DFBRegistration()
         features = df.extract_features(fixed_img, moving_img)
         fixed_matched_points, moving_matched_points, quality = df.feature_mapping(
             features
         )
-        transform = df.estimate_affine_transform(
-            fixed_matched_points, moving_matched_points
-        )
-        _ = cv2.warpAffine(moving_img, transform[0:-1][:], fixed_img.shape[:2][::-1])
+        return df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
 
 
 def match_histograms(image_a, image_b, disk_radius=3):
@@ -275,18 +296,18 @@ def match_histograms(image_a, image_b, disk_radius=3):
     appearance of an image pair.
 
     Args:
-            image_a (:class:`numpy.ndarray`):
-                    A grayscale image.
-            image_b (:class:`numpy.ndarray`):
-                    A grayscale image.
-            disk_radius (int):
-                    The radius of the disk-shaped footprint.
+        image_a (:class:`numpy.ndarray`):
+            A grayscale image.
+        image_b (:class:`numpy.ndarray`):
+            A grayscale image.
+        disk_radius (int):
+            The radius of the disk-shaped footprint.
 
     Returns:
-            :class:`numpy.ndarray`:
-                    A normalized grayscale image.
-            :class:`numpy.ndarray`:
-                    A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
+        :class:`numpy.ndarray`:
+            A normalized grayscale image.
 
     """
 
