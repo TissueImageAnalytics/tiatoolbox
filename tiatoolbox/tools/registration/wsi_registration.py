@@ -18,7 +18,7 @@ class DFBRegistration:
 
     def __init__(self):
         self.patch_size = (224, 224)
-        self.Xscale, self.Yscale = [], []
+        self.xScale, self.yScale = [], []
         model = torchvision.models.vgg16(True)
         return_layers = {"16": "block3_pool", "23": "block4_pool", "30": "block5_pool"}
         self.FeatureExtractor = IntermediateLayerGetter(
@@ -52,8 +52,8 @@ class DFBRegistration:
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
             raise ValueError("The input images are expected to have 3 channels.")
 
-        self.Xscale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
-        self.Yscale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
+        self.xScale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
+        self.yScale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
         fixed_cnn = imresize(
             fixed_img, output_size=self.patch_size, interpolation="linear"
         )
@@ -94,13 +94,13 @@ class DFBRegistration:
 
         """
         seq = np.arange(feature_dist.shape[0])
-        indx_first_min = np.argmin(feature_dist, axis=1)
-        first_min = feature_dist[seq, indx_first_min]
+        ind_first_min = np.argmin(feature_dist, axis=1)
+        first_min = feature_dist[seq, ind_first_min]
         mask = np.zeros_like(feature_dist)
-        mask[seq, indx_first_min] = 1
+        mask[seq, ind_first_min] = 1
         masked = np.ma.masked_array(feature_dist, mask)
         second_min = np.amin(masked, axis=1)
-        return np.array([seq, indx_first_min]).transpose(), np.array(
+        return np.array([seq, ind_first_min]).transpose(), np.array(
             second_min / first_min
         )
 
@@ -147,10 +147,11 @@ class DFBRegistration:
         return feature_distance[row_indx, col_indx]
 
     def feature_mapping(self, features, num_matching_points=128):
-        """CNN based feature extraction for registration.
+        """Mapping of CNN features.
 
-        This function extracts multiscale features from a pre-trained
-        VGG-16 model for an image pair.
+        This function maps features of a fixed image to that of
+        a moving image on the basis of Euclidean distance between
+        them.
 
         Args:
             features (dict):
@@ -175,42 +176,29 @@ class DFBRegistration:
         pool5_feat = features["block5_pool"].detach().numpy()
         ref_feature_size = pool3_feat.shape[2]
 
-        fixed_feat1, moving_feat1 = np.reshape(
-            pool3_feat[0, :, :, :], [-1, 256]
-        ), np.reshape(pool3_feat[1, :, :, :], [-1, 256])
-        fixed_feat2, moving_feat2 = np.reshape(
-            pool4_feat[0, :, :, :], [-1, 512]
-        ), np.reshape(pool4_feat[1, :, :, :], [-1, 512])
-        fixed_feat3, moving_feat3 = np.reshape(
-            pool5_feat[0, :, :, :], [-1, 512]
-        ), np.reshape(pool5_feat[1, :, :, :], [-1, 512])
+        fixed_feat1 = np.reshape(pool3_feat[0, :, :, :], [-1, 256])
+        moving_feat1 = np.reshape(pool3_feat[1, :, :, :], [-1, 256])
+        fixed_feat2 = np.reshape(pool4_feat[0, :, :, :], [-1, 512])
+        moving_feat2 = np.reshape(pool4_feat[1, :, :, :], [-1, 512])
+        fixed_feat3 = np.reshape(pool5_feat[0, :, :, :], [-1, 512])
+        moving_feat3 = np.reshape(pool5_feat[1, :, :, :], [-1, 512])
+        del pool3_feat, pool4_feat, pool5_feat
 
-        fixed_feat1, moving_feat1 = fixed_feat1 / np.std(
-            fixed_feat1
-        ), moving_feat1 / np.std(moving_feat1)
-        fixed_feat2, moving_feat2 = fixed_feat2 / np.std(
-            fixed_feat2
-        ), moving_feat2 / np.std(moving_feat2)
-        fixed_feat3, moving_feat3 = fixed_feat3 / np.std(
-            fixed_feat3
-        ), moving_feat3 / np.std(moving_feat3)
+        fixed_feat1 = fixed_feat1 / np.std(fixed_feat1)
+        moving_feat1 = moving_feat1 / np.std(moving_feat1)
+        fixed_feat2 = fixed_feat2 / np.std(fixed_feat2)
+        moving_feat2 = moving_feat2 / np.std(moving_feat2)
+        fixed_feat3 = fixed_feat3 / np.std(fixed_feat3)
+        moving_feat3 = moving_feat3 / np.std(moving_feat3)
 
         feature_dist1 = self.compute_feature_distance(fixed_feat1, moving_feat1, 1)
         feature_dist2 = self.compute_feature_distance(fixed_feat2, moving_feat2, 2)
         feature_dist3 = self.compute_feature_distance(fixed_feat3, moving_feat3, 4)
         feature_dist = 1.414 * feature_dist1 + feature_dist2 + feature_dist3
 
-        del (
-            fixed_feat1,
-            moving_feat1,
-            fixed_feat2,
-            moving_feat2,
-            fixed_feat3,
-            moving_feat3,
-            feature_dist1,
-            feature_dist2,
-            feature_dist3,
-        )
+        del fixed_feat1, fixed_feat2, fixed_feat3
+        del moving_feat1, moving_feat2, moving_feat3
+        del feature_dist1, feature_dist2, feature_dist3
 
         seq = np.array(
             [[i, j] for i in range(ref_feature_size) for j in range(ref_feature_size)],
@@ -247,13 +235,29 @@ class DFBRegistration:
             ),
         ]
 
-        fixed_points, moving_points = ((fixed_points * 224.0) + 112.0) * self.Xscale, (
-            (moving_points * 224.0) + 112.0
-        ) * self.Yscale
+        fixed_points = ((fixed_points * 224.0) + 112.0) * self.xScale
+        moving_points = ((moving_points * 224.0) + 112.0) * self.yScale
         return fixed_points, moving_points, np.amin(feature_dist, axis=1)
 
     @staticmethod
     def estimate_affine_transform(points_0, points_1):
+        """Compute affine transformation matrix.
+
+        This function estimates transformation parameters
+        using linear least squares for a given set of matched
+        points.
+
+        Args:
+            points_0 (:class:`numpy.ndarray`):
+                An Nx2 array of points in a fixed image.
+            points_1 (:class:`numpy.ndarray`):
+                An Nx2 array of points in a moving image.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                A 3x3 transformation matrix
+
+        """
         num_points = min(len(points_0), len(points_1))
         x = np.hstack([points_0[:num_points], np.ones((num_points, 1))])
         y = np.hstack([points_1[:num_points], np.ones((num_points, 1))])
@@ -262,31 +266,6 @@ class DFBRegistration:
         matrix[-1, :] = [0, 0, 1]
 
         return matrix
-
-    @staticmethod
-    def register(fixed_img, moving_img):
-        """Image Registration.
-
-        This function aligns a pair of images using Deep
-        Feature based Registration (DFBR) method.
-
-        Args:
-            fixed_img (:class:`numpy.ndarray`):
-                A fixed image.
-            moving_img (:class:`numpy.ndarray`):
-                A moving image.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                An affine transformation matrix.
-
-        """
-        df = DFBRegistration()
-        features = df.extract_features(fixed_img, moving_img)
-        fixed_matched_points, moving_matched_points, quality = df.feature_mapping(
-            features
-        )
-        return df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
 
 
 def match_histograms(image_a, image_b, disk_radius=3):
