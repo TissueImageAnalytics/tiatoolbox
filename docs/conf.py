@@ -130,6 +130,11 @@ html_css_files = [
     "sg_gallery.css",
 ]
 
+
+def setup(app):
+    app.add_stylesheet("_static/sg_gallery.css")
+
+
 # -- Options for HTMLHelp output ---------------------------------------
 
 # Output file base name for HTML help builder.
