@@ -26,10 +26,10 @@ class SCCNN(ModelABC):
     The following models have been included in tiatoolbox:
 
     1. `sccnn-crchisto`:
-        This is trained on `CRCHisto dataset
+        This model is trained on `CRCHisto dataset
         <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe/>`_
     2. `sccnn-conic`:
-        This is trained on `CoNiC dataset
+        This model is trained on `CoNIC dataset
         <https://conic-challenge.grand-challenge.org/evaluation/challenge/leaderboard//>`_
         Centroids of ground truth masks were used to train this model.
         The results are reported on the whole test data set including preliminary
