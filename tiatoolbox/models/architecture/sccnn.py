@@ -59,7 +59,7 @@ class SCCNN(ModelABC):
          - 0.80
          - 0.81
        * - sccnn-conic
-         - CoNiC
+         - CoNIC
          - 0.79
          - 0.79
          - 0.79
