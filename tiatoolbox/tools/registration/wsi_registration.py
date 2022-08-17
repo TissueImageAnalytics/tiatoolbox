@@ -138,13 +138,13 @@ class DFBRegistration:
             np.arange(feature_size).reshape([feature_size_2d, feature_size_2d]),
             np.ones([factor, factor], dtype="int32"),
         )
-        row_indx = np.repeat(
+        row_ind = np.repeat(
             feature_grid.reshape([ref_feature_size, 1]), ref_feature_size, axis=1
         )
-        col_indx = np.repeat(
+        col_ind = np.repeat(
             feature_grid.reshape([1, ref_feature_size]), ref_feature_size, axis=0
         )
-        return feature_distance[row_indx, col_indx]
+        return feature_distance[row_ind, col_ind]
 
     def feature_mapping(self, features, num_matching_points=128):
         """Mapping of CNN features.
