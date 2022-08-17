@@ -756,3 +756,13 @@ mapde-crchisto:
             min_distance: 4
             threshold_abs: 250
             num_class: 1
+
+mapde-conic:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
+    architecture:
+        class: mapde.MapDe
+        kwargs:
+            num_input_channels: 3
+            min_distance: 3
+            threshold_abs: 205
+            num_class: 1

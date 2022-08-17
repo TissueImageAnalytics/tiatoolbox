@@ -21,8 +21,14 @@ class MapDe(MicroNet):
     The following models have been included in tiatoolbox:
 
     1. `mapde-crchisto`:
-        This is trained on `CRCHisto dataset
+        This model is trained on `CRCHisto dataset
         <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe/>`_
+    2. `mapde-conic`:
+        This model is trained on `CoNIC dataset
+        <https://conic-challenge.grand-challenge.org/evaluation/challenge/leaderboard//>`_
+        Centroids of ground truth masks were used to train this model.
+        The results are reported on the whole test data set including preliminary
+        and final set.
 
     The tiatoolbox model should produce the following results on the following datasets
     using 8 pixels as radius for true detection:
@@ -41,6 +47,11 @@ class MapDe(MicroNet):
          - 0.81
          - 0.82
          - 0.81
+       * - mapde-conic
+         - CoNiC
+         - 0.85
+         - 0.85
+         - 0.85
 
     Args:
         num_input_channels (int):

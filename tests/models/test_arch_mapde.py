@@ -39,3 +39,8 @@ def test_functionality(remote_sample, tmp_path):
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[99, 178], [64, 218]])
+
+    model = _load_mapde(tmp_path=tmp_path, name="mapde-conic")
+    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.postproc(output[0])
+    assert np.all(output[0:2] == [[19, 171], [53, 89]])
