@@ -132,6 +132,11 @@ html_css_files = [
 
 
 def setup(app):
+    # https: // github.com / sphinx - gallery / sphinx - gallery / pull / 845  # issuecomment-876102461
+    # Force overwrite sg_gallery.css
+    app.connect(
+        "builder-inited", lambda app: app.config.html_static_path.append("_static")
+    )
     app.add_stylesheet("_static/sg_gallery.css")
 
 
