@@ -20,7 +20,7 @@ def test_feature_mapping(fixed_image, moving_image, dfbr_features):
 
     df = DFBRegistration()
     features = df.extract_features(fixed_img, moving_img)
-    fixed_matched_points, moving_matched_points, quality = df.feature_mapping(features)
+    fixed_matched_points, moving_matched_points, _ = df.feature_mapping(features)
     output = df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
     expected = np.array(
         [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]]

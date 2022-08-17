@@ -182,7 +182,6 @@ class DFBRegistration:
         moving_feat2 = np.reshape(pool4_feat[1, :, :, :], [-1, 512])
         fixed_feat3 = np.reshape(pool5_feat[0, :, :, :], [-1, 512])
         moving_feat3 = np.reshape(pool5_feat[1, :, :, :], [-1, 512])
-        del pool3_feat, pool4_feat, pool5_feat
 
         fixed_feat1 = fixed_feat1 / np.std(fixed_feat1)
         moving_feat1 = moving_feat1 / np.std(moving_feat1)
@@ -195,10 +194,6 @@ class DFBRegistration:
         feature_dist2 = self.compute_feature_distance(fixed_feat2, moving_feat2, 2)
         feature_dist3 = self.compute_feature_distance(fixed_feat3, moving_feat3, 4)
         feature_dist = 1.414 * feature_dist1 + feature_dist2 + feature_dist3
-
-        del fixed_feat1, fixed_feat2, fixed_feat3
-        del moving_feat1, moving_feat2, moving_feat3
-        del feature_dist1, feature_dist2, feature_dist3
 
         seq = np.array(
             [[i, j] for i in range(ref_feature_size) for j in range(ref_feature_size)],
