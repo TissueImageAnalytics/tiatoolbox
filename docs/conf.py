@@ -43,7 +43,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
-    "recommonmark",
+    "myst_parser",
     "nbsphinx",
     "sphinx_gallery.load_style",
 ]
