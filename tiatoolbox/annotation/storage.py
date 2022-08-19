@@ -56,18 +56,22 @@ from typing import (
     Union,
 )
 
+import joblib
 import numpy as np
 import pandas as pd
 from shapely import speedups, wkb, wkt
-from shapely.geometry import LineString, Point, Polygon
+from shapely.affinity import scale, translate
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
+from shapely.validation import make_valid
 
 import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
+    SQLTriplet,
     json_contains,
     json_list_sum,
     py_regexp,
@@ -145,6 +149,9 @@ class Annotation:
 
         """
         return json.dumps(self.to_feature())
+
+    def __lt__(self, other):
+        return self.geometry.area < other.geometry.area
 
 
 class AnnotationStore(ABC, MutableMapping):
@@ -790,9 +797,9 @@ class AnnotationStore(ABC, MutableMapping):
         """Query the store for annotation bounding boxes.
 
         Acts similarly to `AnnotationStore.query` except it checks for
-        intersection between sotred and query geometry bounding boxes.
+        intersection between stored and query geometry bounding boxes.
         This may be faster than a regular query in some cases, e.g. for
-        SQliteStore with a alrge number of annotations.
+        SQliteStore with a large number of annotations.
 
         Note that this method only checks for bounding box intersection
         and therefore may give a different result to using
@@ -1136,18 +1143,221 @@ class AnnotationStore(ABC, MutableMapping):
         raise IOError("Invalid file handle or path.")
 
     @classmethod
-    def from_geojson(cls, fp: Union[IO, str]) -> "AnnotationStore":
-        geojson = cls._load_cases(
-            fp=fp,
-            string_fn=json.loads,
-            file_fn=json.load,
-        )
+    def from_geojson(cls, fp: Union[IO, str], scale_factor=1, typedict=None,
+        relative_to=None,) -> "AnnotationStore":
+        """Load annotations from a geoJSON file.
+        Args:
+            fp (Union[IO, str, Path]):
+                The file path or handle to load from.
+            scale_factor (float):
+                The scale factor to use when loading the annotations. All coordinates
+                will be multiplied by this factor to allow import of annotations saved
+                at non-baseline resolution.
+            typedict (Dict[str, str]):
+                A dictionary mapping annotation types to annotation keys. Annotations
+                with a type that is a key in the dictionary, will have their type replaced by
+                the corresponding value. Useful for providing descriptive names to non-descriptive
+                types, eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+            relative_to [float, float]:
+                The x and y coordinates to use as the origin for the annotations.
+
+        Returns:
+            AnnotationStore:
+                A new annotation store with the annotations loaded from the file.
+        """
+
         store = cls()
-        for feature in geojson["features"]:
-            geometry = feature2geometry(feature["geometry"])
-            properties = feature["properties"]
-            store.append(Annotation(geometry, properties))
+        store.add_from(fp, scale_factor, typedict=typedict, relative_to=relative_to)
         return store
+
+    @classmethod
+    def from_dat(cls, fp: Union[IO, str], scale_factor=1, typedict=None,
+        relative_to=None,) -> "AnnotationStore":
+        """Load annotations from a hovernet-style .dat file.
+        Args:
+            fp (Union[IO, str, Path]):
+                The file path or handle to load from.
+            scale_factor (float):
+                The scale factor to use when loading the annotations. All coordinates
+                will be multiplied by this factor to allow import of annotations saved
+                at non-baseline resolution.
+            typedict (Dict[str, str]):
+                A dictionary mapping annotation types to annotation keys. Annotations
+                with a type that is a key in the dictionary, will have their type replaced by
+                the corresponding value. Useful for providing descriptive names to non-descriptive
+                types, eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+            relative_to [float, float]:
+                The x and y coordinates to use as the origin for the annotations.
+
+        Returns:
+            AnnotationStore:
+                A new annotation store with the annotations loaded from the file.
+        """
+
+        store = cls()
+        store.add_from(fp, scale_factor, typedict=typedict, relative_to=relative_to)
+        return store
+
+    def add_from(
+        self,
+        fp: Union[IO, str],
+        scale_factor=1,
+        typedict=None,
+        relative_to=None,
+    ) -> None:
+        """Add annotations from a .geojson or .dat file to an existing store. Make a best
+        effort to create valid shapely geometries from provided contours.
+
+        Args:
+            fp (Union[IO, str, Path]):
+                The file path or handle to load from.
+            scale_factor (float):
+                The scale factor to use when loading the annotations. All coordinates
+                will be multiplied by this factor to allow import of annotations saved
+                at non-baseline resolution.
+            typedict (Dict[str, str]):
+                A dictionary mapping annotation types to annotation keys. Annotations
+                with a type that is a key in the dictionary, will have their type replaced by
+                the corresponding value. Useful for providing descriptive names to non-descriptive
+                types, eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+            relative_to [float, float]:
+                The x and y coordinates to use as the origin for the annotations.
+        """
+        file_type = 'geo'
+        if isinstance(fp, Path) and fp.suffix == '.dat':
+            file_type = 'dat'
+        if isinstance(fp, IO) and Path(fp.name).suffix == '.dat':
+            file_type = 'dat'        
+
+        def make_valid_poly(poly, relative_to=None):
+            """Helper function to make a valid polygon."""
+            if poly.is_valid:
+                return poly
+            poly = poly.buffer(0.01)
+            if poly.is_valid:
+                return poly
+            poly = make_valid(poly)
+            if len(list(poly)) > 1:
+                return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
+            if relative_to is not None:
+                # transform coords to be relative to given pt.
+                poly = translate(poly, -relative_to[0], -relative_to[1])
+            return poly
+
+        if isinstance(fp, str) or file_type=='geo':
+            geojson = self._load_cases(
+                fp=fp,
+                string_fn=json.loads,
+                file_fn=json.load,
+            )
+
+            if scale_factor is not None and scale_factor != 1:
+                anns = [
+                    Annotation(
+                        scale(
+                            make_valid_poly(
+                                feature2geometry(feature["geometry"]), relative_to
+                            ),
+                            xfact=scale_factor,
+                            yfact=scale_factor,
+                            origin=(0, 0, 0),
+                        ),
+                        feature["properties"],
+                    )
+                    for feature in geojson["features"]
+                ]
+            else:
+                anns = [
+                    Annotation(
+                        make_valid_poly(
+                            feature2geometry(feature["geometry"]), relative_to
+                        ),
+                        feature["properties"],
+                    )
+                    for feature in geojson["features"]
+                ]
+
+        elif fp.suffix == ".dat":
+            # hovernet-stype .dat file
+            try:
+                data = joblib.load(fp)
+            except:
+                with open(fp, "r") as f:
+                    data = json.load(f)
+            props = list(data[list(data.keys())[0]].keys())  # [3:]
+            if "contour" not in props:
+                # assume cerberous format with objects subdivided into categories
+                anns = []
+                saved_res = data["resolution"]["resolution"]
+                for subcat in data.keys():
+                    if subcat == "resolution":
+                        continue
+                    props = list(data[subcat][list(data[subcat].keys())[0]].keys())
+                    if "contour" not in props:
+                        continue
+                    if "type" in props:
+                        # use type dictonary if available else autogen from numbers
+                        if typedict is None:
+                            for key in data[subcat].keys():
+                                data[subcat][key][
+                                    "type"
+                                ] = f"{subcat[:3]}: {data[subcat][key]['type']}"
+                        else:
+                            for key in data[subcat].keys():
+                                data[subcat][key]["type"] = typedict[subcat][
+                                    data[subcat][key]["type"]
+                                ]  # f"{subcat[:3]}: {data[subcat][key]['type']}"
+                    else:
+                        props.append("type")
+                        for key in data[subcat].keys():
+                            data[subcat][key]["type"] = subcat
+                    anns.extend(
+                        [
+                            Annotation(
+                                make_valid_poly(
+                                    feature2geometry(
+                                        {
+                                            "type": "Polygon",
+                                            "coordinates": scale_factor
+                                            * np.array([data[subcat][key]["contour"]]),
+                                        }
+                                    ),
+                                    relative_to,
+                                ),
+                                {
+                                    key2: data[subcat][key][key2]
+                                    for key2 in props[3:]
+                                    if key2 in data[subcat][key].keys()
+                                },
+                            )
+                            for key in data[subcat].keys()
+                        ]
+                    )
+            else:
+                anns = [
+                    Annotation(
+                        make_valid_poly(
+                            feature2geometry(
+                                {
+                                    "type": "Polygon",
+                                    "coordinates": scale_factor
+                                    * np.array([data[key]["contour"]]),
+                                }
+                            ),
+                            relative_to,
+                        ),
+                        {
+                            key2: data[key][key2]
+                            for key2 in props[3:]
+                            if key2 in data[key].keys()
+                        },
+                    )
+                    for key in data.keys()
+                ]
+        else:
+            raise ValueError("Invalid file type")
+        print(f"added {len(anns)} annotations")
+        self.append_many(anns)
 
     def to_geojson(self, fp: Optional[IO] = None) -> Optional[str]:
         """Serialise the store to geoJSON.
@@ -1303,6 +1513,23 @@ class AnnotationStore(ABC, MutableMapping):
         )
         return pd.json_normalize(features).set_index("key")
 
+    def translate_db(self, x: float, y: float):
+        """Translate all annotations by the given vector. Useful for
+        transforming coordinates from slide space into patch/tile/core space.
+
+        Args:
+            x (float):
+                The amount to translate in the x direction.
+            y (float):
+                The amount to translate in the y direction.
+
+        """
+        translated_anns = {
+            key: translate(annotation.geometry, x, y)
+            for key, annotation in self.items()
+        }
+        self.patch_many(translated_anns.keys(), translated_anns.values())
+
     def __del__(self) -> None:
         self.close()
 
@@ -1321,19 +1548,22 @@ class AnnotationStore(ABC, MutableMapping):
 class SQLiteMetadata(MutableMapping):
     """Metadata storage for an SQLiteStore.
 
-    Attributes:
-        connection (Union[str, Path, IO]):
-            A reference to where the data is stored. May be a string (
-            e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
-            handle.
-        path (Path):
-            The path to the annotation store data. This will be
-            ":memory:" if the annotation store is in-memory. This is
-            derived from `connection` and normalised to be a pathlib
-            Path object.
-        con (sqlite3.Connection):
-            The sqlite3 database connection.
+        Attributes:
+            connection (Union[str, Path, IO]):
+                A reference to where the data is stored. May be a string (
+                e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
+                handle.
+            path (Path):
+                The path to the annotation store data. This will be
+                ":memory:" if the annotation store is in-memory. This is
+                derived from `connection` and normalised to be a pathlib
+                Path object.
+            con (sqlite3.Connection):
+                The sqlite3 database connection.
+    <<<<<<< HEAD
+    =======
 
+    >>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -1397,6 +1627,7 @@ class SQLiteStore(AnnotationStore):
         connection: Union[Path, str, IO] = ":memory:",
         compression="zlib",
         compression_level=9,
+        auto_commit=True,
     ) -> None:
         super().__init__()
         # Check that JSON and RTree support is enabled
@@ -1429,8 +1660,9 @@ class SQLiteStore(AnnotationStore):
         # Set up database connection and cursor
         self.connection = connection
         self.path = self._connection_to_path(self.connection)
+        self.auto_commit = auto_commit
 
-        # Check if the path is a a non-empty file
+        # Check if the path is a non-empty file
         exists = (
             # Use 'and' to short-circuit
             self.path.is_file()
@@ -1448,7 +1680,7 @@ class SQLiteStore(AnnotationStore):
         def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
             a = wkb.loads(wkb_a)
-            b = self._unpack_geometry(b, cx, cy)
+            b = self._unpack_geometry(b, cx, cy, self.metadata["compression"])
             return self._geometry_predicate(name, a, b)
 
         def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
@@ -1494,6 +1726,7 @@ class SQLiteStore(AnnotationStore):
         register_custom_function("CONTAINS", 1, json_contains)
 
         if exists:
+            # self.con.execute("BEGIN")
             return
 
         # Create tables for geometry and RTree index
@@ -1515,11 +1748,13 @@ class SQLiteStore(AnnotationStore):
                 cx INTEGER NOT NULL,     -- X of centroid/representative point
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
                 geometry BLOB,           -- Detailed geometry
-                properties TEXT          -- JSON properties
+                properties TEXT,         -- JSON properties
+                area FLOAT               -- Area (for ordering)
             )
             """
         )
         self.con.commit()
+        # self.con.execute("BEGIN")
 
     def serialise_geometry(  # skipcq: PYL-W0221
         self, geometry: Geometry
@@ -1545,7 +1780,10 @@ class SQLiteStore(AnnotationStore):
             return zlib.compress(data, level=self.metadata["compression_level"])
         raise ValueError("Unsupported compression method.")
 
-    def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
+    @staticmethod
+    def _unpack_geometry(
+        data: Union[str, bytes], cx: int, cy: int, compress_type
+    ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
         For space optimisation, points are stored as centroids and all
@@ -1566,7 +1804,15 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry.
 
         """
-        return Point(cx, cy) if data is None else self.deserialise_geometry(data)
+        if data is None:
+            return Point(cx, cy)
+        if compress_type == "zlib":
+            data = zlib.decompress(data)
+        elif compress_type is not None:
+            raise Exception("Unsupported compression method.")
+        if isinstance(data, str):
+            return wkt.loads(data)
+        return wkb.loads(data)
 
     def deserialise_geometry(  # skipcq: PYL-W0221
         self, data: Union[str, bytes]
@@ -1630,7 +1876,8 @@ class SQLiteStore(AnnotationStore):
         return [opt for opt, in options]
 
     def close(self) -> None:
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
         self.optimize(vacuum=False, limit=1000)
         self.con.close()
 
@@ -1653,6 +1900,7 @@ class SQLiteStore(AnnotationStore):
             "max_y": geometry.bounds[3],
             "geom_type": geometry.geom_type,
             "properties": json.dumps(annotation.properties, separators=(",", ":")),
+            "area": geometry.area,
         }
 
     def append_many(
@@ -1669,7 +1917,9 @@ class SQLiteStore(AnnotationStore):
         for annotation, key in zip(annotations, keys):
             self._append(key, annotation, cur)
             result.append(key)
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
+        self._cached_query.cache_clear()
         return result
 
     def _append(self, key: str, annotation: Annotation, cur: sqlite3.Cursor) -> None:
@@ -1692,7 +1942,7 @@ class SQLiteStore(AnnotationStore):
             """
                 INSERT INTO annotations VALUES(
                     NULL, :key, :geom_type,
-                    :cx, :cy, :geometry, :properties
+                    :cx, :cy, :geometry, :properties, :area
                 )
                 """,
             token,
@@ -1707,6 +1957,7 @@ class SQLiteStore(AnnotationStore):
                 """,
             token,
         )
+        self._cached_query.cache_clear()
 
     @staticmethod
     def _initialize_query_string_parameters(
@@ -1854,6 +2105,7 @@ class SQLiteStore(AnnotationStore):
                     "Consider adding an index to improve performance."
                 )
 
+        query_string += "\nORDER BY area DESC"
         cur.execute(query_string, query_parameters)
         return cur
 
@@ -1895,7 +2147,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy),
+                    geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
                     properties=json.loads(properties),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
@@ -1903,11 +2155,170 @@ class SQLiteStore(AnnotationStore):
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy),
+                geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
                 properties=json.loads(properties),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
         }
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _cached_query(
+        rows: str,
+        geometry: Optional[Iterable] = None,
+        callable_rows: Optional[str] = None,
+        geometry_predicate="intersects",
+        con=None,
+        bbox=True,
+        compress_type=None,
+        min_area=None,
+    ) -> sqlite3.Cursor:
+        """Common query construction logic for `cached_query` and `cached_bquery`. Similar
+        to `_query` but can be cached. Does not support where.
+
+        Args:
+            rows(str):
+                The rows to select.
+            geometry(tuple or Geometry):
+                The geometry being queries against.
+            select_callable(str):
+                The rows to select when a callable is given to `where`.
+            callable_rows(str):
+                The binary predicate to use when comparing `geometry`
+                with each candidate shape.
+            where (str or bytes or Callable):
+                The predicate to evaluate against candidate properties
+                during the query.
+
+        Returns:
+            sqlite3.Cursor:
+                A database cursor for the current query.
+
+        """
+        if geometry is None:
+            raise ValueError("`geometry` must be specified.")
+        query_geometry = geometry
+        if callable_rows is None:
+            callable_rows = rows
+        cur = con.cursor()
+
+        # Normalise query geometry and determine if it is a rectangle
+        if isinstance(query_geometry, Iterable):
+            query_geometry = Polygon.from_bounds(*query_geometry)
+
+        if callable_rows is not None:
+            rows = callable_rows
+
+        # Initialise the query string and parameters
+        query_string = (
+            "SELECT "  # skipcq: BAN-B608
+            + rows  # skipcq: BAN-B608
+            + """
+         FROM annotations, rtree
+        WHERE annotations.id == rtree.id
+        """
+        )
+
+        query_parameters = {}
+
+        # There is query geometry, add a simple rtree bounds check to
+        # rapidly narrow candidates down.
+        if query_geometry is not None:
+            # Add rtree index checks to the query
+            query_string += """
+            AND max_x >= :min_x
+            AND min_x <= :max_x
+            AND max_y >= :min_y
+            AND min_y <= :max_y
+            """
+
+            # Find the bounds of the geometry for the rtree index
+            min_x, min_y, max_x, max_y = query_geometry.bounds
+
+            # Update query parameters
+            query_parameters.update(
+                {
+                    "min_x": min_x,
+                    "max_x": max_x,
+                    "min_y": min_y,
+                    "max_y": max_y,
+                    "geometry_predicate": geometry_predicate,
+                    "query_geometry": query_geometry.wkb,
+                }
+            )
+
+            if min_area is not None:
+                query_string += f"\nAND area > {min_area}"
+
+            # The query is a full intersection check, not a simple bounds
+            # check only.
+            if (
+                geometry_predicate is not None
+                and geometry_predicate != "bbox_intersects"
+            ):
+                query_string += (
+                    "\nAND geometry_predicate("
+                    ":geometry_predicate, :query_geometry, geometry, cx, cy"
+                    ") "
+                )
+                query_parameters["geometry_predicate"] = geometry_predicate
+                query_parameters["query_geometry"] = query_geometry.wkb
+
+        query_string += "\nORDER BY area DESC"
+        cur.execute(query_string, query_parameters)
+
+        if bbox:
+            return {
+                key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
+                for key, properties, *bounds in cur.fetchall()
+            }
+        else:
+            return [
+                Annotation(
+                    geometry=SQLiteStore._unpack_geometry(blob, cx, cy, compress_type),
+                    properties=json.loads(properties),
+                )
+                for properties, cx, cy, blob in cur.fetchall()
+            ]
+
+    def cached_bquery(
+        self,
+        geometry: Optional[Tuple] = None,
+        where: Callable[[Dict[str, Any]], bool] = None,
+        min_area=None,
+    ) -> Dict[str, Annotation]:
+        data = self._cached_query(
+            rows="[key], properties, min_x, min_y, max_x, max_y",
+            geometry=geometry,
+            geometry_predicate="bbox_intersects",
+            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
+            con=self.con,
+            bbox=True,
+            compress_type=self.metadata["compression"],
+            min_area=min_area,
+        )
+        if where is None:
+            return data
+        return {key: ann for key, ann in data.items() if where(ann.properties)}
+
+    def cached_query(
+        self,
+        geometry: Optional[Tuple] = None,
+        where: Callable[[Dict[str, Any]], bool] = None,
+        min_area=None,
+    ) -> List[Annotation]:
+        data = self._cached_query(
+            rows="properties, cx, cy, geometry",
+            geometry=geometry,
+            geometry_predicate="bbox_intersects",
+            con=self.con,
+            bbox=False,
+            compress_type=self.metadata["compression"],
+            min_area=min_area,
+        )
+        if where is None:
+            return data
+        return [ann for ann in data if where(ann.properties)]
 
     def bquery(
         self,
@@ -1923,7 +2334,7 @@ class SQLiteStore(AnnotationStore):
         )
         if isinstance(where, Callable):
             return {
-                key: bounds
+                key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
                 for key, properties, *bounds in cur.fetchall()
                 if where(json.loads(properties))
             }
@@ -1980,6 +2391,8 @@ class SQLiteStore(AnnotationStore):
                 for i, value in enumerate(selection):
                     result[i].add(value)
             return list(result.values())
+        if where is None:
+            where = lambda _: True
         return {
             key: select(json.loads(properties))
             for key, properties in cur.fetchall()
@@ -2233,7 +2646,9 @@ class SQLiteStore(AnnotationStore):
             raise KeyError(key)
         serialised_geometry, serialised_properties, cx, cy = row
         properties = json.loads(serialised_properties or "{}")
-        geometry = self._unpack_geometry(serialised_geometry, cx, cy)
+        geometry = self._unpack_geometry(
+            serialised_geometry, cx, cy, self.metadata["compression"]
+        )
         return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
@@ -2271,7 +2686,9 @@ class SQLiteStore(AnnotationStore):
                 break
             key, cx, cy, serialised_geometry, serialised_properties = row
             if serialised_geometry is not None:
-                geometry = self._unpack_geometry(serialised_geometry, cx, cy)
+                geometry = self._unpack_geometry(
+                    serialised_geometry, cx, cy, self.metadata["compression"]
+                )
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(serialised_properties)
@@ -2318,7 +2735,9 @@ class SQLiteStore(AnnotationStore):
                         "properties": json.dumps(properties, separators=(",", ":")),
                     },
                 )
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
+        self._cached_query.cache_clear()
 
     def _patch_geometry(
         self, key: str, geometry: Geometry, cur: sqlite3.Cursor
@@ -2363,6 +2782,7 @@ class SQLiteStore(AnnotationStore):
             """,
             query_parameters,
         )
+        self._cached_query.cache_clear()
 
     def remove_many(self, keys: Iterable[str]) -> None:
         cur = self.con.cursor()
@@ -2384,7 +2804,9 @@ class SQLiteStore(AnnotationStore):
                 "DELETE FROM annotations WHERE [key] = ?",
                 (key,),
             )
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
+        self._cached_query.cache_clear()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
         if key in self:
@@ -2416,7 +2838,8 @@ class SQLiteStore(AnnotationStore):
         )
 
     def commit(self) -> None:
-        return self.con.commit()
+        self.con.commit()
+        # self.con.execute("BEGIN")
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
         if hasattr(fp, "write"):
@@ -2432,7 +2855,16 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute("DELETE FROM rtree")
         cur.execute("DELETE FROM annotations")
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
+
+    def __del__(self) -> None:
+        # Limit rows examined by ANALYZE to avoid spending too long
+        self.con.execute("PRAGMA analysis_limit = 500")
+        # Run ANALYZE to improve performance if needed
+        self.con.execute("PRAGMA optimize")
+        # Close the connection to the database
+        return super().__del__()
 
     def create_index(
         self, name: str, where: Union[str, bytes], analyze: bool = True
