@@ -1169,6 +1169,7 @@ class AnnotationStore(ABC, MutableMapping):
         Returns:
             AnnotationStore:
                 A new annotation store with the annotations loaded from the file.
+
         """
         store = cls()
         store.add_from(fp, scale_factor, typedict=typedict, relative_to=relative_to)
@@ -1202,6 +1203,7 @@ class AnnotationStore(ABC, MutableMapping):
         Returns:
             AnnotationStore:
                 A new annotation store with the annotations loaded from the file.
+
         """
         store = cls()
         store.add_from(fp, scale_factor, typedict=typedict, relative_to=relative_to)
@@ -1291,7 +1293,7 @@ class AnnotationStore(ABC, MutableMapping):
             # hovernet-stype .dat file
             try:
                 data = joblib.load(fp)
-            except:
+            except KeyError:
                 with open(fp, "r") as f:
                     data = json.load(f)
             props = list(data[list(data.keys())[0]].keys())
@@ -1523,8 +1525,10 @@ class AnnotationStore(ABC, MutableMapping):
         return pd.json_normalize(features).set_index("key")
 
     def translate_db(self, x: float, y: float):
-        """Translate all annotations by the given vector. Useful for
-        transforming coordinates from slide space into patch/tile/core space.
+        """Translate all annotations by the given vector.
+
+        Useful for transforming coordinates from slide space into
+        patch/tile/core space, for example.
 
         Args:
             x (float):
@@ -1557,22 +1561,18 @@ class AnnotationStore(ABC, MutableMapping):
 class SQLiteMetadata(MutableMapping):
     """Metadata storage for an SQLiteStore.
 
-        Attributes:
-            connection (Union[str, Path, IO]):
-                A reference to where the data is stored. May be a string (
-                e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
-                handle.
-            path (Path):
-                The path to the annotation store data. This will be
-                ":memory:" if the annotation store is in-memory. This is
-                derived from `connection` and normalised to be a pathlib
-                Path object.
-            con (sqlite3.Connection):
-                The sqlite3 database connection.
-    <<<<<<< HEAD
-    =======
-
-    >>>>>>> b4cf2ebc5ad0c367d425c50b631748de42434e4f
+    Attributes:
+        connection (Union[str, Path, IO]):
+            A reference to where the data is stored. May be a string (
+            e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
+            handle.
+        path (Path):
+            The path to the annotation store data. This will be
+            ":memory:" if the annotation store is in-memory. This is
+            derived from `connection` and normalised to be a pathlib
+            Path object.
+        con (sqlite3.Connection):
+            The sqlite3 database connection.
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -2184,8 +2184,9 @@ class SQLiteStore(AnnotationStore):
         compress_type=None,
         min_area=None,
     ) -> sqlite3.Cursor:
-        """Common query construction logic for `cached_query` and `cached_bquery`. Similar
-        to `_query` but can be cached. Does not support where.
+        """Common query construction logic for `cached_query` and `cached_bquery`.
+
+        Similar to `_query` but can be cached. Does not support where.
 
         Args:
             rows(str):
@@ -2303,8 +2304,9 @@ class SQLiteStore(AnnotationStore):
         where: Callable[[Dict[str, Any]], bool] = None,
         min_area=None,
     ) -> Dict[str, Annotation]:
-        """Query the store for annotations. Similar to `bquery` but
-        can be cached.
+        """Query the store for annotations.
+
+        Similar to `bquery` but can be cached.
 
         Args:
             geometry (Geometry or Iterable):
@@ -2342,8 +2344,9 @@ class SQLiteStore(AnnotationStore):
         where: Callable[[Dict[str, Any]], bool] = None,
         min_area=None,
     ) -> List[Annotation]:
-        """Query the store for annotations. Similar to `query` but
-        can be cached.
+        """Query the store for annotations.
+
+        Similar to `query` but can be cached.
 
         Args:
             geometry (Geometry or Iterable):
@@ -2446,7 +2449,10 @@ class SQLiteStore(AnnotationStore):
                     result[i].add(value)
             return list(result.values())
         if where is None:
-            where = lambda _: True
+            return {
+                key: select(json.loads(properties))
+                for key, properties in cur.fetchall()
+            }
         return {
             key: select(json.loads(properties))
             for key, properties in cur.fetchall()
@@ -2893,7 +2899,6 @@ class SQLiteStore(AnnotationStore):
 
     def commit(self) -> None:
         self.con.commit()
-        # self.con.execute("BEGIN")
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
         if hasattr(fp, "write"):
