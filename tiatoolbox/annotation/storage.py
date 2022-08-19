@@ -1253,7 +1253,7 @@ class AnnotationStore(ABC, MutableMapping):
                 return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
             if relative_to is not None:
                 # transform coords to be relative to given pt.
-                poly = translate(poly, -relative_to[0], -relative_to[1])
+                return translate(poly, -relative_to[0], -relative_to[1])
             return poly
 
         if isinstance(fp, str) or file_type == "geo":
@@ -1290,7 +1290,7 @@ class AnnotationStore(ABC, MutableMapping):
                 ]
 
         elif fp.suffix == ".dat":
-            # hovernet-stype .dat file
+            # hovernet-style .dat file
             try:
                 data = joblib.load(fp)
             except KeyError:
@@ -1298,7 +1298,7 @@ class AnnotationStore(ABC, MutableMapping):
                     data = json.load(f)
             props = list(data[list(data.keys())[0]].keys())
             if "contour" not in props:
-                # assume cerberous format with objects subdivided into categories
+                # assume cerberus format with objects subdivided into categories
                 anns = []
                 for subcat in data:
                     if subcat == "resolution":
@@ -1307,7 +1307,7 @@ class AnnotationStore(ABC, MutableMapping):
                     if "contour" not in props:
                         continue
                     if "type" in props:
-                        # use type dictionary if available else autogenerate
+                        # use type dictionary if available else auto-generate
                         if typedict is None:
                             for key in data[subcat]:
                                 data[subcat][key][
@@ -1317,7 +1317,7 @@ class AnnotationStore(ABC, MutableMapping):
                             for key in data[subcat]:
                                 data[subcat][key]["type"] = typedict[subcat][
                                     data[subcat][key]["type"]
-                                ]  # f"{subcat[:3]}: {data[subcat][key]['type']}"
+                                ]
                     else:
                         props.append("type")
                         for key in data[subcat]:
@@ -1357,8 +1357,10 @@ class AnnotationStore(ABC, MutableMapping):
                             ),
                             relative_to,
                         ),
-                        {
-                            key2: data[key][key2]
+                        {   
+                            key2: typedict[data[key][key2]] 
+                            if key2 == "type" and typedict is not None
+                            else data[key][key2]
                             for key2 in props[3:]
                             if key2 in data[key]
                         },
