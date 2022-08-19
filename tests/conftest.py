@@ -375,3 +375,35 @@ def sample_wsi_dict(remote_sample):
         "wsi4_4k_4k_pred",
     ]
     return {name: remote_sample(name) for name in file_names}
+
+
+@pytest.fixture(scope="session")
+def fixed_image(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for fixed image.
+    Download fixed image for pytest.
+    """
+    return remote_sample("fixed_image")
+
+
+@pytest.fixture(scope="session")
+def moving_image(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for moving image.
+    Download moving image for pytest.
+    """
+    return remote_sample("moving_image")
+
+
+@pytest.fixture(scope="session")
+def fixed_mask(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for fixed mask.
+    Download fixed mask for pytest.
+    """
+    return remote_sample("fixed_mask")
+
+
+@pytest.fixture(scope="session")
+def moving_mask(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for moving mask.
+    Download moving mask for pytest.
+    """
+    return remote_sample("moving_mask")
