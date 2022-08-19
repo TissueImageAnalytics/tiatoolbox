@@ -1143,8 +1143,13 @@ class AnnotationStore(ABC, MutableMapping):
         raise IOError("Invalid file handle or path.")
 
     @classmethod
-    def from_geojson(cls, fp: Union[IO, str], scale_factor=1, typedict=None,
-        relative_to=None,) -> "AnnotationStore":
+    def from_geojson(
+        cls,
+        fp: Union[IO, str],
+        scale_factor=1,
+        typedict=None,
+        relative_to=None,
+    ) -> "AnnotationStore":
         """Load annotations from a geoJSON file.
         Args:
             fp (Union[IO, str, Path]):
@@ -1171,8 +1176,13 @@ class AnnotationStore(ABC, MutableMapping):
         return store
 
     @classmethod
-    def from_dat(cls, fp: Union[IO, str], scale_factor=1, typedict=None,
-        relative_to=None,) -> "AnnotationStore":
+    def from_dat(
+        cls,
+        fp: Union[IO, str],
+        scale_factor=1,
+        typedict=None,
+        relative_to=None,
+    ) -> "AnnotationStore":
         """Load annotations from a hovernet-style .dat file.
         Args:
             fp (Union[IO, str, Path]):
@@ -1223,11 +1233,11 @@ class AnnotationStore(ABC, MutableMapping):
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
         """
-        file_type = 'geo'
-        if isinstance(fp, Path) and fp.suffix == '.dat':
-            file_type = 'dat'
-        if isinstance(fp, IO) and Path(fp.name).suffix == '.dat':
-            file_type = 'dat'        
+        file_type = "geo"
+        if isinstance(fp, Path) and fp.suffix == ".dat":
+            file_type = "dat"
+        if isinstance(fp, IO) and Path(fp.name).suffix == ".dat":
+            file_type = "dat"
 
         def make_valid_poly(poly, relative_to=None):
             """Helper function to make a valid polygon."""
@@ -1244,7 +1254,7 @@ class AnnotationStore(ABC, MutableMapping):
                 poly = translate(poly, -relative_to[0], -relative_to[1])
             return poly
 
-        if isinstance(fp, str) or file_type=='geo':
+        if isinstance(fp, str) or file_type == "geo":
             geojson = self._load_cases(
                 fp=fp,
                 string_fn=json.loads,
@@ -2147,7 +2157,9 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
+                    geometry=self._unpack_geometry(
+                        blob, cx, cy, self.metadata["compression"]
+                    ),
                     properties=json.loads(properties),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
@@ -2155,7 +2167,9 @@ class SQLiteStore(AnnotationStore):
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy, self.metadata["compression"]),
+                geometry=self._unpack_geometry(
+                    blob, cx, cy, self.metadata["compression"]
+                ),
                 properties=json.loads(properties),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
