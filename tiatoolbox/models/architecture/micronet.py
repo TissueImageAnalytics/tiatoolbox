@@ -7,6 +7,7 @@ Dec. 2018, vol. 52, p. 160–173.
 """
 
 from collections import OrderedDict
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -20,7 +21,9 @@ from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.utils import misc
 
 
-def group1_forward_branch(layer, in_tensor, resized_feat):
+def group1_forward_branch(
+    layer: nn.Module, in_tensor: torch.Tensor, resized_feat: torch.Tensor
+) -> torch.Tensor:
     """Defines group 1 connections.
 
     Args:
@@ -44,7 +47,7 @@ def group1_forward_branch(layer, in_tensor, resized_feat):
     return torch.cat(tensors=(a, b), dim=1)
 
 
-def group2_forward_branch(layer, in_tensor):
+def group2_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
     """Defines group 1 connections.
 
     Args:
@@ -62,7 +65,9 @@ def group2_forward_branch(layer, in_tensor):
     return layer["conv2"](a)
 
 
-def group3_forward_branch(layer, main_feat, skip):
+def group3_forward_branch(
+    layer: nn.Module, main_feat: torch.Tensor, skip: torch.Tensor
+) -> torch.Tensor:
     """Defines group 1 connections.
 
     Args:
@@ -87,7 +92,7 @@ def group3_forward_branch(layer, main_feat, skip):
     return layer["conv3"](b)
 
 
-def group4_forward_branch(layer, in_tensor):
+def group4_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
     """Defines group 1 connections.
 
     Args:
@@ -172,7 +177,7 @@ def group1_arch_branch(in_ch: int, resized_in_ch: int, out_ch: int):
     return nn.ModuleDict(module_dict)
 
 
-def group2_arch_branch(in_ch, out_ch):
+def group2_arch_branch(in_ch: int, out_ch: int):
     """Group2 branch for MicroNet.
 
     Args:
@@ -212,7 +217,7 @@ def group2_arch_branch(in_ch, out_ch):
     return nn.ModuleDict(module_dict)
 
 
-def group3_arch_branch(in_ch, skip, out_ch):
+def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
     """Group3 branch for MicroNet.
 
     Args:
@@ -277,9 +282,16 @@ def group3_arch_branch(in_ch, skip, out_ch):
 
 
 def group4_arch_branch(
-    in_ch, out_ch, up_kernel=(2, 2), up_strides=(2, 2), activation="tanh"
-):
+    in_ch: int,
+    out_ch: int,
+    up_kernel: Tuple[int, int] = (2, 2),
+    up_strides: Tuple[int, int] = (2, 2),
+    activation: str = "tanh",
+) -> nn.ModuleDict:
     """Group4 branch for MicroNet.
+
+    This branch defines architecture for decoder and
+    provides input for the auxiliary and main output branch.
 
     Args:
         in_ch (int):
@@ -323,8 +335,10 @@ def group4_arch_branch(
     return nn.ModuleDict(module_dict)
 
 
-def out_arch_branch(in_ch, num_class=2, activation="softmax"):
+def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax"):
     """Group5 branch for MicroNet.
+
+    This branch defines architecture for auxiliary and the main output.
 
     Args:
         in_ch (int):

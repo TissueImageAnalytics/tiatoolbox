@@ -48,7 +48,7 @@ class MapDe(MicroNet):
          - 0.82
          - 0.81
        * - mapde-conic
-         - CoNiC
+         - CoNIC
          - 0.85
          - 0.85
          - 0.85
