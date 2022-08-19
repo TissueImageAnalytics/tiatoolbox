@@ -1357,8 +1357,8 @@ class AnnotationStore(ABC, MutableMapping):
                             ),
                             relative_to,
                         ),
-                        {   
-                            key2: typedict[data[key][key2]] 
+                        {
+                            key2: typedict[data[key][key2]]
                             if key2 == "type" and typedict is not None
                             else data[key][key2]
                             for key2 in props[3:]
