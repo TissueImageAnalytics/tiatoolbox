@@ -78,7 +78,8 @@ def test_extract_features(fixed_image, moving_image, dfbr_features):
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
-=======
+
+
 def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     """Test for prealignment of an image pair"""
     fixed_img = imread(fixed_image)
