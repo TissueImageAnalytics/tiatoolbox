@@ -399,3 +399,19 @@ def dfbr_features(remote_sample) -> pathlib.Path:
     Download features for pytest.
     """
     return remote_sample("dfbr_features")
+
+
+@pytest.fixture(scope="session")
+def fixed_mask(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for fixed mask.
+    Download fixed mask for pytest.
+    """
+    return remote_sample("fixed_mask")
+
+
+@pytest.fixture(scope="session")
+def moving_mask(remote_sample) -> pathlib.Path:
+    """Sample pytest fixture for moving mask.
+    Download moving mask for pytest.
+    """
+    return remote_sample("moving_mask")
