@@ -400,6 +400,7 @@ def dfbr_features(remote_sample) -> pathlib.Path:
     """
     return remote_sample("dfbr_features")
 
+
 def fixed_mask(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for fixed mask.
     Download fixed mask for pytest.

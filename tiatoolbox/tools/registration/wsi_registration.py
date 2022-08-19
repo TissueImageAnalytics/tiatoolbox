@@ -2,12 +2,12 @@ import warnings
 
 import cv2
 import numpy as np
+import scipy.ndimage as ndi
 import torch
 import torchvision
-from torchvision.models._utils import IntermediateLayerGetter
-import scipy.ndimage as ndi
 from skimage import exposure, filters
 from skimage.util import img_as_float
+from torchvision.models._utils import IntermediateLayerGetter
 
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize

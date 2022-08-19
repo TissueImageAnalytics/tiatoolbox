@@ -1,12 +1,11 @@
-import cv2
 import pathlib
 
+import cv2
 import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
     DFBRegistration,
-    match_histograms,
     match_histograms,
     prealignment,
 )
