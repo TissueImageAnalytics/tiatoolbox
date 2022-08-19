@@ -143,12 +143,9 @@ def prealignment(
 def match_histograms(image_a, image_b, kernel_size=7):
     """Image normalization function.
 
-class DFBRegistration:
-    r"""Deep Feature based Registration
+    This function performs histogram equalization to unify the
+    appearance of an image pair.
 
-    This class implements a CNN feature based registration,
-    as proposed in a paper titled `Deep Feature based Cross-slide Registration
-    <https://arxiv.org/pdf/2202.09971.pdf>`_.
     Args:
         image_a (:class:`numpy.ndarray`):
             A grayscale image.
@@ -164,6 +161,32 @@ class DFBRegistration:
             A normalized grayscale image.
 
     """
+
+    image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
+    if len(image_a.shape) == 3 or len(image_b.shape) == 3:
+        raise ValueError("The input images should be grayscale images.")
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+    entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
+        image_b, kernel
+    )
+    if np.mean(entropy_a) > np.mean(entropy_b):
+        image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
+    else:
+        image_a = exposure.match_histograms(image_a, image_b).astype(np.uint8)
+
+    return image_a, image_b
+
+
+class DFBRegistration:
+    r"""Deep Feature based Registration
+
+    This class implements a CNN feature based registration,
+    as proposed in a paper titled `Deep Feature based Cross-slide Registration
+    <https://arxiv.org/pdf/2202.09971.pdf>`_.
+
+    """
+
     def __init__(self):
         self.patch_size = (224, 224)
         self.xScale, self.yScale = [], []
@@ -407,13 +430,5 @@ class DFBRegistration:
 
         matrix = np.linalg.lstsq(x, y, rcond=-1)[0].T
         matrix[-1, :] = [0, 0, 1]
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-    entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
-        image_b, kernel
-    )
-    if np.mean(entropy_a) > np.mean(entropy_b):
-        image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
-    else:
-        image_a = exposure.match_histograms(image_a, image_b).astype(np.uint8)
 
         return matrix
