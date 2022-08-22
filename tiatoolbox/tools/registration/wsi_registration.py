@@ -13,7 +13,12 @@ from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
 
 
-def _check_dims(fixed_img, moving_img, fixed_mask, moving_mask):
+def _check_dims(
+    fixed_img: np.ndarray,
+    moving_img: np.ndarray,
+    fixed_mask: np.ndarray,
+    moving_mask: np.ndarray,
+) -> None:
     """Check the dimensionality of images and mask.
 
     Args:
@@ -44,8 +49,13 @@ def _check_dims(fixed_img, moving_img, fixed_mask, moving_mask):
 
 
 def prealignment(
-    fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.5, rotation_step=10
-):
+    fixed_img: np.ndarray,
+    moving_img: np.ndarray,
+    fixed_mask: np.ndarray,
+    moving_mask: np.ndarray,
+    dice_overlap: float = 0.5,
+    rotation_step: int = 10,
+) -> np.ndarray:
     """Coarse registration of an image pair.
 
     This function performs initial alignment of a moving image with respect to a
@@ -140,7 +150,9 @@ def prealignment(
     return None
 
 
-def match_histograms(image_a, image_b, kernel_size=7):
+def match_histograms(
+    image_a: np.ndarray, image_b: np.ndarray, kernel_size: int = 7
+) -> np.ndarray:
     """Image normalization function.
 
     This function performs histogram equalization to unify the
@@ -178,8 +190,8 @@ def match_histograms(image_a, image_b, kernel_size=7):
     return image_a, image_b
 
 
-class DFBRegistration:
-    r"""Deep Feature based Registration
+class DFBRegister:
+    r"""Deep Feature based Registration (DFBR).
 
     This class implements a CNN feature based registration,
     as proposed in a paper titled `Deep Feature based Cross-slide Registration
@@ -197,7 +209,7 @@ class DFBRegistration:
         )
 
     # Make this function private when full pipeline is implemented.
-    def extract_features(self, fixed_img, moving_img):
+    def extract_features(self, fixed_img: np.ndarray, moving_img: np.ndarray) -> dict:
         """CNN based feature extraction for registration.
 
         This function extracts multiscale features from a pre-trained
@@ -246,7 +258,7 @@ class DFBRegistration:
         return self.FeatureExtractor(x)
 
     @staticmethod
-    def finding_match(feature_dist):
+    def finding_match(feature_dist: np.ndarray) -> np.ndarray:
         """Computes matching points.
 
         This function computes all the possible matching points
@@ -276,7 +288,9 @@ class DFBRegistration:
         )
 
     @staticmethod
-    def compute_feature_distance(feature_x, feature_y, factor):
+    def compute_feature_distance(
+        feature_x: np.ndarray, feature_y: np.ndarray, factor: int
+    ) -> np.ndarray:
         """Computes feature distance.
 
         This function computes Euclidean distance between features of
@@ -317,7 +331,7 @@ class DFBRegistration:
         )
         return feature_distance[row_ind, col_ind]
 
-    def feature_mapping(self, features, num_matching_points=128):
+    def feature_mapping(self, features: dict, num_matching_points=128) -> np.ndarray:
         """Mapping of CNN features.
 
         This function maps features of a fixed image to that of
@@ -338,6 +352,7 @@ class DFBRegistration:
             :class:`numpy.ndarray`:
                 A 1D array, where each element represents quality
                 of each matching point.
+
         """
         if len(features) != 3:
             raise ValueError("The feature mapping step expects 3 blocks of features.")
@@ -406,7 +421,9 @@ class DFBRegistration:
         return fixed_points, moving_points, np.amin(feature_dist, axis=1)
 
     @staticmethod
-    def estimate_affine_transform(points_0, points_1):
+    def estimate_affine_transform(
+        points_0: np.ndarray, points_1: np.ndarray
+    ) -> np.ndarray:
         """Compute affine transformation matrix.
 
         This function estimates transformation parameters
