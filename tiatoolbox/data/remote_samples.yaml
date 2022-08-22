@@ -109,3 +109,13 @@ files:
     url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]
   micronet-output:
     url: [*modelroot, "predictions/nuclei_mask/micronet-output.npy"]
+  fixed_image:
+    url: [*testdata, "registration/HE_1_level8_gray.jpeg"]
+  moving_image:
+    url: [ *testdata, "registration/HE_2_level8_gray.jpeg" ]
+  dfbr_features:
+    url: [ *testdata, "registration/dfbr_features.npy" ]
+  fixed_mask:
+    url: [ *testdata, "registration/HE_1_level8_mask.png" ]
+  moving_mask:
+    url: [ *testdata, "registration/HE_2_level8_mask.png" ]
