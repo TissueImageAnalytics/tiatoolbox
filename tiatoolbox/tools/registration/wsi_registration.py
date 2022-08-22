@@ -352,6 +352,7 @@ class DFBRegister:
             :class:`numpy.ndarray`:
                 A 1D array, where each element represents quality
                 of each matching point.
+
         """
         if len(features) != 3:
             raise ValueError("The feature mapping step expects 3 blocks of features.")
