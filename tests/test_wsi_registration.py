@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
-    DFBRegistrtation,
+    DFBRegister,
     match_histograms,
     prealignment,
 )
@@ -17,7 +17,7 @@ def test_extract_features(fixed_image, moving_image, dfbr_features):
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
 
-    df = DFBRegistrtation()
+    df = DFBRegister()
     with pytest.raises(
         ValueError,
         match=r".*The required shape for fixed and moving images is n x m x 3.*",
