@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 import cv2
 import numpy as np
@@ -35,7 +36,7 @@ def _check_dims(
         None
 
     """
-    if len(np.unique(fixed_mask)) == 1 or len(np.unique(fixed_mask)) == 1:
+    if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
         raise ValueError("The foreground is missing in the mask.")
 
     if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
@@ -152,7 +153,7 @@ def prealignment(
 
 def match_histograms(
     image_a: np.ndarray, image_b: np.ndarray, kernel_size: int = 7
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     """Image normalization function.
 
     This function performs histogram equalization to unify the
@@ -200,11 +201,11 @@ class DFBRegister:
     """
 
     def __init__(self):
-        self.patch_size = (224, 224)
-        self.xScale, self.yScale = [], []
+        self.patch_size: Tuple[int, int] = (224, 224)
+        self.x_scale, self.y_scale = [], []
         model = torchvision.models.vgg16(True)
         return_layers = {"16": "block3_pool", "23": "block4_pool", "30": "block5_pool"}
-        self.FeatureExtractor = IntermediateLayerGetter(
+        self.feature_extractor = IntermediateLayerGetter(
             model.features, return_layers=return_layers
         )
 
@@ -235,8 +236,8 @@ class DFBRegister:
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
             raise ValueError("The input images are expected to have 3 channels.")
 
-        self.xScale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
-        self.yScale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
+        self.x_scale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
+        self.y_scale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
         fixed_cnn = imresize(
             fixed_img, output_size=self.patch_size, interpolation="linear"
         )
@@ -255,10 +256,10 @@ class DFBRegister:
         cnn_input = np.concatenate((fixed_cnn, moving_cnn), axis=0)
 
         x = torch.from_numpy(cnn_input).type(torch.float32)
-        return self.FeatureExtractor(x)
+        return self.feature_extractor(x)
 
     @staticmethod
-    def finding_match(feature_dist: np.ndarray) -> np.ndarray:
+    def finding_match(feature_dist: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Computes matching points.
 
         This function computes all the possible matching points
@@ -288,18 +289,18 @@ class DFBRegister:
         )
 
     @staticmethod
-    def compute_feature_distance(
-        feature_x: np.ndarray, feature_y: np.ndarray, factor: int
+    def compute_feature_distances(
+        features_x: np.ndarray, features_y: np.ndarray, factor: int
     ) -> np.ndarray:
-        """Computes feature distance.
+        """Compute feature distance.
 
         This function computes Euclidean distance between features of
         fixed and moving images.
 
         Args:
-            feature_x (:class:`numpy.ndarray`):
+            features_x (:class:`numpy.ndarray`):
                 Features computed for a fixed image.
-            feature_y (:class:`numpy.ndarray`):
+            features_y (:class:`numpy.ndarray`):
                 Features computed for a moving image.
             factor (int):
                 A number multiplied by the feature size
@@ -311,9 +312,11 @@ class DFBRegister:
 
         """
         feature_distance = np.linalg.norm(
-            np.repeat(np.expand_dims(feature_x, axis=0), feature_y.shape[0], axis=0)
-            - np.repeat(np.expand_dims(feature_y, axis=1), feature_x.shape[0], axis=1),
-            axis=len(feature_x.shape),
+            np.repeat(np.expand_dims(features_x, axis=0), features_y.shape[0], axis=0)
+            - np.repeat(
+                np.expand_dims(features_y, axis=1), features_x.shape[0], axis=1
+            ),
+            axis=len(features_x.shape),
         )
 
         feature_size_2d = np.int(np.sqrt(feature_distance.shape[0]))
@@ -331,8 +334,10 @@ class DFBRegister:
         )
         return feature_distance[row_ind, col_ind]
 
-    def feature_mapping(self, features: dict, num_matching_points=128) -> np.ndarray:
-        """Mapping of CNN features.
+    def feature_mapping(
+        self, features: dict, num_matching_points: int = 128
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Find mapping between CNN features.
 
         This function maps features of a fixed image to that of
         a moving image on the basis of Euclidean distance between
@@ -376,9 +381,9 @@ class DFBRegister:
         fixed_feat3 = fixed_feat3 / np.std(fixed_feat3)
         moving_feat3 = moving_feat3 / np.std(moving_feat3)
 
-        feature_dist1 = self.compute_feature_distance(fixed_feat1, moving_feat1, 1)
-        feature_dist2 = self.compute_feature_distance(fixed_feat2, moving_feat2, 2)
-        feature_dist3 = self.compute_feature_distance(fixed_feat3, moving_feat3, 4)
+        feature_dist1 = self.compute_feature_distances(fixed_feat1, moving_feat1, 1)
+        feature_dist2 = self.compute_feature_distances(fixed_feat2, moving_feat2, 2)
+        feature_dist3 = self.compute_feature_distances(fixed_feat3, moving_feat3, 4)
         feature_dist = 1.414 * feature_dist1 + feature_dist2 + feature_dist3
 
         seq = np.array(
@@ -416,8 +421,8 @@ class DFBRegister:
             ),
         ]
 
-        fixed_points = ((fixed_points * 224.0) + 112.0) * self.xScale
-        moving_points = ((moving_points * 224.0) + 112.0) * self.yScale
+        fixed_points = ((fixed_points * 224.0) + 112.0) * self.x_scale
+        moving_points = ((moving_points * 224.0) + 112.0) * self.y_scale
         return fixed_points, moving_points, np.amin(feature_dist, axis=1)
 
     @staticmethod
@@ -438,7 +443,7 @@ class DFBRegister:
 
         Returns:
             :class:`numpy.ndarray`:
-                A 3x3 transformation matrix
+                A 3x3 transformation matrix.
 
         """
         num_points = min(len(points_0), len(points_1))
