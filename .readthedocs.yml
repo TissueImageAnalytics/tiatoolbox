@@ -27,7 +27,7 @@ build:
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
-  version: "3.8"
+  version: "3.10"
   install:
       - requirements: requirements.txt
       - requirements: docs/requirements.txt
