@@ -1232,6 +1232,9 @@ class AnnotationStore(ABC, MutableMapping):
                 replaced by the corresponding value. Useful for providing descriptive
                 names to non-descriptive types,
                 eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+                For multi-head output, should be a dict of dicts, eg:
+                {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
+                    'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
         """
@@ -1256,6 +1259,34 @@ class AnnotationStore(ABC, MutableMapping):
                 return translate(poly, -relative_to[0], -relative_to[1])
             return poly
 
+        def anns_from_hoverdict(data, props, typedict):
+            """Helper function to create list of Annotation objects from a
+            hovernet-style dict of segmentations, mapping types using typedict
+            if provided.
+            """
+            return [
+                Annotation(
+                    make_valid_poly(
+                        feature2geometry(
+                            {
+                                "type": data[key].get("geom_type", "Polygon"),
+                                "coordinates": scale_factor
+                                * np.array([data[key]["contour"]]),
+                            }
+                        ),
+                        relative_to,
+                    ),
+                    {
+                        key2: typedict[data[key][key2]]
+                        if key2 == "type" and typedict is not None
+                        else data[key][key2]
+                        for key2 in props[3:]
+                        if key2 in data[key]
+                    },
+                )
+                for key in data
+            ]
+
         if isinstance(fp, str) or file_type == "geo":
             geojson = self._load_cases(
                 fp=fp,
@@ -1263,7 +1294,7 @@ class AnnotationStore(ABC, MutableMapping):
                 file_fn=json.load,
             )
 
-            if scale_factor is not None and scale_factor != 1:
+            if scale_factor != 1:
                 anns = [
                     Annotation(
                         scale(
@@ -1309,64 +1340,21 @@ class AnnotationStore(ABC, MutableMapping):
                     if "type" in props:
                         # use type dictionary if available else auto-generate
                         if typedict is None:
-                            for key in data[subcat]:
+                            typedict_sub = {
                                 data[subcat][key][
                                     "type"
-                                ] = f"{subcat[:3]}: {data[subcat][key]['type']}"
+                                ]: f"{subcat[:3]}: {data[subcat][key]['type']}"
+                                for key in data[subcat]
+                            }
                         else:
-                            for key in data[subcat]:
-                                data[subcat][key]["type"] = typedict[subcat][
-                                    data[subcat][key]["type"]
-                                ]
+                            typedict_sub = typedict[subcat]
                     else:
                         props.append("type")
                         for key in data[subcat]:
                             data[subcat][key]["type"] = subcat
-                    anns.extend(
-                        [
-                            Annotation(
-                                make_valid_poly(
-                                    feature2geometry(
-                                        {
-                                            "type": "Polygon",
-                                            "coordinates": scale_factor
-                                            * np.array([data[subcat][key]["contour"]]),
-                                        }
-                                    ),
-                                    relative_to,
-                                ),
-                                {
-                                    key2: data[subcat][key][key2]
-                                    for key2 in props[3:]
-                                    if key2 in data[subcat][key]
-                                },
-                            )
-                            for key in data[subcat]
-                        ]
-                    )
+                    anns.extend(anns_from_hoverdict(data[subcat], props, typedict_sub))
             else:
-                anns = [
-                    Annotation(
-                        make_valid_poly(
-                            feature2geometry(
-                                {
-                                    "type": "Polygon",
-                                    "coordinates": scale_factor
-                                    * np.array([data[key]["contour"]]),
-                                }
-                            ),
-                            relative_to,
-                        ),
-                        {   
-                            key2: typedict[data[key][key2]] 
-                            if key2 == "type" and typedict is not None
-                            else data[key][key2]
-                            for key2 in props[3:]
-                            if key2 in data[key]
-                        },
-                    )
-                    for key in data
-                ]
+                anns = anns_from_hoverdict(data, props, typedict)
         else:
             raise ValueError("Invalid file type")
         print(f"added {len(anns)} annotations")
@@ -2043,6 +2031,7 @@ class SQLiteStore(AnnotationStore):
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
+        min_area=None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -2050,7 +2039,7 @@ class SQLiteStore(AnnotationStore):
             columns(str):
                 The columns to select.
             geometry(tuple or Geometry):
-                The geometry being queries against.
+                The geometry being queried against.
             select_callable(str):
                 The rows to select when a callable is given to `where`.
             callable_columns(str):
@@ -2113,6 +2102,8 @@ class SQLiteStore(AnnotationStore):
                     "Query is not using an index. "
                     "Consider adding an index to improve performance."
                 )
+        if min_area is not None:
+            query_string += f"\nAND area > {min_area}"
 
         query_string += "\nORDER BY area DESC"
         cur.execute(query_string, query_parameters)
@@ -2123,6 +2114,7 @@ class SQLiteStore(AnnotationStore):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate="intersects",
+        min_area=None,
     ) -> List[str]:
         query_geometry = geometry
         cur = self._query(
@@ -2131,6 +2123,7 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate=geometry_predicate,
             where=where,
             callable_columns="[key], properties",
+            min_area=min_area,
         )
         if isinstance(where, Callable):
             return [
@@ -2145,6 +2138,7 @@ class SQLiteStore(AnnotationStore):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
+        min_area=None,
     ) -> Dict[str, Annotation]:
         query_geometry = geometry
         cur = self._query(
@@ -2152,6 +2146,7 @@ class SQLiteStore(AnnotationStore):
             geometry=query_geometry,
             geometry_predicate=geometry_predicate,
             where=where,
+            min_area=min_area,
         )
         if isinstance(where, Callable):
             return {
@@ -2214,8 +2209,6 @@ class SQLiteStore(AnnotationStore):
                 A database cursor for the current query.
 
         """
-        if geometry is None:
-            raise ValueError("`geometry` must be specified.")
         query_geometry = geometry
         if callable_rows is None:
             callable_rows = rows
@@ -2326,6 +2319,16 @@ class SQLiteStore(AnnotationStore):
                 Dict:
                     A dict of Annotation objects.
         """
+        if not isinstance(geometry, Iterable):
+            raise ValueError(
+                """geometry must be a bounding box tuple.
+            To query with an arbitrary geometry, please use bquery instead."""
+            )
+        if isinstance(where, (str, bytes)):
+            raise ValueError(
+                """`where` must be a callable. cached_bquery does not support string or
+            pickled `where`. To use these, please use bquery instead."""
+            )
         data = self._cached_query(
             rows="[key], properties, min_x, min_y, max_x, max_y",
             geometry=geometry,
@@ -2344,6 +2347,7 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[Tuple] = None,
         where: Callable[[Dict[str, Any]], bool] = None,
+        geometry_predicate: str = "intersects",
         min_area=None,
     ) -> List[Annotation]:
         """Query the store for annotations.
@@ -2366,10 +2370,25 @@ class SQLiteStore(AnnotationStore):
                 Dict:
                     A dict of Annotation objects.
         """
+        if geometry_predicate not in self._geometry_predicate_names:
+            raise ValueError(
+                "Invalid geometry predicate."
+                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
+            )
+        if isinstance(where, (str, bytes)):
+            raise ValueError(
+                """`where` must be a callable. cached_query does not support string or
+            pickled `where`. To use these, please use query instead."""
+            )
+        if geometry is not None and not isinstance(geometry, Iterable):
+            raise ValueError(
+                """geometry must be a bounding box tuple.
+            To query with an arbitrary geometry, please use query instead."""
+            )
         data = self._cached_query(
             rows="properties, cx, cy, geometry",
             geometry=geometry,
-            geometry_predicate="bbox_intersects",
+            geometry_predicate=geometry_predicate,
             con=self.con,
             bbox=False,
             compress_type=self.metadata["compression"],
@@ -2383,6 +2402,7 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        min_area=None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         cur = self._query(
             columns="[key], min_x, min_y, max_x, max_y",
@@ -2390,6 +2410,7 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate="bbox_intersects",
             where=where,
             callable_columns="[key], properties, min_x, min_y, max_x, max_y",
+            min_area=min_area,
         )
         if isinstance(where, Callable):
             return {

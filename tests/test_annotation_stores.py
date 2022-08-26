@@ -438,6 +438,78 @@ def test_annotation_to_geojson():
     assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
 
 
+def test_cached_query_invalid_geometry_predicate():
+    """Test that invalid geometry predicate raises an exception."""
+    store = SQLiteStore()
+    with pytest.raises(ValueError, match="Invalid geometry predicate"):
+        store.cached_query((0, 0, 1024, 1024), geometry_predicate="foo")
+
+
+def test_cached_query_predicate_str(fill_store):
+    """Test quering with a predicate string."""
+    keys, store = fill_store(SQLiteStore, ":memory:")
+    store.patch(keys[0], properties={"class": 123})
+    with pytest.raises(ValueError, match="does not support"):
+        store.cached_query((0, 0, 1024, 1024), where="props.get('class') == 123")
+
+
+def test_cached_query_predicate_callable(fill_store):
+    """Test quering with a predicate function."""
+    keys, store = fill_store(SQLiteStore, ":memory:")
+    store.patch(keys[0], properties={"class": 123})
+    results = store.cached_query(
+        # (0, 0, 1024, 1024),
+        where=lambda props: props.get("class")
+        == 123,
+    )
+    assert len(results) == 1
+
+
+def test_cached_query_predicate_pickle(fill_store):
+    """Test quering with a pickled predicate function."""
+    keys, store = fill_store(SQLiteStore, ":memory:")
+    store.patch(keys[0], properties={"class": 123})
+    with pytest.raises(ValueError, match="does not support"):
+        store.cached_query((0, 0, 1024, 1024), where=pickle.dumps(sample_where_123))
+
+
+def test_cached_query_bbox(fill_store, tmp_path):
+    """Test query with a bounding box."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    results = store.cached_query((0, 0, 25, 25))
+    assert len(results) == 8
+
+
+def test_cached_query_polygon(fill_store, tmp_path):
+    """Test query with a non-rectangular geometry."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    with pytest.raises(ValueError, match="geometry must be a bounding box tuple"):
+        store.cached_query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
+
+
+def test_cached_bquery_bounds(fill_store):
+    """Test querying a store with a bounding box iterable."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    dictionary = store.cached_bquery((0, 0, 1e10, 1e10))
+    assert isinstance(dictionary, dict)
+    assert len(dictionary) == len(store)
+
+
+def test_cached_bquery(fill_store):
+    """Test querying a store with a bounding box."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    dictionary = store.cached_bquery((0, 0, 1e10, 1e10))
+    assert isinstance(dictionary, dict)
+    assert len(dictionary) == len(store)
+
+
+def test_cached_bquery_polygon(fill_store):
+    """Test querying a store with a polygon."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    with pytest.raises(ValueError, match="geometry must be a bounding box tuple"):
+        store.cached_bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 
