@@ -1,6 +1,6 @@
-* TIA Toolbox version:
-* Python version:
-* Operating System:
+- TIA Toolbox version:
+- Python version:
+- Operating System:
 
 ### Description
 
