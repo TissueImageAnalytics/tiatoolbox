@@ -252,7 +252,9 @@ class MapDe(MicroNet):
         return np.fliplr(coordinates)
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(
+        model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -268,10 +270,8 @@ class MapDe(MicroNet):
                 Whether to run inference on a GPU.
 
         Returns:
-            List of output from each head, each head is expected to
-            contain N predictions for N input patches. There are two
-            cases, one with 2 heads (Nuclei Pixels `np` and Hover `hv`)
-            or with 2 heads (`np`, `hv`, and Nuclei Types `tp`).
+            np.ndarray:
+                Probability map as numpy array.
 
         """
         patch_imgs = batch_data
@@ -282,7 +282,6 @@ class MapDe(MicroNet):
 
         model.eval()  # infer mode
 
-        # --------------------------------------------------------------
         with torch.inference_mode():
             pred = model(patch_imgs_gpu)
 
