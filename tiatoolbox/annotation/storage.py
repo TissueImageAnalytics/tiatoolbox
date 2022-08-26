@@ -1269,22 +1269,22 @@ class AnnotationStore(ABC, MutableMapping):
                     make_valid_poly(
                         feature2geometry(
                             {
-                                "type": data[key].get("geom_type", "Polygon"),
+                                "type": data[id].get("geom_type", "Polygon"),
                                 "coordinates": scale_factor
-                                * np.array([data[key]["contour"]]),
+                                * np.array([data[id]["contour"]]),
                             }
                         ),
                         relative_to,
                     ),
                     {
-                        key2: typedict[data[key][key2]]
-                        if key2 == "type" and typedict is not None
-                        else data[key][key2]
-                        for key2 in props[3:]
-                        if key2 in data[key]
+                        prop: typedict[data[id][prop]]
+                        if prop == "type" and typedict is not None
+                        else data[id][prop]
+                        for prop in props[3:]
+                        if prop in data[id]
                     },
                 )
-                for key in data
+                for id in data
             ]
 
         if isinstance(fp, str) or file_type == "geo":
@@ -1341,17 +1341,18 @@ class AnnotationStore(ABC, MutableMapping):
                         # use type dictionary if available else auto-generate
                         if typedict is None:
                             typedict_sub = {
-                                data[subcat][key][
+                                data[subcat][id][
                                     "type"
-                                ]: f"{subcat[:3]}: {data[subcat][key]['type']}"
-                                for key in data[subcat]
+                                ]: f"{subcat[:3]}: {data[subcat][id]['type']}"
+                                for id in data[subcat]
                             }
                         else:
                             typedict_sub = typedict[subcat]
                     else:
                         props.append("type")
-                        for key in data[subcat]:
-                            data[subcat][key]["type"] = subcat
+                        typedict_sub = None
+                        for id in data[subcat]:
+                            data[subcat][id]["type"] = subcat
                     anns.extend(anns_from_hoverdict(data[subcat], props, typedict_sub))
             else:
                 anns = anns_from_hoverdict(data, props, typedict)
