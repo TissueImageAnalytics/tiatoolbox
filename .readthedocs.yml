@@ -5,29 +5,27 @@
 # Required
 version: 2
 
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.10"
+  apt_packages:
+    - openslide-tools
+    - libopenjp2-7-dev
+    - libopenjp2-tools
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/conf.py
-
-# Build documentation with MkDocs
-# mkdocs:
-#  configuration: mkdocs.yml
 
 # Optionally build your docs in additional formats such as PDF
 formats:
   - pdf
   - epub
 
-# Install apt packages
-build:
-  apt_packages:
-    - openslide-tools
-    - libopenjp2-7-dev
-    - libopenjp2-tools
-
 # Optionally set the version of Python and requirements required to build your docs
 python:
-  version: "3.8"
   install:
       - requirements: requirements.txt
       - requirements: docs/requirements.txt
