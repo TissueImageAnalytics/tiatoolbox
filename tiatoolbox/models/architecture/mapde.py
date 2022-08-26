@@ -1,6 +1,6 @@
 """Defines MapDe architecture.
 
-Raza, Shan E. Ahmed, et al. "Deconvolving convolutional neural network
+Raza, Shan E Ahmed, et al. "Deconvolving convolutional neural network
 for cell detection." 2019 IEEE 16th International Symposium on Biomedical
 Imaging (ISBI 2019). IEEE, 2019.
 
