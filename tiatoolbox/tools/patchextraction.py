@@ -55,7 +55,8 @@ class PatchExtractor(ABC):
             bounds exceed the mother image dimensions would be
             neglected. Default is False.
         min_mask_ratio (float):
-            Area in percentage that a patch needs to contain of positive mask to be included. Defaults to 0.
+            Area in percentage that a patch needs to contain of positive
+            mask to be included. Defaults to 0.
 
 
     Attributes:
@@ -255,7 +256,8 @@ class PatchExtractor(ABC):
                 i.e., `coordinate_units`. If not provided, a default
                 value will be selected based on `coordinate_units`.
             min_mask_ratio (float):
-                Only patches with postive area percentage above this value are included. Defaults to 0.
+                Only patches with postive area percentage above this value are included.
+                Defaults to 0.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -559,7 +561,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Stride in (x, y) direction for patch extraction, default =
             `patch_size`.
         min_mask_ratio (float):
-            Only patches with postive area percentage above this value are included. Defaults to 0.
+            Only patches with postive area percentage above this value are included.
+            Defaults to 0.
 
     Attributes:
         stride(tuple(int)):
