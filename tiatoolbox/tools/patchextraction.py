@@ -56,7 +56,7 @@ class PatchExtractor(ABC):
             neglected. Default is False.
         min_mask_ratio (float):
             Area in percentage that a patch needs to contain of positive mask to be included. Defaults to 0.
-        
+
 
     Attributes:
         wsi(WSIReader):
@@ -100,7 +100,7 @@ class PatchExtractor(ABC):
         pad_mode="constant",
         pad_constant_values=0,
         within_bound=False,
-        min_mask_ratio=0
+        min_mask_ratio=0,
     ):
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
@@ -116,9 +116,11 @@ class PatchExtractor(ABC):
         self.coordinate_list = None
         self.stride = None
 
-        assert min_mask_ratio>=0 and min_mask_ratio<=1, "min_mask_ratio should be in [0,1]"
+        assert (
+            min_mask_ratio >= 0 and min_mask_ratio <= 1
+        ), "min_mask_ratio should be in [0,1]"
 
-        self.min_mask_ratio=min_mask_ratio
+        self.min_mask_ratio = min_mask_ratio
 
         if input_mask is None:
             self.mask = None
@@ -200,7 +202,7 @@ class PatchExtractor(ABC):
                 self.coordinate_list,
                 coordinate_resolution=converted_units[converted_units_keys[0]],
                 coordinate_units=converted_units_keys[0],
-                min_mask_ratio=self.min_mask_ratio
+                min_mask_ratio=self.min_mask_ratio,
             )
             self.coordinate_list = self.coordinate_list[selected_coord_idxs]
             if len(self.coordinate_list) == 0:
@@ -222,8 +224,7 @@ class PatchExtractor(ABC):
         coordinate_resolution,
         coordinate_units,
         mask_resolution=None,
-        min_mask_ratio=0
-        
+        min_mask_ratio=0,
     ):
         """Validate patch extraction coordinates based on the input mask.
 
@@ -271,7 +272,9 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
         if isinstance(coordinate_resolution, (int, float)):
             coordinate_resolution = [coordinate_resolution, coordinate_resolution]
-        assert min_mask_ratio>=0 and min_mask_ratio<=1, "min_mask_ratio should be in [0,1]"
+        assert (
+            min_mask_ratio >= 0 and min_mask_ratio <= 1
+        ), "min_mask_ratio should be in [0,1]"
 
         # define default mask_resolution based on the input `coordinate_units`
         if mask_resolution is None:
@@ -297,9 +300,9 @@ class PatchExtractor(ABC):
         flag_list = []
         for coord in scaled_coords:
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
-            patch_area=np.prod(this_part.shape)
-            pos_area=this_part.sum()
-            if pos_area>=patch_area*min_mask_ratio:
+            patch_area = np.prod(this_part.shape)
+            pos_area = this_part.sum()
+            if pos_area >= patch_area * min_mask_ratio:
                 flag_list.append(True)
             else:
                 flag_list.append(False)
@@ -569,7 +572,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         pad_mode="constant",
         pad_constant_values=0,
         within_bound=False,
-        min_mask_ratio=0
+        min_mask_ratio=0,
     ):
         super().__init__(
             input_img=input_img,
@@ -580,7 +583,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
             within_bound=within_bound,
-            min_mask_ratio=min_mask_ratio
+            min_mask_ratio=min_mask_ratio,
         )
         if stride is None:
             self.stride = self.patch_size
