@@ -54,6 +54,9 @@ class PatchExtractor(ABC):
             `pad_mode`. If False, patches at the margin that their
             bounds exceed the mother image dimensions would be
             neglected. Default is False.
+        min_mask_ratio (float):
+            Area in percentage that a patch needs to contain of positive mask to be included. Defaults to 0.
+        
 
     Attributes:
         wsi(WSIReader):
@@ -82,6 +85,8 @@ class PatchExtractor(ABC):
         stride (tuple(int)):
             Stride in (x, y) direction for patch extraction. Not used
             for :obj:`PointsPatchExtractor`
+        min_mask_ratio (float):
+            Only patches with postive area percentage above this value are included
 
     """
 
@@ -95,6 +100,7 @@ class PatchExtractor(ABC):
         pad_mode="constant",
         pad_constant_values=0,
         within_bound=False,
+        min_mask_ratio=0
     ):
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
@@ -109,6 +115,11 @@ class PatchExtractor(ABC):
         self.locations_df = None
         self.coordinate_list = None
         self.stride = None
+
+        assert min_mask_ratio>=0 and min_mask_ratio<=1, "min_mask_ratio should be in [0,1]"
+
+        self.min_mask_ratio=min_mask_ratio
+
         if input_mask is None:
             self.mask = None
         elif isinstance(input_mask, str) and input_mask in {"otsu", "morphological"}:
@@ -189,6 +200,7 @@ class PatchExtractor(ABC):
                 self.coordinate_list,
                 coordinate_resolution=converted_units[converted_units_keys[0]],
                 coordinate_units=converted_units_keys[0],
+                min_mask_ratio=self.min_mask_ratio
             )
             self.coordinate_list = self.coordinate_list[selected_coord_idxs]
             if len(self.coordinate_list) == 0:
@@ -210,6 +222,8 @@ class PatchExtractor(ABC):
         coordinate_resolution,
         coordinate_units,
         mask_resolution=None,
+        min_mask_ratio=0
+        
     ):
         """Validate patch extraction coordinates based on the input mask.
 
@@ -239,6 +253,8 @@ class PatchExtractor(ABC):
                 supposed to be in the same units as `coord_resolution`
                 i.e., `coordinate_units`. If not provided, a default
                 value will be selected based on `coordinate_units`.
+            min_mask_ratio (float):
+                Only patches with postive area percentage above this value are included. Defaults to 0.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -255,6 +271,7 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
         if isinstance(coordinate_resolution, (int, float)):
             coordinate_resolution = [coordinate_resolution, coordinate_resolution]
+        assert min_mask_ratio>=0 and min_mask_ratio<=1, "min_mask_ratio should be in [0,1]"
 
         # define default mask_resolution based on the input `coordinate_units`
         if mask_resolution is None:
@@ -280,7 +297,12 @@ class PatchExtractor(ABC):
         flag_list = []
         for coord in scaled_coords:
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
-            flag_list.append(np.any(this_part > 0))
+            patch_area=np.prod(this_part.shape)
+            pos_area=this_part.sum()
+            if pos_area>=patch_area*min_mask_ratio:
+                flag_list.append(True)
+            else:
+                flag_list.append(False)
         return np.array(flag_list)
 
     @staticmethod
@@ -527,6 +549,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         stride(int or tuple(int)):
             Stride in (x, y) direction for patch extraction, default =
             `patch_size`.
+        min_mask_ratio (float):
+            Only patches with postive area percentage above this value are included. Defaults to 0.
 
     Attributes:
         stride(tuple(int)):
@@ -545,6 +569,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         pad_mode="constant",
         pad_constant_values=0,
         within_bound=False,
+        min_mask_ratio=0
     ):
         super().__init__(
             input_img=input_img,
@@ -555,6 +580,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
             within_bound=within_bound,
+            min_mask_ratio=min_mask_ratio
         )
         if stride is None:
             self.stride = self.patch_size
