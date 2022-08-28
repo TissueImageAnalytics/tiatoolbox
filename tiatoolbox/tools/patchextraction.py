@@ -302,10 +302,16 @@ class PatchExtractor(ABC):
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
             patch_area = np.prod(this_part.shape)
             pos_area = this_part.sum()
-            if pos_area >= patch_area * min_mask_ratio:
-                flag_list.append(True)
+            if min_mask_ratio == 0:
+                if pos_area:
+                    flag_list.append(True)
+                else:
+                    flag_list.append(False)
             else:
-                flag_list.append(False)
+                if pos_area >= patch_area * min_mask_ratio:
+                    flag_list.append(True)
+                else:
+                    flag_list.append(False)
         return np.array(flag_list)
 
     @staticmethod
