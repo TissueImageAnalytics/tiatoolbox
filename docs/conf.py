@@ -43,8 +43,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
-    "myst_parser",
-    "nbsphinx",
+    "myst_nb",
     "sphinx_gallery.load_style",
 ]
 
@@ -68,6 +67,8 @@ source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",
     ".md": "markdown",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
 }
 
 # The master toctree document.
