@@ -14,7 +14,6 @@ jinja2<3.1.0
 jupyterlab
 matplotlib>=3.5.1
 myst-parser>=0.18.0
-nbsphinx>=0.8.9
 numpy>=1.21.5
 opencv-python>=4.5.5
 openslide-python>=1.1.2
@@ -33,7 +32,7 @@ scikit-image>=0.19.2
 scikit-learn>=1.0.2
 scipy>=1.7.3
 shapely>=1.8.1
-sphinx>=4.5.0
+sphinx>=5.1.1
 sphinx-gallery>=0.11.1
 sphinx-toolbox>=3.1.2
 tifffile>=2021.11.2
