@@ -72,6 +72,7 @@ source_suffix = {
 }
 
 myst_commonmark_only = True
+nb_execution_mode = "off"
 
 # The master toctree document.
 master_doc = "index"
