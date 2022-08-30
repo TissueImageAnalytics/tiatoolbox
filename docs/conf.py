@@ -44,7 +44,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
     "myst_nb",
-    # "myst_parser",
     "sphinx_gallery.load_style",
 ]
 
@@ -66,8 +65,8 @@ templates_path = ["_templates"]
 #
 source_suffix = {
     ".rst": "restructuredtext",
-    # ".txt": "myst-nb",
-    # ".md": "myst-nb",
+    ".txt": "myst-nb",
+    ".md": "myst-nb",
     ".ipynb": "myst-nb",
     ".myst": "myst-nb",
 }
@@ -141,7 +140,7 @@ def setup(app):
     app.connect(
         "builder-inited", lambda app: app.config.html_static_path.append("_static")
     )
-    app.add_stylesheet("sg_gallery.css")
+    app.add_css_file("sg_gallery.css")
 
 
 # -- Options for HTMLHelp output ---------------------------------------

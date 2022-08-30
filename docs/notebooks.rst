@@ -12,12 +12,11 @@ Module Tutorial
 Each of the following notebooks tries to explain how to use
 a specific functionality implemented within the toolbox.
 
-..
-    .. nbgallery::
-        :hidden:
-        :glob:
+.. nbgallery::
+    :hidden:
+    :glob:
 
-        _notebooks/*
+    _notebooks/*
 
 
 Full Pipelines
@@ -39,9 +38,8 @@ Inference Pipelines
 Each of the following notebooks tries to implement only the inference portion
 of a paper.
 
-..
-    .. nbgallery::
-        :hidden:
-        :glob:
+.. nbgallery::
+    :hidden:
+    :glob:
 
-        _notebooks/inference-pipelines/*
+    _notebooks/inference-pipelines/*
