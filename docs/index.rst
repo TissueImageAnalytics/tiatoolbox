@@ -9,7 +9,7 @@ Welcome to TIA Toolbox's documentation!
    :maxdepth: 2
 
    Readme <readme.md>
-   Installation <installation.rst>
+   Installation <installation.md>
 
 .. toctree::
    :maxdepth: 2
@@ -21,12 +21,12 @@ Welcome to TIA Toolbox's documentation!
 
    Pre-trained Models <pretrained.rst>
    Jupyter Notebooks <notebooks.rst>
-   Algorithms <algorithms.rst>
+   Algorithms <algorithms.md>
 
 .. toctree::
    :hidden:
 
    Contributing <contributing.rst>
-   Authors <authors.rst>
-   History <history.rst>
+   Authors <authors.md>
+   History <history.md>
    API Reference <_autosummary/tiatoolbox>
