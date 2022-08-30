@@ -44,6 +44,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
     "myst_nb",
+    # "myst_parser",
     "sphinx_gallery.load_style",
 ]
 
@@ -65,18 +66,20 @@ templates_path = ["_templates"]
 #
 source_suffix = {
     ".rst": "restructuredtext",
-    ".txt": "markdown",
-    ".md": "markdown",
+    # ".txt": "myst-nb",
+    # ".md": "myst-nb",
     ".ipynb": "myst-nb",
     ".myst": "myst-nb",
 }
+
+myst_commonmark_only = True
 
 # The master toctree document.
 master_doc = "index"
 
 # General information about the project.
 project = "TIA Toolbox"
-copyright = "2021, TIA Lab"
+copyright = "2022, TIA Lab"
 author = "TIA Lab"
 
 # The version info for the project you're documenting, acts as replacement
