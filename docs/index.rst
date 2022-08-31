@@ -24,9 +24,9 @@ Welcome to TIA Toolbox's documentation!
    Algorithms <algorithms.rst>
 
 .. toctree::
-   :hidden:
+   :maxdepth: 2
 
+   API Reference <_autosummary/tiatoolbox>
+   History <history.rst>
    Contributing <contributing.rst>
    Authors <authors.rst>
-   History <history.rst>
-   API Reference <_autosummary/tiatoolbox>
