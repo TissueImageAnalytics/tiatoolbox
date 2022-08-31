@@ -27,6 +27,6 @@ Welcome to TIA Toolbox's documentation!
    :maxdepth: 2
 
    API Reference <_autosummary/tiatoolbox>
-   History <history.rst>
    Contributing <contributing.rst>
    Authors <authors.rst>
+   History <history.rst>
