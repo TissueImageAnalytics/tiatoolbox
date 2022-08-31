@@ -9,10 +9,11 @@
 - Dang Vu \<@vqdang>
 - Mostafa Jahanifar \<@mostafajahanifar>
 - David Epstein \<@DavidBAEpstein>
-- Srijay Deshpande \<@Srijay-lab>
-- George Hadjigeorgiou \<@ghadjigeorghiou>
-- Adam Shephard \<@adamshephard>
 - Mark Eastwood \<@measty>
+- Srijay Deshpande \<@Srijay-lab>
+- Ruqayya Awan \<@ruqayya>
+- Adam Shephard \<@adamshephard>
+- George Hadjigeorgiou \<@ghadjigeorghiou>
 - Wenqi Lu \<@wenqi006>
 - Saad Bashir \<@rajasaad>
 
