@@ -17,17 +17,36 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-
+        os: [ubuntu-latest, windows-latest]
     steps:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Dependencies (OpenSlide & OpenJPEG)
+    - name: Install Linux Dependencies (OpenSlide & OpenJPEG)
+      if: runner.os == 'Linux'
       run: |
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
+    - name: Install Windows Dependencies (OpenSlide & OpenJPEG)
+      if: runner.os == 'Windows'
+      run: |
+        # Install OpenJPEG
+        git clone https://github.com/uclouvain/openjpeg.git
+        cd openjpeg
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make
+        make install
+        make clean
+        # Install OpenSlide
+        choco install wget --no-progress
+        wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
+        7z e openslide-win64-20220811.zip
+        cp openslide-win64-20220811/
+        echo "$(realpath ./openslide-win64-20220811)" >> $GITHUB_PATH
     - name: Print Dependency Version Information
       run: |
         echo "---SQlite---"
