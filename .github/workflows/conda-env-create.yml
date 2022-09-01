@@ -31,7 +31,6 @@ jobs:
       - name: Copy file
         shell: bash
         run: cp ./requirements.txt /tmp/requirements.txt
-      - uses: actions/checkout@v2
       - uses: mamba-org/provision-with-micromamba@main
         with:
           environment-name: tiatoolbox
