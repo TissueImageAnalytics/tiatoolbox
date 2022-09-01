@@ -12,14 +12,6 @@ repos:
         require_serial: true
         language: system
         stages: [push]
-#      - id: requirements-consistency
-#        name: check requirements are consistent
-#        entry: python pre-commit/requirements_consistency.py
-#        files: "(requirements.*.(txt|yml|yaml)|setup.py)$"
-#        require_serial: true
-#        pass_filenames: false
-#        language: python
-#        additional_dependencies: [pyyaml]
       - id: notebook-check-ast
         name: check notebook ast
         entry: python pre-commit/notebook_check_ast.py
