@@ -4,14 +4,17 @@ name: Solve Conda Environment
 
 on:
   push:
-    paths: [ "requirements*.yml", "conda-env-create.yml",  "requirements.txt", "requirements_dev.txt"]
+    paths: [ "requirements*.yml", "conda-env-create.yml", "requirement*.txt"]
   pull_request:
-    paths: [ "requirements*.yml", "conda-env-create.yml",  "requirements.txt", "requirements_dev.txt" ]
+    paths: [ "requirements*.yml", "conda-env-create.yml", "requirement*.txt"]
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 
 jobs:
   conda_solve:
+    defaults:
+      run:
+        working-directory: ./tiatoolbox
     strategy:
       fail-fast: true
       matrix:
