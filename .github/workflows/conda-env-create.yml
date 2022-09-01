@@ -4,9 +4,9 @@ name: Solve Conda Environment
 
 on:
   push:
-    paths: [ "requirements*.yml", "conda-env-create.yml" ]
+    paths: [ "requirements*.yml", "conda-env-create.yml",  "requirements.txt", "requirements_dev.txt"]
   pull_request:
-    paths: [ "requirements*.yml", "conda-env-create.yml" ]
+    paths: [ "requirements*.yml", "conda-env-create.yml",  "requirements.txt", "requirements_dev.txt" ]
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 
@@ -21,15 +21,10 @@ jobs:
             requirements: requirements.conda.yml
           - os: windows-latest
             requirements: requirements.win64.conda.yml
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v2
-      - name: copy file
-        uses: canastro/copy-file-action@master
-        with:
-          source: "requirements.txt"
-          target: "/tmp/requirements.txt"
       - uses: mamba-org/provision-with-micromamba@main
         with:
           environment-name: tiatoolbox
