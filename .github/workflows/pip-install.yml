@@ -1,7 +1,6 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# This workflow will install the package as is on the github default branch using pip
 
-name: Python package
+name: pip Install
 
 on:
   push:
