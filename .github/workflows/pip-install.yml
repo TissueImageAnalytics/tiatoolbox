@@ -49,4 +49,3 @@ jobs:
         python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox
     - name: Test Import
       run: python -c "import tiatoolbox"
-
