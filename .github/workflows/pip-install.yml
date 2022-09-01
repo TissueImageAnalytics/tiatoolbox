@@ -23,13 +23,11 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Non-Python Dependencies (OpenSlide & OpenJPEG)
+    - name: Install Dependencies (OpenSlide & OpenJPEG)
       run: |
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov pytest-runner
-        pip install -r requirements.txt
     - name: Print Dependency Version Information
       run: |
         echo "---SQlite---"
