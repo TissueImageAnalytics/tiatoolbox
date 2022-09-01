@@ -1,0 +1,53 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  push:
+    branches: [ develop, pre-release, master, main ]
+    tags: v*
+  pull_request:
+    branches: [ develop, pre-release, master, main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Non-Python Dependencies (OpenSlide & OpenJPEG)
+      run: |
+        sudo apt update
+        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest pytest-cov pytest-runner
+        pip install -r requirements.txt
+    - name: Print Dependency Version Information
+      run: |
+        echo "---SQlite---"
+        sqlite3 --version
+        sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
+        echo "---Openslide---"
+        openslide-quickhash1sum --version
+        echo "---OpenJPEG---"
+        opj_dump -h | head -n 5
+        echo "---Python---"
+        python -c "import sys; print('Python %s' % sys.version)"
+        python -c "import sqlite3; print('SQLite %s' % sqlite3.sqlite_version)"
+        python -c "import numpy; print('Numpy %s' % numpy.__version__)"
+        python -c "import openslide; print('OpenSlide %s' % openslide.__version__)"
+    - name: pip Install From GitHub Repo
+      run: |
+        python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox
+    - name: Test Import
+      run: python -c "import tiatoolbox"
+      
