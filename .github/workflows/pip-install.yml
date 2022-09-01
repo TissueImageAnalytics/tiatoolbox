@@ -11,13 +11,12 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-22.04, windows-latest]
     steps:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
