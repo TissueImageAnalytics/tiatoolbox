@@ -24,9 +24,13 @@ jobs:
             requirements: requirements.conda.yml
           - os: windows-latest
             requirements: requirements.win64.conda.yml
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v2
+      - name: Copy file
+      - shell: bash
+        run: cp ./requirements.txt /tmp/requirements.txt
       - uses: actions/checkout@v2
       - uses: mamba-org/provision-with-micromamba@main
         with:
