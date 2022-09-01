@@ -14,7 +14,7 @@ jobs:
   conda_solve:
     defaults:
       run:
-        working-directory: ./tiatoolbox
+        working-directory: .
     strategy:
       fail-fast: true
       matrix:
