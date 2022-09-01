@@ -12,9 +12,6 @@ on:
 
 jobs:
   conda_solve:
-    defaults:
-      run:
-        working-directory: .
     strategy:
       fail-fast: true
       matrix:
@@ -37,9 +34,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v2
-      - name: Copy file
+      - name: Copy requirements files
         shell: bash
-        run: cp ./requirements*.txt $TMPDIR
+        run: cp ./requirements*.txt /tmp/
       - uses: mamba-org/provision-with-micromamba@main
         with:
           environment-name: tiatoolbox
