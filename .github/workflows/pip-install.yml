@@ -37,11 +37,6 @@ jobs:
         openslide-quickhash1sum --version
         echo "---OpenJPEG---"
         opj_dump -h | head -n 5
-        echo "---Python---"
-        python -c "import sys; print('Python %s' % sys.version)"
-        python -c "import sqlite3; print('SQLite %s' % sqlite3.sqlite_version)"
-        python -c "import numpy; print('Numpy %s' % numpy.__version__)"
-        python -c "import openslide; print('OpenSlide %s' % openslide.__version__)"
     - name: pip Install From GitHub Repo
       run: |
         python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox
