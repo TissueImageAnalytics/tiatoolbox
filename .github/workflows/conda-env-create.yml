@@ -24,7 +24,7 @@ jobs:
             requirements: requirements.conda.yml
           - os: windows-latest
             requirements: requirements.win64.conda.yml
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v2
