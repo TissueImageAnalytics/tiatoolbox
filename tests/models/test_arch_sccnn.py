@@ -33,7 +33,6 @@ def test_functionality(remote_sample, tmp_path):
     patch = reader.read_bounds(
         (30, 30, 61, 61), resolution=0.25, units="mpp", coord_space="resolution"
     )
-    patch = SCCNN.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     model = _load_sccnn(tmp_path=tmp_path, name="sccnn-crchisto")
     output = model.infer_batch(model, batch, on_gpu=False)

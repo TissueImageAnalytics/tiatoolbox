@@ -233,6 +233,22 @@ class SCCNN(ModelABC):
         sc2 = sc1_2 / denominator
         return sc2 * out_map_threshold
 
+    @staticmethod
+    def _transform(imgs: torch.Tensor) -> torch.Tensor:
+        """Transforming network input to desired format.
+
+        This method is model and dataset specific, meaning that it can be replaced by
+        user's desired transform function before training/inference.
+
+        Args:
+            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+
+        Returns:
+            output (torch.Tensor): The transformed input.
+
+        """
+        return imgs / 255.0
+
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
@@ -285,6 +301,7 @@ class SCCNN(ModelABC):
             sigmoid2 = sigmoid[:, 2:3, :, :]
             return sigmoid0, sigmoid1, sigmoid2
 
+        input_tensor = self._transform(input_tensor)
         l1 = self.layer["l1"]["conv1"](input_tensor)
         p1 = self.layer["pool1"](l1)
         l2 = self.layer["l2"]["conv1"](p1)
@@ -322,23 +339,6 @@ class SCCNN(ModelABC):
             exclude_border=False,
         )
         return np.fliplr(coordinates)
-
-    @staticmethod
-    def preproc(image: np.ndarray) -> np.ndarray:
-        """Preprocessing function for MicroNet.
-
-        Performs per image standardization.
-
-        Args:
-            image (:class:`numpy.ndarray`):
-                Input image of type numpy array.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                Pre-processed numpy array.
-
-        """
-        return image / 255.0
 
     @staticmethod
     def infer_batch(
