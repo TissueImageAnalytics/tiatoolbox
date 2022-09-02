@@ -42,6 +42,7 @@ jobs:
         make install
         make clean
         # Install OpenSlide
+        cd  # Go home
         choco install wget --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z x openslide-win64-20220811.zip
