@@ -67,7 +67,7 @@ jobs:
     - name: Test TIAToolbox Import
       shell: python
       run: |
-        import os
+        import sys
         sys.path.append('./openslide/bin')
         sys.path.append('./openslide/lib')
         import tiatoolbox
