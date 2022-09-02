@@ -38,17 +38,17 @@ jobs:
         cd build
         cmake -G "MinGW Makefiles" .. -DCMAKE_BUILD_TYPE=Release
         ls
-        make
+        make -j4
         make install
         make clean
         # Install OpenSlide
         choco install wget --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
-        7z x openslide-win64-20220811.zip -oopenslide
+        7z x openslide-win64-20220811.zip
         ls openslide
         # Add to PATH
-        echo "$(realpath ./openslide/bin)" >> $GITHUB_PATH
-        echo "$(./openslide/lib)" >> $GITHUB_PATH
+        echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
+        echo "$(./openslide-win64-20220811/lib)" >> $GITHUB_PATH
         # Install SQLite shell
         choco install sqlite.shell --no-progress
     - name: Print SQLite Version Information
@@ -72,7 +72,7 @@ jobs:
         import os
         if hasattr(os, "add_dll_directory"):
           # Required for Python>=3.8 on Windows
-          with os.add_dll_directory("./openslide/bin"):
+          with os.add_dll_directory("./openslide-win64-20220811/bin"):
             import tiatoolbox
         else:
           import tiatoolbox
