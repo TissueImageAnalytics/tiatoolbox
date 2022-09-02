@@ -44,8 +44,11 @@ jobs:
         # Install OpenSlide
         choco install wget --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
-        7z e openslide-win64-20220811.zip -oopenslide
+        7z x openslide-win64-20220811.zip -oopenslide
         ls openslide
+        # Add to PATH
+        echo "$(realpath ./openslide/bin)" >> $GITHUB_PATH
+        echo "$(./openslide/lib)" >> $GITHUB_PATH
         # Install SQLite shell
         choco install sqlite.shell --no-progress
     - name: Print SQLite Version Information
@@ -68,6 +71,7 @@ jobs:
       run: |
         import os
         if hasattr(os, "add_dll_directory"):
+          # Required for Python>=3.8 on Windows
           with os.add_dll_directory("./openslide/bin"):
             import tiatoolbox
         else:
