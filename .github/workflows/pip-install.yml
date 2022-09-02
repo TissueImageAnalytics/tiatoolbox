@@ -45,7 +45,7 @@ jobs:
         choco install wget --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z x openslide-win64-20220811.zip
-        ls openslide
+        ls openslide-win64-20220811
         # Add to PATH
         echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
         echo "$(./openslide-win64-20220811/lib)" >> $GITHUB_PATH
