@@ -46,7 +46,7 @@ jobs:
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z e openslide-win64-20220811.zip -oopenslide
         # echo "$(realpath ./openslide)" >> $GITHUB_PATH
-        cp ./openslide C:/Program Files (x86)/
+        cp "./openslide" "C:/Program Files (x86)/"
         # Install SQLite shell
         choco install sqlite.shell --no-progress
     - name: Print SQLite Version Information
