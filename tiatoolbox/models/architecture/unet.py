@@ -321,7 +321,7 @@ class UNetModel(ModelABC):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def _transform(imgs: torch.Tensor):
+    def _transform(imgs: torch.Tensor) -> torch.Tensor:
         """Transforming network input to desired format.
 
         This method is model and dataset specific, meaning that it can be replaced by
