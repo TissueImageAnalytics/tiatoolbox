@@ -42,6 +42,7 @@ jobs:
         make clean
         # Install OpenSlide
         choco install wget --no-progress
+        choco install sqlite.shell --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z e openslide-win64-20220811.zip -oopenslide-win64
         echo "$(realpath ./openslide-win64)" >> $GITHUB_PATH
