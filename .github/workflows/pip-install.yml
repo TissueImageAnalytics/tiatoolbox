@@ -48,7 +48,7 @@ jobs:
         ls openslide-win64-20220811
         # Add to PATH
         echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
-        echo "$(./openslide-win64-20220811/lib)" >> $GITHUB_PATH
+        echo "$(realpath ./openslide-win64-20220811/lib)" >> $GITHUB_PATH
         # Install SQLite shell
         choco install sqlite.shell --no-progress
     - name: Print SQLite Version Information
