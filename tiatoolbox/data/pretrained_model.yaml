@@ -771,3 +771,27 @@ micronet-consep:
             patch_output_shape: [252, 252]
             stride_shape: [150, 150]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+sccnn-crchisto:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
+    architecture:
+        class: sccnn.SCCNN
+        kwargs:
+            num_input_channels: 3
+            out_height: 13
+            out_width: 13
+            radius: 12
+            min_distance: 6
+            threshold_abs: 0.20
+
+sccnn-conic:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-conic.pth
+    architecture:
+        class: sccnn.SCCNN
+        kwargs:
+            num_input_channels: 3
+            out_height: 13
+            out_width: 13
+            radius: 12
+            min_distance: 5
+            threshold_abs: 0.05
