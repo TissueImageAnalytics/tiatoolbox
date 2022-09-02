@@ -52,7 +52,7 @@ extensions = [
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
 # Remove 'view source code' from top of page (for html, not python)
-html_show_sourcelink = True
+html_show_sourcelink = False
 # If no docstring, inherit from base class
 # ! only nice for our ABC but it looks ridiculous when inherit from
 # ! grand-nth ancestors
@@ -116,8 +116,6 @@ todo_include_todos = False
 #
 html_theme = "furo"
 html_title = f"TIA Toolbox {tiatoolbox.__version__} Documentation"
-html_logo = "tia_logo.png"
-html_use_index = True
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
