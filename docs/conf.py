@@ -130,9 +130,7 @@ html_static_path = ["_static"]
 
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
-# html_css_files = [
-#     "sg_gallery.css",
-# ]
+# html_css_files = []
 
 
 def setup(app):
@@ -141,7 +139,6 @@ def setup(app):
     app.connect(
         "builder-inited", lambda app: app.config.html_static_path.append("_static")
     )
-    # app.add_css_file("sg_gallery.css")
 
 
 # -- Options for HTMLHelp output ---------------------------------------
