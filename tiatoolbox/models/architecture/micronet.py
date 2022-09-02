@@ -464,6 +464,22 @@ class MicroNet(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
+    @staticmethod
+    def _transform(imgs: torch.Tensor):
+        """Transforming network input to desired format.
+
+        This method is model and dataset specific, meaning that it can be replaced by
+        user's desired transform function before training/inference.
+
+        Args:
+            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+
+        Returns:
+            output (torch.Tensor): The transformed input.
+
+        """
+        return imgs / 255.0
+
     def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
@@ -479,6 +495,7 @@ class MicroNet(ModelABC):
                 format is `[main_output, aux1, aux2, aux3]`.
 
         """
+        input_tensor = self._transform(input_tensor)
         b1 = group1_forward_branch(
             self.layer["b1"],
             input_tensor,
@@ -558,7 +575,6 @@ class MicroNet(ModelABC):
 
         """
         image = np.transpose(image, axes=(2, 0, 1))
-        image = image / 255.0
         image = torch.from_numpy(image)
 
         image_mean = torch.mean(image, dim=(-1, -2, -3))
