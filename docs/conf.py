@@ -44,7 +44,9 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
     "myst_nb",
+    "nbsphinx",
     "sphinx_gallery.load_style",
+    "sphinx_design",
 ]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
@@ -72,6 +74,7 @@ source_suffix = {
 }
 
 myst_commonmark_only = True
+myst_enable_extensions = ["colon_fence"]
 nb_execution_mode = "off"
 
 # The master toctree document.
@@ -115,7 +118,8 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "alabaster"
+html_theme = "furo"
+html_title = f"TIA Toolbox {tiatoolbox.__version__} Documentation"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
@@ -130,9 +134,7 @@ html_static_path = ["_static"]
 
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
-html_css_files = [
-    "sg_gallery.css",
-]
+# html_css_files = []
 
 
 def setup(app):
@@ -141,7 +143,6 @@ def setup(app):
     app.connect(
         "builder-inited", lambda app: app.config.html_static_path.append("_static")
     )
-    app.add_css_file("sg_gallery.css")
 
 
 # -- Options for HTMLHelp output ---------------------------------------
@@ -229,9 +230,9 @@ autodoc_type_aliases = {
 }
 
 
-print("=" * 16)
+print("=" * 43)
 print("Copy example notebooks into docs/_notebooks")
-print("=" * 16)
+print("=" * 43)
 
 
 def all_but_ipynb(dir_path, contents):
