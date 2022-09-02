@@ -63,8 +63,10 @@ jobs:
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
     - name: OpenSlide Version Information
+      if: runner.os == 'Linux'
       run: openslide-quickhash1sum --version
     - name: OpenJPEG Version Information
+      if: runner.os == 'Linux'
       run: opj_dump -h | head -n 5
     - name: pip Install From GitHub Repo
       run: |
