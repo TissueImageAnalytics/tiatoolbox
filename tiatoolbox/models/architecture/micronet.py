@@ -343,9 +343,10 @@ def out_arch_branch(in_ch, num_class=2):
 
 
 class MicroNet(ModelABC):
-    """Initialise MicroNet [1].
+    """Initialize MicroNet [1].
 
     The following models have been included in tiatoolbox:
+
     1. `micronet-consep`:
         This is trained on `CoNSeP dataset
         <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_ The
