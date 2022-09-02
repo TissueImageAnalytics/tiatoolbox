@@ -54,7 +54,7 @@ jobs:
         # Install
         mkdir "C:\Program Files\openslide"
         Copy-Item -Path ".\openslide-win64-20220811\*" -Destination "C:\Program Files\openslide" -Recurse
-        ls C:/Program Files/openslide
+        ls "C:/Program Files/openslide"
     - name: 🪟 Install SQLite Shell
       if: runner.os == 'Windows'
       run: choco install sqlite.shell --no-progress
