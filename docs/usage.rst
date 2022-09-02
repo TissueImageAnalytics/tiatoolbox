@@ -115,6 +115,7 @@ Neural Network Architectures
 - :obj:`HoVerNet <tiatoolbox.models.architecture.hovernet.HoVerNet>`
 - :obj:`HoVerNet+ <tiatoolbox.models.architecture.hovernetplus.HoVerNetPlus>`
 - :obj:`MicroNet <tiatoolbox.models.architecture.micronet.MicroNet>`
+- :obj:`MapDe <tiatoolbox.models.architecture.mapde.MapDe>`
 - :obj:`SCCNN <tiatoolbox.models.architecture.sccnn.SCCNN>`
 
 Pipelines:
