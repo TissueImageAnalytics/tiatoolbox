@@ -45,7 +45,8 @@ jobs:
         choco install wget --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z e openslide-win64-20220811.zip -oopenslide
-        # echo "$(realpath ./openslide)" >> $GITHUB_PATH
+        echo "$(realpath ./openslide/bin)" >> $GITHUB_PATH
+        echo "$(realpath ./openslide/lib)" >> $GITHUB_PATH
         cp -R "./openslide" "C:/Program Files (x86)/"
         # Install SQLite shell
         choco install sqlite.shell --no-progress
@@ -67,7 +68,4 @@ jobs:
     - name: Test TIAToolbox Import
       shell: python
       run: |
-        import sys
-        sys.path.append('./openslide/bin')
-        sys.path.append('./openslide/lib')
         import tiatoolbox
