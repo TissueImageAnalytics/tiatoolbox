@@ -472,10 +472,12 @@ class MicroNet(ModelABC):
         user's desired transform function before training/inference.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+            imgs (np.ndarray or torch.Tensor):
+                Input images, the tensor is of the shape NCHW.
 
         Returns:
-            output (torch.Tensor): The transformed input.
+            output (torch.Tensor):
+                The transformed input.
 
         """
         return imgs / 255.0
@@ -495,7 +497,6 @@ class MicroNet(ModelABC):
                 format is `[main_output, aux1, aux2, aux3]`.
 
         """
-        input_tensor = self._transform(input_tensor)
         b1 = group1_forward_branch(
             self.layer["b1"],
             input_tensor,
@@ -559,8 +560,7 @@ class MicroNet(ModelABC):
         nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
         return canvas, nuc_inst_info_dict
 
-    @staticmethod
-    def preproc(image: np.ndarray):
+    def preproc(self, image: np.ndarray):
         """Preprocessing function for MicroNet.
 
         Performs per image standardization.
@@ -575,6 +575,7 @@ class MicroNet(ModelABC):
 
         """
         image = np.transpose(image, axes=(2, 0, 1))
+        image = self._transform(image)
         image = torch.from_numpy(image)
 
         image_mean = torch.mean(image, dim=(-1, -2, -3))
