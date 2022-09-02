@@ -22,13 +22,13 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Linux Dependencies (OpenSlide & OpenJPEG)
+    - name: Install OpenSlide & OpenJPEG (Linux)
       if: runner.os == 'Linux'
       run: |
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-    - name: Install Windows Dependencies (SQLite, OpenSlide & OpenJPEG)
+    - name: Install OpenJPEG (Windows)
       if: runner.os == 'Windows'
       run: |
         # Install OpenJPEG
@@ -41,8 +41,9 @@ jobs:
         make -j4
         make install
         make clean
-        # Install OpenSlide
-        cd  # Go home
+    - name: Install OpenSlide (Windows)
+      if: runner.os == 'Windows'
+      run: |
         choco install wget --no-progress
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z x openslide-win64-20220811.zip
@@ -50,14 +51,15 @@ jobs:
         # Add to PATH
         echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
         echo "$(realpath ./openslide-win64-20220811/lib)" >> $GITHUB_PATH
-        # Install SQLite shell
-        choco install sqlite.shell --no-progress
-    - name: Print SQLite Version Information
+    - name: Install SQLite Shell (Windows)
+      if: runner.os == 'Windows'
+      run: choco install sqlite.shell --no-progress
+    - name: SQLite Version Information
       run: |
         echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-    - name: Print OpenSlide & OpenJPEG Version Information
+    - name: OpenSlide & OpenJPEG Version Information
       if: runner.os == 'Linux'
       run: |
         echo "---Openslide---"
