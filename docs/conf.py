@@ -51,7 +51,7 @@ extensions = [
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
 # Remove 'view source code' from top of page (for html, not python)
-html_show_sourcelink = False
+html_show_sourcelink = True
 # If no docstring, inherit from base class
 # ! only nice for our ABC but it looks ridiculous when inherit from
 # ! grand-nth ancestors
