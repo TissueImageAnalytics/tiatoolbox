@@ -25,9 +25,10 @@ def test_functionality(remote_sample, tmp_path):
     patch = reader.read_bounds(
         (0, 0, 252, 252), resolution=0.25, units="mpp", coord_space="resolution"
     )
-    patch = MicroNet.preproc(patch)
-    batch = torch.from_numpy(patch)[None]
+
     model = MicroNet()
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
     fetch_pretrained_weights("micronet-consep", f"{tmp_path}/weights.pth")
     map_location = utils.misc.select_device(utils.env_detection.has_gpu())
     pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
