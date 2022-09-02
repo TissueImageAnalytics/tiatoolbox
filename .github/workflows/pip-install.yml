@@ -51,6 +51,8 @@ jobs:
         # Add to PATH
         echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
         echo "$(realpath ./openslide-win64-20220811/lib)" >> $GITHUB_PATH
+        # Install
+        cp -R ./openslide-win64-20220811 C:/Program Files/openslide
     - name: 🪟 Install SQLite Shell
       if: runner.os == 'Windows'
       run: choco install sqlite.shell --no-progress
