@@ -33,9 +33,10 @@ def test_functionality(remote_sample, tmp_path):
     patch = reader.read_bounds(
         (0, 0, 252, 252), resolution=0.50, units="mpp", coord_space="resolution"
     )
-    patch = MapDe.preproc(patch)
-    batch = torch.from_numpy(patch)[None]
+
     model = _load_mapde(tmp_path=tmp_path, name="mapde-crchisto")
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[99, 178], [64, 218]])
