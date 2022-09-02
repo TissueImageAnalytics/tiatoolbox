@@ -64,5 +64,10 @@ jobs:
     - name: pip Install From GitHub Repo
       run: |
         python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox
-    - name: Test Import
-      run: python -c "import sys;sys.path.append('./openslide/bin');import tiatoolbox"
+    - name: Test TIAToolbox Import
+      shell: python
+      run: |
+        import os
+        sys.path.append('./openslide/bin')
+        sys.path.append('./openslide/lib')
+        import tiatoolbox
