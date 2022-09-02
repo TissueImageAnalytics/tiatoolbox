@@ -52,7 +52,8 @@ jobs:
         echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
         echo "$(realpath ./openslide-win64-20220811/lib)" >> $GITHUB_PATH
         # Install
-        cp -r ./openslide-win64-20220811 C:/Program Files/openslide
+        mkdir "C:\Program Files\openslide"
+        Copy-Item -Path ".\openslide-win64-20220811\*" -Destination "C:\Program Files\openslide" -Recurse
         ls C:/Program Files/openslide
     - name: 🪟 Install SQLite Shell
       if: runner.os == 'Windows'
