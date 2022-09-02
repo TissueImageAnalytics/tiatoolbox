@@ -46,11 +46,14 @@ jobs:
         wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
         7z e openslide-win64-20220811.zip -oopenslide-win64
         echo "$(realpath ./openslide-win64)" >> $GITHUB_PATH
-    - name: Print Dependency Version Information
+    - name: Print SQLite Version Information
       run: |
         echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
+    - name: Print OpenSlide & OpenJPEG Version Information
+      if: runner.os == 'Linux'
+      run: |
         echo "---Openslide---"
         openslide-quickhash1sum --version
         echo "---OpenJPEG---"
