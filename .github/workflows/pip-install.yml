@@ -66,8 +66,7 @@ jobs:
       if: runner.os == 'Linux'
       run: openslide-quickhash1sum --version
     - name: OpenJPEG Version Information
-      shell: bash -l {0}
-      run: opj_dump -h | head -n 5
+      run: opj_dump -h
     - name: pip Install From GitHub Repo
       run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox
     - name: Test TIAToolbox Import
