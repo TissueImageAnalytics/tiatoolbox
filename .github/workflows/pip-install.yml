@@ -22,13 +22,13 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install OpenSlide & OpenJPEG (Linux)
+    - name: 🐧 Install OpenSlide & OpenJPEG 
       if: runner.os == 'Linux'
       run: |
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-    - name: Install OpenJPEG (Windows)
+    - name: 🪟 Install OpenJPEG
       if: runner.os == 'Windows'
       run: |
         # Install OpenJPEG
@@ -41,7 +41,7 @@ jobs:
         make -j4
         make install
         make clean
-    - name: Install OpenSlide (Windows)
+    - name: 🪟 Install OpenSlide
       if: runner.os == 'Windows'
       run: |
         choco install wget --no-progress
@@ -51,21 +51,17 @@ jobs:
         # Add to PATH
         echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
         echo "$(realpath ./openslide-win64-20220811/lib)" >> $GITHUB_PATH
-    - name: Install SQLite Shell (Windows)
+    - name: 🪟 Install SQLite Shell
       if: runner.os == 'Windows'
       run: choco install sqlite.shell --no-progress
     - name: SQLite Version Information
       run: |
-        echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-    - name: OpenSlide & OpenJPEG Version Information
-      if: runner.os == 'Linux'
-      run: |
-        echo "---Openslide---"
-        openslide-quickhash1sum --version
-        echo "---OpenJPEG---"
-        opj_dump -h | head -n 5
+    - name: OpenSlide Version Information
+      run: openslide-quickhash1sum --version
+    - name: OpenJPEG Version Information
+      run: opj_dump -h | head -n 5
     - name: pip Install From GitHub Repo
       run: |
         python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox
@@ -75,7 +71,7 @@ jobs:
         import os
         if hasattr(os, "add_dll_directory"):
           # Required for Python>=3.8 on Windows
-          with os.add_dll_directory("./openslide-win64-20220811/bin"):
+          with os.add_dll_directory(r"D:\a\tiatoolbox\tiatoolbox\openslide-win64-20220811\bin"):
             import tiatoolbox
         else:
           import tiatoolbox
