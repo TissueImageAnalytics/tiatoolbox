@@ -117,10 +117,6 @@ class PatchExtractor(ABC):
         self.coordinate_list = None
         self.stride = None
 
-        assert (
-            min_mask_ratio >= 0 and min_mask_ratio <= 1
-        ), "min_mask_ratio should be in [0,1]"
-
         self.min_mask_ratio = min_mask_ratio
 
         if input_mask is None:
@@ -274,9 +270,9 @@ class PatchExtractor(ABC):
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
         if isinstance(coordinate_resolution, (int, float)):
             coordinate_resolution = [coordinate_resolution, coordinate_resolution]
-        assert (
-            min_mask_ratio >= 0 and min_mask_ratio <= 1
-        ), "min_mask_ratio should be in [0,1]"
+
+        if not (0 <= min_mask_ratio <= 1):
+            raise ValueError("`min_mask_ratio` must be between 0 and 1.")
 
         # define default mask_resolution based on the input `coordinate_units`
         if mask_resolution is None:
@@ -303,17 +299,14 @@ class PatchExtractor(ABC):
         for coord in scaled_coords:
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
             patch_area = np.prod(this_part.shape)
-            pos_area = this_part.sum()
-            if min_mask_ratio == 0:
-                if pos_area:
-                    flag_list.append(True)
-                else:
-                    flag_list.append(False)
+            pos_area = np.count_nonzero(this_part)
+
+            if (
+                (pos_area == patch_area) or (pos_area > patch_area * min_mask_ratio)
+            ) and (pos_area > 0 and patch_area > 0):
+                flag_list.append(True)
             else:
-                if pos_area >= patch_area * min_mask_ratio:
-                    flag_list.append(True)
-                else:
-                    flag_list.append(False)
+                flag_list.append(False)
         return np.array(flag_list)
 
     @staticmethod
