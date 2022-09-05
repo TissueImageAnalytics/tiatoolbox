@@ -73,118 +73,206 @@ class SQLNone:
         return str(self)  # pragma: no cover
 
 
-class SQLExpression(ABC):
-    """SQL expression base class."""
+class SQLExpressionABC(ABC):
+    """Abstract base class for SQLExpression used in tiatoolbox."""
 
     @abstractmethod
     def __repr__(self):
-        return str(self)  # pragma: no cover
+        raise NotImplementedError
 
     @abstractmethod
     def __add__(self, other):
-        return SQLTriplet(self, operator.add, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __radd__(self, other):
-        return SQLTriplet(other, operator.add, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __mul__(self, other):
-        return SQLTriplet(self, operator.mul, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __rmul__(self, other):
-        return SQLTriplet(other, operator.mul, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __sub__(self, other):
-        return SQLTriplet(other, operator.sub, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __rsub__(self, other):
-        return SQLTriplet(self, operator.sub, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __truediv__(self, other):
-        return SQLTriplet(self, operator.truediv, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __rtruediv__(self, other):
-        return SQLTriplet(other, operator.truediv, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __floordiv__(self, other):
-        return SQLTriplet(self, operator.floordiv, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __rfloordiv__(self, other):
-        return SQLTriplet(other, operator.floordiv, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __mod__(self, other):
-        return SQLTriplet(self, operator.mod, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __rmod__(self, other):
-        return SQLTriplet(other, operator.mod, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __gt__(self, other):
-        return SQLTriplet(self, operator.gt, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __ge__(self, other):
-        return SQLTriplet(self, operator.ge, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __lt__(self, other):
-        return SQLTriplet(self, operator.lt, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __le__(self, other):
-        return SQLTriplet(self, operator.le, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __abs__(self):
-        return SQLTriplet(self, operator.abs)
+        raise NotImplementedError
 
     @abstractmethod
     def __eq__(self, other):
-        return SQLTriplet(self, operator.eq, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __ne__(self, other: object):
-        return SQLTriplet(self, operator.ne, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __neg__(self):
-        return SQLTriplet(self, operator.neg)
+        raise NotImplementedError
 
     @abstractmethod
     def __contains__(self, other):
-        return SQLTriplet(self, "contains", other)
+        raise NotImplementedError
 
     @abstractmethod
     def __pow__(self, x):
-        return SQLTriplet(self, operator.pow, x)
+        raise NotImplementedError
 
     @abstractmethod
     def __rpow__(self, x):
-        return SQLTriplet(x, operator.pow, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __and__(self, other):
-        return SQLTriplet(self, operator.and_, other)
+        raise NotImplementedError
 
     @abstractmethod
     def __rand__(self, other):
-        return SQLTriplet(other, operator.and_, self)
+        raise NotImplementedError
 
     @abstractmethod
     def __or__(self, other):
-        return SQLTriplet(self, operator.or_, other)
+        raise NotImplementedError
 
     @abstractmethod
+    def __ror__(self, other):
+        raise NotImplementedError
+
+
+class SQLExpression(SQLExpressionABC):
+    """SQL expression base class."""
+
+    def __repr__(self):
+        return str(self)  # pragma: no cover
+
+    def __add__(self, other):
+        return SQLTriplet(self, operator.add, other)
+
+    def __radd__(self, other):
+        return SQLTriplet(other, operator.add, self)
+
+    def __mul__(self, other):
+        return SQLTriplet(self, operator.mul, other)
+
+    def __rmul__(self, other):
+        return SQLTriplet(other, operator.mul, self)
+
+    def __sub__(self, other):
+        return SQLTriplet(other, operator.sub, self)
+
+    def __rsub__(self, other):
+        return SQLTriplet(self, operator.sub, other)
+
+    def __truediv__(self, other):
+        return SQLTriplet(self, operator.truediv, other)
+
+    def __rtruediv__(self, other):
+        return SQLTriplet(other, operator.truediv, self)
+
+    def __floordiv__(self, other):
+        return SQLTriplet(self, operator.floordiv, other)
+
+    def __rfloordiv__(self, other):
+        return SQLTriplet(other, operator.floordiv, self)
+
+    def __mod__(self, other):
+        return SQLTriplet(self, operator.mod, other)
+
+    def __rmod__(self, other):
+        return SQLTriplet(other, operator.mod, self)
+
+    def __gt__(self, other):
+        return SQLTriplet(self, operator.gt, other)
+
+    def __ge__(self, other):
+        return SQLTriplet(self, operator.ge, other)
+
+    def __lt__(self, other):
+        return SQLTriplet(self, operator.lt, other)
+
+    def __le__(self, other):
+        return SQLTriplet(self, operator.le, other)
+
+    def __abs__(self):
+        return SQLTriplet(self, operator.abs)
+
+    def __eq__(self, other):
+        return SQLTriplet(self, operator.eq, other)
+
+    def __ne__(self, other: object):
+        return SQLTriplet(self, operator.ne, other)
+
+    def __neg__(self):
+        return SQLTriplet(self, operator.neg)
+
+    def __contains__(self, other):
+        return SQLTriplet(self, "contains", other)
+
+    def __pow__(self, x):
+        return SQLTriplet(self, operator.pow, x)
+
+    def __rpow__(self, x):
+        return SQLTriplet(x, operator.pow, self)
+
+    def __and__(self, other):
+        return SQLTriplet(self, operator.and_, other)
+
+    def __rand__(self, other):
+        return SQLTriplet(other, operator.and_, self)
+
+    def __or__(self, other):
+        return SQLTriplet(self, operator.or_, other)
+
     def __ror__(self, other):
         return SQLTriplet(other, operator.or_, self)
 
