@@ -56,7 +56,6 @@ Some mathematical functions will not function if the compile option
 import json
 import operator
 import re
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from numbers import Number
 from typing import Any, Callable, Optional, Union
@@ -73,123 +72,7 @@ class SQLNone:
         return str(self)  # pragma: no cover
 
 
-class SQLExpressionABC(ABC):
-    """Abstract base class for SQLExpression used in tiatoolbox."""
-
-    @abstractmethod
-    def __repr__(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __add__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __radd__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __mul__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rmul__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __sub__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rsub__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __truediv__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rtruediv__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __floordiv__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rfloordiv__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __mod__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rmod__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __gt__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __ge__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __lt__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __le__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __abs__(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __eq__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __ne__(self, other: object):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __neg__(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __contains__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __pow__(self, x):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rpow__(self, x):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __and__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rand__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __or__(self, other):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __ror__(self, other):
-        raise NotImplementedError
-
-
-class SQLExpression(SQLExpressionABC):
+class SQLExpression:
     """SQL expression base class."""
 
     def __repr__(self):
