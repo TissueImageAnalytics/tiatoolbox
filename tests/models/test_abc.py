@@ -83,25 +83,25 @@ def test_model_abc():
     model = Proto()  # skipcq
     # test assign un-callable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
-        model.postproc_func = 1
+        model.postproc_func = 1  # skipcq: PYL-W0201
     with pytest.raises(ValueError, match=r".*callable*"):
-        model.preproc_func = 1
+        model.preproc_func = 1  # skipcq: PYL-W0201
 
     # test setter/getter/initial of preproc_func/postproc_func
     assert model.preproc_func(1) == 1
-    model.preproc_func = lambda x: x - 1
+    model.preproc_func = lambda x: x - 1  # skipcq: PYL-W0201
     assert model.preproc_func(1) == 0
     assert model.preproc(1) == 1, "Must be unchanged!"
     assert model.postproc(1) == -1, "Must be unchanged!"
-    model.preproc_func = None
+    model.preproc_func = None  # skipcq: PYL-W0201
     assert model.preproc_func(2) == 2
 
     # repeat the setter test for postproc
     assert model.postproc_func(2) == 0
-    model.postproc_func = lambda x: x - 1
+    model.postproc_func = lambda x: x - 1  # skipcq: PYL-W0201
     assert model.postproc_func(1) == 0
     assert model.preproc(1) == 1, "Must be unchanged!"
     assert model.postproc(2) == 0, "Must be unchanged!"
     # coverage setter check
-    model.postproc_func = None
+    model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
