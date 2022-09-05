@@ -3,7 +3,7 @@
 This module facilitates conversion from a restricted subset of python
 to another domain specific language, for example SQL. This is done using
 `eval` and a set of provided globals and locals. Mainly used for
-construction of predicate statemtents for AnnotationStore queries but
+construction of predicate statements for AnnotationStore queries but
 also used in statements for the creation of indexes to accelerate
 queries.
 
@@ -56,7 +56,7 @@ Some mathematical functions will not function if the compile option
 import json
 import operator
 import re
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from numbers import Number
 from typing import Any, Callable, Optional, Union
@@ -76,87 +76,115 @@ class SQLNone:
 class SQLExpression(ABC):
     """SQL expression base class."""
 
+    @abstractmethod
     def __repr__(self):
         return str(self)  # pragma: no cover
 
+    @abstractmethod
     def __add__(self, other):
         return SQLTriplet(self, operator.add, other)
 
+    @abstractmethod
     def __radd__(self, other):
         return SQLTriplet(other, operator.add, self)
 
+    @abstractmethod
     def __mul__(self, other):
         return SQLTriplet(self, operator.mul, other)
 
+    @abstractmethod
     def __rmul__(self, other):
         return SQLTriplet(other, operator.mul, self)
 
+    @abstractmethod
     def __sub__(self, other):
         return SQLTriplet(other, operator.sub, self)
 
+    @abstractmethod
     def __rsub__(self, other):
         return SQLTriplet(self, operator.sub, other)
 
+    @abstractmethod
     def __truediv__(self, other):
         return SQLTriplet(self, operator.truediv, other)
 
+    @abstractmethod
     def __rtruediv__(self, other):
         return SQLTriplet(other, operator.truediv, self)
 
+    @abstractmethod
     def __floordiv__(self, other):
         return SQLTriplet(self, operator.floordiv, other)
 
+    @abstractmethod
     def __rfloordiv__(self, other):
         return SQLTriplet(other, operator.floordiv, self)
 
+    @abstractmethod
     def __mod__(self, other):
         return SQLTriplet(self, operator.mod, other)
 
+    @abstractmethod
     def __rmod__(self, other):
         return SQLTriplet(other, operator.mod, self)
 
+    @abstractmethod
     def __gt__(self, other):
         return SQLTriplet(self, operator.gt, other)
 
+    @abstractmethod
     def __ge__(self, other):
         return SQLTriplet(self, operator.ge, other)
 
+    @abstractmethod
     def __lt__(self, other):
         return SQLTriplet(self, operator.lt, other)
 
+    @abstractmethod
     def __le__(self, other):
         return SQLTriplet(self, operator.le, other)
 
+    @abstractmethod
     def __abs__(self):
         return SQLTriplet(self, operator.abs)
 
+    @abstractmethod
     def __eq__(self, other):
         return SQLTriplet(self, operator.eq, other)
 
+    @abstractmethod
     def __ne__(self, other: object):
         return SQLTriplet(self, operator.ne, other)
 
+    @abstractmethod
     def __neg__(self):
         return SQLTriplet(self, operator.neg)
 
+    @abstractmethod
     def __contains__(self, other):
         return SQLTriplet(self, "contains", other)
 
+    @abstractmethod
     def __pow__(self, x):
         return SQLTriplet(self, operator.pow, x)
 
+    @abstractmethod
     def __rpow__(self, x):
         return SQLTriplet(x, operator.pow, self)
 
+    @abstractmethod
     def __and__(self, other):
         return SQLTriplet(self, operator.and_, other)
 
+    @abstractmethod
     def __rand__(self, other):
         return SQLTriplet(other, operator.and_, self)
 
+    @abstractmethod
     def __or__(self, other):
         return SQLTriplet(self, operator.or_, other)
 
+    @abstractmethod
     def __ror__(self, other):
         return SQLTriplet(other, operator.or_, self)
 

@@ -1,6 +1,6 @@
 """This file defines patch extraction methods for deep learning models."""
-import abc
 import warnings
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Tuple, Union
 
@@ -12,18 +12,18 @@ from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-class PatchExtractorABC(abc.ABC):
+class PatchExtractorABC(ABC):
     """Abstract base class for Patch Extraction in tiatoolbox."""
 
-    @abc.abstractmethod
+    @abstractmethod
     def __iter__(self):
         raise NotImplementedError
 
-    @abc.abstractmethod
+    @abstractmethod
     def __next__(self):
         raise NotImplementedError
 
-    @abc.abstractmethod
+    @abstractmethod
     def __getitem__(self, item: int):
         raise NotImplementedError
 

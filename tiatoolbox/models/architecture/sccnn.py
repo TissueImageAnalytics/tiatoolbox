@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 from skimage.feature import peak_local_max
 
-from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 
 

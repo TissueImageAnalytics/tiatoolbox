@@ -3,8 +3,8 @@
 import pytest
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 
 
