@@ -108,7 +108,7 @@ class PatchExtractor(PatchExtractorABC):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, : np.ndarray, WSIReader] = None,
+        input_mask: Union[str, Path, np.ndarray, WSIReader] = None,
         resolution: Union[int, float, Tuple[float, float]] = 0,
         units: str = "level",
         pad_mode: str = "constant",
