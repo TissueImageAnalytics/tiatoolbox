@@ -1,6 +1,6 @@
 """This file defines patch extraction methods for deep learning models."""
+import abc
 import warnings
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Tuple, Union
 
@@ -12,16 +12,18 @@ from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-class PatchExtractorABC(ABC):
+class PatchExtractorABC(abc.ABC):
     """Abstract base class for Patch Extraction in tiatoolbox."""
 
-    @abstractmethod
+    @abc.abstractmethod
     def __iter__(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def __next__(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def __getitem__(self, item: int):
         raise NotImplementedError
 
@@ -110,7 +112,7 @@ class PatchExtractor(PatchExtractorABC):
         resolution: Union[int, float, Tuple[float, float]] = 0,
         units: str = "level",
         pad_mode: str = "constant",
-        pad_constant_values: Union[int, tuple(int)] = 0,
+        pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
     ):
         if isinstance(patch_size, (tuple, list)):
@@ -292,7 +294,7 @@ class PatchExtractor(PatchExtractorABC):
         scaled_coords[:, [1, 3]] = np.clip(
             scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
         )
-        scaled_coords = np.int32(scaled_coords)
+        scaled_coords = list(np.int32(scaled_coords))
 
         flag_list = []
         for coord in scaled_coords:

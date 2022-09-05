@@ -1,10 +1,10 @@
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
-from abc import ABC, abstractmethod
+import abc
 
 import torch.nn as nn
 
 
-class IOConfigABC(ABC):
+class IOConfigABC(abc.ABC):
     """Define an abstract class for holding predictor I/O information.
 
     Enforcing such that following attributes must always be defined by
@@ -13,17 +13,17 @@ class IOConfigABC(ABC):
     """
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def input_resolutions(self):
         raise NotImplementedError
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def output_resolutions(self):
         raise NotImplementedError
 
 
-class ModelABC(ABC, nn.Module):
+class ModelABC(abc.ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self):
@@ -31,7 +31,7 @@ class ModelABC(ABC, nn.Module):
         self._postproc = self.postproc
         self._preproc = self.preproc
 
-    @abstractmethod
+    @abc.abstractmethod
     # noqa
     # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
@@ -39,7 +39,7 @@ class ModelABC(ABC, nn.Module):
         ...  # pragma: no cover
 
     @staticmethod
-    @abstractmethod
+    @abc.abstractmethod
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch.
 
