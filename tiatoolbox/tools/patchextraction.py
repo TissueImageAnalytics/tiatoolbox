@@ -1,15 +1,32 @@
 """This file defines patch extraction methods for deep learning models."""
 import warnings
-from abc import ABC
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Tuple, Union
 
 import numpy as np
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-class PatchExtractor(ABC):
+class PatchExtractorABC(ABC):
+    """Abstract base class for Patch Extraction in tiatoolbox."""
+
+    @abstractmethod
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __next__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, item: int):
+        raise NotImplementedError
+
+
+class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
@@ -67,7 +84,7 @@ class PatchExtractor(ABC):
         n (int):
             Current state of the iterator.
         locations_df (pd.DataFrame):
-            A table containing location and/or type of patces in
+            A table containing location and/or type of patches in
             `(x_start, y_start, class)` format.
         coordinate_list (:class:`numpy.ndarray`):
             An array containing coordinates of patches in `(x_start,
@@ -87,14 +104,14 @@ class PatchExtractor(ABC):
 
     def __init__(
         self,
-        input_img,
-        patch_size,
-        input_mask=None,
-        resolution=0,
-        units="level",
-        pad_mode="constant",
-        pad_constant_values=0,
-        within_bound=False,
+        input_img: Union[str, Path, np.ndarray],
+        patch_size: Union[int, Tuple[int, int]],
+        input_mask: Union[str, Path, : np.ndarray, WSIReader] = None,
+        resolution: Union[int, float, Tuple[float, float]] = 0,
+        units: str = "level",
+        pad_mode: str = "constant",
+        pad_constant_values: Union[int, tuple(int)] = 0,
+        within_bound: bool = False,
     ):
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
@@ -138,7 +155,7 @@ class PatchExtractor(ABC):
         self.n = n + 1
         return self[n]
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int):
         if not isinstance(item, int):
             raise TypeError("Index should be an integer.")
 
@@ -184,13 +201,13 @@ class PatchExtractor(ABC):
                 k: v for k, v in converted_units.items() if v is not None
             }
             converted_units_keys = list(converted_units.keys())
-            selected_coord_idxs = self.filter_coordinates_fast(
+            selected_coord_indices = self.filter_coordinates_fast(
                 self.mask,
                 self.coordinate_list,
                 coordinate_resolution=converted_units[converted_units_keys[0]],
                 coordinate_units=converted_units_keys[0],
             )
-            self.coordinate_list = self.coordinate_list[selected_coord_idxs]
+            self.coordinate_list = self.coordinate_list[selected_coord_indices]
             if len(self.coordinate_list) == 0:
                 warnings.warn(
                     "No candidate coordinates left after "
@@ -302,7 +319,7 @@ class PatchExtractor(ABC):
                 N is the number of coordinate sets and K is either 2 for
                 centroids or 4 for bounding boxes. When using the
                 default `func=None`, K should be 4, as we expect the
-                `coordinates_list` to be refer to bounding boxes in
+                `coordinates_list` to be referred to bounding boxes in
                 `[start_x, start_y, end_x, end_y]` format.
             func:
                 The coordinate validator function. A function that takes
