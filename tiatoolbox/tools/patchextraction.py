@@ -2,14 +2,17 @@
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Callable, ParamSpec, Tuple, Union
 
 import numpy as np
+from pandas import DataFrame
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+
+P = ParamSpec("P")
 
 
 class PatchExtractorABC(ABC):
@@ -224,11 +227,11 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def filter_coordinates_fast(
-        mask_reader,
-        coordinates_list,
-        coordinate_resolution,
-        coordinate_units,
-        mask_resolution=None,
+        mask_reader: VirtualWSIReader,
+        coordinates_list: np.ndarray,
+        coordinate_resolution: float,
+        coordinate_units: str,
+        mask_resolution: float = None,
     ):
         """Validate patch extraction coordinates based on the input mask.
 
@@ -304,7 +307,11 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def filter_coordinates(
-        mask_reader, coordinates_list, func=None, resolution=None, units=None
+        mask_reader: VirtualWSIReader,
+        coordinates_list: np.ndarray,
+        func: Callable = None,
+        resolution: float = None,
+        units: str = None,
     ):
         """Indicates which coordinate is valid for mask-based patch extraction.
 
@@ -368,12 +375,12 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def get_coordinates(
-        image_shape=None,
-        patch_input_shape=None,
-        patch_output_shape=None,
-        stride_shape=None,
-        input_within_bound=False,
-        output_within_bound=False,
+        image_shape: Union[Tuple[int, int], np.ndarray] = None,
+        patch_input_shape: Union[Tuple[int, int], np.ndarray] = None,
+        patch_output_shape: Union[Tuple[int, int], np.ndarray] = None,
+        stride_shape: Union[Tuple[int, int], np.ndarray] = None,
+        input_within_bound: bool = False,
+        output_within_bound: bool = False,
     ):
         """Calculate patch tiling coordinates.
 
@@ -533,9 +540,9 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
-        pad_constant_values (int or tuple(int)): Values to use with
-            constant padding. Defaults to 0. See :func:`numpy.pad` for
-            more.
+        pad_constant_values (int or tuple(int)):
+            Values to use with constant padding. Defaults to 0.
+            See :func:`numpy.pad` for more information.
         within_bound (bool):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
@@ -555,15 +562,15 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     def __init__(
         self,
-        input_img,
-        patch_size,
-        input_mask=None,
-        resolution=0,
-        units="level",
-        stride=None,
-        pad_mode="constant",
-        pad_constant_values=0,
-        within_bound=False,
+        input_img: Union[str, Path, np.ndarray],
+        patch_size: Union[int, Tuple[int, int]],
+        input_mask: Union[str, Path, np.ndarray, WSIReader] = None,
+        resolution: Union[int, float, Tuple[float, float]] = 0,
+        units: str = "level",
+        stride: Union[int, Tuple[int, int]] = None,
+        pad_mode: str = "constant",
+        pad_constant_values: Union[int, Tuple[int, int]] = 0,
+        within_bound: bool = False,
     ):
         super().__init__(
             input_img=input_img,
@@ -633,14 +640,14 @@ class PointsPatchExtractor(PatchExtractor):
 
     def __init__(
         self,
-        input_img,
-        locations_list,
-        patch_size=(224, 224),
-        resolution=0,
-        units="level",
-        pad_mode="constant",
-        pad_constant_values=0,
-        within_bound=False,
+        input_img: Union[str, Path, np.ndarray],
+        locations_list: Union[np.ndarray, DataFrame, str, Path],
+        patch_size: Union[int, Tuple[int, int]] = (224, 224),
+        resolution: Union[int, float, Tuple[float, float]] = 0,
+        units: str = "level",
+        pad_mode: str = "constant",
+        pad_constant_values: Union[int, Tuple[int, int]] = 0,
+        within_bound: bool = False,
     ):
         super().__init__(
             input_img=input_img,
@@ -661,7 +668,7 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
-def get_patch_extractor(method_name, **kwargs):
+def get_patch_extractor(method_name: str, **kwargs: P.kwargs):
     """Return a patch extractor object as requested.
 
     Args:
