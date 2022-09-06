@@ -8,8 +8,8 @@ import torch.nn.functional as F  # noqa: N812
 from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import UpSample2x, centre_crop
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 
 

@@ -12,12 +12,12 @@ from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
 )
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
 
