@@ -204,9 +204,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
         super().__init__()
         output_layers_id = ["16", "23", "30"]
         output_layers_key = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features = OrderedDict.fromkeys(
-            ["block3_pool", "block4_pool", "block5_pool"], None
-        )
+        self.features = OrderedDict.fromkeys(output_layers_key, None)
         self.pretrained = torchvision.models.vgg16(pretrained=True).features
         self.f_hooks = []
 
