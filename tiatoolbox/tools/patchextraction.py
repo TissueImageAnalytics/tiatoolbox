@@ -1,4 +1,6 @@
 """This file defines patch extraction methods for deep learning models."""
+from __future__ import annotations
+
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
