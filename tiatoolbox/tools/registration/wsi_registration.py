@@ -1,4 +1,5 @@
 import warnings
+from collections import OrderedDict
 from typing import Tuple
 
 import cv2
@@ -8,7 +9,6 @@ import torch
 import torchvision
 from skimage import exposure, filters
 from skimage.util import img_as_float
-from torchvision.models._utils import IntermediateLayerGetter
 
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
@@ -191,6 +191,43 @@ def match_histograms(
     return image_a, image_b
 
 
+class DFBRFeatureExtractor(torch.nn.Module):
+    """Feature extractor for Deep Feature based Registration (DFBR).
+
+    This class extracts features from three different layers of VGG16.
+    These features are processed in DFBRegister class for registration
+    of a pair of images.
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        output_layers_id = ["16", "23", "30"]
+        output_layers_key = ["block3_pool", "block4_pool", "block5_pool"]
+        self.features = OrderedDict.fromkeys(
+            ["block3_pool", "block4_pool", "block5_pool"], None
+        )
+        self.pretrained = torchvision.models.vgg16(pretrained=True).features
+        self.f_hooks = []
+
+        for i, l in enumerate(output_layers_id):
+            self.f_hooks.append(
+                getattr(self.pretrained, l).register_forward_hook(
+                    self.forward_hook(output_layers_key[i])
+                )
+            )
+
+    def forward_hook(self, layer_name):
+        def hook(module, module_input, module_output):
+            self.features[layer_name] = module_output
+
+        return hook
+
+    def forward(self, x):
+        _ = self.pretrained(x)
+        return self.features
+
+
 class DFBRegister:
     r"""Deep Feature based Registration (DFBR).
 
@@ -203,11 +240,7 @@ class DFBRegister:
     def __init__(self):
         self.patch_size: Tuple[int, int] = (224, 224)
         self.x_scale, self.y_scale = [], []
-        model = torchvision.models.vgg16(True)
-        return_layers = {"16": "block3_pool", "23": "block4_pool", "30": "block5_pool"}
-        self.feature_extractor = IntermediateLayerGetter(
-            model.features, return_layers=return_layers
-        )
+        self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
     def extract_features(self, fixed_img: np.ndarray, moving_img: np.ndarray) -> dict:
