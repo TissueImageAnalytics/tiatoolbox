@@ -216,12 +216,50 @@ class DFBRFeatureExtractor(torch.nn.Module):
             )
 
     def forward_hook(self, layer_name):
+        """Register a hook.
+
+        Args:
+            layer_name (str):
+                User-defined name for a layer.
+
+        Returns:
+            None
+
+        """
+
         def hook(_0, _1, module_output):
+            """Forward hook.
+
+            Args:
+                _0:
+                    Unused argument for the module.
+                _1:
+                    Unused argument for the modules' input.
+                module_output (torch.Tensor):
+                    Output (features) of the module.
+
+
+            Returns:
+                None
+
+            """
             self.features[layer_name] = module_output
 
         return hook
 
     def forward(self, x):
+        """Forward pass for feature extraction.
+
+        Args:
+            x (torch.Tensor):
+                Batch of input images.
+
+        Returns:
+            dict:
+                A dictionary containing the multiscale features.
+                The expected format is {layer_name: features}.
+
+        """
         _ = self.pretrained(x)
         return self.features
 
