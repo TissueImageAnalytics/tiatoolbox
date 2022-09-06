@@ -1,24 +1,4 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-"""Unit test package for Unet."""
+"""Unit test package for Nuclick."""
 
 import pathlib
 
@@ -28,7 +8,8 @@ import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.nuclick import NuClick
-from tiatoolbox.wsicore.wsireader import get_wsireader
+from tiatoolbox.utils.misc import imread
+import matplotlib.pyplot as plt
 
 ON_GPU = False
 
@@ -38,32 +19,44 @@ ON_GPU = False
 def test_functional_nuclcik(remote_sample, tmp_path):
     """Tests for nuclick."""
     # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
+    img = imread(tile_path)
 
     _pretrained_path = f"{tmp_path}/weights.pth"
-    fetch_pretrained_weights("fcn-tissue_mask", _pretrained_path)
+    fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
 
-    reader = get_wsireader(mini_wsi_svs)
-    with pytest.raises(ValueError, match=r".*Unknown encoder*"):
-        model = NuClick(num_input_channels=5, num_output_channels=1)
+    with pytest.raises(ValueError, match=r".*input channels number error*"):
+        model = NuClick(num_input_channels=-1, num_output_channels=-1)
 
     # test creation
     model = NuClick(num_input_channels=5, num_output_channels=1)
 
     # test inference
-    read_kwargs = dict(resolution=2.0, units="mpp", coord_space="resolution")
-    batch = np.array(
-        [
-            # noqa
-            reader.read_bounds([0, 0, 1024, 1024], **read_kwargs),
-            reader.read_bounds([1024, 1024, 2048, 2048], **read_kwargs),
-        ]
-    )
-    batch = torch.from_numpy(batch)
+    # create image patch, inclusion and exclusion maps
+    patch = img[63:191, 750:878, :]
+    plt.figure(), plt.imshow(patch)
+    inclusion_map = np.zeros((128,128))
+    inclusion_map[64, 64] = 1
+
+    exclusion_map = np.zeros((128, 128))
+    exclusion_map[68, 82] = 1
+    exclusion_map[72, 102] = 1
+    exclusion_map[52, 48] = 1
+
+    patch = np.float32(patch) / 255.
+    patch = np.moveaxis(patch, -1, 0)
+    batch = np.concatenate((patch, inclusion_map[np.newaxis, ...],
+                            exclusion_map[np.newaxis, ...]), axis=0)
+
+    batch = torch.from_numpy(batch[np.newaxis, ...])
 
     model = NuClick(num_input_channels=5, num_output_channels=1)
     pretrained = torch.load(_pretrained_path, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     postproc_masks = model.postproc(output)
-    inst_dict = model.generate_inst_dict(postproc_masks)
+
+    gt_path = pathlib.Path(remote_sample("nuclick-output"))
+    gt_mask = np.load(gt_path)
+
+    assert np.count_nonzero(postproc_masks*gt_mask)/np.count_nonzero(gt_mask) > 0.999
