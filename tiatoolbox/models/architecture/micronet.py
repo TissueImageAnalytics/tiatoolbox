@@ -16,8 +16,8 @@ import torch.nn.functional as functional
 from scipy import ndimage
 from skimage import morphology
 
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.hovernet import HoVerNet
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 
 
