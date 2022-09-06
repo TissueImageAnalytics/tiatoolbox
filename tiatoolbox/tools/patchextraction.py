@@ -1,10 +1,8 @@
 """This file defines patch extraction methods for deep learning models."""
-from __future__ import annotations
-
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, ParamSpec, Tuple, Union
+from typing import Callable, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame
@@ -13,8 +11,6 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
-
-P = ParamSpec("P")
 
 
 class PatchExtractorABC(ABC):
@@ -670,7 +666,7 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
-def get_patch_extractor(method_name: str, **kwargs: P.kwargs):
+def get_patch_extractor(method_name: str, **kwargs: str):
     """Return a patch extractor object as requested.
 
     Args:
