@@ -79,4 +79,7 @@ jobs:
           with os.add_dll_directory(r"D:\a\tiatoolbox\tiatoolbox\openslide-win64-20220811\bin"):
             import tiatoolbox
         else:
+          PATH = os.environ["PATH"]
+          PATH = PATH + r"; D:\a\tiatoolbox\tiatoolbox\openslide-win64-20220811\bin"
+          os.environ["PATH"] = PATH
           import tiatoolbox
