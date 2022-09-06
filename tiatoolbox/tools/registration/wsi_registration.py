@@ -216,7 +216,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             )
 
     def forward_hook(self, layer_name):
-        def hook(module, module_input, module_output):
+        def hook(_0, _1, module_output):
             self.features[layer_name] = module_output
 
         return hook
