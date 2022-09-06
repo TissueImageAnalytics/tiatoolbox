@@ -80,7 +80,4 @@ jobs:
             import tiatoolbox
         else:
           os.environ["PATH"] = r"D:\a\tiatoolbox\tiatoolbox\openslide-win64-20220811\bin;"
-          print("---------------------")
-          print(os.environ["PATH"])
-          print("---------------------")
           import tiatoolbox
