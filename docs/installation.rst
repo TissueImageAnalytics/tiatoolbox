@@ -112,13 +112,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/tialab/tiatoolbox
+    $ git clone https://github.com/TissueImageAnalytics/tiatoolbox.git
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/tialab/tiatoolbox/tarball/master
+    $ curl -OJL https://github.com/TissueImageAnalytics/tiatoolbox/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -127,8 +127,8 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/tialab/tiatoolbox
-.. _tarball: https://github.com/tialab/tiatoolbox/tarball/master
+.. _Github repo: https://github.com/TissueImageAnalytics/tiatoolbox.git
+.. _tarball: https://github.com/TissueImageAnalytics/tiatoolbox/tarball/master
 
 Using Docker
 ============
