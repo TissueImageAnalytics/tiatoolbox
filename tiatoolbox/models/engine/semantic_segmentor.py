@@ -1167,7 +1167,7 @@ class SemanticSegmentor:
             # verbose mode, error by passing ?
             logging.info("Finish: %d", wsi_idx / len(imgs))
             logging.info("--Input: %s", str(img_path))
-            logging.info("--Ouput: %s", str(wsi_save_path))
+            logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
         except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
