@@ -191,6 +191,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Returns:
             True if the coordinates form a rectangle, False otherwise.
+
         """
         # Only allow one extra coordinate for looping back to the first point
         if (len(args) == 1 and not np.array_equal(args[:1], [a])) or len(args) > 1:
@@ -215,6 +216,7 @@ class AnnotationStore(ABC, MutableMapping):
         Returns:
             Path:
                 The normalised path.
+
         """
         if not isinstance(
             connection,
@@ -252,14 +254,9 @@ class AnnotationStore(ABC, MutableMapping):
     def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
         """Apply a binary geometry predicate.
 
-        For more information on geometric predicates see the `Shapely
-        documentation`.
-
-        .. _BP:
-            | https://shapely.readthedocs.io/en/stable/
-            | manual.html#binary-predicates
-
-        __ BP_
+        For more information on geomeric predicates see the `Shapely
+        documentation <https://shapely.readthedocs.io/en/stable/
+        manual.html#binary-predicates>`_.
 
         Args:
             name(str):
@@ -652,17 +649,12 @@ class AnnotationStore(ABC, MutableMapping):
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
                 "intersects". For more information see the `shapely
-                documentation on binary predicates`__.
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
 
             Returns:
                 list:
                     A list of Annotation objects.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
 
         """
         if all(x is None for x in (geometry, where)):
@@ -750,17 +742,12 @@ class AnnotationStore(ABC, MutableMapping):
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
                 "intersects". For more information see the `shapely
-                documentation on binary predicates`__.
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
 
             Returns:
                 list:
                     A list of keys for each Annotation.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
 
         """
         if geometry_predicate not in self._geometry_predicate_names:
@@ -827,7 +814,7 @@ class AnnotationStore(ABC, MutableMapping):
                 filtering in python after or during the query.
                 Additionally, the same string can be used across
                 different backends (e.g. the previous example predicate
-                string is valid for both `DictionaryStore `and a
+                string is valid for both `DictionaryStore` and a
                 `SQliteStore`). On the other hand it has many more
                 limitations. It is important to note that untrusted user
                 input should never be accepted to this argument as
@@ -837,12 +824,6 @@ class AnnotationStore(ABC, MutableMapping):
             Returns:
                 list:
                     A list of bounding boxes for each Annotation.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
 
             Example:
                 >>> from tiatoolbox.annotation.storage import AnnotationStore
@@ -2124,7 +2105,8 @@ class SQLiteStore(AnnotationStore):
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
                 "intersects". For more information see the `shapely
-                documentation on binary predicates`__.
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
             unique (bool):
                 If True, only unique values for each selected property
                 will be returned as a list of sets. If False, all values
