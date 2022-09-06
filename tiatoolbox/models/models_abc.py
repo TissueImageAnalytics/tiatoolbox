@@ -10,16 +10,6 @@ class IOConfigABC(ABC):
     Enforcing such that following attributes must always be defined by
     the subclass.
 
-    Attributes:
-        input_resolutions (list):
-            Define the resolution of each input, incase the predictor
-            receives variable input. Must be in the same order as
-            network input.
-        output_resolutions (dict):
-            Define the resolution of each output, in case the predictor
-            return variable output. Must be in the same order as network
-            output.
-
     """
 
     @property
