@@ -321,7 +321,7 @@ class PatchExtractor(PatchExtractorABC):
                 N is the number of coordinate sets and K is either 2 for
                 centroids or 4 for bounding boxes. When using the
                 default `func=None`, K should be 4, as we expect the
-                `coordinates_list` to be referred to bounding boxes in
+                `coordinates_list` to refer to bounding boxes in
                 `[start_x, start_y, end_x, end_y]` format.
             func:
                 The coordinate validator function. A function that takes
