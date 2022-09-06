@@ -75,6 +75,8 @@ class SQLNone:
 class SQLExpression:
     """SQL expression base class."""
 
+    __hash__ = None
+
     def __repr__(self):
         return str(self)  # pragma: no cover
 
