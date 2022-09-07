@@ -203,11 +203,14 @@ texinfo_documents = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
-    "matplotlib": ("https://matplotlib.org", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
-    "torch": ("https://pytorch.org/docs/master/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
     "click": ("https://click.palletsprojects.com/", None),
+    "h5py": ("https://docs.h5py.org/en/latest/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "Sphinx": ("https://www.sphinx-doc.org/en/stable/", None),
 }
 
 # create latex preample so that we can build arbitrary nested depth
