@@ -819,13 +819,16 @@ class PatchPredictor:
                 image tiles or whole-slide images are provided as input,
                 or save_output is True, then results are saved to
                 `save_dir` and a dictionary indicating save location for
-                each input is returned. The dict has following format:
-                    - img_path: path of the input image.
-                        - raw: path to save location for raw prediction,
-                          saved in .json.
-                        - merged: path to .npy contain merged
-                          predictions if
-                        `merge_predictions` is `True`.
+                each input is returned.
+
+                The dict has the following format:
+
+                - img_path: path of the input image.
+                - raw: path to save location for raw prediction,
+                  saved in .json.
+                - merged: path to .npy contain merged
+                  predictions if
+                `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
