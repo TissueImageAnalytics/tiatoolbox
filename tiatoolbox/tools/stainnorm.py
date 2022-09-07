@@ -281,12 +281,13 @@ class ReinhardNormalizer:
                 Input image.
 
         Returns:
-            chan1 (float):
-                L.
-            chan2 (float):
-                A.
-            chan3 (float):
-                B.
+            tuple:
+                - :py:obj:`float`:
+                    L channel in LAB colour space.
+                - :py:obj:`float`:
+                    A channel in LAB colour space.
+                - :py:obj:`float`:
+                    B channel in LAB colour space.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
