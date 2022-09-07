@@ -3,7 +3,7 @@
 This module facilitates conversion from a restricted subset of python
 to another domain specific language, for example SQL. This is done using
 `eval` and a set of provided globals and locals. Mainly used for
-construction of predicate statemtents for AnnotationStore queries but
+construction of predicate statements for AnnotationStore queries but
 also used in statements for the creation of indexes to accelerate
 queries.
 
@@ -56,7 +56,6 @@ Some mathematical functions will not function if the compile option
 import json
 import operator
 import re
-from abc import ABC
 from dataclasses import dataclass
 from numbers import Number
 from typing import Any, Callable, Optional, Union
@@ -73,8 +72,10 @@ class SQLNone:
         return str(self)  # pragma: no cover
 
 
-class SQLExpression(ABC):
+class SQLExpression:
     """SQL expression base class."""
+
+    __hash__ = None
 
     def __repr__(self):
         return str(self)  # pragma: no cover
