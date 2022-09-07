@@ -106,7 +106,7 @@ class PatchExtractor(PatchExtractorABC):
             Stride in (x, y) direction for patch extraction. Not used
             for :obj:`PointsPatchExtractor`
         min_mask_ratio (float):
-            Only patches with postive area percentage above this value are included
+            Only patches with positive area percentage above this value are included
 
     """
 
@@ -271,8 +271,8 @@ class PatchExtractor(PatchExtractorABC):
                 i.e., `coordinate_units`. If not provided, a default
                 value will be selected based on `coordinate_units`.
             min_mask_ratio (float):
-                Only patches with postive area percentage above this value are included.
-                Defaults to 0.
+                Only patches with positive area percentage above this value are
+                included. Defaults to 0.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -574,7 +574,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Stride in (x, y) direction for patch extraction, default =
             `patch_size`.
         min_mask_ratio (float):
-            Only patches with postive area percentage above this value are included.
+            Only patches with positive area percentage above this value are included.
             Defaults to 0.
 
     Attributes:
