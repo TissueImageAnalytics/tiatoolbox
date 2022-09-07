@@ -142,7 +142,9 @@ class HoVerNetPlus(HoVerNet):
         Returns:
             dict:
                 A dictionary of layer contours. It has the
-                following form::
+                following form:
+
+                .. code-block:: json
 
                     {
                         1: {  # Instance ID
