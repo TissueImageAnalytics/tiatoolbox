@@ -827,8 +827,7 @@ class PatchPredictor:
                 - raw: path to save location for raw prediction,
                   saved in .json.
                 - merged: path to .npy contain merged
-                  predictions if
-                `merge_predictions` is `True`.
+                  predictions if `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']

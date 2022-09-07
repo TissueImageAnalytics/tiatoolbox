@@ -80,6 +80,7 @@ class HoVerNetPlus(HoVerNet):
         self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
         super().__init__(mode="fast")
+        self.num_input_channels = num_input_channels
         self.num_types = num_types
         self.num_layers = num_layers
         ksize = 3
