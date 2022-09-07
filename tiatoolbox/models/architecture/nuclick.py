@@ -6,7 +6,6 @@ Medical Image Analysis, 65, 101771.
 """
 import warnings
 
-import cv2
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,7 +16,7 @@ from skimage.morphology import (
     remove_small_objects,
 )
 
-from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 
 bn_axis = 1
@@ -488,62 +487,6 @@ class NuClick(ModelABC):
         conv9 = self.conv_block_2(up9)
 
         return self.conv_block_3(conv9)
-
-    @staticmethod
-    def generate_inst_dict(pred_mask, bounding_boxes):
-        """To collect instance information and store it within a dictionary.
-        Args:
-            pred_mask: A list of (binary) prediction masks, shape(no.patch, h, w)
-            bounding_boxes: ndarray, A list of bounding boxes.
-                bounding box: `[start_x, start_y, end_x, end_y]`.
-        Returns:
-            inst_info_dict (dict): A dictionary containing a mapping of each instance
-                    within `pred_mask` instance information. It has following form
-                    inst_info = {
-                            box: number[],
-                            centroids: number[],
-                            contour: number[][],
-                    }
-                    inst_info_dict = {[inst_uid: number] : inst_info}
-                    and `inst_uid` is an integer corresponds to the instance
-                    having the same pixel value within `pred_inst`.
-        """
-        inst_info_dict = {}
-        for i in range(len(pred_mask)):
-            patch = pred_mask[i]
-            patch = patch.astype(np.uint8)
-            inst_moment = cv2.moments(patch)
-            inst_contour = cv2.findContours(
-                patch, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-            )
-            # * opencv protocol format may break
-            inst_contour = inst_contour[0][0].astype(np.int32)
-            inst_contour = np.squeeze(inst_contour)
-
-            # < 3 points does not make a contour, so skip, likely artifact too
-            # as the contours obtained via approximation => too small
-            if inst_contour.shape[0] < 3:  # pragma: no cover
-                continue
-            # ! check for trickery shape
-            if len(inst_contour.shape) != 2:  # pragma: no cover
-                continue
-
-            inst_centroid = [
-                (inst_moment["m10"] / inst_moment["m00"]),
-                (inst_moment["m01"] / inst_moment["m00"]),
-            ]
-            inst_centroid = np.array(inst_centroid)
-            inst_box = bounding_boxes[i]
-            inst_box_tl = inst_box[:2]
-            inst_contour += inst_box_tl[None]
-            inst_centroid += inst_box_tl  # X
-            inst_info_dict[i + 1] = {  # inst_id should start at 1
-                "box": inst_box,
-                "centroid": inst_centroid,
-                "contour": inst_contour,
-            }
-
-        return inst_info_dict
 
     @staticmethod
     def postproc(
