@@ -144,14 +144,14 @@ class UnetEncoder(nn.Module):
             )
             input_channels = output_channels
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, input_tensor: torch.Tensor):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
 
         Args:
-            x (torch.Tensor):
-                Input images- the tensor is of the shape NCHW.
+            input_tensor (torch.Tensor):
+                Input images, the tensor is in the shape of NCHW.
 
         Returns:
             list:
@@ -161,9 +161,9 @@ class UnetEncoder(nn.Module):
         """
         features = []
         for block in self.blocks:
-            x = block[0](x)
-            features.append(x)
-            x = block[1](x)  # down-sample
+            input_tensor = block[0](input_tensor)
+            features.append(input_tensor)
+            input_tensor = block[1](input_tensor)  # down-sample
         return features
 
 
@@ -235,10 +235,10 @@ class UNetModel(ModelABC):
             Number of channels in output images.
         encoder (str):
             Name of the encoder, currently supports:
-            - "resnet50": The well-known ResNet50- this is not the
-              pre-activation model.
-            - "unet": The vanilla UNet encoder where each down-sampling
-              level contains 2 blocks of Convolution-BatchNorm-ReLu.
+                - "resnet50": The well-known ResNet50- this is not the
+                  pre-activation model.
+                - "unet": The vanilla UNet encoder where each down-sampling
+                  level contains 2 blocks of Convolution-BatchNorm-ReLu.
         encoder_levels (list):
             A list of integers to configure "unet" encoder levels.
             Each number defines the number of output channels at each
@@ -258,7 +258,7 @@ class UNetModel(ModelABC):
             A pytorch model.
 
     Examples:
-        >>> # instantiate a UNet with resnet50 endcoder and
+        >>> # instantiate a UNet with resnet50 encoder and
         >>> # only 1 3x3 per each up-sampling block in the decoder
         >>> UNetModel.resnet50(
         ...     2, 2,
