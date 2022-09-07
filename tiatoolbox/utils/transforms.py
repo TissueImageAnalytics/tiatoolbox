@@ -221,9 +221,11 @@ def bounds2locsize(bounds, origin="upper"):
     Returns:
         tuple:
             A 2-tuple containing integer 2-tuples for location and size:
+
             - :py:obj:`tuple` - location tuple
                 - :py:obj:`int` - x
                 - :py:obj:`int` - y
+
             - :py:obj:`size` - size tuple
                 - :py:obj:`int` - width
                 - :py:obj:`int` - height
