@@ -5,6 +5,7 @@ NuClick: a deep learning framework for interactive segmentation of microscopic i
 Medical Image Analysis, 65, 101771.
 """
 import warnings
+from typing import Tuple, Union
 
 import numpy as np
 import torch
@@ -36,18 +37,19 @@ class ConvBnRelu(nn.Module):
         convolution layer.
     Returns:
         model (torch.nn.Module): a pytorch model.
+
     """
 
     def __init__(
         self,
-        num_input_channels,
-        num_output_channels=32,
-        kernel_size=(3, 3),
-        strds=(1, 1),
-        use_bias=False,
-        dilatation_rate=(1, 1),
-        activation="relu",
-        do_batchnorm=True,
+        num_input_channels: int,
+        num_output_channels: int,
+        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
+        strds: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        use_bias: bool = False,
+        dilatation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        activation: str = "relu",
+        do_batchnorm: bool = True,
     ):
 
         super().__init__()
