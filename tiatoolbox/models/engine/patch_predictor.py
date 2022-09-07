@@ -361,7 +361,7 @@ class PatchPredictor:
                     output = postproc_func(output)
                 else:
                     output = np.argmax(output, axis=-1)
-                # to make sure background is 0 while class will be 1..N
+                # to make sure background is 0 while class will be 1...N
                 output[denominator > 0] += 1
         return output
 
@@ -470,7 +470,7 @@ class PatchPredictor:
             and must be positive.
         stride_shape (tuple):
             Stride using during tile and WSI processing. Stride is
-            at requested read resolution, not with respect to to
+            at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
         resolution (float):
@@ -792,7 +792,7 @@ class PatchPredictor:
                 and must be positive.
             stride_shape (tuple):
                 Stride using during tile and WSI processing. Stride is
-                at requested read resolution, not with respect to to
+                at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
             resolution (float):
