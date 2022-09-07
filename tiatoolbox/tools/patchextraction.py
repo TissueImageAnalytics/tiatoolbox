@@ -37,8 +37,7 @@ class PatchExtractor(PatchExtractorABC):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or
-        :obj:`WSIReader`):
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the input_mask.
@@ -419,16 +418,14 @@ class PatchExtractor(PatchExtractorABC):
                 extracted from mother image at desired `resolution` and
                 `units`. This argument is also expected to be in (width,
                 height) format.
-            patch_output_shape (tuple (int, int) or
-            :class:`numpy.ndarray` of shape (2,)):
+            patch_output_shape (tuple (int, int) or :class:`numpy.ndarray`):
                 Specifies the output shape of requested patches to be
                 extracted from mother image at desired `resolution` and
                 `units`. This argument is also expected to be in (width,
                 height) format. If this is not provided,
                 `patch_output_shape` will be the same as
                 `patch_input_shape`.
-            stride_shape (tuple (int, int) or :class:`numpy.ndarray`
-            of shape (2,)):
+            stride_shape (tuple (int, int) or :class:`numpy.ndarray`):
                 The stride that is used to calculate the patch location
                 during the patch extraction. If `patch_output_shape` is
                 provided, next stride location will base on the output
@@ -536,8 +533,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or
-        :obj:`WSIReader`):
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the `input_mask`.
