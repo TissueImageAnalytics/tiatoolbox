@@ -1,11 +1,13 @@
 """Detection methods for the current environment.
 
 This module contains methods for detecting aspects of the current
-environment. Some things which this module can detect are:
- - Whether the current environment is interactive.
- - Whether the current environment is a conda environment.
- - Whether the current environment is running on Travis, Kaggle, or
-   Colab.
+environment.
+
+Some things which this module can detect are:
+    - Whether the current environment is interactive.
+    - Whether the current environment is a conda environment.
+    - Whether the current environment is running on Travis, Kaggle, or
+      Colab.
 
 Note that these detections may not be correct 100% of the time but are
 as accurate as can be reasonably be expected depending on what is being
