@@ -26,7 +26,7 @@ class ResNetEncoder(ResNet):
         """Overwriting default torch forward so that it returns features.
 
         Args:
-            x (torch.Tensor): Input images, the tensor is in the shape of NCHW.
+            x (:class:`torch.Tensor`): Input images, the tensor is in the shape of NCHW.
               For this method, C=3 (i.e 3 channels images are used as input).
 
         Returns:
@@ -150,7 +150,7 @@ class UnetEncoder(nn.Module):
         This method defines how layers are used in forward operation.
 
         Args:
-            input_tensor (torch.Tensor):
+            input_tensor (:class:`torch.Tensor`):
                 Input images, the tensor is in the shape of NCHW.
 
         Returns:
@@ -328,10 +328,10 @@ class UNetModel(ModelABC):
         user's desired transform function before training/inference.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+            imgs (:class:`torch.Tensor`): Input images, the tensor is of the shape NCHW.
 
         Returns:
-            output (torch.Tensor): The transformed input.
+            output (:class:`torch.Tensor`): The transformed input.
 
         """
         return imgs / 255.0
@@ -344,11 +344,11 @@ class UNetModel(ModelABC):
         This method defines how layers are used in forward operation.
 
         Args:
-            imgs (torch.Tensor):
+            imgs (:class:`torch.Tensor`):
                 Input images, the tensor is of the shape NCHW.
 
         Returns:
-            torch.Tensor:
+            :class:`torch.Tensor`:
                 The inference output. The tensor is of the shape NCHW.
                 However, `height` and `width` may not be the same as the
                 input images.

@@ -49,6 +49,7 @@ extensions = [
 ]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autodoc_inherit_docstrings = False
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
 # Remove 'view source code' from top of page (for html, not python)
 html_show_sourcelink = False
@@ -205,6 +206,8 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
     "matplotlib": ("https://matplotlib.org", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
+    "torch": ("https://pytorch.org/docs/master/", None),
+    "click": ("https://click.palletsprojects.com/", None),
 }
 
 # create latex preample so that we can build arbitrary nested depth
@@ -225,9 +228,9 @@ autodoc_type_aliases = {
 }
 
 
-print("=" * 16)
+print("=" * 43)
 print("Copy example notebooks into docs/_notebooks")
-print("=" * 16)
+print("=" * 43)
 
 
 def all_but_ipynb(dir_path, contents):
