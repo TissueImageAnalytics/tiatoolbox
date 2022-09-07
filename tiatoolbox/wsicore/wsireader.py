@@ -464,6 +464,7 @@ class WSIReader:
         Returns:
             tuple:
                 Parameters for reading the requested region.
+
                 - :py:obj:`int` - Optimal read level.
 
                 - :py:obj:`tuple` - Read location in level coordinates.
