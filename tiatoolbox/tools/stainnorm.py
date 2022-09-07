@@ -301,7 +301,7 @@ class ReinhardNormalizer:
 
     @staticmethod
     def merge_back(chan1, chan2, chan3):
-        """Take seperate LAB channels and merge back to give RGB uint8.
+        """Take separate LAB channels and merge back to give RGB uint8.
 
         Args:
             chan1 (float):
