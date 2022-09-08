@@ -345,6 +345,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # adding more runtime placeholder
         self._wsi_inst_info = None
+        self._futures = []
 
     @staticmethod
     def _get_tile_info(
