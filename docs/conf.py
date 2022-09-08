@@ -121,7 +121,21 @@ html_title = f"TIA Toolbox {tiatoolbox.__version__} Documentation"
 # theme further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "navigation_with_keys": True,
+    "top_of_page_button": None,
+    "announcement": "Paper available at "
+    "<a href='https://doi.org/10.1101/2021.12.23.474029'>"
+    "https://doi.org/10.1101/2021.12.23.474029</a>",
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/TissueImageAnalytics/tiatoolbox",
+            "html": "",
+            "class": "fa-brands fa-github fa-2x",
+        },
+    ],
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
