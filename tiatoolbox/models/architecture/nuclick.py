@@ -453,6 +453,7 @@ class NuClick(ModelABC):
             imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
+
         """
         conv1 = self.conv_block_1(imgs)
         pool1 = self.pool_block_1(conv1)
