@@ -6,6 +6,7 @@
 1xshxsw
 20x
 2nd
+3D
 3rd
 40x
 B301
@@ -60,8 +61,11 @@ W0063
 W0079
 W0105
 W0123
+W0143
+W0201
 W0212
 W0221
+W0613
 W0703
 W6004
 WRT
@@ -114,6 +118,8 @@ iostate
 jpg
 kather
 kd
+lookahead
+lookbehind
 macports
 memray
 mpp
@@ -162,7 +168,6 @@ uint8
 uncallable
 v4
 viridis
-w0613
 wsi
 wsireader
 zarr

@@ -1,3 +1,6 @@
-nbsphinx
-sphinx_gallery
-sphinx_toolbox
+docutils>=0.17.1
+jinja2<3.1.0
+myst-parser>=0.17.0
+nbsphinx>=0.8.9
+sphinx-gallery>=0.11.1
+sphinx-toolbox>=3.1.2

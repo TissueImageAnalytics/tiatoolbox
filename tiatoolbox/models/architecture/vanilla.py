@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as torch_models
 
-from tiatoolbox.models.abc import ModelABC
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import select_device
 
 

@@ -19,8 +19,8 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
-from tiatoolbox.models.abc import IOConfigABC
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
@@ -1167,13 +1167,14 @@ class SemanticSegmentor:
             # verbose mode, error by passing ?
             logging.info("Finish: %d", wsi_idx / len(imgs))
             logging.info("--Input: %s", str(img_path))
-            logging.info("--Ouput: %s", str(wsi_save_path))
+            logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
         except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+            wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
                 raise err
-            logging.error(err)
+            logging.error("Crashed on %s", wsi_save_path)
 
     def predict(
         self,

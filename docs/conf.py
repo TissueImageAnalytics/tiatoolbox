@@ -43,7 +43,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
-    "recommonmark",
+    "myst_parser",
     "nbsphinx",
     "sphinx_gallery.load_style",
 ]
@@ -123,6 +123,21 @@ html_theme = "alabaster"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    "sg_gallery.css",
+]
+
+
+def setup(app):
+    # https: // github.com / sphinx - gallery / sphinx - gallery / pull / 845  # issuecomment-876102461
+    # Force overwrite sg_gallery.css
+    app.connect(
+        "builder-inited", lambda app: app.config.html_static_path.append("_static")
+    )
+    app.add_css_file("sg_gallery.css")
 
 
 # -- Options for HTMLHelp output ---------------------------------------
