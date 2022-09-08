@@ -130,7 +130,7 @@ class MultiscaleConvBlock(nn.Module):
         dilatation_rates (list): Dilation rate for each convolution layer.
         activation (str): Name of the activation function to use.
     Returns:
-        torch.nn.Module: 
+        torch.nn.Module:
             A PyTorch model.
 
     """
