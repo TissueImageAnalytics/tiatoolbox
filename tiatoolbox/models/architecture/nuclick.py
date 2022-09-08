@@ -77,6 +77,7 @@ class ConvBnRelu(nn.Module):
             input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
+
         """
         return self.conv_bn_relu(input_tensor)
 
