@@ -458,7 +458,7 @@ def plot_graph(
         node_size (int):
             Radius of each node.
         edge_size (int):
-            Linewidth of the edge.
+            Line width of the edge.
 
     """
     if isinstance(node_colors, tuple):

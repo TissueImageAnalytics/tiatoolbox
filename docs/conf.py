@@ -50,7 +50,7 @@ extensions = [
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autodoc_inherit_docstrings = False
-autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+autoclass_content = "both"  # Add __init__ doc (i.e., params) to class summaries
 # Remove 'view source code' from top of page (for html, not python)
 html_show_sourcelink = False
 # If no docstring, inherit from base class
@@ -149,20 +149,7 @@ htmlhelp_basename = "tiatoolboxdoc"
 
 # -- Options for LaTeX output ------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-}
+latex_elements = {}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass
@@ -179,11 +166,11 @@ latex_documents = [
 man_pages = [(master_doc, "tiatoolbox", "TIA Toolbox Documentation", [author], 1)]
 
 
-# -- Options for Texinfo output ----------------------------------------
+# -- Options for Tex info output ----------------------------------------
 
 latex_engine = "xelatex"
 
-# Grouping the document tree into Texinfo files. List of tuples
+# Grouping the document tree into Tex info files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
@@ -213,7 +200,7 @@ intersphinx_mapping = {
     "Sphinx": ("https://www.sphinx-doc.org/en/stable/", None),
 }
 
-# create latex preample so that we can build arbitrary nested depth
+# create latex preamble so that we can build arbitrary nested depth
 fh = open("latex_preamble.tex", "r+")
 PREAMBLE = fh.read()
 fh.close()
