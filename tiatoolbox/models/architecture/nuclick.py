@@ -288,6 +288,7 @@ class NuClick(ModelABC):
     Examples:
         >>> # instantiate a NuClick model for interactive nucleus segmentation.
         >>> NuClick(num_input_channels = 5, num_output_channels = 1)
+
     """
 
     def __init__(self, num_input_channels, num_output_channels):
