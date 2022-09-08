@@ -1,7 +1,6 @@
 """Models package for the models implemented in tiatoolbox."""
 from tiatoolbox.models import (
     architecture,
-    backbone,
     classification,
     controller,
     dataset,
