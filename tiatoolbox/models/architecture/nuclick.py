@@ -38,6 +38,7 @@ class ConvBnRelu(nn.Module):
     Returns:
         model (torch.nn.Module): a pytorch model.
 
+
     """
 
     def __init__(
