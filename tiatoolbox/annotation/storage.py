@@ -1,7 +1,7 @@
 """Storage of annotations.
 
 This module contains a collection of classes for handling storage of
-annotations in memory in addition to serialisation/deserialization to/from
+annotations in memory in addition to serialization/deserialization to/from
 disk.
 
 Definitions
