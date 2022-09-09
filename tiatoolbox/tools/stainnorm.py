@@ -281,12 +281,13 @@ class ReinhardNormalizer:
                 Input image.
 
         Returns:
-            chan1 (float):
-                L.
-            chan2 (float):
-                A.
-            chan3 (float):
-                B.
+            tuple:
+                - :py:obj:`float`:
+                    L channel in LAB colour space.
+                - :py:obj:`float`:
+                    A channel in LAB colour space.
+                - :py:obj:`float`:
+                    B channel in LAB colour space.
 
         """
         img = img.astype("uint8")  # ensure input image is uint8
@@ -300,7 +301,7 @@ class ReinhardNormalizer:
 
     @staticmethod
     def merge_back(chan1, chan2, chan3):
-        """Take seperate LAB channels and merge back to give RGB uint8.
+        """Take separate LAB channels and merge back to give RGB uint8.
 
         Args:
             chan1 (float):

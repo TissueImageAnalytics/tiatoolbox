@@ -163,7 +163,7 @@ class TilePyramidGenerator:
             y (int):
                 The tile index in the y direction.
             pad_mode (str):
-                Method for padding when reading areas outside of the
+                Method for padding when reading areas outside the
                 input image. Default is constant (0 padding). This is
                 passed to `read_func` which defaults to
                 :func:`safe_padded_read`. See :func:`safe_padded_read`
@@ -413,9 +413,9 @@ class ZoomifyGenerator(TilePyramidGenerator):
         grid_size = np.array(self.tile_grid_size(level))
         if any(grid_size <= [x, y]):
             raise IndexError
-        cumsum = sum(np.prod(self.tile_grid_size(n)) for n in range(level))
+        cumulative_sum = sum(np.prod(self.tile_grid_size(n)) for n in range(level))
         index_in_level = np.ravel_multi_index((y, x), self.tile_grid_size(level)[::-1])
-        tile_index = cumsum + index_in_level
+        tile_index = cumulative_sum + index_in_level
         return tile_index // 256  # the tile group
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
