@@ -438,6 +438,26 @@ def test_annotation_to_geojson():
     assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
 
 
+def test_remove_area_column(fill_store):
+    """Test removing an area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+
+
+def test_add_area_column(fill_store):
+    """Test adding an area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    store.add_area_column()
+    assert "area" in store._get_table_columns()
+
+    # check the polygons are properly sorted by area
+    polys = store.query((0, 0, 100, 100))
+    areas = [poly.geometry.area for poly in polys.values()]
+    assert areas == sorted(areas, reverse=True)
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 

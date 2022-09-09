@@ -928,6 +928,9 @@ def add_from_dat(
 
     def make_valid_poly(poly, relative_to=None):
         """Helper function to make a valid polygon."""
+        if relative_to is not None:
+            # transform coords to be relative to given pt.
+            poly = translate(poly, -relative_to[0], -relative_to[1])
         if poly.is_valid:
             return poly
         poly = poly.buffer(0.01)
@@ -936,9 +939,6 @@ def add_from_dat(
         poly = make_valid(poly)
         if len(list(poly)) > 1:
             return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
-        if relative_to is not None:
-            # transform coords to be relative to given pt.
-            return translate(poly, -relative_to[0], -relative_to[1])
         return poly
 
     def anns_from_hoverdict(data, props, typedict):
@@ -951,22 +951,22 @@ def add_from_dat(
                 make_valid_poly(
                     feature2geometry(
                         {
-                            "type": data[id].get("geom_type", "Polygon"),
+                            "type": data[ann_id].get("geom_type", "Polygon"),
                             "coordinates": scale_factor
-                            * np.array([data[id]["contour"]]),
+                            * np.array([data[ann_id]["contour"]]),
                         }
                     ),
                     relative_to,
                 ),
                 {
-                    prop: typedict[data[id][prop]]
+                    prop: typedict[data[ann_id][prop]]
                     if prop == "type" and typedict is not None
-                    else data[id][prop]
+                    else data[ann_id][prop]
                     for prop in props[3:]
-                    if prop in data[id]
+                    if prop in data[ann_id]
                 },
             )
-            for id in data
+            for ann_id in data
         ]
 
     try:
@@ -988,18 +988,18 @@ def add_from_dat(
                 # use type dictionary if available else auto-generate
                 if typedict is None:
                     typedict_sub = {
-                        data[subcat][id][
+                        data[subcat][ann_id][
                             "type"
-                        ]: f"{subcat[:3]}: {data[subcat][id]['type']}"
-                        for id in data[subcat]
+                        ]: f"{subcat[:3]}: {data[subcat][ann_id]['type']}"
+                        for ann_id in data[subcat]
                     }
                 else:
                     typedict_sub = typedict[subcat]
             else:
                 props.append("type")
                 typedict_sub = None
-                for id in data[subcat]:
-                    data[subcat][id]["type"] = subcat
+                for ann_id in data[subcat]:
+                    data[subcat][ann_id]["type"] = subcat
             anns.extend(anns_from_hoverdict(data[subcat], props, typedict_sub))
     else:
         anns = anns_from_hoverdict(data, props, typedict)

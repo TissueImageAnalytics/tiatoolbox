@@ -1563,6 +1563,13 @@ class SQLiteStore(AnnotationStore):
             properties = json.loads(properties)
             return fn(properties)
 
+        def get_area(wkb_bytes: bytes, cx: int, cy: int) -> float:
+            """Function to get the area of a geometry."""
+            return self._unpack_geometry(
+                wkb_bytes, cx, cy, self.metadata["compression"]
+            ).area
+            # return wkb.loads(wkb_bytes).area
+
         # Register custom functions
         def register_custom_function(
             name: str, nargs: int, fn: Callable, deterministic: bool = False
@@ -1598,8 +1605,10 @@ class SQLiteStore(AnnotationStore):
         register_custom_function("REGEXP", 3, py_regexp)
         register_custom_function("LISTSUM", 1, json_list_sum)
         register_custom_function("CONTAINS", 1, json_contains)
+        register_custom_function("get_area", 3, get_area)
 
         if exists:
+            self.table_columns = self._get_table_columns()
             return
 
         # Create tables for geometry and RTree index
@@ -1627,6 +1636,7 @@ class SQLiteStore(AnnotationStore):
             """
         )
         self.con.commit()
+        self.table_columns = self._get_table_columns()
 
     def serialise_geometry(  # skipcq: PYL-W0221
         self, geometry: Geometry
@@ -1962,8 +1972,10 @@ class SQLiteStore(AnnotationStore):
             query_geometry, query_parameters, geometry_predicate, columns, where
         )
 
-        if min_area is not None:
+        if min_area is not None and "area" in self.table_columns:
             query_string += f"\nAND area > {min_area}"
+        elif min_area is not None:
+            raise ValueError("Cannot use `min_area` without an area column.")
 
         if unique:
             query_string = query_string.replace("SELECT", "SELECT DISTINCT")
@@ -1978,8 +1990,9 @@ class SQLiteStore(AnnotationStore):
                     "Query is not using an index. "
                     "Consider adding an index to improve performance."
                 )
-
-        query_string += "\nORDER BY area DESC"
+        # if area column exists, sort annotations by area
+        if "area" in self.table_columns:
+            query_string += "\nORDER BY area DESC"
         cur.execute(query_string, query_parameters)
         return cur
 
@@ -2535,6 +2548,41 @@ class SQLiteStore(AnnotationStore):
             self.patch(key, annotation.geometry, annotation.properties)
             return
         self.append(annotation, key)
+
+    def _get_table_columns(self):
+        # get columns from table
+        cur = self.con.execute("PRAGMA table_info(annotations)")
+        return [row[1] for row in cur.fetchall()]
+
+    def add_area_column(self, mk_index=True):
+        cur = self.con.cursor()
+        cur.execute(
+            """
+            ALTER TABLE annotations
+            ADD COLUMN area INTEGER NOT NULL DEFAULT 0
+            """
+        )
+        cur.execute(
+            """
+            UPDATE annotations
+            SET area = get_area(geometry, cx, cy)
+            """
+        )
+        if mk_index:
+            self.create_index("area", '"area"')
+        self.con.commit()
+        self.table_columns.append("area")
+
+    def remove_area_column(self):
+        cur = self.con.cursor()
+        cur.execute(
+            """
+            ALTER TABLE annotations
+            DROP COLUMN area
+            """
+        )
+        self.con.commit()
+        self.table_columns.remove("area")
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame()

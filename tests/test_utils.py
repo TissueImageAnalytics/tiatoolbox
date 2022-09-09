@@ -6,6 +6,7 @@ import random
 import shutil
 from pathlib import Path
 from typing import Tuple
+import joblib
 
 import cv2
 import numpy as np
@@ -17,6 +18,7 @@ from tiatoolbox import rcParam, utils
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.transforms import locsize2bounds
+from tests.test_annotation_stores import cell_polygon
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
@@ -83,7 +85,7 @@ def test_imresize():
 
     # test for not supporting dtype
     img = np.random.randint(0, 256, (4, 4, 16))
-    with pytest.raises(ValueError, match=r".*float128.*"):
+    with pytest.raises(AttributeError, match=r".*float128.*"):
         resized_img = utils.transforms.imresize(
             img.astype(np.float128),
             scale_factor=4,
@@ -1366,3 +1368,63 @@ def test_detect_gpu():
 
     """
     _ = utils.env_detection.has_gpu()
+
+
+def test_from_dat(tmp_path):
+    """Test generating an annotation store from a .dat file."""
+    polys = [cell_polygon((0, 0)), cell_polygon((100, 100))]
+    data = {
+        f"ann{i}": {
+            "box": polys[i].bounds,
+            "centroid": [polys[i].centroid.x, polys[i].centroid.y],
+            "contour": np.array(polys[i].exterior.coords).tolist(),
+            "type": i,
+        }
+        for i in range(len(polys))
+    }
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    assert len(store) == 2
+
+
+def test_from_dat_typedict(tmp_path):
+    """Test generating an annotation store from a .dat file with a typedict."""
+    polys = [cell_polygon((0, 0)), cell_polygon((100, 100))]
+    data = {
+        f"ann{i}": {
+            "box": polys[i].bounds,
+            "centroid": [polys[i].centroid.x, polys[i].centroid.y],
+            "contour": np.array(polys[i].exterior.coords).tolist(),
+            "type": i,
+        }
+        for i in range(len(polys))
+    }
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(
+        tmp_path / "test.dat", typedict={0: "cell0", 1: "cell1"}
+    )
+    result = store.query(where="props['type'] == 'cell1'")
+    assert len(result) == 1
+
+
+def test_from_dat_transformed(tmp_path):
+    """Test generating an annotation store from a .dat file with a transform."""
+    polys = [cell_polygon((0, 0)), cell_polygon((100, 100))]
+    data = {
+        f"ann{i}": {
+            "box": polys[i].bounds,
+            "centroid": [polys[i].centroid.x, polys[i].centroid.y],
+            "contour": np.array(polys[i].exterior.coords).tolist(),
+            "type": i,
+        }
+        for i in range(len(polys))
+    }
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(
+        tmp_path / "test.dat", scale_factor=2, relative_to=(50, 50)
+    )
+    result = store.query(where="props['type'] == 1")
+    # check centroid is at 150,150
+    poly = next(iter(result.values()))
+    assert np.rint(poly.geometry.centroid.x) == 150
+    assert np.rint(poly.geometry.centroid.y) == 150
