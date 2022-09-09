@@ -7,7 +7,7 @@ import numpy as np
 import PIL
 import torchvision.transforms as transforms
 
-from tiatoolbox.models.dataset import abc
+from tiatoolbox.models.dataset import dataset_abc
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -64,7 +64,7 @@ def predefined_preproc_func(dataset_name):
     return _TorchPreprocCaller(preprocs)
 
 
-class PatchDataset(abc.PatchDatasetABC):
+class PatchDataset(dataset_abc.PatchDatasetABC):
     """Defines a simple patch dataset, which inherits from the
       `torch.utils.data.Dataset` class.
 
@@ -80,7 +80,7 @@ class PatchDataset(abc.PatchDatasetABC):
             Preprocessing function used to transform the input data.
 
     Examples:
-        >>> # an user defined preproc func and expected behavior
+        >>> # A user defined preproc func and expected behavior
         >>> preproc_func = lambda img: img/2  # reduce intensity by half
         >>> transformed_img = preproc_func(img)
         >>> # create a dataset to get patches preprocessed by the above function
@@ -122,7 +122,7 @@ class PatchDataset(abc.PatchDatasetABC):
         return data
 
 
-class WSIPatchDataset(abc.PatchDatasetABC):
+class WSIPatchDataset(dataset_abc.PatchDatasetABC):
     """Defines a WSI-level patch dataset.
 
     Attributes:

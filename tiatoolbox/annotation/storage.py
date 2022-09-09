@@ -1,7 +1,7 @@
 """Storage of annotations.
 
 This module contains a collection of classes for handling storage of
-annotations in memory in addition to serialisation/deserialisation to/from
+annotations in memory in addition to serialization/deserialization to/from
 disk.
 
 Definitions
@@ -196,6 +196,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Returns:
             True if the coordinates form a rectangle, False otherwise.
+
         """
         # Only allow one extra coordinate for looping back to the first point
         if (len(args) == 1 and not np.array_equal(args[:1], [a])) or len(args) > 1:
@@ -220,6 +221,7 @@ class AnnotationStore(ABC, MutableMapping):
         Returns:
             Path:
                 The normalised path.
+
         """
         if not isinstance(
             connection,
@@ -258,13 +260,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Apply a binary geometry predicate.
 
         For more information on geomeric predicates see the `Shapely
-        documentation`.
-
-        .. _BP:
-            | https://shapely.readthedocs.io/en/stable/
-            | manual.html#binary-predicates
-
-        __ BP_
+        documentation <https://shapely.readthedocs.io/en/stable/
+        manual.html#binary-predicates>`_.
 
         Args:
             name(str):
@@ -330,19 +327,19 @@ class AnnotationStore(ABC, MutableMapping):
 
     @staticmethod
     @lru_cache(32)
-    def deserialise_geometry(data: Union[str, bytes]) -> Geometry:
-        """Deserialise a geometry from a string or bytes.
+    def deserialize_geometry(data: Union[str, bytes]) -> Geometry:
+        """Deserialize a geometry from a string or bytes.
 
-        This default implementation will deserialise bytes as well-known
+        This default implementation will deserialize bytes as well-known
         binary (WKB) and strings as well-known text (WKT). This can be
-        overridden to deserialise other formats such as geoJSON etc.
+        overridden to deserialize other formats such as geoJSON etc.
 
         Args:
             data(bytes or str):
                 The serialised representation of a Shapely geometry.
 
         Returns:
-            Geometry: The deserialised Shapely geometry.
+            Geometry: The deserialized Shapely geometry.
 
         """
         return wkt.loads(data) if isinstance(data, str) else wkb.loads(data)
@@ -594,7 +591,7 @@ class AnnotationStore(ABC, MutableMapping):
                 The predicate to evaluate on properties. The predicate may be a
                 string, pickled bytes, or a callable (e.g. a function).
             properties (dict):
-                A dictionary of JSON serialisable
+                A dictionary of JSON serializable
                 properties on which to evaluate the predicate.
 
         Returns:
@@ -630,8 +627,8 @@ class AnnotationStore(ABC, MutableMapping):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
@@ -656,18 +653,13 @@ class AnnotationStore(ABC, MutableMapping):
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
-                intersects. For more information see the `shapely
-                documentation on binary predicates`__.
+                "intersects". For more information see the `shapely
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
 
             Returns:
                 list:
                     A list of Annotation objects.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
 
         """
         if all(x is None for x in (geometry, where)):
@@ -728,8 +720,8 @@ class AnnotationStore(ABC, MutableMapping):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
@@ -754,18 +746,13 @@ class AnnotationStore(ABC, MutableMapping):
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
-                intersects. For more information see the `shapely
-                documentation on binary predicates`__.
+                "intersects". For more information see the `shapely
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
 
             Returns:
                 list:
                     A list of keys for each Annotation.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
 
         """
         if geometry_predicate not in self._geometry_predicate_names:
@@ -817,8 +804,8 @@ class AnnotationStore(ABC, MutableMapping):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
@@ -832,7 +819,7 @@ class AnnotationStore(ABC, MutableMapping):
                 filtering in python after or during the query.
                 Additionally, the same string can be used across
                 different backends (e.g. the previous example predicate
-                string is valid for both `DictionaryStore `and a
+                string is valid for both `DictionaryStore` and a
                 `SQliteStore`). On the other hand it has many more
                 limitations. It is important to note that untrusted user
                 input should never be accepted to this argument as
@@ -842,12 +829,6 @@ class AnnotationStore(ABC, MutableMapping):
             Returns:
                 list:
                     A list of bounding boxes for each Annotation.
-
-            .. _BP:
-                | https://shapely.readthedocs.io/en/stable/
-                | manual.html#binary-predicates
-
-            __ BP_
 
             Example:
                 >>> from tiatoolbox.annotation.storage import AnnotationStore
@@ -1284,18 +1265,20 @@ class AnnotationStore(ABC, MutableMapping):
         """Serialise to New Line Delimited JSON.
 
         Each line contains a JSON object with the following format:
-        ```json
-        {
-            "key": "...",
-            "geometry": {
-                "type": "...",
-                "coordinates": [...]
-            },
-            "properties": {
-                "...": "..."
-            }
-        }
-        ```
+
+        .. code-block:: json
+
+           {
+                "key": "...",
+                "geometry": {
+                    "type": "...",
+                    "coordinates": [...]
+                },
+                "properties": {
+                    "...": "..."
+                }
+           }
+
         That is a geoJSON object with an additional key field.
 
         For more information on the NDJSON format see:
@@ -1332,18 +1315,20 @@ class AnnotationStore(ABC, MutableMapping):
         """Load annotations from NDJSON.
 
         Expects each line to be a JSON object with the following format:
-        ```json
-        {
-            "key": "...",
-            "geometry": {
-                "type": "...",
-                "coordinates": [...]
-            },
-            "properties": {
-                "...": "..."
-            }
-        }
-        ```
+
+        .. code-block:: json
+
+           {
+                "key": "...",
+                "geometry": {
+                    "type": "...",
+                    "coordinates": [...]
+                },
+                "properties": {
+                    "...": "..."
+                }
+           }
+
         That is a geoJSON object with an additional key field. If this key
         field is missing, then a new UUID4 key will be generated for this
         annotation.
@@ -1558,7 +1543,7 @@ class SQLiteStore(AnnotationStore):
             return self._geometry_predicate(name, a, b)
 
         def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
-            """Function to load and execute pickle bytes with a properties dict."""
+            """Function to load and execute pickle bytes with a "properties" dict."""
             fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
             properties = json.loads(properties)
             return fn(properties)
@@ -1696,10 +1681,10 @@ class SQLiteStore(AnnotationStore):
             return wkt.loads(data)
         return wkb.loads(data)
 
-    def deserialise_geometry(  # skipcq: PYL-W0221
+    def deserialize_geometry(  # skipcq: PYL-W0221
         self, data: Union[str, bytes]
     ) -> Geometry:
-        """Deserialise a geometry from a string or bytes.
+        """Deserialize a geometry from a string or bytes.
 
         Args:
             data(bytes or str):
@@ -1707,7 +1692,7 @@ class SQLiteStore(AnnotationStore):
 
         Returns:
             Geometry:
-                The deserialised Shapely geometry.
+                The deserialized Shapely geometry.
 
         """
         if self.metadata["compression"] == "zlib":
@@ -1764,7 +1749,7 @@ class SQLiteStore(AnnotationStore):
         self.con.close()
 
     def _make_token(self, annotation: Annotation, key: Optional[str]) -> Dict:
-        """Create token data dict for tokenised SQL transaction."""
+        """Create token data dict for tokenized SQL transaction."""
         key = key or str(uuid.uuid4())
         geometry = annotation.geometry
         if geometry.geom_type == "Point":
@@ -2091,7 +2076,7 @@ class SQLiteStore(AnnotationStore):
             select (Union[str, bytes, Callable]):
                 A callable to select the properties to return.
             where (CallablePredicate):
-                A callable predicate to filter the rows with. May be
+                A callable predicate to filter the rows with. Maybe
                 None for no-op (no filtering).
             cur (sqlite3.Cursor):
                 The cursor for the query.
@@ -2271,7 +2256,8 @@ class SQLiteStore(AnnotationStore):
                 the store. Only annotations for which this binary
                 predicate is true will be returned. Defaults to
                 "intersects". For more information see the `shapely
-                documentation on binary predicates`__.
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
             unique (bool):
                 If True, only unique values for each selected property
                 will be returned as a list of sets. If False, all values
@@ -2653,7 +2639,7 @@ class SQLiteStore(AnnotationStore):
             where:
                 The predicate used to create the index.
             analyze (bool):
-                Whether to run the ANALYZE command after creating the
+                Whether to run the "ANALYZE" command after creating the
                 index.
 
         """

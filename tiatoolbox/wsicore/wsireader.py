@@ -463,18 +463,22 @@ class WSIReader:
 
         Returns:
             tuple:
-                Parameters for reading the requested region
+                Parameters for reading the requested region.
+
                 - :py:obj:`int` - Optimal read level.
+
                 - :py:obj:`tuple` - Read location in level coordinates.
                     - :py:obj:`int` - X location.
                     - :py:obj:`int` - Y location.
+
                 - :py:obj:`tuple` - Region size in level coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
-                - :py:obj:`tuple` - Scaling to apply after level read to
-                  achieve desired output resolution.
+
+                - :py:obj:`tuple` - Scaling to apply after level read.
                     - :py:obj:`float` - X scale factor.
                     - :py:obj:`float` - Y scale factor.
+
                 - :py:obj:`tuple` - Region size in baseline coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.

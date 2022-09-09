@@ -333,7 +333,7 @@ def test_sqlite_store_no_compression(sample_triangle):
     """Test that using no compression raises no error."""
     store = SQLiteStore(compression=None)
     serialised = store.serialise_geometry(sample_triangle)
-    deserialised = store.deserialise_geometry(serialised)
+    deserialised = store.deserialize_geometry(serialised)
     assert deserialised.wkb == sample_triangle.wkb
 
 
@@ -341,14 +341,14 @@ def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(Exception, match="Unsupported"):
-        _ = store.deserialise_geometry(bytes())
+        _ = store.deserialize_geometry(bytes())
 
 
 def test_sqlite_store_wkt_deserialisation(sample_triangle):
     """Test WKT deserialisation."""
     store = SQLiteStore(compression=None)
     wkt = sample_triangle.wkt
-    geom = store.deserialise_geometry(wkt)
+    geom = store.deserialize_geometry(wkt)
     assert geom == sample_triangle
 
 
@@ -359,7 +359,7 @@ def test_sqlite_store_wkb_deserialisation(sample_triangle):
 
     """
     wkb = sample_triangle.wkb
-    geom = AnnotationStore.deserialise_geometry(wkb)
+    geom = AnnotationStore.deserialize_geometry(wkb)
     assert geom == sample_triangle
 
 
@@ -1092,7 +1092,7 @@ class TestStore:
         for _, annotation in store.items():
             geometry = annotation.geometry
             serialised = store.serialise_geometry(geometry)
-            deserialised = store.deserialise_geometry(serialised)
+            deserialised = store.deserialize_geometry(serialised)
             if isinstance(serialised, str):
                 assert geometry.wkt == deserialised.wkt
             else:

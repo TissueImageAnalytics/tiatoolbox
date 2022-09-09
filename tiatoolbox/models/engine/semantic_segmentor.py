@@ -19,8 +19,8 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
-from tiatoolbox.models.abc import IOConfigABC
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
@@ -31,7 +31,7 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
     """Estimates canvas parameters.
 
     Args:
-        sample_prediction (:class:`numpy.ndarry`):
+        sample_prediction (:class:`numpy.ndarray`):
             Patch prediction assuming to be of shape HWC.
         canvas_shape (:class:`numpy.ndarray`):
             HW of the supposed assembled image.
@@ -125,7 +125,7 @@ class IOSegmentorConfig(IOConfigABC):
         ... )
 
     Examples:
-        >>> # Defining io for a network having 3 input and 2 output at the
+        >>> # Defining io for a network having 3 input and 2 output
         >>> # at the same resolution, the output is then merged at a
         >>> # different resolution.
         >>> ioconfig = IOSegmentorConfig(
@@ -199,7 +199,7 @@ class IOSegmentorConfig(IOConfigABC):
     def scale_to_highest(resolutions: List[dict], units: str):
         """Get the scaling factor from input resolutions.
 
-        This will convert resolutions to scaling factor with repsect to
+        This will convert resolutions to a scaling factor with respect to
         the highest resolution found in the input resolutions list.
 
         Args:
@@ -379,7 +379,7 @@ class WSIStreamDataset(torch_data.Dataset):
 
         # this is in XY and at requested resolution (not baseline)
         bounds = self.mp_shared_space.patch_inputs[idx]
-        bounds = bounds.numpy()  # expected to be torch.Tensor
+        bounds = bounds.numpy()  # expected to be a torch.Tensor
 
         # be the same as bounds br-tl, unless bounds are of float
         patch_data_ = []
@@ -454,7 +454,7 @@ class SemanticSegmentor:
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
             of weights via the `pretrained_weights` argument. Argument
-            is case insensitive.
+            is case-insensitive.
         pretrained_weights (str):
             Path to the weight of the corresponding `pretrained_model`.
         batch_size (int):
@@ -474,9 +474,10 @@ class SemanticSegmentor:
             provided.
 
     Attributes:
-        process_prediction_per_batch (bool): A flag to denote whether post
-            processing for inference output is applied after each batch or
-            after finishing an entire tile or WSI.
+        process_prediction_per_batch (bool):
+            A flag to denote whether post-processing for inference
+            output is applied after each batch or after finishing an entire
+            tile or WSI.
 
     Examples:
         >>> # Sample output of a network
@@ -517,7 +518,7 @@ class SemanticSegmentor:
             self.model = model
 
         # local variables for flagging mode within class,
-        # subclass should overwritten to alter some specific behavior
+        # subclass should have overwritten to alter some specific behavior
         self.process_prediction_per_batch = True
 
         # for runtime, such as after wrapping with nn.DataParallel
@@ -556,7 +557,7 @@ class SemanticSegmentor:
         Args:
             image_shape (tuple(int), :class:`numpy.ndarray`):
                 This argument specifies the shape of mother image (the
-                image we want to) extract patches from) at requested
+                image we want to extract patches from) at requested
                 `resolution` and `units` and it is expected to be in
                 (width, height) format.
             ioconfig (:class:`IOSegmentorConfig`):
@@ -566,14 +567,16 @@ class SemanticSegmentor:
 
         Returns:
             tuple:
-                Tuple containing:
+                List of patch inputs and outputs
+
                 - :py:obj:`list` - patch_inputs:
                     A list of corrdinates in `[start_x, start_y, end_x,
                     end_y]` format indicating the read location of the
                     patch in the mother image.
+
                 - :py:obj:`list` - patch_outputs:
                     A list of corrdinates in `[start_x, start_y, end_x,
-                    end_y]` format indicating the write location of the
+                    end_y]` format indicating to write location of the
                     patch in the mother image.
 
         Examples:
@@ -641,7 +644,7 @@ class SemanticSegmentor:
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
             bounds.dtype, np.integer
         ):
-            raise ValueError("`coordinatess` should be ndarray of integer type.")
+            raise ValueError("`coordinates` should be ndarray of integer type.")
 
         mask_real_shape = mask_reader.img.shape[:2]
         mask_resolution_shape = mask_reader.slide_dimensions(
@@ -764,7 +767,7 @@ class SemanticSegmentor:
                 sample_datas,
                 self._on_gpu,
             )
-            # repackage so that its a N list, each contains
+            # repackage so that it's an N list, each contains
             # L x etc. output
             sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
             sample_outputs = list(zip(*sample_outputs))
@@ -832,7 +835,7 @@ class SemanticSegmentor:
             # assume resolution index to be in the same order as L
             merged_resolution = ioconfig.highest_input_resolution
             merged_locations = locations
-            # ! location is w.r.t highest resolution, hence still need conversion
+            # ! location is w.r.t the highest resolution, hence still need conversion
             if ioconfig.save_resolution is not None:
                 merged_resolution = ioconfig.save_resolution
                 output_shape = wsi_reader.slide_dimensions(**output_resolution)
@@ -873,10 +876,10 @@ class SemanticSegmentor:
             canvas_shape (:class:`numpy.ndarray`):
                 HW of the supposed assembled image.
             predictions (list):
-                List of nd.array, each item is a patch prediction,
+                List of :class:`np.ndarray`, each item is a patch prediction,
                 assuming to be of shape HWC.
             locations (list):
-                List of nd.array, each item is the location of the patch
+                List of :class:`np.ndarray`, each item is the location of the patch
                 at the same index within `predictions`. The location is
                 in the to be assembled canvas and of the form
                 `(top_left_x, top_left_y, bottom_right_x,
@@ -1153,7 +1156,7 @@ class SemanticSegmentor:
 
             # Do not use dict with file name as key, because it can be
             # overwritten. It may be user intention to provide files with a
-            # same name multiple times (may be they have different root path)
+            # same name multiple times (maybe they have different root path)
             self._outputs.append([str(img_path), str(wsi_save_path)])
 
             # ? will this corrupt old version if control + c midway?
@@ -1167,7 +1170,7 @@ class SemanticSegmentor:
             # verbose mode, error by passing ?
             logging.info("Finish: %d", wsi_idx / len(imgs))
             logging.info("--Input: %s", str(img_path))
-            logging.info("--Ouput: %s", str(wsi_save_path))
+            logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
         except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
@@ -1335,7 +1338,7 @@ class SemanticSegmentor:
 class DeepFeatureExtractor(SemanticSegmentor):
     """Generic CNN Feature Extractor.
 
-    A engine for using any CNN model as a feature extractor. Note, if
+    AN engine for using any CNN model as a feature extractor. Note, if
     `model` is supplied in the arguments, it will ignore the
     `pretrained_model` and `pretrained_weights` arguments.
 
@@ -1349,7 +1352,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             processing the data. By default, the corresponding
             pretrained weights will also be downloaded. However, you can
             override with your own set of weights via the
-            `pretrained_weights` argument. Argument is case insensitive.
+            `pretrained_weights` argument. Argument is case-insensitive.
             Refer to
             :class:`tiatoolbox.models.architecture.vanilla.CNNBackbone`
             for list of supported pretrained models.
@@ -1382,7 +1385,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         >>> list(output.keys())
         [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
         >>> # If a network have 2 output heads, for 'A/wsi.svs',
-        >>> # there will be 3 output and they are respectively stored at
+        >>> # there will be 3 outputs, and they are respectively stored at
         >>> # 'output/0.position.npy'   # will always be output
         >>> # 'output/0.features.0.npy' # output of head 0
         >>> # 'output/0.features.1.npy' # output of head 1
@@ -1554,8 +1557,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
             >>> list(output.keys())
             [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
             >>> # If a network have 2 output heads, for 'A/wsi.svs',
-            >>> # there will be 3 output and they are respectively stored at
-            >>> # 'output/0.position.npy'   # will alwayw be output
+            >>> # there will be 3 outputs, and they are respectively stored at
+            >>> # 'output/0.position.npy'   # will always be output
             >>> # 'output/0.features.0.npy' # output of head 0
             >>> # 'output/0.features.1.npy' # output of head 1
             >>> # Each file will contain a same number of items, and the item at each

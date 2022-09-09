@@ -13,14 +13,14 @@ import pandas as pd
 import requests
 import torch
 import yaml
-from skimage import exposure
-from shapely.geometry import MultiPolygon
 from shapely.affinity import translate
+from shapely.geometry import MultiPolygon
 from shapely.geometry import shape as feature2geometry
 from shapely.validation import make_valid
+from skimage import exposure
 
-from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
@@ -787,13 +787,13 @@ def get_bounding_box(img):
     """
     rows = np.any(img, axis=1)
     cols = np.any(img, axis=0)
-    rmin, rmax = np.where(rows)[0][[0, -1]]
-    cmin, cmax = np.where(cols)[0][[0, -1]]
+    r_min, r_max = np.where(rows)[0][[0, -1]]
+    c_min, cmax = np.where(cols)[0][[0, -1]]
     # due to python indexing, need to add 1 to max
     # else accessing will be 1px in the box, not out
-    rmax += 1
+    r_max += 1
     cmax += 1
-    return np.array([cmin, rmin, cmax, rmax])
+    return np.array([c_min, r_min, cmax, r_max])
 
 
 def string_to_tuple(in_str):
@@ -817,7 +817,7 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
     Args:
         ppu (int):
             Pixels per unit.
-        units (Uniont[str, int]):
+        units (Union[str, int]):
             Units of pixels per unit. Valid options are "cm",
             "centimeter", "inch", 2 (inches), 3(cm).
 

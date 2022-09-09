@@ -12,12 +12,12 @@ from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
 )
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import get_bounding_box
 
@@ -537,12 +537,12 @@ class HoVerNet(ModelABC):
         obj_size = math.ceil(10 * (scale_factor**2))
         # Get resolution specific filters etc.
 
-        sobelh = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
-        sobelv = cv2.Sobel(v_dir, cv2.CV_64F, 0, 1, ksize=ksize)
+        sobel_h = cv2.Sobel(h_dir, cv2.CV_64F, 1, 0, ksize=ksize)
+        sobel_v = cv2.Sobel(v_dir, cv2.CV_64F, 0, 1, ksize=ksize)
 
-        sobelh = 1 - (
+        sobel_h = 1 - (
             cv2.normalize(
-                sobelh,
+                sobel_h,
                 None,
                 alpha=0,
                 beta=1,
@@ -550,9 +550,9 @@ class HoVerNet(ModelABC):
                 dtype=cv2.CV_32F,
             )
         )
-        sobelv = 1 - (
+        sobel_v = 1 - (
             cv2.normalize(
-                sobelv,
+                sobel_v,
                 None,
                 alpha=0,
                 beta=1,
@@ -561,7 +561,7 @@ class HoVerNet(ModelABC):
             )
         )
 
-        overall = np.maximum(sobelh, sobelv)
+        overall = np.maximum(sobel_h, sobel_v)
         overall = overall - (1 - blb)
         overall[overall < 0] = 0
 
@@ -664,9 +664,9 @@ class HoVerNet(ModelABC):
         if pred_type is not None:
             # * Get class of each instance id, stored at index id-1
             for inst_id in list(inst_info_dict.keys()):
-                cmin, rmin, cmax, rmax = inst_info_dict[inst_id]["box"]
-                inst_map_crop = pred_inst[rmin:rmax, cmin:cmax]
-                inst_type_crop = pred_type[rmin:rmax, cmin:cmax]
+                c_min, r_min, c_max, r_max = inst_info_dict[inst_id]["box"]
+                inst_map_crop = pred_inst[r_min:r_max, c_min:c_max]
+                inst_type_crop = pred_type[r_min:r_max, c_min:c_max]
 
                 inst_map_crop = inst_map_crop == inst_id
                 inst_type = inst_type_crop[inst_map_crop]
@@ -692,7 +692,7 @@ class HoVerNet(ModelABC):
     @staticmethod
     # skipcq: PYL-W0221  # noqa: E800
     def postproc(raw_maps: List[np.ndarray]):
-        """Post processing script for image tiles.
+        """Post-processing script for image tiles.
 
         Args:
             raw_maps (list(:class:`numpy.ndarray`)):
