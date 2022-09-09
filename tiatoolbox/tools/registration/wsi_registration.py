@@ -203,10 +203,12 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     def __init__(self):
         super().__init__()
-        output_layers_id = ["16", "23", "30"]
-        output_layers_key = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features = OrderedDict.fromkeys(output_layers_key, None)
-        self.pretrained = torchvision.models.vgg16(pretrained=True).features
+        output_layers_id: list[str] = ["16", "23", "30"]
+        output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
+        self.features: OrderedDict = OrderedDict.fromkeys(output_layers_key, None)
+        self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
+            pretrained=True
+        ).features
         self.f_hooks = []
 
         for i, l in enumerate(output_layers_id):
@@ -352,11 +354,10 @@ class DFBRegister:
                 A feature distance array.
 
         Returns:
-            :class:`numpy.ndarray`:
-                An array of matching points.
-            :class:`numpy.ndarray`:
-                An array of floating numbers representing quality
-                of each matching points.
+            tuple:
+                - np.ndarray - An array of matching points.
+                - np.ndarray - An array of floating numbers representing
+                               quality of each matching points.
 
         """
         seq = np.arange(feature_dist.shape[0])
