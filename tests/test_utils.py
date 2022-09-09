@@ -85,7 +85,7 @@ def test_imresize():
 
     # test for not supporting dtype
     img = np.random.randint(0, 256, (4, 4, 16))
-    with pytest.raises(AttributeError, match=r".*float128.*"):
+    with pytest.raises((AttributeError, ValueError), match=r".*float128.*"):
         resized_img = utils.transforms.imresize(
             img.astype(np.float128),
             scale_factor=4,
@@ -1370,18 +1370,22 @@ def test_detect_gpu():
     _ = utils.env_detection.has_gpu()
 
 
-def test_from_dat(tmp_path):
-    """Test generating an annotation store from a .dat file."""
-    polys = [cell_polygon((0, 0)), cell_polygon((100, 100))]
-    data = {
+def make_simple_dat(centroids=((0, 0), (100, 100))):
+    polys = [cell_polygon(cent) for cent in centroids]
+    return {
         f"ann{i}": {
-            "box": polys[i].bounds,
-            "centroid": [polys[i].centroid.x, polys[i].centroid.y],
-            "contour": np.array(polys[i].exterior.coords).tolist(),
+            "box": poly.bounds,
+            "centroid": [poly.centroid.x, poly.centroid.y],
+            "contour": np.array(poly.exterior.coords).tolist(),
             "type": i,
         }
-        for i in range(len(polys))
+        for i, poly in enumerate(polys)
     }
+
+
+def test_from_dat(tmp_path):
+    """Test generating an annotation store from a .dat file."""
+    data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(tmp_path / "test.dat")
     assert len(store) == 2
@@ -1389,16 +1393,7 @@ def test_from_dat(tmp_path):
 
 def test_from_dat_typedict(tmp_path):
     """Test generating an annotation store from a .dat file with a typedict."""
-    polys = [cell_polygon((0, 0)), cell_polygon((100, 100))]
-    data = {
-        f"ann{i}": {
-            "box": polys[i].bounds,
-            "centroid": [polys[i].centroid.x, polys[i].centroid.y],
-            "contour": np.array(polys[i].exterior.coords).tolist(),
-            "type": i,
-        }
-        for i in range(len(polys))
-    }
+    data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
         tmp_path / "test.dat", typedict={0: "cell0", 1: "cell1"}
@@ -1409,16 +1404,7 @@ def test_from_dat_typedict(tmp_path):
 
 def test_from_dat_transformed(tmp_path):
     """Test generating an annotation store from a .dat file with a transform."""
-    polys = [cell_polygon((0, 0)), cell_polygon((100, 100))]
-    data = {
-        f"ann{i}": {
-            "box": polys[i].bounds,
-            "centroid": [polys[i].centroid.x, polys[i].centroid.y],
-            "contour": np.array(polys[i].exterior.coords).tolist(),
-            "type": i,
-        }
-        for i in range(len(polys))
-    }
+    data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
         tmp_path / "test.dat", scale_factor=2, relative_to=(50, 50)
@@ -1428,3 +1414,16 @@ def test_from_dat_transformed(tmp_path):
     poly = next(iter(result.values()))
     assert np.rint(poly.geometry.centroid.x) == 150
     assert np.rint(poly.geometry.centroid.y) == 150
+
+
+def test_from_multihead_dat(tmp_path):
+    """Test generating an annotation store from a .dat file with multiple heads."""
+    head_a = make_simple_dat()
+    head_b = make_simple_dat([(200, 200), (300, 300)])
+    data = {"A": head_a, "B": head_b}
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    assert len(store) == 4
+
+    result = store.query(where="props['type'] == 'A: 1'")
+    assert len(result) == 1

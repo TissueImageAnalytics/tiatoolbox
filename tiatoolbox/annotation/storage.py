@@ -1553,7 +1553,6 @@ class SQLiteStore(AnnotationStore):
             return self._unpack_geometry(
                 wkb_bytes, cx, cy, self.metadata["compression"]
             ).area
-            # return wkb.loads(wkb_bytes).area
 
         # Register custom functions
         def register_custom_function(
@@ -2090,6 +2089,17 @@ class SQLiteStore(AnnotationStore):
                 property dictionaries is returned.
 
         """
+
+        def add_props_to_result(result, properties):
+            # Get the selected values
+            selection = select(properties)
+            # Wrap scalar values into a tuple
+            if not isinstance(selection, tuple):
+                selection = (selection,)
+            # Add the properties to the appropriate set
+            for i, value in enumerate(selection):
+                result[i].add(value)
+
         # Load a pickled select function
         if isinstance(select, bytes):
             select = pickle.loads(select)  # skipcq: BAN-B301
@@ -2102,16 +2112,9 @@ class SQLiteStore(AnnotationStore):
                 # Apply where filter and skip if False
                 if where and not where(properties):
                     continue
-                # Get the selected values
-                selection = select(properties)
-                # Wrap scalar values into a tuple
-                if not isinstance(selection, tuple):
-                    selection = (selection,)
-                # Add the properties to the appropriate set
-                for i, value in enumerate(selection):
-                    result[i].add(value)
+                add_props_to_result(result, properties)
             return list(result.values())
-        if where is None:
+        if not where:
             return {
                 key: select(json.loads(properties))
                 for key, properties in cur.fetchall()

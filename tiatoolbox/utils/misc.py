@@ -896,6 +896,67 @@ def store_from_dat(
     return store
 
 
+def make_valid_poly(poly, relative_to=None):
+    """Helper function to make a valid polygon."""
+    if relative_to is not None:
+        # transform coords to be relative to given pt.
+        poly = translate(poly, -relative_to[0], -relative_to[1])
+    if poly.is_valid:
+        return poly
+    poly = poly.buffer(0.01)
+    if poly.is_valid:
+        return poly
+    poly = make_valid(poly)
+    if len(list(poly)) > 1:
+        return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
+    return poly
+
+
+def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):
+    """Helper function to create list of Annotation objects from a
+    hovernet-style dict of segmentations, mapping types using typedict
+    if provided.
+    """
+    return [
+        Annotation(
+            make_valid_poly(
+                feature2geometry(
+                    {
+                        "type": ann.get("geom_type", "Polygon"),
+                        "coordinates": scale_factor * np.array([ann["contour"]]),
+                    }
+                ),
+                relative_to,
+            ),
+            {
+                prop: typedict[ann[prop]]
+                if prop == "type" and typedict is not None
+                else ann[prop]
+                for prop in props[3:]
+                if prop in ann
+            },
+        )
+        for ann in data.values()
+    ]
+
+
+def make_default_dict(data, subcat):
+    """Helper function to create a default typedict if none is provided.
+
+    The unique types in the data are given a prefix to differentiate
+    types from different heads of a multi-head model.
+    For example, types 1,2, etc in the 'Gland' head will become
+    'Gla: 1', 'Gla: 2', etc.
+    """
+    types = {
+        data[subcat][ann_id]["type"]
+        for ann_id in data[subcat]
+        if "type" in data[subcat][ann_id]
+    }
+    num_chars = np.minimum(3, len(subcat))
+    return {t: f"{subcat[:num_chars]}: {t}" for t in types}
+
+
 def add_from_dat(
     store,
     fp: Union[IO, str],
@@ -926,49 +987,6 @@ def add_from_dat(
             The x and y coordinates to use as the origin for the annotations.
     """
 
-    def make_valid_poly(poly, relative_to=None):
-        """Helper function to make a valid polygon."""
-        if relative_to is not None:
-            # transform coords to be relative to given pt.
-            poly = translate(poly, -relative_to[0], -relative_to[1])
-        if poly.is_valid:
-            return poly
-        poly = poly.buffer(0.01)
-        if poly.is_valid:
-            return poly
-        poly = make_valid(poly)
-        if len(list(poly)) > 1:
-            return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
-        return poly
-
-    def anns_from_hoverdict(data, props, typedict):
-        """Helper function to create list of Annotation objects from a
-        hovernet-style dict of segmentations, mapping types using typedict
-        if provided.
-        """
-        return [
-            Annotation(
-                make_valid_poly(
-                    feature2geometry(
-                        {
-                            "type": data[ann_id].get("geom_type", "Polygon"),
-                            "coordinates": scale_factor
-                            * np.array([data[ann_id]["contour"]]),
-                        }
-                    ),
-                    relative_to,
-                ),
-                {
-                    prop: typedict[data[ann_id][prop]]
-                    if prop == "type" and typedict is not None
-                    else data[ann_id][prop]
-                    for prop in props[3:]
-                    if prop in data[ann_id]
-                },
-            )
-            for ann_id in data
-        ]
-
     data = joblib.load(fp)
     props = list(data[list(data.keys())[0]].keys())
     if "contour" not in props:
@@ -977,28 +995,22 @@ def add_from_dat(
         for subcat in data:
             if subcat == "resolution":
                 continue
-            props = list(data[subcat][list(data[subcat].keys())[0]].keys())
+            props = next(iter(data[subcat].values()))
+            props = list(props.keys())
             if "contour" not in props:
                 continue
-            if "type" in props:
-                # use type dictionary if available else auto-generate
-                if typedict is None:
-                    typedict_sub = {
-                        data[subcat][ann_id][
-                            "type"
-                        ]: f"{subcat[:3]}: {data[subcat][ann_id]['type']}"
-                        for ann_id in data[subcat]
-                    }
-                else:
-                    typedict_sub = typedict[subcat]
+            # use type dictionary if available else auto-generate
+            if typedict is None:
+                typedict_sub = make_default_dict(data, subcat)
             else:
-                props.append("type")
-                typedict_sub = None
-                for ann_id in data[subcat]:
-                    data[subcat][ann_id]["type"] = subcat
-            anns.extend(anns_from_hoverdict(data[subcat], props, typedict_sub))
+                typedict_sub = typedict[subcat]
+            anns.extend(
+                anns_from_hoverdict(
+                    data[subcat], props, typedict_sub, relative_to, scale_factor
+                )
+            )
     else:
-        anns = anns_from_hoverdict(data, props, typedict)
+        anns = anns_from_hoverdict(data, props, typedict, relative_to, scale_factor)
 
     print(f"added {len(anns)} annotations")
     store.append_many(anns)
