@@ -13,14 +13,14 @@ import pandas as pd
 import requests
 import torch
 import yaml
-from skimage import exposure
-from shapely.geometry import MultiPolygon
 from shapely.affinity import translate
+from shapely.geometry import MultiPolygon
 from shapely.geometry import shape as feature2geometry
 from shapely.validation import make_valid
+from skimage import exposure
 
-from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.utils.exceptions import FileNotSupported
 
 
 def split_path_name_ext(full_path):
