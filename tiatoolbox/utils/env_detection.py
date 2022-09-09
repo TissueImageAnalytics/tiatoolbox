@@ -1,11 +1,13 @@
 """Detection methods for the current environment.
 
 This module contains methods for detecting aspects of the current
-environment. Some things which this module can detect are:
- - Whether the current environment is interactive.
- - Whether the current environment is a conda environment.
- - Whether the current environment is running on Travis, Kaggle, or
-   Colab.
+environment.
+
+Some things which this module can detect are:
+    - Whether the current environment is interactive.
+    - Whether the current environment is a conda environment.
+    - Whether the current environment is running on Travis, Kaggle, or
+      Colab.
 
 Note that these detections may not be correct 100% of the time but are
 as accurate as can be reasonably be expected depending on what is being
@@ -316,7 +318,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
             versions = [version_to_tuple(match) for match in matches]
     if platform.system() == "Darwin" and shutil.which("port") and not versions:
         # Using macports to check for pixman. Also checks the platform
-        # is Darwin, as macports is only available on MacOS.
+        # is Darwin, as macports is only available on macOS.
         using = "port"
         port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
         port_pixman = subprocess.check_output(
