@@ -273,8 +273,9 @@ class DFBRFeatureExtractor(torch.nn.Module):
 class DFBRegister:
     r"""Deep Feature based Registration (DFBR).
 
-    This class implements a CNN feature based registration,
-    as proposed in the paper [1].
+    This class implements a CNN feature based method for
+    registering a pair of histology images, as presented
+    in the paper [1]. This work is adapted from [2].
 
     References:
         [1] Awan, R., Raza, S.E.A., Lotz, J. and Rajpoot, N.M., 2022.
@@ -282,6 +283,9 @@ class DFBRegister:
         <https://arxiv.org/pdf/2202.09971.pdf>`_. arXiv preprint
         arXiv:2202.09971.
 
+        [2] Yang, Z., Dan, T. and Yang, Y., 2018. Multi-temporal remote
+        sensing image registration using deep convolutional features.
+        Ieee Access, 6, pp.38544-38555.
 
     """
 
