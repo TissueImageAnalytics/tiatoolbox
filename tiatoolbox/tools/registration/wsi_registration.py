@@ -1,4 +1,3 @@
-import math
 import warnings
 from collections import OrderedDict
 from typing import Tuple
@@ -466,7 +465,7 @@ class DFBRegister:
         feature_dist1 = self.compute_feature_distances(fixed_feat1, moving_feat1, 1)
         feature_dist2 = self.compute_feature_distances(fixed_feat2, moving_feat2, 2)
         feature_dist3 = self.compute_feature_distances(fixed_feat3, moving_feat3, 4)
-        feature_dist = math.sqrt(2) * feature_dist1 + feature_dist2 + feature_dist3
+        feature_dist = np.sqrt(2) * feature_dist1 + feature_dist2 + feature_dist3
 
         seq = np.array(
             [[i, j] for i in range(ref_feature_size) for j in range(ref_feature_size)],
