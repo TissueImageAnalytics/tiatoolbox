@@ -8,7 +8,7 @@ Welcome to TIA Toolbox's documentation!
 .. toctree::
    :maxdepth: 2
 
-   Readme <readme.md>
+   Readme <readme.rst>
    Installation <installation.rst>
 
 .. toctree::
