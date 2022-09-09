@@ -238,7 +238,7 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         The clustering uses a distance kernel, ranging between 0 and 1,
         which is a weighted product of spatial distance (distance
-        between coordinates in `points`, e.g. WSI location and
+        between coordinates in `points`, e.g. WSI location) and
         feature-space distance (e.g. ResNet features).
 
         Points which are spatially further apart than
@@ -287,8 +287,10 @@ class SlideGraphConstructor:  # noqa: PIE798
                 A dictionary defining a graph for serialisation (e.g.
                 JSON or msgpack) or converting into a torch-geometric
                 Data object where each node is the centroid (mean) of
-                the features in a cluster. The dictionary has the
-                following entries:
+                the features in a cluster.
+
+                The dictionary has the following entries:
+
                 - :class:`numpy.ndarray` - x:
                     Features of each node (mean of features in a
                     cluster). Required for torch-geometric Data.
@@ -331,25 +333,25 @@ class SlideGraphConstructor:  # noqa: PIE798
         # Find the similarity between pairs of patches
         index = 0
         for i in range(len(points) - 1):
-            # Only consider neighbours which are inside of the radius
+            # Only consider neighbours which are inside the radius
             # (neighbour_search_radius).
-            neighbour_distances_singlepoint = neighbour_distances_ckd[i][
+            neighbour_distances_single_point = neighbour_distances_ckd[i][
                 neighbour_distances_ckd[i] < neighbour_search_radius
             ]
-            neighbour_indexes_singlepoint = neighbour_indexes_ckd[i][
-                : len(neighbour_distances_singlepoint)
+            neighbour_indexes_single_point = neighbour_indexes_ckd[i][
+                : len(neighbour_distances_single_point)
             ]
 
             # Called f in the paper
             neighbour_feature_similarities = np.exp(
                 -lambda_f
                 * np.linalg.norm(
-                    features[i] - features[neighbour_indexes_singlepoint], axis=1
+                    features[i] - features[neighbour_indexes_single_point], axis=1
                 )
             )
             # Called d in paper
             neighbour_distance_similarities = np.exp(
-                -lambda_d * neighbour_distances_singlepoint
+                -lambda_d * neighbour_distances_single_point
             )
             # 1 - product of similarities (1 - fd)
             # (1 = most un-similar 0 = most similar)
@@ -361,7 +363,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             i_vs_all_similarities = np.ones(len(points))
             # Set the neighbours similarity to calculated values (similarity/fd)
             i_vs_all_similarities[
-                neighbour_indexes_singlepoint
+                neighbour_indexes_single_point
             ] = neighbour_similarities
             i_vs_all_similarities = i_vs_all_similarities[i + 1 :]
             condensed_distance_matrix[
@@ -418,22 +420,22 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         Args:
             graph (dict):
-                The graph to visualise as a dictionary with the following
-                entries:
+                The graph to visualise as a dictionary with the following entries:
+
                 - :class:`numpy.ndarray` - x:
-                    Features of each node (mean of features in a
-                    cluster). Required
+                      Features of each node (mean of features
+                      in a cluster). Required
                 - :class:`numpy.ndarray` - edge_index:
-                    Edge index matrix defining connectivity. Required
+                      Edge index matrix defining connectivity. Required
                 - :class:`numpy.ndarray` - coordinates:
-                    Coordinates of each node within the WSI (mean of
-                    point in a cluster). Required
+                      Coordinates of each node within the WSI (mean of point in a
+                      cluster). Required
             color (np.array or str or callable):
                 Colours of the nodes in the plot. If it is a callable,
                 it should take a graph as input and return a numpy array
                 of matplotlib colours. If `None` then a default function
                 is used (UMAP on `graph["x"]`).
-            node_size (int or np.array or callable):
+            node_size (int or np.ndarray or callable):
                 Size of the nodes in the plot. If it is a function then
                 it is called with the graph as an argument.
             edge_color (str):

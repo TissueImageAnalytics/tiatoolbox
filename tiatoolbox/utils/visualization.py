@@ -385,7 +385,7 @@ def overlay_prediction_contours(
         inst_colours (tuple, np.ndarray):
             A colour to assign for all instances, or a list of colours
             to assigned for each instance in `inst_dict`. By default,
-            all instances will have RGB colour `(255, 255, 0).
+            all instances will have RGB colour `(255, 255, 0)`.
         line_thickness:
             Line thickness of contours.
 
@@ -394,7 +394,7 @@ def overlay_prediction_contours(
             The overlaid image.
 
     """
-    overlay = np.copy((canvas))
+    overlay = np.copy(canvas)
 
     if inst_colours is None:
         inst_colours = random_colors(len(inst_dict))
@@ -458,7 +458,7 @@ def plot_graph(
         node_size (int):
             Radius of each node.
         edge_size (int):
-            Linewidth of the edge.
+            Line width of the edge.
 
     """
     if isinstance(node_colors, tuple):
@@ -490,31 +490,32 @@ class AnnotationRenderer:
     from an AnnotationStore to a tile.
 
     Args:
-    score_prop (str):
-        A key that is present in the properties of annotations
-        to be rendered that will be used to color rendered annotations.
-    mapper (str, Dict or List):
-        A dictionary or colormap used to color annotations according
-        to the value of properties[score_prop] of an annotation.  Should
-        be either a matplotlib colormap, a string which is a name of a
-        matplotlib colormap, a dict of possible property {value: color}
-        pairs, or a list of categorical property values (in which case a
-        dict will be created with a random color generated for each
-        category)
-    where (str or Callable):
-        a callable or predicate which will be passed on to
-        AnnotationStore.query() when fetching annotations to be rendered
-        (see AnnotationStore for more details)
-    score_fn (Callable):
-        an optional callable which will be called on the value of
-        the property that will be used to generate the color before giving
-        it to colormap. Use it for example to normalise property
-        values if they do not fall into the range [0,1], as matplotlib
-        colormap expects values in this range. i.e roughly speaking
-        annotation_color=mapper(score_fn(ann.properties[score_prop]))
-    max_scale (int):
-        downsample level above which Polygon geometries on crowded
-        tiles will be rendered as a bounding box instead
+        score_prop (str):
+            A key that is present in the properties of annotations
+            to be rendered that will be used to color rendered annotations.
+        mapper (str, Dict or List):
+            A dictionary or colormap used to color annotations according
+            to the value of properties[score_prop] of an annotation.  Should
+            be either a matplotlib colormap, a string which is a name of a
+            matplotlib colormap, a dict of possible property {value: color}
+            pairs, or a list of categorical property values (in which case a
+            dict will be created with a random color generated for each
+            category).
+        where (str or Callable):
+            a callable or predicate which will be passed on to
+            AnnotationStore.query() when fetching annotations to be rendered
+            (see :class:`tiatoolbox.annotation.storage.AnnotationStore`
+            for more details).
+        score_fn (Callable):
+            an optional callable which will be called on the value of
+            the property that will be used to generate the color before giving
+            it to colormap. Use it for example to normalise property
+            values if they do not fall into the range [0,1], as matplotlib
+            colormap expects values in this range. i.e., roughly speaking
+            annotation_color=mapper(score_fn(ann.properties[score_prop])).
+        max_scale (int):
+            downsample level above which Polygon geometries on crowded
+            tiles will be rendered as a bounding box instead.
 
     """
 
@@ -581,7 +582,7 @@ class AnnotationRenderer:
                 warnings.warn(
                     "score_prop not found in properties. Using default color."
                 )
-        return (0, 255, 0, 255)  # default color if no score_prop given
+        return 0, 255, 0, 255  # default color if no score_prop given
 
     def render_poly(
         self,
@@ -671,7 +672,7 @@ class AnnotationRenderer:
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
-            annontation (Annotation):
+            annotation (Annotation):
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.

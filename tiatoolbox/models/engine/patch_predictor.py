@@ -361,7 +361,7 @@ class PatchPredictor:
                     output = postproc_func(output)
                 else:
                     output = np.argmax(output, axis=-1)
-                # to make sure background is 0 while class will be 1..N
+                # to make sure background is 0 while class will be 1...N
                 output[denominator > 0] += 1
         return output
 
@@ -470,7 +470,7 @@ class PatchPredictor:
             and must be positive.
         stride_shape (tuple):
             Stride using during tile and WSI processing. Stride is
-            at requested read resolution, not with respect to to
+            at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
         resolution (float):
@@ -792,7 +792,7 @@ class PatchPredictor:
                 and must be positive.
             stride_shape (tuple):
                 Stride using during tile and WSI processing. Stride is
-                at requested read resolution, not with respect to to
+                at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
             resolution (float):
@@ -819,13 +819,15 @@ class PatchPredictor:
                 image tiles or whole-slide images are provided as input,
                 or save_output is True, then results are saved to
                 `save_dir` and a dictionary indicating save location for
-                each input is returned. The dict has following format:
-                    - img_path: path of the input image.
-                        - raw: path to save location for raw prediction,
-                          saved in .json.
-                        - merged: path to .npy contain merged
-                          predictions if
-                        `merge_predictions` is `True`.
+                each input is returned.
+
+                The dict has the following format:
+
+                - img_path: path of the input image.
+                - raw: path to save location for raw prediction,
+                  saved in .json.
+                - merged: path to .npy contain merged
+                  predictions if `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']

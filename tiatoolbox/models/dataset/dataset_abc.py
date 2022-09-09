@@ -9,19 +9,7 @@ from tiatoolbox.utils.misc import imread
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
-    """Defines abstract base class for patch dataset.
-
-    Attributes:
-        preproc_func:
-            Preprocessing function used to transform the input data. If
-            supplied, then `torch.Compose` will be used on the input
-            `preproc`. `preproc` is a list of torchvision or custom transforms for
-            preprocessing the image. The transforms will be applied in
-            the order that they are given in the list. For more
-            information, use the following link:
-            https://pytorch.org/vision/stable/transforms.html.
-
-    """
+    """Defines abstract base class for patch dataset."""
 
     def __init__(
         self,
@@ -63,9 +51,9 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         if mode == "patch":
             self.data_is_npy_alike = False
             is_all_paths = all(isinstance(v, (pathlib.Path, str)) for v in self.inputs)
-            is_all_npys = all(isinstance(v, np.ndarray) for v in self.inputs)
+            is_all_npy = all(isinstance(v, np.ndarray) for v in self.inputs)
 
-            if not (is_all_paths or is_all_npys or isinstance(self.inputs, np.ndarray)):
+            if not (is_all_paths or is_all_npy or isinstance(self.inputs, np.ndarray)):
                 raise ValueError(
                     "Input must be either a list/array of images "
                     "or a list of valid image paths."
@@ -84,7 +72,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                 shapes = [self.load_img(v).shape for v in self.inputs]
                 self.data_is_npy_alike = False
 
-            if is_all_npys:
+            if is_all_npy:
                 shapes = [v.shape for v in self.inputs]
                 self.data_is_npy_alike = True
 

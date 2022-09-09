@@ -3,7 +3,6 @@
 import pathlib
 import tempfile
 import zipfile
-from importlib.resources import path
 from typing import Optional, Union
 from urllib.parse import urlparse
 
@@ -95,7 +94,7 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
 
     Example:
-        >>> # Get the path to a sample target image for performaing
+        >>> # Get the path to a sample target image for performing
         >>> # stain normalization.
         >>> from tiatoolbox.data import stain_norm_target
         >>> img = stainnorm_target()

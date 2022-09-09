@@ -1,14 +1,11 @@
 .. _pretrained-info-page:
 
-=================================
 Pretrained Neural Network Models
-=================================
+================================
 
-^^^^^^^^^^^^^^^^^^^^^^
 Patch Classification
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
---------------------
 Kather Patch Dataset
 --------------------
 
@@ -47,7 +44,6 @@ They share the same input output configuration defined below:
     - mobilenet_v3_small-kather100k
     - googlenet-kather100k
 
------------------------------
 Patch Camelyon (PCam) Dataset
 -----------------------------
 
@@ -86,14 +82,11 @@ They share the same input output configuration defined below:
     - mobilenet_v3_small-pcam
     - googlenet-pcam
 
-
-^^^^^^^^^^^^^^^^^^^^^^
 Semantic Segmentation
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
---------------------
 Tissue Masking
---------------------
+--------------
 
 The following models are trained using internal data of TIA Centre.
 They share the same input output configuration defined below:
@@ -121,10 +114,8 @@ They share the same input output configuration defined below:
 
     - fcn-tissue_mask
 
-
---------------------
 Breast Cancer
---------------------
+-------------
 
 The following models are trained using the `BCSS dataset <https://bcsegmentation.grand-challenge.org/>`_.
 They share the same input output configuration defined below:
@@ -152,14 +143,11 @@ They share the same input output configuration defined below:
 
     - fcn_resnet50_unet-bcss
 
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Nucleus Instance Segmentation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
---------------------
 PanNuke Dataset
---------------------
+---------------
 
 We provide the following models trained using the `PanNuke dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_, which uses the following
 input output configuration:
@@ -190,10 +178,8 @@ input output configuration:
 
     - hovernet_fast-pannuke
 
-
---------------------
 MoNuSAC Dataset
---------------------
+---------------
 
 We provide the following models trained using the `MoNuSAC dataset <https://monusac.grand-challenge.org/>`_, which uses the following
 input output configuration:
@@ -224,10 +210,8 @@ input output configuration:
 
     - hovernet_fast-monusac
 
-
---------------------
 CoNSeP Dataset
---------------------
+--------------
 
 We provide the following models trained using the `CoNSeP dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_, which uses the following
 input output configuration:
@@ -259,10 +243,8 @@ input output configuration:
     - hovernet_original-consep
     - micronet_hovernet-consep
 
-
---------------------
 Kumar Dataset
---------------------
+-------------
 
 We provide the following models trained using the `Kumar dataset <https://monuseg.grand-challenge.org/>`_, which uses the following
 input output configuration:
@@ -293,12 +275,9 @@ input output configuration:
 
     - hovernet_original_kumar
 
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Multi-Task Segmentation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
-----------------------------------------
 Oral Epithelial Dysplasia (OED) Dataset
 ---------------------------------------
 

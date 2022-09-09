@@ -168,10 +168,11 @@ def match_histograms(
             The size of the ellipse-shaped footprint.
 
     Returns:
-        :class:`numpy.ndarray`:
-            A normalized grayscale image.
-        :class:`numpy.ndarray`:
-            A normalized grayscale image.
+        tuple:
+            - :class:`numpy.ndarray`:
+                A normalized grayscale image.
+            - :class:`numpy.ndarray`:
+                A normalized grayscale image.
 
     """
 
@@ -339,11 +340,12 @@ class DFBRegister:
                 A feature distance array.
 
         Returns:
-            :class:`numpy.ndarray`:
-                An array of matching points.
-            :class:`numpy.ndarray`:
-                An array of floating numbers representing quality
-                of each matching points.
+            tuple:
+                - :class:`numpy.ndarray`:
+                    An array of matching points.
+                - :class:`numpy.ndarray`:
+                    An array of floating numbers representing quality
+                    of each matching points.
 
         """
         seq = np.arange(feature_dist.shape[0])
@@ -419,13 +421,14 @@ class DFBRegister:
                 Number of required matching points.
 
         Returns:
-            :class:`numpy.ndarray`:
-                A matching 2D point set in the fixed image.
-            :class:`numpy.ndarray`:
-                A matching 2D point set in the moving image.
-            :class:`numpy.ndarray`:
-                A 1D array, where each element represents quality
-                of each matching point.
+            tuple:
+                - :class:`numpy.ndarray`:
+                    A matching 2D point set in the fixed image.
+                - :class:`numpy.ndarray`:
+                    A matching 2D point set in the moving image.
+                - :class:`numpy.ndarray`:
+                    A 1D array, where each element represents quality
+                    of each matching point.
 
         """
         if len(features) != 3:
