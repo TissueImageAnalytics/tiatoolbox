@@ -50,7 +50,8 @@ extensions = [
 ]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
-autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+autodoc_inherit_docstrings = False
+autoclass_content = "both"  # Add __init__ doc (i.e., params) to class summaries
 # Remove 'view source code' from top of page (for html, not python)
 html_show_sourcelink = False
 # If no docstring, inherit from base class
@@ -104,7 +105,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "requirements*.txt"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
@@ -1914,20 +1915,7 @@ htmlhelp_basename = "tiatoolboxdoc"
 
 # -- Options for LaTeX output ------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-}
+latex_elements = {}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass
@@ -1944,11 +1932,11 @@ latex_documents = [
 man_pages = [(master_doc, "tiatoolbox", "TIA Toolbox Documentation", [author], 1)]
 
 
-# -- Options for Texinfo output ----------------------------------------
+# -- Options for Tex info output ----------------------------------------
 
 latex_engine = "xelatex"
 
-# Grouping the document tree into Texinfo files. List of tuples
+# Grouping the document tree into Tex info files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
@@ -1968,12 +1956,17 @@ texinfo_documents = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
-    "matplotlib": ("https://matplotlib.org", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+    "click": ("https://click.palletsprojects.com/", None),
+    "h5py": ("https://docs.h5py.org/en/latest/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "Sphinx": ("https://www.sphinx-doc.org/en/stable/", None),
 }
 
-# create latex preample so that we can build arbitrary nested depth
+# create latex preamble so that we can build arbitrary nested depth
 fh = open("latex_preamble.tex", "r+")
 PREAMBLE = fh.read()
 fh.close()
