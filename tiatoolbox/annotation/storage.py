@@ -56,7 +56,6 @@ from typing import (
     Union,
 )
 
-import joblib
 import numpy as np
 import pandas as pd
 from shapely import speedups, wkb, wkt
@@ -1146,10 +1145,9 @@ class AnnotationStore(ABC, MutableMapping):
         cls,
         fp: Union[IO, str],
         scale_factor=1,
-        typedict=None,
         relative_to=None,
     ) -> "AnnotationStore":
-        """Load annotations from a geoJSON file.
+        """Create a new database with annotations loaded from a geoJSON file.
         Args:
             fp (Union[IO, str, Path]):
                 The file path or handle to load from.
@@ -1157,12 +1155,6 @@ class AnnotationStore(ABC, MutableMapping):
                 The scale factor to use when loading the annotations. All coordinates
                 will be multiplied by this factor to allow import of annotations saved
                 at non-baseline resolution.
-            typedict (Dict[str, str]):
-                A dictionary mapping annotation types to annotation keys. Annotations
-                with a type that is a key in the dictionary, will have their type
-                replaced by the corresponding value. Useful for providing descriptive
-                names to non-descriptive types,
-                eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
 
@@ -1172,51 +1164,16 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         store = cls()
-        store.add_from(fp, scale_factor, typedict=typedict, relative_to=relative_to)
-        return store
-
-    @classmethod
-    def from_dat(
-        cls,
-        fp: Union[IO, str],
-        scale_factor=1,
-        typedict=None,
-        relative_to=None,
-    ) -> "AnnotationStore":
-        """Load annotations from a hovernet-style .dat file.
-        Args:
-            fp (Union[IO, str, Path]):
-                The file path or handle to load from.
-            scale_factor (float):
-                The scale factor to use when loading the annotations. All coordinates
-                will be multiplied by this factor to allow import of annotations saved
-                at non-baseline resolution.
-            typedict (Dict[str, str]):
-                A dictionary mapping annotation types to annotation keys. Annotations
-                with a type that is a key in the dictionary, will have their type
-                replaced by the corresponding value. Useful for providing descriptive
-                names to non-descriptive types,
-                eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
-            relative_to [float, float]:
-                The x and y coordinates to use as the origin for the annotations.
-
-        Returns:
-            AnnotationStore:
-                A new annotation store with the annotations loaded from the file.
-
-        """
-        store = cls()
-        store.add_from(fp, scale_factor, typedict=typedict, relative_to=relative_to)
+        store.add_from(fp, scale_factor, relative_to=relative_to)
         return store
 
     def add_from(
         self,
         fp: Union[IO, str],
         scale_factor=1,
-        typedict=None,
         relative_to=None,
     ) -> None:
-        """Add annotations from a .geojson or .dat file to an existing store. Make
+        """Add annotations from a .geojson file to an existing store. Make
         a best effort to create valid shapely geometries from provided contours.
 
         Args:
@@ -1226,23 +1183,9 @@ class AnnotationStore(ABC, MutableMapping):
                 The scale factor to use when loading the annotations. All coordinates
                 will be multiplied by this factor to allow import of annotations saved
                 at non-baseline resolution.
-            typedict (Dict[str, str]):
-                A dictionary mapping annotation types to annotation keys. Annotations
-                with a type that is a key in the dictionary, will have their type
-                replaced by the corresponding value. Useful for providing descriptive
-                names to non-descriptive types,
-                eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
-                For multi-head output, should be a dict of dicts, eg:
-                {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
-                    'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
         """
-        file_type = "geo"
-        if isinstance(fp, Path) and fp.suffix == ".dat":
-            file_type = "dat"
-        if isinstance(fp, IO) and Path(fp.name).suffix == ".dat":
-            file_type = "dat"
 
         def make_valid_poly(poly, relative_to=None):
             """Helper function to make a valid polygon."""
@@ -1259,105 +1202,36 @@ class AnnotationStore(ABC, MutableMapping):
                 return translate(poly, -relative_to[0], -relative_to[1])
             return poly
 
-        def anns_from_hoverdict(data, props, typedict):
-            """Helper function to create list of Annotation objects from a
-            hovernet-style dict of segmentations, mapping types using typedict
-            if provided.
-            """
-            return [
+        geojson = self._load_cases(
+            fp=fp,
+            string_fn=json.loads,
+            file_fn=json.load,
+        )
+
+        if scale_factor != 1:
+            anns = [
                 Annotation(
-                    make_valid_poly(
-                        feature2geometry(
-                            {
-                                "type": data[id].get("geom_type", "Polygon"),
-                                "coordinates": scale_factor
-                                * np.array([data[id]["contour"]]),
-                            }
-                        ),
-                        relative_to,
-                    ),
-                    {
-                        prop: typedict[data[id][prop]]
-                        if prop == "type" and typedict is not None
-                        else data[id][prop]
-                        for prop in props[3:]
-                        if prop in data[id]
-                    },
-                )
-                for id in data
-            ]
-
-        if isinstance(fp, str) or file_type == "geo":
-            geojson = self._load_cases(
-                fp=fp,
-                string_fn=json.loads,
-                file_fn=json.load,
-            )
-
-            if scale_factor != 1:
-                anns = [
-                    Annotation(
-                        scale(
-                            make_valid_poly(
-                                feature2geometry(feature["geometry"]), relative_to
-                            ),
-                            xfact=scale_factor,
-                            yfact=scale_factor,
-                            origin=(0, 0, 0),
-                        ),
-                        feature["properties"],
-                    )
-                    for feature in geojson["features"]
-                ]
-            else:
-                anns = [
-                    Annotation(
+                    scale(
                         make_valid_poly(
                             feature2geometry(feature["geometry"]), relative_to
                         ),
-                        feature["properties"],
-                    )
-                    for feature in geojson["features"]
-                ]
-
-        elif fp.suffix == ".dat":
-            # hovernet-style .dat file
-            try:
-                data = joblib.load(fp)
-            except KeyError:
-                with open(fp, "r") as f:
-                    data = json.load(f)
-            props = list(data[list(data.keys())[0]].keys())
-            if "contour" not in props:
-                # assume cerberus format with objects subdivided into categories
-                anns = []
-                for subcat in data:
-                    if subcat == "resolution":
-                        continue
-                    props = list(data[subcat][list(data[subcat].keys())[0]].keys())
-                    if "contour" not in props:
-                        continue
-                    if "type" in props:
-                        # use type dictionary if available else auto-generate
-                        if typedict is None:
-                            typedict_sub = {
-                                data[subcat][id][
-                                    "type"
-                                ]: f"{subcat[:3]}: {data[subcat][id]['type']}"
-                                for id in data[subcat]
-                            }
-                        else:
-                            typedict_sub = typedict[subcat]
-                    else:
-                        props.append("type")
-                        typedict_sub = None
-                        for id in data[subcat]:
-                            data[subcat][id]["type"] = subcat
-                    anns.extend(anns_from_hoverdict(data[subcat], props, typedict_sub))
-            else:
-                anns = anns_from_hoverdict(data, props, typedict)
+                        xfact=scale_factor,
+                        yfact=scale_factor,
+                        origin=(0, 0, 0),
+                    ),
+                    feature["properties"],
+                )
+                for feature in geojson["features"]
+            ]
         else:
-            raise ValueError("Invalid file type")
+            anns = [
+                Annotation(
+                    make_valid_poly(feature2geometry(feature["geometry"]), relative_to),
+                    feature["properties"],
+                )
+                for feature in geojson["features"]
+            ]
+
         print(f"added {len(anns)} annotations")
         self.append_many(anns)
 
@@ -1748,7 +1622,7 @@ class SQLiteStore(AnnotationStore):
                 cy INTEGER NOT NULL,     -- Y of centroid/representative point
                 geometry BLOB,           -- Detailed geometry
                 properties TEXT,         -- JSON properties
-                area FLOAT               -- Area (for ordering)
+                area INTEGER NOT NULL    -- Area (for ordering)
             )
             """
         )
@@ -1898,7 +1772,7 @@ class SQLiteStore(AnnotationStore):
             "max_y": geometry.bounds[3],
             "geom_type": geometry.geom_type,
             "properties": json.dumps(annotation.properties, separators=(",", ":")),
-            "area": geometry.area,
+            "area": int(geometry.area),
         }
 
     def append_many(
@@ -1917,7 +1791,6 @@ class SQLiteStore(AnnotationStore):
             result.append(key)
         if self.auto_commit:
             self.con.commit()
-        self._cached_query.cache_clear()
         return result
 
     def _append(self, key: str, annotation: Annotation, cur: sqlite3.Cursor) -> None:
@@ -1955,7 +1828,6 @@ class SQLiteStore(AnnotationStore):
                 """,
             token,
         )
-        self._cached_query.cache_clear()
 
     @staticmethod
     def _initialize_query_string_parameters(
@@ -2090,6 +1962,9 @@ class SQLiteStore(AnnotationStore):
             query_geometry, query_parameters, geometry_predicate, columns, where
         )
 
+        if min_area is not None:
+            query_string += f"\nAND area > {min_area}"
+
         if unique:
             query_string = query_string.replace("SELECT", "SELECT DISTINCT")
 
@@ -2103,8 +1978,6 @@ class SQLiteStore(AnnotationStore):
                     "Query is not using an index. "
                     "Consider adding an index to improve performance."
                 )
-        if min_area is not None:
-            query_string += f"\nAND area > {min_area}"
 
         query_string += "\nORDER BY area DESC"
         cur.execute(query_string, query_parameters)
@@ -2149,12 +2022,11 @@ class SQLiteStore(AnnotationStore):
             where=where,
             min_area=min_area,
         )
+        comp = self.metadata["compression"]
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(
-                        blob, cx, cy, self.metadata["compression"]
-                    ),
+                    geometry=self._unpack_geometry(blob, cx, cy, comp),
                     properties=json.loads(properties),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
@@ -2162,242 +2034,11 @@ class SQLiteStore(AnnotationStore):
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(
-                    blob, cx, cy, self.metadata["compression"]
-                ),
+                geometry=self._unpack_geometry(blob, cx, cy, comp),
                 properties=json.loads(properties),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
         }
-
-    @staticmethod
-    @lru_cache(maxsize=256)
-    def _cached_query(
-        rows: str,
-        geometry: Optional[Iterable] = None,
-        callable_rows: Optional[str] = None,
-        geometry_predicate="intersects",
-        con=None,
-        bbox=True,
-        compress_type=None,
-        min_area=None,
-    ) -> sqlite3.Cursor:
-        """Common query construction logic for `cached_query` and `cached_bquery`.
-
-        Similar to `_query` but can be cached. Does not support where.
-
-        Args:
-            rows(str):
-                The rows to select.
-            geometry(tuple or Geometry):
-                The geometry being queries against.
-            select_callable(str):
-                The rows to select when a callable is given to `where`.
-            callable_rows(str):
-                The binary predicate to use when comparing `geometry`
-                with each candidate shape.
-            con(sqlite3.Connection):
-                The connection object of the store.
-            bbox(bool):
-                Whether to return only box or whole geometry.
-            compress_type(str):
-                The compression type of the store.
-            min_area(float):
-                The minimum area of the geometry to return.
-
-        Returns:
-            sqlite3.Cursor:
-                A database cursor for the current query.
-
-        """
-        query_geometry = geometry
-        if callable_rows is None:
-            callable_rows = rows
-        cur = con.cursor()
-
-        # Normalise query geometry and determine if it is a rectangle
-        if isinstance(query_geometry, Iterable):
-            query_geometry = Polygon.from_bounds(*query_geometry)
-
-        if callable_rows is not None:
-            rows = callable_rows
-
-        # Initialise the query string and parameters
-        query_string = (
-            "SELECT "  # skipcq: BAN-B608
-            + rows  # skipcq: BAN-B608
-            + """
-         FROM annotations, rtree
-        WHERE annotations.id == rtree.id
-        """
-        )
-
-        query_parameters = {}
-
-        # There is query geometry, add a simple rtree bounds check to
-        # rapidly narrow candidates down.
-        if query_geometry is not None:
-            # Add rtree index checks to the query
-            query_string += """
-            AND max_x >= :min_x
-            AND min_x <= :max_x
-            AND max_y >= :min_y
-            AND min_y <= :max_y
-            """
-
-            # Find the bounds of the geometry for the rtree index
-            min_x, min_y, max_x, max_y = query_geometry.bounds
-
-            # Update query parameters
-            query_parameters.update(
-                {
-                    "min_x": min_x,
-                    "max_x": max_x,
-                    "min_y": min_y,
-                    "max_y": max_y,
-                    "geometry_predicate": geometry_predicate,
-                    "query_geometry": query_geometry.wkb,
-                }
-            )
-
-            if min_area is not None:
-                query_string += f"\nAND area > {min_area}"
-
-            # The query is a full intersection check, not a simple bounds
-            # check only.
-            if (
-                geometry_predicate is not None
-                and geometry_predicate != "bbox_intersects"
-            ):
-                query_string += (
-                    "\nAND geometry_predicate("
-                    ":geometry_predicate, :query_geometry, geometry, cx, cy"
-                    ") "
-                )
-                query_parameters["geometry_predicate"] = geometry_predicate
-                query_parameters["query_geometry"] = query_geometry.wkb
-
-        query_string += "\nORDER BY area DESC"
-        cur.execute(query_string, query_parameters)
-
-        if bbox:
-            return {
-                key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
-                for key, properties, *bounds in cur.fetchall()
-            }
-
-        return [
-            Annotation(
-                geometry=SQLiteStore._unpack_geometry(blob, cx, cy, compress_type),
-                properties=json.loads(properties),
-            )
-            for properties, cx, cy, blob in cur.fetchall()
-        ]
-
-    def cached_bquery(
-        self,
-        geometry: Optional[Tuple] = None,
-        where: Callable[[Dict[str, Any]], bool] = None,
-        min_area=None,
-    ) -> Dict[str, Annotation]:
-        """Query the store for annotations.
-
-        Similar to `bquery` but can be cached.
-
-        Args:
-            geometry (Geometry or Iterable):
-                Geometry to use when querying. This can be a bounds
-                (iterable of length 4) or a Shapely geometry (e.g.
-                Polygon).
-            where (Callable):
-                A statement which should evaluate to a boolean value.
-                Only annotations for which this predicate is true will
-                be returned. Defaults to None (assume always true).
-            min_area (float):
-                The minimum area of the geometry to return.
-
-            Returns:
-                Dict:
-                    A dict of Annotation objects.
-        """
-        if not isinstance(geometry, Iterable):
-            raise ValueError(
-                """geometry must be a bounding box tuple.
-            To query with an arbitrary geometry, please use bquery instead."""
-            )
-        if isinstance(where, (str, bytes)):
-            raise ValueError(
-                """`where` must be a callable. cached_bquery does not support string or
-            pickled `where`. To use these, please use bquery instead."""
-            )
-        data = self._cached_query(
-            rows="[key], properties, min_x, min_y, max_x, max_y",
-            geometry=geometry,
-            geometry_predicate="bbox_intersects",
-            callable_rows="[key], properties, min_x, min_y, max_x, max_y",
-            con=self.con,
-            bbox=True,
-            compress_type=self.metadata["compression"],
-            min_area=min_area,
-        )
-        if where is None:
-            return data
-        return {key: ann for key, ann in data.items() if where(ann.properties)}
-
-    def cached_query(
-        self,
-        geometry: Optional[Tuple] = None,
-        where: Callable[[Dict[str, Any]], bool] = None,
-        geometry_predicate: str = "intersects",
-        min_area=None,
-    ) -> List[Annotation]:
-        """Query the store for annotations.
-
-        Similar to `query` but can be cached.
-
-        Args:
-            geometry (Geometry or Iterable):
-                Geometry to use when querying. This can be a bounds
-                (iterable of length 4) or a Shapely geometry (e.g.
-                Polygon).
-            where (Callable):
-                A statement which should evaluate to a boolean value.
-                Only annotations for which this predicate is true will
-                be returned. Defaults to None (assume always true).
-            min_area (float):
-                The minimum area of the geometry to return.
-
-            Returns:
-                Dict:
-                    A dict of Annotation objects.
-        """
-        if geometry_predicate not in self._geometry_predicate_names:
-            raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
-            )
-        if isinstance(where, (str, bytes)):
-            raise ValueError(
-                """`where` must be a callable. cached_query does not support string or
-            pickled `where`. To use these, please use query instead."""
-            )
-        if geometry is not None and not isinstance(geometry, Iterable):
-            raise ValueError(
-                """geometry must be a bounding box tuple.
-            To query with an arbitrary geometry, please use query instead."""
-            )
-        data = self._cached_query(
-            rows="properties, cx, cy, geometry",
-            geometry=geometry,
-            geometry_predicate=geometry_predicate,
-            con=self.con,
-            bbox=False,
-            compress_type=self.metadata["compression"],
-            min_area=min_area,
-        )
-        if where is None:
-            return data
-        return [ann for ann in data if where(ann.properties)]
 
     def bquery(
         self,
@@ -2821,7 +2462,6 @@ class SQLiteStore(AnnotationStore):
                 )
         if self.auto_commit:
             self.con.commit()
-        self._cached_query.cache_clear()
 
     def _patch_geometry(
         self, key: str, geometry: Geometry, cur: sqlite3.Cursor
@@ -2866,7 +2506,6 @@ class SQLiteStore(AnnotationStore):
             """,
             query_parameters,
         )
-        self._cached_query.cache_clear()
 
     def remove_many(self, keys: Iterable[str]) -> None:
         cur = self.con.cursor()
@@ -2890,7 +2529,6 @@ class SQLiteStore(AnnotationStore):
             )
         if self.auto_commit:
             self.con.commit()
-        self._cached_query.cache_clear()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
         if key in self:
