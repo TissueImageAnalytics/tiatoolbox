@@ -500,6 +500,24 @@ def test_filter_coordinates():
             coordinate_units="mpp",
         )
 
+    # Test for put of range min_mask_ratio
+    with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
+        PatchExtractor.filter_coordinates_fast(
+            mask_reader,
+            bbox_list,
+            coordinate_resolution=1.0,
+            coordinate_units="mpp",
+            min_mask_ratio=-0.5,
+        )
+    with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
+        PatchExtractor.filter_coordinates_fast(
+            mask_reader,
+            bbox_list,
+            coordinate_resolution=1.0,
+            coordinate_units="mpp",
+            min_mask_ratio=1.1,
+        )
+
 
 def test_mask_based_patch_extractor_ndpi(sample_ndpi):
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""

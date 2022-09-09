@@ -45,7 +45,7 @@ def pair_coordinates(set_a, set_b, radius):
     # return, thus the unique pairing is ensured.
     indices_a, paired_indices_b = linear_sum_assignment(pair_distance)
 
-    # Extract the paired cost and remove instances outside of designated
+    # Extract the paired cost and remove instances outside designated
     # radius.
     pair_cost = pair_distance[indices_a, paired_indices_b]
 
