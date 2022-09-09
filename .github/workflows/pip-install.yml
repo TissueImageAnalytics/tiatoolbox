@@ -16,7 +16,7 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
     steps:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
@@ -27,6 +27,11 @@ jobs:
       run: |
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        python -m pip install --upgrade pip
+    - name: 🍎 Install OpenSlide & OpenJPEG
+      if: runner.os == 'macOS'
+      run: |
+        brew install openslide openjpeg
         python -m pip install --upgrade pip
     - name: 🪟 Install OpenJPEG
       if: runner.os == 'Windows'
