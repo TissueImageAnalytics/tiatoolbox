@@ -1,3 +1,4 @@
+import math
 import warnings
 from collections import OrderedDict
 from typing import Tuple
@@ -168,10 +169,10 @@ def match_histograms(
             The size of the ellipse-shaped footprint.
 
     Returns:
-        :class:`numpy.ndarray`:
-            A normalized grayscale image.
-        :class:`numpy.ndarray`:
-            A normalized grayscale image.
+        tuple:
+            A normalized pair of images for performing registration.
+            - np.ndarray - A normalized grayscale image.
+            - np.ndarray - A normalized grayscale image.
 
     """
 
@@ -215,7 +216,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
                 )
             )
 
-    def forward_hook(self, layer_name):
+    def forward_hook(self, layer_name: str) -> None:
         """Register a hook.
 
         Args:
@@ -227,13 +228,17 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         """
 
-        def hook(_0, _1, module_output):
-            """Forward hook.
+        def hook(
+            _module: torch.nn.MaxPool2d,
+            _module_input: tuple[torch.Tensor],
+            module_output: torch.Tensor,
+        ) -> None:
+            """Forward hook for feature extraction.
 
             Args:
-                _0:
+                _module:
                     Unused argument for the module.
-                _1:
+                _module_input:
                     Unused argument for the modules' input.
                 module_output (torch.Tensor):
                     Output (features) of the module.
@@ -247,7 +252,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -255,7 +260,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
                 Batch of input images.
 
         Returns:
-            dict:
+            OrderedDict:
                 A dictionary containing the multiscale features.
                 The expected format is {layer_name: features}.
 
@@ -268,8 +273,14 @@ class DFBRegister:
     r"""Deep Feature based Registration (DFBR).
 
     This class implements a CNN feature based registration,
-    as proposed in a paper titled `Deep Feature based Cross-slide Registration
-    <https://arxiv.org/pdf/2202.09971.pdf>`_.
+    as proposed in the paper [1].
+
+    References:
+        [1] Awan, R., Raza, S.E.A., Lotz, J. and Rajpoot, N.M., 2022.
+        `Deep Feature based Cross-slide Registration
+        <https://arxiv.org/pdf/2202.09971.pdf>`_. arXiv preprint
+        arXiv:2202.09971.
+
 
     """
 
@@ -279,7 +290,9 @@ class DFBRegister:
         self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
-    def extract_features(self, fixed_img: np.ndarray, moving_img: np.ndarray) -> dict:
+    def extract_features(
+        self, fixed_img: np.ndarray, moving_img: np.ndarray
+    ) -> OrderedDict[str, torch.Tensor]:
         """CNN based feature extraction for registration.
 
         This function extracts multiscale features from a pre-trained
@@ -292,7 +305,7 @@ class DFBRegister:
                 A moving image.
 
         Returns:
-            dict:
+            OrderedDict:
                 A dictionary containing the multiscale features.
                 The expected format is {layer_name: features}.
 
@@ -404,7 +417,7 @@ class DFBRegister:
         return feature_distance[row_ind, col_ind]
 
     def feature_mapping(
-        self, features: dict, num_matching_points: int = 128
+        self, features: OrderedDict[str, torch.Tensor], num_matching_points: int = 128
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find mapping between CNN features.
 
@@ -413,19 +426,18 @@ class DFBRegister:
         them.
 
         Args:
-            features (dict):
+            features (OrderedDict):
                 Multiscale CNN features.
             num_matching_points (int):
                 Number of required matching points.
 
         Returns:
-            :class:`numpy.ndarray`:
-                A matching 2D point set in the fixed image.
-            :class:`numpy.ndarray`:
-                A matching 2D point set in the moving image.
-            :class:`numpy.ndarray`:
-                A 1D array, where each element represents quality
-                of each matching point.
+            tuple:
+                Parameters for estimating transformation parameters.
+                - np.ndarray - A matching 2D point set in the fixed image.
+                - np.ndarray - A matching 2D point set in the moving image.
+                - np.ndarray - A 1D array, where each element represents
+                               quality of each matching point.
 
         """
         if len(features) != 3:
@@ -453,7 +465,7 @@ class DFBRegister:
         feature_dist1 = self.compute_feature_distances(fixed_feat1, moving_feat1, 1)
         feature_dist2 = self.compute_feature_distances(fixed_feat2, moving_feat2, 2)
         feature_dist3 = self.compute_feature_distances(fixed_feat3, moving_feat3, 4)
-        feature_dist = 1.414 * feature_dist1 + feature_dist2 + feature_dist3
+        feature_dist = math.sqrt(2) * feature_dist1 + feature_dist2 + feature_dist3
 
         seq = np.array(
             [[i, j] for i in range(ref_feature_size) for j in range(ref_feature_size)],
