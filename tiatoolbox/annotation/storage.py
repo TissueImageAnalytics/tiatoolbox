@@ -2536,11 +2536,12 @@ class SQLiteStore(AnnotationStore):
         self.append(annotation, key)
 
     def _get_table_columns(self):
-        # get columns from table
+        """Get a list of columns in the annotations table."""
         cur = self.con.execute("PRAGMA table_info(annotations)")
         return [row[1] for row in cur.fetchall()]
 
     def add_area_column(self, mk_index=True):
+        """Add a column to store the area of the geometry."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -2560,6 +2561,7 @@ class SQLiteStore(AnnotationStore):
         self.table_columns.append("area")
 
     def remove_area_column(self):
+        """Remove the area column from the store."""
         cur = self.con.cursor()
         cur.execute(
             """

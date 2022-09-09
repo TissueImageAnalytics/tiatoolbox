@@ -969,11 +969,7 @@ def add_from_dat(
             for ann_id in data
         ]
 
-    try:
-        data = joblib.load(fp)
-    except KeyError:
-        with open(fp, "r") as f:
-            data = json.load(f)
+    data = joblib.load(fp)
     props = list(data[list(data.keys())[0]].keys())
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
