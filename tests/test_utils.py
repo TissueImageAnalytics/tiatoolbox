@@ -6,19 +6,19 @@ import random
 import shutil
 from pathlib import Path
 from typing import Tuple
-import joblib
 
 import cv2
+import joblib
 import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
 
+from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.transforms import locsize2bounds
-from tests.test_annotation_stores import cell_polygon
 
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
