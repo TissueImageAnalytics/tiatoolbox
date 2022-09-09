@@ -8,6 +8,7 @@ import scipy.ndimage as ndi
 import torch
 import torchvision
 from skimage import exposure, filters
+from skimage.measure import regionprops
 from skimage.util import img_as_float
 
 from tiatoolbox.utils.metrics import dice
@@ -23,17 +24,17 @@ def _check_dims(
     """Check the dimensionality of images and mask.
 
     Args:
-        fixed_img (:class:`numpy.ndarray`):
-            A grayscale fixed image.
-        moving_img (:class:`numpy.ndarray`):
-            A grayscale moving image.
-        fixed_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the fixed image.
-        moving_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the moving image.
+            fixed_img (:class:`numpy.ndarray`):
+                    A grayscale fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                    A grayscale moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the moving image.
 
     Returns:
-        None
+            None
 
     """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
@@ -63,23 +64,23 @@ def prealignment(
     fixed image. This can be used as a prealignment step before final refinement.
 
     Args:
-        fixed_img (:class:`numpy.ndarray`):
-            A grayscale fixed image.
-        moving_img (:class:`numpy.ndarray`):
-            A grayscale moving image.
-        fixed_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the fixed image.
-        moving_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the moving image.
-        dice_overlap (float):
-            Dice ratio used for the selection of the best
-            transformation matrix.
-        rotation_step (int):
-            Rotation_step defines an increment in the rotation angles.
+            fixed_img (:class:`numpy.ndarray`):
+                    A grayscale fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                    A grayscale moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                    A binary tissue mask for the moving image.
+            dice_overlap (float):
+                    Dice ratio used for the selection of the best
+                    transformation matrix.
+            rotation_step (int):
+                    Rotation_step defines an increment in the rotation angles.
 
     Returns:
-        :class:`numpy.ndarray`:
-            A transform matrix.
+            :class:`numpy.ndarray`:
+                    A rigid transform matrix.
 
     """
     if len(fixed_mask.shape) != 2:
@@ -160,18 +161,18 @@ def match_histograms(
     appearance of an image pair.
 
     Args:
-        image_a (:class:`numpy.ndarray`):
-            A grayscale image.
-        image_b (:class:`numpy.ndarray`):
-            A grayscale image.
-        kernel_size (int):
-            The size of the ellipse-shaped footprint.
+            image_a (:class:`numpy.ndarray`):
+                    A grayscale image.
+            image_b (:class:`numpy.ndarray`):
+                    A grayscale image.
+            kernel_size (int):
+                    The size of the ellipse-shaped footprint.
 
     Returns:
-        tuple:
-            A normalized pair of images for performing registration.
-            - np.ndarray - A normalized grayscale image.
-            - np.ndarray - A normalized grayscale image.
+            tuple:
+                    A normalized pair of images for performing registration.
+                    - np.ndarray - A normalized grayscale image.
+                    - np.ndarray - A normalized grayscale image.
 
     """
 
@@ -221,11 +222,11 @@ class DFBRFeatureExtractor(torch.nn.Module):
         """Register a hook.
 
         Args:
-            layer_name (str):
-                User-defined name for a layer.
+                layer_name (str):
+                        User-defined name for a layer.
 
         Returns:
-            None
+                None
 
         """
 
@@ -237,15 +238,15 @@ class DFBRFeatureExtractor(torch.nn.Module):
             """Forward hook for feature extraction.
 
             Args:
-                _module:
-                    Unused argument for the module.
-                _module_input:
-                    Unused argument for the modules' input.
-                module_output (torch.Tensor):
-                    Output (features) of the module.
+                    _module:
+                            Unused argument for the module.
+                    _module_input:
+                            Unused argument for the modules' input.
+                    module_output (torch.Tensor):
+                            Output (features) of the module.
 
             Returns:
-                None
+                    None
 
             """
             self.features[layer_name] = module_output
@@ -256,13 +257,13 @@ class DFBRFeatureExtractor(torch.nn.Module):
         """Forward pass for feature extraction.
 
         Args:
-            x (torch.Tensor):
-                Batch of input images.
+                x (torch.Tensor):
+                        Batch of input images.
 
         Returns:
-            OrderedDict:
-                A dictionary containing the multiscale features.
-                The expected format is {layer_name: features}.
+                OrderedDict:
+                        A dictionary containing the multiscale features.
+                        The expected format is {layer_name: features}.
 
         """
         _ = self.pretrained(x)
@@ -277,14 +278,14 @@ class DFBRegister:
     in the paper [1]. This work is adapted from [2].
 
     References:
-        [1] Awan, R., Raza, S.E.A., Lotz, J. and Rajpoot, N.M., 2022.
-        `Deep Feature based Cross-slide Registration
-        <https://arxiv.org/pdf/2202.09971.pdf>`_. arXiv preprint
-        arXiv:2202.09971.
+            [1] Awan, R., Raza, S.E.A., Lotz, J. and Rajpoot, N.M., 2022.
+            `Deep Feature based Cross-slide Registration
+            <https://arxiv.org/pdf/2202.09971.pdf>`_. arXiv preprint
+            arXiv:2202.09971.
 
-        [2] Yang, Z., Dan, T. and Yang, Y., 2018. Multi-temporal remote
-        sensing image registration using deep convolutional features.
-        Ieee Access, 6, pp.38544-38555.
+            [2] Yang, Z., Dan, T. and Yang, Y., 2018. Multi-temporal remote
+            sensing image registration using deep convolutional features.
+            Ieee Access, 6, pp.38544-38555.
 
     """
 
@@ -303,15 +304,15 @@ class DFBRegister:
         VGG-16 model for an image pair.
 
         Args:
-            fixed_img (:class:`numpy.ndarray`):
-                A fixed image.
-            moving_img (:class:`numpy.ndarray`):
-                A moving image.
+                fixed_img (:class:`numpy.ndarray`):
+                        A fixed image.
+                moving_img (:class:`numpy.ndarray`):
+                        A moving image.
 
         Returns:
-            OrderedDict:
-                A dictionary containing the multiscale features.
-                The expected format is {layer_name: features}.
+                OrderedDict:
+                        A dictionary containing the multiscale features.
+                        The expected format is {layer_name: features}.
 
         """
         if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
@@ -352,14 +353,14 @@ class DFBRegister:
         between fixed and moving images.
 
         Args:
-            feature_dist (:class:`numpy.ndarray`):
-                A feature distance array.
+                feature_dist (:class:`numpy.ndarray`):
+                        A feature distance array.
 
         Returns:
-            tuple:
-                - np.ndarray - An array of matching points.
-                - np.ndarray - An array of floating numbers representing
-                               quality of each matching points.
+                tuple:
+                        - np.ndarray - An array of matching points.
+                        - np.ndarray - An array of floating numbers representing
+                                                   quality of each matching points.
 
         """
         seq = np.arange(feature_dist.shape[0])
@@ -383,17 +384,17 @@ class DFBRegister:
         fixed and moving images.
 
         Args:
-            features_x (:class:`numpy.ndarray`):
-                Features computed for a fixed image.
-            features_y (:class:`numpy.ndarray`):
-                Features computed for a moving image.
-            factor (int):
-                A number multiplied by the feature size
-                for getting the referenced feature size.
+                features_x (:class:`numpy.ndarray`):
+                        Features computed for a fixed image.
+                features_y (:class:`numpy.ndarray`):
+                        Features computed for a moving image.
+                factor (int):
+                        A number multiplied by the feature size
+                        for getting the referenced feature size.
 
         Returns:
-            :class:`numpy.ndarray`:
-                A feature distance array.
+                :class:`numpy.ndarray`:
+                        A feature distance array.
 
         """
         feature_distance = np.linalg.norm(
@@ -429,18 +430,18 @@ class DFBRegister:
         them.
 
         Args:
-            features (OrderedDict):
-                Multiscale CNN features.
-            num_matching_points (int):
-                Number of required matching points.
+                features (OrderedDict):
+                        Multiscale CNN features.
+                num_matching_points (int):
+                        Number of required matching points.
 
         Returns:
-            tuple:
-                Parameters for estimating transformation parameters.
-                - np.ndarray - A matching 2D point set in the fixed image.
-                - np.ndarray - A matching 2D point set in the moving image.
-                - np.ndarray - A 1D array, where each element represents
-                               quality of each matching point.
+                tuple:
+                        Parameters for estimating transformation parameters.
+                        - np.ndarray - A matching 2D point set in the fixed image.
+                        - np.ndarray - A matching 2D point set in the moving image.
+                        - np.ndarray - A 1D array, where each element represents
+                                                   quality of each matching point.
 
         """
         if len(features) != 3:
@@ -507,6 +508,7 @@ class DFBRegister:
 
         fixed_points = ((fixed_points * 224.0) + 112.0) * self.x_scale
         moving_points = ((moving_points * 224.0) + 112.0) * self.y_scale
+        fixed_points, moving_points = fixed_points[:, [1, 0]], moving_points[:, [1, 0]]
         return fixed_points, moving_points, np.amin(feature_dist, axis=1)
 
     @staticmethod
@@ -520,14 +522,14 @@ class DFBRegister:
         points.
 
         Args:
-            points_0 (:class:`numpy.ndarray`):
-                An Nx2 array of points in a fixed image.
-            points_1 (:class:`numpy.ndarray`):
-                An Nx2 array of points in a moving image.
+                points_0 (:class:`numpy.ndarray`):
+                        An Nx2 array of points in a fixed image.
+                points_1 (:class:`numpy.ndarray`):
+                        An Nx2 array of points in a moving image.
 
         Returns:
-            :class:`numpy.ndarray`:
-                A 3x3 transformation matrix.
+                :class:`numpy.ndarray`:
+                        A 3x3 transformation matrix.
 
         """
         num_points = min(len(points_0), len(points_1))
@@ -538,3 +540,116 @@ class DFBRegister:
         matrix[-1, :] = [0, 0, 1]
 
         return matrix
+
+    @staticmethod
+    def get_tissue_regions(
+        fixed_image: np.ndarray,
+        fixed_mask: np.ndarray,
+        moving_image: np.ndarray,
+        moving_mask: np.ndarray,
+    ):
+        if len(fixed_mask.shape) != 2:
+            fixed_mask = fixed_mask[:, :, 0]
+        if len(moving_mask.shape) != 2:
+            moving_mask = moving_mask[:, :, 0]
+
+        fixed_mask = np.uint8(fixed_mask > 0)
+        moving_mask = np.uint8(moving_mask > 0)
+
+        regions = regionprops(fixed_mask)
+        fixed_minr, fixed_minc, fixed_maxr, fixed_maxc = regions[0].bbox
+        regions = regionprops(moving_mask)
+        moving_minr, moving_minc, moving_maxr, moving_maxc = regions[0].bbox
+        minc, maxc, minr, maxr = (
+            np.min([fixed_minc, moving_minc]),
+            np.max([fixed_maxc, moving_maxc]),
+            np.min([fixed_minr, moving_minr]),
+            np.max([fixed_maxr, moving_maxr]),
+        )
+
+        fixed_tissue_image = fixed_image[minr:maxr, minc:maxc]
+        fixed_tissue_mask = fixed_mask[minr:maxr, minc:maxc]
+        moving_tissue_image = moving_image[minr:maxr, minc:maxc]
+        moving_tissue_mask = moving_mask[minr:maxr, minc:maxc]
+        moving_tissue_image[np.all(moving_tissue_image == (0, 0, 0), axis=-1)] = (
+            243,
+            243,
+            243,
+        )
+        return (
+            fixed_tissue_image,
+            fixed_tissue_mask,
+            moving_tissue_image,
+            moving_tissue_mask,
+            (minr, minc, maxr, maxc),
+        )
+
+    def show_matching_points(self, fixed, moving, x, y, dist):
+        keypoints1 = []
+        keypoints2 = []
+        matching_points = []
+        for i in range(len(dist)):
+            matching_points.append(
+                cv2.DMatch(_distance=dist[i], _imgIdx=0, _queryIdx=i, _trainIdx=i)
+            )
+            keypoints1.append(cv2.KeyPoint(x[i, 0], x[i, 1], 5))
+            keypoints2.append(cv2.KeyPoint(y[i, 0], y[i, 1], 5))
+
+        matching_points = sorted(
+            matching_points, key=lambda x: x.distance
+        )  # Sort them in the order of their distance.
+        if np.max(fixed) <= 1:
+            fixed = 255 * fixed
+        fixed = fixed.astype(np.uint8)
+
+        if np.max(moving) <= 1:
+            moving = 255 * moving
+        moving = moving.astype(np.uint8)
+        return cv2.drawMatches(
+            fixed, keypoints1, moving, keypoints2, matching_points, None, flags=2
+        )
+
+    def register(
+        self,
+        fixed_img: np.ndarray,
+        moving_img: np.ndarray,
+        fixed_mask: np.ndarray,
+        moving_mask: np.ndarray,
+    ) -> np.ndarray:
+        """Image Registration.
+
+        This function aligns a pair of images using Deep
+        Feature based Registration (DFBR) method.
+
+        Args:
+                fixed_img (:class:`numpy.ndarray`):
+                        A fixed image.
+                moving_img (:class:`numpy.ndarray`):
+                        A moving image.
+                fixed_mask (:class:`numpy.ndarray`):
+                        A binary tissue mask for the fixed image.
+                moving_mask (:class:`numpy.ndarray`):
+                        A binary tissue mask for the moving image.
+
+        Returns:
+                :class:`numpy.ndarray`:
+                        An affine transformation matrix.
+
+        """
+        (
+            fixed_img,
+            fixed_mask,
+            moving_img,
+            moving_mask,
+            tissue_top_left_coor,
+        ) = self.get_tissue_regions(fixed_img, fixed_mask, moving_img, moving_mask)
+        features = self.extract_features(fixed_img, moving_img)
+        fixed_matched_points, moving_matched_points, quality = self.feature_mapping(
+            features
+        )
+        _ = self.show_matching_points(
+            fixed_img, moving_img, fixed_matched_points, moving_matched_points, quality
+        )
+        return DFBRegister.estimate_affine_transform(
+            fixed_matched_points, moving_matched_points
+        )

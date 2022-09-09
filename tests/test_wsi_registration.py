@@ -219,3 +219,22 @@ def test_match_histograms():
     norm_image_a, norm_image_b = match_histograms(image_a, image_b)
     assert np.all(norm_image_a == expected_output)
     assert np.all(norm_image_b == image_b)
+
+
+def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
+    moving_img = cv2.warpAffine(
+        moving_img, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
+    )
+    moving_msk = cv2.warpAffine(
+        moving_msk, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
+    )
+
+    df = DFBRegister()
+    _ = df.register(fixed_img, moving_img, fixed_msk, moving_msk)
+    print("hello")
