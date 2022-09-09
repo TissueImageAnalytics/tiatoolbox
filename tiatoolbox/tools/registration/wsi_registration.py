@@ -244,7 +244,6 @@ class DFBRFeatureExtractor(torch.nn.Module):
                 module_output (torch.Tensor):
                     Output (features) of the module.
 
-
             Returns:
                 None
 
