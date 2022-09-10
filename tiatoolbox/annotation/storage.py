@@ -60,7 +60,7 @@ import numpy as np
 import pandas as pd
 from shapely import speedups, wkb, wkt
 from shapely.affinity import scale, translate
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 from shapely.validation import make_valid
@@ -1168,20 +1168,15 @@ class AnnotationStore(ABC, MutableMapping):
                 The x and y coordinates to use as the origin for the annotations.
         """
 
-        def make_valid_poly(poly, relative_to=None):
+        def make_valid_geom(geom, relative_to=None):
             """Helper function to make a valid polygon."""
-            if poly.is_valid:
-                return poly
-            poly = poly.buffer(0.01)
-            if poly.is_valid:
-                return poly
-            poly = make_valid(poly)
-            if len(list(poly)) > 1:
-                return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
             if relative_to is not None:
                 # transform coords to be relative to given pt.
-                return translate(poly, -relative_to[0], -relative_to[1])
-            return poly
+                geom = translate(geom, -relative_to[0], -relative_to[1])
+            if geom.is_valid:
+                return geom
+            warnings.warn("Invalid geometry found, using shapely make_valid() to fix.")
+            return make_valid(geom)
 
         geojson = self._load_cases(
             fp=fp,
@@ -1193,7 +1188,7 @@ class AnnotationStore(ABC, MutableMapping):
             anns = [
                 Annotation(
                     scale(
-                        make_valid_poly(
+                        make_valid_geom(
                             feature2geometry(feature["geometry"]), relative_to
                         ),
                         xfact=scale_factor,
@@ -1207,7 +1202,7 @@ class AnnotationStore(ABC, MutableMapping):
         else:
             anns = [
                 Annotation(
-                    make_valid_poly(feature2geometry(feature["geometry"]), relative_to),
+                    make_valid_geom(feature2geometry(feature["geometry"]), relative_to),
                     feature["properties"],
                 )
                 for feature in geojson["features"]

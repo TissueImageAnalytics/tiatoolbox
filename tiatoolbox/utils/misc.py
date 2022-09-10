@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import pathlib
+import warnings
 import zipfile
 from typing import IO, Union
 
@@ -14,9 +15,7 @@ import requests
 import torch
 import yaml
 from shapely.affinity import translate
-from shapely.geometry import MultiPolygon
 from shapely.geometry import shape as feature2geometry
-from shapely.validation import make_valid
 from skimage import exposure
 
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
@@ -903,13 +902,8 @@ def make_valid_poly(poly, relative_to=None):
         poly = translate(poly, -relative_to[0], -relative_to[1])
     if poly.is_valid:
         return poly
-    poly = poly.buffer(0.01)
-    if poly.is_valid:
-        return poly
-    poly = make_valid(poly)
-    if len(list(poly)) > 1:
-        return MultiPolygon([p for p in poly if poly.geom_type == "Polygon"])
-    return poly
+    warnings.warn("Invalid geometry found, fix using buffer().")
+    return poly.buffer(0.01)
 
 
 def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):

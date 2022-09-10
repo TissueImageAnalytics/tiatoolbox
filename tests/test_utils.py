@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
+from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
@@ -1427,3 +1428,22 @@ def test_from_multihead_dat(tmp_path):
 
     result = store.query(where="props['type'] == 'A: 1'")
     assert len(result) == 1
+
+
+def test_invalid_poly(tmp_path):
+    """Test that invalid polygons are dealt with correctly."""
+    coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
+    poly = Polygon(coords)
+    data = make_simple_dat()
+    data["invalid"] = {
+        "box": poly.bounds,
+        "centroid": [poly.centroid.x, poly.centroid.y],
+        "contour": np.array(poly.exterior.coords).tolist(),
+        "type": 2,
+    }
+    joblib.dump(data, tmp_path / "test.dat")
+    with pytest.warns(UserWarning, match="Invalid geometry found, fix"):
+        store = utils.misc.store_from_dat(tmp_path / "test.dat")
+
+    result = store.query(where="props['type'] == 2")
+    assert next(iter(result.values())).geometry.is_valid
