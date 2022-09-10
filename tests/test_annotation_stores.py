@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from shapely import affinity
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPoint, Polygon
 from shapely.geometry.point import Point
 
 from tiatoolbox.annotation.storage import (
@@ -791,6 +791,27 @@ class TestStore:
         store.to_geojson(tmp_path / "polygon.json")
         store2 = store_cls.from_geojson(tmp_path / "polygon.json")
         assert len(store) == len(store2)
+
+    @staticmethod
+    def test_from_geojson_path_transform(fill_store, tmp_path, store_cls):
+        """Test loading from geojson with a transform"""
+
+        def annotations_center_of_mass(annotations):
+            """Compute the mean of the annotation centroids."""
+            centroids = [annotation.geometry.centroid for annotation in annotations]
+            return MultiPoint(centroids).centroid
+
+        _, store = fill_store(store_cls, tmp_path / "polygon.db")
+        com = annotations_center_of_mass(list(store.values()))
+        store.to_geojson(tmp_path / "polygon.json")
+        # load the store translated relative to (100,100) and scaled by 2
+        store2 = store_cls.from_geojson(
+            tmp_path / "polygon.json", scale_factor=2, relative_to=(100, 100)
+        )
+        assert len(store) == len(store2)
+        com2 = annotations_center_of_mass(list(store2.values()))
+        assert com2.x == pytest.approx((com.x - 100) * 2)
+        assert com2.y == pytest.approx((com.y - 100) * 2)
 
     @staticmethod
     def test_to_geojson_str(fill_store, tmp_path, store_cls):
