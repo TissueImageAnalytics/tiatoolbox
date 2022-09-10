@@ -1,6 +1,5 @@
 import warnings
-from collections import OrderedDict
-from typing import Tuple
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
@@ -204,7 +203,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features: OrderedDict = OrderedDict.fromkeys(output_layers_key, None)
+        self.features: dict = dict.fromkeys(output_layers_key, None)
         self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
             pretrained=True
         ).features
@@ -252,7 +251,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -260,7 +259,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
                 Batch of input images.
 
         Returns:
-            OrderedDict:
+            dict:
                 A dictionary containing the multiscale features.
                 The expected format is {layer_name: features}.
 
@@ -296,7 +295,7 @@ class DFBRegister:
     # Make this function private when full pipeline is implemented.
     def extract_features(
         self, fixed_img: np.ndarray, moving_img: np.ndarray
-    ) -> OrderedDict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """CNN based feature extraction for registration.
 
         This function extracts multiscale features from a pre-trained
@@ -309,7 +308,7 @@ class DFBRegister:
                 A moving image.
 
         Returns:
-            OrderedDict:
+            dict:
                 A dictionary containing the multiscale features.
                 The expected format is {layer_name: features}.
 
@@ -420,7 +419,7 @@ class DFBRegister:
         return feature_distance[row_ind, col_ind]
 
     def feature_mapping(
-        self, features: OrderedDict[str, torch.Tensor], num_matching_points: int = 128
+        self, features: Dict[str, torch.Tensor], num_matching_points: int = 128
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find mapping between CNN features.
 
@@ -429,7 +428,7 @@ class DFBRegister:
         them.
 
         Args:
-            features (OrderedDict):
+            features (dict):
                 Multiscale CNN features.
             num_matching_points (int):
                 Number of required matching points.
