@@ -2590,14 +2590,6 @@ class SQLiteStore(AnnotationStore):
         if self.auto_commit:
             self.con.commit()
 
-    def __del__(self) -> None:
-        # Limit rows examined by ANALYZE to avoid spending too long
-        self.con.execute("PRAGMA analysis_limit = 500")
-        # Run ANALYZE to improve performance if needed
-        self.con.execute("PRAGMA optimize")
-        # Close the connection to the database
-        return super().__del__()
-
     def create_index(
         self, name: str, where: Union[str, bytes], analyze: bool = True
     ) -> None:
