@@ -192,7 +192,7 @@ class StainAugmentor(ImageOnlyTransform):
         return np.uint8(img_augmented)
 
     def apply(self, img, **params):  # alpha=None, beta=None,
-        """Call the `fit` and `augment` functions to generate an stain augmented image.
+        """Call the `fit` and `augment` functions to generate a stain augmented image.
 
         Args:
             img (:class:`numpy.ndarray`):
