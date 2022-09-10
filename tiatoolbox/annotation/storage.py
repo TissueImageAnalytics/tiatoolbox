@@ -63,7 +63,6 @@ from shapely.affinity import scale, translate
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
-from shapely.validation import make_valid
 
 import tiatoolbox
 from tiatoolbox import logger
@@ -147,9 +146,6 @@ class Annotation:
 
         """
         return json.dumps(self.to_feature())
-
-    def __lt__(self, other):
-        return self.geometry.area < other.geometry.area
 
 
 class AnnotationStore(ABC, MutableMapping):
@@ -1168,15 +1164,19 @@ class AnnotationStore(ABC, MutableMapping):
                 The x and y coordinates to use as the origin for the annotations.
         """
 
-        def make_valid_geom(geom, relative_to=None):
-            """Helper function to make a valid polygon."""
+        def transform_geom(geom):
+            """Helper function to transform a geometry if needed."""
             if relative_to is not None:
                 # transform coords to be relative to given pt.
                 geom = translate(geom, -relative_to[0], -relative_to[1])
-            if geom.is_valid:
-                return geom
-            warnings.warn("Invalid geometry found, using shapely make_valid() to fix.")
-            return make_valid(geom)
+            if scale_factor != 1:
+                geom = scale(
+                    geom,
+                    xfact=scale_factor,
+                    yfact=scale_factor,
+                    origin=(0, 0, 0),
+                )
+            return geom
 
         geojson = self._load_cases(
             fp=fp,
@@ -1184,29 +1184,15 @@ class AnnotationStore(ABC, MutableMapping):
             file_fn=json.load,
         )
 
-        if scale_factor != 1:
-            anns = [
-                Annotation(
-                    scale(
-                        make_valid_geom(
-                            feature2geometry(feature["geometry"]), relative_to
-                        ),
-                        xfact=scale_factor,
-                        yfact=scale_factor,
-                        origin=(0, 0, 0),
-                    ),
-                    feature["properties"],
-                )
-                for feature in geojson["features"]
-            ]
-        else:
-            anns = [
-                Annotation(
-                    make_valid_geom(feature2geometry(feature["geometry"]), relative_to),
-                    feature["properties"],
-                )
-                for feature in geojson["features"]
-            ]
+        anns = [
+            Annotation(
+                transform_geom(
+                    feature2geometry(feature["geometry"]),
+                ),
+                feature["properties"],
+            )
+            for feature in geojson["features"]
+        ]
 
         print(f"added {len(anns)} annotations")
         self.append_many(anns)
@@ -1534,7 +1520,7 @@ class SQLiteStore(AnnotationStore):
         def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
             a = wkb.loads(wkb_a)
-            b = self._unpack_geometry(b, cx, cy, self.metadata["compression"])
+            b = self._unpack_geometry(b, cx, cy)
             return self._geometry_predicate(name, a, b)
 
         def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
@@ -1546,7 +1532,9 @@ class SQLiteStore(AnnotationStore):
         def get_area(wkb_bytes: bytes, cx: int, cy: int) -> float:
             """Function to get the area of a geometry."""
             return self._unpack_geometry(
-                wkb_bytes, cx, cy, self.metadata["compression"]
+                wkb_bytes,
+                cx,
+                cy,
             ).area
 
         # Register custom functions
@@ -1641,10 +1629,7 @@ class SQLiteStore(AnnotationStore):
             return zlib.compress(data, level=self.metadata["compression_level"])
         raise ValueError("Unsupported compression method.")
 
-    @staticmethod
-    def _unpack_geometry(
-        data: Union[str, bytes], cx: int, cy: int, compress_type
-    ) -> Geometry:
+    def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
         For space optimisation, points are stored as centroids and all
@@ -1665,18 +1650,11 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry.
 
         """
-        if data is None:
-            return Point(cx, cy)
-        if compress_type == "zlib":
-            data = zlib.decompress(data)
-        elif compress_type is not None:
-            raise Exception("Unsupported compression method.")
-        if isinstance(data, str):
-            return wkt.loads(data)
-        return wkb.loads(data)
+        return Point(cx, cy) if data is None else self.deserialize_geometry(data)
 
     def deserialize_geometry(  # skipcq: PYL-W0221
-        self, data: Union[str, bytes]
+        self,
+        data: Union[str, bytes],
     ) -> Geometry:
         """Deserialize a geometry from a string or bytes.
 
@@ -2014,11 +1992,10 @@ class SQLiteStore(AnnotationStore):
             where=where,
             min_area=min_area,
         )
-        comp = self.metadata["compression"]
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy, comp),
+                    geometry=self._unpack_geometry(blob, cx, cy),
                     properties=json.loads(properties),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
@@ -2026,7 +2003,7 @@ class SQLiteStore(AnnotationStore):
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy, comp),
+                geometry=self._unpack_geometry(blob, cx, cy),
                 properties=json.loads(properties),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
@@ -2369,7 +2346,9 @@ class SQLiteStore(AnnotationStore):
         serialised_geometry, serialised_properties, cx, cy = row
         properties = json.loads(serialised_properties or "{}")
         geometry = self._unpack_geometry(
-            serialised_geometry, cx, cy, self.metadata["compression"]
+            serialised_geometry,
+            cx,
+            cy,
         )
         return Annotation(geometry, properties)
 
@@ -2408,9 +2387,7 @@ class SQLiteStore(AnnotationStore):
                 break
             key, cx, cy, serialised_geometry, serialised_properties = row
             if serialised_geometry is not None:
-                geometry = self._unpack_geometry(
-                    serialised_geometry, cx, cy, self.metadata["compression"]
-                )
+                geometry = self._unpack_geometry(serialised_geometry, cx, cy)
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(serialised_properties)

@@ -125,6 +125,12 @@ def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
     return (props.get("class"), props.get("class") % 2)
 
 
+def annotations_center_of_mass(annotations):
+    """Compute the mean of the annotation centroids."""
+    centroids = [annotation.geometry.centroid for annotation in annotations]
+    return MultiPoint(centroids).centroid
+
+
 # Fixtures
 
 
@@ -795,12 +801,6 @@ class TestStore:
     @staticmethod
     def test_from_geojson_path_transform(fill_store, tmp_path, store_cls):
         """Test loading from geojson with a transform"""
-
-        def annotations_center_of_mass(annotations):
-            """Compute the mean of the annotation centroids."""
-            centroids = [annotation.geometry.centroid for annotation in annotations]
-            return MultiPoint(centroids).centroid
-
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")
@@ -812,6 +812,16 @@ class TestStore:
         com2 = annotations_center_of_mass(list(store2.values()))
         assert com2.x == pytest.approx((com.x - 100) * 2)
         assert com2.y == pytest.approx((com.y - 100) * 2)
+
+    @staticmethod
+    def test_translate_db(fill_store, tmp_path, store_cls):
+        """Test translating a store."""
+        _, store = fill_store(store_cls, tmp_path / "polygon.db")
+        com = annotations_center_of_mass(list(store.values()))
+        store.translate_db(100, 100)
+        com2 = annotations_center_of_mass(list(store.values()))
+        assert com2.x - com.x == pytest.approx(100)
+        assert com2.y - com.y == pytest.approx(100)
 
     @staticmethod
     def test_to_geojson_str(fill_store, tmp_path, store_cls):
