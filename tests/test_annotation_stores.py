@@ -443,6 +443,8 @@ def test_remove_area_column(fill_store):
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
     assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
 
 
 def test_add_area_column(fill_store):
@@ -452,17 +454,17 @@ def test_add_area_column(fill_store):
     store.add_area_column()
     assert "area" in store._get_table_columns()
 
-    # check the polygons are properly sorted by area
-    polys = store.query((0, 0, 100, 100))
-    areas = [poly.geometry.area for poly in polys.values()]
+    # check the results are properly sorted by area
+    result = store.query((0, 0, 100, 100))
+    areas = [ann.geometry.area for ann in result.values()]
     assert areas == sorted(areas, reverse=True)
 
 
 def test_query_min_area(fill_store):
     """Test querying with a minimum area."""
     _, store = fill_store(SQLiteStore, ":memory:")
-    polys = store.query((0, 0, 1000, 1000), min_area=1)
-    assert len(polys) == 100  # should only get cells, pts are too small
+    result = store.query((0, 0, 1000, 1000), min_area=1)
+    assert len(result) == 100  # should only get cells, pts are too small
 
 
 def test_query_min_area_no_area_column(fill_store):
