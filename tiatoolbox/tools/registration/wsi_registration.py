@@ -3,10 +3,12 @@ from collections import OrderedDict
 from typing import Tuple
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as ndi
 import torch
 import torchvision
+from matplotlib import path
 from skimage import exposure, filters
 from skimage.measure import regionprops
 from skimage.util import img_as_float
@@ -584,7 +586,8 @@ class DFBRegister:
             (minr, minc, maxr, maxc),
         )
 
-    def show_matching_points(self, fixed, moving, x, y, dist):
+    @staticmethod
+    def show_matching_points(fixed, moving, x, y, dist):
         keypoints1 = []
         keypoints2 = []
         matching_points = []
@@ -608,6 +611,19 @@ class DFBRegister:
         return cv2.drawMatches(
             fixed, keypoints1, moving, keypoints2, matching_points, None, flags=2
         )
+
+    @staticmethod
+    def find_points_inside_boundary(mask, points):
+        kernel = np.ones((25, 25), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        bound_points, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        included_points = []
+        for bound_p in bound_points:
+            bound_p = path.Path(np.squeeze(bound_p))
+            indx = bound_p.contains_points(points).nonzero()
+            included_points = np.hstack([included_points, indx[0]])
+        return included_points.astype(int)
 
     def register(
         self,
@@ -637,19 +653,53 @@ class DFBRegister:
 
         """
         (
-            fixed_img,
+            fixed_tissue,
             fixed_mask,
-            moving_img,
+            moving_tissue,
             moving_mask,
             tissue_top_left_coor,
         ) = self.get_tissue_regions(fixed_img, fixed_mask, moving_img, moving_mask)
-        features = self.extract_features(fixed_img, moving_img)
+        features = self.extract_features(fixed_tissue, moving_tissue)
         fixed_matched_points, moving_matched_points, quality = self.feature_mapping(
             features
         )
-        _ = self.show_matching_points(
-            fixed_img, moving_img, fixed_matched_points, moving_matched_points, quality
+        before_img = self.show_matching_points(
+            fixed_tissue,
+            moving_tissue,
+            fixed_matched_points,
+            moving_matched_points,
+            quality,
         )
+        plt.imshow(before_img)
+        plt.show()
+
+        included_indx = self.find_points_inside_boundary(
+            fixed_mask, fixed_matched_points
+        )
+        fixed_matched_points, moving_matched_points, quality = (
+            fixed_matched_points[included_indx, :],
+            moving_matched_points[included_indx, :],
+            quality[included_indx],
+        )
+        included_indx = self.find_points_inside_boundary(
+            moving_mask, moving_matched_points
+        )
+        fixed_matched_points, moving_matched_points, quality = (
+            fixed_matched_points[included_indx, :],
+            moving_matched_points[included_indx, :],
+            quality[included_indx],
+        )
+
+        after_img = self.show_matching_points(
+            fixed_tissue,
+            moving_tissue,
+            fixed_matched_points,
+            moving_matched_points,
+            quality,
+        )
+        plt.imshow(after_img)
+        plt.show()
+
         return DFBRegister.estimate_affine_transform(
             fixed_matched_points, moving_matched_points
         )
