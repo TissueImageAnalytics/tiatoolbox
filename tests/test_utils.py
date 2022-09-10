@@ -1421,7 +1421,12 @@ def test_from_multihead_dat(tmp_path):
     """Test generating an annotation store from a .dat file with multiple heads."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
-    data = {"A": head_a, "B": head_b}
+    data = {
+        "A": head_a,
+        "B": head_b,
+        "resolution": 0.5,
+        "othermetadata": {"foo": "bar"},
+    }
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(tmp_path / "test.dat")
     assert len(store) == 4
@@ -1447,3 +1452,21 @@ def test_invalid_poly(tmp_path):
 
     result = store.query(where="props['type'] == 2")
     assert next(iter(result.values())).geometry.is_valid
+
+
+def test_from_multihead_dat_typedict(tmp_path):
+    """Test generating a store from a .dat file with multiple heads, with typedict."""
+    head_a = make_simple_dat()
+    head_b = make_simple_dat([(200, 200), (300, 300)])
+    data = {"A": head_a, "B": head_b}
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(
+        tmp_path / "test.dat",
+        typedict={"A": {0: "cell0", 1: "cell1"}, "B": {0: "gland0", 1: "gland1"}},
+    )
+    assert len(store) == 4
+
+    result = store.query(where="props['type'] == 'gland1'")
+    assert len(result) == 1
+    result = store.query(where=lambda x: x["type"][0:4] == "cell")
+    assert len(result) == 2

@@ -458,6 +458,21 @@ def test_add_area_column(fill_store):
     assert areas == sorted(areas, reverse=True)
 
 
+def test_query_min_area(fill_store):
+    """Test querying with a minimum area."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    polys = store.query((0, 0, 1000, 1000), min_area=1)
+    assert len(polys) == 100  # should only get cells, pts are too small
+
+
+def test_query_min_area_no_area_column(fill_store):
+    """Test querying with a minimum area when there is no area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    with pytest.raises(ValueError, match="without an area column"):
+        store.query((0, 0, 1000, 1000), min_area=1)
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 

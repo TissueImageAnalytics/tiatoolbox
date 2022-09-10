@@ -990,9 +990,9 @@ def add_from_dat(
             if subcat == "resolution":
                 continue
             props = next(iter(data[subcat].values()))
-            props = list(props.keys())
-            if "contour" not in props:
+            if not isinstance(props, dict):
                 continue
+            props = list(props.keys())
             # use type dictionary if available else auto-generate
             if typedict is None:
                 typedict_sub = make_default_dict(data, subcat)
