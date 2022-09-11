@@ -499,11 +499,12 @@ def test_auto_commit(fill_store, tmp_path):
     store = SQLiteStore(tmp_path / "polygon.db")
     result = store.query((0, 0, 1000, 1000))
     assert len(result) == 200  # check none of the changes were committed
-    store.clear()
+    store = SQLiteStore(tmp_path / "polygon2.db", auto_commit=False)
+    store.append_many([Annotation(Point(10, 10), {}), Annotation(Point(20, 20), {})])
     store.commit()
     store.close()
-    store = SQLiteStore(tmp_path / "polygon.db")
-    assert len(store) == 0  # check explicitly committing works
+    store = SQLiteStore(tmp_path / "polygon2.db")
+    assert len(store) == 2  # check explicitly committing works
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
