@@ -24,17 +24,17 @@ def _check_dims(
     """Check the dimensionality of images and mask.
 
     Args:
-    fixed_img (:class:`numpy.ndarray`):
-        A grayscale fixed image.
-    moving_img (:class:`numpy.ndarray`):
-        A grayscale moving image.
-    fixed_mask (:class:`numpy.ndarray`):
-        A binary tissue mask for the fixed image.
-    moving_mask (:class:`numpy.ndarray`):
-        A binary tissue mask for the moving image.
+        fixed_img (:class:`numpy.ndarray`):
+            A grayscale fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A grayscale moving image.
+        fixed_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the fixed image.
+        moving_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the moving image.
 
     Returns:
-    None
+        None
 
     """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
@@ -64,23 +64,23 @@ def prealignment(
     fixed image. This can be used as a prealignment step before final refinement.
 
     Args:
-    fixed_img (:class:`numpy.ndarray`):
-        A grayscale fixed image.
-    moving_img (:class:`numpy.ndarray`):
-        A grayscale moving image.
-    fixed_mask (:class:`numpy.ndarray`):
-        A binary tissue mask for the fixed image.
-    moving_mask (:class:`numpy.ndarray`):
-        A binary tissue mask for the moving image.
-    dice_overlap (float):
-        Dice ratio used for the selection of the best
-        transformation matrix.
-    rotation_step (int):
-        Rotation_step defines an increment in the rotation angles.
+        fixed_img (:class:`numpy.ndarray`):
+            A grayscale fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A grayscale moving image.
+        fixed_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the fixed image.
+        moving_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the moving image.
+        dice_overlap (float):
+            Dice ratio used for the selection of the best
+            transformation matrix.
+        rotation_step (int):
+            Rotation_step defines an increment in the rotation angles.
 
     Returns:
-    :class:`numpy.ndarray`:
-        A rigid transform matrix.
+        :class:`numpy.ndarray`:
+            A rigid transform matrix.
 
     """
     if len(fixed_mask.shape) != 2:
@@ -380,21 +380,21 @@ class DFBRegister:
     ) -> np.ndarray:
         """Compute feature distance.
 
-            This function computes Euclidean distance between features of
-            fixed and moving images.
+        This function computes Euclidean distance between features of
+        fixed and moving images.
 
-            Args:
-        features_x (:class:`numpy.ndarray`):
-            Features computed for a fixed image.
-        features_y (:class:`numpy.ndarray`):
-            Features computed for a moving image.
-        factor (int):
-            A number multiplied by the feature size
-            for getting the referenced feature size.
+        Args:
+            features_x (:class:`numpy.ndarray`):
+                Features computed for a fixed image.
+            features_y (:class:`numpy.ndarray`):
+                Features computed for a moving image.
+            factor (int):
+                A number multiplied by the feature size
+                for getting the referenced feature size.
 
-            Returns:
-        :class:`numpy.ndarray`:
-            A feature distance array.
+        Returns:
+            :class:`numpy.ndarray`:
+                A feature distance array.
 
         """
         feature_distance = np.linalg.norm(
@@ -425,23 +425,23 @@ class DFBRegister:
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find mapping between CNN features.
 
-            This function maps features of a fixed image to that of
-            a moving image on the basis of Euclidean distance between
-            them.
+        This function maps features of a fixed image to that of
+        a moving image on the basis of Euclidean distance between
+        them.
 
-            Args:
-        features (Dict):
-            Multiscale CNN features.
-        num_matching_points (int):
-            Number of required matching points.
+        Args:
+            features (Dict):
+                Multiscale CNN features.
+            num_matching_points (int):
+                Number of required matching points.
 
-            Returns:
-        tuple:
-            Parameters for estimating transformation parameters.
-            - np.ndarray - A matching 2D point set in the fixed image.
-            - np.ndarray - A matching 2D point set in the moving image.
-            - np.ndarray - A 1D array, where each element represents
-            quality of each matching point.
+        Returns:
+            tuple:
+                Parameters for estimating transformation parameters.
+                - np.ndarray - A matching 2D point set in the fixed image.
+                - np.ndarray - A matching 2D point set in the moving image.
+                - np.ndarray - A 1D array, where each element represents
+                quality of each matching point.
 
         """
         if len(features) != 3:
@@ -548,8 +548,7 @@ class DFBRegister:
         moving_image: np.ndarray,
         moving_mask: np.ndarray,
     ) -> Tuple[np.array, np.array, np.array, np.array, tuple]:
-        """
-        Extract tissue region.
+        """Extract tissue region.
 
         This function uses binary mask for extracting tissue
         region from the image.
@@ -611,8 +610,7 @@ class DFBRegister:
 
     @staticmethod
     def find_points_inside_boundary(mask: np.ndarray, points: np.ndarray):
-        """
-        Find indices of points lying inside the boundary.
+        """Find indices of points lying inside the boundary.
 
         This function returns indices of points which are
         enclosed by an area indicated by a binary mask.
@@ -647,8 +645,7 @@ class DFBRegister:
         moving_matched_points: np.ndarray,
         quality: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Filter the matching points.
+        """Filter the matching points.
 
         This function removes the duplicated points and the points
         which are identified outside the tissue region.
@@ -666,7 +663,7 @@ class DFBRegister:
                 An array representing quality of each matching point.
 
         Returns:
-                        tuple:
+            tuple:
                 - np.ndarray - Filtered matching points for a fixed image.
                 - np.ndarray - Filtered matching points for a moving image.
                 - np.ndarray - Quality of matching points.
@@ -723,22 +720,22 @@ class DFBRegister:
     ) -> np.ndarray:
         """Image Registration.
 
-            This function aligns a pair of images using Deep
-            Feature based Registration (DFBR) method.
+        This function aligns a pair of images using Deep
+        Feature based Registration (DFBR) method.
 
-            Args:
-        fixed_img (:class:`numpy.ndarray`):
-            A fixed image.
-        moving_img (:class:`numpy.ndarray`):
-            A moving image.
-        fixed_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the fixed image.
-        moving_mask (:class:`numpy.ndarray`):
-            A binary tissue mask for the moving image.
+        Args:
+            fixed_img (:class:`numpy.ndarray`):
+                A fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                A moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                A binary tissue mask for the moving image.
 
-            Returns:
-        :class:`numpy.ndarray`:
-            An affine transformation matrix.
+        Returns:
+            :class:`numpy.ndarray`:
+                An affine transformation matrix.
 
         """
         (
