@@ -802,7 +802,7 @@ class DFBRegister:
             ],
         ]
         fixed_matched_points, moving_matched_points, quality = [], [], []
-        for block in range(len(blocks_bbox)):
+        for _index, block in enumerate(blocks_bbox):
             bbox = [int(x) for x in blocks_bbox[block]]
             fixed_block = fixed_tissue[bbox[0] : bbox[1], bbox[2] : bbox[3], :]
             moving_block = moving_tissue[bbox[0] : bbox[1], bbox[2] : bbox[3], :]
