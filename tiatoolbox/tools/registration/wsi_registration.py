@@ -1,6 +1,5 @@
 import warnings
-from collections import OrderedDict
-from typing import Tuple
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
@@ -206,7 +205,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features: OrderedDict = OrderedDict.fromkeys(output_layers_key, None)
+        self.features: dict = dict.fromkeys(output_layers_key, None)
         self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
             pretrained=True
         ).features
@@ -223,11 +222,11 @@ class DFBRFeatureExtractor(torch.nn.Module):
         """Register a hook.
 
         Args:
-                        layer_name (str):
-                                        User-defined name for a layer.
+            layer_name (str):
+                User-defined name for a layer.
 
         Returns:
-                        None
+            None
 
         """
 
@@ -239,32 +238,32 @@ class DFBRFeatureExtractor(torch.nn.Module):
             """Forward hook for feature extraction.
 
             Args:
-                            _module:
-                                            Unused argument for the module.
-                            _module_input:
-                                            Unused argument for the modules' input.
-                            module_output (torch.Tensor):
-                                            Output (features) of the module.
+                _module:
+                    Unused argument for the module.
+                _module_input:
+                    Unused argument for the modules' input.
+                module_output (torch.Tensor):
+                    Output (features) of the module.
 
             Returns:
-                            None
+                None
 
             """
             self.features[layer_name] = module_output
 
         return hook
 
-    def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
-                        x (torch.Tensor):
-                                        Batch of input images.
+            x (torch.Tensor):
+                Batch of input images.
 
         Returns:
-                        OrderedDict:
-                                        A dictionary containing the multiscale features.
-                                        The expected format is {layer_name: features}.
+            Dict:
+                A dictionary containing the multiscale features.
+                The expected format is {layer_name: features}.
 
         """
         _ = self.pretrained(x)
@@ -279,14 +278,14 @@ class DFBRegister:
     in the paper [1]. This work is adapted from [2].
 
     References:
-                    [1] Awan, R., Raza, S.E.A., Lotz, J. and Rajpoot, N.M., 2022.
-                    `Deep Feature based Cross-slide Registration
-                    <https://arxiv.org/pdf/2202.09971.pdf>`_. arXiv preprint
-                    arXiv:2202.09971.
+        [1] Awan, R., Raza, S.E.A., Lotz, J. and Rajpoot, N.M., 2022.
+        `Deep Feature based Cross-slide Registration
+        <https://arxiv.org/pdf/2202.09971.pdf>`_. arXiv preprint
+        arXiv:2202.09971.
 
-                    [2] Yang, Z., Dan, T. and Yang, Y., 2018. Multi-temporal remote
-                    sensing image registration using deep convolutional features.
-                    Ieee Access, 6, pp.38544-38555.
+        [2] Yang, Z., Dan, T. and Yang, Y., 2018. Multi-temporal remote
+        sensing image registration using deep convolutional features.
+        Ieee Access, 6, pp.38544-38555.
 
     """
 
@@ -298,22 +297,22 @@ class DFBRegister:
     # Make this function private when full pipeline is implemented.
     def extract_features(
         self, fixed_img: np.ndarray, moving_img: np.ndarray
-    ) -> OrderedDict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """CNN based feature extraction for registration.
 
         This function extracts multiscale features from a pre-trained
         VGG-16 model for an image pair.
 
         Args:
-                        fixed_img (:class:`numpy.ndarray`):
-                                        A fixed image.
-                        moving_img (:class:`numpy.ndarray`):
-                                        A moving image.
+            fixed_img (:class:`numpy.ndarray`):
+                A fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                A moving image.
 
         Returns:
-                        OrderedDict:
-                                        A dictionary containing the multiscale features.
-                                        The expected format is {layer_name: features}.
+            Dict:
+                A dictionary containing the multiscale features.
+                The expected format is {layer_name: features}.
 
         """
         if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
@@ -422,7 +421,7 @@ class DFBRegister:
         return feature_distance[row_ind, col_ind]
 
     def feature_mapping(
-        self, features: OrderedDict[str, torch.Tensor], num_matching_points: int = 128
+        self, features: Dict[str, torch.Tensor], num_matching_points: int = 128
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find mapping between CNN features.
 
@@ -431,7 +430,7 @@ class DFBRegister:
             them.
 
             Args:
-        features (OrderedDict):
+        features (Dict):
             Multiscale CNN features.
         num_matching_points (int):
             Number of required matching points.
@@ -523,14 +522,14 @@ class DFBRegister:
         points.
 
         Args:
-                        points_0 (:class:`numpy.ndarray`):
-                                        An Nx2 array of points in a fixed image.
-                        points_1 (:class:`numpy.ndarray`):
-                                        An Nx2 array of points in a moving image.
+            points_0 (:class:`numpy.ndarray`):
+                An Nx2 array of points in a fixed image.
+            points_1 (:class:`numpy.ndarray`):
+                An Nx2 array of points in a moving image.
 
         Returns:
-                        :class:`numpy.ndarray`:
-                                        A 3x3 transformation matrix.
+            :class:`numpy.ndarray`:
+                A 3x3 transformation matrix.
 
         """
         num_points = min(len(points_0), len(points_1))
