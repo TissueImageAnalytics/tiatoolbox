@@ -1513,13 +1513,14 @@ class SQLiteStore(AnnotationStore):
 
         # Set up metadata
         self.metadata = SQLiteMetadata(self.con)
-        self.metadata["version"] = "1.0.0"
-        self.metadata["compression"] = compression
-        self.metadata["compression_level"] = compression_level
+        if not exists:
+            self.metadata["version"] = "1.0.0"
+            self.metadata["compression"] = compression
+            self.metadata["compression_level"] = compression_level
 
         # store locally as constantly fetching from db in (de)serialization is slow
-        self.compression = compression
-        self.compression_level = compression_level
+        self.compression = self.metadata["compression"]
+        self.compression_level = self.metadata["compression_level"]
 
         # Register predicate functions as custom SQLite functions
         def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
