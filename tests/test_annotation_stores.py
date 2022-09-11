@@ -1320,7 +1320,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_unique_multi_select(fill_store, store_cls):
-        """Test querying for properties with a callable select and where."""
+        """Test querying unique properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=sample_multi_select,
@@ -1344,7 +1344,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_no_where(fill_store, store_cls):
-        """Test querying for properties with a callable select and where."""
+        """Test querying for properties with callable select, no where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=lambda props: props.get("class"),

@@ -1517,6 +1517,10 @@ class SQLiteStore(AnnotationStore):
         self.metadata["compression"] = compression
         self.metadata["compression_level"] = compression_level
 
+        # store locally as constantly fetching from db in (de)serialization is slow
+        self.compression = compression
+        self.compression_level = compression_level
+
         # Register predicate functions as custom SQLite functions
         def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
@@ -1625,10 +1629,10 @@ class SQLiteStore(AnnotationStore):
 
         """
         data = geometry.wkb
-        if self.metadata["compression"] is None:
+        if self.compression is None:
             return data
-        if self.metadata["compression"] == "zlib":
-            return zlib.compress(data, level=self.metadata["compression_level"])
+        if self.compression == "zlib":
+            return zlib.compress(data, level=self.compression_level)
         raise ValueError("Unsupported compression method.")
 
     def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
@@ -1669,9 +1673,9 @@ class SQLiteStore(AnnotationStore):
                 The deserialized Shapely geometry.
 
         """
-        if self.metadata["compression"] == "zlib":
+        if self.compression == "zlib":
             data = zlib.decompress(data)
-        elif self.metadata["compression"] is not None:
+        elif self.compression is not None:
             raise ValueError("Unsupported compression method.")
         if isinstance(data, str):
             return wkt.loads(data)
