@@ -369,6 +369,12 @@ def test_sqlite_store_wkb_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
+def test_sqlite_store_metadata_get_key():
+    """Test getting a metadata entry."""
+    store = SQLiteStore()
+    assert store.metadata["compression"] == "zlib"
+
+
 def test_sqlite_store_metadata_get_keyerror():
     """Test getting a metadata entry that does not exists."""
     store = SQLiteStore()
