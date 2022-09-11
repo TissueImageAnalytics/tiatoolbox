@@ -1509,6 +1509,7 @@ class SQLiteStore(AnnotationStore):
             and self.path.stat().st_size > 0
         )
         self.con = sqlite3.connect(str(self.path), isolation_level="DEFERRED")
+        self.con.execute("BEGIN")
 
         # Set up metadata
         self.metadata = SQLiteMetadata(self.con)
@@ -1602,7 +1603,8 @@ class SQLiteStore(AnnotationStore):
             )
             """
         )
-        self.con.commit()
+        if self.auto_commit:
+            self.con.commit()
         self.table_columns = self._get_table_columns()
 
     def serialise_geometry(  # skipcq: PYL-W0221
@@ -1751,7 +1753,8 @@ class SQLiteStore(AnnotationStore):
         keys = list(keys) if keys else [str(uuid.uuid4()) for _ in annotations]
         self._validate_equal_lengths(keys, annotations)
         cur = self.con.cursor()
-        cur.execute("BEGIN")
+        if self.auto_commit:
+            cur.execute("BEGIN")
         result = []
         for annotation, key in zip(annotations, keys):
             self._append(key, annotation, cur)
@@ -2413,7 +2416,8 @@ class SQLiteStore(AnnotationStore):
         # Update the database
         cur = self.con.cursor()
         # Begin a transaction
-        cur.execute("BEGIN")
+        if self.auto_commit:
+            cur.execute("BEGIN")
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             # Annotation is not in DB:
             if key not in self:
@@ -2483,7 +2487,8 @@ class SQLiteStore(AnnotationStore):
 
     def remove_many(self, keys: Iterable[str]) -> None:
         cur = self.con.cursor()
-        cur.execute("BEGIN")
+        if self.auto_commit:
+            cur.execute("BEGIN")
         for key in keys:
             cur.execute(
                 """

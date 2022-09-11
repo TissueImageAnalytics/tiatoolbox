@@ -481,6 +481,31 @@ def test_query_min_area_no_area_column(fill_store):
         store.query((0, 0, 1000, 1000), min_area=1)
 
 
+def test_auto_commit(fill_store, tmp_path):
+    """Test auto commit.
+
+    Check that if auto-commit is False, the changes are not committed until
+    commit() is called.
+    """
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db", auto_commit=False)
+    keys = list(store.keys())
+    store.patch(keys[0], Point(-500, -500))
+    store.append_many([Annotation(Point(10, 10), {}), Annotation(Point(20, 20), {})])
+    store.remove_many(keys[5:10])
+    store.clear()
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db")
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200  # check none of the changes were committed
+    store.clear()
+    store.commit()
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db")
+    assert len(store) == 0  # check explicitly committing works
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 
