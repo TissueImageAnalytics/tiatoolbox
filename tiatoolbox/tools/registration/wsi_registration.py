@@ -232,7 +232,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         def hook(
             _module: torch.nn.MaxPool2d,
-            _module_input: tuple[torch.Tensor],
+            _module_input: Tuple[torch.Tensor],
             module_output: torch.Tensor,
         ) -> None:
             """Forward hook for feature extraction.
