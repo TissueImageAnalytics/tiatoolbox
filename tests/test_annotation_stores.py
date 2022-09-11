@@ -1343,6 +1343,18 @@ class TestStore:
         assert set(result_set.values()) == {1}
 
     @staticmethod
+    def test_pquery_callable_no_where(fill_store, store_cls):
+        """Test querying for properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=lambda props: props.get("class"),
+            where=None,
+            unique=False,
+        )
+        assert isinstance(result_set, dict)
+        assert set(result_set.values()).issubset({0, 1, 2, 3, 4, None})
+
+    @staticmethod
     def test_pquery_pickled(fill_store, store_cls):
         """Test querying for properties with a pickled select and where."""
         _, store = fill_store(store_cls, ":memory:")
