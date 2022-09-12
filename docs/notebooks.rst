@@ -25,12 +25,9 @@ Full Pipelines
 Each of the following notebooks tries to reproduce an entire paper. This
 reproduction includes both the training and inference portions.
 
-.. nbgallery::
-    :hidden:
-    :glob:
+`Slide Graph Full-pipeline Notebook`_
 
-    _notebooks/full-pipelines/*
-
+.. _Slide Graph Full-pipeline Notebook: _notebooks/full-pipelines/slide-graph.ipynb
 
 Inference Pipelines
 --------------------
@@ -38,4 +35,9 @@ Inference Pipelines
 Each of the following notebooks tries to implement only the inference portion
 of a paper.
 
-    _notebooks/full-pipelines/slide-graph
+`Slide Graph Pipeline`_
+
+`Prediction of Molecular Pathways and Key Mutations`_
+
+.. _Slide Graph Pipeline:    _notebooks/inference-pipelines/slide-graph.ipynb
+.. _Prediction of Molecular Pathways and Key Mutations: _notebooks/inference-pipelines/idars.ipynb
