@@ -38,8 +38,4 @@ Inference Pipelines
 Each of the following notebooks tries to implement only the inference portion
 of a paper.
 
-.. nbgallery::
-    :hidden:
-    :glob:
-
-    _notebooks/inference-pipelines/*
+    _notebooks/full-pipelines/slide-graph
