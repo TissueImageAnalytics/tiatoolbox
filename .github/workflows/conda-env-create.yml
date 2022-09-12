@@ -38,6 +38,7 @@ jobs:
         shell: bash
         run: |
           cp ./requirements*.txt /tmp/
+          mkdir /tmp/docs/
           cp ./docs/requirements*.txt /tmp/docs/
       - uses: mamba-org/provision-with-micromamba@main
         with:
