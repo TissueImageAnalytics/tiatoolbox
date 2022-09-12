@@ -1,3 +1,5 @@
+# torch installation
+--extra-index-url https://download.pytorch.org/whl/cu113; sys_platform != "darwin"
 albumentations>=1.0.3
 Click>=8.1.2
 defusedxml>=0.7.1
@@ -20,8 +22,8 @@ scipy>=1.7.3
 shapely>=1.8.1
 sphinx>=4.3.2
 tifffile>=2021.11.2
-torch>=1.11.0
-torchvision>=0.12.0
+torch>=1.11.0;
+torchvision>=0.12.0;
 tqdm>=4.63.1
 umap-learn>=0.5.2
 wsidicom>=0.2.0
