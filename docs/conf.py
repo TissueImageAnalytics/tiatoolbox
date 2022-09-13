@@ -72,6 +72,8 @@ source_suffix = {
     ".myst": "myst-nb",
 }
 
+suppress_warnings = ["misc.highlighting_failure"]
+
 myst_commonmark_only = True
 myst_enable_extensions = ["colon_fence"]
 nb_execution_mode = "off"
@@ -103,7 +105,14 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "requirements*.txt"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "requirements*.txt",
+    "notebooks.rst",
+    "api.rst",
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
@@ -1890,7 +1899,7 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+html_static_path = []
 
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
@@ -1971,3 +1980,45 @@ autodoc_type_aliases = {
     "Iterable": "Iterable",
     "ArrayLike": "ArrayLike",
 }
+
+print("=" * 43)
+print("Copy example notebooks into docs/_notebooks")
+print("=" * 43)
+
+
+def all_but_ipynb(dir_path, contents):
+    """Helper to copy all .ipynb"""
+    result = []
+    for c in contents:
+        flag = os.path.isfile(os.path.join(dir_path, c)) and (not c.endswith(".ipynb"))
+        if flag:
+            result += [c]
+    return result
+
+
+DOC_ROOT = os.path.dirname(os.path.realpath(__file__))
+PROJ_ROOT = pathlib.Path(DOC_ROOT).parent
+shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
+shutil.copytree(
+    os.path.join(PROJ_ROOT, "examples"),
+    os.path.join(PROJ_ROOT, "docs/_notebooks"),
+    ignore=all_but_ipynb,
+)
+
+shutil.copy(
+    os.path.join(PROJ_ROOT, "docs/notebooks.rst"),
+    os.path.join(PROJ_ROOT, "docs/_notebooks/notebooks.rst"),
+)
+
+# Read in the file
+with open("../examples/README.md", "r") as file:
+    file_data = file.read()
+
+# Replace the target string
+file_data = file_data.replace(".rst", ".html")
+file_data = file_data.replace(".ipynb", ".html")
+file_data = file_data.replace("../docs/", "../")
+
+# Write the file out again
+with open("_notebooks/README.md", "w") as file:
+    file.write(file_data)

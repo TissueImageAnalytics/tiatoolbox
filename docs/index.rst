@@ -20,7 +20,7 @@ Welcome to TIA Toolbox's documentation!
    :maxdepth: 2
 
    Pre-trained Models <pretrained.rst>
-   Jupyter Notebooks <notebooks.rst>
+   Jupyter Notebooks <_notebooks/notebooks.rst>
    Algorithms <algorithms.rst>
 
 .. toctree::

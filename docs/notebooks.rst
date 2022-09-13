@@ -1,4 +1,13 @@
 Jupyter Notebooks
 #################
-.. include:: ../examples/README.md
+
+.. include:: ./README.md
    :parser: myst_parser.sphinx_
+
+.. toctree::
+    :hidden:
+    :glob:
+
+    ./*
+    ./inference-pipelines/*
+    ./full-pipelines/*
