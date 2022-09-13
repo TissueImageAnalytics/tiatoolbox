@@ -70,7 +70,7 @@ class ConvBnRelu(nn.Module):
             do_batchnorm,
         )
 
-    def forward(self, input_tensor: torch.Tensor)-> torch.Tensor:
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
         This method defines how layers are used in forward operation.
         Args:
