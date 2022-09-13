@@ -111,7 +111,6 @@ exclude_patterns = [
     ".DS_Store",
     "requirements*.txt",
     "notebooks.rst",
-    "api.rst",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
