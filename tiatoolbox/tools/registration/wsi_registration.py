@@ -288,8 +288,8 @@ class DFBRegister:
 
     """
 
-    def __init__(self):
-        self.patch_size: Tuple[int, int] = (224, 224)
+    def __init__(self, patch_size: Tuple[int, int] = (224, 224)):
+        self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
         self.feature_extractor = DFBRFeatureExtractor()
 
