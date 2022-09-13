@@ -2015,8 +2015,8 @@ with open("../examples/README.md", "r") as file:
     file_data = file.read()
 
 # Replace the target string
-file_data = file_data.replace(".rst", ".html")
-file_data = file_data.replace(".ipynb", ".html")
+file_data = file_data.replace(".rst", "")
+file_data = file_data.replace(".ipynb", "")
 file_data = file_data.replace("../docs/", "../")
 
 # Write the file out again
