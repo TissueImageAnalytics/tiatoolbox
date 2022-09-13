@@ -1729,20 +1729,6 @@ def test_tiffwsireader_invalid_svs_metadata(sample_svs, monkeypatch):
         _ = wsi._info()
 
 
-def test_tiffwsireader_invalid_ome_metadata(sample_ome_tiff, monkeypatch):
-    """Test exception raised for invalid OME-XML metadata instrument."""
-    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
-    monkeypatch.setattr(
-        wsi.tiff.pages[0],
-        "description",
-        wsi.tiff.pages[0].description.replace(
-            '<Objective ID="Objective:0:0" NominalMagnification="20.0"/>', ""
-        ),
-    )
-    with pytest.raises(KeyError, match="No matching Instrument"):
-        _ = wsi._info()
-
-
 def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatch):
     """Test no exception raised for missing x/y mpp but warning given."""
     for dim in "XY":

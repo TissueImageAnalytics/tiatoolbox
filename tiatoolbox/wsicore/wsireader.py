@@ -2872,7 +2872,11 @@ class ArrayView:
         """
         self.array = array
         self.axes = axes
-        self._shape = dict(zip(self.axes, self.array.shape))
+
+        if self.axes == "YX" and len(self.array.shape) == 3:
+            self._shape = dict(zip("SYX", self.array.shape))
+        else:
+            self._shape = dict(zip(self.axes, self.array.shape))
 
     @property
     def shape(self):
@@ -2884,6 +2888,13 @@ class ArrayView:
             index = (index,)
         while len(index) < len(self.axes):
             index = (*index, slice(None))
+
+        # toilet roll multiplex OME TIFF
+        if self.axes == "YX":
+            y, x = index
+            s = slice(0, self.shape[-1], 1)
+            index = (s, y, x)
+            return np.rollaxis(self.array[index], 0, 3)
 
         if self.axes == "YXS":
             return self.array[index]
@@ -2959,6 +2970,13 @@ class TIFFWSIReader(WSIReader):
                 Shape in YXS order.
 
         """
+        # toilet roll multiplex OME TIFF
+        if self._axes == "YX":
+            if len(shape) == 2:
+                return shape
+            if len(shape) == 3:
+                return np.roll(shape, -1)
+
         if self._axes == "YXS":
             return shape
         if self._axes == "SYX":
@@ -3075,6 +3093,16 @@ class TIFFWSIReader(WSIReader):
 
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
+
+        objective_power = None
+        if not instrument_ref or not objective_settings:
+            return {
+                "objective_power": objective_power,
+                "vendor": vendor,
+                "mpp": mpp,
+                "raw": raw,
+            }
+
         instrument_ref_id = instrument_ref.attrib["ID"]
         objective_settings_id = objective_settings.attrib["ID"]
         instruments = {
@@ -3087,11 +3115,8 @@ class TIFFWSIReader(WSIReader):
             for objective in instrument.findall("ome:Objective", namespaces)
         }
 
-        try:
-            objective = objectives[(instrument_ref_id, objective_settings_id)]
-            objective_power = float(objective.attrib.get("NominalMagnification"))
-        except KeyError:
-            raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
+        objective = objectives[(instrument_ref_id, objective_settings_id)]
+        objective_power = float(objective.attrib.get("NominalMagnification"))
 
         return {
             "objective_power": objective_power,
@@ -3533,14 +3558,14 @@ class TIFFWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (read_level, bounds_at_read, _, post_read_scale,) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
             # Find parameters for optimal read
             (
                 read_level,
-                _,
+                bounds_at_read,
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -3549,7 +3574,7 @@ class TIFFWSIReader(WSIReader):
 
         im_region = utils.image.sub_pixel_read(
             image=self.level_arrays[read_level],
-            bounds=bounds_at_baseline,
+            bounds=bounds_at_read,
             output_size=size_at_requested,
             interpolation=interpolation,
             pad_mode=pad_mode,
