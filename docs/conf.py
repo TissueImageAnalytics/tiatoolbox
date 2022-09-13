@@ -44,7 +44,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_toolbox.collapse",
     "myst_nb",
-    "nbsphinx",
     "sphinx_design",
 ]
 
@@ -1972,28 +1971,3 @@ autodoc_type_aliases = {
     "Iterable": "Iterable",
     "ArrayLike": "ArrayLike",
 }
-
-
-print("=" * 43)
-print("Copy example notebooks into docs/_notebooks")
-print("=" * 43)
-
-
-def all_but_ipynb(dir_path, contents):
-    """Helper to copy all .ipynb"""
-    result = []
-    for c in contents:
-        flag = os.path.isfile(os.path.join(dir_path, c)) and (not c.endswith(".ipynb"))
-        if flag:
-            result += [c]
-    return result
-
-
-DOC_ROOT = os.path.dirname(os.path.realpath(__file__))
-PROJ_ROOT = pathlib.Path(DOC_ROOT).parent
-shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
-shutil.copytree(
-    os.path.join(PROJ_ROOT, "examples"),
-    os.path.join(PROJ_ROOT, "docs/_notebooks"),
-    ignore=all_but_ipynb,
-)
