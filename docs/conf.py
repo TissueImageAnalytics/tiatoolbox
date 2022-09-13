@@ -45,7 +45,6 @@ extensions = [
     "sphinx_toolbox.collapse",
     "myst_parser",
     "nbsphinx",
-    "sphinx_gallery.load_style",
     "sphinx_design",
 ]
 
@@ -1893,15 +1892,6 @@ html_static_path = ["_static"]
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
 # html_css_files = []
-
-
-def setup(app):
-    # https: // github.com / sphinx - gallery / sphinx - gallery / pull / 845  # issuecomment-876102461
-    # Force overwrite sg_gallery.css
-    app.connect(
-        "builder-inited", lambda app: app.config.html_static_path.append("_static")
-    )
-
 
 # -- Options for HTMLHelp output ---------------------------------------
 
