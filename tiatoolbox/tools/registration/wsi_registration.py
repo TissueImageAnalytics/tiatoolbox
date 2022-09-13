@@ -169,8 +169,9 @@ def match_histograms(
     Returns:
         tuple:
             A normalized pair of images for performing registration.
-            - np.ndarray - A normalized grayscale image.
-            - np.ndarray - A normalized grayscale image.
+
+            - :class:`numpy.ndarray` - A normalized grayscale image.
+            - :class:`numpy.ndarray` - A normalized grayscale image.
 
     """
 
@@ -356,9 +357,9 @@ class DFBRegister:
 
         Returns:
             tuple:
-                - np.ndarray - An array of matching points.
-                - np.ndarray - An array of floating numbers representing
-                               quality of each matching points.
+                - :class:`numpy.ndarray` - An array of matching points.
+                - :class:`numpy.ndarray` - An array of floating numbers representing
+                  quality of each matching point.
 
         """
         seq = np.arange(feature_dist.shape[0])
@@ -436,10 +437,11 @@ class DFBRegister:
         Returns:
             tuple:
                 Parameters for estimating transformation parameters.
-                - np.ndarray - A matching 2D point set in the fixed image.
-                - np.ndarray - A matching 2D point set in the moving image.
-                - np.ndarray - A 1D array, where each element represents
-                               quality of each matching point.
+
+                - :class:`numpy.ndarray` - A matching 2D point set in the fixed image.
+                - :class:`numpy.ndarray` - A matching 2D point set in the moving image.
+                - :class:`numpy.ndarray` - A 1D array, where each element represents
+                  quality of each matching point.
 
         """
         if len(features) != 3:
