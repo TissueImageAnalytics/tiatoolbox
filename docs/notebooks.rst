@@ -135,6 +135,6 @@ reproduction includes both the training and inference portions.
     :target: _notebooks/full-pipelines/slide-graph.html
     :width: 800
 
-    `Slide Graph FullPipeline`_
+    `Slide Graph Full Pipeline`_
 
-.. _Slide Graph FullPipeline: _notebooks/full-pipelines/slide-graph.ipynb
+.. _Slide Graph Full Pipeline: _notebooks/full-pipelines/slide-graph.ipynb
