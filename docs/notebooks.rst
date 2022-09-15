@@ -1,13 +1,23 @@
 Jupyter Notebooks
 #################
 
-.. include:: ./README.md
-   :parser: myst_parser.sphinx_
+.. toctree::
+    :maxdepth: 2
+
+    _notebooks/README.md
+
+|
 
 .. toctree::
-    :hidden:
+    :maxdepth: 3
     :glob:
 
-    ./*
-    ./inference-pipelines/*
-    ./full-pipelines/*
+    Basic Functionalities <basic_functionalities.rst>
+
+|
+
+.. toctree::
+    :maxdepth: 3
+    :glob:
+
+    Pipelines <jnb_pipelines.rst>

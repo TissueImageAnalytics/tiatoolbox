@@ -110,7 +110,6 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "requirements*.txt",
-    "notebooks.rst",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -2000,14 +1999,14 @@ PROJ_ROOT = pathlib.Path(DOC_ROOT).parent
 shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
 shutil.copytree(
     os.path.join(PROJ_ROOT, "examples"),
-    os.path.join(PROJ_ROOT, "docs/_notebooks"),
+    os.path.join(PROJ_ROOT, "docs/_notebooks/jnb"),
     ignore=all_but_ipynb,
 )
 
-shutil.copy(
-    os.path.join(PROJ_ROOT, "docs/notebooks.rst"),
-    os.path.join(PROJ_ROOT, "docs/_notebooks/notebooks.rst"),
-)
+# shutil.copy(
+#     os.path.join(PROJ_ROOT, "docs/notebooks.rst"),
+#     os.path.join(PROJ_ROOT, "docs/_notebooks/notebooks.rst"),
+# )
 
 # Read in the file
 with open("../examples/README.md", "r") as file:
@@ -2017,6 +2016,7 @@ with open("../examples/README.md", "r") as file:
 file_data = file_data.replace(".rst", ".html")
 file_data = file_data.replace(".ipynb", ".html")
 file_data = file_data.replace("../docs/", "../")
+file_data = file_data.replace("](./", "](./jnb/")
 
 # Write the file out again
 with open("_notebooks/README.md", "w") as file:
