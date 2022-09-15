@@ -846,11 +846,16 @@ class TestStore:
         assert com2.y == pytest.approx((com.y - 100) * 2)
 
     @staticmethod
-    def test_translate_db(fill_store, tmp_path, store_cls):
+    def test_transform_db(fill_store, tmp_path, store_cls):
         """Test translating a store."""
+
+        def test_translation(geom):
+            """Performas a translation of input geometry."""
+            return affinity.translate(geom, 100, 100)
+
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
-        store.translate_db(100, 100)
+        store.transform_db(test_translation)
         com2 = annotations_center_of_mass(list(store.values()))
         assert com2.x - com.x == pytest.approx(100)
         assert com2.y - com.y == pytest.approx(100)

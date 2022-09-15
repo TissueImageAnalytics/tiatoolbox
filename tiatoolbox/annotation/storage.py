@@ -1141,10 +1141,10 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         store = cls()
-        store.add_from(fp, scale_factor, relative_to=relative_to)
+        store.add_from_geojson(fp, scale_factor, relative_to=relative_to)
         return store
 
-    def add_from(
+    def add_from_geojson(
         self,
         fp: Union[IO, str],
         scale_factor=1,
@@ -1355,24 +1355,21 @@ class AnnotationStore(ABC, MutableMapping):
         )
         return pd.json_normalize(features).set_index("key")
 
-    def translate_db(self, x: float, y: float):
-        """Translate all annotations by the given vector.
+    def transform_db(self, transform: Callable[[Geometry], Geometry]) -> None:
+        """Transform all annotations in the store using provided function.
 
         Useful for transforming coordinates from slide space into
-        patch/tile/core space, for example.
+        patch/tile/core space, or to a different resolution, for example.
 
         Args:
-            x (float):
-                The amount to translate in the x direction.
-            y (float):
-                The amount to translate in the y direction.
-
+            transform (callable[Geometry, Geometry]):
+                A function that takes a geometry and returns a new
+                transformed geometry.
         """
-        translated_anns = {
-            key: translate(annotation.geometry, x, y)
-            for key, annotation in self.items()
+        transformed_geoms = {
+            key: transform(annotation.geometry) for key, annotation in self.items()
         }
-        self.patch_many(translated_anns.keys(), translated_anns.values())
+        self.patch_many(transformed_geoms.keys(), transformed_geoms.values())
 
     def __del__(self) -> None:
         self.close()
