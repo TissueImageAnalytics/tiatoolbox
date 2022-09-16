@@ -2030,7 +2030,7 @@ class SQLiteStore(AnnotationStore):
         )
         if isinstance(where, Callable):
             return {
-                key: Annotation(Polygon.from_bounds(*bounds), json.loads(properties))
+                key: bounds
                 for key, properties, *bounds in cur.fetchall()
                 if where(json.loads(properties))
             }
