@@ -1,12 +1,26 @@
 # About the Example Notebooks
 
-In this directory, you will find some example use cases of the TIAToolbox functionalities in the form of Jupyter Notebooks. All of these notebooks are designed and maintained to run on Colab and Kaggle platforms (unless otherwise stated) but you can run them on your own system as well. In the first cell of each example notebook, there are links to open the notebook in Google Colab and Kaggle. Simply clicking on one of these links opens that notebook on the selected platform. Each notebook contains all the information needed to run the example remotely on Colab or Kaggle. All that you need is a local computer at your fingertips, with a standard browser connected to the Internet. The local computer does not even need a programming language to be installed—all the crucial resources are provided at the remote site. To run the notebook on other platforms, such as your own computer, set up your Python environment, as explained in the [installation guide](../docs/installation.rst).
+In this directory, you will find some example use cases of the TIAToolbox functionalities in the form of Jupyter Notebooks. All of these notebooks are designed and maintained to run on Colab platforms (unless otherwise stated) but you can run them on your own system as well. In the first cell of each example notebook, there are links to open the notebook in Google Colab and GitHub. Simply clicking on one of these links opens that notebook on the selected platform. You can right-click on "Open in Colab" and select "Open in new tab" if the left click does not work for you.
+
+## Local Machine
+
+To run the notebook on other platforms, such as your own computer, set up your Python environment, as explained in the [installation guide](../docs/installation.rst).
+
+## [Google Colab](https://colab.research.google.com/)
+
+Each notebook contains all the information needed to run the example remotely on Colab. All that you need is a local computer at your fingertips, with a standard browser connected to the Internet. The local computer does not even need a programming language to be installed—all the crucial resources are provided at the remote site, free of charge, thanks to Google Colaboratory. Check that "colab" appears in the address bar. Familiarize yourself with the drop-down menus near the top of the window. You can edit the notebook during the session, for example substituting your own image files for the image files used in this demo. Experiment by changing the parameters of functions. It is not possible for an ordinary user to permanently change this version of the notebook on GitHub or Colab, so you cannot inadvertently mess it up. Use the notebook's File Menu if you wish to save your own (changed) notebook.
+
+### GPU or CPU runtime
+
+Processes in the notebooks can be accelerated by using a GPU. Therefore, whether you are running the notebook on your system or Colab, you need to check and specify if you are using GPU or CPU hardware acceleration. In Colab, you need to make sure that the runtime type is set to GPU in the *"Runtime→Change runtime type→Hardware accelerator"*. If you are *not* using GPU, consider changing the `ON_GPU` flag to `Flase` value, otherwise, some errors will be raised when running the following cells.
+
+> **IMPORTANT**: If you are using Colab and install tiatoolbox, please note that you need to restart the runtime after tiatoolbox installation before proceeding through (menu) *"Runtime→Restart runtime"* . This is needed to load the latest versions of prerequisite packages installed with TIAToolbox. Doing so, you should be able to run all the remaining cells altogether (*"Runtime→Run after"* from the next cell) or one by one.
+
+## Structure of the examples directory
 
 We explain here the structure of the examples directory and briefly describe our notebooks. (Except for technical minutiae, the words _folder_ and _directory_ are interchangeable.) The examples directory includes general notebooks explaining different functionalities/modules incorporated in TIAToolbox. Most of these notebooks are written with less advanced users in mind—some familiarity with Python is assumed—but the capabilities they demonstrate would also be useful to more advanced users.
 
 The example directory contains two subdirectories called `full-pipelines` and `inference-pipelines` that include examples of using TIAToolbox in training of neural networks or inference of WSIs for high-level CPath applications, such as patient survival prediction and MSI status prediction from H&E whole slide images.
-
-Many of the notebooks will run on a standard desktop computer using only CPU computation. Some notebooks would take too long to run without a GPU: when a GPU is preferable, this is mentioned in the notebook. If requested, Colab and Kaggle do provide GPU support, but free-of-charge GPU use on Colab and Kaggle is strictly limited. For this reason, a few notebooks are not provided with Colab or Kaggle badges.
 
 ## A) Examples of TIAToolbox functionalities
 
