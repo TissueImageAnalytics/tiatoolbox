@@ -3684,7 +3684,12 @@ class TIFFWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, bounds_at_read, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                bounds_at_read,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
