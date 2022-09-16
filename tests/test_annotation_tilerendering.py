@@ -113,7 +113,8 @@ def test_correct_number_rendered(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
+    renderer = AnnotationRenderer(edge_thickness=0)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer)
 
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
@@ -128,6 +129,7 @@ def test_correct_colour_rendered(fill_store, tmp_path):
     renderer = AnnotationRenderer(
         "type",
         {"cell": (1, 0, 0, 1), "pt": (0, 1, 0, 1), "line": (0, 0, 1, 1)},
+        edge_thickness=0,
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
@@ -145,7 +147,7 @@ def test_filter_by_expression(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(where='props["type"] == "cell"')
+    renderer = AnnotationRenderer(where='props["type"] == "cell"', edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
@@ -157,7 +159,9 @@ def test_zoomed_out_rendering(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(max_scale=1)
+    renderer = AnnotationRenderer(
+        max_scale=1, edge_thickness=0, zoomed_out_strat="decimate"
+    )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
     thumb = tg.get_tile(1, 0, 0)
@@ -174,7 +178,7 @@ def test_decimation(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(max_scale=1)
+    renderer = AnnotationRenderer(max_scale=1, zoomed_out_strat="decimate")
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
     thumb = tg.get_tile(1, 1, 1)
@@ -189,7 +193,7 @@ def test_get_tile_negative_level(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(max_scale=1)
+    renderer = AnnotationRenderer(max_scale=1, edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     with pytest.raises(IndexError):
         tg.get_tile(-1, 0, 0)
@@ -200,7 +204,7 @@ def test_get_tile_large_level(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(max_scale=1)
+    renderer = AnnotationRenderer(max_scale=1, edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     with pytest.raises(IndexError):
         tg.get_tile(100, 0, 0)
@@ -251,7 +255,7 @@ def test_unknown_geometry(fill_store, tmp_path):
         Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={})
     )
     store.commit()
-    renderer = AnnotationRenderer(max_scale=8)
+    renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     with pytest.warns(UserWarning, match="Unknown geometry"):
         tg.get_tile(0, 0, 0)
@@ -275,6 +279,7 @@ def test_user_provided_cm(fill_store, tmp_path):
     renderer = AnnotationRenderer(
         "prob",
         "viridis",
+        edge_thickness=0,
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
@@ -325,5 +330,5 @@ def test_colour_prop_warning(fill_store, tmp_path):
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(score_prop="nonexistant_prop")
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    with pytest.warns(UserWarning, match="score_prop not found in properties"):
+    with pytest.warns(UserWarning, match="not found in properties"):
         tg.get_tile(1, 0, 0)

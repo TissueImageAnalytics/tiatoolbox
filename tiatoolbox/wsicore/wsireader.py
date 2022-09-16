@@ -17,11 +17,16 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
+from PIL import Image, ImageOps
+from shapely.geometry import Polygon
 
 from tiatoolbox import utils
+from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.transforms import background_composite
+from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
@@ -217,6 +222,9 @@ class WSIReader:
         _, _, suffixes = utils.misc.split_path_name_ext(input_path)
         last_suffix = suffixes[-1]
 
+        if last_suffix == ".db":
+            return AnnotationStoreReader(input_path)
+
         if last_suffix in (".zarr",):
             if not is_ngff(input_path):
                 raise FileNotSupported(
@@ -287,6 +295,7 @@ class WSIReader:
             ".jpg",
             ".jpeg",
             ".zarr",
+            ".db",
         ]:
             raise FileNotSupported(f"File {input_path} is not a supported file format.")
 
@@ -4341,4 +4350,232 @@ class NGFFWSIReader(WSIReader):
                 output_size=size_at_requested,
             )
 
+        return im_region
+
+
+class AnnotationStoreReader(WSIReader):
+    """Reader for Annotation stores.
+
+    This reader is used to read annotation store data as if it were a WSI,
+    rendering the annotations in the specified region to be read. Can be used
+    either to render annotations as a stand-alone mask, or to render annotations
+    on top of its parent WSI as a virtual 'annotated slide'.
+
+    Args:
+        path (str):
+            Path to annotation store.
+        info (WSIMeta):
+            Metadata of the base WSi for the annotations in the store.
+            If this is not provided, will attempt to read it read from
+            the store metadata, or the base_wsi_reader if provided.
+            If no source of metadata is found, will raise an error.
+        renderer (AnnotationRenderer):
+            Renderer to use for rendering annotations. Providing a renderer
+            allows for customisation of the rendering process. If not provided,
+            a sensible default will be created.
+        base_wsi_reader (WSIReader):
+            Base WSI reader to use for reading the base WSI. Annotations
+            will be rendered on top of the base WSI. If not provided,
+            will render annotation masks without a base image.
+        alpha (float):
+            Opacity of the overlaid annotations. Must be between 0 and 1.
+            Has no effect if base_wsi_reader is not provided.
+
+    """
+
+    def __init__(
+        self,
+        path,
+        info: Optional[WSIMeta] = None,
+        renderer: AnnotationRenderer = None,
+        base_wsi_reader: WSIReader = None,
+        alpha=1.0,
+        **kwargs,
+    ):
+        super().__init__(path, **kwargs)
+        # self.store = store
+        self.store = SQLiteStore(path)
+        if info is None:
+            if base_wsi_reader is not None:
+                # get the metadata from the base reader
+                info = base_wsi_reader.info
+            else:
+                # try to get metadata from store
+                try:
+                    self.info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
+                except:
+                    raise ValueError(
+                        "No metadata found in store. Please provide either info or base slide."
+                    )
+        else:
+            self.info = info
+        if renderer is None:
+            types = self.store.pquery("props['type']")
+            if len(types) == 0:
+                renderer = AnnotationRenderer()
+            else:
+                renderer = AnnotationRenderer("type", list(types))
+        renderer.edge_thickness = 0
+        self.renderer = renderer
+        self.base_wsi_reader = base_wsi_reader
+        if base_wsi_reader is not None:
+            self.info = base_wsi_reader.info
+            self.on_slide = True
+        self.alpha = alpha
+
+    def _info(self):
+        return self.info
+
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        if coord_space == "resolution":
+            im_region = self._read_rect_at_resolution(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+            )
+            return utils.transforms.background_composite(image=im_region)
+
+        # Find parameters for optimal read
+        (
+            read_level,
+            _,
+            _,
+            post_read_scale,
+            baseline_read_size,
+        ) = self.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
+
+        bounds = utils.transforms.locsize2bounds(
+            location=location, size=baseline_read_size
+        )
+        # bound_geom = Polygon.from_bounds(*bounds)
+        im_region = self.renderer.render_annotations(
+            self.store, bounds, np.rint(self.info.level_downsamples[read_level])
+        )
+
+        im_region = utils.transforms.imresize(
+            img=im_region,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation=interpolation,
+        )
+
+        # return utils.transforms.background_composite(image=im_region)
+        if self.base_wsi_reader is not None:
+            # overlay imregion on the base wsi
+            base_region = self.base_wsi_reader.read_rect(
+                location,
+                size,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+                coord_space=coord_space,
+                **kwargs,
+            )
+            base_region = Image.fromarray(background_composite(base_region, alpha=True))
+            im_region = Image.fromarray(im_region)
+            if self.alpha < 1.0:
+                im_region.putalpha(
+                    im_region.getchannel("A").point(lambda i: i * self.alpha)
+                )
+            base_region = Image.alpha_composite(base_region, im_region)
+            base_region = base_region.convert("RGB")
+            return np.array(base_region)
+        return im_region
+
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        bounds_at_baseline = bounds
+        if coord_space == "resolution":
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units
+            )
+            _, size_at_requested = utils.transforms.bounds2locsize(bounds)
+            # don't use the `output_size` (`size_at_requested`) here
+            # because the rounding error at `bounds_at_baseline` leads to
+            # different `size_at_requested` (keeping same read resolution
+            # but base image is of different scale)
+            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+        else:  # duplicated portion with VirtualReader, factoring out ?
+            # Find parameters for optimal read
+            (
+                read_level,
+                _,
+                size_at_requested,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
+                bounds_at_baseline, resolution=resolution, units=units
+            )
+
+        # bound_geom = Polygon.from_bounds(*bounds_at_baseline)
+        im_region = self.renderer.render_annotations(
+            self.store,
+            bounds_at_baseline,
+            np.rint(self.info.level_downsamples[read_level]),
+        )
+
+        if coord_space == "resolution":
+            # do this to enforce output size is as defined by input bounds
+            im_region = utils.transforms.imresize(
+                img=im_region, output_size=size_at_requested
+            )
+        else:
+            im_region = utils.transforms.imresize(
+                img=im_region,
+                scale_factor=post_read_scale,
+                output_size=size_at_requested,
+            )
+        if self.base_wsi_reader is not None:
+            # overlay imregion on the base wsi
+            base_region = self.base_wsi_reader.read_bounds(
+                bounds,
+                resolution=resolution,
+                units=units,
+                interpolation=interpolation,
+                pad_mode=pad_mode,
+                pad_constant_values=pad_constant_values,
+                coord_space=coord_space,
+                **kwargs,
+            )
+            base_region = Image.fromarray(background_composite(base_region, alpha=True))
+            im_region = Image.fromarray(im_region)
+            if self.alpha < 1.0:
+                im_region.putalpha(
+                    im_region.getchannel("A").point(lambda i: i * self.alpha)
+                )
+            base_region = Image.alpha_composite(base_region, im_region)
+            base_region = base_region.convert("RGB")
+            return np.array(base_region)
         return im_region

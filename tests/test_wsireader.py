@@ -28,8 +28,10 @@ from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
+from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
+    AnnotationStoreReader,
     ArrayView,
     DICOMWSIReader,
     NGFFWSIReader,
@@ -37,6 +39,7 @@ from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
+    WSIMeta,
     WSIReader,
     is_ngff,
     is_zarr,
@@ -418,7 +421,6 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     sample_ndpi,
 ):
     """Test finding optimal level for mpp read with scale > 1.
-
     This tests the case where the scale is found to be > 1 and interpolation
     will be applied to the output. A UserWarning should be raised in this case.
     """
@@ -429,7 +431,6 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
 
 def test_find_optimal_level_and_downsample_jp2_interpolation_warning(sample_jp2):
     """Test finding optimal level for mpp read with scale > 1.
-
     This tests the case where the scale is found to be > 1 and interpolation
     will be applied to the output. A UserWarning should be raised in this case.
     """
@@ -474,7 +475,6 @@ def test_find_optimal_level_and_downsample_power(sample_ndpi):
 
 def test_find_optimal_level_and_downsample_level(sample_ndpi):
     """Test finding optimal level for level read.
-
     For integer levels, the returned level should always be the same as
     the input level.
     """
@@ -594,7 +594,6 @@ def test_find_read_rect_params_mpp(sample_ndpi):
 
 def test_read_rect_openslide_baseline(sample_ndpi):
     """Test openslide read rect at baseline.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -609,7 +608,6 @@ def test_read_rect_openslide_baseline(sample_ndpi):
 
 def test_read_rect_jp2_baseline(sample_jp2):
     """Test jp2 read rect at baseline.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -654,7 +652,6 @@ def test_is_tiled_tiff(source_image):
 
 def test_read_rect_openslide_levels(sample_ndpi):
     """Test openslide read rect with resolution in levels.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -670,7 +667,6 @@ def test_read_rect_openslide_levels(sample_ndpi):
 
 def test_read_rect_jp2_levels(sample_jp2):
     """Test jp2 read rect with resolution in levels.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -712,7 +708,6 @@ def read_rect_mpp(wsi, location, size):
 
 def test_read_rect_openslide_mpp(sample_ndpi):
     """Test openslide read rect with resolution in microns per pixel.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -723,7 +718,6 @@ def test_read_rect_openslide_mpp(sample_ndpi):
 
 def test_read_rect_jp2_mpp(sample_jp2):
     """Test jp2 read rect with resolution in microns per pixel.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -734,7 +728,6 @@ def test_read_rect_jp2_mpp(sample_jp2):
 
 def test_read_rect_openslide_objective_power(sample_ndpi):
     """Test openslide read rect with resolution in objective power.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -746,7 +739,6 @@ def test_read_rect_openslide_objective_power(sample_ndpi):
 
 def test_read_rect_jp2_objective_power(sample_jp2):
     """Test jp2 read rect with resolution in objective power.
-
     Location coordinate is in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -758,7 +750,6 @@ def test_read_rect_jp2_objective_power(sample_jp2):
 
 def test_read_bounds_openslide_baseline(sample_ndpi):
     """Test openslide read bounds at baseline.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -773,7 +764,6 @@ def test_read_bounds_openslide_baseline(sample_ndpi):
 
 def test_read_bounds_jp2_baseline(sample_jp2):
     """Test jp2 read bounds at baseline.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -793,7 +783,6 @@ def test_read_bounds_jp2_baseline(sample_jp2):
 
 def test_read_bounds_openslide_levels(sample_ndpi):
     """Test openslide read bounds with resolution in levels.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -812,7 +801,6 @@ def test_read_bounds_openslide_levels(sample_ndpi):
 
 def test_read_bounds_jp2_levels(sample_jp2):
     """Test jp2 read bounds with resolution in levels.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -832,7 +820,6 @@ def test_read_bounds_jp2_levels(sample_jp2):
 
 def test_read_bounds_openslide_mpp(sample_ndpi):
     """Test openslide read bounds with resolution in microns per pixel.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -844,7 +831,6 @@ def test_read_bounds_openslide_mpp(sample_ndpi):
 
 def test_read_bounds_jp2_mpp(sample_jp2):
     """Test jp2 read bounds with resolution in microns per pixel.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -856,7 +842,6 @@ def test_read_bounds_jp2_mpp(sample_jp2):
 
 def test_read_bounds_openslide_objective_power(sample_ndpi):
     """Test openslide read bounds with resolution in objective power.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
@@ -869,7 +854,6 @@ def test_read_bounds_openslide_objective_power(sample_ndpi):
 
 def test_read_bounds_jp2_objective_power(sample_jp2):
     """Test jp2 read bounds with resolution in objective power.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
@@ -882,7 +866,6 @@ def test_read_bounds_jp2_objective_power(sample_jp2):
 
 def test_read_bounds_interpolated(sample_svs):
     """Test openslide read bounds with interpolated output.
-
     Coordinates in baseline (level 0) reference frame.
     """
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
@@ -1127,10 +1110,8 @@ def test_virtual_wsi_reader_read_bounds_virtual_baseline(source_image):
 
 def test_virtual_wsi_reader_read_rect_virtual_baseline(source_image):
     """Test VirtualWSIReader read rect with virtual baseline.
-
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image.
-
     """
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
@@ -1147,12 +1128,9 @@ def test_virtual_wsi_reader_read_rect_virtual_baseline(source_image):
 
 def test_virtual_wsi_reader_read_rect_virtual_levels(source_image):
     """Test VirtualWSIReader read rect with vritual levels.
-
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels.
-
     Checks that the regions read at each level line up with expected values.
-
     """
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
@@ -1174,12 +1152,9 @@ def test_virtual_wsi_reader_read_rect_virtual_levels(source_image):
 
 def test_virtual_wsi_reader_read_bounds_virtual_levels(source_image):
     """Test VirtualWSIReader read bounds with vritual levels.
-
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels.
-
     Checks that the regions read at each level line up with expected values.
-
     """
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
@@ -1211,11 +1186,9 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels(source_image):
 
 def test_virtual_wsi_reader_read_rect_virtual_levels_mpp(source_image):
     """Test VirtualWSIReader read rect with vritual levels and MPP.
-
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels and
     a baseline MPP specified.
-
     Checks that the regions read with specified MPP for each level lines up
     with expected values.
     """
@@ -1246,12 +1219,9 @@ def test_virtual_wsi_reader_read_rect_virtual_levels_mpp(source_image):
 
 def test_virtual_wsi_reader_read_bounds_virtual_levels_mpp(source_image):
     """Test VirtualWSIReader read bounds with vritual levels and MPP.
-
     Creates a virtual slide with a virtualbaseline size which is twice
     as large as the input image and the pyramid/resolution levels.
-
     Checks that the regions read at each level line up with expected values.
-
     """
     img_array = utils.misc.imread(pathlib.Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
@@ -1792,7 +1762,6 @@ def test_arrayview_incomplete_index():
 
 def test_arrayview_single_number_index():
     """Test reading a column from ArrayView.
-
     I'm not sure why you would want to do this but it is implemented for
     consistency with other __getitem__ objects.
     """
@@ -1844,9 +1813,7 @@ def test_tiled_tiff_openslide(remote_sample):
 
 def test_tiled_tiff_tifffile(remote_sample):
     """Test fallback to tifffile for files which openslide cannot read.
-
     E.G. tiled tiffs with JPEG XL compression.
-
     """
     sample_path = remote_sample("tiled-tiff-1-small-jp2k")
     wsi = wsireader.WSIReader.open(sample_path)
@@ -1906,40 +1873,87 @@ def test_is_ngff_regular_zarr(tmp_path):
 class TestReader:
     scenarios = [
         (
+            "AnnotationReader",
+            {
+                "reader_class": AnnotationStoreReader,
+                "sample_key": "annotation_store_svs_1",
+                "kwargs": {
+                    "renderer": AnnotationRenderer(
+                        "type",
+                        {
+                            0: (200, 0, 0, 255),
+                            1: (0, 200, 0, 255),
+                            2: (0, 0, 200, 255),
+                            3: (155, 155, 0, 255),
+                            4: (155, 0, 155, 255),
+                            5: (0, 155, 155, 255),
+                        },
+                    ),
+                    "base_wsi_reader": WSIReader.open(
+                        _fetch_remote_sample("svs-1-small")
+                    ),
+                    "alpha": 0.5,
+                },
+            },
+        ),
+        (
             "TIFFReader",
             {
                 "reader_class": TIFFWSIReader,
                 "sample_key": "ome-brightfield-pyramid-1-small",
+                "kwargs": {},
             },
         ),
-        ("DICOMReader", {"reader_class": DICOMWSIReader, "sample_key": "dicom-1"}),
-        ("NGFFWSIReader", {"reader_class": NGFFWSIReader, "sample_key": "ngff-1"}),
+        (
+            "DICOMReader",
+            {
+                "reader_class": DICOMWSIReader,
+                "sample_key": "dicom-1",
+                "kwargs": {},
+            },
+        ),
+        (
+            "NGFFWSIReader",
+            {
+                "reader_class": NGFFWSIReader,
+                "sample_key": "ngff-1",
+                "kwargs": {},
+            },
+        ),
         (
             "OpenSlideWSIReader (Small SVS)",
-            {"reader_class": OpenSlideWSIReader, "sample_key": "svs-1-small"},
+            {
+                "reader_class": OpenSlideWSIReader,
+                "sample_key": "svs-1-small",
+                "kwargs": {},
+            },
         ),
         (
             "OmnyxJP2WSIReader",
-            {"reader_class": OmnyxJP2WSIReader, "sample_key": "jp2-omnyx-1"},
+            {
+                "reader_class": OmnyxJP2WSIReader,
+                "sample_key": "jp2-omnyx-1",
+                "kwargs": {},
+            },
         ),
     ]
 
     @staticmethod
-    def test_base_open(sample_key, reader_class):
+    def test_base_open(sample_key, reader_class, kwargs):
         """Checks that WSIReader.open detects the type correctly."""
         sample = _fetch_remote_sample(sample_key)
         wsi = WSIReader.open(sample)
         assert isinstance(wsi, reader_class)
 
     @staticmethod
-    def test_wsimeta_attrs(sample_key, reader_class):
+    def test_wsimeta_attrs(sample_key, reader_class, kwargs):
         """Check for expected attrs in .info / WSIMeta.
 
         Checks for existence of expected attrs but not their contents.
 
         """
         sample = _fetch_remote_sample(sample_key)
-        wsi = reader_class(sample)
+        wsi = reader_class(sample, **kwargs)
         info = wsi.info
         expected_attrs = [
             "slide_dimensions",
@@ -1956,7 +1970,7 @@ class TestReader:
             assert hasattr(info, attr)
 
     @staticmethod
-    def test_read_rect_level_consistency(sample_key, reader_class):
+    def test_read_rect_level_consistency(sample_key, reader_class, kwargs):
         """Compare the same region at each stored resolution level.
 
         Read the same region at each stored resolution level and compare
@@ -1965,7 +1979,7 @@ class TestReader:
 
         """
         sample = _fetch_remote_sample(sample_key)
-        wsi = reader_class(sample)
+        wsi = reader_class(sample, **kwargs)
         location = (0, 0)
         size = np.array([1024, 1024])
 
@@ -1994,7 +2008,7 @@ class TestReader:
                 assert error < 0.125
 
     @staticmethod
-    def test_read_bounds_level_consistency(sample_key, reader_class):
+    def test_read_bounds_level_consistency(sample_key, reader_class, kwargs):
         """Compare the same region at each stored resolution level.
 
         Read the same region at each stored resolution level and compare
@@ -2003,14 +2017,14 @@ class TestReader:
 
         """
         sample = _fetch_remote_sample(sample_key)
-        wsi = reader_class(sample)
+        wsi = reader_class(sample, **kwargs)
         bounds = (0, 0, 1024, 1024)
         # This logic can be moved from the helper to here when other
         # reader classes have been parameterised into scenarios also.
         read_bounds_level_consistency(wsi, bounds)
 
     @staticmethod
-    def test_fuzz_read_region_baseline_size(sample_key, reader_class):
+    def test_fuzz_read_region_baseline_size(sample_key, reader_class, kwargs):
         """Fuzz test for `read_bounds` output size at level 0 (baseline).
 
         - Tests that the output image size matches the input bounds size.
@@ -2021,7 +2035,7 @@ class TestReader:
         """
         random.seed(123)
         sample = _fetch_remote_sample(sample_key)
-        wsi = reader_class(sample)
+        wsi = reader_class(sample, **kwargs)
         width, height = wsi.info.slide_dimensions
         iterations = 50
         for _ in range(iterations):
@@ -2035,7 +2049,7 @@ class TestReader:
             assert region.shape[:2][::-1] == size
 
     @staticmethod
-    def test_read_rect_coord_space_consistency(sample_key, reader_class):
+    def test_read_rect_coord_space_consistency(sample_key, reader_class, kwargs):
         """Test that read_rect coord_space modes are consistent.
 
         Using `read_rect` with `coord_space="baseline"` and
@@ -2048,7 +2062,7 @@ class TestReader:
 
         """
         sample = _fetch_remote_sample(sample_key)
-        reader = reader_class(sample)
+        reader = reader_class(sample, **kwargs)
         roi1 = reader.read_rect(
             np.array([500, 500]),
             np.array([2000, 2000]),
@@ -2064,7 +2078,14 @@ class TestReader:
             units="baseline",
         )
         # Make the regions the same size for comparison of content
+        import matplotlib.pyplot as plt
+
         roi2 = imresize(roi2, output_size=[2000, 2000])
+        plt.subplot(1, 2, 1)
+        plt.imshow(roi1)
+        plt.subplot(1, 2, 2)
+        plt.imshow(roi2)
+        plt.show()
 
         # Check MSE
         mse = np.mean((roi1 - roi2) ** 2)
@@ -2080,7 +2101,7 @@ class TestReader:
             assert ssim > 0.9
 
     @staticmethod
-    def test_file_path_does_not_exist(sample_key, reader_class):
+    def test_file_path_does_not_exist(sample_key, reader_class, kwargs):
         """Test that FileNotFoundError is raised when file does not exist."""
         with pytest.raises(FileNotFoundError):
-            _ = reader_class("./foo.bar")
+            _ = reader_class("./foo.bar", **kwargs)
