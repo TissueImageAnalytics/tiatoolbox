@@ -23,7 +23,7 @@ class HoVerNetPlus(HoVerNet):
     in contrast to HoVerNet at 0.25 mpp.
 
     The tiatoolbox model should produce following results on the specified datasets
-    that is was trained on.
+    that it was trained on.
 
     .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
        :widths: 15 15 15 15 15 15 15
@@ -81,6 +81,7 @@ class HoVerNetPlus(HoVerNet):
         self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
         super().__init__(mode="fast")
+        self.num_input_channels = num_input_channels
         self.num_types = num_types
         self.num_layers = num_layers
         ksize = 3
@@ -175,7 +176,9 @@ class HoVerNetPlus(HoVerNet):
         Returns:
             dict:
                 A dictionary of layer contours. It has the
-                following form::
+                following form:
+
+                .. code-block:: json
 
                     {
                         1: {  # Instance ID
@@ -221,51 +224,55 @@ class HoVerNetPlus(HoVerNet):
                 output of `infer_batch`).
 
         Returns:
-            inst_map (ndarray):
-                Pixel-wise nuclear instance segmentation prediction.
-            inst_dict (dict):
-                A dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has the
-                following form::
+            tuple:
+                - inst_map (ndarray):
+                    Pixel-wise nuclear instance segmentation prediction.
+                - inst_dict (dict):
+                    A dictionary containing a mapping of each instance
+                    within `inst_map` instance information. It has the
+                    following form:
 
-                    {
-                        0: {  # Instance ID
-                            "box": [
-                                x_min,
-                                y_min,
-                                x_max,
-                                y_max,
-                            ],
-                            "centroid": [x, y],
-                            "contour": [
-                                [x, y],
-                                ...
-                            ],
-                            "type": integer,
-                            "prob": float,
-                        },
-                        ...
-                    }
+                    .. code-block:: json
 
-                where the instance ID is an integer corresponding to the
-                instance at the same pixel value within `inst_map`.
-            layer_map (ndarray):
-                Pixel-wise layer segmentation prediction.
-            layer_dict (dict):
-                A dictionary containing a mapping of each segmented
-                layer within `layer_map`. It has the following form::
+                        {
+                            0: {  # Instance ID
+                                "box": [
+                                    x_min,
+                                    y_min,
+                                    x_max,
+                                    y_max,
+                                ],
+                                "centroid": [x, y],
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": integer,
+                                "prob": float,
+                            },
+                            ...
+                        }
 
-                    {
-                        1: {  # Instance ID
-                            "contour": [
-                                [x, y],
-                                ...
-                            ],
-                            "type": integer,
-                        },
-                        ...
-                    }
+                    where the instance ID is an integer corresponding to the
+                    instance at the same pixel value within `inst_map`.
+                - layer_map (ndarray):
+                    Pixel-wise layer segmentation prediction.
+                - layer_dict (dict):
+                    A dictionary containing a mapping of each segmented
+                    layer within `layer_map`. It has the following form
 
+                    .. code-block:: json
+
+                        {
+                            1: {  # Instance ID
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": integer,
+                            },
+                            ...
+                        }
         Examples:
             >>> from tiatoolbox.models.architecture.hovernetplus import HoVerNetPlus
             >>> import torch

@@ -182,7 +182,7 @@ def crop_and_pad_edges(
 
     Applies padding to areas of the image region which have coordinates
     less than zero or above the width and height in `max_dimensions`.
-    Note that bounds and max_dimensions must given for the same image
+    Note that bounds and max_dimensions must be given for the same image
     pyramid level (or more generally resolution e.g. if interpolated
     between levels or working in other units).
 
@@ -275,10 +275,10 @@ def safe_padded_read(
 ):
     """Read a region of a numpy array with padding applied to edges.
 
-    Safely 'read' regions, even outside of the image bounds. Accepts
+    Safely 'read' regions, even outside the image bounds. Accepts
     integer bounds only.
 
-    Regions outside of the source image are padded using any of the pad
+    Regions outside the source image are padded using any of the pad
     modes available in :func:`numpy.pad`.
 
     Note that padding of the output is not guaranteed to be
@@ -301,7 +301,7 @@ def safe_padded_read(
         padding (int or tuple(int)):
             Padding to apply to each bound. Default to 0.
         pad_mode (str):
-            Method for padding when reading areas outside of the input
+            Method for padding when reading areas outside the input
             image. Default is constant (0 padding). Possible values are:
             constant, reflect, wrap, symmetric. See :func:`numpy.pad`
             for more.
@@ -356,7 +356,7 @@ def safe_padded_read(
         stride = np.tile(stride, 2)
     x_stride, y_stride = stride
 
-    # Check if the padded coords outside of the image bounds
+    # Check if the padded coords are outside the image bounds
     # (over the width/height or under 0)
     padded_bounds = bounds + (padding * np.array([-1, -1, 1, 1]))
     img_size = np.array(image.shape[:2][::-1])
@@ -464,7 +464,7 @@ def sub_pixel_read(  # noqa: CCR001
             region. This function should return a numpy array with 2 or
             3 dimensions. See examples for more.
         pad_mode (str):
-            Method for padding when reading areas outside of the input
+            Method for padding when reading areas are outside the input
             image. Default is constant (0 padding). This is passed to
             `read_func` which defaults to :func:`safe_padded_read`. See
             :func:`safe_padded_read` for supported pad modes. Setting to

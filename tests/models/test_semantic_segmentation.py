@@ -19,7 +19,6 @@ import yaml
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import centre_crop
 from tiatoolbox.models.engine.semantic_segmentor import (
@@ -27,6 +26,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     WSIStreamDataset,
 )
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
