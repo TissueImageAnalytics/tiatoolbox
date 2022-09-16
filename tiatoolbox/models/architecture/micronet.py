@@ -121,7 +121,7 @@ def group1_arch_branch(in_ch: int, resized_in_ch: int, out_ch: int):
             Number of output channels.
 
     Returns:
-        torch.nn.ModuleDict:
+        :class:`torch.nn.ModuleDict`:
             An output of type :class:`torch.nn.ModuleDict`
 
     """
